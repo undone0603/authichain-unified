@@ -25,7 +25,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
-  Building2, Link2, Settings,
+  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -48,6 +48,8 @@ const menuItems = [
 const adminMenuItems = [
   { icon: BarChart3, label: "Admin Dashboard", path: "/admin" },
   { icon: Building2, label: "White Label", path: "/white-label" },
+  { icon: Rocket, label: "Grants & Partners", path: "/grants" },
+  { icon: TrendingUp, label: "Growth Engine", path: "/growth" },
   { icon: Users, label: "Manage Users", path: "/admin/users" },
 ];
 

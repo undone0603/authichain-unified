@@ -23,6 +23,9 @@ const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const Referrals = lazy(() => import("./pages/Referrals"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const WhiteLabel = lazy(() => import("./pages/WhiteLabel"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const GrantHub = lazy(() => import("./pages/GrantHub"));
+const GrowthEngine = lazy(() => import("./pages/GrowthEngine"));
 
 function PageLoader() {
   return (
@@ -50,6 +53,8 @@ function DashboardRoutes() {
           <Route path="/admin" component={AdminDashboard} />
           <Route path="/admin/users" component={AdminDashboard} />
           <Route path="/white-label" component={WhiteLabel} />
+          <Route path="/grants" component={GrantHub} />
+          <Route path="/growth" component={GrowthEngine} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
@@ -61,6 +66,13 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/pricing">
+        {() => (
+          <Suspense fallback={<PageLoader />}>
+            <Pricing />
+          </Suspense>
+        )}
+      </Route>
       <Route path="/certificate/:token">
         {(params) => (
           <Suspense fallback={<PageLoader />}>

@@ -35,7 +35,9 @@
 - [x] Referral Dashboard
 - [x] Admin Dashboard (revenue, fraud, health)
 - [x] White-label Settings page
-- [ ] Pricing page (deferred - subscription page covers pricing)
+- [x] Pricing page with premium tiers, ROI calculator, and lead capture
+- [x] Grants & Partnerships Hub page
+- [x] Growth Engine page with conversion funnel, A/B tests, outreach
 
 ## Integrations
 - [x] Stripe payment integration (router ready, needs API keys)
@@ -51,3 +53,19 @@
 - [x] Subscription logic tests
 - [x] Admin role-based access tests
 - [x] Public endpoint tests (certificates, NFTs, referrals, white-label)
+
+## Revenue-First Strategy (Phase 2)
+- [x] Research blockchain/anti-counterfeiting grants and funding opportunities
+- [x] Identify strategic partnership angles (luxury brands, pharma, supply chain)
+- [x] Competitive landscape analysis and one-of-a-kind positioning
+- [x] Premium pricing strategy aligned with unique value proposition ($49/$199/$799 tiers)
+- [x] Build dedicated Pricing page with tiered enterprise pricing
+- [x] Lead capture funnel with ROI calculator
+- [x] Grant application materials and pitch deck content (6 grants identified, $2.4M+ potential)
+- [x] Partnership outreach pipeline (12 targets across 4 categories)
+- [x] Revenue analytics dashboard with MRR tracking and projections
+- [x] Conversion optimization: funnel analytics, A/B testing framework
+- [x] Automated email outreach sequences with performance tracking
+- [x] Industry solutions positioning (6 verticals: luxury, pharma, agriculture, art, cannabis, electronics)
+- [x] Add-on pricing for NFT minting, holographic QR packs, NFC tags, white-label, API access
+- [x] Growth engine with 10-month revenue projection ($150K MRR / $1.8M ARR target)
