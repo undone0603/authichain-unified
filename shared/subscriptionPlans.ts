@@ -1,0 +1,56 @@
+export const SUBSCRIPTION_PLANS = {
+  starter: {
+    name: "Starter",
+    monthlyPrice: 49,
+    annualPrice: 470,
+    monthlyQuota: 100,
+    features: [
+      "100 authentications/month",
+      "Basic AI analysis",
+      "QR code generation",
+      "Certificate issuance",
+      "Email support",
+      "1 team member",
+    ],
+    highlighted: false,
+  },
+  professional: {
+    name: "Professional",
+    monthlyPrice: 149,
+    annualPrice: 1430,
+    monthlyQuota: 1000,
+    features: [
+      "1,000 authentications/month",
+      "Advanced AI analysis with blockchain verification",
+      "NFT marketplace access",
+      "Supply chain tracking",
+      "AI Autopilot (balanced mode)",
+      "Email campaigns",
+      "Referral program",
+      "Priority support",
+      "5 team members",
+    ],
+    highlighted: true,
+  },
+  enterprise: {
+    name: "Enterprise",
+    monthlyPrice: 499,
+    annualPrice: 4790,
+    monthlyQuota: 10000,
+    features: [
+      "10,000 authentications/month",
+      "Full AI analysis suite with custom models",
+      "White-label solutions",
+      "Custom API access",
+      "AI Autopilot (all modes)",
+      "Advanced analytics & fraud detection",
+      "Dedicated account manager",
+      "Custom integrations",
+      "Unlimited team members",
+      "SLA guarantee",
+    ],
+    highlighted: false,
+  },
+} as const;
+
+export type PlanKey = keyof typeof SUBSCRIPTION_PLANS;

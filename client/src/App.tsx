@@ -5,31 +5,80 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import DashboardLayout from "./components/DashboardLayout";
+import { lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
+
+// Lazy load dashboard pages
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Authenticate = lazy(() => import("./pages/Authenticate"));
+const QrCodes = lazy(() => import("./pages/QrCodes"));
+const Certificates = lazy(() => import("./pages/Certificates"));
+const CertificatePublic = lazy(() => import("./pages/CertificatePublic"));
+const NftMarketplace = lazy(() => import("./pages/NftMarketplace"));
+const SupplyChain = lazy(() => import("./pages/SupplyChain"));
+const Autopilot = lazy(() => import("./pages/Autopilot"));
+const EmailCampaigns = lazy(() => import("./pages/EmailCampaigns"));
+const Subscriptions = lazy(() => import("./pages/Subscriptions"));
+const Referrals = lazy(() => import("./pages/Referrals"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const WhiteLabel = lazy(() => import("./pages/WhiteLabel"));
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+function DashboardRoutes() {
+  return (
+    <DashboardLayout>
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/authenticate" component={Authenticate} />
+          <Route path="/qr-codes" component={QrCodes} />
+          <Route path="/certificates" component={Certificates} />
+          <Route path="/nft" component={NftMarketplace} />
+          <Route path="/supply-chain" component={SupplyChain} />
+          <Route path="/autopilot" component={Autopilot} />
+          <Route path="/email-campaigns" component={EmailCampaigns} />
+          <Route path="/subscriptions" component={Subscriptions} />
+          <Route path="/referrals" component={Referrals} />
+          <Route path="/admin" component={AdminDashboard} />
+          <Route path="/admin/users" component={AdminDashboard} />
+          <Route path="/white-label" component={WhiteLabel} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+    </DashboardLayout>
+  );
+}
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
+      <Route path="/" component={Home} />
+      <Route path="/certificate/:token">
+        {(params) => (
+          <Suspense fallback={<PageLoader />}>
+            <CertificatePublic token={params.token} />
+          </Suspense>
+        )}
+      </Route>
+      <Route>
+        <DashboardRoutes />
+      </Route>
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
           <Router />
