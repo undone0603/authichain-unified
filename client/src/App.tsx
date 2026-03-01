@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { ThirdwebAppProvider } from "./components/ThirdwebProvider";
 import Home from "./pages/Home";
 import DashboardLayout from "./components/DashboardLayout";
 import { lazy, Suspense } from "react";
@@ -26,6 +27,7 @@ const WhiteLabel = lazy(() => import("./pages/WhiteLabel"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const GrantHub = lazy(() => import("./pages/GrantHub"));
 const GrowthEngine = lazy(() => import("./pages/GrowthEngine"));
+const Blockchain = lazy(() => import("./pages/Blockchain"));
 
 function PageLoader() {
   return (
@@ -55,6 +57,7 @@ function DashboardRoutes() {
           <Route path="/white-label" component={WhiteLabel} />
           <Route path="/grants" component={GrantHub} />
           <Route path="/growth" component={GrowthEngine} />
+          <Route path="/blockchain" component={Blockchain} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
@@ -91,10 +94,12 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <ThirdwebAppProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </ThirdwebAppProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

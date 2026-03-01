@@ -257,6 +257,63 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
   });
 
+  describe("blockchain router", () => {
+    it("blockchain.status returns connection status (public)", async () => {
+      const ctx = createPublicContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.blockchain.status();
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty("connected");
+      expect(result).toHaveProperty("clientId");
+      expect(result).toHaveProperty("chain");
+    });
+
+    it("blockchain.uploadToIPFS requires authentication", async () => {
+      const ctx = createPublicContext();
+      const caller = appRouter.createCaller(ctx);
+      await expect(caller.blockchain.uploadToIPFS({ name: "Test" })).rejects.toThrow();
+    });
+
+    it("blockchain.mintNFT requires authentication", async () => {
+      const ctx = createPublicContext();
+      const caller = appRouter.createCaller(ctx);
+      await expect(caller.blockchain.mintNFT({
+        name: "Test", walletAddress: "0x123", contractAddress: "0x456", privateKey: "0x789",
+      })).rejects.toThrow();
+    });
+
+    it("blockchain.mintCertificateNFT requires authentication", async () => {
+      const ctx = createPublicContext();
+      const caller = appRouter.createCaller(ctx);
+      await expect(caller.blockchain.mintCertificateNFT({
+        productId: 1, certificateNumber: "CERT-001",
+        walletAddress: "0x123", contractAddress: "0x456", privateKey: "0x789",
+      })).rejects.toThrow();
+    });
+
+    it("blockchain.getNFTBalance is public", async () => {
+      const ctx = createPublicContext();
+      const caller = appRouter.createCaller(ctx);
+      // This will fail at the thirdweb call level, but proves the route is accessible
+      try {
+        await caller.blockchain.getNFTBalance({ contractAddress: "0x0000000000000000000000000000000000000000", walletAddress: "0x0000000000000000000000000000000000000000" });
+      } catch (e: any) {
+        // Expected to fail due to invalid contract, but should not be an auth error
+        expect(e.message).not.toContain("login");
+      }
+    });
+
+    it("blockchain.getContractSupply is public", async () => {
+      const ctx = createPublicContext();
+      const caller = appRouter.createCaller(ctx);
+      try {
+        await caller.blockchain.getContractSupply({ contractAddress: "0x0000000000000000000000000000000000000000" });
+      } catch (e: any) {
+        expect(e.message).not.toContain("login");
+      }
+    });
+  });
+
   describe("admin operations with admin role", () => {
     it("admin.metrics returns platform metrics", async () => {
       const ctx = createAuthContext("admin");

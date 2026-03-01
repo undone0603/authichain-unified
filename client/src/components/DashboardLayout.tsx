@@ -25,7 +25,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
-  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp,
+  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -43,6 +43,7 @@ const menuItems = [
   { icon: Mail, label: "Email Campaigns", path: "/email-campaigns" },
   { icon: CreditCard, label: "Subscriptions", path: "/subscriptions" },
   { icon: Link2, label: "Referrals", path: "/referrals" },
+  { icon: Blocks, label: "Blockchain Hub", path: "/blockchain" },
 ];
 
 const adminMenuItems = [

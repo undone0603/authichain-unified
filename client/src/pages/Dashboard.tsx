@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Award, Gem, Package, ArrowRight, Bot, Loader2 } from "lucide-react";
+import { Shield, Award, Gem, Package, ArrowRight, Bot, Loader2, Blocks, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 
@@ -94,6 +94,7 @@ export default function Dashboard() {
                   { label: "Generate QR Code", path: "/qr-codes", icon: Package },
                   { label: "Browse NFT Marketplace", path: "/nft", icon: Gem },
                   { label: "Configure AI Autopilot", path: "/autopilot", icon: Bot },
+                  { label: "Blockchain Hub", path: "/blockchain", icon: Blocks },
                 ].map((a) => (
                   <button
                     key={a.path}
@@ -108,8 +109,50 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Blockchain Status */}
+          <BlockchainStatusCard />
         </>
       )}
     </div>
+  );
+}
+
+function BlockchainStatusCard() {
+  const { data: status, isLoading } = trpc.blockchain.status.useQuery();
+  const [, setLocation] = useLocation();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Blocks className="h-4 w-4" />
+          Blockchain Status
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>
+        ) : status?.connected ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium text-green-500">Thirdweb Connected</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Chain</span>
+              <span>{status.chain}</span>
+            </div>
+            <Button size="sm" variant="outline" className="w-full" onClick={() => setLocation("/blockchain")}>
+              Open Blockchain Hub <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <XCircle className="h-4 w-4 text-red-500" />
+            <span className="text-sm text-muted-foreground">Not connected</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

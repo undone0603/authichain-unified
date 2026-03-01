@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Upload, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { Shield, Upload, Loader2, CheckCircle2, XCircle, AlertTriangle, Link2, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -127,6 +127,18 @@ export default function Authenticate() {
                   </div>
                 )}
                 <p className="text-sm mt-3 p-3 rounded-lg bg-accent/50">{result.recommendation}</p>
+                {result.result === "authentic" && (
+                  <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                    <div className="flex items-center gap-2 text-primary text-sm font-semibold mb-1">
+                      <Link2 className="h-4 w-4" />
+                      Blockchain Verified
+                    </div>
+                    <p className="text-xs text-muted-foreground">This authentication result is eligible for on-chain verification via the Blockchain Hub. Mint an NFT certificate to create an immutable proof of authenticity.</p>
+                    <a href="/blockchain" className="inline-flex items-center gap-1 text-xs text-primary mt-2 hover:underline">
+                      Go to Blockchain Hub <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

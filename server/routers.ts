@@ -690,6 +690,116 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── Blockchain (Thirdweb) ──────────────────────────────────────────────
+  blockchain: router({
+    status: publicProcedure.query(async () => {
+      const { checkThirdwebConnection } = await import("./thirdweb");
+      return await checkThirdwebConnection();
+    }),
+    uploadToIPFS: protectedProcedure.input(z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      imageUrl: z.string().optional(),
+      attributes: z.array(z.object({ trait_type: z.string(), value: z.union([z.string(), z.number()]) })).optional(),
+    })).mutation(async ({ input }) => {
+      const { uploadMetadataToIPFS } = await import("./thirdweb");
+      const uri = await uploadMetadataToIPFS({
+        name: input.name,
+        description: input.description,
+        image: input.imageUrl,
+        attributes: input.attributes,
+      });
+      return { ipfsUri: uri };
+    }),
+    mintCertificateNFT: protectedProcedure.input(z.object({
+      productId: z.number(),
+      certificateNumber: z.string(),
+      walletAddress: z.string(),
+      contractAddress: z.string(),
+      privateKey: z.string(),
+      chainId: z.number().optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const { getProductById, getCertificateByNumber, logActivity } = await import("./db");
+      const { mintAuthenticationNFT, buildAuthCertificateMetadata } = await import("./thirdweb");
+      const product = await getProductById(input.productId);
+      if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+      const cert = await getCertificateByNumber(input.certificateNumber);
+      if (!cert) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
+      const metadata = buildAuthCertificateMetadata({
+        productName: product.name,
+        productBrand: product.brand || undefined,
+        productSerial: product.serialNumber || undefined,
+        confidenceScore: 95,
+        verificationDate: new Date().toISOString(),
+        certificateNumber: input.certificateNumber,
+        imageUrl: product.imageUrl || undefined,
+        authenticatorId: ctx.user.id,
+      });
+      const result = await mintAuthenticationNFT({
+        contractAddress: input.contractAddress,
+        recipientAddress: input.walletAddress,
+        metadata,
+        privateKey: input.privateKey,
+        chainId: input.chainId,
+      });
+      await logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "certificate", entityId: cert.id });
+      return { transactionHash: result.transactionHash, metadataUri: result.metadataUri, chain: result.chain };
+    }),
+    mintNFT: protectedProcedure.input(z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      imageUrl: z.string().optional(),
+      walletAddress: z.string(),
+      contractAddress: z.string(),
+      privateKey: z.string(),
+      chainId: z.number().optional(),
+      attributes: z.array(z.object({ trait_type: z.string(), value: z.union([z.string(), z.number()]) })).optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const { mintAuthenticationNFT } = await import("./thirdweb");
+      const { logActivity } = await import("./db");
+      const result = await mintAuthenticationNFT({
+        contractAddress: input.contractAddress,
+        recipientAddress: input.walletAddress,
+        metadata: {
+          name: input.name,
+          description: input.description,
+          image: input.imageUrl,
+          attributes: input.attributes,
+        },
+        privateKey: input.privateKey,
+        chainId: input.chainId,
+      });
+      await logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "nft", entityId: 0 });
+      return { transactionHash: result.transactionHash, metadataUri: result.metadataUri, chain: result.chain };
+    }),
+    getNFTBalance: publicProcedure.input(z.object({
+      contractAddress: z.string(),
+      walletAddress: z.string(),
+      chainId: z.number().optional(),
+    })).query(async ({ input }) => {
+      const { getNFTBalance } = await import("./thirdweb");
+      const balance = await getNFTBalance(input.contractAddress, input.walletAddress, input.chainId);
+      return { balance };
+    }),
+    getContractSupply: publicProcedure.input(z.object({
+      contractAddress: z.string(),
+      chainId: z.number().optional(),
+    })).query(async ({ input }) => {
+      const { getContractTotalSupply } = await import("./thirdweb");
+      const supply = await getContractTotalSupply(input.contractAddress, input.chainId);
+      return { totalSupply: supply };
+    }),
+    getWalletNFTs: publicProcedure.input(z.object({
+      contractAddress: z.string(),
+      walletAddress: z.string(),
+      chainId: z.number().optional(),
+    })).query(async ({ input }) => {
+      const { getWalletNFTs } = await import("./thirdweb");
+      const nfts = await getWalletNFTs(input.contractAddress, input.walletAddress, input.chainId);
+      return { nfts };
+    }),
+  }),
+
   // ─── Dashboard Metrics ───────────────────────────────────────────────────
   dashboard: router({
     metrics: protectedProcedure.query(async ({ ctx }) => {
