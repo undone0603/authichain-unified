@@ -105,6 +105,18 @@ export const appRouter = router({
       if (sub) await updateSubscriptionUsage(ctx.user.id, (sub.usedQuota || 0) + 1);
       await recordUsage({ userId: ctx.user.id, subscriptionId: sub?.id, type: "authentication", quantity: 1 });
       await logActivity({ userId: ctx.user.id, action: "product_authenticated", entityType: "authentication", entityId: authResult.id });
+      // Auto-notification for authentication result
+      try {
+        const { createSystemNotification } = await import("./db");
+        const emoji = aiResult.result === "authentic" ? "Verified" : aiResult.result === "counterfeit" ? "Alert" : "Review Needed";
+        await createSystemNotification(
+          ctx.user.id,
+          `Authentication ${emoji}: ${product.name}`,
+          `${product.brand || "Product"} ${product.name} scored ${aiResult.confidence}% confidence as ${aiResult.result}. ${aiResult.recommendation}`,
+          aiResult.result === "counterfeit" ? "alert" : "authentication",
+          "/authenticate"
+        );
+      } catch (notifErr) { console.warn("[Notification] Failed:", notifErr); }
       return aiResult;
     }),
     history: protectedProcedure.query(async ({ ctx }) => {
@@ -870,6 +882,45 @@ export const appRouter = router({
     metrics: protectedProcedure.query(async ({ ctx }) => {
       const { getDashboardMetrics } = await import("./db");
       return await getDashboardMetrics(ctx.user.id);
+    }),
+  }),
+
+  // ─── Notifications ──────────────────────────────────────────────────────
+  notifications: router({
+    list: protectedProcedure.input(z.object({
+      limit: z.number().optional().default(50),
+    }).optional()).query(async ({ ctx, input }) => {
+      const { getUserNotifications } = await import("./db");
+      return await getUserNotifications(ctx.user.id, input?.limit ?? 50);
+    }),
+    unreadCount: protectedProcedure.query(async ({ ctx }) => {
+      const { getUnreadNotificationCount } = await import("./db");
+      return { count: await getUnreadNotificationCount(ctx.user.id) };
+    }),
+    markRead: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
+      const { markNotificationRead } = await import("./db");
+      await markNotificationRead(input.id, ctx.user.id);
+      return { success: true };
+    }),
+    markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+      const { markAllNotificationsRead } = await import("./db");
+      await markAllNotificationsRead(ctx.user.id);
+      return { success: true };
+    }),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
+      const { deleteNotification } = await import("./db");
+      await deleteNotification(input.id, ctx.user.id);
+      return { success: true };
+    }),
+    // Create notification (for testing / admin use)
+    create: protectedProcedure.input(z.object({
+      title: z.string().min(1),
+      message: z.string().min(1),
+      type: z.enum(["authentication", "certificate", "payment", "subscription", "nft", "referral", "system", "alert", "supply_chain", "autopilot"]),
+      actionUrl: z.string().optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const { createNotification } = await import("./db");
+      return await createNotification({ ...input, userId: ctx.user.id, isRead: 0 });
     }),
   }),
 });

@@ -6,8 +6,8 @@ import {
   invoices, payments, leads, emailCampaigns, emailDrafts, supplyChainEvents,
   referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions,
   abTests, whiteLabelClients, activityLog, fraudAlerts, customerHealthScores,
-  revenueRecords,
-  type Product, type InsertProduct,
+  revenueRecords, notifications,
+  type Product, type InsertProduct, type InsertNotification,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -599,4 +599,58 @@ export async function getSubscriptionAnalytics() {
   const db = await getDb();
   if (!db) return [];
   return await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt));
+}
+
+// ─── Notification Helpers ───────────────────────────────────────────────────
+export async function createNotification(data: Omit<InsertNotification, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(notifications).values(data as any);
+  return { id: result[0].insertId };
+}
+
+export async function getUserNotifications(userId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+}
+
+export async function getUnreadNotificationCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const [result] = await db.select({ count: sql<number>`count(*)` })
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+  return result?.count || 0;
+}
+
+export async function markNotificationRead(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(notifications)
+    .set({ isRead: 1 })
+    .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+}
+
+export async function markAllNotificationsRead(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(notifications)
+    .set({ isRead: 1 })
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+}
+
+export async function deleteNotification(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { eq: eqOp, and: andOp } = await import("drizzle-orm");
+  await db.delete(notifications)
+    .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+}
+
+export async function createSystemNotification(userId: number, title: string, message: string, type: InsertNotification["type"], actionUrl?: string) {
+  return createNotification({ userId, type: type as any, title, message, isRead: 0, actionUrl });
 }

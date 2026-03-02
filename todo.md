@@ -82,18 +82,27 @@
 - [x] Write Thirdweb integration tests (41 tests passing)
 
 ## Phase 4: Deploy, Stripe, and Grant Submission
-- [ ] Deploy AuthiChainNFT smart contract to Polygon Amoy testnet
-- [ ] Configure contract address in platform
-- [ ] Connect Stripe for subscription billing ($49/$199/$799 tiers)
-- [ ] Build Stripe webhook handler for subscription lifecycle
+- [x] Deploy AuthiChainNFT smart contract to Polygon Amoy testnet (0xc3143254997d48fdc9983d618fb2e10067673eb5)
+- [x] Configure contract address in platform
+- [x] Connect Stripe for subscription billing ($49/$199/$799 tiers)
+- [x] Build Stripe webhook handler for subscription lifecycle
 - [ ] Prepare DHS SVIP grant application materials
 - [ ] Submit grant application
-- [ ] End-to-end testing of all integrations
+- [x] End-to-end testing of all integrations
 
 ## Stripe Payment Testing
-- [ ] Test Stripe checkout flow on live deployed site with promo code MANUS100OFFEfh
-- [ ] Verify webhook handling for successful payment
-- [ ] Fix any issues found during payment testing
+- [x] Test Stripe checkout flow on live deployed site with promo code MANUS100OFFEfh
+- [x] Verify webhook handling for successful payment ($7.99 Enterprise test payment confirmed)
+- [x] Fix promo code creation (live mode, legacy coupon format)
+
+## Connected Apps Integration
+- [x] Clean up temporary Stripe admin endpoints (moved to tRPC adminProcedure)
+- [ ] Integrate HubSpot CRM for lead management and sales pipeline (401 auth issue — needs re-authorization)
+- [ ] Integrate Gmail for automated email outreach (tools available, pending campaign setup)
+- [x] Integrate Google Calendar for scheduling demos and meetings (4 events created)
+- [ ] Integrate HeyGen for AI avatar video generation (connected, 15 credits available)
+- [x] Integrate Airtable for data management workflows (contract + payment events logged)
+- [x] Explore Meta Marketing for ad campaign management (connected, no active data)
 
 ## SEO Fixes
 - [x] Fix homepage title to 30-60 characters (57 chars)
@@ -101,12 +110,12 @@
 - [x] Add keywords meta tag (10 keywords)
 
 ## Custom Notification System
-- [ ] Add notifications table to database schema
-- [ ] Create notification DB helpers (create, list, markRead, markAllRead, delete)
-- [ ] Add notification tRPC router with CRUD endpoints
-- [ ] Build NotificationBell component with unread count badge
-- [ ] Build NotificationDropdown with recent notifications
-- [ ] Build full Notifications page with filtering and management
-- [ ] Integrate notifications into DashboardLayout header
-- [ ] Add auto-notifications for key events (auth, payments, subscriptions)
-- [ ] Write notification tests
+- [x] Add notifications table to database schema
+- [x] Create notification DB helpers (create, list, markRead, markAllRead, delete)
+- [x] Add notification tRPC router with CRUD endpoints
+- [x] Build NotificationBell component with unread count badge
+- [x] Build NotificationDropdown with recent notifications
+- [x] Build full Notifications page with filtering and management
+- [x] Integrate notifications into DashboardLayout header
+- [x] Add auto-notifications for key events (auth, payments, subscriptions)
+- [x] Write notification tests (11 tests passing)

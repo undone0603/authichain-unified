@@ -28,6 +28,7 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const GrantHub = lazy(() => import("./pages/GrantHub"));
 const GrowthEngine = lazy(() => import("./pages/GrowthEngine"));
 const Blockchain = lazy(() => import("./pages/Blockchain"));
+const Notifications = lazy(() => import("./pages/Notifications"));
 
 function PageLoader() {
   return (
@@ -58,6 +59,7 @@ function DashboardRoutes() {
           <Route path="/grants" component={GrantHub} />
           <Route path="/growth" component={GrowthEngine} />
           <Route path="/blockchain" component={Blockchain} />
+          <Route path="/notifications" component={Notifications} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>

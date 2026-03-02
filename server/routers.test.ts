@@ -392,4 +392,130 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(Array.isArray(result)).toBe(true);
     });
   });
+
+  describe("notifications router", () => {
+    it("notifications.list requires authentication", async () => {
+      const ctx = createPublicContext();
+      const caller = appRouter.createCaller(ctx);
+      await expect(caller.notifications.list()).rejects.toThrow();
+    });
+
+    it("notifications.unreadCount requires authentication", async () => {
+      const ctx = createPublicContext();
+      const caller = appRouter.createCaller(ctx);
+      await expect(caller.notifications.unreadCount()).rejects.toThrow();
+    });
+
+    it("notifications.markAllRead requires authentication", async () => {
+      const ctx = createPublicContext();
+      const caller = appRouter.createCaller(ctx);
+      await expect(caller.notifications.markAllRead()).rejects.toThrow();
+    });
+
+    it("notifications.list returns array for authenticated user", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.notifications.list({ limit: 10 });
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it("notifications.unreadCount returns count object", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.notifications.unreadCount();
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty("count");
+      expect(typeof result.count).toBe("number");
+    });
+
+    it("notifications.markAllRead returns success", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.notifications.markAllRead();
+      expect(result).toEqual({ success: true });
+    });
+
+    it("notifications.create creates a notification", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.notifications.create({
+        title: "Test Notification",
+        message: "This is a test notification from vitest",
+        type: "system",
+        actionUrl: "/dashboard",
+      });
+      expect(result).toBeDefined();
+      expect(result.id).toBeDefined();
+    });
+
+    it("notifications.create then list shows the notification", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      // Create a notification
+      await caller.notifications.create({
+        title: "Visible Test",
+        message: "Should appear in list",
+        type: "authentication",
+      });
+      // List should contain it
+      const list = await caller.notifications.list({ limit: 50 });
+      const found = list.find((n: any) => n.title === "Visible Test");
+      expect(found).toBeDefined();
+      expect(found?.message).toBe("Should appear in list");
+      expect(found?.type).toBe("authentication");
+      expect(found?.isRead).toBe(0);
+    });
+
+    it("notifications.markRead marks a specific notification as read", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      // Create a notification
+      const created = await caller.notifications.create({
+        title: "Mark Read Test",
+        message: "Will be marked read",
+        type: "payment",
+      });
+      // Mark it as read
+      const markResult = await caller.notifications.markRead({ id: created.id });
+      expect(markResult).toEqual({ success: true });
+      // Verify it's read
+      const list = await caller.notifications.list({ limit: 50 });
+      const found = list.find((n: any) => n.id === created.id);
+      expect(found?.isRead).toBe(1);
+    });
+
+    it("notifications.delete removes a notification", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      // Create a notification
+      const created = await caller.notifications.create({
+        title: "Delete Test",
+        message: "Will be deleted",
+        type: "alert",
+      });
+      // Delete it
+      const deleteResult = await caller.notifications.delete({ id: created.id });
+      expect(deleteResult).toEqual({ success: true });
+      // Verify it's gone
+      const list = await caller.notifications.list({ limit: 50 });
+      const found = list.find((n: any) => n.id === created.id);
+      expect(found).toBeUndefined();
+    });
+
+    it("notifications.unreadCount reflects actual unread count", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      // Get initial count
+      const initial = await caller.notifications.unreadCount();
+      // Create a notification
+      await caller.notifications.create({
+        title: "Count Test",
+        message: "Increases unread count",
+        type: "nft",
+      });
+      // Count should increase
+      const after = await caller.notifications.unreadCount();
+      expect(after.count).toBeGreaterThanOrEqual(initial.count + 1);
+    });
+  });
 });

@@ -488,3 +488,22 @@ export const revenueRecords = mysqlTable("revenue_records", {
   metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", [
+    "authentication", "certificate", "payment", "subscription",
+    "nft", "referral", "system", "alert", "supply_chain", "autopilot"
+  ]).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  message: text("message").notNull(),
+  isRead: int("isRead").default(0).notNull(),
+  actionUrl: varchar("actionUrl", { length: 512 }),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

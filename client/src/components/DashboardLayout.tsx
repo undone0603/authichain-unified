@@ -25,8 +25,9 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
-  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks,
+  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell,
 } from "lucide-react";
+import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -44,6 +45,7 @@ const menuItems = [
   { icon: CreditCard, label: "Subscriptions", path: "/subscriptions" },
   { icon: Link2, label: "Referrals", path: "/referrals" },
   { icon: Blocks, label: "Blockchain Hub", path: "/blockchain" },
+  { icon: Bell, label: "Notifications", path: "/notifications" },
 ];
 
 const adminMenuItems = [
@@ -273,6 +275,12 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
               <span className="tracking-tight text-foreground">{activeMenuItem?.label ?? "Menu"}</span>
             </div>
+            <NotificationBell />
+          </div>
+        )}
+        {!isMobile && (
+          <div className="flex border-b h-14 items-center justify-end bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+            <NotificationBell />
           </div>
         )}
         <main className="flex-1 p-4 md:p-6">{children}</main>
