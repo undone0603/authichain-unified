@@ -15,6 +15,7 @@ export const users = mysqlTable("users", {
   phone: varchar("phone", { length: 32 }),
   onboardingCompleted: int("onboardingCompleted").default(0),
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  paddleCustomerId: varchar("paddleCustomerId", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -181,6 +182,8 @@ export const subscriptions = mysqlTable("subscriptions", {
   usedQuota: int("usedQuota").default(0),
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
+  paddleSubscriptionId: varchar("paddleSubscriptionId", { length: 128 }),
+  paddleCustomerId: varchar("paddleCustomerId", { length: 128 }),
   billingCycle: mysqlEnum("billingCycle", ["monthly", "annual"]).default("monthly"),
   currentPeriodStart: timestamp("currentPeriodStart"),
   currentPeriodEnd: timestamp("currentPeriodEnd"),
@@ -334,6 +337,9 @@ export const referrals = mysqlTable("referrals", {
   status: mysqlEnum("status", ["pending", "active", "converted", "expired"]).default("pending"),
   rewardAmount: decimal("rewardAmount", { precision: 10, scale: 2 }).default("0"),
   rewardPaid: int("rewardPaid").default(0),
+  referredEmail: varchar("referredEmail", { length: 320 }),
+  tier: mysqlEnum("tier", ["starter", "professional", "enterprise", "agency"]),
+  commissionPaid: decimal("commissionPaid", { precision: 10, scale: 2 }).default("0"),
   convertedAt: timestamp("convertedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -351,6 +357,9 @@ export const affiliates = mysqlTable("affiliates", {
   totalReferrals: int("totalReferrals").default(0),
   totalConversions: int("totalConversions").default(0),
   status: mysqlEnum("status", ["active", "suspended", "pending"]).default("pending"),
+  tier: mysqlEnum("affiliateTier", ["basic", "silver", "gold", "platinum"]).default("basic"),
+  activeReferrals: int("activeReferrals").default(0),
+  paypalEmail: varchar("paypalEmail", { length: 320 }),
   payoutMethod: varchar("payoutMethod", { length: 64 }),
   payoutDetails: json("payoutDetails"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -507,3 +516,74 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+// ─── Bonuses ─────────────────────────────────────────────────────────────────
+export const bonuses = mysqlTable("bonuses", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  bonusType: varchar("bonusType", { length: 64 }).notNull(),
+  bonusName: varchar("bonusName", { length: 256 }).notNull(),
+  bonusValue: int("bonusValue").notNull(),
+  tier: mysqlEnum("bonusTier", ["starter", "professional", "enterprise", "agency"]),
+  status: mysqlEnum("bonusStatus", ["pending", "claimed", "delivered"]).default("pending"),
+  deliveryMethod: varchar("deliveryMethod", { length: 64 }),
+  claimedAt: timestamp("claimedAt"),
+  deliveredAt: timestamp("deliveredAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Bonus = typeof bonuses.$inferSelect;
+
+// ─── Referral Clicks ─────────────────────────────────────────────────────────
+export const referralClicks = mysqlTable("referral_clicks", {
+  id: int("id").autoincrement().primaryKey(),
+  referralCode: varchar("referralCode", { length: 32 }).notNull(),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  userAgent: text("userAgent"),
+  referer: text("referer"),
+  landingPage: text("landingPage"),
+  convertedAt: timestamp("convertedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── AI Models (Marketplace) ─────────────────────────────────────────────────
+export const aiModels = mysqlTable("ai_models", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 128 }),
+  price: int("price").notNull().default(0),
+  status: mysqlEnum("modelStatus", ["active", "draft", "archived"]).default("draft"),
+  downloads: int("downloads").default(0),
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
+  reviewCount: int("reviewCount").default(0),
+  creatorId: int("creatorId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AiModel = typeof aiModels.$inferSelect;
+
+// ─── Model Purchases ─────────────────────────────────────────────────────────
+export const modelPurchases = mysqlTable("model_purchases", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  modelId: int("modelId").notNull(),
+  pricePaid: int("pricePaid").notNull(),
+  purchaseType: mysqlEnum("purchaseType", ["purchase", "subscription", "rental"]).default("purchase"),
+  status: mysqlEnum("purchaseStatus", ["active", "expired", "refunded"]).default("active"),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ModelPurchase = typeof modelPurchases.$inferSelect;
+
+// ─── Model Reviews ────────────────────────────────────────────────────────────
+export const modelReviews = mysqlTable("model_reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  modelId: int("modelId").notNull(),
+  userId: int("userId").notNull(),
+  rating: int("rating").notNull(),
+  review: text("review"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});

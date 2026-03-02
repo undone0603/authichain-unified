@@ -7,26 +7,26 @@ import { Users, Loader2, Copy, DollarSign, Link2, UserPlus } from "lucide-react"
 import { toast } from "sonner";
 
 export default function Referrals() {
-  const { data: referrals, isLoading } = trpc.referrals.myReferrals.useQuery();
-  const { data: affiliate } = trpc.affiliates.myProfile.useQuery();
-  const { data: commissions } = trpc.affiliates.commissions.useQuery();
-  const genCode = trpc.referrals.generateCode.useMutation();
-  const joinAffiliate = trpc.affiliates.join.useMutation();
+  const { data: referrals, isLoading } = trpc.referral.getHistory.useQuery();
+  const { data: affiliate } = trpc.affiliate.getStatus.useQuery();
+  const { data: affiliateStats } = trpc.affiliate.getStats.useQuery();
+  const genCode = trpc.referral.generateCode.useMutation();
+  const joinAffiliate = trpc.affiliate.submitApplication.useMutation();
   const utils = trpc.useUtils();
 
   const handleGenCode = async () => {
     try {
       await genCode.mutateAsync();
       toast.success("Referral code generated");
-      utils.referrals.myReferrals.invalidate();
+      utils.referral.getHistory.invalidate();
     } catch (e: any) { toast.error(e.message || "Failed"); }
   };
 
   const handleJoinAffiliate = async () => {
     try {
-      await joinAffiliate.mutateAsync();
+      await joinAffiliate.mutateAsync({});
       toast.success("Joined affiliate program");
-      utils.affiliates.myProfile.invalidate();
+      utils.affiliate.getStatus.invalidate();
     } catch (e: any) { toast.error(e.message || "Failed"); }
   };
 
@@ -34,6 +34,8 @@ export default function Referrals() {
     navigator.clipboard.writeText(code);
     toast.success("Copied to clipboard");
   };
+
+  const commissions = affiliateStats?.commissions;
 
   return (
     <div className="space-y-6">

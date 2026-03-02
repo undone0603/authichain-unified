@@ -157,7 +157,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("returns invalid for non-existent referral code", async () => {
       const ctx = createPublicContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.referrals.validate({ code: "FAKE-CODE-123" });
+      const result = await caller.referral.validate({ code: "FAKE-CODE-123" });
       expect(result.valid).toBe(false);
     });
   });
@@ -208,7 +208,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("referrals.myReferrals throws UNAUTHORIZED for unauthenticated", async () => {
       const ctx = createPublicContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.referrals.myReferrals()).rejects.toThrow();
+      await expect(caller.referral.getHistory()).rejects.toThrow();
     });
   });
 
@@ -274,14 +274,14 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("referrals.myReferrals returns array", async () => {
       const ctx = createAuthContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.referrals.myReferrals();
+      const result = await caller.referral.getHistory();
       expect(Array.isArray(result)).toBe(true);
     });
 
     it("affiliates.myProfile returns null or profile", async () => {
       const ctx = createAuthContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.affiliates.myProfile();
+      const result = await caller.affiliate.getStatus();
       expect(result === null || result === undefined || typeof result === "object").toBe(true);
     });
 

@@ -11,4 +11,7 @@ export const ENV = {
   thirdwebSecretKey: process.env.thirdweb_api_key ?? "",
   hubspotServiceKey: process.env.HUBSPOT_SERVICE_KEY ?? "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
+  sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
+  paddleApiKey: process.env.PADDLE_API_KEY ?? "",
+  paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
 };
