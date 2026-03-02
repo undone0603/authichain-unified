@@ -54,6 +54,7 @@ const adminMenuItems = [
   { icon: Rocket, label: "Grants & Partners", path: "/grants" },
   { icon: TrendingUp, label: "Growth Engine", path: "/growth" },
   { icon: Users, label: "Manage Users", path: "/admin/users" },
+  { icon: DollarSign, label: "CRM (HubSpot)", path: "/crm" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

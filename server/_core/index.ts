@@ -91,6 +91,16 @@ async function startServer() {
               "/subscriptions"
             );
           } catch (notifErr) { console.warn("[Notification] Failed to create:", notifErr); }
+          // Auto-sync payment to HubSpot
+          try {
+            const { syncPaymentToHubSpot } = await import("../hubspot-service");
+            await syncPaymentToHubSpot({
+              email: result.email || "",
+              name: result.customerName || undefined,
+              amount: 0, // Amount comes from Stripe, we just track the deal
+              plan: plan,
+            });
+          } catch (hsErr) { console.warn("[HubSpot] Payment sync failed:", hsErr); }
         }
       }
 

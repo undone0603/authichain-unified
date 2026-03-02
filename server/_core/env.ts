@@ -9,4 +9,6 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   thirdwebClientId: process.env.VITE_THIRDWEB_CLIENT_ID ?? "",
   thirdwebSecretKey: process.env.thirdweb_api_key ?? "",
+  hubspotServiceKey: process.env.HUBSPOT_SERVICE_KEY ?? "",
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
 };

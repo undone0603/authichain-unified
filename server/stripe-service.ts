@@ -212,6 +212,8 @@ export interface WebhookResult {
   plan?: string;
   subscriptionId?: string;
   customerId?: string;
+  email?: string;
+  customerName?: string;
 }
 
 export async function processWebhookEvent(event: Stripe.Event): Promise<WebhookResult> {
@@ -227,6 +229,8 @@ export async function processWebhookEvent(event: Stripe.Event): Promise<WebhookR
       result.plan = session.metadata?.plan;
       result.subscriptionId = session.subscription as string;
       result.customerId = session.customer as string;
+      result.email = session.customer_email || session.metadata?.customer_email || undefined;
+      result.customerName = session.metadata?.customer_name || undefined;
       result.handled = true;
       break;
     }

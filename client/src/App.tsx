@@ -29,6 +29,7 @@ const GrantHub = lazy(() => import("./pages/GrantHub"));
 const GrowthEngine = lazy(() => import("./pages/GrowthEngine"));
 const Blockchain = lazy(() => import("./pages/Blockchain"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const CRM = lazy(() => import("./pages/CRM"));
 
 function PageLoader() {
   return (
@@ -60,6 +61,7 @@ function DashboardRoutes() {
           <Route path="/growth" component={GrowthEngine} />
           <Route path="/blockchain" component={Blockchain} />
           <Route path="/notifications" component={Notifications} />
+          <Route path="/crm" component={CRM} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>

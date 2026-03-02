@@ -97,7 +97,7 @@
 
 ## Connected Apps Integration
 - [x] Clean up temporary Stripe admin endpoints (moved to tRPC adminProcedure)
-- [ ] Integrate HubSpot CRM for lead management and sales pipeline (401 auth issue — needs re-authorization)
+- [x] Integrate HubSpot CRM for lead management and sales pipeline (HUBSPOT_SERVICE_KEY working, CRM dashboard, auto-sync leads/payments)
 - [ ] Integrate Gmail for automated email outreach (tools available, pending campaign setup)
 - [x] Integrate Google Calendar for scheduling demos and meetings (4 events created)
 - [ ] Integrate HeyGen for AI avatar video generation (connected, 15 credits available)

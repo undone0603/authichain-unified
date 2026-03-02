@@ -691,7 +691,13 @@ export const appRouter = router({
       source: z.string().optional(),
     })).mutation(async ({ input }) => {
       const { createLead } = await import("./db");
-      return await createLead(input);
+      const result = await createLead(input);
+      // Auto-sync to HubSpot
+      try {
+        const { syncLeadToHubSpot } = await import("./hubspot-service");
+        await syncLeadToHubSpot(input);
+      } catch (e) { /* HubSpot sync is best-effort */ }
+      return result;
     }),
     updateLeadScore: adminProcedure.input(z.object({ id: z.number(), score: z.number() })).mutation(async ({ input }) => {
       const { updateLeadScore } = await import("./db");
@@ -921,6 +927,79 @@ export const appRouter = router({
     })).mutation(async ({ ctx, input }) => {
       const { createNotification } = await import("./db");
       return await createNotification({ ...input, userId: ctx.user.id, isRead: 0 });
+    }),
+  }),
+
+  // ─── HubSpot CRM ──────────────────────────────────────────────────────
+  hubspot: router({
+    status: protectedProcedure.query(async () => {
+      const { isHubSpotConfigured, getCRMStats } = await import("./hubspot-service");
+      if (!isHubSpotConfigured()) return { connected: false, contacts: 0, companies: 0, deals: 0, error: "HUBSPOT_SERVICE_KEY is not configured. Add it in Settings → Secrets." };
+      return await getCRMStats();
+    }),
+    contacts: router({
+      list: protectedProcedure.query(async () => {
+        const { listContacts } = await import("./hubspot-service");
+        return await listContacts();
+      }),
+      search: protectedProcedure.input(z.object({ query: z.string() })).query(async ({ input }) => {
+        const { searchContacts } = await import("./hubspot-service");
+        return await searchContacts(input.query);
+      }),
+      create: protectedProcedure.input(z.object({
+        email: z.string().email(),
+        firstname: z.string().optional(),
+        lastname: z.string().optional(),
+        phone: z.string().optional(),
+        company: z.string().optional(),
+      })).mutation(async ({ input }) => {
+        const { createContact } = await import("./hubspot-service");
+        return await createContact(input);
+      }),
+    }),
+    companies: router({
+      list: protectedProcedure.query(async () => {
+        const { listCompanies } = await import("./hubspot-service");
+        return await listCompanies();
+      }),
+      create: protectedProcedure.input(z.object({
+        name: z.string(),
+        domain: z.string().optional(),
+        industry: z.string().optional(),
+        description: z.string().optional(),
+      })).mutation(async ({ input }) => {
+        const { createCompany } = await import("./hubspot-service");
+        return await createCompany(input);
+      }),
+    }),
+    deals: router({
+      list: protectedProcedure.query(async () => {
+        const { listDeals } = await import("./hubspot-service");
+        return await listDeals();
+      }),
+      create: protectedProcedure.input(z.object({
+        dealname: z.string(),
+        amount: z.string().optional(),
+        pipeline: z.string().optional(),
+        dealstage: z.string().optional(),
+        closedate: z.string().optional(),
+      })).mutation(async ({ input }) => {
+        const { createDeal } = await import("./hubspot-service");
+        return await createDeal(input);
+      }),
+    }),
+  }),
+
+  // ─── AI Chat ───────────────────────────────────────────────────────────
+  ai: router({
+    chat: protectedProcedure.input(z.object({
+      messages: z.array(z.object({ role: z.enum(["user", "assistant", "system"]), content: z.string() })),
+    })).mutation(async ({ input }) => {
+      const { invokeLLM } = await import("./_core/llm");
+      const systemPrompt = "You are AuthiChain AI, an expert assistant for product authentication, blockchain verification, supply chain management, and anti-counterfeiting. Help users understand authentication results, manage their products, and optimize their supply chain security.";
+      const messages = [{ role: "system" as const, content: systemPrompt }, ...input.messages];
+      const response = await invokeLLM({ messages });
+      return { content: response.choices?.[0]?.message?.content || "I apologize, I could not generate a response." };
     }),
   }),
 });
