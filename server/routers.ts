@@ -265,7 +265,8 @@ export const appRouter = router({
   subscription: router({
     current: protectedProcedure.query(async ({ ctx }) => {
       const { getUserSubscription } = await import("./db");
-      return await getUserSubscription(ctx.user.id);
+      const sub = await getUserSubscription(ctx.user.id);
+      return sub ?? null;
     }),
     create: protectedProcedure.input(z.object({
       plan: z.enum(["starter", "professional", "enterprise"]),
@@ -291,6 +292,41 @@ export const appRouter = router({
       const sub = await getUserSubscription(ctx.user.id);
       if (!sub) return { plan: null, used: 0, limit: 0, percentage: 0 };
       return { plan: sub.plan, used: sub.usedQuota || 0, limit: sub.monthlyQuota, percentage: Math.round(((sub.usedQuota || 0) / sub.monthlyQuota) * 100) };
+    }),
+    checkout: protectedProcedure.input(z.object({
+      plan: z.enum(["starter", "professional", "enterprise"]),
+      billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
+      origin: z.string(),
+    })).mutation(async ({ ctx, input }) => {
+      const { createSubscriptionCheckout } = await import("./stripe-service");
+      const url = await createSubscriptionCheckout({
+        userId: ctx.user.id,
+        userEmail: ctx.user.email || "",
+        userName: ctx.user.name || "",
+        plan: input.plan,
+        billing: input.billing,
+        origin: input.origin,
+        stripeCustomerId: (ctx.user as any).stripeCustomerId || undefined,
+      });
+      return { checkoutUrl: url };
+    }),
+    cancel: protectedProcedure.mutation(async ({ ctx }) => {
+      const { getUserSubscription } = await import("./db");
+      const sub = await getUserSubscription(ctx.user.id);
+      if (!sub?.stripeSubscriptionId) throw new TRPCError({ code: "NOT_FOUND", message: "No active Stripe subscription" });
+      const { cancelSubscription } = await import("./stripe-service");
+      await cancelSubscription(sub.stripeSubscriptionId);
+      return { success: true, message: "Subscription will cancel at end of billing period" };
+    }),
+    paymentHistory: protectedProcedure.query(async ({ ctx }) => {
+      const stripeCustomerId = (ctx.user as any).stripeCustomerId;
+      if (!stripeCustomerId) return { payments: [], invoices: [] };
+      const { getCustomerPayments, getCustomerInvoices } = await import("./stripe-service");
+      const [payments, invoices] = await Promise.all([
+        getCustomerPayments(stripeCustomerId).catch(() => []),
+        getCustomerInvoices(stripeCustomerId).catch(() => []),
+      ]);
+      return { payments, invoices };
     }),
   }),
 
@@ -797,6 +833,16 @@ export const appRouter = router({
       const { getWalletNFTs } = await import("./thirdweb");
       const nfts = await getWalletNFTs(input.contractAddress, input.walletAddress, input.chainId);
       return { nfts };
+    }),
+    deployedContract: publicProcedure.query(() => {
+      const address = process.env.VITE_AUTHICHAIN_CONTRACT_ADDRESS || "";
+      return {
+        address,
+        chainId: 80002,
+        chain: "Polygon Amoy",
+        explorer: address ? `https://amoy.polygonscan.com/address/${address}` : "",
+        deployed: !!address,
+      };
     }),
   }),
 

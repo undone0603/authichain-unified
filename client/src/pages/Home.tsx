@@ -6,6 +6,7 @@ import {
   BarChart3, Bot, Gem, QrCode, Truck, Mail,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useEffect } from "react";
 
 const features = [
   { icon: Shield, title: "AI Authentication", desc: "Blockchain-verified product authentication with AI-powered image analysis and confidence scoring" },
@@ -29,6 +30,10 @@ const stats = [
 export default function Home() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    document.title = "AuthiChain – Blockchain Product Authentication Platform";
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

@@ -80,3 +80,22 @@
 - [x] Add wallet connection to user profile/dashboard
 - [x] Update certificate generation with on-chain verification
 - [x] Write Thirdweb integration tests (41 tests passing)
+
+## Phase 4: Deploy, Stripe, and Grant Submission
+- [ ] Deploy AuthiChainNFT smart contract to Polygon Amoy testnet
+- [ ] Configure contract address in platform
+- [ ] Connect Stripe for subscription billing ($49/$199/$799 tiers)
+- [ ] Build Stripe webhook handler for subscription lifecycle
+- [ ] Prepare DHS SVIP grant application materials
+- [ ] Submit grant application
+- [ ] End-to-end testing of all integrations
+
+## Stripe Payment Testing
+- [ ] Test Stripe checkout flow on live deployed site with promo code MANUS100OFFEfh
+- [ ] Verify webhook handling for successful payment
+- [ ] Fix any issues found during payment testing
+
+## SEO Fixes
+- [x] Fix homepage title to 30-60 characters (57 chars)
+- [x] Add meta description (140 characters)
+- [x] Add keywords meta tag (10 keywords)

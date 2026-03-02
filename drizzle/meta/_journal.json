@@ -15,6 +15,13 @@
       "when": 1772150780756,
       "tag": "0001_windy_red_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1772407033155,
+      "tag": "0002_motionless_jack_flag",
+      "breakpoints": true
     }
   ]
 }

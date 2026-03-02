@@ -14,6 +14,7 @@ export const users = mysqlTable("users", {
   title: varchar("title", { length: 256 }),
   phone: varchar("phone", { length: 32 }),
   onboardingCompleted: int("onboardingCompleted").default(0),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

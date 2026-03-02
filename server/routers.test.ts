@@ -312,6 +312,23 @@ describe("AuthiChain Unified Platform Routers", () => {
         expect(e.message).not.toContain("login");
       }
     });
+
+    it("blockchain.deployedContract returns contract address from env", async () => {
+      const ctx = createPublicContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.blockchain.deployedContract();
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty("address");
+      expect(result).toHaveProperty("chainId", 80002);
+      expect(result).toHaveProperty("chain", "Polygon Amoy");
+      expect(result).toHaveProperty("deployed");
+      // Verify the contract address is set from VITE_AUTHICHAIN_CONTRACT_ADDRESS env
+      if (process.env.VITE_AUTHICHAIN_CONTRACT_ADDRESS) {
+        expect(result.address).toBe(process.env.VITE_AUTHICHAIN_CONTRACT_ADDRESS);
+        expect(result.deployed).toBe(true);
+        expect(result.explorer).toContain("amoy.polygonscan.com");
+      }
+    });
   });
 
   describe("admin operations with admin role", () => {
