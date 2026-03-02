@@ -28,7 +28,7 @@ export interface PaddleCustomerInput {
 export async function upsertPaddleCustomer(input: PaddleCustomerInput): Promise<string> {
   const paddle = await getPaddle();
   const customers = await paddle.customers.list({ email: [input.email] });
-  const existing = customers.data?.[0];
+  const existing = (customers as any).data?.[0];
   if (existing) return existing.id;
   const customer = await paddle.customers.create({
     email: input.email,
@@ -50,7 +50,7 @@ export async function createPaddleTransaction(input: PaddleTransactionInput): Pr
   const transaction = await paddle.transactions.create({
     items: [{ priceId: input.priceId, quantity: 1 }],
     customerId: input.customerId,
-    checkoutUrl: input.successUrl,
+    checkout: { url: input.successUrl },
   });
   return (transaction as any).checkout?.url || "";
 }
