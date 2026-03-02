@@ -99,3 +99,14 @@
 - [x] Fix homepage title to 30-60 characters (57 chars)
 - [x] Add meta description (140 characters)
 - [x] Add keywords meta tag (10 keywords)
+
+## Custom Notification System
+- [ ] Add notifications table to database schema
+- [ ] Create notification DB helpers (create, list, markRead, markAllRead, delete)
+- [ ] Add notification tRPC router with CRUD endpoints
+- [ ] Build NotificationBell component with unread count badge
+- [ ] Build NotificationDropdown with recent notifications
+- [ ] Build full Notifications page with filtering and management
+- [ ] Integrate notifications into DashboardLayout header
+- [ ] Add auto-notifications for key events (auth, payments, subscriptions)
+- [ ] Write notification tests
