@@ -119,3 +119,8 @@
 - [x] Integrate notifications into DashboardLayout header
 - [x] Add auto-notifications for key events (auth, payments, subscriptions)
 - [x] Write notification tests (11 tests passing)
+
+## HubSpot Expanded Scopes
+- [x] Verify newly scoped HUBSPOT_SERVICE_KEY works for contacts, companies, and deals (7 contacts, 8 companies, 4 deals)
+- [x] Seed initial partnership companies and deals into HubSpot CRM (LVMH, Pfizer, Walmart, Sotheby's + 4 deals)
+- [x] Verify CRM dashboard shows all three tabs with live data
