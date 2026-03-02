@@ -112,6 +112,50 @@ async function startServer() {
     }
   });
 
+  // ─── Temporary Admin Utilities ─────────────────
+  app.get("/api/admin/stripe-mode", async (_req, res) => {
+    const key = process.env.STRIPE_SECRET_KEY || "";
+    res.json({ mode: key.startsWith("sk_live_") ? "live" : key.startsWith("sk_test_") ? "test" : "unknown", keyPrefix: key.slice(0, 12) });
+  });
+
+  app.get("/api/admin/list-promos", async (_req, res) => {
+    try {
+      const secretKey = process.env.STRIPE_SECRET_KEY;
+      if (!secretKey) return res.status(500).json({ error: "No key" });
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(secretKey);
+      const promos = await stripe.promotionCodes.list({ limit: 10, active: true });
+      // Return raw data for debugging
+      res.json(promos.data.map((p: any) => JSON.parse(JSON.stringify(p))));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/create-promo", express.json(), async (req, res) => {
+    try {
+      const { code, percentOff = 99 } = req.body;
+      if (!code) return res.status(400).json({ error: "code is required" });
+      const secretKey = process.env.STRIPE_SECRET_KEY;
+      if (!secretKey) return res.status(500).json({ error: "STRIPE_SECRET_KEY not configured" });
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(secretKey);
+      const coupon = await stripe.coupons.create({
+        percent_off: percentOff,
+        duration: "forever",
+        name: `AuthiChain ${percentOff}% Off`,
+      });
+      const promo = await stripe.promotionCodes.create({
+        promotion: { type: 'coupon' as const, coupon: coupon.id },
+        code,
+        active: true,
+      });
+      res.json({ success: true, code: promo.code, id: promo.id, percentOff });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

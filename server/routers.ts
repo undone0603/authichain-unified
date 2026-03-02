@@ -328,6 +328,25 @@ export const appRouter = router({
       ]);
       return { payments, invoices };
     }),
+    createPromoCode: adminProcedure.input(z.object({
+      code: z.string().min(1),
+      percentOff: z.number().min(1).max(100).default(99),
+      name: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const Stripe = (await import("stripe")).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+      const coupon = await stripe.coupons.create({
+        percent_off: input.percentOff,
+        duration: "forever",
+        name: input.name || `AuthiChain ${input.percentOff}% Off`,
+      });
+      const promo = await stripe.promotionCodes.create({
+        promotion: { type: 'coupon', coupon: coupon.id },
+        code: input.code,
+        active: true,
+      });
+      return { success: true, code: promo.code, id: promo.id, percentOff: input.percentOff };
+    }),
   }),
 
   // ─── Payments ────────────────────────────────────────────────────────────
