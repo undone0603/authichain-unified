@@ -1,5 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { type SQL } from "drizzle-orm";
 import {
   InsertUser, users, products, authentications, certificates, qrCodes,
   nftCollections, nfts, auctions, auctionBids, subscriptions, usageRecords,
@@ -7,11 +8,13 @@ import {
   referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions,
   abTests, whiteLabelClients, activityLog, fraudAlerts, customerHealthScores,
   revenueRecords, notifications,
+  bonuses, referralClicks, aiModels, modelPurchases, modelReviews,
   type Product, type InsertProduct, type InsertNotification,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
-let _db: ReturnType<typeof drizzle> | null = null;
+type DrizzleInstance = ReturnType<typeof drizzle>;
+let _db: DrizzleInstance | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -24,6 +27,14 @@ export async function getDb() {
   }
   return _db;
 }
+
+// Synchronous proxy for feature modules — throws if DB not initialised
+export const db: DrizzleInstance = new Proxy({} as DrizzleInstance, {
+  get(_target, prop: string | symbol) {
+    if (!_db) throw new Error("Database not available");
+    return Reflect.get(_db as object, prop as string);
+  },
+});
 
 // ─── User Helpers ────────────────────────────────────────────────────────────
 export async function upsertUser(user: InsertUser): Promise<void> {

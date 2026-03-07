@@ -4,6 +4,12 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { referralRouter } from "./referral/router";
+import { affiliateRouter } from "./affiliate/router";
+import { bonusesRouter } from "./bonuses/router";
+import { marketplaceRouter } from "./marketplace/router";
+import { emailDraftsRouter } from "./email-drafts/router";
+import { subscriptionsRouter } from "./subscriptions/router";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
@@ -1100,5 +1106,11 @@ export const appRouter = router({
       return { success: true, message: `Job ${input.jobName} triggered successfully` };
     }),
   }),
+
+  // ─── Modularized Routers (from dev branch) ──────────────────────────────
+  referral: referralRouter,
+  affiliate: affiliateRouter,
+  bonuses: bonusesRouter,
+  marketplace: marketplaceRouter,
 });
 export type AppRouter = typeof appRouter;

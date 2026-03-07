@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE `users` ADD COLUMN `paddleCustomerId` varchar(128) DEFAULT NULL;\nALTER TABLE `subscriptions` ADD COLUMN `paddleSubscriptionId` varchar(128) DEFAULT NULL;\nALTER TABLE `subscriptions` ADD COLUMN `paddleCustomerId` varchar(128) DEFAULT NULL;\nALTER TABLE `referrals` ADD COLUMN `referredEmail` varchar(320) DEFAULT NULL;\nALTER TABLE `referrals` ADD COLUMN `tier` enum('starter','professional','enterprise','agency') DEFAULT NULL;\nALTER TABLE `referrals` ADD COLUMN `commissionPaid` decimal(10,2) DEFAULT '0';\nALTER TABLE `affiliates` ADD COLUMN `affiliateTier` enum('basic','silver','gold','platinum') DEFAULT 'basic';\nALTER TABLE `affiliates` ADD COLUMN `activeReferrals` int DEFAULT 0;\nALTER TABLE `affiliates` ADD COLUMN `paypalEmail` varchar(320) DEFAULT NULL;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4XTCLw1moPXT7t4.50501b56cddc --database gPea3UHeYTkK76mSwNBRp9 --execute \nALTER TABLE `users` ADD COLUMN `paddleCustomerId` varchar(128) DEFAULT NULL;\nALTER TABLE `subscriptions` ADD COLUMN `paddleSubscriptionId` varchar(128) DEFAULT NULL;\nALTER TABLE `subscriptions` ADD COLUMN `paddleCustomerId` varchar(128) DEFAULT NULL;\nALTER TABLE `referrals` ADD COLUMN `referredEmail` varchar(320) DEFAULT NULL;\nALTER TABLE `referrals` ADD COLUMN `tier` enum('starter','professional','enterprise','agency') DEFAULT NULL;\nALTER TABLE `referrals` ADD COLUMN `commissionPaid` decimal(10,2) DEFAULT '0';\nALTER TABLE `affiliates` ADD COLUMN `affiliateTier` enum('basic','silver','gold','platinum') DEFAULT 'basic';\nALTER TABLE `affiliates` ADD COLUMN `activeReferrals` int DEFAULT 0;\nALTER TABLE `affiliates` ADD COLUMN `paypalEmail` varchar(320) DEFAULT NULL;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1980
+}

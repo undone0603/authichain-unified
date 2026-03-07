@@ -169,3 +169,9 @@
 - [x] Reduce homepage keywords from 10 to 6 focused keywords (removed AI image analysis, QR code verification, enterprise authentication, counterfeit detection)
 - [x] Generate sitemap.xml with all public pages
 - [x] Update robots.txt to reference sitemap
+
+## GitHub Dev Branch Merge
+- [x] Merge user_github/dev branch (email/Paddle integration, package changes) into main
+- [x] Resolve any merge conflicts
+- [x] Verify all tests pass after merge (88 tests passing)
+- [x] Sync merged main back to GitHub
