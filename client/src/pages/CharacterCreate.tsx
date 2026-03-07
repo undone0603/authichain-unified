@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Shield, BookOpen, Eye, Compass, Scale, Check, Star, Zap, ChevronRight } from "lucide-react";
+import { Loader2, Sparkles, Shield, BookOpen, Eye, Compass, Scale, Check, Star, Zap, ChevronRight, ShoppingBag, Map } from "lucide-react";
 
 const ARCHETYPES = [
   { key: "guardian" as const, name: "Guardian", icon: Shield, color: "from-blue-500 to-blue-700", description: "Protects brand integrity and product authenticity", abilities: ["Verify", "Protect", "Alert"] },
@@ -14,6 +14,8 @@ const ARCHETYPES = [
   { key: "sentinel" as const, name: "Sentinel", icon: Eye, color: "from-red-500 to-red-700", description: "Monitors supply chain integrity in real-time", abilities: ["Monitor", "Detect", "Respond"] },
   { key: "scout" as const, name: "Scout", icon: Compass, color: "from-emerald-500 to-emerald-700", description: "Discovers counterfeits and maps threat networks", abilities: ["Scan", "Discover", "Map"] },
   { key: "arbiter" as const, name: "Arbiter", icon: Scale, color: "from-amber-500 to-amber-700", description: "Resolves disputes and renders consensus verdicts", abilities: ["Judge", "Resolve", "Settle"] },
+  { key: "merchant" as const, name: "Merchant", icon: ShoppingBag, color: "from-pink-500 to-pink-700", description: "Facilitates authentic commerce and value exchange", abilities: ["Trade", "Certify", "Price"] },
+  { key: "explorer" as const, name: "Explorer", icon: Map, color: "from-cyan-500 to-cyan-700", description: "Charts new authentication frontiers and protocols", abilities: ["Discover", "Pioneer", "Integrate"] },
 ];
 
 type Step = "archetype" | "context" | "generating" | "select" | "name" | "complete";
@@ -23,6 +25,8 @@ export default function CharacterCreate() {
   const [selectedArchetype, setSelectedArchetype] = useState<typeof ARCHETYPES[number] | null>(null);
   const [brand, setBrand] = useState("");
   const [object, setObject] = useState("");
+  const [colorway, setColorway] = useState("");
+  const [mood, setMood] = useState("");
   const [generationId, setGenerationId] = useState<number | null>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
   const [agentName, setAgentName] = useState("");
@@ -70,6 +74,8 @@ export default function CharacterCreate() {
       archetype: selectedArchetype.key,
       brand: brand || undefined,
       object: object || undefined,
+      colorway: colorway || undefined,
+      mood: mood || undefined,
     });
   };
 
@@ -128,7 +134,7 @@ export default function CharacterCreate() {
         {step === "archetype" && (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-center">Choose Your Agent Archetype</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {ARCHETYPES.map((arch) => {
                 const Icon = arch.icon;
                 const isSelected = selectedArchetype?.key === arch.key;
@@ -202,6 +208,26 @@ export default function CharacterCreate() {
                     className="bg-gray-800 border-gray-700 text-white"
                   />
                   <p className="text-xs text-gray-500 mt-1">The type of product being authenticated</p>
+                </div>
+                <div>
+                  <Label className="text-gray-300">Color Direction (optional)</Label>
+                  <Input
+                    value={colorway}
+                    onChange={(e) => setColorway(e.target.value)}
+                    placeholder="e.g., midnight blue and gold, crimson and silver"
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Custom color palette for your character</p>
+                </div>
+                <div>
+                  <Label className="text-gray-300">Mood (optional)</Label>
+                  <Input
+                    value={mood}
+                    onChange={(e) => setMood(e.target.value)}
+                    placeholder="e.g., fierce and commanding, calm and wise"
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">The personality and energy of your character</p>
                 </div>
               </CardContent>
             </Card>
@@ -288,13 +314,13 @@ export default function CharacterCreate() {
                         </div>
                         <div className="grid grid-cols-2 gap-1 text-xs">
                           {[
-                            { label: "Iconity", value: asset.scoreIconity },
-                            { label: "Trust", value: asset.scoreTrustClarity },
-                            { label: "Premium", value: asset.scorePremiumFeel },
-                            { label: "Silhouette", value: asset.scoreSilhouette },
-                            { label: "UI Compat", value: asset.scoreUiCompat },
-                            { label: "Mint Ready", value: asset.scoreMintReady },
-                            { label: "Protocol", value: asset.scoreProtocolAlign },
+                            { label: "Protocol Fit", value: asset.protocolFitScore ? parseFloat(asset.protocolFitScore) * 10 : asset.scoreIconity },
+                            { label: "Thumbnail", value: asset.thumbnailClarityScore ? parseFloat(asset.thumbnailClarityScore) * 10 : asset.scoreTrustClarity },
+                            { label: "Premium", value: asset.premiumFeelScore ? parseFloat(asset.premiumFeelScore) * 10 : asset.scorePremiumFeel },
+                            { label: "Silhouette", value: asset.silhouetteScore ? parseFloat(asset.silhouetteScore) * 10 : asset.scoreSilhouette },
+                            { label: "Trust", value: asset.trustSymbolismScore ? parseFloat(asset.trustSymbolismScore) * 10 : asset.scoreUiCompat },
+                            { label: "Mint Ready", value: asset.mintReadinessScore ? parseFloat(asset.mintReadinessScore) * 10 : asset.scoreMintReady },
+                            { label: "UI Compat", value: asset.uiCompatibilityScore ? parseFloat(asset.uiCompatibilityScore) * 10 : asset.scoreProtocolAlign },
                           ].map((s) => (
                             <div key={s.label} className="flex justify-between text-gray-400">
                               <span>{s.label}</span>

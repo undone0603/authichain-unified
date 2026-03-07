@@ -1010,12 +1010,14 @@ export const appRouter = router({
   // ─── AuthiCharacter System ──────────────────────────────────────────
   character: router({
     generate: protectedProcedure.input(z.object({
-      archetype: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter"]),
+      archetype: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
       brand: z.string().optional(),
       object: z.string().optional(),
+      colorway: z.string().optional(),
+      mood: z.string().optional(),
     })).mutation(async ({ ctx, input }) => {
       const { startCharacterGeneration } = await import("./character-service");
-      return await startCharacterGeneration(ctx.user.id, input.archetype, { brand: input.brand, object: input.object });
+      return await startCharacterGeneration(ctx.user.id, input.archetype, { brand: input.brand, object: input.object, colorway: input.colorway, mood: input.mood });
     }),
     generationStatus: protectedProcedure.input(z.object({ generationId: z.number() })).query(async ({ input }) => {
       const { getGenerationStatus } = await import("./character-service");
@@ -1036,7 +1038,7 @@ export const appRouter = router({
     createAgent: protectedProcedure.input(z.object({
       characterAssetId: z.number(),
       name: z.string().min(2).max(64),
-      agentType: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter"]),
+      agentType: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
     })).mutation(async ({ ctx, input }) => {
       const { createProtocolAgent } = await import("./character-service");
       return await createProtocolAgent(ctx.user.id, input.characterAssetId, input.name, input.agentType);
@@ -1056,6 +1058,10 @@ export const appRouter = router({
     networkStats: publicProcedure.query(async () => {
       const { getNetworkStats } = await import("./character-service");
       return await getNetworkStats();
+    }),
+    mintPrep: protectedProcedure.input(z.object({ assetId: z.number() })).mutation(async ({ ctx, input }) => {
+      const { prepareMint } = await import("./character-service");
+      return await prepareMint(ctx.user.id, input.assetId);
     }),
     submitClaim: protectedProcedure.input(z.object({
       agentId: z.number(),

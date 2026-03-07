@@ -1,9 +1,10 @@
 /**
- * AuthiCharacter Generation Service
+ * AuthiCharacter Generation Service — OpenArt Protocol Edition
  * 
- * Handles: AI character generation, multi-dimensional scoring,
- * mint-prep pipeline, agent creation, QRON reward distribution,
- * and consensus verification.
+ * Integrates: Protocol-grade prompt builder (7 archetypes),
+ * 7-dimension scoring (protocol_fit, thumbnail_clarity, premium_feel,
+ * silhouette, trust_symbolism, mint_readiness, ui_compatibility),
+ * mint-prep pipeline, agent creation, QRON reward distribution.
  */
 import { getDb } from "./db";
 import {
@@ -19,85 +20,177 @@ import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
 import crypto from "crypto";
 
-// ─── Archetype Definitions ──────────────────────────────────────────────────
+// ─── Archetype Definitions (7 archetypes from OpenArt protocol) ────────────
 const ARCHETYPES = {
   guardian: {
     name: "Guardian",
     description: "Protects brand integrity and product authenticity",
-    promptStyle: "noble shield-bearing protector with glowing verification sigils, armored in crystalline blockchain plates",
     color: "#3B82F6",
     baseXP: 100,
     featureScopes: ["verify", "protect", "alert"],
+    visual: {
+      role: "shield-bearing protector",
+      armor: "crystalline blockchain plates with glowing verification sigils",
+      weapon: "luminous shield projecting holographic authenticity seals",
+      aura: "steady blue-gold radiance of unwavering trust",
+      environment: "fortified gateway between physical and digital realms",
+    },
   },
   archivist: {
     name: "Archivist",
     description: "Records and preserves provenance data on-chain",
-    promptStyle: "ancient scholar with floating holographic scrolls, robed in data-stream fabric with golden chain links",
     color: "#8B5CF6",
     baseXP: 80,
     featureScopes: ["record", "archive", "query"],
+    visual: {
+      role: "ancient scholar of digital provenance",
+      armor: "robes woven from data-stream fabric with golden chain links",
+      weapon: "floating holographic scrolls containing immutable records",
+      aura: "soft violet glow of accumulated knowledge",
+      environment: "vast library of crystallized blockchain ledgers",
+    },
   },
   sentinel: {
     name: "Sentinel",
     description: "Monitors supply chain integrity in real-time",
-    promptStyle: "vigilant watchtower entity with radar-like scanning eyes, armored in sensor-mesh with pulsing IoT nodes",
     color: "#EF4444",
     baseXP: 120,
     featureScopes: ["monitor", "detect", "respond"],
+    visual: {
+      role: "vigilant watchtower entity",
+      armor: "sensor-mesh plating with pulsing IoT nodes",
+      weapon: "radar-like scanning eyes that pierce deception",
+      aura: "crimson alert pulses radiating outward",
+      environment: "elevated observation post overlooking global supply networks",
+    },
   },
   scout: {
     name: "Scout",
     description: "Discovers counterfeits and maps threat networks",
-    promptStyle: "agile reconnaissance figure with magnifying lens eye, cloaked in stealth-mesh with network mapping trails",
     color: "#10B981",
     baseXP: 90,
     featureScopes: ["scan", "discover", "map"],
+    visual: {
+      role: "agile reconnaissance operative",
+      armor: "stealth-mesh cloak with network mapping trails",
+      weapon: "magnifying lens eye revealing hidden patterns",
+      aura: "emerald traces of discovered connections",
+      environment: "shadowy marketplace where fakes hide among genuine goods",
+    },
   },
   arbiter: {
     name: "Arbiter",
     description: "Resolves disputes and renders consensus verdicts",
-    promptStyle: "judicial figure with balanced scales of verification, robed in consensus-weave with gavel of finality",
     color: "#F59E0B",
     baseXP: 150,
     featureScopes: ["judge", "resolve", "settle"],
+    visual: {
+      role: "judicial figure of absolute fairness",
+      armor: "consensus-weave robes with embedded voting nodes",
+      weapon: "balanced scales of verification and gavel of finality",
+      aura: "golden symmetry of impartial judgment",
+      environment: "grand tribunal hall where truth is determined by consensus",
+    },
+  },
+  merchant: {
+    name: "Merchant",
+    description: "Facilitates authentic commerce and value exchange",
+    color: "#EC4899",
+    baseXP: 110,
+    featureScopes: ["trade", "certify", "price"],
+    visual: {
+      role: "master trader of verified goods",
+      armor: "merchant vestments threaded with smart-contract filigree",
+      weapon: "authentication stamp that brands genuine articles",
+      aura: "warm rose-gold shimmer of trusted commerce",
+      environment: "bustling digital bazaar where every item bears proof of origin",
+    },
+  },
+  explorer: {
+    name: "Explorer",
+    description: "Charts new authentication frontiers and protocols",
+    color: "#06B6D4",
+    baseXP: 95,
+    featureScopes: ["discover", "pioneer", "integrate"],
+    visual: {
+      role: "frontier pathfinder of new verification domains",
+      armor: "adaptive exploration suit with multi-protocol interfaces",
+      weapon: "compass that points toward undiscovered authentication methods",
+      aura: "cyan trails of newly charted protocol paths",
+      environment: "edge of the known verification network, peering into unexplored chains",
+    },
   },
 } as const;
 
 export type ArchetypeKey = keyof typeof ARCHETYPES;
 
-// ─── Prompt Builder ─────────────────────────────────────────────────────────
-function buildCharacterPrompt(archetype: ArchetypeKey, context?: { brand?: string; object?: string }): string {
+// ─── Protocol-Grade Prompt Builder (from OpenArt spec) ─────────────────────
+function buildCharacterPrompt(
+  archetype: ArchetypeKey,
+  context?: { brand?: string; object?: string; colorway?: string; mood?: string }
+): { prompt: string; negativePrompt: string } {
   const arch = ARCHETYPES[archetype];
-  const brandContext = context?.brand ? `, representing the brand "${context.brand}"` : "";
-  const objectContext = context?.object ? `, guarding a ${context.object}` : "";
+  const v = arch.visual;
 
-  return `Create a protocol-grade digital character avatar for a blockchain authentication platform. 
-Style: Protocol-heraldic, premium digital art, clean vector-style with subtle gradients.
-Character: ${arch.promptStyle}${brandContext}${objectContext}.
-The character should embody trust, verification, and digital authority.
-Background: Abstract blockchain network pattern with subtle glow effects.
-Color palette: Primary ${arch.color}, with metallic accents and deep navy/charcoal background.
-Aspect ratio: Square (1:1), suitable for NFT minting and UI avatar use.
-No text, no watermarks, no borders. High detail, professional quality.`;
+  const brandLine = context?.brand
+    ? `\nBrand affiliation: "${context.brand}" — incorporate subtle brand-aligned elements.`
+    : "";
+  const objectLine = context?.object
+    ? `\nGuarding/representing: ${context.object}.`
+    : "";
+  const colorLine = context?.colorway
+    ? `\nColor direction: ${context.colorway}.`
+    : `\nPrimary color: ${arch.color}, with metallic accents and deep navy/charcoal background.`;
+  const moodLine = context?.mood
+    ? `\nMood: ${context.mood}.`
+    : "\nMood: authoritative yet approachable, premium yet accessible.";
+
+  const prompt = `Premium futuristic heraldic concept art of a protocol-grade digital character.
+
+ROLE: ${v.role}
+ARMOR/ATTIRE: ${v.armor}
+SIGNATURE ELEMENT: ${v.weapon}
+AURA: ${v.aura}
+SETTING: ${v.environment}
+${brandLine}${objectLine}${colorLine}${moodLine}
+
+STYLE REQUIREMENTS:
+- Clean vector-inspired digital art with subtle gradients
+- Protocol-heraldic aesthetic: blockchain motifs, verification symbols, trust iconography
+- Suitable for NFT minting: no text, no watermarks, no borders
+- Square 1:1 aspect ratio, high detail, professional quality
+- Character should embody trust, verification, and digital authority
+- Background: abstract blockchain network pattern with subtle glow effects`;
+
+  const negativePrompt = `text, watermark, signature, logo, border, frame, low quality, blurry, 
+deformed, ugly, amateur, cartoon, anime, chibi, pixel art, voxel, 
+photorealistic human face, photograph, stock photo, clip art,
+violent, gore, nsfw, offensive symbols, real brand logos`;
+
+  return { prompt, negativePrompt };
 }
 
 // ─── Character Generation ───────────────────────────────────────────────────
 export async function startCharacterGeneration(
   userId: number,
   archetype: ArchetypeKey,
-  context?: { brand?: string; object?: string }
+  context?: { brand?: string; object?: string; colorway?: string; mood?: string }
 ): Promise<{ generationId: number; prompt: string }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const prompt = buildCharacterPrompt(archetype, context);
+  const { prompt, negativePrompt } = buildCharacterPrompt(archetype, context);
 
   const [result] = await db.insert(characterGenerations).values({
     userId,
     archetype,
-    style: "protocol-heraldic",
+    style: "premium futuristic heraldic concept art",
+    colorway: context?.colorway || null,
+    mood: context?.mood || null,
     prompt,
-    model: "image-gen-v1",
+    negativePrompt,
+    provider: "built-in",
+    providerModel: "image-gen-v1",
     variantCount: 4,
     status: "pending",
     context: context ? JSON.stringify(context) : null,
@@ -106,14 +199,16 @@ export async function startCharacterGeneration(
   const generationId = result.insertId;
 
   // Start async generation (don't await - return immediately)
-  generateVariants(generationId, prompt, archetype).catch(err => {
+  generateVariants(generationId, prompt, archetype, userId).catch(err => {
     console.error(`[CharacterGen] Generation ${generationId} failed:`, err);
   });
 
   return { generationId, prompt };
 }
 
-async function generateVariants(generationId: number, prompt: string, archetype: ArchetypeKey): Promise<void> {
+async function generateVariants(
+  generationId: number, prompt: string, archetype: ArchetypeKey, userId: number
+): Promise<void> {
   const db = await getDb();
   if (!db) return;
 
@@ -121,21 +216,21 @@ async function generateVariants(generationId: number, prompt: string, archetype:
     .set({ status: "generating" })
     .where(eq(characterGenerations.id, generationId));
 
-  const variants: Array<{ imageUrl: string }> = [];
+  const variants: Array<{ imageUrl: string; variantPrompt: string }> = [];
 
-  // Generate 4 variants with slight prompt variations
+  // Generate 4 variants with slight prompt variations (OpenArt pattern)
   const variations = [
     prompt,
-    prompt + " Emphasize power and authority.",
-    prompt + " Emphasize elegance and precision.",
-    prompt + " Emphasize speed and agility.",
+    prompt + "\nEmphasis: power and authority, imposing presence.",
+    prompt + "\nEmphasis: elegance and precision, refined details.",
+    prompt + "\nEmphasis: dynamic energy and agility, motion lines.",
   ];
 
   for (const variantPrompt of variations) {
     try {
       const result = await generateImage({ prompt: variantPrompt });
       if (result.url) {
-        variants.push({ imageUrl: result.url });
+        variants.push({ imageUrl: result.url, variantPrompt });
       }
     } catch (err) {
       console.error(`[CharacterGen] Variant generation failed:`, err);
@@ -150,50 +245,77 @@ async function generateVariants(generationId: number, prompt: string, archetype:
   }
 
   // Insert assets and score them
+  let bestScore = -1;
+  let bestAssetId: number | null = null;
+
   for (const variant of variants) {
     const [assetResult] = await db.insert(characterAssets).values({
       generationId,
+      userId,
       imageUrl: variant.imageUrl,
+      prompt: variant.variantPrompt,
       mintStatus: "not_minted",
     });
 
-    // Score asynchronously
-    scoreCharacterAsset(assetResult.insertId, variant.imageUrl, archetype).catch(err => {
-      console.error(`[CharacterGen] Scoring failed for asset ${assetResult.insertId}:`, err);
-    });
+    const assetId = assetResult.insertId;
+
+    // Score and track best
+    try {
+      const score = await scoreCharacterAsset(assetId, variant.imageUrl, archetype);
+      if (score > bestScore) {
+        bestScore = score;
+        bestAssetId = assetId;
+      }
+    } catch (err) {
+      console.error(`[CharacterGen] Scoring failed for asset ${assetId}:`, err);
+    }
+  }
+
+  // Mark best asset as recommended
+  if (bestAssetId) {
+    await db.update(characterAssets)
+      .set({ isRecommended: 1 })
+      .where(eq(characterAssets.id, bestAssetId));
   }
 
   await db.update(characterGenerations)
-    .set({ status: "completed", completedAt: new Date() })
+    .set({
+      status: "completed",
+      completedAt: new Date(),
+      bestAssetId,
+    })
     .where(eq(characterGenerations.id, generationId));
 }
 
-// ─── Character Scoring ──────────────────────────────────────────────────────
-async function scoreCharacterAsset(assetId: number, imageUrl: string, archetype: ArchetypeKey): Promise<void> {
+// ─── 7-Dimension Character Scoring (OpenArt Protocol) ──────────────────────
+async function scoreCharacterAsset(
+  assetId: number, imageUrl: string, archetype: ArchetypeKey
+): Promise<number> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) return 0;
 
   try {
     const result = await invokeLLM({
       messages: [
         {
           role: "system",
-          content: `You are an expert digital art evaluator for a blockchain authentication protocol. 
-Score the character avatar image on these 7 dimensions (0-100 each):
-1. iconity - How iconic and memorable is the design?
-2. trust_clarity - Does it convey trust and verification authority?
-3. premium_feel - Does it feel premium and professional?
-4. silhouette - Is the silhouette distinctive and recognizable?
-5. ui_compat - Will it work well as a small avatar in UI?
-6. mint_ready - Is it suitable for NFT minting (clean, no artifacts)?
-7. protocol_align - Does it align with the "${archetype}" archetype role?
+          content: `You are an expert digital art evaluator for the AuthiChain protocol.
+Score the character avatar on these 7 dimensions (0.0 to 10.0 scale, one decimal):
 
-Return ONLY a JSON object with these exact keys and integer scores.`,
+1. protocol_fit — Does the character embody the "${archetype}" role within a blockchain authentication protocol?
+2. thumbnail_clarity — Is the character recognizable and impactful at 64×64 thumbnail size?
+3. premium_feel — Does the art feel premium, polished, and worth minting as an NFT?
+4. silhouette — Is the silhouette distinctive and instantly recognizable?
+5. trust_symbolism — Does the design incorporate trust, verification, and authority symbols?
+6. mint_readiness — Is the image clean (no artifacts, text, watermarks) and ready for on-chain minting?
+7. ui_compatibility — Will it work well as an avatar in dashboards, leaderboards, and mobile UI?
+
+Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`,
         },
         {
           role: "user",
           content: [
-            { type: "text", text: `Score this ${archetype} character avatar:` },
+            { type: "text", text: `Score this ${archetype} character avatar for the AuthiChain protocol:` },
             { type: "image_url", image_url: { url: imageUrl, detail: "high" } },
           ],
         },
@@ -206,15 +328,15 @@ Return ONLY a JSON object with these exact keys and integer scores.`,
           schema: {
             type: "object",
             properties: {
-              iconity: { type: "integer" },
-              trust_clarity: { type: "integer" },
-              premium_feel: { type: "integer" },
-              silhouette: { type: "integer" },
-              ui_compat: { type: "integer" },
-              mint_ready: { type: "integer" },
-              protocol_align: { type: "integer" },
+              protocol_fit: { type: "number" },
+              thumbnail_clarity: { type: "number" },
+              premium_feel: { type: "number" },
+              silhouette: { type: "number" },
+              trust_symbolism: { type: "number" },
+              mint_readiness: { type: "number" },
+              ui_compatibility: { type: "number" },
             },
-            required: ["iconity", "trust_clarity", "premium_feel", "silhouette", "ui_compat", "mint_ready", "protocol_align"],
+            required: ["protocol_fit", "thumbnail_clarity", "premium_feel", "silhouette", "trust_symbolism", "mint_readiness", "ui_compatibility"],
             additionalProperties: false,
           },
         },
@@ -225,41 +347,64 @@ Return ONLY a JSON object with these exact keys and integer scores.`,
     const scoreText = typeof content === "string" ? content : "";
     const scores = JSON.parse(scoreText);
 
-    const totalScore = Math.round(
-      (scores.iconity + scores.trust_clarity + scores.premium_feel +
-        scores.silhouette + scores.ui_compat + scores.mint_ready + scores.protocol_align) / 7
+    // Calculate weighted total (out of 10)
+    const totalScore = (
+      scores.protocol_fit * 0.20 +
+      scores.thumbnail_clarity * 0.15 +
+      scores.premium_feel * 0.20 +
+      scores.silhouette * 0.10 +
+      scores.trust_symbolism * 0.15 +
+      scores.mint_readiness * 0.10 +
+      scores.ui_compatibility * 0.10
     );
+
+    const roundedTotal = Math.round(totalScore * 100) / 100;
 
     await db.update(characterAssets)
       .set({
-        scoreIconity: scores.iconity,
-        scoreTrustClarity: scores.trust_clarity,
-        scorePremiumFeel: scores.premium_feel,
-        scoreSilhouette: scores.silhouette,
-        scoreUiCompat: scores.ui_compat,
-        scoreMintReady: scores.mint_ready,
-        scoreProtocolAlign: scores.protocol_align,
-        totalScore,
-        isRecommended: totalScore >= 75 ? 1 : 0,
+        protocolFitScore: String(scores.protocol_fit),
+        thumbnailClarityScore: String(scores.thumbnail_clarity),
+        premiumFeelScore: String(scores.premium_feel),
+        silhouetteScore: String(scores.silhouette),
+        trustSymbolismScore: String(scores.trust_symbolism),
+        mintReadinessScore: String(scores.mint_readiness),
+        uiCompatibilityScore: String(scores.ui_compatibility),
+        totalScore: String(roundedTotal),
+        // Also fill legacy integer scores (0-100 scale) for backward compat
+        scoreIconity: Math.round(scores.protocol_fit * 10),
+        scoreTrustClarity: Math.round(scores.trust_symbolism * 10),
+        scorePremiumFeel: Math.round(scores.premium_feel * 10),
+        scoreSilhouette: Math.round(scores.silhouette * 10),
+        scoreUiCompat: Math.round(scores.ui_compatibility * 10),
+        scoreMintReady: Math.round(scores.mint_readiness * 10),
+        scoreProtocolAlign: Math.round(scores.protocol_fit * 10),
       })
       .where(eq(characterAssets.id, assetId));
+
+    return roundedTotal;
   } catch (err) {
     console.error(`[CharacterGen] LLM scoring failed for asset ${assetId}:`, err);
     // Set default scores if LLM fails
-    const defaultScore = 70;
+    const defaultScore = "7.0";
     await db.update(characterAssets)
       .set({
-        scoreIconity: defaultScore, scoreTrustClarity: defaultScore,
-        scorePremiumFeel: defaultScore, scoreSilhouette: defaultScore,
-        scoreUiCompat: defaultScore, scoreMintReady: defaultScore,
-        scoreProtocolAlign: defaultScore, totalScore: defaultScore,
+        protocolFitScore: defaultScore, thumbnailClarityScore: defaultScore,
+        premiumFeelScore: defaultScore, silhouetteScore: defaultScore,
+        trustSymbolismScore: defaultScore, mintReadinessScore: defaultScore,
+        uiCompatibilityScore: defaultScore, totalScore: defaultScore,
+        scoreIconity: 70, scoreTrustClarity: 70, scorePremiumFeel: 70,
+        scoreSilhouette: 70, scoreUiCompat: 70, scoreMintReady: 70,
+        scoreProtocolAlign: 70,
       })
       .where(eq(characterAssets.id, assetId));
+    return 7.0;
   }
 }
 
-// ─── Character Selection & Mint Prep ────────────────────────────────────────
-export async function selectCharacterAsset(userId: number, assetId: number): Promise<{ success: boolean; metadataHash?: string }> {
+// ─── Character Selection (from uploaded select route) ──────────────────────
+export async function selectCharacterAsset(
+  userId: number, assetId: number
+): Promise<{ success: boolean; metadataHash?: string }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -272,7 +417,7 @@ export async function selectCharacterAsset(userId: number, assetId: number): Pro
 
   if (!asset) throw new Error("Asset not found or not owned by user");
 
-  // Deselect any previously selected assets for this user's generations
+  // Deselect ALL previously selected assets for this user (OpenArt pattern)
   const userGens = await db.select({ id: characterGenerations.id })
     .from(characterGenerations)
     .where(eq(characterGenerations.userId, userId));
@@ -283,20 +428,26 @@ export async function selectCharacterAsset(userId: number, assetId: number): Pro
       .where(eq(characterAssets.generationId, gen.id));
   }
 
-  // Build metadata for mint
+  // Build NFT metadata
+  const arch = ARCHETYPES[asset.character_generations.archetype as ArchetypeKey];
   const metadata = {
-    name: `AuthiCharacter #${assetId}`,
-    description: `Protocol ${asset.character_generations.archetype} agent for the AuthiChain verification network`,
+    name: `AuthiCharacter #${assetId} — ${arch?.name || asset.character_generations.archetype}`,
+    description: `Protocol ${asset.character_generations.archetype} agent for the AuthiChain verification network. ${arch?.description || ""}`,
     image: asset.character_assets.imageUrl,
+    external_url: "https://authichain-gpea3uhe.manus.space",
     attributes: [
-      { trait_type: "Archetype", value: asset.character_generations.archetype },
-      { trait_type: "Iconity", value: asset.character_assets.scoreIconity || 0 },
-      { trait_type: "Trust Clarity", value: asset.character_assets.scoreTrustClarity || 0 },
-      { trait_type: "Premium Feel", value: asset.character_assets.scorePremiumFeel || 0 },
-      { trait_type: "Total Score", value: asset.character_assets.totalScore || 0 },
+      { trait_type: "Archetype", value: arch?.name || asset.character_generations.archetype },
+      { trait_type: "Protocol Fit", value: parseFloat(asset.character_assets.protocolFitScore || "0"), display_type: "number" },
+      { trait_type: "Thumbnail Clarity", value: parseFloat(asset.character_assets.thumbnailClarityScore || "0"), display_type: "number" },
+      { trait_type: "Premium Feel", value: parseFloat(asset.character_assets.premiumFeelScore || "0"), display_type: "number" },
+      { trait_type: "Silhouette", value: parseFloat(asset.character_assets.silhouetteScore || "0"), display_type: "number" },
+      { trait_type: "Trust Symbolism", value: parseFloat(asset.character_assets.trustSymbolismScore || "0"), display_type: "number" },
+      { trait_type: "Mint Readiness", value: parseFloat(asset.character_assets.mintReadinessScore || "0"), display_type: "number" },
+      { trait_type: "UI Compatibility", value: parseFloat(asset.character_assets.uiCompatibilityScore || "0"), display_type: "number" },
+      { trait_type: "Total Score", value: parseFloat(asset.character_assets.totalScore || "0"), display_type: "number" },
     ],
     protocol: "AuthiChain",
-    version: "1.0",
+    version: "2.0",
   };
 
   const metadataJson = JSON.stringify(metadata);
@@ -310,6 +461,7 @@ export async function selectCharacterAsset(userId: number, assetId: number): Pro
     "application/json"
   );
 
+  // Mark selected
   await db.update(characterAssets)
     .set({
       isSelected: 1,
@@ -321,7 +473,60 @@ export async function selectCharacterAsset(userId: number, assetId: number): Pro
     })
     .where(eq(characterAssets.id, assetId));
 
+  // Update generation status
+  await db.update(characterGenerations)
+    .set({ status: "selected", selectedAssetId: assetId })
+    .where(eq(characterGenerations.id, asset.character_assets.generationId));
+
   return { success: true, metadataHash };
+}
+
+// ─── Mint Prep (from uploaded mint-prep route) ─────────────────────────────
+export async function prepareMint(userId: number, assetId: number): Promise<{
+  success: boolean;
+  metadataUri: string;
+  metadataHash: string;
+  imageHash: string;
+  imageUrl: string;
+}> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Verify ownership and selection
+  const [asset] = await db.select()
+    .from(characterAssets)
+    .innerJoin(characterGenerations, eq(characterAssets.generationId, characterGenerations.id))
+    .where(and(
+      eq(characterAssets.id, assetId),
+      eq(characterGenerations.userId, userId),
+      eq(characterAssets.isSelected, 1)
+    ))
+    .limit(1);
+
+  if (!asset) throw new Error("Asset not found, not owned, or not selected");
+
+  // Ensure metadata is ready
+  if (!asset.character_assets.metadataUri || !asset.character_assets.metadataHash) {
+    throw new Error("Asset metadata not prepared — select the asset first");
+  }
+
+  // Update mint status to queued
+  await db.update(characterAssets)
+    .set({ mintStatus: "queued" })
+    .where(eq(characterAssets.id, assetId));
+
+  // Update generation to mint_ready
+  await db.update(characterGenerations)
+    .set({ status: "mint_ready" })
+    .where(eq(characterGenerations.id, asset.character_assets.generationId));
+
+  return {
+    success: true,
+    metadataUri: asset.character_assets.metadataUri,
+    metadataHash: asset.character_assets.metadataHash,
+    imageHash: asset.character_assets.imageHash || "",
+    imageUrl: asset.character_assets.imageUrl,
+  };
 }
 
 // ─── Agent Creation ─────────────────────────────────────────────────────────
@@ -400,12 +605,10 @@ export async function getUserGenerations(userId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  const gens = await db.select()
+  return db.select()
     .from(characterGenerations)
     .where(eq(characterGenerations.userId, userId))
     .orderBy(desc(characterGenerations.createdAt));
-
-  return gens;
 }
 
 export async function getUserCharacterAssets(userId: number) {
@@ -444,7 +647,6 @@ export async function awardQRON(
     status: "pending",
   });
 
-  // Update agent's pending QRON
   await db.update(protocolAgents)
     .set({
       qronPending: sql`${protocolAgents.qronPending} + ${amount}`,
@@ -518,7 +720,6 @@ export async function submitVerificationClaim(
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Get agent's reputation weight
   const [agent] = await db.select()
     .from(protocolAgents)
     .where(eq(protocolAgents.id, agentId))
@@ -538,7 +739,6 @@ export async function submitVerificationClaim(
     status: "pending",
   });
 
-  // Update agent stats
   await db.update(protocolAgents)
     .set({
       totalClaims: sql`${protocolAgents.totalClaims} + 1`,
@@ -546,7 +746,6 @@ export async function submitVerificationClaim(
     })
     .where(eq(protocolAgents.id, agentId));
 
-  // Award QRON for verification
   await awardQRON(agentId, agent?.userId || 0, "0.50", "verification_reward", "claim", result.insertId);
 
   return { claimId: result.insertId };
@@ -559,7 +758,7 @@ export async function rewardAgentForVerification(userId: number, wasSuccessful: 
   const db = await getDb();
   if (!db) return;
   const [agent] = await db.select().from(protocolAgents).where(eq(protocolAgents.userId, userId)).limit(1);
-  if (!agent) return; // User has no agent yet
+  if (!agent) return;
 
   const xpReward = wasSuccessful ? 25 : 10;
   const qronReward = wasSuccessful ? "1.00" : "0.25";

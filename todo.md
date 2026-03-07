@@ -153,3 +153,14 @@
 - [x] Integrate agent XP rewards into product authentication flow (rewardAgentForVerification)
 - [ ] HeyGen explainer video (MCP has schema validation bug, script prepared for manual generation)
 - [x] Write AuthiCharacter tests (7 tests, 69 total passing)
+
+## OpenArt Character Generation Upgrade
+- [x] Integrate protocol-grade prompt builder (prompt.ts) with 7 archetypes (Guardian, Archivist, Sentinel, Scout, Arbiter, Merchant, Explorer)
+- [x] Integrate OpenArt API client pattern for image generation (using built-in generateImage)
+- [x] Add 7-dimension scoring system (protocol_fit, thumbnail_clarity, premium_feel, silhouette, trust_symbolism, mint_readiness, ui_compatibility)
+- [x] Update DB schema with new scoring columns and fields (tenantId, providerAssetId, previewUrl, 7 scoring dimensions, selectedAssetId, bestAssetId, etc.)
+- [x] Add select endpoint (deselect all, select one, update generation status)
+- [x] Add mint-prep endpoint (prepareMint: hash image, build metadata, update mintStatus)
+- [x] Update character tRPC router with new flows (7 archetypes, colorway, mood, mintPrep)
+- [x] Update CharacterCreate frontend with 7 archetypes, colorway/mood fields, 7-dim scoring display
+- [x] Write tests for new character generation flows (69 tests passing)
