@@ -117,6 +117,11 @@ export const appRouter = router({
           "/authenticate"
         );
       } catch (notifErr) { console.warn("[Notification] Failed:", notifErr); }
+      // Award XP to user's agent for verification
+      try {
+        const { rewardAgentForVerification } = await import("./character-service");
+        await rewardAgentForVerification(ctx.user.id, aiResult.result === "authentic");
+      } catch (agentErr) { console.warn("[Agent XP] No agent or error:", agentErr); }
       return aiResult;
     }),
     history: protectedProcedure.query(async ({ ctx }) => {
@@ -1000,6 +1005,71 @@ export const appRouter = router({
       const messages = [{ role: "system" as const, content: systemPrompt }, ...input.messages];
       const response = await invokeLLM({ messages });
       return { content: response.choices?.[0]?.message?.content || "I apologize, I could not generate a response." };
+    }),
+  }),
+  // ─── AuthiCharacter System ──────────────────────────────────────────
+  character: router({
+    generate: protectedProcedure.input(z.object({
+      archetype: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter"]),
+      brand: z.string().optional(),
+      object: z.string().optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const { startCharacterGeneration } = await import("./character-service");
+      return await startCharacterGeneration(ctx.user.id, input.archetype, { brand: input.brand, object: input.object });
+    }),
+    generationStatus: protectedProcedure.input(z.object({ generationId: z.number() })).query(async ({ input }) => {
+      const { getGenerationStatus } = await import("./character-service");
+      return await getGenerationStatus(input.generationId);
+    }),
+    myGenerations: protectedProcedure.query(async ({ ctx }) => {
+      const { getUserGenerations } = await import("./character-service");
+      return await getUserGenerations(ctx.user.id);
+    }),
+    myAssets: protectedProcedure.query(async ({ ctx }) => {
+      const { getUserCharacterAssets } = await import("./character-service");
+      return await getUserCharacterAssets(ctx.user.id);
+    }),
+    select: protectedProcedure.input(z.object({ assetId: z.number() })).mutation(async ({ ctx, input }) => {
+      const { selectCharacterAsset } = await import("./character-service");
+      return await selectCharacterAsset(ctx.user.id, input.assetId);
+    }),
+    createAgent: protectedProcedure.input(z.object({
+      characterAssetId: z.number(),
+      name: z.string().min(2).max(64),
+      agentType: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter"]),
+    })).mutation(async ({ ctx, input }) => {
+      const { createProtocolAgent } = await import("./character-service");
+      return await createProtocolAgent(ctx.user.id, input.characterAssetId, input.name, input.agentType);
+    }),
+    myAgent: protectedProcedure.query(async ({ ctx }) => {
+      const { getAgentByUser } = await import("./character-service");
+      return await getAgentByUser(ctx.user.id);
+    }),
+    agentRewards: protectedProcedure.input(z.object({ agentId: z.number() })).query(async ({ input }) => {
+      const { getAgentRewards } = await import("./character-service");
+      return await getAgentRewards(input.agentId);
+    }),
+    leaderboard: publicProcedure.input(z.object({ limit: z.number().optional().default(20) })).query(async ({ input }) => {
+      const { getAgentLeaderboard } = await import("./character-service");
+      return await getAgentLeaderboard(input.limit);
+    }),
+    networkStats: publicProcedure.query(async () => {
+      const { getNetworkStats } = await import("./character-service");
+      return await getNetworkStats();
+    }),
+    submitClaim: protectedProcedure.input(z.object({
+      agentId: z.number(),
+      productId: z.number(),
+      authenticationId: z.number().nullable().optional(),
+      claimType: z.enum(["authentic", "counterfeit", "inconclusive", "needs_review"]),
+      confidence: z.number().min(0).max(100),
+      reasoning: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { submitVerificationClaim } = await import("./character-service");
+      return await submitVerificationClaim(
+        input.agentId, input.productId, input.authenticationId ?? null,
+        input.claimType, input.confidence, undefined, input.reasoning
+      );
     }),
   }),
   // ─── Scheduled Jobs (Admin) ─────────────────────────────────────────

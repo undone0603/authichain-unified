@@ -523,3 +523,152 @@ export const scheduledJobRuns = mysqlTable("scheduled_job_runs", {
 
 export type ScheduledJobRun = typeof scheduledJobRuns.$inferSelect;
 export type InsertScheduledJobRun = typeof scheduledJobRuns.$inferInsert;
+
+// ─── Character Generations ──────────────────────────────────────────────────
+export const characterGenerations = mysqlTable("character_generations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  archetype: mysqlEnum("archetype", ["guardian", "archivist", "sentinel", "scout", "arbiter"]).notNull(),
+  style: varchar("style", { length: 128 }).default("protocol-heraldic"),
+  prompt: text("prompt").notNull(),
+  model: varchar("model", { length: 128 }),
+  variantCount: int("variantCount").default(4),
+  status: mysqlEnum("status", ["pending", "generating", "completed", "failed"]).default("pending"),
+  context: json("context"), // brand, object, tenant context
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+});
+
+export type CharacterGeneration = typeof characterGenerations.$inferSelect;
+export type InsertCharacterGeneration = typeof characterGenerations.$inferInsert;
+
+// ─── Character Assets ───────────────────────────────────────────────────────
+export const characterAssets = mysqlTable("character_assets", {
+  id: int("id").autoincrement().primaryKey(),
+  generationId: int("generationId").notNull(),
+  imageUrl: text("imageUrl").notNull(),
+  thumbnailUrl: text("thumbnailUrl"),
+  // Scoring dimensions (0-100)
+  scoreIconity: int("scoreIconity"),
+  scoreTrustClarity: int("scoreTrustClarity"),
+  scorePremiumFeel: int("scorePremiumFeel"),
+  scoreSilhouette: int("scoreSilhouette"),
+  scoreUiCompat: int("scoreUiCompat"),
+  scoreMintReady: int("scoreMintReady"),
+  scoreProtocolAlign: int("scoreProtocolAlign"),
+  totalScore: int("totalScore"),
+  isRecommended: int("isRecommended").default(0),
+  isSelected: int("isSelected").default(0),
+  selectedAt: timestamp("selectedAt"),
+  // Mint fields
+  metadataUri: text("metadataUri"),
+  metadataHash: varchar("metadataHash", { length: 128 }),
+  imageHash: varchar("imageHash", { length: 128 }),
+  mintStatus: mysqlEnum("mintStatus", ["not_minted", "preparing", "queued", "minting", "minted", "failed"]).default("not_minted"),
+  mintTxHash: varchar("mintTxHash", { length: 128 }),
+  tokenId: varchar("tokenId", { length: 128 }),
+  mintedAt: timestamp("mintedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CharacterAsset = typeof characterAssets.$inferSelect;
+export type InsertCharacterAsset = typeof characterAssets.$inferInsert;
+
+// ─── Protocol Agents ────────────────────────────────────────────────────────
+export const protocolAgents = mysqlTable("protocol_agents", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  characterAssetId: int("characterAssetId"),
+  name: varchar("name", { length: 256 }).notNull(),
+  agentType: mysqlEnum("agentType", ["guardian", "archivist", "sentinel", "scout", "arbiter"]).notNull(),
+  status: mysqlEnum("status", ["active", "inactive", "suspended"]).default("active"),
+  level: int("level").default(1),
+  xp: int("xp").default(0),
+  reputationScore: int("reputationScore").default(100),
+  totalVerifications: int("totalVerifications").default(0),
+  successfulVerifications: int("successfulVerifications").default(0),
+  totalClaims: int("totalClaims").default(0),
+  consensusParticipations: int("consensusParticipations").default(0),
+  qronEarned: decimal("qronEarned", { precision: 18, scale: 8 }).default("0"),
+  qronPending: decimal("qronPending", { precision: 18, scale: 8 }).default("0"),
+  walletAddress: varchar("walletAddress", { length: 128 }),
+  tokenId: varchar("tokenId", { length: 128 }),
+  policyConfig: json("policyConfig"),
+  featureScopes: json("featureScopes"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProtocolAgent = typeof protocolAgents.$inferSelect;
+export type InsertProtocolAgent = typeof protocolAgents.$inferInsert;
+
+// ─── Verification Claims ────────────────────────────────────────────────────
+export const verificationClaims = mysqlTable("verification_claims", {
+  id: int("id").autoincrement().primaryKey(),
+  agentId: int("agentId").notNull(),
+  productId: int("productId").notNull(),
+  authenticationId: int("authenticationId"),
+  claimType: mysqlEnum("claimType", ["authentic", "counterfeit", "inconclusive", "needs_review"]).notNull(),
+  confidence: int("confidence").notNull(),
+  evidence: json("evidence"),
+  reasoning: text("reasoning"),
+  status: mysqlEnum("status", ["pending", "accepted", "rejected", "superseded"]).default("pending"),
+  weight: decimal("weight", { precision: 5, scale: 3 }).default("1.000"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type VerificationClaim = typeof verificationClaims.$inferSelect;
+
+// ─── Consensus Results ──────────────────────────────────────────────────────
+export const consensusResults = mysqlTable("consensus_results", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("productId").notNull(),
+  authenticationId: int("authenticationId"),
+  finalStatus: mysqlEnum("finalStatus", ["authentic", "counterfeit", "inconclusive"]).notNull(),
+  finalScore: int("finalScore").notNull(),
+  quorumCount: int("quorumCount").notNull(),
+  claimIds: json("claimIds"),
+  settledOnChain: int("settledOnChain").default(0),
+  checkpointBatchId: int("checkpointBatchId"),
+  txHash: varchar("txHash", { length: 128 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ConsensusResult = typeof consensusResults.$inferSelect;
+
+// ─── QRON Reward Ledger ─────────────────────────────────────────────────────
+export const qronRewardLedger = mysqlTable("qron_reward_ledger", {
+  id: int("id").autoincrement().primaryKey(),
+  agentId: int("agentId").notNull(),
+  userId: int("userId").notNull(),
+  amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
+  reason: mysqlEnum("reason", [
+    "verification_reward", "consensus_participation", "accuracy_bonus",
+    "streak_bonus", "referral_reward", "staking_yield", "penalty"
+  ]).notNull(),
+  referenceType: varchar("referenceType", { length: 64 }),
+  referenceId: int("referenceId"),
+  status: mysqlEnum("status", ["pending", "settled", "claimed", "expired"]).default("pending"),
+  settlementBatchId: int("settlementBatchId"),
+  claimedAt: timestamp("claimedAt"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type QronRewardEntry = typeof qronRewardLedger.$inferSelect;
+
+// ─── Checkpoint Batches ─────────────────────────────────────────────────────
+export const checkpointBatches = mysqlTable("checkpoint_batches", {
+  id: int("id").autoincrement().primaryKey(),
+  batchType: mysqlEnum("batchType", ["verification", "reward_settlement", "agent_registration"]).notNull(),
+  rootHash: varchar("rootHash", { length: 128 }).notNull(),
+  chainId: int("chainId").default(137),
+  txHash: varchar("txHash", { length: 128 }),
+  itemCount: int("itemCount").default(0),
+  status: mysqlEnum("status", ["pending", "submitted", "confirmed", "failed"]).default("pending"),
+  finalizedAt: timestamp("finalizedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CheckpointBatch = typeof checkpointBatches.$inferSelect;

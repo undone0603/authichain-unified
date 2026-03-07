@@ -25,7 +25,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
-  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Clock,
+  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Clock, Sparkles, Globe, Trophy,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -45,6 +45,8 @@ const menuItems = [
   { icon: CreditCard, label: "Subscriptions", path: "/subscriptions" },
   { icon: Link2, label: "Referrals", path: "/referrals" },
   { icon: Blocks, label: "Blockchain Hub", path: "/blockchain" },
+  { icon: Sparkles, label: "My Agent", path: "/character" },
+  { icon: Globe, label: "Network & Leaderboard", path: "/network" },
   { icon: Bell, label: "Notifications", path: "/notifications" },
 ];
 

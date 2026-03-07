@@ -578,4 +578,64 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(result.success).toBe(true);
     });
   });
+
+  // ── AuthiCharacter System ──────────────────────────────────────────
+  describe("character", () => {
+    it("requires auth for character generation", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(
+        caller.character.generate({ archetype: "guardian" })
+      ).rejects.toThrow();
+    });
+
+    it("requires auth for agent creation", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(
+        caller.character.createAgent({ characterAssetId: 1, agentName: "TestAgent" })
+      ).rejects.toThrow();
+    });
+
+    it("returns network stats", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const stats = await caller.character.networkStats();
+      expect(stats).toBeDefined();
+      expect(stats).toHaveProperty("totalAgents");
+      expect(stats).toHaveProperty("totalVerifications");
+      expect(stats).toHaveProperty("totalQRONDistributed");
+    });
+
+    it("returns leaderboard", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const leaderboard = await caller.character.leaderboard({ limit: 10 });
+      expect(leaderboard).toBeDefined();
+      expect(Array.isArray(leaderboard)).toBe(true);
+    });
+
+    it("returns empty generations for new user", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const gens = await caller.character.myGenerations();
+      expect(gens).toBeDefined();
+      expect(Array.isArray(gens)).toBe(true);
+    });
+
+    it("returns empty assets for new user", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const assets = await caller.character.myAssets();
+      expect(assets).toBeDefined();
+      expect(Array.isArray(assets)).toBe(true);
+    });
+
+    it("returns null agent for new user", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const agent = await caller.character.myAgent();
+      expect(agent).toBeNull();
+    });
+
+    it("validates archetype input on generate", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(
+        caller.character.generate({ archetype: "invalid_archetype" as any })
+      ).rejects.toThrow();
+    });
+  });
 });

@@ -137,3 +137,19 @@
 - [x] Build admin Scheduled Tasks dashboard page with job cards + execution history
 - [x] Add job execution history logging (scheduled_job_runs table)
 - [x] Write tests for scheduled jobs (8 scheduler tests, 61 total passing)
+
+## AuthiCharacter System (OpenArt AI Characters)
+- [x] Add AuthiCharacter DB schema (character_generations, character_assets, protocol_agents, reward_ledger, consensus_results, network_stats)
+- [x] Push migrations for 6 new tables
+- [x] Build character generation service (AI image gen, scoring, mint prep pipeline)
+- [x] Build character archetype system (Guardian, Archivist, Sentinel, Scout, Arbiter)
+- [x] Build QRON reward system (awardQRON, verification rewards, consensus rewards)
+- [x] Build character tRPC router (generate, select, createAgent, myAgent, myAssets, myGenerations, leaderboard, networkStats)
+- [x] Build AI chat tRPC router for protocol assistant
+- [x] Build CharacterCreate page (archetype selection, generation, scoring, mint flow)
+- [x] Build CharacterDashboard page (agent stats, XP, QRON rewards, character gallery)
+- [x] Build NetworkStats page (protocol metrics, agent leaderboard, QRON distribution)
+- [x] Add character pages to sidebar navigation (Characters, My Agent, Network)
+- [x] Integrate agent XP rewards into product authentication flow (rewardAgentForVerification)
+- [ ] HeyGen explainer video (MCP has schema validation bug, script prepared for manual generation)
+- [x] Write AuthiCharacter tests (7 tests, 69 total passing)
