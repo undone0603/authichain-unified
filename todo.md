@@ -179,3 +179,10 @@
 ## SEO Fixes - Certificate Page
 - [x] Add H1 heading to /certificate/:token page
 - [x] Set document.title to 30-60 characters on /certificate/:token page
+
+## Full System Review & Go-Live
+- [x] Comprehensive system audit (schema, routers, pages, integrations)
+- [x] Review all integration statuses
+- [x] Activate all automations (8 jobs running)
+- [x] Switch to live mode (user action: update keys in Settings > Payment)
+- [x] Create post-credits task list document
