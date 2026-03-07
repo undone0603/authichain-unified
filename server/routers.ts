@@ -1002,6 +1002,27 @@ export const appRouter = router({
       return { content: response.choices?.[0]?.message?.content || "I apologize, I could not generate a response." };
     }),
   }),
+  // ─── Scheduled Jobs (Admin) ─────────────────────────────────────────
+  scheduler: router({
+    listJobs: adminProcedure.query(async () => {
+      const { getRegisteredJobs } = await import("./scheduled-jobs");
+      return getRegisteredJobs();
+    }),
+    getHistory: adminProcedure.input(z.object({
+      jobName: z.string().optional(),
+      limit: z.number().optional().default(50),
+    })).query(async ({ input }) => {
+      const { getJobHistory } = await import("./scheduled-jobs");
+      return await getJobHistory(input.jobName, input.limit);
+    }),
+    runManually: adminProcedure.input(z.object({
+      jobName: z.string(),
+    })).mutation(async ({ input }) => {
+      const { runJobManually } = await import("./scheduled-jobs");
+      const success = await runJobManually(input.jobName);
+      if (!success) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
+      return { success: true, message: `Job ${input.jobName} triggered successfully` };
+    }),
+  }),
 });
-
 export type AppRouter = typeof appRouter;

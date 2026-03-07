@@ -507,3 +507,19 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+// ─── Scheduled Job Runs ─────────────────────────────────────────────────────
+export const scheduledJobRuns = mysqlTable("scheduled_job_runs", {
+  id: int("id").autoincrement().primaryKey(),
+  jobName: varchar("jobName", { length: 128 }).notNull(),
+  status: mysqlEnum("status", ["running", "completed", "failed"]).notNull(),
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  duration: int("duration"), // milliseconds
+  result: json("result"),
+  error: text("error"),
+  itemsProcessed: int("itemsProcessed").default(0),
+});
+
+export type ScheduledJobRun = typeof scheduledJobRuns.$inferSelect;
+export type InsertScheduledJobRun = typeof scheduledJobRuns.$inferInsert;

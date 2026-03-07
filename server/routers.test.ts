@@ -518,4 +518,64 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(after.count).toBeGreaterThanOrEqual(initial.count + 1);
     });
   });
+
+  // ─── Scheduler Tests ──────────────────────────────────────────────────────
+  describe("scheduler", () => {
+    it("requires admin role to list jobs", async () => {
+      const caller = appRouter.createCaller(createAuthContext("user"));
+      await expect(caller.scheduler.listJobs()).rejects.toThrow();
+    });
+
+    it("allows admin to list registered jobs", async () => {
+      const caller = appRouter.createCaller(createAuthContext("admin"));
+      const jobs = await caller.scheduler.listJobs();
+      expect(Array.isArray(jobs)).toBe(true);
+      expect(jobs.length).toBeGreaterThanOrEqual(1);
+      expect(jobs[0]).toHaveProperty("name");
+      expect(jobs[0]).toHaveProperty("description");
+      expect(jobs[0]).toHaveProperty("schedule");
+      expect(jobs[0]).toHaveProperty("enabled");
+    });
+
+    it("returns all 8 registered maintenance jobs", async () => {
+      const caller = appRouter.createCaller(createAuthContext("admin"));
+      const jobs = await caller.scheduler.listJobs();
+      const jobNames = jobs.map((j: any) => j.name);
+      expect(jobNames).toContain("subscription-health-check");
+      expect(jobNames).toContain("certificate-expiry-check");
+      expect(jobNames).toContain("lead-nurturing");
+      expect(jobNames).toContain("database-cleanup");
+      expect(jobNames).toContain("weekly-analytics-digest");
+      expect(jobNames).toContain("hubspot-crm-sync");
+      expect(jobNames).toContain("customer-health-score");
+      expect(jobNames).toContain("fraud-detection-sweep");
+    });
+
+    it("requires admin role to get job history", async () => {
+      const caller = appRouter.createCaller(createAuthContext("user"));
+      await expect(caller.scheduler.getHistory({ limit: 10 })).rejects.toThrow();
+    });
+
+    it("allows admin to get job history", async () => {
+      const caller = appRouter.createCaller(createAuthContext("admin"));
+      const history = await caller.scheduler.getHistory({ limit: 10 });
+      expect(Array.isArray(history)).toBe(true);
+    });
+
+    it("requires admin role to run jobs manually", async () => {
+      const caller = appRouter.createCaller(createAuthContext("user"));
+      await expect(caller.scheduler.runManually({ jobName: "database-cleanup" })).rejects.toThrow();
+    });
+
+    it("rejects running non-existent jobs", async () => {
+      const caller = appRouter.createCaller(createAuthContext("admin"));
+      await expect(caller.scheduler.runManually({ jobName: "nonexistent-job" })).rejects.toThrow();
+    });
+
+    it("allows admin to manually trigger database-cleanup job", async () => {
+      const caller = appRouter.createCaller(createAuthContext("admin"));
+      const result = await caller.scheduler.runManually({ jobName: "database-cleanup" });
+      expect(result.success).toBe(true);
+    });
+  });
 });

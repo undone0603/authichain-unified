@@ -124,3 +124,16 @@
 - [x] Verify newly scoped HUBSPOT_SERVICE_KEY works for contacts, companies, and deals (7 contacts, 8 companies, 4 deals)
 - [x] Seed initial partnership companies and deals into HubSpot CRM (LVMH, Pfizer, Walmart, Sotheby's + 4 deals)
 - [x] Verify CRM dashboard shows all three tabs with live data
+
+## Recurring Maintenance Tasks
+- [x] Build server-side scheduled job runner (node-cron based, 8 jobs registered)
+- [x] Implement HubSpot CRM sync job (every 2 hours: sync leads, update deal stages)
+- [x] Implement database cleanup job (daily at 3 AM UTC: purge old notifications, stale sessions)
+- [x] Implement subscription health check job (every 4 hours: check expiring subs, notify owner)
+- [x] Implement analytics digest job (weekly Monday 8 AM UTC: compile stats, notify owner)
+- [x] Implement lead nurturing job (every 3 hours: check stale leads, auto-follow-up)
+- [x] Implement fraud detection sweep (every 6 hours: check suspicious patterns)
+- [x] Implement certificate expiry checker (daily at 6 AM UTC: flag expiring certs, notify owner)
+- [x] Build admin Scheduled Tasks dashboard page with job cards + execution history
+- [x] Add job execution history logging (scheduled_job_runs table)
+- [x] Write tests for scheduled jobs (8 scheduler tests, 61 total passing)
