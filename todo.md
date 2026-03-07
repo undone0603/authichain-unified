@@ -164,3 +164,6 @@
 - [x] Update character tRPC router with new flows (7 archetypes, colorway, mood, mintPrep)
 - [x] Update CharacterCreate frontend with 7 archetypes, colorway/mood fields, 7-dim scoring display
 - [x] Write tests for new character generation flows (69 tests passing)
+
+## SEO Fixes
+- [x] Reduce homepage keywords from 10 to 6 focused keywords (removed AI image analysis, QR code verification, enterprise authentication, counterfeit detection)
