@@ -1,0 +1,25 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME IN ('bonuses', 'referral_clicks', 'ai_models', 'model_purchases', 'model_reviews') ORDER BY TABLE_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4XTCLw1moPXT7t4.50501b56cddc --database gPea3UHeYTkK76mSwNBRp9 --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME IN ('bonuses', 'referral_clicks', 'ai_models', 'model_purchases', 'model_reviews') ORDER BY TABLE_NAME;",
+  "rows": [
+    {
+      "TABLE_NAME": "ai_models"
+    },
+    {
+      "TABLE_NAME": "bonuses"
+    },
+    {
+      "TABLE_NAME": "model_purchases"
+    },
+    {
+      "TABLE_NAME": "model_reviews"
+    },
+    {
+      "TABLE_NAME": "referral_clicks"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\nai_models\nbonuses\nmodel_purchases\nmodel_reviews\nreferral_clicks\n",
+  "stderr": "",
+  "execution_time_ms": 235
+}

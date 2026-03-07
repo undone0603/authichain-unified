@@ -175,3 +175,7 @@
 - [x] Resolve any merge conflicts
 - [x] Verify all tests pass after merge (88 tests passing)
 - [x] Sync merged main back to GitHub
+
+## SEO Fixes - Certificate Page
+- [x] Add H1 heading to /certificate/:token page
+- [x] Set document.title to 30-60 characters on /certificate/:token page
