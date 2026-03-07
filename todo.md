@@ -167,3 +167,5 @@
 
 ## SEO Fixes
 - [x] Reduce homepage keywords from 10 to 6 focused keywords (removed AI image analysis, QR code verification, enterprise authentication, counterfeit detection)
+- [x] Generate sitemap.xml with all public pages
+- [x] Update robots.txt to reference sitemap
