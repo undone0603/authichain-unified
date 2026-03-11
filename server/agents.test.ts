@@ -29,6 +29,13 @@ vi.mock('./db.js', () => ({
   logActivity:          vi.fn().mockResolvedValue(undefined),
   enqueueTask:          vi.fn().mockResolvedValue(undefined),
   markTaskWaitingHuman: vi.fn().mockResolvedValue(undefined),
+  getAdaptivePriors:    vi.fn().mockResolvedValue({
+    GOV:     { alpha: 2,  beta: 23 },
+    RETAIL:  { alpha: 3,  beta: 17 },
+    PRESS:   { alpha: 4,  beta: 16 },
+    PARTNER: { alpha: 2,  beta: 6  },
+    DEFAULT: { alpha: 1,  beta: 4  },
+  }),
 }));
 
 vi.mock('./_core/llm.js', () => ({

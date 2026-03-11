@@ -518,4 +518,84 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(after.count).toBeGreaterThanOrEqual(initial.count + 1);
     });
   });
+
+  // ─── outcomes router ──────────────────────────────────────────────────────
+
+  describe("outcomes router", () => {
+    it("outcomes.record requires authentication", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(
+        caller.outcomes.record({ signal: "email_replied", segment: "GOV" }),
+      ).rejects.toThrow();
+    });
+
+    it("outcomes.record returns { ok: true } for all valid signals", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const signals = [
+        "email_opened", "email_replied", "meeting_booked", "deal_created",
+        "unsubscribed", "bounced", "no_response",
+      ] as const;
+      for (const signal of signals) {
+        const result = await caller.outcomes.record({ signal, segment: "GOV" });
+        expect(result).toEqual({ ok: true });
+      }
+    });
+
+    it("outcomes.record accepts optional taskId and leadId", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const result = await caller.outcomes.record({
+        signal: "meeting_booked",
+        segment: "RETAIL",
+        taskId: "00000000-0000-0000-0000-000000000001",
+        leadId: 42,
+      });
+      expect(result).toEqual({ ok: true });
+    });
+
+    it("outcomes.record rejects unknown signal", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(
+        caller.outcomes.record({ signal: "UNKNOWN_SIGNAL" as any, segment: "GOV" }),
+      ).rejects.toThrow();
+    });
+
+    it("outcomes.getSegmentStats returns an object with segment keys", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const result = await caller.outcomes.getSegmentStats() as Record<string, { alpha: number; beta: number }>;
+      expect(typeof result).toBe("object");
+      // Should have at least the DEFAULT prior
+      expect(result).toHaveProperty("DEFAULT");
+      // Each segment should have alpha and beta
+      for (const [, prior] of Object.entries(result)) {
+        expect(prior).toHaveProperty("alpha");
+        expect(prior).toHaveProperty("beta");
+        expect(prior.alpha).toBeGreaterThan(0);
+        expect(prior.beta).toBeGreaterThan(0);
+      }
+    });
+
+    it("outcomes.getSegmentStats requires authentication", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.outcomes.getSegmentStats()).rejects.toThrow();
+    });
+  });
+
+  // ─── emailDrafts.getByTaskId ──────────────────────────────────────────────
+
+  describe("emailDrafts.getByTaskId", () => {
+    it("requires authentication", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(
+        caller.emailDrafts.getByTaskId({ taskId: "00000000-0000-0000-0000-000000000000" }),
+      ).rejects.toThrow();
+    });
+
+    it("returns null for a non-existent task ID", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const result = await caller.emailDrafts.getByTaskId({
+        taskId: "00000000-0000-0000-0000-000000000000",
+      });
+      expect(result).toBeNull();
+    });
+  });
 });

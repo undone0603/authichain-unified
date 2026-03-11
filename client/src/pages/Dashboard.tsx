@@ -1,7 +1,8 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Award, Gem, Package, ArrowRight, Bot, Loader2, Blocks, CheckCircle2, XCircle } from "lucide-react";
+import { Shield, Award, Gem, Package, ArrowRight, Bot, Loader2, Blocks, CheckCircle2, XCircle, Target, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 
 export default function Dashboard() {
@@ -110,11 +111,107 @@ export default function Dashboard() {
             </Card>
           </div>
 
+          {/* AgentZ Missions + Pipeline */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <MissionSummaryCard />
+            <PendingDraftsCard />
+          </div>
+
           {/* Blockchain Status */}
           <BlockchainStatusCard />
         </>
       )}
     </div>
+  );
+}
+
+function MissionSummaryCard() {
+  const { data: missions } = trpc.missions.list.useQuery({}, { refetchInterval: 30_000 });
+  const [, setLocation] = useLocation();
+  const list = (missions as any[] | undefined) ?? [];
+
+  const counts = {
+    IN_PROGRESS: list.filter(m => m.status === "IN_PROGRESS").length,
+    PLANNED:     list.filter(m => m.status === "PLANNED").length,
+    BLOCKED:     list.filter(m => m.status === "BLOCKED").length,
+    COMPLETED:   list.filter(m => m.status === "COMPLETED").length,
+  };
+
+  return (
+    <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setLocation("/missions")}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          AgentZ Missions
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: "Active",     count: counts.IN_PROGRESS, color: "bg-blue-500/20 text-blue-300 border-blue-600" },
+            { label: "Planned",    count: counts.PLANNED,     color: "bg-slate-500/20 text-slate-300 border-slate-600" },
+            { label: "Blocked",    count: counts.BLOCKED,     color: "bg-orange-500/20 text-orange-300 border-orange-600" },
+            { label: "Completed",  count: counts.COMPLETED,   color: "bg-emerald-500/20 text-emerald-300 border-emerald-600" },
+          ].map(({ label, count, color }) => (
+            <div key={label} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5">
+              <span className="text-xs text-muted-foreground">{label}</span>
+              <Badge variant="outline" className={`text-xs ${color}`}>{count}</Badge>
+            </div>
+          ))}
+        </div>
+        <Button size="sm" variant="outline" className="w-full text-xs border-white/20">
+          Open Missions <ArrowRight className="h-3 w-3 ml-1" />
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PendingDraftsCard() {
+  const { data: drafts } = trpc.emailDrafts.listPending.useQuery(undefined, { refetchInterval: 30_000 });
+  const [, setLocation] = useLocation();
+  const list = (drafts as any[] | undefined) ?? [];
+  const count = list.length;
+
+  return (
+    <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setLocation("/missions")}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Mail className="h-4 w-4 text-yellow-400" />
+          Pending Approvals
+          {count > 0 && (
+            <Badge variant="outline" className="ml-auto text-xs bg-yellow-500/20 text-yellow-300 border-yellow-600">
+              {count}
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {count === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-3">No drafts awaiting review</p>
+        ) : (
+          <div className="space-y-2">
+            {list.slice(0, 4).map((d: any) => (
+              <div key={d.id} className="flex items-center justify-between gap-2 text-xs">
+                <div className="min-w-0">
+                  <p className="truncate text-white/80">{d.subject}</p>
+                  <p className="truncate text-white/40">{d.prospectEmail}</p>
+                </div>
+                <Badge variant="outline" className="shrink-0 bg-yellow-500/20 text-yellow-300 border-yellow-600 text-xs">
+                  review
+                </Badge>
+              </div>
+            ))}
+            {count > 4 && (
+              <p className="text-xs text-muted-foreground text-center">+{count - 4} more</p>
+            )}
+            <Button size="sm" variant="outline" className="w-full text-xs border-yellow-500/30 text-yellow-300 mt-1">
+              Review All <ArrowRight className="h-3 w-3 ml-1" />
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
