@@ -37,7 +37,6 @@ export async function runFollowupSequence(task: Task): Promise<void> {
   for (const lead of dueLeads) {
     const meta = (lead.metadata as Record<string, number> | null) ?? {};
     const followupNum = Math.min((meta.followupCount ?? 0) + 1, maxFollowups);
-    if (followupNum > maxFollowups) continue;
 
     const tone = followupNum === 1 ? 'gentle reminder' : followupNum === 2 ? 'value-focused' : 'final outreach with urgency';
 
