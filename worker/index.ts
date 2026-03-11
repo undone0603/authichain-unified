@@ -15,6 +15,19 @@ import { runPipelineTick } from "../server/jobs/pipeline-tick";
 export interface Env {
   [key: string]: string | undefined;
 }
+const requiredEnvVars = [
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "HUBSPOT_PRIVATE_APP_TOKEN",
+  "STRIPE_SECRET_KEY",
+  "META_ADS_ACCESS_TOKEN",
+];
+for (const varName of requiredEnvVars) {
+  if (!process.env[varName]) {
+    throw new Error(`Missing required environment variable: ${varName}`);
+  }
+}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
