@@ -16,20 +16,6 @@ export interface Env {
   ASSETS: Fetcher;
   [key: string]: string | Fetcher | undefined;
 }
-const requiredEnvVars = [
-  "SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "HUBSPOT_PRIVATE_APP_TOKEN",
-  "STRIPE_SECRET_KEY",
-  "META_ADS_ACCESS_TOKEN",
-];
-for (const varName of requiredEnvVars) {
-  if (!process.env[varName]) {
-    throw new Error(`Missing required environment variable: ${varName}`);
-  }
-}
-
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function jsonResponse(body: unknown, status = 200): Response {
