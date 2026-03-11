@@ -1,5 +1,6 @@
 name = "authichain-unified"
 main = "worker/index.ts"
+tsconfig = "tsconfig.worker.json"
 compatibility_date = "2026-03-11"
 compatibility_flags = ["nodejs_compat"]
 
@@ -9,13 +10,6 @@ not_found_handling = "single-page-application"
 
 [triggers]
 crons = ["*/5 * * * *"]
-
-# Path aliases (mirrors vite.config.ts resolve.alias)
-[alias]
-"@shared/const"         = "./shared/const"
-"@shared/_core/errors"  = "./shared/_core/errors"
-"@shared/types"         = "./shared/types"
-"@shared/subscriptionPlans" = "./shared/subscriptionPlans"
 
 # Set these via: wrangler secret put <NAME>
 # DATABASE_URL, JWT_SECRET, VITE_APP_ID, OAUTH_SERVER_URL
