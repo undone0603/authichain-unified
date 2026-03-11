@@ -10,13 +10,6 @@ not_found_handling = "single-page-application"
 [triggers]
 crons = ["*/5 * * * *"]
 
-[build]
-command = "pnpm run build"
-cwd = "./worker"
-
-[build.upload]
-format = "modules"
-
 # Set these via: wrangler secret put <NAME>
 # DATABASE_URL, JWT_SECRET, VITE_APP_ID, OAUTH_SERVER_URL
 # BUILT_IN_FORGE_API_URL, BUILT_IN_FORGE_API_KEY
