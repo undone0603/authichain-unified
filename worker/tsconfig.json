@@ -1,3 +1,19 @@
 {
-  
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["@cloudflare/workers-types", "vite/client"],
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "noEmit": true,
+    "allowJs": false
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
 }
