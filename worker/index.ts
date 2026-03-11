@@ -13,7 +13,8 @@ import * as db from "../server/db";
 import { runPipelineTick } from "../server/jobs/pipeline-tick";
 
 export interface Env {
-  [key: string]: string | undefined;
+  ASSETS: Fetcher;
+  [key: string]: string | Fetcher | undefined;
 }
 const requiredEnvVars = [
   "SUPABASE_URL",
@@ -216,9 +217,8 @@ export default {
       return response;
     }
 
-    // Static assets are served automatically by Cloudflare via [assets] config
-    // Fallthrough returns 404 (assets handler serves SPA fallback)
-    return new Response("Not found", { status: 404 });
+    // Delegate to static assets (serves dist/public, SPA fallback for unknown routes)
+    return env.ASSETS.fetch(request);
   },
 
   async scheduled(
