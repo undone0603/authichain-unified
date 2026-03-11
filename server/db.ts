@@ -867,6 +867,42 @@ export async function getEmailDraftById(id: number) {
   return rows[0];
 }
 
+export async function getEmailDraftByTaskId(taskId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(emailDrafts)
+    .where(and(eq(emailDrafts.taskId, taskId), inArray(emailDrafts.status, ['pending', 'approved'])))
+    .orderBy(desc(emailDrafts.createdAt))
+    .limit(1);
+  return rows[0];
+}
+
+export async function getAdaptivePriors(): Promise<Record<string, { alpha: number; beta: number }>> {
+  const { SEGMENT_PRIORS, updatePrior } = await import('./_core/bayesian.js');
+  // Deep-clone starting priors so we don't mutate the module-level constants
+  const priors: Record<string, { alpha: number; beta: number }> = {};
+  for (const [k, v] of Object.entries(SEGMENT_PRIORS)) priors[k] = { ...v };
+
+  const db = await getDb();
+  if (!db) return priors;
+
+  const signals = await db
+    .select({ details: activityLog.details })
+    .from(activityLog)
+    .where(eq(activityLog.action, 'outcome_signal'))
+    .orderBy(activityLog.createdAt);
+
+  for (const { details } of signals) {
+    const d = details as Record<string, unknown>;
+    const seg = (d.segment as string) ?? 'DEFAULT';
+    const signal = d.signal as string;
+    if (priors[seg] && signal) {
+      priors[seg] = updatePrior(priors[seg], signal as Parameters<typeof updatePrior>[1]);
+    }
+  }
+  return priors;
+}
+
 export async function updateDraftStatus(id: number, status: string, approvedBy?: number) {
   const db = await getDb();
   if (!db) return;

@@ -580,6 +580,10 @@ export const appRouter = router({
       const { createEmailDraft } = await import("./db");
       return await createEmailDraft({ ...input, status: "pending", generatedBy: "ai_manager" });
     }),
+    getByTaskId: protectedProcedure.input(z.object({ taskId: z.string() })).query(async ({ input }) => {
+      const { getEmailDraftByTaskId } = await import("./db");
+      return await getEmailDraftByTaskId(input.taskId) ?? null;
+    }),
     approve: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
       const { updateDraftStatus } = await import("./db");
       await updateDraftStatus(input.id, "approved", ctx.user.id);
@@ -1258,6 +1262,30 @@ export const appRouter = router({
       const { retryTask } = await import("./db");
       await retryTask(input.id);
       return { ok: true };
+    }),
+  }),
+
+  // ─── Outcomes (Bayesian feedback loop) ──────────────────────────────────
+  outcomes: router({
+    record: protectedProcedure.input(z.object({
+      signal: z.enum(['email_opened', 'email_replied', 'meeting_booked', 'deal_created', 'unsubscribed', 'bounced', 'no_response']),
+      segment: z.string().optional().default('DEFAULT'),
+      taskId: z.string().optional(),
+      leadId: z.number().optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const { logActivity } = await import('./db');
+      await logActivity({
+        userId: ctx.user.id,
+        action: 'outcome_signal',
+        entityType: 'lead',
+        entityId: input.leadId ?? 0,
+        details: { signal: input.signal, segment: input.segment, taskId: input.taskId },
+      });
+      return { ok: true };
+    }),
+    getSegmentStats: protectedProcedure.query(async () => {
+      const { getAdaptivePriors } = await import('./db');
+      return await getAdaptivePriors();
     }),
   }),
 

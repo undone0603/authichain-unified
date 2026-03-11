@@ -20,9 +20,16 @@ vi.mock('./jobs/organic-traffic.js',   () => ({ runOrganicTrafficAutomation:    
 vi.mock('./jobs/task-runner.js',       () => ({ runTask:                        vi.fn().mockResolvedValue({ ok: true }) }));
 
 vi.mock('./db.js', () => ({
-  getDueTasks:     vi.fn().mockResolvedValue([]),
-  getRunTaskCount: vi.fn().mockResolvedValue(100),
-  logActivity:     vi.fn().mockResolvedValue(undefined),
+  getDueTasks:       vi.fn().mockResolvedValue([]),
+  getRunTaskCount:   vi.fn().mockResolvedValue(100),
+  getAdaptivePriors: vi.fn().mockResolvedValue({
+    GOV:     { alpha: 2,  beta: 23 },
+    RETAIL:  { alpha: 3,  beta: 17 },
+    PRESS:   { alpha: 4,  beta: 16 },
+    PARTNER: { alpha: 2,  beta: 6  },
+    DEFAULT: { alpha: 1,  beta: 4  },
+  }),
+  logActivity:       vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

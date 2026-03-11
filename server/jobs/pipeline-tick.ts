@@ -8,9 +8,9 @@ import { runRetentionAutomation } from "./retention";
 import { runWeeklyDigestDispatch } from "./weekly-digest";
 import { runQuarterlyValueReportDispatch } from "./quarterly-value";
 import { runOrganicTrafficAutomation } from "./organic-traffic";
-import { getDueTasks, getRunTaskCount } from "../db";
+import { getDueTasks, getRunTaskCount, getAdaptivePriors } from "../db";
 import { runTask } from "./task-runner";
-import { ucb1Score, SEGMENT_PRIORS } from "../_core/bayesian";
+import { ucb1Score } from "../_core/bayesian";
 
 export async function runPipelineTick() {
   if (!ENV.autonomousPipelineEnabled) {
@@ -27,25 +27,29 @@ export async function runPipelineTick() {
   // Mission task orchestration — UCB1 prioritisation
   // Score each task's kind by: E[conversion] + exploration bonus.
   // Unexplored task kinds get Infinity (always tried first).
-  const [dueTasks, runCount] = await Promise.all([getDueTasks(), getRunTaskCount()]);
+  const [dueTasks, runCount, adaptivePriors] = await Promise.all([
+    getDueTasks(),
+    getRunTaskCount(),
+    getAdaptivePriors(),
+  ]);
   // totalTasks must reflect cumulative history — using only the current batch would
   // make the exploration bonus a constant (ln(batchSize)) rather than growing with experience.
   const totalTasks = Math.max(runCount, 1);
 
+  const kindToSegment: Record<string, string> = {
+    FIND_GOV_LEADS:       'GOV',
+    FIND_RETAIL_LEADS:    'RETAIL',
+    DRAFT_OUTBOUND_EMAIL: 'GOV',
+    FOLLOWUP_SEQUENCE:    'GOV',
+    BUILD_PILOT_PACKET:   'PARTNER',
+    DRAFT_INTEL_DOSSIER:  'PRESS',
+    CRM_UPDATE:           'PARTNER',
+    DRAFT_PRESS_RELEASE:  'PRESS',
+  };
+
   const scored = dueTasks.map(task => {
-    // Map task kind to a segment prior (best proxy we have at the task level)
-    const kindToSegment: Record<string, string> = {
-      FIND_GOV_LEADS:       'GOV',
-      FIND_RETAIL_LEADS:    'RETAIL',
-      DRAFT_OUTBOUND_EMAIL: 'GOV',
-      FOLLOWUP_SEQUENCE:    'GOV',
-      BUILD_PILOT_PACKET:   'PARTNER',
-      DRAFT_INTEL_DOSSIER:  'PRESS',
-      CRM_UPDATE:           'PARTNER',
-      DRAFT_PRESS_RELEASE:  'PRESS',
-    };
     const seg = kindToSegment[task.kind] ?? 'DEFAULT';
-    const prior = SEGMENT_PRIORS[seg] ?? SEGMENT_PRIORS.DEFAULT;
+    const prior = adaptivePriors[seg] ?? adaptivePriors.DEFAULT;
     return { task, score: ucb1Score(prior, totalTasks) };
   });
 
