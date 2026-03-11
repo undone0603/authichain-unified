@@ -11,7 +11,13 @@ not_found_handling = "single-page-application"
 crons = ["*/5 * * * *"]
 
 [build]
-command = "pnpm exec vite build"
+command = "pnpm run build"
+cwd = "./worker"
+
+[build.upload]
+format = "modules"
+dir = "./worker/dist"
+main = "./worker/dist/index.js"
 
 # Set these via: wrangler secret put <NAME>
 # DATABASE_URL, JWT_SECRET, VITE_APP_ID, OAUTH_SERVER_URL
