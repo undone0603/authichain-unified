@@ -1,10 +1,10 @@
 import { invokeLLM } from '../_core/llm.js';
 import { callDataApi } from '../_core/dataApi.js';
-import { logActivity, enqueueTask } from '../db.js';
+import { logActivity, enqueueTask, getAdaptivePriors } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 import { getDb } from '../db.js';
 import { leads } from '../../drizzle/schema.js';
-import { SEGMENT_PRIORS, SEGMENT_REVENUE, betaMean, betaCI } from '../_core/bayesian.js';
+import { SEGMENT_REVENUE, betaMean, betaCI } from '../_core/bayesian.js';
 
 interface LeadFinderPayload {
   count?: number;
@@ -71,7 +71,8 @@ export async function runLeadFinder(task: Task): Promise<void> {
     .join('\n---\n');
 
   // ── Bayesian context for the prompt ───────────────────────────────────────
-  const prior = SEGMENT_PRIORS[segment] ?? SEGMENT_PRIORS.DEFAULT;
+  const adaptivePriors = await getAdaptivePriors();
+  const prior = adaptivePriors[segment] ?? adaptivePriors.DEFAULT;
   const conversionMean = betaMean(prior);
   const [ciLo, ciHi] = betaCI(prior);
   const expectedRevenue = SEGMENT_REVENUE[segment] ?? SEGMENT_REVENUE.DEFAULT;
