@@ -10,6 +10,13 @@ not_found_handling = "single-page-application"
 [triggers]
 crons = ["*/5 * * * *"]
 
+# Path aliases (mirrors vite.config.ts resolve.alias)
+[alias]
+"@shared/const"         = "./shared/const"
+"@shared/_core/errors"  = "./shared/_core/errors"
+"@shared/types"         = "./shared/types"
+"@shared/subscriptionPlans" = "./shared/subscriptionPlans"
+
 # Set these via: wrangler secret put <NAME>
 # DATABASE_URL, JWT_SECRET, VITE_APP_ID, OAUTH_SERVER_URL
 # BUILT_IN_FORGE_API_URL, BUILT_IN_FORGE_API_KEY
