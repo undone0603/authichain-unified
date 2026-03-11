@@ -16,8 +16,6 @@ cwd = "./worker"
 
 [build.upload]
 format = "modules"
-dir = "./worker/dist"
-main = "./worker/dist/index.js"
 
 # Set these via: wrangler secret put <NAME>
 # DATABASE_URL, JWT_SECRET, VITE_APP_ID, OAUTH_SERVER_URL
