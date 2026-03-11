@@ -680,6 +680,15 @@ export const appRouter = router({
           const { markTaskDone } = await import("./db");
           await markTaskDone(draft.taskId);
         }
+      } else if (result.status === "suppressed") {
+        // Suppressed = bounce suppression — record as bounced outcome signal
+        await logActivity({
+          userId: null,
+          action: "outcome_signal",
+          entityType: "lead",
+          entityId: 0,
+          details: { signal: "bounced", segment: "DEFAULT", taskId: draft.taskId ?? null, reason: result.reason },
+        });
       }
 
       await logActivity({

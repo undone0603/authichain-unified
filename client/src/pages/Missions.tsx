@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Loader2, ChevronDown, ChevronRight, RefreshCw, Plus, Target,
-  Mail, CheckCircle2, XCircle, Eye,
+  Mail, CheckCircle2, XCircle, Eye, Brain, TrendingUp,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -389,6 +389,156 @@ function MissionCard({ mission }: { mission: Mission }) {
   );
 }
 
+// ─── Bayesian intelligence panel ──────────────────────────────────────────────
+
+const OUTCOME_SIGNALS = [
+  "email_opened", "email_replied", "meeting_booked", "deal_created",
+  "unsubscribed", "bounced", "no_response",
+] as const;
+type OutcomeSignal = typeof OUTCOME_SIGNALS[number];
+
+const SIGNAL_LABEL: Record<OutcomeSignal, string> = {
+  email_opened:    "Email opened",
+  email_replied:   "Replied",
+  meeting_booked:  "Meeting booked",
+  deal_created:    "Deal created",
+  unsubscribed:    "Unsubscribed",
+  bounced:         "Bounced",
+  no_response:     "No response",
+};
+
+const SIGNAL_COLOR: Record<OutcomeSignal, string> = {
+  email_opened:    "text-blue-300",
+  email_replied:   "text-emerald-300",
+  meeting_booked:  "text-purple-300",
+  deal_created:    "text-yellow-300",
+  unsubscribed:    "text-orange-300",
+  bounced:         "text-red-400",
+  no_response:     "text-white/40",
+};
+
+function IntelPanel() {
+  const [open, setOpen] = useState(false);
+  const [seg, setSeg] = useState("GOV");
+  const [signal, setSignal] = useState<OutcomeSignal>("email_replied");
+  const utils = trpc.useUtils();
+
+  const statsQuery = trpc.outcomes.getSegmentStats.useQuery(undefined, { enabled: open });
+  const recordMut  = trpc.outcomes.record.useMutation({
+    onSuccess: () => {
+      toast.success(`Recorded: ${SIGNAL_LABEL[signal]} for ${seg}`);
+      utils.outcomes.getSegmentStats.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const stats = statsQuery.data ?? {};
+  const segments = Object.entries(stats);
+
+  return (
+    <Card className="bg-white/5 border-white/10">
+      <CardHeader className="pb-2">
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="flex items-center gap-2 text-left w-full"
+        >
+          {open ? <ChevronDown className="h-4 w-4 text-white/40" /> : <ChevronRight className="h-4 w-4 text-white/40" />}
+          <Brain className="h-4 w-4 text-purple-400" />
+          <CardTitle className="text-sm font-medium text-white/80">Bayesian Intelligence</CardTitle>
+          <span className="ml-auto text-xs text-white/30">live segment priors</span>
+        </button>
+      </CardHeader>
+
+      {open && (
+        <CardContent className="space-y-4 pt-0">
+          {statsQuery.isLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-white/40" />
+            </div>
+          ) : (
+            <>
+              {/* Segment prior table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-white/10 text-white/40">
+                      <th className="text-left py-1.5 pr-4 font-medium">Segment</th>
+                      <th className="text-right py-1.5 px-2 font-medium">α</th>
+                      <th className="text-right py-1.5 px-2 font-medium">β</th>
+                      <th className="text-right py-1.5 px-2 font-medium">Mean%</th>
+                      <th className="text-right py-1.5 pl-2 font-medium">Observations</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {segments.map(([name, p]) => {
+                      const prior = p as { alpha: number; beta: number };
+                      const mean = prior.alpha / (prior.alpha + prior.beta);
+                      const obs  = Math.max(0, prior.alpha + prior.beta - 2);
+                      return (
+                        <tr key={name} className="border-b border-white/5 last:border-0">
+                          <td className="py-1.5 pr-4 font-mono text-white/70">{name}</td>
+                          <td className="py-1.5 px-2 text-right text-emerald-400/80">{prior.alpha.toFixed(1)}</td>
+                          <td className="py-1.5 px-2 text-right text-red-400/80">{prior.beta.toFixed(1)}</td>
+                          <td className="py-1.5 px-2 text-right font-medium text-white">
+                            {(mean * 100).toFixed(1)}%
+                          </td>
+                          <td className="py-1.5 pl-2 text-right text-white/40">{obs}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Manual outcome recorder */}
+              <div className="border-t border-white/10 pt-4">
+                <p className="text-xs text-white/40 mb-2 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" /> Record outcome signal
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Select value={seg} onValueChange={setSeg}>
+                    <SelectTrigger className="w-32 h-7 bg-white/5 border-white/20 text-xs text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {segments.map(([name]) => (
+                        <SelectItem key={name} value={name} className="text-xs">{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={signal} onValueChange={v => setSignal(v as OutcomeSignal)}>
+                    <SelectTrigger className="w-44 h-7 bg-white/5 border-white/20 text-xs text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OUTCOME_SIGNALS.map(s => (
+                        <SelectItem key={s} value={s} className={`text-xs ${SIGNAL_COLOR[s]}`}>
+                          {SIGNAL_LABEL[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-3 text-xs border-white/20 text-white/70"
+                    onClick={() => recordMut.mutate({ signal, segment: seg })}
+                    disabled={recordMut.isPending}
+                  >
+                    {recordMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Record"}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 // ─── Create mission dialog ────────────────────────────────────────────────────
 
 function CreateMissionButton({ onCreated }: { onCreated: () => void }) {
@@ -461,6 +611,8 @@ export default function Missions() {
         </div>
         <CreateMissionButton onCreated={() => setRefreshKey(k => k + 1)} />
       </div>
+
+      <IntelPanel />
 
       {/* Status filter tabs */}
       <div className="flex gap-1 flex-wrap">
