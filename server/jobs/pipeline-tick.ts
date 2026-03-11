@@ -8,7 +8,7 @@ import { runRetentionAutomation } from "./retention";
 import { runWeeklyDigestDispatch } from "./weekly-digest";
 import { runQuarterlyValueReportDispatch } from "./quarterly-value";
 import { runOrganicTrafficAutomation } from "./organic-traffic";
-import { getDueTasks } from "../db";
+import { getDueTasks, getRunTaskCount } from "../db";
 import { runTask } from "./task-runner";
 import { ucb1Score, SEGMENT_PRIORS } from "../_core/bayesian";
 
@@ -27,8 +27,10 @@ export async function runPipelineTick() {
   // Mission task orchestration — UCB1 prioritisation
   // Score each task's kind by: E[conversion] + exploration bonus.
   // Unexplored task kinds get Infinity (always tried first).
-  const dueTasks = await getDueTasks();
-  const totalTasks = dueTasks.length;
+  const [dueTasks, runCount] = await Promise.all([getDueTasks(), getRunTaskCount()]);
+  // totalTasks must reflect cumulative history — using only the current batch would
+  // make the exploration bonus a constant (ln(batchSize)) rather than growing with experience.
+  const totalTasks = Math.max(runCount, 1);
 
   const scored = dueTasks.map(task => {
     // Map task kind to a segment prior (best proxy we have at the task level)
@@ -51,10 +53,10 @@ export async function runPipelineTick() {
 
   const taskResults = { total: dueTasks.length, ran: 0, errors: 0 };
   for (const { task } of scored) {
-    try {
-      await runTask(task);
+    const result = await runTask(task);
+    if (result.ok) {
       taskResults.ran++;
-    } catch {
+    } else {
       taskResults.errors++;
     }
   }

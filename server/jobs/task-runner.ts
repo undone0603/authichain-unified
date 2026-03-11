@@ -14,7 +14,7 @@ import {
   runScheduleSocialPosts,
 } from '../agents/content.js';
 
-export async function runTask(task: Task): Promise<void> {
+export async function runTask(task: Task): Promise<{ ok: boolean }> {
   await markTaskRunning(task.id);
 
   try {
@@ -84,8 +84,9 @@ export async function runTask(task: Task): Promise<void> {
         throw new Error(`Unknown task kind: ${task.kind}`);
     }
 
-    // Agents that set WAITING_HUMAN skip markTaskDone — check current status
+    // markTaskDone guards with WHERE status='RUNNING', so WAITING_HUMAN is preserved if the agent set it
     await markTaskDone(task.id);
+    return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await markTaskFailed(task.id, message);
@@ -94,5 +95,6 @@ export async function runTask(task: Task): Promise<void> {
       missionId: task.missionId,
       error: message,
     }});
+    return { ok: false };
   }
 }

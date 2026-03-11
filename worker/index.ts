@@ -135,8 +135,8 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     // Populate process.env from Worker bindings so existing code works unchanged
     for (const [k, v] of Object.entries(env)) {
-      if (v !== undefined && !process.env[k]) {
-        (process.env as any)[k] = v;
+      if (typeof v === 'string' && !process.env[k]) {
+        process.env[k] = v;
       }
     }
 
@@ -214,8 +214,8 @@ export default {
   ): Promise<void> {
     // Populate process.env
     for (const [k, v] of Object.entries(env)) {
-      if (v !== undefined && !process.env[k]) {
-        (process.env as any)[k] = v;
+      if (typeof v === 'string' && !process.env[k]) {
+        process.env[k] = v;
       }
     }
 

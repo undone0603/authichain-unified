@@ -17,11 +17,12 @@ vi.mock('./jobs/retention.js',         () => ({ runRetentionAutomation:         
 vi.mock('./jobs/weekly-digest.js',     () => ({ runWeeklyDigestDispatch:        vi.fn().mockResolvedValue({ executed: true }) }));
 vi.mock('./jobs/quarterly-value.js',   () => ({ runQuarterlyValueReportDispatch: vi.fn().mockResolvedValue({ executed: true }) }));
 vi.mock('./jobs/organic-traffic.js',   () => ({ runOrganicTrafficAutomation:    vi.fn().mockResolvedValue({ executed: true }) }));
-vi.mock('./jobs/task-runner.js',       () => ({ runTask:                        vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./jobs/task-runner.js',       () => ({ runTask:                        vi.fn().mockResolvedValue({ ok: true }) }));
 
 vi.mock('./db.js', () => ({
-  getDueTasks:  vi.fn().mockResolvedValue([]),
-  logActivity:  vi.fn().mockResolvedValue(undefined),
+  getDueTasks:     vi.fn().mockResolvedValue([]),
+  getRunTaskCount: vi.fn().mockResolvedValue(100),
+  logActivity:     vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -116,8 +117,8 @@ describe('runPipelineTick', () => {
     ]);
 
     vi.mocked(runTask)
-      .mockRejectedValueOnce(new Error('task1 failed'))
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true });
 
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
     const result = await runPipelineTick() as any;

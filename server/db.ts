@@ -1599,6 +1599,15 @@ export async function retryTask(id: string): Promise<void> {
     .where(and(eq(missionTasks.id, id), eq(missionTasks.status, 'FAILED')));
 }
 
+export async function getRunTaskCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const [row] = await db.select({ count: sql<number>`count(*)::int` })
+    .from(missionTasks)
+    .where(inArray(missionTasks.status, ['DONE', 'FAILED', 'WAITING_HUMAN']));
+  return row?.count ?? 0;
+}
+
 export async function enqueueTask(missionId: string, kind: string, payload: Record<string, unknown>, runAt?: Date): Promise<string> {
   const db = await getDb();
   const id = crypto.randomUUID();
