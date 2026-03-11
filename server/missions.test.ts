@@ -1,6 +1,92 @@
 import { describe, expect, it, beforeAll } from 'vitest';
+import { vi } from 'vitest';
 import { appRouter } from './routers';
 import type { TrpcContext } from './_core/context';
+
+// ─── In-memory store (hoisted so vi.mock factory can access it) ───────────────
+
+const { store } = vi.hoisted(() => ({
+  store: {
+    missions: new Map<string, any>(),
+    tasks:    new Map<string, any>(),
+  },
+}));
+
+// Task kind lists matching templates.ts exactly
+const TASK_KINDS: Record<string, string[]> = {
+  GOV_PILOT:          ['BUILD_PILOT_PACKET', 'DRAFT_INTEL_DOSSIER', 'FIND_GOV_LEADS', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
+  RETAIL_PILOT:       ['FINALIZE_RETAIL_SIGNAGE', 'PACKAGE_SKU_ONBOARDING', 'FIND_RETAIL_LEADS', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
+  PRESS_LAUNCH:       ['FIND_RETAIL_LEADS', 'DRAFT_PRESS_RELEASE', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'SCHEDULE_SOCIAL_POSTS'],
+  PARTNER_ONBOARDING: ['BUILD_PILOT_PACKET', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
+  TECH_OS_LOCK:       ['BUILD_PILOT_PACKET', 'DRAFT_INTEL_DOSSIER', 'GENERATE_LAUNCH_CHECKLIST'],
+  LAUNCH_AUTHICHAIN:  ['CHECK_DNS_CONFIG', 'VERIFY_SSL', 'RUN_LIGHTHOUSE_AUDIT', 'GENERATE_LAUNCH_CHECKLIST', 'DRAFT_LAUNCH_EMAIL', 'DRAFT_PRESS_RELEASE', 'SCHEDULE_SOCIAL_POSTS'],
+};
+
+const TITLES: Record<string, string> = {
+  GOV_PILOT:          'Government Pilot – Initial Agency',
+  RETAIL_PILOT:       'Retail Pilot – Dispensary / Retail Partner',
+  PRESS_LAUNCH:       'Press Launch – Media & PR Outreach',
+  PARTNER_ONBOARDING: 'Partner Onboarding',
+  TECH_OS_LOCK:       'Tech OS Lock – Platform Defensibility',
+  LAUNCH_AUTHICHAIN:  'AuthiChain.com – Full Launch Orchestration',
+};
+
+// ─── Mock db module ───────────────────────────────────────────────────────────
+
+vi.mock('./db', () => ({
+  getMissions: async (statusFilter?: string) => {
+    const all = [...store.missions.values()];
+    return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
+  },
+
+  getMissionById: async (id: string) => {
+    const m = store.missions.get(id);
+    if (!m) return null;
+    const tasks = [...store.tasks.values()].filter((t: any) => t.missionId === id);
+    return { ...m, tasks };
+  },
+
+  createMission: async (type: string) => {
+    const id = crypto.randomUUID();
+    store.missions.set(id, {
+      id, type,
+      title: TITLES[type] ?? type,
+      status: 'PLANNED',
+      priority: 5,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    for (const kind of (TASK_KINDS[type] ?? [])) {
+      const taskId = crypto.randomUUID();
+      store.tasks.set(taskId, {
+        id: taskId, missionId: id, kind, payload: {}, status: 'PENDING',
+        runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null,
+        createdAt: new Date(), updatedAt: new Date(),
+      });
+    }
+    return id;
+  },
+
+  updateMissionStatus: async (id: string, status: string) => {
+    const m = store.missions.get(id);
+    if (m) store.missions.set(id, { ...m, status, updatedAt: new Date() });
+  },
+
+  getTasksByMission: async (missionId: string) => {
+    return [...store.tasks.values()].filter((t: any) => t.missionId === missionId);
+  },
+
+  retryTask: async (id: string) => {
+    const t = store.tasks.get(id);
+    if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
+  },
+
+  // getDb returns null — tests using direct db access guard with if (db)
+  getDb: async () => null,
+
+  logActivity:               vi.fn().mockResolvedValue(undefined),
+  createSystemNotification:  vi.fn().mockResolvedValue(undefined),
+}));
 
 // ─── Shared test context ──────────────────────────────────────────────────────
 
@@ -30,7 +116,7 @@ function publicCtx(): TrpcContext {
   };
 }
 
-// ─── Auth guards ─────────────────────────────────────────────────────────────
+// ─── Auth guards ──────────────────────────────────────────────────────────────
 
 describe('missions — auth guards', () => {
   it('missions.list throws UNAUTHORIZED for unauthenticated', async () => {
@@ -104,7 +190,8 @@ describe('missions.create', () => {
     const caller = appRouter.createCaller(makeCtx());
     const fromGet = (await caller.missions.get({ id: missionId }) as any)?.tasks ?? [];
     const fromList = await caller.tasks.list({ missionId });
-    expect(fromList.length).toBe(fromGet.length);
+    expect((fromList as any[]).length).toBe(fromGet.length);
+    expect((fromList as any[]).length).toBeGreaterThan(0);
   });
 });
 
@@ -164,18 +251,22 @@ describe('tasks.retry', () => {
   let failedTaskId: string;
 
   beforeAll(async () => {
-    // Create a mission, then manually fail one of its tasks via DB
     const { createMission, getTasksByMission, getDb } = await import('./db');
-    const { missionTasks } = await import('../drizzle/schema');
-    const { eq } = await import('drizzle-orm');
 
     const missionId = await createMission('TECH_OS_LOCK');
     const tasks = await getTasksByMission(missionId);
     failedTaskId = tasks[0].id;
 
+    // Directly mark the task FAILED in the in-memory store
+    const t = store.tasks.get(failedTaskId);
+    if (t) store.tasks.set(failedTaskId, { ...t, status: 'FAILED', lastError: 'test failure', updatedAt: new Date() });
+
     const db = await getDb();
     if (db) {
-      await db.update(missionTasks)
+      // If a real DB were present, we'd update there too (won't run in mock env)
+      const { missionTasks } = await import('../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      await (db as any).update(missionTasks)
         .set({ status: 'FAILED', lastError: 'test failure', updatedAt: new Date() })
         .where(eq(missionTasks.id, failedTaskId));
     }
@@ -186,21 +277,17 @@ describe('tasks.retry', () => {
     const result = await caller.tasks.retry({ id: failedTaskId });
     expect(result).toEqual({ ok: true });
 
-    const { getDb } = await import('./db');
-    const { missionTasks } = await import('../drizzle/schema');
-    const { eq } = await import('drizzle-orm');
-    const db = await getDb();
-    if (db) {
-      const [task] = await db.select().from(missionTasks).where(eq(missionTasks.id, failedTaskId));
-      expect(task.status).toBe('PENDING');
-      expect(task.lastError).toBeNull();
-    }
+    // Verify in the in-memory store
+    const task = store.tasks.get(failedTaskId);
+    expect(task?.status).toBe('PENDING');
+    expect(task?.lastError).toBeNull();
   });
 
-  it('retry on non-FAILED task is a no-op (status unchanged)', async () => {
+  it('retry on a PENDING task is a safe no-op', async () => {
     const caller = appRouter.createCaller(makeCtx());
-    // Call retry on a task that is now PENDING — should be a safe no-op
     await expect(caller.tasks.retry({ id: failedTaskId })).resolves.toEqual({ ok: true });
+    const task = store.tasks.get(failedTaskId);
+    expect(task?.status).toBe('PENDING');
   });
 });
 
@@ -211,5 +298,21 @@ describe('missions.get edge cases', () => {
     const caller = appRouter.createCaller(makeCtx());
     const result = await caller.missions.get({ id: '00000000-0000-0000-0000-000000000000' });
     expect(result).toBeNull();
+  });
+});
+
+// ─── missions.list — status filter reflects mutations ─────────────────────────
+
+describe('missions.list — status filtering after mutations', () => {
+  it('lists IN_PROGRESS missions after status update', async () => {
+    const caller = appRouter.createCaller(makeCtx());
+    const { id } = await caller.missions.create({ type: 'GOV_PILOT' });
+    await caller.missions.updateStatus({ id, status: 'IN_PROGRESS' });
+
+    const inProgress = await caller.missions.list({ status: 'IN_PROGRESS' }) as any[];
+    expect(inProgress.some((m: any) => m.id === id)).toBe(true);
+
+    const planned = await caller.missions.list({ status: 'PLANNED' }) as any[];
+    expect(planned.every((m: any) => m.id !== id)).toBe(true);
   });
 });
