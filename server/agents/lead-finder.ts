@@ -4,6 +4,7 @@ import { logActivity, enqueueTask } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 import { getDb } from '../db.js';
 import { leads } from '../../drizzle/schema.js';
+import { SEGMENT_PRIORS, SEGMENT_REVENUE, betaMean, betaCI } from '../_core/bayesian.js';
 
 interface LeadFinderPayload {
   count?: number;
@@ -18,6 +19,7 @@ interface FoundLead {
   email: string;
   title?: string;
   notes?: string;
+  fitProbability?: number;
 }
 
 interface SearchResult {
@@ -68,7 +70,20 @@ export async function runLeadFinder(task: Task): Promise<void> {
     .map(r => `Title: ${r.title ?? ''}\nSnippet: ${r.snippet ?? ''}\nURL: ${r.link ?? ''}`)
     .join('\n---\n');
 
-  const prompt = `You are a B2B lead researcher. Using the web search results below, extract up to ${count} real decision-maker contacts for:
+  // ── Bayesian context for the prompt ───────────────────────────────────────
+  const prior = SEGMENT_PRIORS[segment] ?? SEGMENT_PRIORS.DEFAULT;
+  const conversionMean = betaMean(prior);
+  const [ciLo, ciHi] = betaCI(prior);
+  const expectedRevenue = SEGMENT_REVENUE[segment] ?? SEGMENT_REVENUE.DEFAULT;
+  const expectedValue = (conversionMean * expectedRevenue).toFixed(0);
+
+  const prompt = `[BAYESIAN REASONING]
+Prior belief: ${segment} segment reply-to-meeting conversion rate ≈ ${(conversionMean * 100).toFixed(1)}% (95% CI: ${(ciLo * 100).toFixed(1)}%–${(ciHi * 100).toFixed(1)}%).
+Expected value per lead: ~$${expectedValue} (conversion rate × $${expectedRevenue.toLocaleString()} pilot revenue).
+Implication: prioritise leads with the highest posterior fit probability — even a 2× fit improvement doubles expected value.
+[END REASONING]
+
+You are a B2B lead researcher. Using the web search results below, extract up to ${count} real decision-maker contacts for:
 
 ICP: ${icp}
 Segment: ${segment}
@@ -77,14 +92,20 @@ ${payload.vertical ? `Vertical: ${payload.vertical}` : ''}
 Web search results:
 ${searchContext || '(no results — use your knowledge of this industry)'}
 
-For each lead, produce:
+For each lead:
+1. Assess prior probability of fit (0–1) based on title authority, org size, and segment alignment.
+2. Identify any evidence that raises or lowers that probability (signals in the snippet/URL).
+3. Output the posterior-ranked lead (highest fit first).
+
+Fields per lead:
 - name: full name of decision-maker
 - org: organization name
 - email: best-guess professional email (firstname.lastname@domain.com or info@domain.com)
 - title: job title
-- notes: 1-sentence fit reason
+- fitProbability: your posterior estimate 0.0–1.0
+- notes: one sentence — prior belief + key evidence that updated it
 
-Return JSON: { "leads": [ { "name":"...", "org":"...", "email":"...", "title":"...", "notes":"..." } ] }`;
+Return JSON: { "leads": [ { "name":"...", "org":"...", "email":"...", "title":"...", "fitProbability": 0.0, "notes":"..." } ] }`;
 
   const result = await invokeLLM({
     messages: [{ role: 'user', content: prompt }],
@@ -100,6 +121,9 @@ Return JSON: { "leads": [ { "name":"...", "org":"...", "email":"...", "title":".
     throw new Error(`Lead finder LLM returned unparseable JSON: ${(result.choices[0].message.content as string)?.slice(0, 200)}`);
   }
 
+  // Sort by posterior fit probability (highest first) before inserting
+  foundLeads.sort((a, b) => (b.fitProbability ?? 0.5) - (a.fitProbability ?? 0.5));
+
   const db = await getDb();
   let inserted = 0;
 
@@ -112,7 +136,7 @@ Return JSON: { "leads": [ { "name":"...", "org":"...", "email":"...", "title":".
         name: lead.name,
         company: lead.org,
         title: lead.title,
-        notes: lead.notes,
+        notes: lead.notes ? `[fit:${(lead.fitProbability ?? 0.5).toFixed(2)}] ${lead.notes}` : undefined,
         source: `agentz_lead_finder_${segment.toLowerCase()}`,
         status: 'new',
         segment,
