@@ -1,13 +1,15 @@
 import "dotenv/config";
-import express from "express";
+import express, { type Request } from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { ENV } from "./env";
 import { serveStatic, setupVite } from "./vite";
-import { initializeScheduler } from "../scheduled-jobs";
+
+const processStartedAt = Date.now();
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -28,12 +30,79 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+function createIpRateLimiter(windowMs: number, max: number) {
+  const counters = new Map<string, { count: number; resetAt: number }>();
+  return (req: Request, res: express.Response, next: express.NextFunction) => {
+    const xff = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim();
+    const key = xff || req.ip || "unknown";
+    const now = Date.now();
+    const current = counters.get(key);
+    if (!current || current.resetAt <= now) {
+      counters.set(key, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    if (current.count >= max) {
+      const retryAfter = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
+      res.setHeader("Retry-After", String(retryAfter));
+      return res.status(429).json({ error: "Too many requests" });
+    }
+    current.count += 1;
+    counters.set(key, current);
+    return next();
+  };
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  const stripeWebhookRateLimit = createIpRateLimiter(60 * 1000, 100);
+  const trpcRateLimit = createIpRateLimiter(60 * 1000, 200);
+  const createLeadRateLimit = createIpRateLimiter(60 * 1000, 10);
+
+  app.set("trust proxy", 1);
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    const allowOrigin = !origin
+      || !ENV.isProduction
+      || ENV.corsAllowedOrigins.includes(origin);
+    if (allowOrigin && origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    } else if (origin) {
+      return res.status(403).json({ error: "CORS blocked" });
+    }
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") return res.sendStatus(204);
+    return next();
+  });
+
+  app.get("/health", async (_req, res) => {
+    let dbConnected = false;
+    try {
+      const { getDb } = await import("../db");
+      dbConnected = !!(await getDb());
+    } catch {
+      dbConnected = false;
+    }
+    const mem = process.memoryUsage();
+    return res.status(dbConnected ? 200 : 503).json({
+      ok: dbConnected,
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.floor((Date.now() - processStartedAt) / 1000),
+      database: { connected: dbConnected },
+      memory: {
+        rss: mem.rss,
+        heapTotal: mem.heapTotal,
+        heapUsed: mem.heapUsed,
+        external: mem.external,
+      },
+    });
+  });
 
   // ─── Stripe Webhook (MUST be before express.json()) ───────────────────
-  app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  app.post("/api/stripe/webhook", stripeWebhookRateLimit, express.raw({ type: "application/json" }), async (req, res) => {
     const sig = req.headers["stripe-signature"] as string;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
@@ -53,84 +122,189 @@ async function startServer() {
       }
 
       const result = await processWebhookEvent(event);
+      const { hasWebhookEventProcessed } = await import("../db");
+      if (await hasWebhookEventProcessed(event.id)) {
+        console.log(`[Stripe Webhook] Duplicate event ignored: ${event.id}`);
+        return res.json({ received: true, duplicate: true, type: event.type });
+      }
 
       if (result.handled && result.eventType === "checkout.session.completed" && result.userId && result.plan) {
-        // Update subscription in database
-        const { getDb } = await import("../db");
-        const db = await getDb();
-        if (db) {
-          const { subscriptions, users } = await import("../../drizzle/schema");
-          const { eq } = await import("drizzle-orm");
-          const { getPlanQuota } = await import("../stripe-products");
-          const plan = result.plan as "starter" | "professional" | "enterprise";
-          // Upsert subscription
-          await db.insert(subscriptions).values({
+        const { getPlanQuota } = await import("../stripe-products");
+        const {
+          createSystemNotification,
+          logAutomationAudit,
+          recordRevenue,
+          upsertStripeSubscription,
+        } = await import("../db");
+        const plan = result.plan as "starter" | "professional" | "enterprise";
+        const session = event.data.object as any;
+        const billingCycle = session?.metadata?.billing === "annual" ? "annual" : "monthly";
+        const amountUsd = session?.amount_total ? Number(session.amount_total) / 100 : 0;
+
+        await upsertStripeSubscription({
+          userId: result.userId,
+          plan,
+          status: "active",
+          monthlyQuota: getPlanQuota(plan),
+          billingCycle,
+          stripeCustomerId: result.customerId || null,
+          stripeSubscriptionId: result.subscriptionId || null,
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(Date.now() + (billingCycle === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000),
+        });
+        await logAutomationAudit("billing_checkout_completed", {
+          eventId: event.id,
+          userId: result.userId,
+          plan,
+          billingCycle,
+          amountUsd,
+          stripeSubscriptionId: result.subscriptionId || null,
+        }, result.userId);
+        if (amountUsd > 0) {
+          await recordRevenue({
+            source: "stripe",
+            amount: amountUsd.toFixed(2),
+            currency: "USD",
+            type: "subscription",
             userId: result.userId,
-            plan,
-            status: "active",
-            monthlyQuota: getPlanQuota(plan),
-            usedQuota: 0,
-            stripeCustomerId: result.customerId || null,
-            stripeSubscriptionId: result.subscriptionId || null,
-            billingCycle: "monthly",
-            currentPeriodStart: new Date(),
-            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            metadata: { eventId: event.id, plan, billingCycle },
           });
-          // Update user's stripeCustomerId
-          if (result.customerId) {
-            await db.update(users).set({ stripeCustomerId: result.customerId }).where(eq(users.id, result.userId));
-          }
-          console.log(`[Stripe Webhook] Subscription created for user ${result.userId}: ${plan}`);
-          // Auto-notification for subscription
-          try {
-            const { createSystemNotification } = await import("../db");
-            await createSystemNotification(
-              result.userId,
-              `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Activated`,
-              `Your ${plan} subscription is now active. You have ${getPlanQuota(plan)} monthly authentications available.`,
-              "subscription",
-              "/subscriptions"
-            );
-          } catch (notifErr) { console.warn("[Notification] Failed to create:", notifErr); }
-          // Auto-sync payment to HubSpot
-          try {
-            const { syncPaymentToHubSpot } = await import("../hubspot-service");
-            await syncPaymentToHubSpot({
-              email: result.email || "",
-              name: result.customerName || undefined,
-              amount: 0, // Amount comes from Stripe, we just track the deal
-              plan: plan,
-            });
-          } catch (hsErr) { console.warn("[HubSpot] Payment sync failed:", hsErr); }
+        }
+
+        await createSystemNotification(
+          result.userId,
+          `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Activated`,
+          `Your ${plan} subscription is active with ${getPlanQuota(plan)} monthly authentications.`,
+          "subscription",
+          "/subscriptions",
+        );
+        console.log(`[Stripe Webhook] Subscription upserted for user ${result.userId}: ${plan}`);
+
+        try {
+          const { syncDealStageToHubSpot, syncPaymentToHubSpot } = await import("../hubspot-service");
+          await syncPaymentToHubSpot({
+            email: result.email || "",
+            name: result.customerName || undefined,
+            amount: amountUsd,
+            plan,
+          });
+          await syncDealStageToHubSpot({
+            email: result.email || "",
+            name: result.customerName || undefined,
+            amount: amountUsd,
+            plan,
+            stage: "paid",
+            eventId: event.id,
+          });
+        } catch (hsErr) {
+          console.warn("[HubSpot] Payment sync failed:", hsErr);
         }
       }
 
       if (result.handled && result.eventType === "customer.subscription.deleted" && result.subscriptionId) {
-        const { getDb } = await import("../db");
-        const db = await getDb();
-        if (db) {
-          const { subscriptions } = await import("../../drizzle/schema");
-          const { eq } = await import("drizzle-orm");
-          await db.update(subscriptions).set({ status: "cancelled", cancelledAt: new Date() }).where(eq(subscriptions.stripeSubscriptionId, result.subscriptionId));
-          console.log(`[Stripe Webhook] Subscription cancelled: ${result.subscriptionId}`);
-        }
+        const { logAutomationAudit, setSubscriptionStatusByStripeId } = await import("../db");
+        await setSubscriptionStatusByStripeId(result.subscriptionId, "cancelled", new Date());
+        await logAutomationAudit("billing_subscription_cancelled", {
+          eventId: event.id,
+          stripeSubscriptionId: result.subscriptionId,
+        });
+        console.log(`[Stripe Webhook] Subscription cancelled: ${result.subscriptionId}`);
       }
 
       if (result.handled && result.eventType === "invoice.payment_failed" && result.subscriptionId) {
-        const { getDb } = await import("../db");
-        const db = await getDb();
-        if (db) {
-          const { subscriptions } = await import("../../drizzle/schema");
-          const { eq } = await import("drizzle-orm");
-          await db.update(subscriptions).set({ status: "past_due" }).where(eq(subscriptions.stripeSubscriptionId, result.subscriptionId));
-          console.log(`[Stripe Webhook] Payment failed for subscription: ${result.subscriptionId}`);
+        const {
+          createSystemNotification,
+          getSubscriptionByStripeSubscriptionId,
+          logAutomationAudit,
+          setSubscriptionStatusByStripeId,
+        } = await import("../db");
+        await setSubscriptionStatusByStripeId(result.subscriptionId, "past_due");
+        const sub = await getSubscriptionByStripeSubscriptionId(result.subscriptionId);
+        if (sub?.userId) {
+          await createSystemNotification(
+            sub.userId,
+            "Payment Failed",
+            "Payment failed. Dunning sequence started. Update billing details to avoid downgrade.",
+            "alert",
+            "/subscriptions",
+          );
         }
+        await logAutomationAudit("billing_dunning_started", {
+          eventId: event.id,
+          stripeSubscriptionId: result.subscriptionId,
+          dunningStep: "day_0",
+        }, sub?.userId);
+        if (result.email && sub?.plan) {
+          try {
+            const { syncDealStageToHubSpot } = await import("../hubspot-service");
+            await syncDealStageToHubSpot({
+              email: result.email,
+              plan: sub.plan,
+              stage: "payment_failed",
+              eventId: event.id,
+            });
+          } catch {
+            // Best-effort external sync.
+          }
+        }
+        console.log(`[Stripe Webhook] Payment failed for subscription: ${result.subscriptionId}`);
+      }
+
+      if (result.handled && result.eventType === "checkout.session.expired" && result.plan && result.email) {
+        const { logAutomationAudit } = await import("../db");
+        await logAutomationAudit("checkout_abandoned", {
+          eventId: event.id,
+          plan: result.plan,
+          email: result.email,
+        }, result.userId);
+        try {
+          const { syncDealStageToHubSpot } = await import("../hubspot-service");
+          await syncDealStageToHubSpot({
+            email: result.email,
+            name: result.customerName,
+            plan: result.plan,
+            stage: "abandoned",
+            eventId: event.id,
+          });
+        } catch {
+          // Best-effort external sync.
+        }
+      }
+
+      if (result.handled && result.eventType === "invoice.paid" && result.subscriptionId) {
+        const { logAutomationAudit, setSubscriptionStatusByStripeId } = await import("../db");
+        await setSubscriptionStatusByStripeId(result.subscriptionId, "active");
+        await logAutomationAudit("billing_invoice_paid", {
+          eventId: event.id,
+          stripeSubscriptionId: result.subscriptionId,
+        });
+        console.log(`[Stripe Webhook] Invoice paid for subscription: ${result.subscriptionId}`);
       }
 
       res.json({ received: true, type: event.type });
     } catch (err: any) {
       console.error(`[Stripe Webhook] Error: ${err.message}`);
       res.status(400).json({ error: err.message });
+    }
+  });
+
+  // ─── Stripe Webhook v2 — /webhooks/stripe ─────────────────────────────────
+  // Canonical path for new Stripe webhook registrations. Delegates to the
+  // extracted handler in server/webhooks/stripe.ts which writes directly to
+  // activity_log, revenue_records, and subscriptions so AgentZ jobs can
+  // consume real Stripe data on their next tick.
+  app.post("/webhooks/stripe", stripeWebhookRateLimit, express.raw({ type: "application/json" }), async (req, res) => {
+    const sig = req.headers["stripe-signature"] as string;
+    if (!sig) {
+      return res.status(400).json({ error: "Missing stripe-signature header" });
+    }
+    try {
+      const { handleStripeWebhook } = await import("../webhooks/stripe");
+      const result = await handleStripeWebhook(req.body as Buffer, sig);
+      return res.json(result);
+    } catch (err: any) {
+      console.error(`[/webhooks/stripe] Error: ${err.message}`);
+      return res.status(400).json({ error: err.message });
     }
   });
 
@@ -144,6 +318,14 @@ async function startServer() {
   // tRPC API
   app.use(
     "/api/trpc",
+    trpcRateLimit,
+    (req, res, next) => {
+      const trpcPath = req.path || "";
+      if (trpcPath.includes("marketing.createLead")) {
+        return createLeadRateLimit(req, res, next);
+      }
+      return next();
+    },
     createExpressMiddleware({
       router: appRouter,
       createContext,
@@ -165,7 +347,6 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    initializeScheduler();
   });
 }
 

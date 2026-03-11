@@ -1,20 +1,19 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { ENV } from "./_core/env";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { referralRouter } from "./referral/router";
-import { affiliateRouter } from "./affiliate/router";
-import { bonusesRouter } from "./bonuses/router";
-import { marketplaceRouter } from "./marketplace/router";
-import { emailDraftsRouter } from "./email-drafts/router";
-import { subscriptionsRouter } from "./subscriptions/router";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
   return next({ ctx });
 });
+
+const trimmedStr = (max: number) => z.string().trim().min(1).max(max);
+const trimmedOptional = (max: number) => z.string().trim().max(max).optional();
+const trimmedEmail = () => z.string().trim().email().max(320);
 
 export const appRouter = router({
   system: systemRouter,
@@ -123,11 +122,6 @@ export const appRouter = router({
           "/authenticate"
         );
       } catch (notifErr) { console.warn("[Notification] Failed:", notifErr); }
-      // Award XP to user's agent for verification
-      try {
-        const { rewardAgentForVerification } = await import("./character-service");
-        await rewardAgentForVerification(ctx.user.id, aiResult.result === "authentic");
-      } catch (agentErr) { console.warn("[Agent XP] No agent or error:", agentErr); }
       return aiResult;
     }),
     history: protectedProcedure.query(async ({ ctx }) => {
@@ -319,7 +313,7 @@ export const appRouter = router({
     checkout: protectedProcedure.input(z.object({
       plan: z.enum(["starter", "professional", "enterprise"]),
       billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
-      origin: z.string(),
+      origin: z.string().trim().url().max(512),
     })).mutation(async ({ ctx, input }) => {
       const { createSubscriptionCheckout } = await import("./stripe-service");
       const url = await createSubscriptionCheckout({
@@ -331,6 +325,18 @@ export const appRouter = router({
         origin: input.origin,
         stripeCustomerId: (ctx.user as any).stripeCustomerId || undefined,
       });
+      try {
+        const { syncDealStageToHubSpot } = await import("./hubspot-service");
+        await syncDealStageToHubSpot({
+          email: ctx.user.email || "",
+          name: ctx.user.name || undefined,
+          plan: input.plan,
+          stage: "checkout_started",
+          amount: 0,
+        });
+      } catch {
+        // Best-effort external sync.
+      }
       return { checkoutUrl: url };
     }),
     cancel: protectedProcedure.mutation(async ({ ctx }) => {
@@ -355,13 +361,21 @@ export const appRouter = router({
       code: z.string().min(1),
       percentOff: z.number().min(1).max(100).default(99),
       name: z.string().optional(),
+      approvalNote: z.string().optional(),
     })).mutation(async ({ input }) => {
+      if (input.percentOff > ENV.discountApprovalThresholdPercent && !input.approvalNote) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `Discounts above ${ENV.discountApprovalThresholdPercent}% require approvalNote`,
+        });
+      }
       const Stripe = (await import("stripe")).default;
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
       const coupon = await stripe.coupons.create({
         percent_off: input.percentOff,
         duration: "forever",
         name: input.name || `AuthiChain ${input.percentOff}% Off`,
+        metadata: input.approvalNote ? { approvalNote: input.approvalNote } : undefined,
       });
       const promo = await stripe.promotionCodes.create({
         promotion: { type: 'coupon', coupon: coupon.id },
@@ -508,11 +522,11 @@ export const appRouter = router({
       return await getUserEmailCampaigns(ctx.user.id);
     }),
     create: protectedProcedure.input(z.object({
-      name: z.string().min(1),
-      subject: z.string().min(1),
-      body: z.string().min(1),
+      name: trimmedStr(256),
+      subject: trimmedStr(512),
+      body: trimmedStr(20000),
       type: z.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
-      scheduledAt: z.string().optional(),
+      scheduledAt: z.string().trim().datetime().optional(),
     })).mutation(async ({ ctx, input }) => {
       const { createEmailCampaign } = await import("./db");
       return await createEmailCampaign({
@@ -522,8 +536,8 @@ export const appRouter = router({
     }),
     generateContent: protectedProcedure.input(z.object({
       type: z.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
-      topic: z.string(),
-      targetAudience: z.string().optional(),
+      topic: trimmedStr(300),
+      targetAudience: trimmedOptional(300),
     })).mutation(async ({ input }) => {
       const { invokeLLM } = await import("./_core/llm");
       const response = await invokeLLM({
@@ -572,14 +586,120 @@ export const appRouter = router({
       return { success: true };
     }),
     reject: protectedProcedure.input(z.object({ id: z.number(), notes: z.string().optional() })).mutation(async ({ ctx, input }) => {
-      const { updateDraftStatus } = await import("./db");
+      const { updateDraftStatus, getEmailDraftById, markTaskFailed } = await import("./db");
+      const draft = await getEmailDraftById(input.id);
       await updateDraftStatus(input.id, "rejected", ctx.user.id);
+      if (draft?.taskId) await markTaskFailed(draft.taskId, 'Email draft rejected by reviewer');
       return { success: true };
     }),
     bulkApprove: protectedProcedure.input(z.object({ ids: z.array(z.number()) })).mutation(async ({ ctx, input }) => {
       const { updateDraftStatus } = await import("./db");
       for (const id of input.ids) await updateDraftStatus(id, "approved", ctx.user.id);
       return { success: true, count: input.ids.length };
+    }),
+    sendApproved: adminProcedure.input(z.object({
+      limit: z.number().min(1).max(200).optional().default(20),
+    }).optional()).mutation(async ({ ctx, input }) => {
+      const { getApprovedDrafts, logAutomationAudit, logActivity, updateDraftStatus } = await import("./db");
+      const { sendEmail } = await import("./email-service");
+      const drafts = await getApprovedDrafts(input?.limit ?? 20);
+      let sent = 0;
+      let suppressed = 0;
+      let skipped = 0;
+
+      for (const draft of drafts) {
+        const result = await sendEmail({
+          to: draft.prospectEmail,
+          subject: draft.subject,
+          body: draft.body,
+          fromName: "AuthiChain Revenue",
+        });
+
+        if (result.status === "sent") {
+          await updateDraftStatus(draft.id, "sent", ctx.user.id);
+          if (draft.taskId) {
+            const { markTaskDone } = await import("./db");
+            await markTaskDone(draft.taskId);
+          }
+          sent++;
+        } else if (result.status === "suppressed") {
+          suppressed++;
+        } else {
+          skipped++;
+        }
+
+        await logActivity({
+          userId: ctx.user.id,
+          action: "email_send_attempt",
+          entityType: "email_draft",
+          entityId: draft.id,
+          details: {
+            to: draft.prospectEmail,
+            subject: draft.subject,
+            bodyLength: draft.body?.length || 0,
+            status: result.status,
+            provider: result.provider || "none",
+            providerMessageId: result.providerMessageId || null,
+            reason: result.reason || null,
+          },
+        });
+      }
+
+      await logAutomationAudit("outreach_batch_send", {
+        attempted: drafts.length,
+        sent,
+        suppressed,
+        skipped,
+      }, ctx.user.id);
+
+      return { success: true, attempted: drafts.length, sent, suppressed, skipped };
+    }),
+    sendById: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
+      const { getEmailDraftById, logAutomationAudit, logActivity, updateDraftStatus } = await import("./db");
+      const { sendEmail } = await import("./email-service");
+      const draft = await getEmailDraftById(input.id);
+      if (!draft) throw new TRPCError({ code: "NOT_FOUND", message: "Draft not found" });
+      if (draft.status !== "approved") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Draft must be approved before send" });
+      }
+
+      const result = await sendEmail({
+        to: draft.prospectEmail,
+        subject: draft.subject,
+        body: draft.body,
+        fromName: "AuthiChain Revenue",
+      });
+
+      if (result.status === "sent") {
+        await updateDraftStatus(draft.id, "sent", ctx.user.id);
+        if (draft.taskId) {
+          const { markTaskDone } = await import("./db");
+          await markTaskDone(draft.taskId);
+        }
+      }
+
+      await logActivity({
+        userId: ctx.user.id,
+        action: "email_send_attempt",
+        entityType: "email_draft",
+        entityId: draft.id,
+        details: {
+          to: draft.prospectEmail,
+          subject: draft.subject,
+          bodyLength: draft.body?.length || 0,
+          status: result.status,
+          provider: result.provider || "none",
+          providerMessageId: result.providerMessageId || null,
+          reason: result.reason || null,
+        },
+      });
+      await logAutomationAudit("outreach_single_send", {
+        draftId: draft.id,
+        status: result.status,
+        reason: result.reason || null,
+      }, ctx.user.id);
+
+      return { success: true, draftId: draft.id, ...result };
     }),
   }),
 
@@ -696,34 +816,50 @@ export const appRouter = router({
       return await getAllLeads();
     }),
     createLead: publicProcedure.input(z.object({
-      email: z.string().email(),
-      name: z.string().optional(),
-      company: z.string().optional(),
-      source: z.string().optional(),
+      email: trimmedEmail(),
+      name: trimmedOptional(256),
+      company: trimmedOptional(256),
+      source: trimmedOptional(128),
+      title: trimmedOptional(256),
+      phone: z.string().trim().max(32).optional(),
+      industry: trimmedOptional(128),
+      metadata: z.record(z.string().trim().max(64), z.any()).optional(),
+      signals: z.object({
+        segmentFit: z.number().min(0).max(100).optional(),
+        intent: z.number().min(0).max(100).optional(),
+        urgency: z.number().min(0).max(100).optional(),
+        budgetProxy: z.number().min(0).max(100).optional(),
+      }).optional(),
     })).mutation(async ({ input }) => {
-      const { createLead } = await import("./db");
-      const result = await createLead(input);
+      const { ingestLeadAndRoute } = await import("./revenue-orchestrator");
+      const result = await ingestLeadAndRoute(input);
+      if (!result.accepted) {
+        return { success: false, reason: result.reason };
+      }
       // Auto-sync to HubSpot
       try {
         const { syncLeadToHubSpot } = await import("./hubspot-service");
         await syncLeadToHubSpot(input);
       } catch (e) { /* HubSpot sync is best-effort */ }
-      return result;
+      return { success: true, id: result.leadId, ...result };
     }),
     updateLeadScore: adminProcedure.input(z.object({ id: z.number(), score: z.number() })).mutation(async ({ input }) => {
       const { updateLeadScore } = await import("./db");
       await updateLeadScore(input.id, input.score);
       return { success: true };
     }),
-    updateLeadStatus: adminProcedure.input(z.object({ id: z.number(), status: z.string() })).mutation(async ({ input }) => {
+    updateLeadStatus: adminProcedure.input(z.object({
+      id: z.number(),
+      status: z.enum(["new", "contacted", "qualified", "proposal", "won", "lost"]),
+    })).mutation(async ({ input }) => {
       const { updateLeadStatus } = await import("./db");
       await updateLeadStatus(input.id, input.status);
       return { success: true };
     }),
     generateContent: protectedProcedure.input(z.object({
       type: z.enum(["email", "social", "blog"]),
-      topic: z.string(),
-      targetAudience: z.string().optional(),
+      topic: trimmedStr(300),
+      targetAudience: trimmedOptional(300),
     })).mutation(async ({ input }) => {
       const { invokeLLM } = await import("./_core/llm");
       const response = await invokeLLM({
@@ -756,6 +892,18 @@ export const appRouter = router({
         input?.endDate ? new Date(input.endDate) : undefined,
       );
     }),
+    funnelReport: adminProcedure.query(async () => {
+      const { getFunnelBySegmentAndChannel } = await import("./db");
+      return await getFunnelBySegmentAndChannel();
+    }),
+    cohortReport: adminProcedure.query(async () => {
+      const { getLeadCohorts } = await import("./db");
+      return await getLeadCohorts();
+    }),
+    quarterlyValueReport: adminProcedure.query(async () => {
+      const { getQuarterlyValueReport } = await import("./db");
+      return await getQuarterlyValueReport();
+    }),
     fraudAlerts: adminProcedure.query(async () => {
       const { getOpenFraudAlerts } = await import("./db");
       return await getOpenFraudAlerts();
@@ -771,6 +919,74 @@ export const appRouter = router({
     subscriptions: adminProcedure.query(async () => {
       const { getSubscriptionAnalytics } = await import("./db");
       return await getSubscriptionAnalytics();
+    }),
+    weeklyRevenueDigest: adminProcedure.query(async () => {
+      const { getWeeklyRevenueDigest } = await import("./db");
+      return await getWeeklyRevenueDigest();
+    }),
+    operationalReadiness: adminProcedure.query(async () => {
+      const { getMonthlyLlmSpendUsd } = await import("./db");
+      const critical = [
+        { key: "STRIPE_SECRET_KEY", present: !!process.env.STRIPE_SECRET_KEY },
+        { key: "STRIPE_WEBHOOK_SECRET", present: !!process.env.STRIPE_WEBHOOK_SECRET },
+        { key: "HUBSPOT_SERVICE_KEY", present: !!process.env.HUBSPOT_SERVICE_KEY },
+        { key: "DATABASE_URL", present: !!process.env.DATABASE_URL },
+        { key: "BUILT_IN_FORGE_API_KEY", present: !!process.env.BUILT_IN_FORGE_API_KEY },
+      ];
+      const missing = critical.filter(x => !x.present).map(x => x.key);
+      const monthlyLlmSpendUsd = await getMonthlyLlmSpendUsd();
+      return {
+        ready: missing.length === 0,
+        missingCriticalEnv: missing,
+        guardrails: {
+          outreachApprovalRequired: ENV.requireOutreachApproval,
+          discountApprovalThresholdPercent: ENV.discountApprovalThresholdPercent,
+          llmMonthlyBudgetUsd: ENV.llmMonthlyBudgetUsd,
+          llmPerRequestBudgetUsd: ENV.llmPerRequestBudgetUsd,
+        },
+        budgets: {
+          llmMonthlySpendUsd: monthlyLlmSpendUsd,
+          llmMonthlyRemainingUsd: Number((ENV.llmMonthlyBudgetUsd - monthlyLlmSpendUsd).toFixed(6)),
+        },
+      };
+    }),
+    budgetStatus: adminProcedure.query(async () => {
+      const { getBudgetStatus } = await import("./db");
+      return await getBudgetStatus();
+    }),
+    acceptanceStatus: adminProcedure.query(async () => {
+      const { getAcceptanceCriteriaStatus } = await import("./db");
+      return await getAcceptanceCriteriaStatus();
+    }),
+    runAutomationJob: adminProcedure.input(z.object({
+      job: z.enum(["dunning", "retention", "weekly_digest", "quarterly_value", "budget_monitor", "pipeline_tick", "all"]),
+    })).mutation(async ({ input }) => {
+      const result: Record<string, unknown> = {};
+      if (input.job === "dunning" || input.job === "all") {
+        const { runDunningEscalation } = await import("./jobs/dunning");
+        result.dunning = await runDunningEscalation();
+      }
+      if (input.job === "retention" || input.job === "all") {
+        const { runRetentionAutomation } = await import("./jobs/retention");
+        result.retention = await runRetentionAutomation();
+      }
+      if (input.job === "weekly_digest" || input.job === "all") {
+        const { runWeeklyDigestDispatch } = await import("./jobs/weekly-digest");
+        result.weeklyDigest = await runWeeklyDigestDispatch();
+      }
+      if (input.job === "quarterly_value" || input.job === "all") {
+        const { runQuarterlyValueReportDispatch } = await import("./jobs/quarterly-value");
+        result.quarterlyValue = await runQuarterlyValueReportDispatch();
+      }
+      if (input.job === "budget_monitor" || input.job === "all") {
+        const { runBudgetMonitor } = await import("./jobs/budget-monitor");
+        result.budgetMonitor = await runBudgetMonitor();
+      }
+      if (input.job === "pipeline_tick" || input.job === "all") {
+        const { runPipelineTick } = await import("./jobs/pipeline-tick");
+        result.pipelineTick = await runPipelineTick();
+      }
+      return { success: true, ...result };
     }),
   }),
 
@@ -953,16 +1169,16 @@ export const appRouter = router({
         const { listContacts } = await import("./hubspot-service");
         return await listContacts();
       }),
-      search: protectedProcedure.input(z.object({ query: z.string() })).query(async ({ input }) => {
+      search: protectedProcedure.input(z.object({ query: trimmedStr(256) })).query(async ({ input }) => {
         const { searchContacts } = await import("./hubspot-service");
         return await searchContacts(input.query);
       }),
       create: protectedProcedure.input(z.object({
-        email: z.string().email(),
-        firstname: z.string().optional(),
-        lastname: z.string().optional(),
-        phone: z.string().optional(),
-        company: z.string().optional(),
+        email: trimmedEmail(),
+        firstname: trimmedOptional(128),
+        lastname: trimmedOptional(128),
+        phone: z.string().trim().max(32).optional(),
+        company: trimmedOptional(256),
       })).mutation(async ({ input }) => {
         const { createContact } = await import("./hubspot-service");
         return await createContact(input);
@@ -974,10 +1190,10 @@ export const appRouter = router({
         return await listCompanies();
       }),
       create: protectedProcedure.input(z.object({
-        name: z.string(),
-        domain: z.string().optional(),
-        industry: z.string().optional(),
-        description: z.string().optional(),
+        name: trimmedStr(256),
+        domain: trimmedOptional(256),
+        industry: trimmedOptional(128),
+        description: trimmedOptional(2000),
       })).mutation(async ({ input }) => {
         const { createCompany } = await import("./hubspot-service");
         return await createCompany(input);
@@ -989,15 +1205,59 @@ export const appRouter = router({
         return await listDeals();
       }),
       create: protectedProcedure.input(z.object({
-        dealname: z.string(),
-        amount: z.string().optional(),
-        pipeline: z.string().optional(),
-        dealstage: z.string().optional(),
-        closedate: z.string().optional(),
+        dealname: trimmedStr(256),
+        amount: z.string().trim().regex(/^\d+(\.\d{1,2})?$/).max(20).optional(),
+        pipeline: trimmedOptional(128),
+        dealstage: trimmedOptional(128),
+        closedate: z.string().trim().max(32).optional(),
       })).mutation(async ({ input }) => {
         const { createDeal } = await import("./hubspot-service");
         return await createDeal(input);
       }),
+    }),
+  }),
+
+  // ─── Missions ──────────────────────────────────────────────────────────
+  missions: router({
+    list: protectedProcedure.input(z.object({
+      status: z.enum(['PLANNED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED']).optional(),
+    })).query(async ({ input }) => {
+      const { getMissions } = await import("./db");
+      return getMissions(input.status);
+    }),
+    get: protectedProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ input }) => {
+      const { getMissionById } = await import("./db");
+      return getMissionById(input.id);
+    }),
+    create: protectedProcedure.input(z.object({
+      type: z.enum(['GOV_PILOT', 'RETAIL_PILOT', 'PRESS_LAUNCH', 'PARTNER_ONBOARDING', 'TECH_OS_LOCK', 'LAUNCH_AUTHICHAIN']),
+    })).mutation(async ({ input }) => {
+      const { createMission } = await import("./db");
+      const id = await createMission(input.type as any);
+      return { id };
+    }),
+    updateStatus: protectedProcedure.input(z.object({
+      id: z.string().uuid(),
+      status: z.enum(['PLANNED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED']),
+    })).mutation(async ({ input }) => {
+      const { updateMissionStatus } = await import("./db");
+      await updateMissionStatus(input.id, input.status as any);
+      return { ok: true };
+    }),
+  }),
+
+  // ─── Tasks ─────────────────────────────────────────────────────────────
+  tasks: router({
+    list: protectedProcedure.input(z.object({
+      missionId: z.string().uuid(),
+    })).query(async ({ input }) => {
+      const { getTasksByMission } = await import("./db");
+      return getTasksByMission(input.missionId);
+    }),
+    retry: protectedProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ input }) => {
+      const { retryTask } = await import("./db");
+      await retryTask(input.id);
+      return { ok: true };
     }),
   }),
 
@@ -1013,104 +1273,6 @@ export const appRouter = router({
       return { content: response.choices?.[0]?.message?.content || "I apologize, I could not generate a response." };
     }),
   }),
-  // ─── AuthiCharacter System ──────────────────────────────────────────
-  character: router({
-    generate: protectedProcedure.input(z.object({
-      archetype: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
-      brand: z.string().optional(),
-      object: z.string().optional(),
-      colorway: z.string().optional(),
-      mood: z.string().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { startCharacterGeneration } = await import("./character-service");
-      return await startCharacterGeneration(ctx.user.id, input.archetype, { brand: input.brand, object: input.object, colorway: input.colorway, mood: input.mood });
-    }),
-    generationStatus: protectedProcedure.input(z.object({ generationId: z.number() })).query(async ({ input }) => {
-      const { getGenerationStatus } = await import("./character-service");
-      return await getGenerationStatus(input.generationId);
-    }),
-    myGenerations: protectedProcedure.query(async ({ ctx }) => {
-      const { getUserGenerations } = await import("./character-service");
-      return await getUserGenerations(ctx.user.id);
-    }),
-    myAssets: protectedProcedure.query(async ({ ctx }) => {
-      const { getUserCharacterAssets } = await import("./character-service");
-      return await getUserCharacterAssets(ctx.user.id);
-    }),
-    select: protectedProcedure.input(z.object({ assetId: z.number() })).mutation(async ({ ctx, input }) => {
-      const { selectCharacterAsset } = await import("./character-service");
-      return await selectCharacterAsset(ctx.user.id, input.assetId);
-    }),
-    createAgent: protectedProcedure.input(z.object({
-      characterAssetId: z.number(),
-      name: z.string().min(2).max(64),
-      agentType: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
-    })).mutation(async ({ ctx, input }) => {
-      const { createProtocolAgent } = await import("./character-service");
-      return await createProtocolAgent(ctx.user.id, input.characterAssetId, input.name, input.agentType);
-    }),
-    myAgent: protectedProcedure.query(async ({ ctx }) => {
-      const { getAgentByUser } = await import("./character-service");
-      return await getAgentByUser(ctx.user.id);
-    }),
-    agentRewards: protectedProcedure.input(z.object({ agentId: z.number() })).query(async ({ input }) => {
-      const { getAgentRewards } = await import("./character-service");
-      return await getAgentRewards(input.agentId);
-    }),
-    leaderboard: publicProcedure.input(z.object({ limit: z.number().optional().default(20) })).query(async ({ input }) => {
-      const { getAgentLeaderboard } = await import("./character-service");
-      return await getAgentLeaderboard(input.limit);
-    }),
-    networkStats: publicProcedure.query(async () => {
-      const { getNetworkStats } = await import("./character-service");
-      return await getNetworkStats();
-    }),
-    mintPrep: protectedProcedure.input(z.object({ assetId: z.number() })).mutation(async ({ ctx, input }) => {
-      const { prepareMint } = await import("./character-service");
-      return await prepareMint(ctx.user.id, input.assetId);
-    }),
-    submitClaim: protectedProcedure.input(z.object({
-      agentId: z.number(),
-      productId: z.number(),
-      authenticationId: z.number().nullable().optional(),
-      claimType: z.enum(["authentic", "counterfeit", "inconclusive", "needs_review"]),
-      confidence: z.number().min(0).max(100),
-      reasoning: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { submitVerificationClaim } = await import("./character-service");
-      return await submitVerificationClaim(
-        input.agentId, input.productId, input.authenticationId ?? null,
-        input.claimType, input.confidence, undefined, input.reasoning
-      );
-    }),
-  }),
-  // ─── Scheduled Jobs (Admin) ─────────────────────────────────────────
-  scheduler: router({
-    listJobs: adminProcedure.query(async () => {
-      const { getRegisteredJobs } = await import("./scheduled-jobs");
-      return getRegisteredJobs();
-    }),
-    getHistory: adminProcedure.input(z.object({
-      jobName: z.string().optional(),
-      limit: z.number().optional().default(50),
-    })).query(async ({ input }) => {
-      const { getJobHistory } = await import("./scheduled-jobs");
-      return await getJobHistory(input.jobName, input.limit);
-    }),
-    runManually: adminProcedure.input(z.object({
-      jobName: z.string(),
-    })).mutation(async ({ input }) => {
-      const { runJobManually } = await import("./scheduled-jobs");
-      const success = await runJobManually(input.jobName);
-      if (!success) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
-      return { success: true, message: `Job ${input.jobName} triggered successfully` };
-    }),
-  }),
-
-  // ─── Modularized Routers (from dev branch) ──────────────────────────────
-  referral: referralRouter,
-  affiliate: affiliateRouter,
-  bonuses: bonusesRouter,
-  marketplace: marketplaceRouter,
 });
+
 export type AppRouter = typeof appRouter;

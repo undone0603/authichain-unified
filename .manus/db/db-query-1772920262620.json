@@ -1,9 +1,0 @@
-{
-  "query": "\nALTER TABLE character_generations \n  ADD COLUMN tenantId varchar(128) NULL,\n  ADD COLUMN objectId varchar(256) NULL,\n  ADD COLUMN colorway varchar(256) NULL,\n  ADD COLUMN mood varchar(256) NULL,\n  ADD COLUMN negativePrompt text NULL,\n  ADD COLUMN provider varchar(64) DEFAULT 'internal',\n  ADD COLUMN providerModel varchar(128) NULL,\n  ADD COLUMN selectedAssetId int NULL,\n  ADD COLUMN bestAssetId int NULL,\n  ADD COLUMN requestPayload json NULL,\n  ADD COLUMN responsePayload json NULL;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4XTCLw1moPXT7t4.50501b56cddc --database gPea3UHeYTkK76mSwNBRp9 --execute \nALTER TABLE character_generations \n  ADD COLUMN tenantId varchar(128) NULL,\n  ADD COLUMN objectId varchar(256) NULL,\n  ADD COLUMN colorway varchar(256) NULL,\n  ADD COLUMN mood varchar(256) NULL,\n  ADD COLUMN negativePrompt text NULL,\n  ADD COLUMN provider varchar(64) DEFAULT 'internal',\n  ADD COLUMN providerModel varchar(128) NULL,\n  ADD COLUMN selectedAssetId int NULL,\n  ADD COLUMN bestAssetId int NULL,\n  ADD COLUMN requestPayload json NULL,\n  ADD COLUMN responsePayload json NULL;\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 1567
-}

@@ -30,10 +30,7 @@ const GrowthEngine = lazy(() => import("./pages/GrowthEngine"));
 const Blockchain = lazy(() => import("./pages/Blockchain"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const CRM = lazy(() => import("./pages/CRM"));
-const ScheduledTasks = lazy(() => import("./pages/ScheduledTasks"));
-const CharacterCreate = lazy(() => import("./pages/CharacterCreate"));
-const CharacterDashboard = lazy(() => import("./pages/CharacterDashboard"));
-const NetworkStats = lazy(() => import("./pages/NetworkStats"));
+const Missions = lazy(() => import("./pages/Missions"));
 
 function PageLoader() {
   return (
@@ -66,10 +63,7 @@ function DashboardRoutes() {
           <Route path="/blockchain" component={Blockchain} />
           <Route path="/notifications" component={Notifications} />
           <Route path="/crm" component={CRM} />
-          <Route path="/scheduled-tasks" component={ScheduledTasks} />
-          <Route path="/character" component={CharacterDashboard} />
-          <Route path="/character/create" component={CharacterCreate} />
-          <Route path="/network" component={NetworkStats} />
+          <Route path="/missions" component={Missions} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>

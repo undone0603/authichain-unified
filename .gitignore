@@ -108,3 +108,12 @@ temp/
 
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
+
+.vercel
+
+# AgentZ
+.agentz.lock
+.agentz-supervisor.compiled.mjs
+
+# Manus internal
+.manus/

@@ -3,7 +3,7 @@
  * Handles checkout sessions, subscription management, and webhook processing
  */
 import Stripe from "stripe";
-import { STRIPE_PRODUCTS, type PlanKey, getPlanQuota } from "./stripe-products";
+import { STRIPE_PRODUCTS, type PlanKey, getPlanQuota, getStripePriceId } from "./stripe-products";
 
 let _stripe: Stripe | null = null;
 
@@ -34,6 +34,7 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
   const priceAmount = params.billing === "annual"
     ? product.priceAnnual
     : product.priceMonthly;
+  const stripePriceId = getStripePriceId(params.plan, params.billing);
 
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
@@ -49,22 +50,24 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
       plan: params.plan,
       billing: params.billing,
     },
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: product.name,
-            description: product.description,
+    line_items: stripePriceId
+      ? [{ price: stripePriceId, quantity: 1 }]
+      : [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: product.name,
+                description: product.description,
+              },
+              unit_amount: priceAmount,
+              recurring: {
+                interval: params.billing === "annual" ? "year" : "month",
+              },
+            },
+            quantity: 1,
           },
-          unit_amount: priceAmount,
-          recurring: {
-            interval: params.billing === "annual" ? "year" : "month",
-          },
-        },
-        quantity: 1,
-      },
-    ],
+        ],
     success_url: `${params.origin}/subscriptions?session_id={CHECKOUT_SESSION_ID}&success=true`,
     cancel_url: `${params.origin}/subscriptions?cancelled=true`,
   };
@@ -228,6 +231,17 @@ export async function processWebhookEvent(event: Stripe.Event): Promise<WebhookR
       result.userId = session.metadata?.user_id ? parseInt(session.metadata.user_id) : undefined;
       result.plan = session.metadata?.plan;
       result.subscriptionId = session.subscription as string;
+      result.customerId = session.customer as string;
+      result.email = session.customer_email || session.metadata?.customer_email || undefined;
+      result.customerName = session.metadata?.customer_name || undefined;
+      result.handled = true;
+      break;
+    }
+
+    case "checkout.session.expired": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      result.userId = session.metadata?.user_id ? parseInt(session.metadata.user_id) : undefined;
+      result.plan = session.metadata?.plan;
       result.customerId = session.customer as string;
       result.email = session.customer_email || session.metadata?.customer_email || undefined;
       result.customerName = session.metadata?.customer_name || undefined;

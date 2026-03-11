@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "5aa7b61a-1854-4878-a91e-580142062f11",
+  "id": "57ec25ed-9003-4d4c-a7f3-8af8746b5a69",
   "prevId": "45ea4a22-3108-4f1d-9052-f4ca682963b2",
   "tables": {
     "ab_tests": {
@@ -625,7 +625,15 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "authentications_product_id_idx": {
+          "name": "authentications_product_id_idx",
+          "columns": [
+            "productId"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "authentications_id": {
@@ -882,7 +890,15 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "certificates_certificate_number_idx": {
+          "name": "certificates_certificate_number_idx",
+          "columns": [
+            "certificateNumber"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "certificates_id": {
@@ -1556,7 +1572,15 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "leads_email_idx": {
+          "name": "leads_email_idx",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "leads_id": {
@@ -2191,7 +2215,15 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "products_user_id_idx": {
+          "name": "products_user_id_idx",
+          "columns": [
+            "userId"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "products_id": {
@@ -2350,7 +2382,15 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "referrals_referrer_id_idx": {
+          "name": "referrals_referrer_id_idx",
+          "columns": [
+            "referrerId"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "referrals_id": {
@@ -2437,88 +2477,6 @@
       "compositePrimaryKeys": {
         "revenue_records_id": {
           "name": "revenue_records_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraint": {}
-    },
-    "scheduled_job_runs": {
-      "name": "scheduled_job_runs",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "jobName": {
-          "name": "jobName",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "enum('running','completed','failed')",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "startedAt": {
-          "name": "startedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(now())"
-        },
-        "completedAt": {
-          "name": "completedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "duration": {
-          "name": "duration",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "result": {
-          "name": "result",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "error": {
-          "name": "error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "itemsProcessed": {
-          "name": "itemsProcessed",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": 0
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "scheduled_job_runs_id": {
-          "name": "scheduled_job_runs_id",
           "columns": [
             "id"
           ]
@@ -2642,7 +2600,15 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "subscriptions_user_id_idx": {
+          "name": "subscriptions_user_id_idx",
+          "columns": [
+            "userId"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "subscriptions_id": {
@@ -2961,7 +2927,22 @@
           "default": "(now())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "users_email_idx": {
+          "name": "users_email_idx",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        },
+        "users_stripe_customer_id_idx": {
+          "name": "users_stripe_customer_id_idx",
+          "columns": [
+            "stripeCustomerId"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "users_id": {

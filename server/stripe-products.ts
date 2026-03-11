@@ -16,6 +16,8 @@ export const STRIPE_PRODUCTS = {
       "Email support",
       "1 team member",
     ],
+    stripePriceIdMonthly: process.env.STRIPE_PRICE_STARTER_MONTHLY || "",
+    stripePriceIdAnnual: process.env.STRIPE_PRICE_STARTER_ANNUAL || "",
   },
   professional: {
     name: "AuthiChain Professional",
@@ -31,6 +33,8 @@ export const STRIPE_PRODUCTS = {
       "Priority support",
       "5 team members",
     ],
+    stripePriceIdMonthly: process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY || "",
+    stripePriceIdAnnual: process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL || "",
   },
   enterprise: {
     name: "AuthiChain Enterprise",
@@ -47,6 +51,8 @@ export const STRIPE_PRODUCTS = {
       "Unlimited team members",
       "Custom integrations",
     ],
+    stripePriceIdMonthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || "",
+    stripePriceIdAnnual: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || "",
   },
 } as const;
 
@@ -63,4 +69,10 @@ export function getPlanQuota(plan: PlanKey): number {
     case "professional": return 5000;
     case "enterprise": return 999999;
   }
+}
+
+export function getStripePriceId(plan: PlanKey, billing: "monthly" | "annual"): string | null {
+  const product = STRIPE_PRODUCTS[plan];
+  const id = billing === "annual" ? product.stripePriceIdAnnual : product.stripePriceIdMonthly;
+  return id?.trim() ? id.trim() : null;
 }

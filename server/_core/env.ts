@@ -11,7 +11,21 @@ export const ENV = {
   thirdwebSecretKey: process.env.thirdweb_api_key ?? "",
   hubspotServiceKey: process.env.HUBSPOT_SERVICE_KEY ?? "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
-  sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
-  paddleApiKey: process.env.PADDLE_API_KEY ?? "",
-  paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+  suppressionList: process.env.SUPPRESSION_LIST ?? "",
+  requireOutreachApproval: (process.env.REQUIRE_OUTREACH_APPROVAL ?? "true").toLowerCase() !== "false",
+  discountApprovalThresholdPercent: Number(process.env.DISCOUNT_APPROVAL_THRESHOLD_PERCENT ?? "20"),
+  llmMonthlyBudgetUsd: Number(process.env.LLM_MONTHLY_BUDGET_USD ?? "500"),
+  llmPerRequestBudgetUsd: Number(process.env.LLM_PER_REQUEST_BUDGET_USD ?? "0.1"),
+  adsDailyCapUsd: Number(process.env.ADS_DAILY_CAP_USD ?? "300"),
+  enrichmentMonthlyCapUsd: Number(process.env.ENRICHMENT_MONTHLY_CAP_USD ?? "200"),
+  requireSchemaMigrationApproval:
+    (process.env.REQUIRE_SCHEMA_MIGRATION_APPROVAL ?? "true").toLowerCase() !== "false",
+  autonomousPipelineEnabled:
+    (process.env.AUTONOMOUS_PIPELINE_ENABLED ?? "false").toLowerCase() === "true",
+  corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS
+    ?? "https://authichain.com,https://www.authichain.com")
+    .split(",")
+    .map(x => x.trim())
+    .filter(Boolean),
 };
