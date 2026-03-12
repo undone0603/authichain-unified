@@ -8,9 +8,9 @@ import { runRetentionAutomation } from "./retention";
 import { runWeeklyDigestDispatch } from "./weekly-digest";
 import { runQuarterlyValueReportDispatch } from "./quarterly-value";
 import { runOrganicTrafficAutomation } from "./organic-traffic";
-import { getDueTasks, getRunTaskCount, getAdaptivePriors } from "../db";
+import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
 import { runTask } from "./task-runner";
-import { ucb1Score } from "../_core/bayesian";
+import { ucb1Score, betaMean } from "../_core/bayesian";
 
 export async function runPipelineTick() {
   if (!ENV.autonomousPipelineEnabled) {
@@ -65,6 +65,24 @@ export async function runPipelineTick() {
     }
   }
 
+  // ── PMF auto-scale: if a segment's posterior mean exceeds threshold AND
+  //    no active mission of that type exists, create one automatically. ──────
+  const PMF_THRESHOLDS: Record<string, { missionType: string; threshold: number }> = {
+    GOV:    { missionType: 'GOV_PILOT',    threshold: 0.12 },
+    RETAIL: { missionType: 'RETAIL_PILOT', threshold: 0.10 },
+  };
+  const activeMissionTypes = await getActiveMissionTypes();
+  const pmfCreated: string[] = [];
+  for (const [seg, { missionType, threshold }] of Object.entries(PMF_THRESHOLDS)) {
+    const prior = adaptivePriors[seg];
+    if (!prior) continue;
+    const mean = betaMean(prior);
+    if (mean >= threshold && !activeMissionTypes.includes(missionType)) {
+      await createMission(missionType as any);
+      pmfCreated.push(missionType);
+    }
+  }
+
   const summary = {
     enabled: true,
     budgetMonitor,
@@ -74,6 +92,7 @@ export async function runPipelineTick() {
     quarterlyValue,
     organicTraffic,
     missionTasks: taskResults,
+    pmfCreated,
   };
 
   await logActivity({

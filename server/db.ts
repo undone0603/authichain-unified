@@ -7,9 +7,9 @@ import {
   invoices, payments, leads, emailCampaigns, emailDrafts, supplyChainEvents,
   referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions,
   abTests, whiteLabelClients, activityLog, fraudAlerts, customerHealthScores,
-  revenueRecords, notifications, missions, missionTasks,
+  revenueRecords, notifications, missions, missionTasks, proposals,
   type Product, type InsertProduct, type InsertNotification,
-  type Mission, type MissionTask,
+  type Mission, type MissionTask, type InsertProposal,
 } from "../drizzle/schema";
 import type { MissionType, MissionStatus, TaskStatus } from './missions/types.js';
 import { missionTemplates, taskTemplates } from './missions/templates.js';
@@ -877,6 +877,24 @@ export async function getEmailDraftByTaskId(taskId: string) {
   return rows[0];
 }
 
+export async function getLastPipelineTick() {
+  const db = await getDb();
+  if (!db) return null;
+  const [row] = await db
+    .select()
+    .from(activityLog)
+    .where(eq(activityLog.action, 'pipeline_tick_executed'))
+    .orderBy(desc(activityLog.createdAt))
+    .limit(1);
+  if (!row) return null;
+  const d = row.details as Record<string, unknown>;
+  return {
+    ranAt:        row.createdAt,
+    missionTasks: (d.missionTasks as { total: number; ran: number; errors: number }) ?? { total: 0, ran: 0, errors: 0 },
+    enabled:      (d.enabled as boolean) ?? true,
+  };
+}
+
 export async function getAdaptivePriors(): Promise<Record<string, { alpha: number; beta: number }>> {
   const { SEGMENT_PRIORS, updatePrior } = await import('./_core/bayesian.js');
   // Deep-clone starting priors so we don't mutate the module-level constants
@@ -1658,4 +1676,36 @@ export async function enqueueTask(missionId: string, kind: string, payload: Reco
     });
   }
   return id;
+}
+
+// ─── Proposals ────────────────────────────────────────────────────────────────
+
+export async function createProposal(data: Omit<InsertProposal, 'id' | 'sentAt' | 'createdAt'>): Promise<string> {
+  const db = await getDb();
+  const id = crypto.randomUUID();
+  if (db) {
+    await db.insert(proposals).values({ id, ...data } as InsertProposal);
+  }
+  return id;
+}
+
+export async function markProposalAccepted(checkoutSessionId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(proposals)
+    .set({ status: 'ACCEPTED', acceptedAt: new Date() })
+    .where(eq(proposals.checkoutSessionId, checkoutSessionId));
+}
+
+// ─── PMF helpers ──────────────────────────────────────────────────────────────
+
+/** Returns mission types that currently have an active (non-COMPLETED, non-BLOCKED) mission. */
+export async function getActiveMissionTypes(): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ type: missions.type })
+    .from(missions)
+    .where(or(eq(missions.status, 'IN_PROGRESS'), eq(missions.status, 'PLANNED')));
+  return rows.map(r => r.type);
 }

@@ -13,6 +13,13 @@ import {
   runDraftPressRelease,
   runScheduleSocialPosts,
 } from '../agents/content.js';
+import {
+  runCheckReplies,
+  runSendDemoPacket,
+  runGenerateProposal,
+  runSendContract,
+  runAutoReply,
+} from '../agents/closer.js';
 
 export async function runTask(task: Task): Promise<{ ok: boolean }> {
   await markTaskRunning(task.id);
@@ -78,6 +85,26 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'SCHEDULE_SOCIAL_POSTS':
         await runScheduleSocialPosts(task);
+        break;
+
+      case 'CHECK_REPLIES':
+        await runCheckReplies(task);
+        break;
+
+      case 'SEND_DEMO_PACKET':
+        await runSendDemoPacket(task);
+        break;
+
+      case 'GENERATE_PROPOSAL':
+        await runGenerateProposal(task);
+        break;
+
+      case 'SEND_CONTRACT':
+        await runSendContract(task);
+        break;
+
+      case 'AUTO_REPLY':
+        await runAutoReply(task);
         break;
 
       default:
