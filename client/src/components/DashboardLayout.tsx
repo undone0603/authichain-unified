@@ -25,7 +25,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
-  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Target, Clapperboard,
+  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Target, Clapperboard, Fingerprint,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -57,6 +57,7 @@ const adminMenuItems = [
   { icon: DollarSign, label: "CRM (HubSpot)", path: "/crm" },
   { icon: Target, label: "Missions", path: "/missions" },
   { icon: Clapperboard, label: "Video Studio", path: "/video-studio" },
+  { icon: Fingerprint, label: "Physical Auth", path: "/physical-auth" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

@@ -27,6 +27,7 @@ export const ENV = {
   gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN ?? "",
   gmailFromEmail: process.env.GMAIL_FROM_EMAIL ?? "",
   heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
+  qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
   autonomousPipelineEnabled:
     (process.env.AUTONOMOUS_PIPELINE_ENABLED ?? "false").toLowerCase() === "true",
   corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS

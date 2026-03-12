@@ -1387,6 +1387,151 @@ export const appRouter = router({
       return { content: response.choices?.[0]?.message?.content || "I apologize, I could not generate a response." };
     }),
   }),
+
+  // ─── QRON Physical Authentication Bridge ─────────────────────────────────
+  qron: router({
+    // Generate a QRON visual fingerprint for a product
+    generate: adminProcedure.input(z.object({
+      productId: z.number(),
+      productName: trimmedStr(200),
+      brand: trimmedOptional(100),
+      serialNumber: trimmedOptional(100),
+      nftTokenId: trimmedOptional(100),
+      category: z.enum(["luxury_fashion", "pharma", "electronics", "automotive", "food_bev", "other"]).optional(),
+      tier: z.enum(["standard", "premium", "enterprise", "pharma"]).optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const { generateProductQRON } = await import("./qron-service");
+      const { getProductById, logActivity } = await import("./db");
+      const db = (await import("./db")).db;
+      const { productQrons } = await import("../drizzle/schema");
+
+      const product = await getProductById(input.productId);
+      if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+
+      const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL ?? "https://authichain.com"}/verify/${product.id}`;
+      const record = await generateProductQRON({
+        productId: input.productId,
+        productName: input.productName,
+        brand: input.brand,
+        serialNumber: input.serialNumber,
+        nftTokenId: input.nftTokenId,
+        category: input.category,
+        tier: input.tier,
+        verifyUrl,
+      });
+
+      // Upsert into product_qrons
+      await db.execute(`
+        INSERT INTO product_qrons (
+          product_id, qron_id, qron_image_url, qron_thumbnail_url, qron_mode,
+          generation_seed, fingerprint_hash, nft_token_id, openart_url, openart_registered
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        ON CONFLICT (product_id) DO UPDATE SET
+          qron_id = EXCLUDED.qron_id,
+          qron_image_url = EXCLUDED.qron_image_url,
+          qron_thumbnail_url = EXCLUDED.qron_thumbnail_url,
+          qron_mode = EXCLUDED.qron_mode,
+          generation_seed = EXCLUDED.generation_seed,
+          fingerprint_hash = EXCLUDED.fingerprint_hash,
+          nft_token_id = EXCLUDED.nft_token_id,
+          openart_url = EXCLUDED.openart_url,
+          openart_registered = EXCLUDED.openart_registered,
+          updated_at = NOW()
+      `, [
+        input.productId, record.qronId, record.imageUrl, record.thumbnailUrl ?? null,
+        record.mode, record.seed, record.fingerprintHash,
+        record.nftTokenId ?? null, record.openartUrl ?? null, !!record.openartUrl,
+      ]);
+
+      await logActivity({ userId: ctx.user.id, action: "qron_generated", entityType: "product", entityId: input.productId });
+      return record;
+    }),
+
+    // Verify a scanned image against the registered QRON fingerprint
+    verify: protectedProcedure.input(z.object({
+      productId: z.number(),
+      scannedImageUrl: z.string().url(),
+    })).mutation(async ({ input }) => {
+      const { verifyVisualFingerprint, computeTrustScore } = await import("./qron-service");
+      const db = (await import("./db")).db;
+
+      const rows = await db.execute(
+        `SELECT * FROM product_qrons WHERE product_id = $1 LIMIT 1`,
+        [input.productId]
+      ) as any;
+      const qron = rows.rows?.[0];
+      if (!qron) throw new TRPCError({ code: "NOT_FOUND", message: "No QRON registered for this product" });
+
+      const fingerprint = await verifyVisualFingerprint({
+        scannedImageUrl: input.scannedImageUrl,
+        registeredImageUrl: qron.qron_image_url,
+        registeredFingerprintHash: qron.fingerprint_hash,
+      });
+
+      const trustScore = computeTrustScore({
+        qrDecodePass: true,
+        blockchainCertExists: !!qron.nft_token_id,
+        visualFingerprint: fingerprint,
+        communityVerified: qron.verified_scan_count,
+        communityFlagged: qron.fake_flag_count,
+        openArtRegistered: qron.openart_registered,
+      });
+
+      // Log the scan verdict
+      await db.execute(`
+        INSERT INTO qron_scan_verdicts (product_qron_id, fingerprint_sim, fingerprint_pass, user_verdict)
+        VALUES ($1, $2, $3, $4)
+      `, [qron.id, fingerprint.similarity, fingerprint.pass, fingerprint.verdict]);
+
+      return { fingerprint, trustScore, qronImageUrl: qron.qron_image_url, openartUrl: qron.openart_url };
+    }),
+
+    // Get QRON record + trust stats for a product
+    stats: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
+      const db = (await import("./db")).db;
+      const qron = await db.execute(
+        `SELECT pq.*,
+           (SELECT COUNT(*) FROM qron_scan_verdicts WHERE product_qron_id = pq.id) AS total_scans
+         FROM product_qrons pq WHERE pq.product_id = $1 LIMIT 1`,
+        [input.productId]
+      ) as any;
+      return qron.rows?.[0] ?? null;
+    }),
+
+    // List all products with QRON status
+    list: adminProcedure.query(async () => {
+      const db = (await import("./db")).db;
+      const result = await db.execute(`
+        SELECT pq.*, p.name AS product_name, p.brand, p.category
+        FROM product_qrons pq
+        JOIN products p ON p.id = pq.product_id
+        ORDER BY pq.trust_score ASC, pq.updated_at DESC
+        LIMIT 200
+      `) as any;
+      return result.rows ?? [];
+    }),
+
+    // Submit a community verdict (authentic / suspicious / fake)
+    submitVerdict: protectedProcedure.input(z.object({
+      productId: z.number(),
+      verdict: z.enum(["authentic", "suspicious", "fake"]),
+    })).mutation(async ({ ctx, input }) => {
+      const db = (await import("./db")).db;
+      const qron = await db.execute(
+        `SELECT id FROM product_qrons WHERE product_id = $1 LIMIT 1`,
+        [input.productId]
+      ) as any;
+      const qronRow = qron.rows?.[0];
+      if (!qronRow) throw new TRPCError({ code: "NOT_FOUND", message: "No QRON for this product" });
+
+      await db.execute(`
+        INSERT INTO qron_scan_verdicts (product_qron_id, user_verdict, user_id)
+        VALUES ($1, $2, $3)
+      `, [qronRow.id, input.verdict, ctx.user.id]);
+
+      return { ok: true };
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

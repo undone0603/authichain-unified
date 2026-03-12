@@ -1,5 +1,6 @@
 import { invokeLLM } from '../_core/llm.js';
 import { logActivity } from '../db.js';
+import { postThread } from '../twitter-service.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 interface ContentPayload {
@@ -137,15 +138,40 @@ Return JSON: { "platforms": { "<platform>": [{ "day": 0, "copy": "...", "hashtag
     responseFormat: { type: 'json_object' },
   });
 
-  let calendar: unknown;
+  let calendar: { platforms?: Record<string, { day: number; copy: string; hashtags: string[] }[]> };
   try {
     calendar = JSON.parse(result.choices[0].message.content as string ?? '{}');
   } catch {
     throw new Error('Social posts LLM returned unparseable JSON');
   }
 
-  await logActivity({ userId: null, action: 'social_posts_scheduled', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  const postedUrls: string[] = [];
+
+  // Post today's (day 0) Twitter/X posts immediately; queue the rest
+  if (platforms.includes('twitter') || platforms.includes('x')) {
+    const twitterPosts = calendar.platforms?.['twitter'] ?? calendar.platforms?.['x'] ?? [];
+    const todayPosts = twitterPosts.filter(p => p.day === 0);
+
+    for (const post of todayPosts) {
+      const text = post.hashtags?.length
+        ? `${post.copy}\n\n${post.hashtags.map(h => `#${h.replace(/^#/, '')}`).join(' ')}`
+        : post.copy;
+      // Truncate to 280 chars
+      const truncated = text.length > 280 ? text.slice(0, 277) + '…' : text;
+      try {
+        const tweet = await postThread([truncated], 'authichain');
+        postedUrls.push(tweet[0]?.url ?? '');
+      } catch (e) {
+        console.warn('[content.ts] Twitter post failed:', e);
+      }
+    }
+  }
+
+  await logActivity({ userId: null, action: 'social_posts_scheduled', entityType: 'task', entityId: 0, details: {
+    taskId: task.id,
     platforms,
     missionId: task.missionId,
+    postedUrls,
+    totalScheduled: Object.values(calendar.platforms ?? {}).reduce((s, arr) => s + arr.length, 0),
   }});
 }
