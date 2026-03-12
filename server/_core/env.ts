@@ -22,6 +22,10 @@ export const ENV = {
   requireSchemaMigrationApproval:
     (process.env.REQUIRE_SCHEMA_MIGRATION_APPROVAL ?? "true").toLowerCase() !== "false",
   apolloApiKey: process.env.APOLLO_API_KEY ?? "",
+  gmailClientId: process.env.GMAIL_CLIENT_ID ?? "",
+  gmailClientSecret: process.env.GMAIL_CLIENT_SECRET ?? "",
+  gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN ?? "",
+  gmailFromEmail: process.env.GMAIL_FROM_EMAIL ?? "",
   autonomousPipelineEnabled:
     (process.env.AUTONOMOUS_PIPELINE_ENABLED ?? "false").toLowerCase() === "true",
   corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS
