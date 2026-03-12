@@ -31,7 +31,8 @@ export type TaskKind =
   | 'SEND_DEMO_PACKET'
   | 'GENERATE_PROPOSAL'
   | 'SEND_CONTRACT'
-  | 'AUTO_REPLY';
+  | 'AUTO_REPLY'
+  | 'GENERATE_OUTREACH_VIDEO';
 
 export type LeadSegment = 'GOV' | 'RETAIL' | 'PRESS';
 
