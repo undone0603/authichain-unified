@@ -20,6 +20,7 @@
         "quarterly:run": "tsx server/jobs/quarterly-value.ts",
         "budget:monitor": "tsx server/jobs/budget-monitor.ts",
         "pipeline:tick": "tsx server/jobs/pipeline-tick.ts",
+        "orchestration:apply": "node scripts/apply-orchestration-sql.mjs",
         "live:check": "tsx server/jobs/live-systems-check.ts",
         "analytics:snapshot": "tsx server/jobs/analytics-snapshot.ts",
         "organic:run": "tsx server/jobs/organic-traffic.ts",
