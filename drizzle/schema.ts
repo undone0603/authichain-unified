@@ -556,3 +556,26 @@ export const missionTasks = pgTable("mission_tasks", {
 
 export type MissionTask = typeof missionTasks.$inferSelect;
 export type InsertMissionTask = typeof missionTasks.$inferInsert;
+
+// ─── Proposals ────────────────────────────────────────────────────────────────
+export const proposals = pgTable("proposals", {
+  id:                varchar("id", { length: 36 }).primaryKey(),
+  leadEmail:         varchar("leadEmail", { length: 320 }).notNull(),
+  missionId:         varchar("missionId", { length: 36 }).notNull(),
+  taskId:            varchar("taskId", { length: 36 }),
+  segment:           varchar("segment", { length: 20 }).notNull().default("GOV"),
+  content:           text("content").notNull(),
+  paymentLink:       text("paymentLink"),
+  checkoutSessionId: varchar("checkoutSessionId", { length: 128 }),
+  status:            varchar("status", { length: 20 }).notNull().default("SENT"),
+  pilotPriceUsd:     integer("pilotPriceUsd").notNull().default(0),
+  sentAt:            timestamp("sentAt").defaultNow().notNull(),
+  acceptedAt:        timestamp("acceptedAt"),
+  createdAt:         timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("proposals_lead_email_idx").on(table.leadEmail),
+  index("proposals_status_idx").on(table.status),
+]);
+
+export type Proposal = typeof proposals.$inferSelect;
+export type InsertProposal = typeof proposals.$inferInsert;

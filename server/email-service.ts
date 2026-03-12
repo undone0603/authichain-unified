@@ -10,6 +10,7 @@ export type SendEmailInput = {
 export type SendEmailResult = {
   status: "sent" | "suppressed" | "skipped";
   providerMessageId?: string;
+  threadId?: string;
   provider?: string;
   reason?: string;
 };
@@ -86,6 +87,51 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     status: "sent",
     provider: "gmail",
     providerMessageId: data?.id,
+    threadId: data?.threadId,
   };
+}
+
+/** Check whether a Gmail thread has received a reply (any message NOT in SENT labels). */
+export async function checkThreadReplies(threadId: string): Promise<{
+  hasReply: boolean;
+  replyText?: string;
+  replyFrom?: string;
+}> {
+  const gmailAccessToken = process.env.GMAIL_ACCESS_TOKEN || "";
+  if (!gmailAccessToken || !threadId) return { hasReply: false };
+
+  const res = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`,
+    { headers: { Authorization: `Bearer ${gmailAccessToken}` } },
+  );
+  if (!res.ok) return { hasReply: false };
+
+  const thread = await res.json().catch(() => null) as any;
+  const messages: any[] = thread?.messages ?? [];
+  // First message is the one we sent (SENT label). Any subsequent message is a reply.
+  const replies = messages.filter(m =>
+    Array.isArray(m.labelIds) && m.labelIds.includes("INBOX"),
+  );
+  if (replies.length === 0) return { hasReply: false };
+
+  const latest = replies[replies.length - 1];
+
+  // Extract plain-text body (base64url encoded)
+  function extractBody(payload: any): string {
+    if (!payload) return "";
+    if (payload.mimeType === "text/plain" && payload.body?.data) {
+      return Buffer.from(payload.body.data, "base64").toString("utf-8");
+    }
+    for (const part of payload.parts ?? []) {
+      const t = extractBody(part);
+      if (t) return t;
+    }
+    return "";
+  }
+
+  const replyText = extractBody(latest.payload).slice(0, 1500);
+  const fromHeader = (latest.payload?.headers as any[] ?? []).find((h: any) => h.name === "From");
+
+  return { hasReply: true, replyText, replyFrom: fromHeader?.value };
 }
 

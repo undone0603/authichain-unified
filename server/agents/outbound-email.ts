@@ -1,7 +1,7 @@
 import { invokeLLM } from '../_core/llm.js';
 import { ENV } from '../_core/env.js';
 import { sendEmail } from '../email-service.js';
-import { logActivity, getDb, markTaskWaitingHuman } from '../db.js';
+import { logActivity, getDb, markTaskWaitingHuman, enqueueTask } from '../db.js';
 import { emailDrafts, leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
@@ -129,6 +129,21 @@ Return JSON: { "subject": "...", "body": "..." }`;
     await db.update(leads)
       .set({ status: 'CONTACTED', lastContactedAt: new Date(), updatedAt: new Date() })
       .where(eq(leads.email, payload.leadEmail.toLowerCase()));
+  }
+
+  // Enqueue reply check in 48h so closer agent can pick up the thread
+  if (sendResult.status === 'sent') {
+    const check48h = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    await enqueueTask(task.missionId, 'CHECK_REPLIES', {
+      threadId: sendResult.threadId,
+      leadEmail:  payload.leadEmail,
+      leadName:   payload.leadName,
+      leadOrg:    payload.leadOrg,
+      leadTitle:  payload.leadTitle,
+      segment,
+      sequence,
+      maxSequence: 3,
+    }, check48h);
   }
 
   await logActivity({ userId: null, action: 'outbound_email_sent', entityType: 'task', entityId: 0, details: {

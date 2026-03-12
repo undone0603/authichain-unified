@@ -47,7 +47,16 @@ vi.mock('./_core/dataApi.js', () => ({
 }));
 
 vi.mock('./email-service.js', () => ({
-  sendEmail: vi.fn().mockResolvedValue({ status: 'sent' }),
+  sendEmail:           vi.fn().mockResolvedValue({ status: 'sent', threadId: 'thread-123' }),
+  checkThreadReplies:  vi.fn().mockResolvedValue({ hasReply: false }),
+  isSuppressed:        vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('./apollo-service.js', () => ({
+  apolloSearchLeads: vi.fn().mockResolvedValue([
+    { name: 'Alice', org: 'GovCorp',  email: 'alice@gov.com', title: 'Director', seniority: 'director' },
+    { name: 'Bob',   org: 'GovInc',   email: 'bob@gov.com',   title: 'Manager',  seniority: 'manager'  },
+  ]),
 }));
 
 vi.mock('./hubspot-service.js', () => ({
@@ -94,12 +103,11 @@ describe('runLeadFinder', () => {
   });
 
   it('enqueues a DRAFT_OUTBOUND_EMAIL task for each valid lead', async () => {
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse({
-      leads: [
-        { name: 'Alice', org: 'GovCorp', email: 'alice@gov.com', title: 'Director', fitProbability: 0.8 },
-        { name: 'Bob',   org: 'GovInc',  email: 'bob@gov.com',   title: 'Manager',  fitProbability: 0.6 },
-      ],
-    }));
+    // Apollo returns 2 leads; LLM scoring assigns fit probabilities
+    invokeLLM.mockResolvedValueOnce(llmJsonResponse([
+      { index: 0, fitProbability: 0.8, fitNotes: 'strong procurement fit' },
+      { index: 1, fitProbability: 0.6, fitNotes: 'moderate fit' },
+    ]));
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
     await runLeadFinder(makeTask('FIND_GOV_LEADS', { count: 2, segment: 'GOV' }));
@@ -113,13 +121,13 @@ describe('runLeadFinder', () => {
   });
 
   it('skips leads without email or org', async () => {
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse({
-      leads: [
-        { name: 'No Email',  org: 'Corp' }, // missing email
-        { name: 'No Org', email: 'x@y.com' }, // missing org
-        { name: 'Valid', org: 'ValidCorp', email: 'valid@corp.com' },
-      ],
-    }));
+    const { apolloSearchLeads } = await import('./apollo-service.js');
+    vi.mocked(apolloSearchLeads).mockResolvedValueOnce([
+      { name: 'Valid', org: 'ValidCorp', email: 'valid@corp.com', title: 'Director', firstName: 'Valid', lastName: 'User' },
+    ]);
+    invokeLLM.mockResolvedValueOnce(llmJsonResponse([
+      { index: 0, fitProbability: 0.7, fitNotes: 'good fit' },
+    ]));
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
     await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }));
@@ -127,46 +135,47 @@ describe('runLeadFinder', () => {
     expect(enqueueTask).toHaveBeenCalledTimes(1);
   });
 
-  it('throws if LLM returns unparseable JSON', async () => {
+  it('falls back gracefully when LLM scoring returns unparseable JSON', async () => {
     invokeLLM.mockResolvedValueOnce({ choices: [{ message: { content: 'not json {{{{' } }] });
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
-    await expect(runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }))).rejects.toThrow(
-      /unparseable JSON/,
-    );
+    // Should NOT throw — uses fallback 0.5 score for each lead
+    await expect(runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }))).resolves.toBeUndefined();
+    // Both Apollo leads get enqueued despite bad scoring
+    expect(enqueueTask).toHaveBeenCalledTimes(2);
   });
 
   it('uses RETAIL segment for FIND_RETAIL_LEADS task kind', async () => {
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse({ leads: [] }));
+    invokeLLM.mockResolvedValueOnce(llmJsonResponse([]));
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
     await runLeadFinder(makeTask('FIND_RETAIL_LEADS'));
 
-    // LLM prompt should mention RETAIL
+    // LLM scoring prompt should mention RETAIL
     const prompt = invokeLLM.mock.calls[0][0].messages[0].content as string;
     expect(prompt).toContain('RETAIL');
   });
 
   it('logs activity on completion', async () => {
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse({ leads: [] }));
+    invokeLLM.mockResolvedValueOnce(llmJsonResponse([]));
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
     await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }));
 
     expect(logActivity).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'lead_finder_completed' }),
+      expect.objectContaining({ action: 'lead_finder_completed', details: expect.objectContaining({ source: 'apollo' }) }),
     );
   });
 
-  it('Bayesian preamble appears in LLM prompt', async () => {
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse({ leads: [] }));
+  it('Bayesian preamble appears in LLM scoring prompt', async () => {
+    invokeLLM.mockResolvedValueOnce(llmJsonResponse([]));
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
     await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }));
 
     const prompt = invokeLLM.mock.calls[0][0].messages[0].content as string;
     expect(prompt).toContain('[BAYESIAN REASONING]');
-    expect(prompt).toContain('Expected value per lead');
+    expect(prompt).toContain('Expected value per converted lead');
   });
 });
 

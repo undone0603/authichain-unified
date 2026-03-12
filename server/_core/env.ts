@@ -21,6 +21,7 @@ export const ENV = {
   enrichmentMonthlyCapUsd: Number(process.env.ENRICHMENT_MONTHLY_CAP_USD ?? "200"),
   requireSchemaMigrationApproval:
     (process.env.REQUIRE_SCHEMA_MIGRATION_APPROVAL ?? "true").toLowerCase() !== "false",
+  apolloApiKey: process.env.APOLLO_API_KEY ?? "",
   autonomousPipelineEnabled:
     (process.env.AUTONOMOUS_PIPELINE_ENABLED ?? "false").toLowerCase() === "true",
   corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS
