@@ -1,32 +1,20 @@
 /**
- * Gmail OAuth Setup — two-step credential bootstrapper
+ * Gmail OAuth Setup — fully automated using googleapis + open
  *
- * Step 1 (first run — no args):
+ * Usage:
  *   node scripts/gmail-oauth-setup.mjs
- *   Opens https://console.cloud.google.com pre-filled URL.
- *   Paste your client_id and client_secret when prompted, OR
- *   pass them as environment variables:
- *     GMAIL_CLIENT_ID=xxx GMAIL_CLIENT_SECRET=yyy node scripts/gmail-oauth-setup.mjs
+ *     → prints instructions to create OAuth credentials
  *
- * Step 2 (second run — after pasting credentials):
- *   The script starts a local HTTP server on port 9000,
- *   opens the Google consent page in your browser,
- *   catches the callback, exchanges the code for tokens,
- *   then calls:  gh workflow run set-worker-secrets.yml
- *   to push everything to Cloudflare automatically.
- *
- * Requirements: gh CLI authenticated (already is for this repo)
+ *   GMAIL_CLIENT_ID=xxx GMAIL_CLIENT_SECRET=yyy node scripts/gmail-oauth-setup.mjs
+ *     → starts local server, opens browser for consent, exchanges code,
+ *       then pushes all secrets to Cloudflare via GitHub Actions automatically
  */
 
+import { google } from "googleapis";
+import open from "open";
 import { createServer } from "http";
-import { execSync, exec } from "child_process";
-import { readFileSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 import "dotenv/config";
-
-const __dir = dirname(fileURLToPath(import.meta.url));
-const root  = join(__dir, "..");
 
 const CLIENT_ID     = process.env.GMAIL_CLIENT_ID     || "";
 const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || "";
@@ -37,139 +25,114 @@ const FROM_EMAIL    = process.env.GMAIL_FROM_EMAIL || "Z@authichain.com";
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.send",
   "https://www.googleapis.com/auth/gmail.readonly",
-].join(" ");
+];
 
-// ─── Step 0: Check if we have credentials ────────────────────────────────────
+// ─── Step 0: No credentials yet ──────────────────────────────────────────────
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.log(`
 ╔══════════════════════════════════════════════════════════════════╗
-║          Gmail OAuth Setup — Step 1: Create Credentials          ║
+║         Gmail OAuth Setup — Step 1: Create Credentials          ║
 ╚══════════════════════════════════════════════════════════════════╝
 
-You need a Google OAuth 2.0 Client ID.  It takes ~90 seconds:
+1. Enable the Gmail API (if not already):
+   https://console.cloud.google.com/apis/library/gmail.googleapis.com
 
-1. Open this URL in your browser:
+2. Create an OAuth 2.0 Client ID:
    https://console.cloud.google.com/apis/credentials/oauthclient
 
-2. If prompted, create a project (name it "authichain").
+   • Application type : Web application
+   • Name             : AuthiChain Gmail
+   • Redirect URI     : http://localhost:9000/callback
 
-3. Application type: Web application
-   Name: AuthiChain Gmail
-   Authorized redirect URIs → Add: http://localhost:9000/callback
+3. Click CREATE → copy the Client ID + Client Secret.
 
-4. Click CREATE — you'll see the client_id and client_secret.
-
-5. Re-run this script with the credentials:
+4. Re-run with your credentials:
 
    GMAIL_CLIENT_ID=<id> GMAIL_CLIENT_SECRET=<secret> node scripts/gmail-oauth-setup.mjs
-
-Also make sure the Gmail API is enabled:
-   https://console.cloud.google.com/apis/library/gmail.googleapis.com
 `);
   process.exit(0);
 }
 
-// ─── Step 1: Start local callback server, open consent URL ───────────────────
+// ─── Step 1: Build auth URL via googleapis ────────────────────────────────────
 
-console.log("\n[gmail-oauth] Starting local callback server on port 9000...");
+const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 
-const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-authUrl.searchParams.set("client_id",     CLIENT_ID);
-authUrl.searchParams.set("redirect_uri",  REDIRECT_URI);
-authUrl.searchParams.set("response_type", "code");
-authUrl.searchParams.set("scope",         SCOPES);
-authUrl.searchParams.set("access_type",   "offline");
-authUrl.searchParams.set("prompt",        "consent");
+const authUrl = oAuth2Client.generateAuthUrl({
+  access_type: "offline",
+  prompt:      "consent",
+  scope:       SCOPES,
+});
 
-console.log(`[gmail-oauth] Opening consent URL:\n  ${authUrl}\n`);
+console.log("\n[gmail-oauth] Opening consent page in your browser...");
+console.log(`  ${authUrl}\n`);
 
-// Try to open browser
-try {
-  const opener = process.platform === "win32" ? "start" : process.platform === "darwin" ? "open" : "xdg-open";
-  exec(`${opener} "${authUrl.toString()}"`);
-} catch { /* ignore */ }
+await open(authUrl);
 
-// Local HTTP server to catch the OAuth callback
-await new Promise((resolve, reject) => {
+// ─── Step 2: Local HTTP server to catch callback ──────────────────────────────
+
+console.log("[gmail-oauth] Waiting for Google to redirect to http://localhost:9000/callback ...\n");
+
+const refreshToken = await new Promise((resolve, reject) => {
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost:9000");
-    if (url.pathname !== "/callback") {
-      res.writeHead(404); res.end("not found"); return;
-    }
+    if (url.pathname !== "/callback") { res.writeHead(404); res.end(); return; }
 
-    const code = url.searchParams.get("code");
+    const code  = url.searchParams.get("code");
     const error = url.searchParams.get("error");
 
     if (error || !code) {
       res.writeHead(400, { "Content-Type": "text/html" });
       res.end(`<h2 style="color:red">Error: ${error || "no code"}</h2>`);
-      server.close();
-      reject(new Error(error || "no code returned"));
+      server.close(() => reject(new Error(error || "no code returned")));
       return;
     }
 
     res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(`<h2 style="color:green">✓ Authorized! Check the terminal.</h2><p>You can close this tab.</p>`);
+    res.end(`<h2 style="color:green;font-family:sans-serif">✓ Authorized! Check your terminal.</h2><p>You can close this tab.</p>`);
+
+    console.log("[gmail-oauth] Authorization code received. Exchanging for tokens...");
+
+    const { tokens } = await oAuth2Client.getToken(code);
     server.close();
 
-    console.log("[gmail-oauth] Got authorization code. Exchanging for tokens...");
-
-    // Exchange code for tokens
-    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id:     CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        redirect_uri:  REDIRECT_URI,
-        grant_type:    "authorization_code",
-      }).toString(),
-    });
-
-    const data = await tokenRes.json();
-    if (!tokenRes.ok || !data.refresh_token) {
-      console.error("[gmail-oauth] Token exchange failed:", JSON.stringify(data, null, 2));
-      reject(new Error("token exchange failed: " + JSON.stringify(data)));
+    if (!tokens.refresh_token) {
+      reject(new Error(
+        "No refresh_token returned. Revoke access at https://myaccount.google.com/permissions " +
+        "and re-run to force a new consent prompt."
+      ));
       return;
     }
 
-    console.log("\n╔══════════════════════════════════════════════════════════╗");
-    console.log("║       ✓ Gmail OAuth tokens obtained successfully          ║");
-    console.log("╚══════════════════════════════════════════════════════════╝\n");
-    console.log(`GMAIL_CLIENT_ID     = ${CLIENT_ID}`);
-    console.log(`GMAIL_CLIENT_SECRET = ${CLIENT_SECRET}`);
-    console.log(`GMAIL_REFRESH_TOKEN = ${data.refresh_token}`);
-    console.log(`GMAIL_FROM_EMAIL    = ${FROM_EMAIL}`);
-    console.log("\nPushing secrets to Cloudflare Worker via GitHub Actions...\n");
-
-    // Trigger the set-worker-secrets workflow
-    try {
-      execSync([
-        "gh workflow run set-worker-secrets.yml",
-        `--repo ${REPO}`,
-        `--field "GMAIL_CLIENT_ID=${CLIENT_ID}"`,
-        `--field "GMAIL_CLIENT_SECRET=${CLIENT_SECRET}"`,
-        `--field "GMAIL_REFRESH_TOKEN=${data.refresh_token}"`,
-      ].join(" "), { stdio: "inherit" });
-
-      console.log(`\n✓ Workflow dispatched!`);
-      console.log(`  Watch: https://github.com/${REPO}/actions/workflows/set-worker-secrets.yml`);
-      console.log(`\nGmail outreach is now fully configured for ${FROM_EMAIL}.`);
-    } catch (e) {
-      console.error("Failed to trigger workflow:", e.message);
-      console.log("\nRun manually:");
-      console.log(`  bash scripts/set-gmail-secrets.sh "${CLIENT_ID}" "${CLIENT_SECRET}" "${data.refresh_token}"`);
-    }
-
-    resolve();
+    resolve(tokens.refresh_token);
   });
 
-  server.listen(9000, () => {
-    console.log("[gmail-oauth] Waiting for Google to redirect to http://localhost:9000/callback ...");
-    console.log("             (Open the consent URL above in your browser if it didn't open automatically)\n");
-  });
-
+  server.listen(9000);
   server.on("error", reject);
 });
+
+// ─── Step 3: Push secrets to Cloudflare via GitHub Actions ───────────────────
+
+console.log("\n╔══════════════════════════════════════════════════════════════╗");
+console.log("║         ✓ Tokens obtained. Pushing to Cloudflare...         ║");
+console.log("╚══════════════════════════════════════════════════════════════╝\n");
+console.log(`GMAIL_CLIENT_ID     = ${CLIENT_ID}`);
+console.log(`GMAIL_CLIENT_SECRET = ${CLIENT_SECRET.slice(0, 6)}...`);
+console.log(`GMAIL_REFRESH_TOKEN = ${refreshToken.slice(0, 12)}...`);
+console.log(`GMAIL_FROM_EMAIL    = ${FROM_EMAIL}\n`);
+
+execSync(
+  [
+    "gh workflow run set-worker-secrets.yml",
+    `--repo ${REPO}`,
+    `--field GMAIL_CLIENT_ID="${CLIENT_ID}"`,
+    `--field GMAIL_CLIENT_SECRET="${CLIENT_SECRET}"`,
+    `--field GMAIL_REFRESH_TOKEN="${refreshToken}"`,
+  ].join(" "),
+  { stdio: "inherit" }
+);
+
+console.log(`\n✓ Workflow dispatched!`);
+console.log(`  Progress: https://github.com/${REPO}/actions/workflows/set-worker-secrets.yml`);
+console.log(`\nGmail outreach is now fully configured for ${FROM_EMAIL}.`);
+console.log(`Next: trigger a pipeline tick to send the first outbound email.\n`);
