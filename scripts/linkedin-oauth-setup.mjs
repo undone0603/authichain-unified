@@ -26,9 +26,10 @@ const REDIRECT_URI  = "http://localhost:9001/callback";
 const REPO          = "undone0603/authichain-unified";
 
 const SCOPES = [
-  "r_liteprofile",
+  "openid",
+  "profile",
+  "email",
   "w_member_social",
-  "r_emailaddress",
 ].join(" ");
 
 // ─── Step 0: No credentials yet ──────────────────────────────────────────────
@@ -134,19 +135,33 @@ const { accessToken, refreshToken, personUrn } = await new Promise((resolve, rej
     const accessToken  = tokens.access_token;
     const refreshToken = tokens.refresh_token ?? "";   // LinkedIn may not return a refresh token on basic products
 
-    // Fetch person URN
+    // Fetch person URN via OpenID Connect userinfo endpoint
     let personUrn = "";
     try {
-      const meRes = await fetch("https://api.linkedin.com/v2/me", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "X-Restli-Protocol-Version": "2.0.0",
-        },
+      // Try OpenID Connect userinfo first (modern API)
+      const userinfoRes = await fetch("https://api.linkedin.com/v2/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (meRes.ok) {
-        const me = await meRes.json();
-        personUrn = `urn:li:person:${me.id}`;
-        console.log(`[linkedin-oauth] Person URN: ${personUrn}`);
+      if (userinfoRes.ok) {
+        const userinfo = await userinfoRes.json();
+        // sub is the person ID in OIDC responses
+        personUrn = userinfo.sub?.startsWith("urn:li:person:")
+          ? userinfo.sub
+          : `urn:li:person:${userinfo.sub}`;
+        console.log(`[linkedin-oauth] Person URN: ${personUrn} (${userinfo.name ?? userinfo.email ?? ""})`);
+      } else {
+        // Fallback: classic /v2/me endpoint
+        const meRes = await fetch("https://api.linkedin.com/v2/me", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "X-Restli-Protocol-Version": "2.0.0",
+          },
+        });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          personUrn = `urn:li:person:${me.id}`;
+          console.log(`[linkedin-oauth] Person URN: ${personUrn}`);
+        }
       }
     } catch (e) {
       console.warn("[linkedin-oauth] Could not fetch profile URN:", e.message);
