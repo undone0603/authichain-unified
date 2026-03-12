@@ -31,6 +31,7 @@ const Blockchain = lazy(() => import("./pages/Blockchain"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const CRM = lazy(() => import("./pages/CRM"));
 const Missions = lazy(() => import("./pages/Missions"));
+const VideoStudio = lazy(() => import("./pages/VideoStudio"));
 
 function PageLoader() {
   return (
@@ -64,6 +65,7 @@ function DashboardRoutes() {
           <Route path="/notifications" component={Notifications} />
           <Route path="/crm" component={CRM} />
           <Route path="/missions" component={Missions} />
+          <Route path="/video-studio" component={VideoStudio} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>

@@ -1317,6 +1317,64 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── HeyGen Video Studio ────────────────────────────────────────────────
+  heygen: router({
+    avatars: adminProcedure.query(async () => {
+      const { listAvatars } = await import("./heygen-service");
+      return listAvatars();
+    }),
+
+    voices: adminProcedure.query(async () => {
+      const { listVoices } = await import("./heygen-service");
+      return listVoices();
+    }),
+
+    videos: adminProcedure.input(z.object({
+      page: z.number().int().min(1).default(1),
+    })).query(async ({ input }) => {
+      const { listVideos } = await import("./heygen-service");
+      return listVideos(input.page, 50);
+    }),
+
+    videoStatus: adminProcedure.input(z.object({
+      videoId: z.string().min(1),
+    })).query(async ({ input }) => {
+      const { getVideoStatus } = await import("./heygen-service");
+      return getVideoStatus(input.videoId);
+    }),
+
+    generate: adminProcedure.input(z.object({
+      avatarId: z.string().min(1),
+      voiceId: z.string().min(1),
+      script: z.string().min(1).max(500),
+      title: z.string().min(1).max(120),
+      aspectRatio: z.enum(["16:9", "9:16", "1:1"]).default("16:9"),
+    })).mutation(async ({ input, ctx }) => {
+      const { generateVideo } = await import("./heygen-service");
+      const { logActivity } = await import("./db");
+      const videoId = await generateVideo(input);
+      await logActivity({
+        userId: ctx.user.id,
+        action: "heygen_video_queued",
+        entityType: "video",
+        entityId: 0,
+        details: { videoId, title: input.title, avatarId: input.avatarId },
+      });
+      return { videoId };
+    }),
+
+    draftScript: adminProcedure.input(z.object({
+      firstName: z.string().min(1),
+      company: z.string().min(1),
+      segment: z.string().min(1),
+      useCase: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { draftOutreachScript } = await import("./heygen-service");
+      const script = await draftOutreachScript(input);
+      return { script };
+    }),
+  }),
+
   // ─── AI Chat ───────────────────────────────────────────────────────────
   ai: router({
     chat: protectedProcedure.input(z.object({

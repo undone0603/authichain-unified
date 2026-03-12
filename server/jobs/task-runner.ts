@@ -20,6 +20,7 @@ import {
   runSendContract,
   runAutoReply,
 } from '../agents/closer.js';
+import { runGenerateOutreachVideo } from '../agents/heygen-video.js';
 
 export async function runTask(task: Task): Promise<{ ok: boolean }> {
   await markTaskRunning(task.id);
@@ -105,6 +106,10 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'AUTO_REPLY':
         await runAutoReply(task);
+        break;
+
+      case 'GENERATE_OUTREACH_VIDEO':
+        await runGenerateOutreachVideo(task);
         break;
 
       default:
