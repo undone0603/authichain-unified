@@ -24,6 +24,8 @@ import {
   draftOutreachScript,
   getVideoStatus,
 } from '../heygen-service.js';
+import { uploadVideo } from '../youtube-service.js';
+import { postTweet } from '../twitter-service.js';
 
 const POLL_INTERVAL_MS = 8_000;
 const MAX_POLLS = 30; // 4 minutes max wait
@@ -88,12 +90,28 @@ export async function runGenerateOutreachVideo(task: Task): Promise<void> {
 
   if (!videoUrl) throw new Error("HeyGen video timed out");
 
+  // Auto-publish to YouTube (non-fatal)
+  let youtubeUrl: string | undefined;
+  try {
+    const yt = await uploadVideo({
+      videoUrl,
+      title: `AuthiChain Outreach — ${p.company} | Anti-Counterfeiting Demo`,
+      description: `Personalized outreach video for ${p.firstName} at ${p.company}.\n\nAuthiChain provides blockchain-backed product authentication for the ${p.segment} sector.\n\nLearn more: https://authichain.com`,
+      tags: ["AuthiChain", "authentication", "blockchain", "anti-counterfeiting", p.segment.toLowerCase()],
+      privacy: "unlisted",  // Keep outreach videos unlisted
+      channel: "authichain",
+    });
+    youtubeUrl = yt.youtubeUrl;
+  } catch (e) {
+    console.warn("[heygen-video] YouTube upload failed (non-fatal):", e);
+  }
+
   // Log as activity (stores video_url for lead enrichment)
   await logActivity({
     userId: 0,
     action: "heygen_video_generated",
     entityType: "lead",
     entityId: p.leadId,
-    details: { videoId, videoUrl, script, avatarId, voiceId },
+    details: { videoId, videoUrl, youtubeUrl, script, avatarId, voiceId },
   });
 }
