@@ -1,5 +1,55 @@
 import { ENV } from "./_core/env";
 
+// ─── Gmail token cache (auto-refresh) ────────────────────────────────────────
+
+let _cachedToken: string | null = null;
+let _tokenExpiresAt = 0; // epoch ms
+
+async function getGmailAccessToken(): Promise<string> {
+  // If we have a cached token with >60s remaining, use it
+  if (_cachedToken && Date.now() < _tokenExpiresAt - 60_000) {
+    return _cachedToken;
+  }
+
+  // Prefer static env token (e.g. short-lived dev token set directly)
+  const staticToken = process.env.GMAIL_ACCESS_TOKEN || "";
+  if (staticToken && !ENV.gmailRefreshToken) {
+    // Can't refresh — use as-is
+    _cachedToken = staticToken;
+    _tokenExpiresAt = Date.now() + 55 * 60 * 1000; // assume ~1h
+    return staticToken;
+  }
+
+  if (!ENV.gmailClientId || !ENV.gmailClientSecret || !ENV.gmailRefreshToken) {
+    return staticToken; // not configured — fall back silently
+  }
+
+  // Exchange refresh token for a new access token
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: ENV.gmailClientId,
+      client_secret: ENV.gmailClientSecret,
+      refresh_token: ENV.gmailRefreshToken,
+      grant_type: "refresh_token",
+    }).toString(),
+  });
+
+  if (!res.ok) {
+    console.error("[gmail] token refresh failed:", res.status, await res.text().catch(() => ""));
+    return staticToken; // fall back to static if refresh fails
+  }
+
+  const data = await res.json().catch(() => ({})) as any;
+  _cachedToken = data.access_token ?? staticToken;
+  // expires_in is in seconds; default 3600
+  _tokenExpiresAt = Date.now() + ((data.expires_in ?? 3600) * 1000);
+  return _cachedToken!;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export type SendEmailInput = {
   to: string;
   subject: string;
@@ -42,14 +92,18 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { status: "suppressed", reason: "suppression_list" };
   }
 
-  const gmailAccessToken = process.env.GMAIL_ACCESS_TOKEN || "";
-  const fromEmail = process.env.GMAIL_FROM_EMAIL || "";
-  if (!gmailAccessToken || !fromEmail) {
+  const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
+  if (!fromEmail) {
     return {
       status: "skipped",
       reason: "gmail_not_configured",
       provider: "gmail",
     };
+  }
+
+  const gmailAccessToken = await getGmailAccessToken();
+  if (!gmailAccessToken) {
+    return { status: "skipped", reason: "gmail_token_unavailable", provider: "gmail" };
   }
 
   const fromName = input.fromName || "AuthiChain";
@@ -97,7 +151,7 @@ export async function checkThreadReplies(threadId: string): Promise<{
   replyText?: string;
   replyFrom?: string;
 }> {
-  const gmailAccessToken = process.env.GMAIL_ACCESS_TOKEN || "";
+  const gmailAccessToken = await getGmailAccessToken();
   if (!gmailAccessToken || !threadId) return { hasReply: false };
 
   const res = await fetch(
