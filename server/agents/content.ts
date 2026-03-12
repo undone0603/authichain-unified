@@ -1,6 +1,7 @@
 import { invokeLLM } from '../_core/llm.js';
 import { logActivity } from '../db.js';
 import { postThread } from '../twitter-service.js';
+import { postLinkedInThread } from '../linkedin-service.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 interface ContentPayload {
@@ -147,25 +148,40 @@ Return JSON: { "platforms": { "<platform>": [{ "day": 0, "copy": "...", "hashtag
 
   const postedUrls: string[] = [];
 
-  // Post today's (day 0) Twitter/X posts immediately; queue the rest
-  if (platforms.includes('twitter') || platforms.includes('x')) {
-    const twitterPosts = calendar.platforms?.['twitter'] ?? calendar.platforms?.['x'] ?? [];
-    const todayPosts = twitterPosts.filter(p => p.day === 0);
+  // Build today's (day 0) posts per platform, then fire in parallel
+  const twitterPosts  = (calendar.platforms?.['twitter'] ?? calendar.platforms?.['x'] ?? []).filter(p => p.day === 0);
+  const linkedinPosts = (calendar.platforms?.['linkedin'] ?? []).filter(p => p.day === 0);
 
-    for (const post of todayPosts) {
-      const text = post.hashtags?.length
-        ? `${post.copy}\n\n${post.hashtags.map(h => `#${h.replace(/^#/, '')}`).join(' ')}`
-        : post.copy;
-      // Truncate to 280 chars
-      const truncated = text.length > 280 ? text.slice(0, 277) + '…' : text;
-      try {
-        const tweet = await postThread([truncated], 'authichain');
-        postedUrls.push(tweet[0]?.url ?? '');
-      } catch (e) {
-        console.warn('[content.ts] Twitter post failed:', e);
-      }
-    }
-  }
+  const formatText = (post: { copy: string; hashtags?: string[] }, maxLen = 0): string => {
+    const tagged = post.hashtags?.length
+      ? `${post.copy}\n\n${post.hashtags.map(h => `#${h.replace(/^#/, '')}`).join(' ')}`
+      : post.copy;
+    return maxLen && tagged.length > maxLen ? tagged.slice(0, maxLen - 3) + '…' : tagged;
+  };
+
+  const [twitterResults, linkedinResults] = await Promise.allSettled([
+    // Twitter/X — 280 char limit, real thread support
+    (async () => {
+      if (!(platforms.includes('twitter') || platforms.includes('x')) || twitterPosts.length === 0) return [];
+      const texts = twitterPosts.map(p => formatText(p, 280));
+      const tweets = await postThread(texts, 'authichain');
+      return tweets.map(t => t?.url ?? '').filter(Boolean);
+    })(),
+
+    // LinkedIn — 3000 char limit, sequential posts
+    (async () => {
+      if (!platforms.includes('linkedin') || linkedinPosts.length === 0) return [];
+      const texts = linkedinPosts.map(p => formatText(p, 3000));
+      const posts = await postLinkedInThread(texts, 'person');
+      return posts.map(p => p.postUrl).filter(Boolean);
+    })(),
+  ]);
+
+  if (twitterResults.status === 'fulfilled')  postedUrls.push(...twitterResults.value);
+  else console.warn('[content.ts] Twitter post failed:', twitterResults.reason);
+
+  if (linkedinResults.status === 'fulfilled') postedUrls.push(...linkedinResults.value);
+  else console.warn('[content.ts] LinkedIn post failed:', linkedinResults.reason);
 
   await logActivity({ userId: null, action: 'social_posts_scheduled', entityType: 'task', entityId: 0, details: {
     taskId: task.id,

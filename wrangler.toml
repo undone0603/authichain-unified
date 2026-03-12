@@ -26,3 +26,7 @@ crons = ["*/5 * * * *"]
 # GITHUB_TOKEN (PAT: repo + actions + pull_requests scopes — for dev team build loop)
 # GITHUB_OWNER, GITHUB_REPO
 # REQUIRE_DEV_APPROVAL (default: true — gates MERGE_PR on human approval)
+# LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET
+# LINKEDIN_ACCESS_TOKEN, LINKEDIN_REFRESH_TOKEN (run: node scripts/linkedin-oauth-setup.mjs)
+# LINKEDIN_PERSON_URN (e.g. urn:li:person:XXXXXXXX — printed by setup script)
+# LINKEDIN_ORG_URN (optional — for company page posts)

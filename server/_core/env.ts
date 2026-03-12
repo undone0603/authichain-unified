@@ -35,6 +35,12 @@ export const ENV = {
   githubRepo:  process.env.GITHUB_REPO  ?? "authichain-unified",
   autonomousPipelineEnabled:
     (process.env.AUTONOMOUS_PIPELINE_ENABLED ?? "false").toLowerCase() === "true",
+  linkedinClientId: process.env.LINKEDIN_CLIENT_ID ?? "",
+  linkedinClientSecret: process.env.LINKEDIN_CLIENT_SECRET ?? "",
+  linkedinAccessToken: process.env.LINKEDIN_ACCESS_TOKEN ?? "",
+  linkedinRefreshToken: process.env.LINKEDIN_REFRESH_TOKEN ?? "",
+  linkedinPersonUrn: process.env.LINKEDIN_PERSON_URN ?? "",
+  linkedinOrgUrn: process.env.LINKEDIN_ORG_URN ?? "",
   corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS
     ?? "https://authichain.com,https://www.authichain.com")
     .split(",")
