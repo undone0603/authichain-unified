@@ -13,7 +13,7 @@ export const ENV = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
   suppressionList: process.env.SUPPRESSION_LIST ?? "",
-  requireOutreachApproval: (process.env.REQUIRE_OUTREACH_APPROVAL ?? "true").toLowerCase() !== "false",
+  requireOutreachApproval: (process.env.REQUIRE_OUTREACH_APPROVAL ?? "false").toLowerCase() !== "false",
   discountApprovalThresholdPercent: Number(process.env.DISCOUNT_APPROVAL_THRESHOLD_PERCENT ?? "20"),
   llmMonthlyBudgetUsd: Number(process.env.LLM_MONTHLY_BUDGET_USD ?? "500"),
   llmPerRequestBudgetUsd: Number(process.env.LLM_PER_REQUEST_BUDGET_USD ?? "0.1"),
