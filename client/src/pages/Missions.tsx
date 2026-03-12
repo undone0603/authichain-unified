@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,42 @@ import { toast } from "sonner";
 import {
   Loader2, ChevronDown, ChevronRight, RefreshCw, Plus, Target,
   Mail, CheckCircle2, XCircle, Eye, Brain, TrendingUp,
+  Zap, Clock, AlertCircle,
 } from "lucide-react";
+
+// ─── Time helpers ─────────────────────────────────────────────────────────────
+
+function relativeTime(date: string | Date | null | undefined): string {
+  if (!date) return "—";
+  const diff = Date.now() - new Date(date).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 5)  return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function nextTickIn(lastRanAt: string | Date | null | undefined): string {
+  if (!lastRanAt) return "soon";
+  const elapsed = (Date.now() - new Date(lastRanAt).getTime()) / 1000;
+  const remaining = Math.max(0, 300 - elapsed); // 5-min cron
+  if (remaining < 5) return "any moment";
+  const m = Math.floor(remaining / 60);
+  const s = Math.floor(remaining % 60);
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+/** Re-renders every second for live countdowns */
+function useTick() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(n => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -205,6 +240,22 @@ function DraftReviewDialog({ taskId, open, onClose, onActioned }: {
 
 // ─── Task row ─────────────────────────────────────────────────────────────────
 
+function TaskTimeLabel({ task }: { task: Task }) {
+  useTick();
+  if (task.status === "RUNNING") {
+    const elapsed = task.runAt ? Math.floor((Date.now() - new Date(task.runAt).getTime()) / 1000) : 0;
+    return <span className="text-blue-300/60 text-xs">{elapsed}s</span>;
+  }
+  if (task.status === "DONE" || task.status === "FAILED" || task.status === "WAITING_HUMAN") {
+    return <span className="text-white/25 text-xs">{relativeTime(task.runAt)}</span>;
+  }
+  if (task.status === "PENDING") {
+    const future = task.runAt && new Date(task.runAt) > new Date();
+    if (future) return <span className="text-white/25 text-xs">in {relativeTime(task.runAt).replace(" ago", "")}</span>;
+  }
+  return null;
+}
+
 function TaskRow({ task, onRetry }: { task: Task; onRetry: (id: string) => void }) {
   const [reviewOpen, setReviewOpen] = useState(false);
   const retryMut = trpc.tasks.retry.useMutation({ onSuccess: onRetry.bind(null, task.id) });
@@ -213,18 +264,28 @@ function TaskRow({ task, onRetry }: { task: Task; onRetry: (id: string) => void 
     <>
       <div className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0 text-sm">
         <div className="flex items-center gap-2 min-w-0">
-          <Badge variant="outline" className={`text-xs shrink-0 ${taskStatusColor[task.status]}`}>
-            {task.status}
-          </Badge>
+          {/* Status badge with running pulse */}
+          <div className="shrink-0 relative">
+            {task.status === "RUNNING" && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-400" />
+              </span>
+            )}
+            <Badge variant="outline" className={`text-xs ${taskStatusColor[task.status]}`}>
+              {task.status === "RUNNING" ? "RUNNING" : task.status}
+            </Badge>
+          </div>
           <span className="text-white/80 font-mono text-xs truncate">{task.kind}</span>
           {task.retryCount != null && task.retryCount > 0 && (
             <span className="text-white/40 text-xs">×{task.retryCount}</span>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <TaskTimeLabel task={task} />
           {task.lastError && (
-            <span className="text-red-400/70 text-xs truncate max-w-[180px]" title={task.lastError}>
-              {task.lastError.slice(0, 40)}…
+            <span className="text-red-400/70 text-xs truncate max-w-[160px]" title={task.lastError}>
+              {task.lastError.slice(0, 35)}…
             </span>
           )}
           {task.status === "WAITING_HUMAN" && (
@@ -271,7 +332,7 @@ function MissionCard({ mission }: { mission: Mission }) {
 
   const tasksQuery = trpc.tasks.list.useQuery(
     { missionId: mission.id },
-    { enabled: open },
+    { enabled: open, refetchInterval: open ? 5_000 : false },
   );
 
   const updateStatus = trpc.missions.updateStatus.useMutation({
@@ -280,9 +341,10 @@ function MissionCard({ mission }: { mission: Mission }) {
 
   const tasks: Task[] = (tasksQuery.data as Task[] | undefined) ?? (mission.tasks as Task[] | undefined) ?? [];
 
-  const doneCount = tasks.filter(t => t.status === "DONE").length;
-  const failedCount = tasks.filter(t => t.status === "FAILED").length;
+  const doneCount    = tasks.filter(t => t.status === "DONE").length;
+  const failedCount  = tasks.filter(t => t.status === "FAILED").length;
   const waitingCount = tasks.filter(t => t.status === "WAITING_HUMAN").length;
+  const hasRunning   = tasks.some(t => t.status === "RUNNING");
 
   return (
     <Card className="bg-white/5 border-white/10">
@@ -292,9 +354,17 @@ function MissionCard({ mission }: { mission: Mission }) {
             <button onClick={() => setOpen(o => !o)} className="text-white/60 hover:text-white shrink-0 mt-0.5">
               {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </button>
-            <div className="min-w-0">
-              <CardTitle className="text-sm font-medium text-white truncate">{mission.title}</CardTitle>
-              <p className="text-white/40 text-xs font-mono mt-0.5">{mission.type}</p>
+            <div className="min-w-0 flex items-center gap-2">
+              <div>
+                <CardTitle className="text-sm font-medium text-white truncate">{mission.title}</CardTitle>
+                <p className="text-white/40 text-xs font-mono mt-0.5">{mission.type}</p>
+              </div>
+              {hasRunning && (
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-400" />
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -386,6 +456,75 @@ function MissionCard({ mission }: { mission: Mission }) {
         </CardContent>
       )}
     </Card>
+  );
+}
+
+// ─── Pipeline status bar ──────────────────────────────────────────────────────
+
+function PipelineStatusBar() {
+  useTick(); // re-render every second for live countdown
+  const { data: tick, isLoading } = trpc.pipeline.status.useQuery(undefined, {
+    refetchInterval: 10_000,
+  });
+
+  const ranAt      = tick?.ranAt ? new Date(tick.ranAt) : null;
+  const msSinceTick = ranAt ? Date.now() - ranAt.getTime() : Infinity;
+  const isRecent   = msSinceTick < 90_000; // within 90s = "just ran"
+  const mt         = tick?.missionTasks;
+
+  return (
+    <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border text-xs transition-colors ${
+      isRecent
+        ? "bg-blue-500/10 border-blue-500/30"
+        : "bg-white/5 border-white/10"
+    }`}>
+      {/* Live indicator */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className={`relative flex h-2 w-2`}>
+          {isRecent && (
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+          )}
+          <span className={`relative inline-flex h-2 w-2 rounded-full ${isRecent ? "bg-blue-400" : "bg-white/20"}`} />
+        </span>
+        <span className={`font-medium ${isRecent ? "text-blue-300" : "text-white/40"}`}>
+          {isRecent ? "Pipeline active" : "Pipeline idle"}
+        </span>
+      </div>
+
+      <span className="text-white/20">|</span>
+
+      {/* Last tick */}
+      <div className="flex items-center gap-1 text-white/50">
+        <Clock className="h-3 w-3" />
+        Last tick: <span className="text-white/70">{isLoading ? "…" : (ranAt ? relativeTime(ranAt) : "never")}</span>
+      </div>
+
+      {/* Next tick countdown */}
+      <div className="flex items-center gap-1 text-white/50">
+        <Zap className="h-3 w-3" />
+        Next: <span className="text-white/70">{isLoading ? "…" : nextTickIn(ranAt)}</span>
+      </div>
+
+      {/* Last tick results */}
+      {mt && (mt.ran > 0 || mt.errors > 0) && (
+        <>
+          <span className="text-white/20">|</span>
+          <div className="flex items-center gap-2">
+            {mt.ran > 0 && (
+              <span className="text-emerald-400">{mt.ran} ran</span>
+            )}
+            {mt.errors > 0 && (
+              <span className="flex items-center gap-0.5 text-red-400">
+                <AlertCircle className="h-3 w-3" /> {mt.errors} err
+              </span>
+            )}
+            {mt.total > 0 && (
+              <span className="text-white/30">({mt.total} total)</span>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -611,6 +750,8 @@ export default function Missions() {
         </div>
         <CreateMissionButton onCreated={() => setRefreshKey(k => k + 1)} />
       </div>
+
+      <PipelineStatusBar />
 
       <IntelPanel />
 
