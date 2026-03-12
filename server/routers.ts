@@ -1274,6 +1274,14 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── Pipeline status ─────────────────────────────────────────────────────
+  pipeline: router({
+    status: protectedProcedure.query(async () => {
+      const { getLastPipelineTick } = await import('./db');
+      return await getLastPipelineTick();
+    }),
+  }),
+
   // ─── Outcomes (Bayesian feedback loop) ──────────────────────────────────
   outcomes: router({
     record: protectedProcedure.input(z.object({
