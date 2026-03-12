@@ -1,14 +1,18 @@
 -- Migration 006: National Branding Missions
 -- Seeds 4 AgentZ missions for the Made in USA / National Origin Verification campaign
 -- Run once on Supabase: Dashboard → SQL Editor → paste → Run
+--
+-- NOTE: schema uses camelCase column names in double-quotes.
+--   missions:       "createdAt", "updatedAt"
+--   mission_tasks:  "missionId", "runAt", "lastError", "retryCount", "retryAfter", "createdAt", "updatedAt"
 
 -- ── Mission 1: GOV_PILOT — Commerce/USDA Origin Verification ──────────────────
 DO $$
 DECLARE
-  m1 UUID := gen_random_uuid();
+  m1 TEXT := gen_random_uuid()::text;
 BEGIN
 
-INSERT INTO missions (id, type, title, status, priority, created_at, updated_at)
+INSERT INTO missions (id, type, title, status, priority, "createdAt", "updatedAt")
 VALUES (
   m1,
   'GOV_PILOT',
@@ -20,9 +24,9 @@ VALUES (
 );
 
 -- Task 1a: Intel dossier on FTC/Commerce landscape
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m1, 'DRAFT_INTEL_DOSSIER',
+  gen_random_uuid()::text, m1, 'DRAFT_INTEL_DOSSIER',
   '{
     "segment": "GOV",
     "focus": "national_origin_verification",
@@ -40,9 +44,9 @@ VALUES (
 );
 
 -- Task 1b: Build pilot packet
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m1, 'BUILD_PILOT_PACKET',
+  gen_random_uuid()::text, m1, 'BUILD_PILOT_PACKET',
   '{
     "segment": "GOV",
     "focus": "national_origin_verification",
@@ -63,9 +67,9 @@ VALUES (
 );
 
 -- Task 1c: Find government leads
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m1, 'FIND_GOV_LEADS',
+  gen_random_uuid()::text, m1, 'FIND_GOV_LEADS',
   '{
     "count": 15,
     "segment": "GOV",
@@ -86,9 +90,9 @@ VALUES (
 );
 
 -- Task 1d: Draft outbound email sequence
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m1, 'DRAFT_OUTBOUND_EMAIL',
+  gen_random_uuid()::text, m1, 'DRAFT_OUTBOUND_EMAIL',
   '{
     "segment": "GOV",
     "sequence": 1,
@@ -106,9 +110,9 @@ VALUES (
 );
 
 -- Task 1e: Follow-up sequence
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m1, 'FOLLOWUP_SEQUENCE',
+  gen_random_uuid()::text, m1, 'FOLLOWUP_SEQUENCE',
   '{
     "segment": "GOV",
     "maxFollowups": 3,
@@ -120,9 +124,9 @@ VALUES (
 );
 
 -- Task 1f: CRM update
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m1, 'CRM_UPDATE',
+  gen_random_uuid()::text, m1, 'CRM_UPDATE',
   '{
     "segment": "GOV",
     "dealStage": "pilot_proposed",
@@ -138,10 +142,10 @@ END $$;
 -- ── Mission 2: PRESS_LAUNCH — "Made in USA Fraud" Expose Campaign ────────────
 DO $$
 DECLARE
-  m2 UUID := gen_random_uuid();
+  m2 TEXT := gen_random_uuid()::text;
 BEGIN
 
-INSERT INTO missions (id, type, title, status, priority, created_at, updated_at)
+INSERT INTO missions (id, type, title, status, priority, "createdAt", "updatedAt")
 VALUES (
   m2,
   'PRESS_LAUNCH',
@@ -153,9 +157,9 @@ VALUES (
 );
 
 -- Task 2a: Draft press release
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m2, 'DRAFT_PRESS_RELEASE',
+  gen_random_uuid()::text, m2, 'DRAFT_PRESS_RELEASE',
   '{
     "headline": "AuthiChain Launches First Blockchain Standard for Made in USA Verification, Exposing Widespread Fraud in Origin Claims",
     "subheadline": "New platform gives American manufacturers cryptographic proof of domestic content as FTC enforcement gaps cost billions annually",
@@ -164,7 +168,7 @@ VALUES (
       "20-40% of Made in USA labels are fraudulent according to FTC data",
       "AuthiChain provides component-level blockchain certificates — raw material to finished product",
       "First platform to combine blockchain provenance + QRON visual fingerprints + community verification",
-      "Launching with [X] Made in USA brands as founding partners",
+      "Launching with founding Made in USA brands as partners",
       "Available for government procurement verification and consumer scanning"
     ],
     "quote": "Consumers and procurement officers deserve cryptographic proof, not a label they have to trust on faith.",
@@ -175,9 +179,9 @@ VALUES (
 );
 
 -- Task 2b: Find journalists and media contacts
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m2, 'FIND_RETAIL_LEADS',
+  gen_random_uuid()::text, m2, 'FIND_RETAIL_LEADS',
   '{
     "count": 25,
     "vertical": "press",
@@ -200,9 +204,9 @@ VALUES (
 );
 
 -- Task 2c: Draft journalist pitch emails
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m2, 'DRAFT_OUTBOUND_EMAIL',
+  gen_random_uuid()::text, m2, 'DRAFT_OUTBOUND_EMAIL',
   '{
     "segment": "PRESS",
     "sequence": 1,
@@ -219,54 +223,24 @@ VALUES (
   'PENDING', NOW() + INTERVAL '15 minutes', NOW(), NOW()
 );
 
--- Task 2d: Social media campaign
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+-- Task 2d: Social media campaign (Twitter + LinkedIn)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m2, 'SCHEDULE_SOCIAL_POSTS',
+  gen_random_uuid()::text, m2, 'SCHEDULE_SOCIAL_POSTS',
   '{
     "platforms": ["twitter", "linkedin"],
     "campaignTheme": "Made in USA Verification Launch",
+    "audience": "American manufacturers, supply chain professionals, policy makers",
     "viralHook": "Thread: We scanned 100 products labeled Made in USA. Here is what the blockchain actually shows.",
-    "posts": [
-      {
-        "day": 0,
-        "type": "teaser",
-        "copy": "Something big is coming for American manufacturing. 🇺🇸 Next week we reveal what we found when we put 100 Made in USA products on the blockchain.",
-        "hashtags": ["MadeInUSA", "SupplyChain", "Blockchain", "Manufacturing"]
-      },
-      {
-        "day": 2,
-        "type": "data_reveal",
-        "copy": "THREAD: We scanned 100 Made in USA products with AuthiChain. The results will surprise you. 🧵",
-        "hashtags": ["MadeInUSA", "Authentication", "AuthiChain", "SupplyChainTransparency"]
-      },
-      {
-        "day": 2,
-        "type": "thread_body",
-        "copy": "The problem: Made in USA is the most trusted — and most abused — label in American commerce. The FTC estimates 20-40% of claims are fraudulent. Until now, there was no way to verify.",
-        "hashtags": []
-      },
-      {
-        "day": 3,
-        "type": "solution",
-        "copy": "Today that changes. AuthiChain provides blockchain-verified origin certificates at every step — from raw material to finished product. Scan the QR. See the truth.",
-        "hashtags": ["AuthiChain", "MadeInUSA", "Blockchain", "Manufacturing"]
-      },
-      {
-        "day": 5,
-        "type": "cta",
-        "copy": "American manufacturers: you deserve to be believed. We give you cryptographic proof. Apply to be a founding AuthiChain verified brand → authichain.com",
-        "hashtags": ["MadeInUSA", "AmericanManufacturing", "AuthiChain"]
-      }
-    ]
+    "tone": "bold, data-driven, patriotic, no corporate speak"
   }'::jsonb,
   'PENDING', NOW() + INTERVAL '10 minutes', NOW(), NOW()
 );
 
 -- Task 2e: Follow-up journalist sequence
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m2, 'FOLLOWUP_SEQUENCE',
+  gen_random_uuid()::text, m2, 'FOLLOWUP_SEQUENCE',
   '{
     "segment": "PRESS",
     "maxFollowups": 2,
@@ -281,10 +255,10 @@ END $$;
 -- ── Mission 3: PARTNER_ONBOARDING — Made in USA Anchor Brands ────────────────
 DO $$
 DECLARE
-  m3 UUID := gen_random_uuid();
+  m3 TEXT := gen_random_uuid()::text;
 BEGIN
 
-INSERT INTO missions (id, type, title, status, priority, created_at, updated_at)
+INSERT INTO missions (id, type, title, status, priority, "createdAt", "updatedAt")
 VALUES (
   m3,
   'PARTNER_ONBOARDING',
@@ -296,9 +270,9 @@ VALUES (
 );
 
 -- Task 3a: Intel dossier on target brands
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m3, 'DRAFT_INTEL_DOSSIER',
+  gen_random_uuid()::text, m3, 'DRAFT_INTEL_DOSSIER',
   '{
     "segment": "PARTNER",
     "focus": "made_in_usa_anchor_brands",
@@ -323,9 +297,9 @@ VALUES (
 );
 
 -- Task 3b: Build brand partner pitch packet
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m3, 'BUILD_PILOT_PACKET',
+  gen_random_uuid()::text, m3, 'BUILD_PILOT_PACKET',
   '{
     "segment": "PARTNER",
     "focus": "made_in_usa_brand_certification",
@@ -347,9 +321,9 @@ VALUES (
 );
 
 -- Task 3c: Draft founder-level outreach emails
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m3, 'DRAFT_OUTBOUND_EMAIL',
+  gen_random_uuid()::text, m3, 'DRAFT_OUTBOUND_EMAIL',
   '{
     "segment": "PARTNER",
     "sequence": 1,
@@ -367,9 +341,9 @@ VALUES (
 );
 
 -- Task 3d: Follow-up sequence
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m3, 'FOLLOWUP_SEQUENCE',
+  gen_random_uuid()::text, m3, 'FOLLOWUP_SEQUENCE',
   '{
     "segment": "PARTNER",
     "maxFollowups": 3,
@@ -381,9 +355,9 @@ VALUES (
 );
 
 -- Task 3e: CRM update
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m3, 'CRM_UPDATE',
+  gen_random_uuid()::text, m3, 'CRM_UPDATE',
   '{
     "segment": "PARTNER",
     "dealStage": "pilot_proposed",
@@ -399,10 +373,10 @@ END $$;
 -- ── Mission 4: TECH_SPRINT — Origin Passport Consumer Page ───────────────────
 DO $$
 DECLARE
-  m4 UUID := gen_random_uuid();
+  m4 TEXT := gen_random_uuid()::text;
 BEGIN
 
-INSERT INTO missions (id, type, title, status, priority, created_at, updated_at)
+INSERT INTO missions (id, type, title, status, priority, "createdAt", "updatedAt")
 VALUES (
   m4,
   'TECH_SPRINT',
@@ -413,9 +387,9 @@ VALUES (
   NOW()
 );
 
-INSERT INTO tasks (id, mission_id, kind, payload, status, run_at, created_at, updated_at)
+INSERT INTO mission_tasks (id, "missionId", kind, payload, status, "runAt", "createdAt", "updatedAt")
 VALUES (
-  gen_random_uuid(), m4, 'PLAN_SPRINT',
+  gen_random_uuid()::text, m4, 'PLAN_SPRINT',
   '{
     "feature": "Build a public /verify/:productId page that shows the full Origin Passport for a product — supply chain breakdown by country percentage (e.g. 89% USA, 8% Canada, 3% Mexico), factory quality scores, QRON visual fingerprint embed, blockchain certificate link, and a trust score gauge. The page must be publicly accessible (no login required), mobile-first, and scannable from a QR code on physical products.",
     "context": "This is the consumer-facing authentication page that closes the loop between physical products (QRON QR codes) and the AuthiChain blockchain. It is the key deliverable for the Made in USA national branding campaign — when a customer scans a product, this is what they see. Design should feel premium, trustworthy, and simple. Tech: wouter public route, tRPC publicProcedure, Drizzle for product + qron data. Add a product_origins table (product_id, component, country, pct, certified_by) to store supply chain breakdown data.",
@@ -448,9 +422,9 @@ SELECT
   m.status,
   m.priority,
   COUNT(t.id) AS task_count,
-  MIN(t.run_at) AS first_task_runs_at
+  MIN(t."runAt") AS first_task_runs_at
 FROM missions m
-LEFT JOIN tasks t ON t.mission_id = m.id
-WHERE m.created_at > NOW() - INTERVAL '1 minute'
+LEFT JOIN mission_tasks t ON t."missionId" = m.id
+WHERE m."createdAt" > NOW() - INTERVAL '1 minute'
 GROUP BY m.id, m.title, m.type, m.status, m.priority
 ORDER BY m.priority DESC;
