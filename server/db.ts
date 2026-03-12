@@ -1709,3 +1709,31 @@ export async function getActiveMissionTypes(): Promise<string[]> {
     .where(or(eq(missions.status, 'IN_PROGRESS'), eq(missions.status, 'PLANNED')));
   return rows.map(r => r.type);
 }
+
+// ─── Dev Team Helpers ─────────────────────────────────────────────────────────
+
+/** Export db instance for raw SQL use in dev-team agents. */
+export { getDb as db };
+
+/** Returns all user IDs with role='admin' for notifications. */
+export async function getAllAdminIds(): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, 'admin'));
+  return rows.map(r => String(r.id));
+}
+
+/** Retrieve TECH_SPRINT tasks for the build loop dashboard. */
+export async function getSprintTasks(missionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(tasks)
+    .where(eq(tasks.missionId, missionId))
+    .orderBy(tasks.createdAt);
+}
+

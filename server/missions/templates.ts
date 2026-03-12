@@ -12,6 +12,11 @@ interface TaskTemplate {
 }
 
 export const missionTemplates: Record<MissionType, MissionTemplate> = {
+  TECH_SPRINT: {
+    type: 'TECH_SPRINT',
+    title: 'Tech Sprint – Feature Development',
+    priority: 8,
+  },
   GOV_PILOT: {
     type: 'GOV_PILOT',
     title: 'Government Pilot – Initial Agency',
@@ -45,6 +50,16 @@ export const missionTemplates: Record<MissionType, MissionTemplate> = {
 };
 
 export const taskTemplates: Record<MissionType, TaskTemplate[]> = {
+  TECH_SPRINT: [
+    {
+      kind: 'PLAN_SPRINT',
+      payload: {
+        feature: 'Feature to be specified at mission creation',
+        context: 'authichain-unified full-stack TypeScript Cloudflare Worker',
+      },
+    },
+    // PLAN_SPRINT dynamically enqueues: WRITE_CODE → OPEN_PR → RUN_TESTS → CODE_REVIEW → MERGE_PR → MONITOR_DEPLOY
+  ],
   GOV_PILOT: [
     { kind: 'BUILD_PILOT_PACKET',      payload: { segment: 'GOV' } },
     { kind: 'DRAFT_INTEL_DOSSIER',     payload: { segment: 'GOV' } },

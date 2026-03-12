@@ -33,6 +33,7 @@ const CRM = lazy(() => import("./pages/CRM"));
 const Missions = lazy(() => import("./pages/Missions"));
 const VideoStudio = lazy(() => import("./pages/VideoStudio"));
 const PhysicalAuth = lazy(() => import("./pages/PhysicalAuth"));
+const BuildLoop = lazy(() => import("./pages/BuildLoop"));
 
 function PageLoader() {
   return (
@@ -68,6 +69,7 @@ function DashboardRoutes() {
           <Route path="/missions" component={Missions} />
           <Route path="/video-studio" component={VideoStudio} />
           <Route path="/physical-auth" component={PhysicalAuth} />
+          <Route path="/build-loop" component={BuildLoop} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
