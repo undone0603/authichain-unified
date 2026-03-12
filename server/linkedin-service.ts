@@ -79,6 +79,43 @@ export interface LinkedInPost {
   postUrl: string;
 }
 
+// ─── Person URN resolution ─────────────────────────────────────────────────
+
+let _personUrnCache = "";
+
+async function resolvePersonUrn(token: string): Promise<string> {
+  if (_personUrnCache) return _personUrnCache;
+
+  const envUrn = process.env.LINKEDIN_PERSON_URN ?? "";
+  if (envUrn) { _personUrnCache = envUrn; return envUrn; }
+
+  // Fetch from OpenID Connect userinfo endpoint
+  const res = await fetch(`${LI_API}/userinfo`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.ok) {
+    const json = await res.json() as { sub?: string };
+    if (json.sub) {
+      _personUrnCache = json.sub.startsWith("urn:li:person:") ? json.sub : `urn:li:person:${json.sub}`;
+      return _personUrnCache;
+    }
+  }
+
+  // Classic /v2/me fallback
+  const meRes = await fetch(`${LI_API}/me`, {
+    headers: { Authorization: `Bearer ${token}`, "X-Restli-Protocol-Version": "2.0.0" },
+  });
+  if (meRes.ok) {
+    const me = await meRes.json() as { id?: string };
+    if (me.id) {
+      _personUrnCache = `urn:li:person:${me.id}`;
+      return _personUrnCache;
+    }
+  }
+
+  throw new Error("Could not resolve LinkedIn person URN — set LINKEDIN_PERSON_URN secret or ensure OpenID Connect product is active");
+}
+
 // ─── Post to LinkedIn ──────────────────────────────────────────────────────
 
 /**
@@ -88,7 +125,7 @@ export interface LinkedInPost {
 export async function postUpdate(params: LinkedInPostParams): Promise<LinkedInPost> {
   const token = await getAccessToken();
 
-  const personUrn = process.env.LINKEDIN_PERSON_URN ?? "";
+  const personUrn = await resolvePersonUrn(token);
   const orgUrn    = process.env.LINKEDIN_ORG_URN ?? "";
 
   const author = params.author === "org" && orgUrn ? orgUrn : personUrn;
@@ -169,11 +206,26 @@ export interface LinkedInProfile {
 
 export async function getProfile(): Promise<LinkedInProfile | null> {
   const token = await getAccessToken();
+
+  // Try OIDC userinfo first
+  const uiRes = await fetch(`${LI_API}/userinfo`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (uiRes.ok) {
+    const ui = await uiRes.json() as any;
+    const sub = ui.sub ?? "";
+    const urn = sub.startsWith("urn:li:person:") ? sub : `urn:li:person:${sub}`;
+    return {
+      id:        sub.replace("urn:li:person:", ""),
+      firstName: ui.given_name ?? "",
+      lastName:  ui.family_name ?? "",
+      urn,
+    };
+  }
+
+  // Fallback to classic /v2/me
   const res = await fetch(`${LI_API}/me`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "X-Restli-Protocol-Version": "2.0.0",
-    },
+    headers: { Authorization: `Bearer ${token}`, "X-Restli-Protocol-Version": "2.0.0" },
   });
   if (!res.ok) return null;
   const json = await res.json() as any;
