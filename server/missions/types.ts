@@ -4,7 +4,8 @@ export type MissionType =
   | 'PRESS_LAUNCH'
   | 'PARTNER_ONBOARDING'
   | 'TECH_OS_LOCK'
-  | 'LAUNCH_AUTHICHAIN';
+  | 'LAUNCH_AUTHICHAIN'
+  | 'TECH_SPRINT';
 
 export type MissionStatus = 'PLANNED' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';
 
@@ -32,7 +33,17 @@ export type TaskKind =
   | 'GENERATE_PROPOSAL'
   | 'SEND_CONTRACT'
   | 'AUTO_REPLY'
-  | 'GENERATE_OUTREACH_VIDEO';
+  | 'GENERATE_OUTREACH_VIDEO'
+  // ── Dev Team ──────────────────────────────────────────────
+  | 'PLAN_SPRINT'
+  | 'WRITE_CODE'
+  | 'OPEN_PR'
+  | 'RUN_TESTS'
+  | 'CODE_REVIEW'
+  | 'MERGE_PR'
+  | 'MONITOR_DEPLOY'
+  | 'FILE_BUG'
+  | 'AUTO_FIX';
 
 export type LeadSegment = 'GOV' | 'RETAIL' | 'PRESS';
 

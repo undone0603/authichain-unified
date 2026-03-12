@@ -28,6 +28,11 @@ export const ENV = {
   gmailFromEmail: process.env.GMAIL_FROM_EMAIL ?? "",
   heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
   qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
+  requireDevApproval:
+    (process.env.REQUIRE_DEV_APPROVAL ?? "true").toLowerCase() !== "false",
+  githubToken: process.env.GITHUB_TOKEN ?? "",
+  githubOwner: process.env.GITHUB_OWNER ?? "undone0603",
+  githubRepo:  process.env.GITHUB_REPO  ?? "authichain-unified",
   autonomousPipelineEnabled:
     (process.env.AUTONOMOUS_PIPELINE_ENABLED ?? "false").toLowerCase() === "true",
   corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS

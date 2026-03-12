@@ -21,6 +21,9 @@ import {
   runAutoReply,
 } from '../agents/closer.js';
 import { runGenerateOutreachVideo } from '../agents/heygen-video.js';
+import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
+import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
+import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
 
 export async function runTask(task: Task): Promise<{ ok: boolean }> {
   await markTaskRunning(task.id);
@@ -110,6 +113,43 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'GENERATE_OUTREACH_VIDEO':
         await runGenerateOutreachVideo(task);
+        break;
+
+      // ── Dev Team ────────────────────────────────────────────────────────
+      case 'PLAN_SPRINT':
+        await runPlanSprint(task);
+        break;
+
+      case 'WRITE_CODE':
+        await runWriteCode(task);
+        break;
+
+      case 'OPEN_PR':
+        await runOpenPR(task);
+        break;
+
+      case 'RUN_TESTS':
+        await runTests(task);
+        break;
+
+      case 'CODE_REVIEW':
+        await runCodeReview(task);
+        break;
+
+      case 'MERGE_PR':
+        await runMergePR(task);
+        break;
+
+      case 'MONITOR_DEPLOY':
+        await runMonitorDeploy(task);
+        break;
+
+      case 'FILE_BUG':
+        await runFileBug(task);
+        break;
+
+      case 'AUTO_FIX':
+        await runAutoFix(task);
         break;
 
       default:

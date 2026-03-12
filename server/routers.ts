@@ -1388,6 +1388,78 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── Dev Team (AgentZ Build Loop) ───────────────────────────────────────
+  devTeam: router({
+    // Create a TECH_SPRINT mission and seed the first PLAN_SPRINT task
+    createSprint: adminProcedure.input(z.object({
+      feature: trimmedStr(500),
+      context: trimmedOptional(1000),
+      targetFiles: z.array(z.string()).optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const { createMission, logActivity } = await import("./db");
+      const missionId = crypto.randomUUID();
+      // Insert mission
+      const db = (await import("./db")).getDb && (await (await import("./db")).db());
+      await (db as any)?.execute(
+        `INSERT INTO missions (id, type, title, status, priority) VALUES ($1,'TECH_SPRINT',$2,'IN_PROGRESS',8)`,
+        [missionId, `Sprint: ${input.feature.slice(0, 80)}`]
+      );
+      // Insert PLAN_SPRINT task
+      const taskId = crypto.randomUUID();
+      await (db as any)?.execute(
+        `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'PLAN_SPRINT',$3,'PENDING',NOW())`,
+        [taskId, missionId, JSON.stringify({ feature: input.feature, context: input.context, targetFiles: input.targetFiles })]
+      );
+      await logActivity({ userId: ctx.user.id, action: "sprint_created", entityType: "mission", entityId: 0, details: { missionId, feature: input.feature } });
+      return { missionId, taskId };
+    }),
+
+    // Get all tasks for a sprint mission
+    sprintTasks: adminProcedure.input(z.object({ missionId: z.string() })).query(async ({ input }) => {
+      const { getSprintTasks } = await import("./db");
+      return await getSprintTasks(input.missionId);
+    }),
+
+    // List all TECH_SPRINT missions
+    sprints: adminProcedure.query(async () => {
+      const db = await (await import("./db")).db();
+      if (!db) return [];
+      const result = await (db as any).execute(
+        `SELECT m.*, COUNT(t.id) AS task_count,
+           COUNT(t.id) FILTER (WHERE t.status = 'DONE') AS done_count,
+           COUNT(t.id) FILTER (WHERE t.status = 'FAILED') AS failed_count,
+           COUNT(t.id) FILTER (WHERE t.status = 'WAITING_HUMAN') AS waiting_count
+         FROM missions m
+         LEFT JOIN tasks t ON t.mission_id = m.id
+         WHERE m.type = 'TECH_SPRINT'
+         GROUP BY m.id
+         ORDER BY m.created_at DESC
+         LIMIT 50`
+      ) as any;
+      return result.rows ?? [];
+    }),
+
+    // Retry a failed or waiting task
+    retryTask: adminProcedure.input(z.object({ taskId: z.string() })).mutation(async ({ input }) => {
+      const db = await (await import("./db")).db();
+      await (db as any)?.execute(
+        `UPDATE tasks SET status='PENDING', run_at=NOW(), last_error=NULL WHERE id=$1 AND status IN ('FAILED','WAITING_HUMAN')`,
+        [input.taskId]
+      );
+      return { ok: true };
+    }),
+
+    // Approve a WAITING_HUMAN merge — sets back to PENDING
+    approveMerge: adminProcedure.input(z.object({ taskId: z.string() })).mutation(async ({ input }) => {
+      const db = await (await import("./db")).db();
+      await (db as any)?.execute(
+        `UPDATE tasks SET status='PENDING', run_at=NOW() WHERE id=$1 AND status='WAITING_HUMAN' AND kind='MERGE_PR'`,
+        [input.taskId]
+      );
+      return { ok: true };
+    }),
+  }),
+
   // ─── QRON Physical Authentication Bridge ─────────────────────────────────
   qron: router({
     // Generate a QRON visual fingerprint for a product

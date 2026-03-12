@@ -23,3 +23,6 @@ crons = ["*/5 * * * *"]
 # YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN, YOUTUBE_CHANNEL_ID
 # YOUTUBE_QRON_REFRESH_TOKEN, YOUTUBE_QRON_CHANNEL_ID
 # FAL_KEY (for CLIP visual fingerprint embedding)
+# GITHUB_TOKEN (PAT: repo + actions + pull_requests scopes — for dev team build loop)
+# GITHUB_OWNER, GITHUB_REPO
+# REQUIRE_DEV_APPROVAL (default: true — gates MERGE_PR on human approval)
