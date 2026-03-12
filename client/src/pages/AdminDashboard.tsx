@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3 } from "lucide-react";
+import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3, TrendingUp } from "lucide-react";
 
 export default function AdminDashboard() {
   const { data: metrics, isLoading } = trpc.admin.metrics.useQuery();
@@ -12,6 +12,8 @@ export default function AdminDashboard() {
   const { data: healthScores } = trpc.admin.healthScores.useQuery();
   const { data: activity } = trpc.admin.activity.useQuery({ limit: 30 });
   const { data: subscriptions } = trpc.admin.subscriptions.useQuery();
+  const { data: weeklyKpis } = trpc.admin.weeklyKpis.useQuery();
+  const { data: pipelineFunnel } = trpc.admin.pipelineFunnel.useQuery();
 
   if (isLoading) return (
     <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -32,10 +34,39 @@ export default function AdminDashboard() {
         <MetricCard icon={AlertTriangle} label="Fraud Alerts" value={fraudAlerts?.length ?? 0} color="text-red-400" />
       </div>
 
+      {/* Pipeline Funnel snapshot */}
+      {pipelineFunnel && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" /> Revenue Pipeline Funnel
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              {[
+                { label: "Leads", value: pipelineFunnel.leads_total },
+                { label: "MQL", value: pipelineFunnel.mql_total },
+                { label: "SQL", value: pipelineFunnel.sql_total },
+                { label: "Checkout", value: pipelineFunnel.checkout_started_total },
+                { label: "Paid", value: pipelineFunnel.paid_total },
+                { label: "Churned", value: pipelineFunnel.churn_total },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-lg bg-accent/30 p-3 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                  <p className="text-xl font-bold">{Number(value ?? 0).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="users">
         <TabsList>
           <TabsTrigger value="users">Users ({users?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
+          <TabsTrigger value="kpis">Weekly KPIs</TabsTrigger>
           <TabsTrigger value="fraud">Fraud Alerts ({fraudAlerts?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="health">Health Scores</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
@@ -108,6 +139,51 @@ export default function AdminDashboard() {
                   )}
                 </div>
               ) : <EmptyState text="No revenue data" />}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="kpis" className="mt-4">
+          <Card>
+            <CardContent className="p-4">
+              {weeklyKpis && (weeklyKpis as any[]).length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-muted-foreground text-xs">
+                        <th className="text-left py-2 px-3">Week</th>
+                        <th className="text-right py-2 px-3">Leads</th>
+                        <th className="text-right py-2 px-3">MQL</th>
+                        <th className="text-right py-2 px-3">SQL</th>
+                        <th className="text-right py-2 px-3">Demos</th>
+                        <th className="text-right py-2 px-3">Trials</th>
+                        <th className="text-right py-2 px-3">Paid</th>
+                        <th className="text-right py-2 px-3">Churn</th>
+                        <th className="text-right py-2 px-3">MRR</th>
+                        <th className="text-right py-2 px-3">ARPA</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(weeklyKpis as any[]).map((row: any, i: number) => (
+                        <tr key={i} className="border-b border-border/50">
+                          <td className="py-2 px-3 text-muted-foreground whitespace-nowrap">
+                            {row.week_start ? new Date(row.week_start).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="py-2 px-3 text-right">{row.leads ?? 0}</td>
+                          <td className="py-2 px-3 text-right">{row.mql ?? 0}</td>
+                          <td className="py-2 px-3 text-right">{row.sql ?? 0}</td>
+                          <td className="py-2 px-3 text-right">{row.demos_booked ?? 0}</td>
+                          <td className="py-2 px-3 text-right">{row.trials_started ?? 0}</td>
+                          <td className="py-2 px-3 text-right text-green-500">{row.trial_to_paid ?? 0}</td>
+                          <td className="py-2 px-3 text-right text-red-400">{row.churn ?? 0}</td>
+                          <td className="py-2 px-3 text-right font-medium">${Number(row.mrr ?? 0).toFixed(0)}</td>
+                          <td className="py-2 px-3 text-right text-muted-foreground">${Number(row.arpa ?? 0).toFixed(0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <EmptyState text="No weekly KPI data yet — pipeline will populate as leads flow through" />}
             </CardContent>
           </Card>
         </TabsContent>

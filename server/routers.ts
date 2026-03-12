@@ -1001,6 +1001,17 @@ export const appRouter = router({
       }
       return { success: true, ...result };
     }),
+    weeklyKpis: adminProcedure.query(async () => {
+      const { db } = await import("./db");
+      const { sql: drizzleSql } = await import("drizzle-orm");
+      return db.execute(drizzleSql`SELECT * FROM v_weekly_revenue_kpis LIMIT 12`);
+    }),
+    pipelineFunnel: adminProcedure.query(async () => {
+      const { db } = await import("./db");
+      const { sql: drizzleSql } = await import("drizzle-orm");
+      const rows = await db.execute(drizzleSql`SELECT * FROM v_pipeline_funnel LIMIT 1`);
+      return rows[0] ?? null;
+    }),
   }),
 
   // ─── Blockchain (Thirdweb) ──────────────────────────────────────────────
