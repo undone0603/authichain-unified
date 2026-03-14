@@ -4,6 +4,7 @@ import { scheduledJobRuns, subscriptions, certificates, leads, notifications, us
 import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
+import { ENV } from "./_core/env";
 
 // ─── Job Registry ───────────────────────────────────────────────────────────
 interface JobDefinition {
@@ -529,6 +530,34 @@ registerJob({
     }
 
     return { itemsProcessed: flagged, details: { highVolumeUsers: highVolumeUsers.length, failedAuthProducts: failedAuths.length } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 9: Autonomous Revenue Pipeline Tick (every 15 minutes)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "autonomous-pipeline-tick",
+  description: "Run AgentZ revenue pipeline: find leads, draft outreach, monitor deals",
+  schedule: "*/15 * * * *", // every 15 minutes
+  enabled: ENV.autonomousPipelineEnabled,
+  handler: async (): Promise<JobResult> => {
+    const { runPipelineTick } = await import("./jobs/pipeline-tick");
+    const result = await runPipelineTick();
+    if ("skipped" in result && result.skipped) {
+      return { itemsProcessed: 0, details: result };
+    }
+    const r = result as any;
+    const tasksRan = r.taskResults?.ran ?? 0;
+    return {
+      itemsProcessed: tasksRan,
+      details: {
+        budgetMonitor: r.budgetMonitor,
+        dunning:        r.dunning,
+        retention:      r.retention,
+        taskResults:    r.taskResults,
+      },
+    };
   },
 });
 
