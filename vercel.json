@@ -10,7 +10,7 @@
   "crons": [
     {
       "path": "/api/server?_cron=pipeline-tick",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
