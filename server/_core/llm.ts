@@ -1,5 +1,4 @@
 import { ENV } from "./env";
-import { getMonthlyLlmSpendUsd, logActivity } from "../db";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -217,7 +216,7 @@ const resolveApiUrl = () =>
 
 const assertApiKey = () => {
   if (!ENV.forgeApiKey) {
-    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
+    throw new Error("OPENAI_API_KEY is not configured");
   }
 };
 
@@ -285,23 +284,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     messages: messages.map(normalizeMessage),
   };
 
-  const promptChars = JSON.stringify(payload.messages).length;
-  const estimatedPromptTokens = Math.max(1, Math.ceil(promptChars / 4));
-  const estimatedCompletionTokens = 600;
-  const estimatedTotalTokens = estimatedPromptTokens + estimatedCompletionTokens;
-  const estimatedCostUsd = Number((estimatedTotalTokens * 0.0000005).toFixed(6));
-  if (estimatedCostUsd > ENV.llmPerRequestBudgetUsd) {
-    throw new Error(
-      `LLM request blocked by per-request budget cap (${estimatedCostUsd} > ${ENV.llmPerRequestBudgetUsd})`,
-    );
-  }
-  const monthlySpend = await getMonthlyLlmSpendUsd();
-  if (monthlySpend + estimatedCostUsd > ENV.llmMonthlyBudgetUsd) {
-    throw new Error(
-      `LLM request blocked by monthly budget cap (${(monthlySpend + estimatedCostUsd).toFixed(6)} > ${ENV.llmMonthlyBudgetUsd})`,
-    );
-  }
-
   if (tools && tools.length > 0) {
     payload.tools = tools;
   }
@@ -345,19 +327,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
     );
   }
-  const parsed = (await response.json()) as InvokeResult;
-  const actualTokens = parsed.usage?.total_tokens ?? estimatedTotalTokens;
-  const actualCostUsd = Number((actualTokens * 0.0000005).toFixed(6));
-  await logActivity({
-    userId: null,
-    action: "llm_usage",
-    entityType: "llm",
-    details: {
-      model: parsed.model,
-      totalTokens: actualTokens,
-      costUsd: actualCostUsd,
-      estimatedCostUsd,
-    },
-  });
-  return parsed;
+
+  return (await response.json()) as InvokeResult;
 }

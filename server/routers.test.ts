@@ -519,83 +519,123 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
   });
 
-  // ─── outcomes router ──────────────────────────────────────────────────────
-
-  describe("outcomes router", () => {
-    it("outcomes.record requires authentication", async () => {
-      const caller = appRouter.createCaller(createPublicContext());
-      await expect(
-        caller.outcomes.record({ signal: "email_replied", segment: "GOV" }),
-      ).rejects.toThrow();
+  // ─── Scheduler Tests ──────────────────────────────────────────────────────
+  describe("scheduler", () => {
+    it("requires admin role to list jobs", async () => {
+      const caller = appRouter.createCaller(createAuthContext("user"));
+      await expect(caller.scheduler.listJobs()).rejects.toThrow();
     });
 
-    it("outcomes.record returns { ok: true } for all valid signals", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      const signals = [
-        "email_opened", "email_replied", "meeting_booked", "deal_created",
-        "unsubscribed", "bounced", "no_response",
-      ] as const;
-      for (const signal of signals) {
-        const result = await caller.outcomes.record({ signal, segment: "GOV" });
-        expect(result).toEqual({ ok: true });
-      }
+    it("allows admin to list registered jobs", async () => {
+      const caller = appRouter.createCaller(createAuthContext("admin"));
+      const jobs = await caller.scheduler.listJobs();
+      expect(Array.isArray(jobs)).toBe(true);
+      expect(jobs.length).toBeGreaterThanOrEqual(1);
+      expect(jobs[0]).toHaveProperty("name");
+      expect(jobs[0]).toHaveProperty("description");
+      expect(jobs[0]).toHaveProperty("schedule");
+      expect(jobs[0]).toHaveProperty("enabled");
     });
 
-    it("outcomes.record accepts optional taskId and leadId", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      const result = await caller.outcomes.record({
-        signal: "meeting_booked",
-        segment: "RETAIL",
-        taskId: "00000000-0000-0000-0000-000000000001",
-        leadId: 42,
-      });
-      expect(result).toEqual({ ok: true });
+    it("returns all 8 registered maintenance jobs", async () => {
+      const caller = appRouter.createCaller(createAuthContext("admin"));
+      const jobs = await caller.scheduler.listJobs();
+      const jobNames = jobs.map((j: any) => j.name);
+      expect(jobNames).toContain("subscription-health-check");
+      expect(jobNames).toContain("certificate-expiry-check");
+      expect(jobNames).toContain("lead-nurturing");
+      expect(jobNames).toContain("database-cleanup");
+      expect(jobNames).toContain("weekly-analytics-digest");
+      expect(jobNames).toContain("hubspot-crm-sync");
+      expect(jobNames).toContain("customer-health-score");
+      expect(jobNames).toContain("fraud-detection-sweep");
     });
 
-    it("outcomes.record rejects unknown signal", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      await expect(
-        caller.outcomes.record({ signal: "UNKNOWN_SIGNAL" as any, segment: "GOV" }),
-      ).rejects.toThrow();
+    it("requires admin role to get job history", async () => {
+      const caller = appRouter.createCaller(createAuthContext("user"));
+      await expect(caller.scheduler.getHistory({ limit: 10 })).rejects.toThrow();
     });
 
-    it("outcomes.getSegmentStats returns an object with segment keys", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      const result = await caller.outcomes.getSegmentStats() as Record<string, { alpha: number; beta: number }>;
-      expect(typeof result).toBe("object");
-      // Should have at least the DEFAULT prior
-      expect(result).toHaveProperty("DEFAULT");
-      // Each segment should have alpha and beta
-      for (const [, prior] of Object.entries(result)) {
-        expect(prior).toHaveProperty("alpha");
-        expect(prior).toHaveProperty("beta");
-        expect(prior.alpha).toBeGreaterThan(0);
-        expect(prior.beta).toBeGreaterThan(0);
-      }
+    it("allows admin to get job history", async () => {
+      const caller = appRouter.createCaller(createAuthContext("admin"));
+      const history = await caller.scheduler.getHistory({ limit: 10 });
+      expect(Array.isArray(history)).toBe(true);
     });
 
-    it("outcomes.getSegmentStats requires authentication", async () => {
-      const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.outcomes.getSegmentStats()).rejects.toThrow();
+    it("requires admin role to run jobs manually", async () => {
+      const caller = appRouter.createCaller(createAuthContext("user"));
+      await expect(caller.scheduler.runManually({ jobName: "database-cleanup" })).rejects.toThrow();
+    });
+
+    it("rejects running non-existent jobs", async () => {
+      const caller = appRouter.createCaller(createAuthContext("admin"));
+      await expect(caller.scheduler.runManually({ jobName: "nonexistent-job" })).rejects.toThrow();
+    });
+
+    it("allows admin to manually trigger database-cleanup job", async () => {
+      const caller = appRouter.createCaller(createAuthContext("admin"));
+      const result = await caller.scheduler.runManually({ jobName: "database-cleanup" });
+      expect(result.success).toBe(true);
     });
   });
 
-  // ─── emailDrafts.getByTaskId ──────────────────────────────────────────────
-
-  describe("emailDrafts.getByTaskId", () => {
-    it("requires authentication", async () => {
+  // ── AuthiCharacter System ──────────────────────────────────────────
+  describe("character", () => {
+    it("requires auth for character generation", async () => {
       const caller = appRouter.createCaller(createPublicContext());
       await expect(
-        caller.emailDrafts.getByTaskId({ taskId: "00000000-0000-0000-0000-000000000000" }),
+        caller.character.generate({ archetype: "guardian" })
       ).rejects.toThrow();
     });
 
-    it("returns null for a non-existent task ID", async () => {
+    it("requires auth for agent creation", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(
+        caller.character.createAgent({ characterAssetId: 1, agentName: "TestAgent" })
+      ).rejects.toThrow();
+    });
+
+    it("returns network stats", async () => {
       const caller = appRouter.createCaller(createAuthContext());
-      const result = await caller.emailDrafts.getByTaskId({
-        taskId: "00000000-0000-0000-0000-000000000000",
-      });
-      expect(result).toBeNull();
+      const stats = await caller.character.networkStats();
+      expect(stats).toBeDefined();
+      expect(stats).toHaveProperty("totalAgents");
+      expect(stats).toHaveProperty("totalVerifications");
+      expect(stats).toHaveProperty("totalQRONDistributed");
+    });
+
+    it("returns leaderboard", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const leaderboard = await caller.character.leaderboard({ limit: 10 });
+      expect(leaderboard).toBeDefined();
+      expect(Array.isArray(leaderboard)).toBe(true);
+    });
+
+    it("returns empty generations for new user", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const gens = await caller.character.myGenerations();
+      expect(gens).toBeDefined();
+      expect(Array.isArray(gens)).toBe(true);
+    });
+
+    it("returns empty assets for new user", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const assets = await caller.character.myAssets();
+      expect(assets).toBeDefined();
+      expect(Array.isArray(assets)).toBe(true);
+    });
+
+    it("returns null agent for new user", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const agent = await caller.character.myAgent();
+      expect(agent).toBeNull();
+    });
+
+    it("validates archetype input on generate", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(
+        caller.character.generate({ archetype: "invalid_archetype" as any })
+      ).rejects.toThrow();
     });
   });
 });

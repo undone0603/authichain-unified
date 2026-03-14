@@ -219,35 +219,3 @@ export async function syncPaymentToHubSpot(payment: {
     return null;
   }
 }
-
-export async function syncDealStageToHubSpot(input: {
-  email: string;
-  name?: string;
-  plan: string;
-  stage: "checkout_started" | "paid" | "abandoned" | "payment_failed";
-  amount?: number;
-  eventId?: string;
-}) {
-  if (!isHubSpotConfigured()) return null;
-  try {
-    const stageLabel = input.stage.replace(/_/g, " ");
-    const dealname = `AuthiChain ${input.plan} - ${input.email} - ${stageLabel}`;
-    const amount = (input.amount ?? 0).toString();
-    const closeDate = input.stage === "paid" ? new Date().toISOString().split("T")[0] : undefined;
-    const result = await createDeal({
-      dealname,
-      amount,
-      dealstage: input.stage === "paid" ? "closedwon" : "appointmentscheduled",
-      closedate: closeDate,
-    });
-    console.log(
-      `[HubSpot] Deal stage sync (${input.stage})`,
-      result.success ? result.id : result.error,
-      input.eventId ? `event=${input.eventId}` : "",
-    );
-    return result;
-  } catch (err: any) {
-    console.error("[HubSpot] Deal stage sync failed:", err.message);
-    return null;
-  }
-}
