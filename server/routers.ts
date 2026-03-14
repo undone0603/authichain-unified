@@ -10,6 +10,7 @@ import { bonusesRouter } from "./bonuses/router";
 import { marketplaceRouter } from "./marketplace/router";
 import { emailDraftsRouter } from "./email-drafts/router";
 import { subscriptionsRouter } from "./subscriptions/router";
+import { missionsRouter, tasksRouter } from "./missions/router";
 import { SERVICE_CATALOG, SERVICE_LIST, type ServiceType } from "./service-catalog";
 import { createServiceOrder, getServiceOrderById, getServiceOrderBySessionId, getServiceOrdersByUser, getAllServiceOrders, updateServiceOrderStatus } from "./db";
 import { createPaymentCheckout, getStripe } from "./stripe-service";
@@ -372,6 +373,23 @@ export const appRouter = router({
         active: true,
       });
       return { success: true, code: promo.code, id: promo.id, percentOff: input.percentOff };
+    }),
+    createPaddleCheckout: protectedProcedure.input(z.object({
+      plan: z.enum(["starter", "professional", "enterprise"]),
+      billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
+      successUrl: z.string(),
+    })).mutation(async ({ ctx, input }) => {
+      const PADDLE_PRICES: Record<string, Record<string, string>> = {
+        starter:      { monthly: process.env.PADDLE_PRICE_STARTER_MONTHLY || "", annual: process.env.PADDLE_PRICE_STARTER_ANNUAL || "" },
+        professional: { monthly: process.env.PADDLE_PRICE_PRO_MONTHLY || "",     annual: process.env.PADDLE_PRICE_PRO_ANNUAL || "" },
+        enterprise:   { monthly: process.env.PADDLE_PRICE_ENT_MONTHLY || "",     annual: process.env.PADDLE_PRICE_ENT_ANNUAL || "" },
+      };
+      const priceId = PADDLE_PRICES[input.plan]?.[input.billing];
+      if (!priceId) throw new TRPCError({ code: "BAD_REQUEST", message: `Paddle price not configured for ${input.plan}/${input.billing}` });
+      const { upsertPaddleCustomer, createPaddleTransaction } = await import("./paddle-service");
+      const customerId = await upsertPaddleCustomer({ email: ctx.user.email || "", name: ctx.user.name || "", userId: ctx.user.id });
+      const checkoutUrl = await createPaddleTransaction({ customerId, priceId, successUrl: input.successUrl });
+      return { checkoutUrl };
     }),
   }),
 
@@ -1197,5 +1215,7 @@ export const appRouter = router({
   affiliate: affiliateRouter,
   bonuses: bonusesRouter,
   marketplace: marketplaceRouter,
+  missions: missionsRouter,
+  tasks: tasksRouter,
 });
 export type AppRouter = typeof appRouter;
