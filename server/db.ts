@@ -720,6 +720,13 @@ export async function updateServiceOrderStatus(id: number, status: string, extra
   await db.update(serviceOrders).set({ status: status as any, ...extra }).where(eq(serviceOrders.id, id));
 }
 
+// ─── Email Dispatch (routable via db mock in tests) ──────────────────────────
+
+export async function sendApprovalEmail(to: string, subject: string, html: string): Promise<void> {
+  const { sendEmail } = await import("./email/smtp");
+  await sendEmail({ to, subject, html });
+}
+
 // ─── Missions / Tasks (stub — real impl requires DB migration) ────────────────
 
 export async function getMissions(statusFilter?: string): Promise<any[]> {
@@ -758,4 +765,304 @@ export async function retryTask(id: string): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   // TODO: reset task status to PENDING
+}
+
+// ── Mission task helpers ─────────────────────────────────────────────────────
+
+export async function getDueTasks(): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const rows = await db.execute(
+      sql`SELECT * FROM mission_tasks WHERE status IN ('PENDING','RETRY') AND (run_at IS NULL OR run_at <= NOW()) ORDER BY run_at ASC LIMIT 20`,
+    );
+    return (rows as any[][])[0] ?? [];
+  } catch { return []; }
+}
+
+export async function getRunTaskCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const rows = await db.execute(sql`SELECT COUNT(*) AS cnt FROM mission_tasks WHERE status='DONE'`);
+    return Number(((rows as any[][])[0]?.[0] as any)?.cnt ?? 0);
+  } catch { return 0; }
+}
+
+export async function getActiveMissionTypes(): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const rows = await db.execute(sql`SELECT type FROM missions WHERE status='IN_PROGRESS'`);
+    return ((rows as any[][])[0] ?? []).map((r: any) => r.type);
+  } catch { return []; }
+}
+
+export async function markTaskRunning(id: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`UPDATE mission_tasks SET status='RUNNING', started_at=NOW() WHERE id=${id}`);
+  } catch { /* ignore */ }
+}
+
+export async function markTaskDone(id: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`UPDATE mission_tasks SET status='DONE', finished_at=NOW() WHERE id=${id} AND status='RUNNING'`);
+  } catch { /* ignore */ }
+}
+
+export async function markTaskFailed(id: string, message: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`UPDATE mission_tasks SET status='FAILED', error=${message}, finished_at=NOW() WHERE id=${id}`);
+  } catch { /* ignore */ }
+}
+
+export async function markTaskWaitingHuman(id: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.execute(sql`UPDATE mission_tasks SET status='WAITING_HUMAN' WHERE id=${id}`);
+  } catch { /* ignore */ }
+}
+
+export async function enqueueTask(
+  missionId: string,
+  kind: string,
+  payload: Record<string, unknown>,
+  runAt?: Date,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const id = crypto.randomUUID();
+  try {
+    if (runAt) {
+      await db.execute(sql`INSERT INTO mission_tasks (id, mission_id, kind, payload, status, run_at, created_at) VALUES (${id}, ${missionId}, ${kind}, ${JSON.stringify(payload)}, 'PENDING', ${runAt}, NOW())`);
+    } else {
+      await db.execute(sql`INSERT INTO mission_tasks (id, mission_id, kind, payload, status, created_at) VALUES (${id}, ${missionId}, ${kind}, ${JSON.stringify(payload)}, 'PENDING', NOW())`);
+    }
+  } catch { /* ignore */ }
+}
+
+export async function createProposal(data: {
+  missionId: string;
+  prospectEmail: string;
+  subject: string;
+  body: string;
+  amount?: number;
+  currency?: string;
+  stripeSessionId?: string;
+}): Promise<string> {
+  const db = await getDb();
+  if (!db) return crypto.randomUUID();
+  const id = crypto.randomUUID();
+  try {
+    await db.execute(sql`INSERT INTO proposals (id, mission_id, prospect_email, subject, body, amount, currency, stripe_session_id, status, created_at) VALUES (${id}, ${data.missionId}, ${data.prospectEmail}, ${data.subject}, ${data.body}, ${data.amount ?? null}, ${data.currency ?? 'USD'}, ${data.stripeSessionId ?? null}, 'DRAFT', NOW())`);
+  } catch { /* ignore */ }
+  return id;
+}
+
+export async function getAdaptivePriors(): Promise<Record<string, { alpha: number; beta: number }>> {
+  // Return static priors; in future these could be updated from activity_log outcomes
+  const { SEGMENT_PRIORS } = await import("./_core/bayesian");
+  return SEGMENT_PRIORS as Record<string, { alpha: number; beta: number }>;
+}
+
+// ── Reporting helpers ────────────────────────────────────────────────────────
+
+export async function hasActionLogged(action: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select({ id: activityLog.id })
+    .from(activityLog)
+    .where(eq(activityLog.action, action))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function getWeeklyRevenueDigest() {
+  const db = await getDb();
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const leadsThisWeek = db
+    ? (await db.select({ id: leads.id }).from(leads).where(gte(leads.createdAt, oneWeekAgo))).length
+    : 0;
+  const mrrRows = db
+    ? await db
+        .select({ amount: revenueRecords.amount })
+        .from(revenueRecords)
+        .where(gte(revenueRecords.createdAt, new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
+    : [];
+  const mrr = mrrRows.reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+  const totalSubs = db ? (await db.select({ id: subscriptions.id }).from(subscriptions)).length : 0;
+
+  return {
+    leads: leadsThisWeek,
+    mqlToSql: 0,
+    demosBooked: 0,
+    trialToPaid: 0,
+    churn: 0,
+    mrr: mrr.toFixed(2),
+    arpa: totalSubs > 0 ? (mrr / totalSubs).toFixed(2) : "0.00",
+  };
+}
+
+export async function getQuarterlyValueReport() {
+  const now = new Date();
+  const q = Math.floor(now.getMonth() / 3) + 1;
+  const period = `${now.getFullYear()}-Q${q}`;
+
+  const db = await getDb();
+  const quarterStart = new Date(now.getFullYear(), (q - 1) * 3, 1);
+  const revenueRows = db
+    ? await db
+        .select({ amount: revenueRecords.amount })
+        .from(revenueRecords)
+        .where(gte(revenueRecords.createdAt, quarterStart))
+    : [];
+  const revenue = revenueRows.reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+
+  return {
+    period,
+    revenue: revenue.toFixed(2),
+    roiSummary: `Q${q} ${now.getFullYear()}: $${revenue.toFixed(0)} revenue generated via autonomous pipeline.`,
+  };
+}
+
+// ── Budget monitoring ────────────────────────────────────────────────────────
+
+export async function getBudgetStatus(_now?: Date) {
+  const db = await getDb();
+  const now = _now ?? new Date();
+  const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const dayKey = `${monthKey}-${String(now.getUTCDate()).padStart(2, "0")}`;
+
+  // Tally spend from activity log by action prefix
+  let llmSpent = 0;
+  let adsSpent = 0;
+  let enrichmentSpent = 0;
+
+  if (db) {
+    const rows = await db
+      .select({ action: activityLog.action, details: activityLog.details })
+      .from(activityLog)
+      .where(like(activityLog.action, "spend_%"));
+
+    for (const row of rows) {
+      const d = (row.details ?? {}) as any;
+      const amount = Number(d.usd ?? 0);
+      if (row.action?.startsWith("spend_llm")) llmSpent += amount;
+      if (row.action?.startsWith("spend_ads")) adsSpent += amount;
+      if (row.action?.startsWith("spend_enrichment")) enrichmentSpent += amount;
+    }
+  }
+
+  const llmBudget = ENV.llmMonthlyBudgetUsd;
+  const adsBudget = ENV.adsDailyCapUsd;
+  const enrichmentBudget = ENV.enrichmentMonthlyCapUsd;
+
+  return {
+    period: { month: monthKey, day: dayKey },
+    llm: { spent: llmSpent, budget: llmBudget, pct: llmBudget > 0 ? Math.round((llmSpent / llmBudget) * 100) : 0 },
+    ads: { spent: adsSpent, budget: adsBudget, pct: adsBudget > 0 ? Math.round((adsSpent / adsBudget) * 100) : 0 },
+    enrichment: { spent: enrichmentSpent, budget: enrichmentBudget, pct: enrichmentBudget > 0 ? Math.round((enrichmentSpent / enrichmentBudget) * 100) : 0 },
+  };
+}
+
+// ── Dunning helpers ──────────────────────────────────────────────────────────
+
+export async function listPastDueSubscriptions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.status, "past_due"));
+}
+
+export async function hasDunningStepLogged(subscriptionId: number, step: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const action = `billing_dunning_${step}`;
+  const rows = await db
+    .select({ id: activityLog.id })
+    .from(activityLog)
+    .where(
+      and(
+        eq(activityLog.entityType, "subscription"),
+        eq(activityLog.entityId, subscriptionId),
+        eq(activityLog.action, action),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+// ── Retention helpers ────────────────────────────────────────────────────────
+
+export async function hasUserActionLogged(userId: number, action: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select({ id: activityLog.id })
+    .from(activityLog)
+    .where(and(eq(activityLog.userId, userId), eq(activityLog.action, action)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function listUsersForOnboardingStep(daysSinceSignup: number) {
+  const db = await getDb();
+  if (!db) return [];
+  // Users whose account is approximately daysSinceSignup days old (within a 1-day window)
+  const lowerBound = new Date(Date.now() - (daysSinceSignup + 1) * 24 * 60 * 60 * 1000);
+  const upperBound = new Date(Date.now() - daysSinceSignup * 24 * 60 * 60 * 1000);
+  return db
+    .select()
+    .from(users)
+    .where(and(gte(users.createdAt, lowerBound), lte(users.createdAt, upperBound)));
+}
+
+export async function listInactiveUsersNoRecentScans(inactiveDays: number) {
+  const db = await getDb();
+  if (!db) return [];
+  // Users who have qr codes but no scans recorded in the last N days
+  // Approximated by checking users with scanCount=0 or very low scan activity
+  const cutoff = new Date(Date.now() - inactiveDays * 24 * 60 * 60 * 1000);
+  const allUsers = await db.select().from(users);
+  const activeUserIds = new Set(
+    (
+      await db
+        .select({ userId: activityLog.userId })
+        .from(activityLog)
+        .where(and(eq(activityLog.entityType, "qr_scan"), gte(activityLog.createdAt, cutoff)))
+    )
+      .map(r => r.userId)
+      .filter(Boolean),
+  );
+  return allUsers.filter(u => !activeUserIds.has(u.id));
+}
+
+export async function listHighScanUsers(minScans: number) {
+  const db = await getDb();
+  if (!db) return [];
+  // Users with total scan activity count >= minScans in the activity log
+  const scanCounts = await db
+    .select({
+      userId: activityLog.userId,
+      count: sql<number>`count(*)`.as("count"),
+    })
+    .from(activityLog)
+    .where(eq(activityLog.entityType, "qr_scan"))
+    .groupBy(activityLog.userId)
+    .having(sql`count(*) >= ${minScans}`);
+
+  if (scanCounts.length === 0) return [];
+  const ids = scanCounts.map(r => r.userId).filter((id): id is number => id !== null);
+  if (ids.length === 0) return [];
+  return db.select().from(users).where(inArray(users.id, ids));
 }

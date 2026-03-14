@@ -2,6 +2,50 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
+// ─── In-memory store for DB-dependent tests ───────────────────────────────────
+const { notifStore } = vi.hoisted(() => ({
+  notifStore: {
+    notifications: new Map<number, any>(),
+    nextId: 1,
+    reset() { this.notifications.clear(); this.nextId = 1; },
+  },
+}));
+
+vi.mock("./db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./db")>();
+  return {
+    ...actual,
+    // Notification stubs (stateful in-memory)
+    createNotification: async (data: any) => {
+      const id = notifStore.nextId++;
+      notifStore.notifications.set(id, { ...data, id, createdAt: new Date() });
+      return { id };
+    },
+    getUserNotifications: async (userId: number, limit: number = 50) => {
+      return [...notifStore.notifications.values()]
+        .filter(n => n.userId === userId)
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, limit);
+    },
+    getUnreadNotificationCount: async (userId: number) => {
+      return [...notifStore.notifications.values()].filter(n => n.userId === userId && n.isRead === 0).length;
+    },
+    markNotificationRead: async (id: number, _userId: number) => {
+      const n = notifStore.notifications.get(id);
+      if (n) notifStore.notifications.set(id, { ...n, isRead: 1 });
+    },
+    markAllNotificationsRead: async (userId: number) => {
+      for (const [id, n] of notifStore.notifications)
+        if (n.userId === userId) notifStore.notifications.set(id, { ...n, isRead: 1 });
+    },
+    deleteNotification: async (id: number, _userId: number) => {
+      notifStore.notifications.delete(id);
+    },
+    // Marketing stubs
+    createLead: async (_data: any) => ({ id: notifStore.nextId++ }),
+  };
+});
+
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
