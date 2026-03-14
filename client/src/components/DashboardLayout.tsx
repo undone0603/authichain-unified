@@ -25,7 +25,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
-  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Target, Clapperboard, Fingerprint, Terminal,
+  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Clock, Sparkles, Globe, Trophy, ShoppingBag, Package,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -45,6 +45,10 @@ const menuItems = [
   { icon: CreditCard, label: "Subscriptions", path: "/subscriptions" },
   { icon: Link2, label: "Referrals", path: "/referrals" },
   { icon: Blocks, label: "Blockchain Hub", path: "/blockchain" },
+  { icon: Sparkles, label: "My Agent", path: "/character" },
+  { icon: Globe, label: "Network & Leaderboard", path: "/network" },
+  { icon: ShoppingBag, label: "Services", path: "/services" },
+  { icon: Package, label: "My Orders", path: "/orders" },
   { icon: Bell, label: "Notifications", path: "/notifications" },
 ];
 
@@ -55,10 +59,7 @@ const adminMenuItems = [
   { icon: TrendingUp, label: "Growth Engine", path: "/growth" },
   { icon: Users, label: "Manage Users", path: "/admin/users" },
   { icon: DollarSign, label: "CRM (HubSpot)", path: "/crm" },
-  { icon: Target, label: "Missions", path: "/missions" },
-  { icon: Clapperboard, label: "Video Studio", path: "/video-studio" },
-  { icon: Fingerprint, label: "Physical Auth", path: "/physical-auth" },
-  { icon: Terminal, label: "Build Loop", path: "/build-loop" },
+  { icon: Clock, label: "Scheduled Tasks", path: "/scheduled-tasks" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

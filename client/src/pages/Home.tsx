@@ -48,6 +48,7 @@ export default function Home() {
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#stats" className="hover:text-foreground transition-colors">Stats</a>
             <a href="/pricing" className="hover:text-foreground transition-colors">Pricing</a>
+            <a href="/services" className="hover:text-foreground transition-colors">Services</a>
           </div>
           <div className="flex items-center gap-3">
             {user ? (

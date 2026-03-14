@@ -30,10 +30,12 @@ const GrowthEngine = lazy(() => import("./pages/GrowthEngine"));
 const Blockchain = lazy(() => import("./pages/Blockchain"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const CRM = lazy(() => import("./pages/CRM"));
-const Missions = lazy(() => import("./pages/Missions"));
-const VideoStudio = lazy(() => import("./pages/VideoStudio"));
-const PhysicalAuth = lazy(() => import("./pages/PhysicalAuth"));
-const BuildLoop = lazy(() => import("./pages/BuildLoop"));
+const ScheduledTasks = lazy(() => import("./pages/ScheduledTasks"));
+const CharacterCreate = lazy(() => import("./pages/CharacterCreate"));
+const CharacterDashboard = lazy(() => import("./pages/CharacterDashboard"));
+const NetworkStats = lazy(() => import("./pages/NetworkStats"));
+const Services = lazy(() => import("./pages/Services"));
+const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
 
 function PageLoader() {
   return (
@@ -66,10 +68,11 @@ function DashboardRoutes() {
           <Route path="/blockchain" component={Blockchain} />
           <Route path="/notifications" component={Notifications} />
           <Route path="/crm" component={CRM} />
-          <Route path="/missions" component={Missions} />
-          <Route path="/video-studio" component={VideoStudio} />
-          <Route path="/physical-auth" component={PhysicalAuth} />
-          <Route path="/build-loop" component={BuildLoop} />
+          <Route path="/scheduled-tasks" component={ScheduledTasks} />
+          <Route path="/character" component={CharacterDashboard} />
+          <Route path="/character/create" component={CharacterCreate} />
+          <Route path="/network" component={NetworkStats} />
+          <Route path="/orders" component={ServiceOrders} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
@@ -85,6 +88,13 @@ function Router() {
         {() => (
           <Suspense fallback={<PageLoader />}>
             <Pricing />
+          </Suspense>
+        )}
+      </Route>
+      <Route path="/services">
+        {() => (
+          <Suspense fallback={<PageLoader />}>
+            <Services />
           </Suspense>
         )}
       </Route>

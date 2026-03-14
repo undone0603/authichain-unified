@@ -1,19 +1,23 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { ENV } from "./_core/env";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { referralRouter } from "./referral/router";
+import { affiliateRouter } from "./affiliate/router";
+import { bonusesRouter } from "./bonuses/router";
+import { marketplaceRouter } from "./marketplace/router";
+import { emailDraftsRouter } from "./email-drafts/router";
+import { subscriptionsRouter } from "./subscriptions/router";
+import { SERVICE_CATALOG, SERVICE_LIST, type ServiceType } from "./service-catalog";
+import { createServiceOrder, getServiceOrderById, getServiceOrderBySessionId, getServiceOrdersByUser, getAllServiceOrders, updateServiceOrderStatus } from "./db";
+import { createPaymentCheckout, getStripe } from "./stripe-service";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
   return next({ ctx });
 });
-
-const trimmedStr = (max: number) => z.string().trim().min(1).max(max);
-const trimmedOptional = (max: number) => z.string().trim().max(max).optional();
-const trimmedEmail = () => z.string().trim().email().max(320);
 
 export const appRouter = router({
   system: systemRouter,
@@ -122,6 +126,11 @@ export const appRouter = router({
           "/authenticate"
         );
       } catch (notifErr) { console.warn("[Notification] Failed:", notifErr); }
+      // Award XP to user's agent for verification
+      try {
+        const { rewardAgentForVerification } = await import("./character-service");
+        await rewardAgentForVerification(ctx.user.id, aiResult.result === "authentic");
+      } catch (agentErr) { console.warn("[Agent XP] No agent or error:", agentErr); }
       return aiResult;
     }),
     history: protectedProcedure.query(async ({ ctx }) => {
@@ -313,7 +322,7 @@ export const appRouter = router({
     checkout: protectedProcedure.input(z.object({
       plan: z.enum(["starter", "professional", "enterprise"]),
       billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
-      origin: z.string().trim().url().max(512),
+      origin: z.string(),
     })).mutation(async ({ ctx, input }) => {
       const { createSubscriptionCheckout } = await import("./stripe-service");
       const url = await createSubscriptionCheckout({
@@ -325,18 +334,6 @@ export const appRouter = router({
         origin: input.origin,
         stripeCustomerId: (ctx.user as any).stripeCustomerId || undefined,
       });
-      try {
-        const { syncDealStageToHubSpot } = await import("./hubspot-service");
-        await syncDealStageToHubSpot({
-          email: ctx.user.email || "",
-          name: ctx.user.name || undefined,
-          plan: input.plan,
-          stage: "checkout_started",
-          amount: 0,
-        });
-      } catch {
-        // Best-effort external sync.
-      }
       return { checkoutUrl: url };
     }),
     cancel: protectedProcedure.mutation(async ({ ctx }) => {
@@ -361,21 +358,13 @@ export const appRouter = router({
       code: z.string().min(1),
       percentOff: z.number().min(1).max(100).default(99),
       name: z.string().optional(),
-      approvalNote: z.string().optional(),
     })).mutation(async ({ input }) => {
-      if (input.percentOff > ENV.discountApprovalThresholdPercent && !input.approvalNote) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: `Discounts above ${ENV.discountApprovalThresholdPercent}% require approvalNote`,
-        });
-      }
       const Stripe = (await import("stripe")).default;
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
       const coupon = await stripe.coupons.create({
         percent_off: input.percentOff,
         duration: "forever",
         name: input.name || `AuthiChain ${input.percentOff}% Off`,
-        metadata: input.approvalNote ? { approvalNote: input.approvalNote } : undefined,
       });
       const promo = await stripe.promotionCodes.create({
         promotion: { type: 'coupon', coupon: coupon.id },
@@ -522,11 +511,11 @@ export const appRouter = router({
       return await getUserEmailCampaigns(ctx.user.id);
     }),
     create: protectedProcedure.input(z.object({
-      name: trimmedStr(256),
-      subject: trimmedStr(512),
-      body: trimmedStr(20000),
+      name: z.string().min(1),
+      subject: z.string().min(1),
+      body: z.string().min(1),
       type: z.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
-      scheduledAt: z.string().trim().datetime().optional(),
+      scheduledAt: z.string().optional(),
     })).mutation(async ({ ctx, input }) => {
       const { createEmailCampaign } = await import("./db");
       return await createEmailCampaign({
@@ -536,8 +525,8 @@ export const appRouter = router({
     }),
     generateContent: protectedProcedure.input(z.object({
       type: z.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
-      topic: trimmedStr(300),
-      targetAudience: trimmedOptional(300),
+      topic: z.string(),
+      targetAudience: z.string().optional(),
     })).mutation(async ({ input }) => {
       const { invokeLLM } = await import("./_core/llm");
       const response = await invokeLLM({
@@ -580,139 +569,20 @@ export const appRouter = router({
       const { createEmailDraft } = await import("./db");
       return await createEmailDraft({ ...input, status: "pending", generatedBy: "ai_manager" });
     }),
-    getByTaskId: protectedProcedure.input(z.object({ taskId: z.string() })).query(async ({ input }) => {
-      const { getEmailDraftByTaskId } = await import("./db");
-      return await getEmailDraftByTaskId(input.taskId) ?? null;
-    }),
     approve: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
       const { updateDraftStatus } = await import("./db");
       await updateDraftStatus(input.id, "approved", ctx.user.id);
       return { success: true };
     }),
     reject: protectedProcedure.input(z.object({ id: z.number(), notes: z.string().optional() })).mutation(async ({ ctx, input }) => {
-      const { updateDraftStatus, getEmailDraftById, markTaskFailed } = await import("./db");
-      const draft = await getEmailDraftById(input.id);
+      const { updateDraftStatus } = await import("./db");
       await updateDraftStatus(input.id, "rejected", ctx.user.id);
-      if (draft?.taskId) await markTaskFailed(draft.taskId, 'Email draft rejected by reviewer');
       return { success: true };
     }),
     bulkApprove: protectedProcedure.input(z.object({ ids: z.array(z.number()) })).mutation(async ({ ctx, input }) => {
       const { updateDraftStatus } = await import("./db");
       for (const id of input.ids) await updateDraftStatus(id, "approved", ctx.user.id);
       return { success: true, count: input.ids.length };
-    }),
-    sendApproved: adminProcedure.input(z.object({
-      limit: z.number().min(1).max(200).optional().default(20),
-    }).optional()).mutation(async ({ ctx, input }) => {
-      const { getApprovedDrafts, logAutomationAudit, logActivity, updateDraftStatus } = await import("./db");
-      const { sendEmail } = await import("./email-service");
-      const drafts = await getApprovedDrafts(input?.limit ?? 20);
-      let sent = 0;
-      let suppressed = 0;
-      let skipped = 0;
-
-      for (const draft of drafts) {
-        const result = await sendEmail({
-          to: draft.prospectEmail,
-          subject: draft.subject,
-          body: draft.body,
-          fromName: "AuthiChain Revenue",
-        });
-
-        if (result.status === "sent") {
-          await updateDraftStatus(draft.id, "sent", ctx.user.id);
-          if (draft.taskId) {
-            const { markTaskDone } = await import("./db");
-            await markTaskDone(draft.taskId);
-          }
-          sent++;
-        } else if (result.status === "suppressed") {
-          suppressed++;
-        } else {
-          skipped++;
-        }
-
-        await logActivity({
-          userId: ctx.user.id,
-          action: "email_send_attempt",
-          entityType: "email_draft",
-          entityId: draft.id,
-          details: {
-            to: draft.prospectEmail,
-            subject: draft.subject,
-            bodyLength: draft.body?.length || 0,
-            status: result.status,
-            provider: result.provider || "none",
-            providerMessageId: result.providerMessageId || null,
-            reason: result.reason || null,
-          },
-        });
-      }
-
-      await logAutomationAudit("outreach_batch_send", {
-        attempted: drafts.length,
-        sent,
-        suppressed,
-        skipped,
-      }, ctx.user.id);
-
-      return { success: true, attempted: drafts.length, sent, suppressed, skipped };
-    }),
-    sendById: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
-      const { getEmailDraftById, logAutomationAudit, logActivity, updateDraftStatus } = await import("./db");
-      const { sendEmail } = await import("./email-service");
-      const draft = await getEmailDraftById(input.id);
-      if (!draft) throw new TRPCError({ code: "NOT_FOUND", message: "Draft not found" });
-      if (draft.status !== "approved") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Draft must be approved before send" });
-      }
-
-      const result = await sendEmail({
-        to: draft.prospectEmail,
-        subject: draft.subject,
-        body: draft.body,
-        fromName: "AuthiChain Revenue",
-      });
-
-      if (result.status === "sent") {
-        await updateDraftStatus(draft.id, "sent", ctx.user.id);
-        if (draft.taskId) {
-          const { markTaskDone } = await import("./db");
-          await markTaskDone(draft.taskId);
-        }
-      } else if (result.status === "suppressed") {
-        // Suppressed = bounce suppression — record as bounced outcome signal
-        await logActivity({
-          userId: null,
-          action: "outcome_signal",
-          entityType: "lead",
-          entityId: 0,
-          details: { signal: "bounced", segment: "DEFAULT", taskId: draft.taskId ?? null, reason: result.reason },
-        });
-      }
-
-      await logActivity({
-        userId: ctx.user.id,
-        action: "email_send_attempt",
-        entityType: "email_draft",
-        entityId: draft.id,
-        details: {
-          to: draft.prospectEmail,
-          subject: draft.subject,
-          bodyLength: draft.body?.length || 0,
-          status: result.status,
-          provider: result.provider || "none",
-          providerMessageId: result.providerMessageId || null,
-          reason: result.reason || null,
-        },
-      });
-      await logAutomationAudit("outreach_single_send", {
-        draftId: draft.id,
-        status: result.status,
-        reason: result.reason || null,
-      }, ctx.user.id);
-
-      return { success: true, draftId: draft.id, ...result };
     }),
   }),
 
@@ -829,50 +699,34 @@ export const appRouter = router({
       return await getAllLeads();
     }),
     createLead: publicProcedure.input(z.object({
-      email: trimmedEmail(),
-      name: trimmedOptional(256),
-      company: trimmedOptional(256),
-      source: trimmedOptional(128),
-      title: trimmedOptional(256),
-      phone: z.string().trim().max(32).optional(),
-      industry: trimmedOptional(128),
-      metadata: z.record(z.string().trim().max(64), z.any()).optional(),
-      signals: z.object({
-        segmentFit: z.number().min(0).max(100).optional(),
-        intent: z.number().min(0).max(100).optional(),
-        urgency: z.number().min(0).max(100).optional(),
-        budgetProxy: z.number().min(0).max(100).optional(),
-      }).optional(),
+      email: z.string().email(),
+      name: z.string().optional(),
+      company: z.string().optional(),
+      source: z.string().optional(),
     })).mutation(async ({ input }) => {
-      const { ingestLeadAndRoute } = await import("./revenue-orchestrator");
-      const result = await ingestLeadAndRoute(input);
-      if (!result.accepted) {
-        return { success: false, reason: result.reason };
-      }
+      const { createLead } = await import("./db");
+      const result = await createLead(input);
       // Auto-sync to HubSpot
       try {
         const { syncLeadToHubSpot } = await import("./hubspot-service");
         await syncLeadToHubSpot(input);
       } catch (e) { /* HubSpot sync is best-effort */ }
-      return { success: true, id: result.leadId, ...result };
+      return result;
     }),
     updateLeadScore: adminProcedure.input(z.object({ id: z.number(), score: z.number() })).mutation(async ({ input }) => {
       const { updateLeadScore } = await import("./db");
       await updateLeadScore(input.id, input.score);
       return { success: true };
     }),
-    updateLeadStatus: adminProcedure.input(z.object({
-      id: z.number(),
-      status: z.enum(["new", "contacted", "qualified", "proposal", "won", "lost"]),
-    })).mutation(async ({ input }) => {
+    updateLeadStatus: adminProcedure.input(z.object({ id: z.number(), status: z.string() })).mutation(async ({ input }) => {
       const { updateLeadStatus } = await import("./db");
       await updateLeadStatus(input.id, input.status);
       return { success: true };
     }),
     generateContent: protectedProcedure.input(z.object({
       type: z.enum(["email", "social", "blog"]),
-      topic: trimmedStr(300),
-      targetAudience: trimmedOptional(300),
+      topic: z.string(),
+      targetAudience: z.string().optional(),
     })).mutation(async ({ input }) => {
       const { invokeLLM } = await import("./_core/llm");
       const response = await invokeLLM({
@@ -905,18 +759,6 @@ export const appRouter = router({
         input?.endDate ? new Date(input.endDate) : undefined,
       );
     }),
-    funnelReport: adminProcedure.query(async () => {
-      const { getFunnelBySegmentAndChannel } = await import("./db");
-      return await getFunnelBySegmentAndChannel();
-    }),
-    cohortReport: adminProcedure.query(async () => {
-      const { getLeadCohorts } = await import("./db");
-      return await getLeadCohorts();
-    }),
-    quarterlyValueReport: adminProcedure.query(async () => {
-      const { getQuarterlyValueReport } = await import("./db");
-      return await getQuarterlyValueReport();
-    }),
     fraudAlerts: adminProcedure.query(async () => {
       const { getOpenFraudAlerts } = await import("./db");
       return await getOpenFraudAlerts();
@@ -932,85 +774,6 @@ export const appRouter = router({
     subscriptions: adminProcedure.query(async () => {
       const { getSubscriptionAnalytics } = await import("./db");
       return await getSubscriptionAnalytics();
-    }),
-    weeklyRevenueDigest: adminProcedure.query(async () => {
-      const { getWeeklyRevenueDigest } = await import("./db");
-      return await getWeeklyRevenueDigest();
-    }),
-    operationalReadiness: adminProcedure.query(async () => {
-      const { getMonthlyLlmSpendUsd } = await import("./db");
-      const critical = [
-        { key: "STRIPE_SECRET_KEY", present: !!process.env.STRIPE_SECRET_KEY },
-        { key: "STRIPE_WEBHOOK_SECRET", present: !!process.env.STRIPE_WEBHOOK_SECRET },
-        { key: "HUBSPOT_SERVICE_KEY", present: !!process.env.HUBSPOT_SERVICE_KEY },
-        { key: "DATABASE_URL", present: !!process.env.DATABASE_URL },
-        { key: "BUILT_IN_FORGE_API_KEY", present: !!process.env.BUILT_IN_FORGE_API_KEY },
-      ];
-      const missing = critical.filter(x => !x.present).map(x => x.key);
-      const monthlyLlmSpendUsd = await getMonthlyLlmSpendUsd();
-      return {
-        ready: missing.length === 0,
-        missingCriticalEnv: missing,
-        guardrails: {
-          outreachApprovalRequired: ENV.requireOutreachApproval,
-          discountApprovalThresholdPercent: ENV.discountApprovalThresholdPercent,
-          llmMonthlyBudgetUsd: ENV.llmMonthlyBudgetUsd,
-          llmPerRequestBudgetUsd: ENV.llmPerRequestBudgetUsd,
-        },
-        budgets: {
-          llmMonthlySpendUsd: monthlyLlmSpendUsd,
-          llmMonthlyRemainingUsd: Number((ENV.llmMonthlyBudgetUsd - monthlyLlmSpendUsd).toFixed(6)),
-        },
-      };
-    }),
-    budgetStatus: adminProcedure.query(async () => {
-      const { getBudgetStatus } = await import("./db");
-      return await getBudgetStatus();
-    }),
-    acceptanceStatus: adminProcedure.query(async () => {
-      const { getAcceptanceCriteriaStatus } = await import("./db");
-      return await getAcceptanceCriteriaStatus();
-    }),
-    runAutomationJob: adminProcedure.input(z.object({
-      job: z.enum(["dunning", "retention", "weekly_digest", "quarterly_value", "budget_monitor", "pipeline_tick", "all"]),
-    })).mutation(async ({ input }) => {
-      const result: Record<string, unknown> = {};
-      if (input.job === "dunning" || input.job === "all") {
-        const { runDunningEscalation } = await import("./jobs/dunning");
-        result.dunning = await runDunningEscalation();
-      }
-      if (input.job === "retention" || input.job === "all") {
-        const { runRetentionAutomation } = await import("./jobs/retention");
-        result.retention = await runRetentionAutomation();
-      }
-      if (input.job === "weekly_digest" || input.job === "all") {
-        const { runWeeklyDigestDispatch } = await import("./jobs/weekly-digest");
-        result.weeklyDigest = await runWeeklyDigestDispatch();
-      }
-      if (input.job === "quarterly_value" || input.job === "all") {
-        const { runQuarterlyValueReportDispatch } = await import("./jobs/quarterly-value");
-        result.quarterlyValue = await runQuarterlyValueReportDispatch();
-      }
-      if (input.job === "budget_monitor" || input.job === "all") {
-        const { runBudgetMonitor } = await import("./jobs/budget-monitor");
-        result.budgetMonitor = await runBudgetMonitor();
-      }
-      if (input.job === "pipeline_tick" || input.job === "all") {
-        const { runPipelineTick } = await import("./jobs/pipeline-tick");
-        result.pipelineTick = await runPipelineTick();
-      }
-      return { success: true, ...result };
-    }),
-    weeklyKpis: adminProcedure.query(async () => {
-      const { db } = await import("./db");
-      const { sql: drizzleSql } = await import("drizzle-orm");
-      return db.execute(drizzleSql`SELECT * FROM v_weekly_revenue_kpis LIMIT 12`);
-    }),
-    pipelineFunnel: adminProcedure.query(async () => {
-      const { db } = await import("./db");
-      const { sql: drizzleSql } = await import("drizzle-orm");
-      const rows = await db.execute(drizzleSql`SELECT * FROM v_pipeline_funnel LIMIT 1`);
-      return rows[0] ?? null;
     }),
   }),
 
@@ -1193,16 +956,16 @@ export const appRouter = router({
         const { listContacts } = await import("./hubspot-service");
         return await listContacts();
       }),
-      search: protectedProcedure.input(z.object({ query: trimmedStr(256) })).query(async ({ input }) => {
+      search: protectedProcedure.input(z.object({ query: z.string() })).query(async ({ input }) => {
         const { searchContacts } = await import("./hubspot-service");
         return await searchContacts(input.query);
       }),
       create: protectedProcedure.input(z.object({
-        email: trimmedEmail(),
-        firstname: trimmedOptional(128),
-        lastname: trimmedOptional(128),
-        phone: z.string().trim().max(32).optional(),
-        company: trimmedOptional(256),
+        email: z.string().email(),
+        firstname: z.string().optional(),
+        lastname: z.string().optional(),
+        phone: z.string().optional(),
+        company: z.string().optional(),
       })).mutation(async ({ input }) => {
         const { createContact } = await import("./hubspot-service");
         return await createContact(input);
@@ -1214,10 +977,10 @@ export const appRouter = router({
         return await listCompanies();
       }),
       create: protectedProcedure.input(z.object({
-        name: trimmedStr(256),
-        domain: trimmedOptional(256),
-        industry: trimmedOptional(128),
-        description: trimmedOptional(2000),
+        name: z.string(),
+        domain: z.string().optional(),
+        industry: z.string().optional(),
+        description: z.string().optional(),
       })).mutation(async ({ input }) => {
         const { createCompany } = await import("./hubspot-service");
         return await createCompany(input);
@@ -1229,149 +992,15 @@ export const appRouter = router({
         return await listDeals();
       }),
       create: protectedProcedure.input(z.object({
-        dealname: trimmedStr(256),
-        amount: z.string().trim().regex(/^\d+(\.\d{1,2})?$/).max(20).optional(),
-        pipeline: trimmedOptional(128),
-        dealstage: trimmedOptional(128),
-        closedate: z.string().trim().max(32).optional(),
+        dealname: z.string(),
+        amount: z.string().optional(),
+        pipeline: z.string().optional(),
+        dealstage: z.string().optional(),
+        closedate: z.string().optional(),
       })).mutation(async ({ input }) => {
         const { createDeal } = await import("./hubspot-service");
         return await createDeal(input);
       }),
-    }),
-  }),
-
-  // ─── Missions ──────────────────────────────────────────────────────────
-  missions: router({
-    list: protectedProcedure.input(z.object({
-      status: z.enum(['PLANNED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED']).optional(),
-    })).query(async ({ input }) => {
-      const { getMissions } = await import("./db");
-      return getMissions(input.status);
-    }),
-    get: protectedProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ input }) => {
-      const { getMissionById } = await import("./db");
-      return getMissionById(input.id);
-    }),
-    create: protectedProcedure.input(z.object({
-      type: z.enum(['GOV_PILOT', 'RETAIL_PILOT', 'PRESS_LAUNCH', 'PARTNER_ONBOARDING', 'TECH_OS_LOCK', 'LAUNCH_AUTHICHAIN']),
-    })).mutation(async ({ input }) => {
-      const { createMission } = await import("./db");
-      const id = await createMission(input.type as any);
-      return { id };
-    }),
-    updateStatus: protectedProcedure.input(z.object({
-      id: z.string().uuid(),
-      status: z.enum(['PLANNED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED']),
-    })).mutation(async ({ input }) => {
-      const { updateMissionStatus } = await import("./db");
-      await updateMissionStatus(input.id, input.status as any);
-      return { ok: true };
-    }),
-  }),
-
-  // ─── Tasks ─────────────────────────────────────────────────────────────
-  tasks: router({
-    list: protectedProcedure.input(z.object({
-      missionId: z.string().uuid(),
-    })).query(async ({ input }) => {
-      const { getTasksByMission } = await import("./db");
-      return getTasksByMission(input.missionId);
-    }),
-    retry: protectedProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ input }) => {
-      const { retryTask } = await import("./db");
-      await retryTask(input.id);
-      return { ok: true };
-    }),
-  }),
-
-  // ─── Pipeline status ─────────────────────────────────────────────────────
-  pipeline: router({
-    status: protectedProcedure.query(async () => {
-      const { getLastPipelineTick } = await import('./db');
-      return await getLastPipelineTick();
-    }),
-  }),
-
-  // ─── Outcomes (Bayesian feedback loop) ──────────────────────────────────
-  outcomes: router({
-    record: protectedProcedure.input(z.object({
-      signal: z.enum(['email_opened', 'email_replied', 'meeting_booked', 'deal_created', 'unsubscribed', 'bounced', 'no_response']),
-      segment: z.string().optional().default('DEFAULT'),
-      taskId: z.string().optional(),
-      leadId: z.number().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { logActivity } = await import('./db');
-      await logActivity({
-        userId: ctx.user.id,
-        action: 'outcome_signal',
-        entityType: 'lead',
-        entityId: input.leadId ?? 0,
-        details: { signal: input.signal, segment: input.segment, taskId: input.taskId },
-      });
-      return { ok: true };
-    }),
-    getSegmentStats: protectedProcedure.query(async () => {
-      const { getAdaptivePriors } = await import('./db');
-      return await getAdaptivePriors();
-    }),
-  }),
-
-  // ─── HeyGen Video Studio ────────────────────────────────────────────────
-  heygen: router({
-    avatars: adminProcedure.query(async () => {
-      const { listAvatars } = await import("./heygen-service");
-      return listAvatars();
-    }),
-
-    voices: adminProcedure.query(async () => {
-      const { listVoices } = await import("./heygen-service");
-      return listVoices();
-    }),
-
-    videos: adminProcedure.input(z.object({
-      page: z.number().int().min(1).default(1),
-    })).query(async ({ input }) => {
-      const { listVideos } = await import("./heygen-service");
-      return listVideos(input.page, 50);
-    }),
-
-    videoStatus: adminProcedure.input(z.object({
-      videoId: z.string().min(1),
-    })).query(async ({ input }) => {
-      const { getVideoStatus } = await import("./heygen-service");
-      return getVideoStatus(input.videoId);
-    }),
-
-    generate: adminProcedure.input(z.object({
-      avatarId: z.string().min(1),
-      voiceId: z.string().min(1),
-      script: z.string().min(1).max(500),
-      title: z.string().min(1).max(120),
-      aspectRatio: z.enum(["16:9", "9:16", "1:1"]).default("16:9"),
-    })).mutation(async ({ input, ctx }) => {
-      const { generateVideo } = await import("./heygen-service");
-      const { logActivity } = await import("./db");
-      const videoId = await generateVideo(input);
-      await logActivity({
-        userId: ctx.user.id,
-        action: "heygen_video_queued",
-        entityType: "video",
-        entityId: 0,
-        details: { videoId, title: input.title, avatarId: input.avatarId },
-      });
-      return { videoId };
-    }),
-
-    draftScript: adminProcedure.input(z.object({
-      firstName: z.string().min(1),
-      company: z.string().min(1),
-      segment: z.string().min(1),
-      useCase: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { draftOutreachScript } = await import("./heygen-service");
-      const script = await draftOutreachScript(input);
-      return { script };
     }),
   }),
 
@@ -1387,223 +1016,186 @@ export const appRouter = router({
       return { content: response.choices?.[0]?.message?.content || "I apologize, I could not generate a response." };
     }),
   }),
-
-  // ─── Dev Team (AgentZ Build Loop) ───────────────────────────────────────
-  devTeam: router({
-    // Create a TECH_SPRINT mission and seed the first PLAN_SPRINT task
-    createSprint: adminProcedure.input(z.object({
-      feature: trimmedStr(500),
-      context: trimmedOptional(1000),
-      targetFiles: z.array(z.string()).optional(),
+  // ─── AuthiCharacter System ──────────────────────────────────────────
+  character: router({
+    generate: protectedProcedure.input(z.object({
+      archetype: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
+      brand: z.string().optional(),
+      object: z.string().optional(),
+      colorway: z.string().optional(),
+      mood: z.string().optional(),
     })).mutation(async ({ ctx, input }) => {
-      const { createMission, logActivity } = await import("./db");
-      const missionId = crypto.randomUUID();
-      // Insert mission
-      const db = (await import("./db")).getDb && (await (await import("./db")).db());
-      await (db as any)?.execute(
-        `INSERT INTO missions (id, type, title, status, priority) VALUES ($1,'TECH_SPRINT',$2,'IN_PROGRESS',8)`,
-        [missionId, `Sprint: ${input.feature.slice(0, 80)}`]
-      );
-      // Insert PLAN_SPRINT task
-      const taskId = crypto.randomUUID();
-      await (db as any)?.execute(
-        `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'PLAN_SPRINT',$3,'PENDING',NOW())`,
-        [taskId, missionId, JSON.stringify({ feature: input.feature, context: input.context, targetFiles: input.targetFiles })]
-      );
-      await logActivity({ userId: ctx.user.id, action: "sprint_created", entityType: "mission", entityId: 0, details: { missionId, feature: input.feature } });
-      return { missionId, taskId };
+      const { startCharacterGeneration } = await import("./character-service");
+      return await startCharacterGeneration(ctx.user.id, input.archetype, { brand: input.brand, object: input.object, colorway: input.colorway, mood: input.mood });
     }),
-
-    // Get all tasks for a sprint mission
-    sprintTasks: adminProcedure.input(z.object({ missionId: z.string() })).query(async ({ input }) => {
-      const { getSprintTasks } = await import("./db");
-      return await getSprintTasks(input.missionId);
+    generationStatus: protectedProcedure.input(z.object({ generationId: z.number() })).query(async ({ input }) => {
+      const { getGenerationStatus } = await import("./character-service");
+      return await getGenerationStatus(input.generationId);
     }),
-
-    // List all TECH_SPRINT missions
-    sprints: adminProcedure.query(async () => {
-      const db = await (await import("./db")).db();
-      if (!db) return [];
-      const result = await (db as any).execute(
-        `SELECT m.*, COUNT(t.id) AS task_count,
-           COUNT(t.id) FILTER (WHERE t.status = 'DONE') AS done_count,
-           COUNT(t.id) FILTER (WHERE t.status = 'FAILED') AS failed_count,
-           COUNT(t.id) FILTER (WHERE t.status = 'WAITING_HUMAN') AS waiting_count
-         FROM missions m
-         LEFT JOIN tasks t ON t.mission_id = m.id
-         WHERE m.type = 'TECH_SPRINT'
-         GROUP BY m.id
-         ORDER BY m.created_at DESC
-         LIMIT 50`
-      ) as any;
-      return result.rows ?? [];
+    myGenerations: protectedProcedure.query(async ({ ctx }) => {
+      const { getUserGenerations } = await import("./character-service");
+      return await getUserGenerations(ctx.user.id);
     }),
-
-    // Retry a failed or waiting task
-    retryTask: adminProcedure.input(z.object({ taskId: z.string() })).mutation(async ({ input }) => {
-      const db = await (await import("./db")).db();
-      await (db as any)?.execute(
-        `UPDATE tasks SET status='PENDING', run_at=NOW(), last_error=NULL WHERE id=$1 AND status IN ('FAILED','WAITING_HUMAN')`,
-        [input.taskId]
-      );
-      return { ok: true };
+    myAssets: protectedProcedure.query(async ({ ctx }) => {
+      const { getUserCharacterAssets } = await import("./character-service");
+      return await getUserCharacterAssets(ctx.user.id);
     }),
-
-    // Approve a WAITING_HUMAN merge — sets back to PENDING
-    approveMerge: adminProcedure.input(z.object({ taskId: z.string() })).mutation(async ({ input }) => {
-      const db = await (await import("./db")).db();
-      await (db as any)?.execute(
-        `UPDATE tasks SET status='PENDING', run_at=NOW() WHERE id=$1 AND status='WAITING_HUMAN' AND kind='MERGE_PR'`,
-        [input.taskId]
-      );
-      return { ok: true };
+    select: protectedProcedure.input(z.object({ assetId: z.number() })).mutation(async ({ ctx, input }) => {
+      const { selectCharacterAsset } = await import("./character-service");
+      return await selectCharacterAsset(ctx.user.id, input.assetId);
     }),
-  }),
-
-  // ─── QRON Physical Authentication Bridge ─────────────────────────────────
-  qron: router({
-    // Generate a QRON visual fingerprint for a product
-    generate: adminProcedure.input(z.object({
-      productId: z.number(),
-      productName: trimmedStr(200),
-      brand: trimmedOptional(100),
-      serialNumber: trimmedOptional(100),
-      nftTokenId: trimmedOptional(100),
-      category: z.enum(["luxury_fashion", "pharma", "electronics", "automotive", "food_bev", "other"]).optional(),
-      tier: z.enum(["standard", "premium", "enterprise", "pharma"]).optional(),
+    createAgent: protectedProcedure.input(z.object({
+      characterAssetId: z.number(),
+      name: z.string().min(2).max(64),
+      agentType: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
     })).mutation(async ({ ctx, input }) => {
-      const { generateProductQRON } = await import("./qron-service");
-      const { getProductById, logActivity } = await import("./db");
-      const db = (await import("./db")).db;
-      const { productQrons } = await import("../drizzle/schema");
-
-      const product = await getProductById(input.productId);
-      if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
-
-      const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL ?? "https://authichain.com"}/verify/${product.id}`;
-      const record = await generateProductQRON({
-        productId: input.productId,
-        productName: input.productName,
-        brand: input.brand,
-        serialNumber: input.serialNumber,
-        nftTokenId: input.nftTokenId,
-        category: input.category,
-        tier: input.tier,
-        verifyUrl,
-      });
-
-      // Upsert into product_qrons
-      await db.execute(`
-        INSERT INTO product_qrons (
-          product_id, qron_id, qron_image_url, qron_thumbnail_url, qron_mode,
-          generation_seed, fingerprint_hash, nft_token_id, openart_url, openart_registered
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-        ON CONFLICT (product_id) DO UPDATE SET
-          qron_id = EXCLUDED.qron_id,
-          qron_image_url = EXCLUDED.qron_image_url,
-          qron_thumbnail_url = EXCLUDED.qron_thumbnail_url,
-          qron_mode = EXCLUDED.qron_mode,
-          generation_seed = EXCLUDED.generation_seed,
-          fingerprint_hash = EXCLUDED.fingerprint_hash,
-          nft_token_id = EXCLUDED.nft_token_id,
-          openart_url = EXCLUDED.openart_url,
-          openart_registered = EXCLUDED.openart_registered,
-          updated_at = NOW()
-      `, [
-        input.productId, record.qronId, record.imageUrl, record.thumbnailUrl ?? null,
-        record.mode, record.seed, record.fingerprintHash,
-        record.nftTokenId ?? null, record.openartUrl ?? null, !!record.openartUrl,
-      ]);
-
-      await logActivity({ userId: ctx.user.id, action: "qron_generated", entityType: "product", entityId: input.productId });
-      return record;
+      const { createProtocolAgent } = await import("./character-service");
+      return await createProtocolAgent(ctx.user.id, input.characterAssetId, input.name, input.agentType);
     }),
-
-    // Verify a scanned image against the registered QRON fingerprint
-    verify: protectedProcedure.input(z.object({
+    myAgent: protectedProcedure.query(async ({ ctx }) => {
+      const { getAgentByUser } = await import("./character-service");
+      return await getAgentByUser(ctx.user.id);
+    }),
+    agentRewards: protectedProcedure.input(z.object({ agentId: z.number() })).query(async ({ input }) => {
+      const { getAgentRewards } = await import("./character-service");
+      return await getAgentRewards(input.agentId);
+    }),
+    leaderboard: publicProcedure.input(z.object({ limit: z.number().optional().default(20) })).query(async ({ input }) => {
+      const { getAgentLeaderboard } = await import("./character-service");
+      return await getAgentLeaderboard(input.limit);
+    }),
+    networkStats: publicProcedure.query(async () => {
+      const { getNetworkStats } = await import("./character-service");
+      return await getNetworkStats();
+    }),
+    mintPrep: protectedProcedure.input(z.object({ assetId: z.number() })).mutation(async ({ ctx, input }) => {
+      const { prepareMint } = await import("./character-service");
+      return await prepareMint(ctx.user.id, input.assetId);
+    }),
+    submitClaim: protectedProcedure.input(z.object({
+      agentId: z.number(),
       productId: z.number(),
-      scannedImageUrl: z.string().url(),
+      authenticationId: z.number().nullable().optional(),
+      claimType: z.enum(["authentic", "counterfeit", "inconclusive", "needs_review"]),
+      confidence: z.number().min(0).max(100),
+      reasoning: z.string().optional(),
     })).mutation(async ({ input }) => {
-      const { verifyVisualFingerprint, computeTrustScore } = await import("./qron-service");
-      const db = (await import("./db")).db;
-
-      const rows = await db.execute(
-        `SELECT * FROM product_qrons WHERE product_id = $1 LIMIT 1`,
-        [input.productId]
-      ) as any;
-      const qron = rows.rows?.[0];
-      if (!qron) throw new TRPCError({ code: "NOT_FOUND", message: "No QRON registered for this product" });
-
-      const fingerprint = await verifyVisualFingerprint({
-        scannedImageUrl: input.scannedImageUrl,
-        registeredImageUrl: qron.qron_image_url,
-        registeredFingerprintHash: qron.fingerprint_hash,
-      });
-
-      const trustScore = computeTrustScore({
-        qrDecodePass: true,
-        blockchainCertExists: !!qron.nft_token_id,
-        visualFingerprint: fingerprint,
-        communityVerified: qron.verified_scan_count,
-        communityFlagged: qron.fake_flag_count,
-        openArtRegistered: qron.openart_registered,
-      });
-
-      // Log the scan verdict
-      await db.execute(`
-        INSERT INTO qron_scan_verdicts (product_qron_id, fingerprint_sim, fingerprint_pass, user_verdict)
-        VALUES ($1, $2, $3, $4)
-      `, [qron.id, fingerprint.similarity, fingerprint.pass, fingerprint.verdict]);
-
-      return { fingerprint, trustScore, qronImageUrl: qron.qron_image_url, openartUrl: qron.openart_url };
-    }),
-
-    // Get QRON record + trust stats for a product
-    stats: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
-      const db = (await import("./db")).db;
-      const qron = await db.execute(
-        `SELECT pq.*,
-           (SELECT COUNT(*) FROM qron_scan_verdicts WHERE product_qron_id = pq.id) AS total_scans
-         FROM product_qrons pq WHERE pq.product_id = $1 LIMIT 1`,
-        [input.productId]
-      ) as any;
-      return qron.rows?.[0] ?? null;
-    }),
-
-    // List all products with QRON status
-    list: adminProcedure.query(async () => {
-      const db = (await import("./db")).db;
-      const result = await db.execute(`
-        SELECT pq.*, p.name AS product_name, p.brand, p.category
-        FROM product_qrons pq
-        JOIN products p ON p.id = pq.product_id
-        ORDER BY pq.trust_score ASC, pq.updated_at DESC
-        LIMIT 200
-      `) as any;
-      return result.rows ?? [];
-    }),
-
-    // Submit a community verdict (authentic / suspicious / fake)
-    submitVerdict: protectedProcedure.input(z.object({
-      productId: z.number(),
-      verdict: z.enum(["authentic", "suspicious", "fake"]),
-    })).mutation(async ({ ctx, input }) => {
-      const db = (await import("./db")).db;
-      const qron = await db.execute(
-        `SELECT id FROM product_qrons WHERE product_id = $1 LIMIT 1`,
-        [input.productId]
-      ) as any;
-      const qronRow = qron.rows?.[0];
-      if (!qronRow) throw new TRPCError({ code: "NOT_FOUND", message: "No QRON for this product" });
-
-      await db.execute(`
-        INSERT INTO qron_scan_verdicts (product_qron_id, user_verdict, user_id)
-        VALUES ($1, $2, $3)
-      `, [qronRow.id, input.verdict, ctx.user.id]);
-
-      return { ok: true };
+      const { submitVerificationClaim } = await import("./character-service");
+      return await submitVerificationClaim(
+        input.agentId, input.productId, input.authenticationId ?? null,
+        input.claimType, input.confidence, undefined, input.reasoning
+      );
     }),
   }),
-});
+  // ─── Scheduled Jobs (Admin) ─────────────────────────────────────────
+  scheduler: router({
+    listJobs: adminProcedure.query(async () => {
+      const { getRegisteredJobs } = await import("./scheduled-jobs");
+      return getRegisteredJobs();
+    }),
+    getHistory: adminProcedure.input(z.object({
+      jobName: z.string().optional(),
+      limit: z.number().optional().default(50),
+    })).query(async ({ input }) => {
+      const { getJobHistory } = await import("./scheduled-jobs");
+      return await getJobHistory(input.jobName, input.limit);
+    }),
+    runManually: adminProcedure.input(z.object({
+      jobName: z.string(),
+    })).mutation(async ({ input }) => {
+      const { runJobManually } = await import("./scheduled-jobs");
+      const success = await runJobManually(input.jobName);
+      if (!success) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
+      return { success: true, message: `Job ${input.jobName} triggered successfully` };
+    }),
+  }),
 
+  // ─── Services (Revenue) ─────────────────────────────────────────────────
+  services: router({
+    catalog: publicProcedure.query(() => {
+      return SERVICE_LIST;
+    }),
+
+    getService: publicProcedure.input(z.object({ key: z.string() })).query(({ input }) => {
+      const service = SERVICE_CATALOG[input.key as ServiceType];
+      if (!service) throw new TRPCError({ code: "NOT_FOUND", message: "Service not found" });
+      return service;
+    }),
+
+    checkout: protectedProcedure.input(z.object({
+      serviceType: z.enum(["authenticity_audit", "cinematic_page", "automation_setup", "landing_page", "brand_story_pack", "government_dossier"]),
+      businessName: z.string().optional(),
+      businessType: z.string().optional(),
+      businessUrl: z.string().optional(),
+      notes: z.string().optional(),
+      origin: z.string(),
+    })).mutation(async ({ ctx, input }) => {
+      const service = SERVICE_CATALOG[input.serviceType];
+      if (!service) throw new TRPCError({ code: "NOT_FOUND", message: "Service not found" });
+
+      const order = await createServiceOrder({
+        userId: ctx.user.id,
+        customerEmail: ctx.user.email || "",
+        customerName: ctx.user.name || undefined,
+        serviceType: input.serviceType,
+        amount: service.price,
+        businessName: input.businessName,
+        businessType: input.businessType,
+        businessUrl: input.businessUrl,
+        notes: input.notes,
+      });
+
+      const checkoutUrl = await createPaymentCheckout({
+        userId: ctx.user.id,
+        userEmail: ctx.user.email || "",
+        userName: ctx.user.name || "Customer",
+        description: service.name,
+        amount: service.price,
+        origin: input.origin,
+        metadata: {
+          service_type: input.serviceType,
+          order_id: order.id.toString(),
+        },
+      });
+
+      await updateServiceOrderStatus(order.id, "pending", { stripePaymentIntentId: undefined });
+
+      return { checkoutUrl, orderId: order.id };
+    }),
+
+    myOrders: protectedProcedure.query(async ({ ctx }) => {
+      return await getServiceOrdersByUser(ctx.user.id);
+    }),
+
+    getOrder: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ ctx, input }) => {
+      const order = await getServiceOrderById(input.id);
+      if (!order) throw new TRPCError({ code: "NOT_FOUND" });
+      if (order.userId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return order;
+    }),
+
+    // Admin endpoints
+    allOrders: adminProcedure.query(async () => {
+      return await getAllServiceOrders();
+    }),
+
+    updateStatus: adminProcedure.input(z.object({
+      id: z.number(),
+      status: z.enum(["pending", "paid", "in_progress", "delivered", "cancelled"]),
+      deliveryUrl: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      await updateServiceOrderStatus(input.id, input.status, {
+        deliveryUrl: input.deliveryUrl,
+        deliveredAt: input.status === "delivered" ? new Date() : undefined,
+      });
+      return { success: true };
+    }),
+  }),
+
+  // ─── Modularized Routers (from dev branch) ──────────────────────────────
+  referral: referralRouter,
+  affiliate: affiliateRouter,
+  bonuses: bonusesRouter,
+  marketplace: marketplaceRouter,
+});
 export type AppRouter = typeof appRouter;
