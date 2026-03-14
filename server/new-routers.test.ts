@@ -2,6 +2,49 @@ import { describe, it, expect, vi } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
+// ─── Mock referral/core direct DB calls ───────────────────────────────────────
+vi.mock("./referral/core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./referral/core")>();
+  return {
+    ...actual,
+    trackReferralClick: vi.fn(async () => undefined),
+    getReferralStats: vi.fn(async () => ({
+      totalReferrals: 0, convertedReferrals: 0, pendingReferrals: 0,
+      totalCommission: 0, conversionRate: 0,
+    })),
+  };
+});
+
+// ─── Mock marketplace/db direct DB calls ─────────────────────────────────────
+vi.mock("./marketplace/db", async () => ({
+  listModels: vi.fn(async () => []),
+  getModelById: vi.fn(async () => undefined),
+  createModel: vi.fn(async () => ({ id: 1 })),
+  purchaseModel: vi.fn(async () => ({ id: 1 })),
+  getUserPurchases: vi.fn(async () => []),
+  addReview: vi.fn(async () => ({ id: 1 })),
+  getModelReviews: vi.fn(async () => []),
+}));
+
+// ─── Mock db module (Drizzle proxy) for bonuses direct db usage ───────────────
+vi.mock("./db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./db")>();
+  const mockDrizzle: any = {
+    select: () => ({ from: () => ({ where: () => [], orderBy: () => [], limit: () => [] }) }),
+    insert: () => ({ values: () => [{ insertId: 1 }] }),
+    update: () => ({ set: () => ({ where: () => undefined }) }),
+    delete: () => ({ where: () => undefined }),
+  };
+  return {
+    ...actual,
+    db: mockDrizzle,
+    getReferralByCode: async () => undefined,
+    getUserReferrals: async () => [],
+    getAffiliateByUserId: async () => undefined,
+    getUserReferralCommissions: async () => [],
+  };
+});
+
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
