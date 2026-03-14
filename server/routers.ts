@@ -571,38 +571,7 @@ export const appRouter = router({
   }),
 
   // ─── Email Drafts (Approval Workflow) ─────────────────────────────────────
-  emailDrafts: router({
-    listPending: protectedProcedure.query(async () => {
-      const { getPendingDrafts } = await import("./db");
-      return await getPendingDrafts();
-    }),
-    create: protectedProcedure.input(z.object({
-      prospectName: z.string().optional(),
-      prospectEmail: z.string().email(),
-      prospectCompany: z.string().optional(),
-      industry: z.string().optional(),
-      subject: z.string().min(1),
-      body: z.string().min(1),
-    })).mutation(async ({ input }) => {
-      const { createEmailDraft } = await import("./db");
-      return await createEmailDraft({ ...input, status: "pending", generatedBy: "ai_manager" });
-    }),
-    approve: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
-      const { updateDraftStatus } = await import("./db");
-      await updateDraftStatus(input.id, "approved", ctx.user.id);
-      return { success: true };
-    }),
-    reject: protectedProcedure.input(z.object({ id: z.number(), notes: z.string().optional() })).mutation(async ({ ctx, input }) => {
-      const { updateDraftStatus } = await import("./db");
-      await updateDraftStatus(input.id, "rejected", ctx.user.id);
-      return { success: true };
-    }),
-    bulkApprove: protectedProcedure.input(z.object({ ids: z.array(z.number()) })).mutation(async ({ ctx, input }) => {
-      const { updateDraftStatus } = await import("./db");
-      for (const id of input.ids) await updateDraftStatus(id, "approved", ctx.user.id);
-      return { success: true, count: input.ids.length };
-    }),
-  }),
+  emailDrafts: emailDraftsRouter,
 
   // ─── Supply Chain ────────────────────────────────────────────────────────
   supplyChain: router({
