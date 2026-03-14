@@ -719,3 +719,43 @@ export async function updateServiceOrderStatus(id: number, status: string, extra
   if (!db) throw new Error("Database not available");
   await db.update(serviceOrders).set({ status: status as any, ...extra }).where(eq(serviceOrders.id, id));
 }
+
+// ─── Missions / Tasks (stub — real impl requires DB migration) ────────────────
+
+export async function getMissions(statusFilter?: string): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  // TODO: implement with missions table once migrated
+  return [];
+}
+
+export async function getMissionById(id: string): Promise<any | null> {
+  const db = await getDb();
+  if (!db) return null;
+  return null;
+}
+
+export async function createMission(type: string): Promise<string> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // TODO: insert into missions table and seed tasks via templates
+  return crypto.randomUUID();
+}
+
+export async function updateMissionStatus(id: string, status: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // TODO: update missions table
+}
+
+export async function getTasksByMission(missionId: string): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return [];
+}
+
+export async function retryTask(id: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // TODO: reset task status to PENDING
+}
