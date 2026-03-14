@@ -100,7 +100,7 @@
 - [x] Integrate HubSpot CRM for lead management and sales pipeline (HUBSPOT_SERVICE_KEY working, CRM dashboard, auto-sync leads/payments)
 - [ ] Integrate Gmail for automated email outreach (tools available, pending campaign setup)
 - [x] Integrate Google Calendar for scheduling demos and meetings (4 events created)
-- [ ] Integrate HeyGen for AI avatar video generation (connected, 15 credits available)
+- [x] Integrate HeyGen for AI avatar video generation (tRPC router + /heygen page built)
 - [x] Integrate Airtable for data management workflows (contract + payment events logged)
 - [x] Explore Meta Marketing for ad campaign management (connected, no active data)
 
@@ -124,3 +124,23 @@
 - [x] Verify newly scoped HUBSPOT_SERVICE_KEY works for contacts, companies, and deals (7 contacts, 8 companies, 4 deals)
 - [x] Seed initial partnership companies and deals into HubSpot CRM (LVMH, Pfizer, Walmart, Sotheby's + 4 deals)
 - [x] Verify CRM dashboard shows all three tabs with live data
+
+## MACROHARD Integration (Phase 5)
+- [x] Scaffold MACROHARD tRPC router (status, sync, query, pushEvent endpoints)
+- [x] Build MACROHARD frontend page at /macrohard with connection status, sync panel, event push, API query
+- [x] Add MACROHARD nav item to admin sidebar (Cpu icon)
+- [ ] Configure MACROHARD_API_URL and MACROHARD_API_KEY environment variables
+- [ ] Map MACROHARD data model to AuthiChain entities
+- [ ] Add real-time event webhooks from AuthiChain → MACROHARD
+- [ ] Integration tests for MACROHARD router
+
+## DHS SVIP Grant Application
+- [x] Write complete Phase I application ($200K ask, FIPS 140-2, W3C VC, CBP field app)
+- [ ] SAM.gov registration (required before submission — register at sam.gov)
+- [ ] CAGE code + UEI number
+- [ ] sbir.gov account creation
+- [ ] Submit at https://www.dhs.gov/science-and-technology/svip-application-process
+
+## qron.space Domain Setup
+- [ ] Add qron.space to Vercel project (vercel.com → qron-app → Settings → Domains)
+- [ ] Cloudflare DNS: delete A record to 216.198.79.1, add CNAME qron.space → cname.vercel-dns.com (proxy OFF)

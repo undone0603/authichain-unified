@@ -25,7 +25,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
-  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell,
+  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Video, Cpu,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -55,6 +55,8 @@ const adminMenuItems = [
   { icon: TrendingUp, label: "Growth Engine", path: "/growth" },
   { icon: Users, label: "Manage Users", path: "/admin/users" },
   { icon: DollarSign, label: "CRM (HubSpot)", path: "/crm" },
+  { icon: Video, label: "AI Avatar Videos", path: "/heygen" },
+  { icon: Cpu, label: "MACROHARD", path: "/macrohard" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

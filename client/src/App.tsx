@@ -30,6 +30,8 @@ const GrowthEngine = lazy(() => import("./pages/GrowthEngine"));
 const Blockchain = lazy(() => import("./pages/Blockchain"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const CRM = lazy(() => import("./pages/CRM"));
+const HeyGen = lazy(() => import("./pages/HeyGen"));
+const Macrohard = lazy(() => import("./pages/Macrohard"));
 
 function PageLoader() {
   return (
@@ -62,6 +64,8 @@ function DashboardRoutes() {
           <Route path="/blockchain" component={Blockchain} />
           <Route path="/notifications" component={Notifications} />
           <Route path="/crm" component={CRM} />
+          <Route path="/heygen" component={HeyGen} />
+          <Route path="/macrohard" component={Macrohard} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>

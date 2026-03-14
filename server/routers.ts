@@ -25,6 +25,8 @@ import { referralRouter } from "./referral/router";
 import { affiliateRouter } from "./affiliate/router";
 import { bonusesRouter } from "./bonuses/router";
 import { marketplaceRouter } from "./marketplace/router";
+import { heygenRouter } from "./heygen/router";
+import { macrohardRouter } from "./macrohard/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -53,6 +55,8 @@ export const appRouter = router({
   affiliate: affiliateRouter,
   bonuses: bonusesRouter,
   marketplace: marketplaceRouter,
+  heygen: heygenRouter,
+  macrohard: macrohardRouter,
 });
 
 export type AppRouter = typeof appRouter;
