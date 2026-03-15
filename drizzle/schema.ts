@@ -24,6 +24,16 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
+// MissionTask table
+export const MissionTask = pgTable("mission_tasks", {
+  id: serial("id").primaryKey(),
+  // TODO: add real fields once known
+  // example:
+  // missionId: integer("mission_id").notNull(),
+  // title: text("title").notNull(),
+  // status: text("status").default("pending"),
+});
+
 // ─── Products ────────────────────────────────────────────────────────────────
 export const products = mysqlTable("products", {
   id: int("id").autoincrement().primaryKey(),
