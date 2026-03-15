@@ -1068,6 +1068,9 @@ export async function listHighScanUsers(minScans: number) {
   return db.select().from(users).where(inArray(users.id, ids));
 }
 export async function getAllAdminIds() {
-  return db.select({ id: Admin.id }).from(Admin);
+  return db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, "admin"));
 }
-    
+
