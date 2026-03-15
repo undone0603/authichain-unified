@@ -156,3 +156,6 @@ export type {
   InsertNotification,
   SQL,
 };
+export function createMission() {
+  throw new Error("createMission must be imported from the missions module, not db.ts");
+}
