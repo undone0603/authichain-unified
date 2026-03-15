@@ -30,7 +30,7 @@ export async function getDb() {
 
 // Synchronous proxy for feature modules — throws if DB not initialised
 export const db: DrizzleInstance = new Proxy({} as DrizzleInstance, {
-  get(_target, prop: string | symbol) {
+    get(_target, prop: string | symbol) {
     if (!_db) throw new Error("Database not available");
     return Reflect.get(_db as object, prop as string);
   },
