@@ -1,65 +1,208 @@
-import { eq, desc, and, sql, gte, lte, inArray, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { Admin, MissionTask } from "../drizzle";
-import { type SQL } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import {
-  InsertUser, users, products, authentications, certificates, qrCodes,
-  nftCollections, nfts, auctions, auctionBids, subscriptions, usageRecords,
-  invoices, payments, leads, emailCampaigns, emailDrafts, supplyChainEvents,
-  referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions,
-  abTests, whiteLabelClients, activityLog, fraudAlerts, customerHealthScores,
-  revenueRecords, notifications,
-  bonuses, referralClicks, aiModels, modelPurchases, modelReviews, serviceOrders,
-  type Product, type InsertProduct, type InsertNotification,
-} from "../drizzle/schema";
-import { ENV } from './_core/env';
+  eq,
+  desc,
+  and,
+  sql,
+  gte,
+  lte,
+  inArray,
+  like,
+} from "drizzle-orm";
 
-type DrizzleInstance = ReturnType<typeof drizzle>;
+import { Admin, MissionTask } from "../drizzle";
+import {
+  InsertUser,
+  users,
+  products,
+  authentications,
+  certificates,
+  qrCodes,
+  nftCollections,
+  nfts,
+  auctions,
+  auctionBids,
+  subscriptions,
+  usageRecords,
+  invoices,
+  payments,
+  leads,
+  emailCampaigns,
+  emailDrafts,
+  supplyChainEvents,
+  referrals,
+  affiliates,
+  affiliateCommissions,
+  autopilotConfig,
+  autopilotDecisions,
+  abTests,
+  whiteLabelClients,
+  activityLog,
+  fraudAlerts,
+  customerHealthScores,
+  revenueRecords,
+  notifications,
+  bonuses,
+  referralClicks,
+  aiModels,
+  modelPurchases,
+  modelReviews,
+  serviceOrders,
+  type Product,
+  type InsertProduct,
+  type InsertNotification,
+} from "../drizzle/schema";
+import { ENV } from "./_core/env";
+
+export type DrizzleInstance = ReturnType<typeof drizzle>;
+
+// ─── Internal singleton state ────────────────────────────────────────────────
+
 let _db: DrizzleInstance | null = null;
 
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+/**
+ * Low-level factory for creating a Drizzle instance.
+ * Prefer using `getDb()` unless you explicitly need a custom instance.
+ */
+export function createDb(connectionString: string): DrizzleInstance {
+  if (!connectionString) {
+    throw new Error("[Database] Missing connection string");
   }
-  return _db;
+  return drizzle(connectionString);
 }
 
-// Synchronous proxy for feature modules — throws if DB not initialised
+/**
+ * Lazily initializes and returns the shared Drizzle instance.
+ * Throws if the database cannot be initialized.
+ */
+export async function getDb(): Promise<DrizzleInstance> {
+  if (_db) return _db;
+
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error("[Database] DATABASE_URL is not set");
+  }
+
+  try {
+    _db = createDb(url);
+    return _db;
+  } catch (error) {
+    console.error("[Database] Failed to connect:", error);
+    _db = null;
+    throw new Error("[Database] Unable to initialize database connection");
+  }
+}
+
+/**
+ * Synchronous proxy for feature modules.
+ * Ensures that any attempt to use `db` before initialization fails loudly.
+ *
+ * In long-running environments, call `await getDb()` during startup
+ * to guarantee availability before handling requests.
+ */
 export const db: DrizzleInstance = new Proxy({} as DrizzleInstance, {
-    get(_target, prop: string | symbol) {
-    if (!_db) throw new Error("Database not available");
+  get(_target, prop: string | symbol) {
+    if (!_db) {
+      throw new Error(
+        "[Database] Database not available. Call `await getDb()` during startup."
+      );
+    }
     return Reflect.get(_db as object, prop as string);
   },
 });
 
-// ─── User Helpers ────────────────────────────────────────────────────────────
+// ─── User helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Upserts a user by openId.
+ * - Requires `user.openId`
+ * - Normalizes nullable text fields
+ * - Automatically sets `lastSignedIn`
+ * - Grants admin role to ENV.ownerOpenId if no explicit role is provided
+ */
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) throw new Error("User openId is required for upsert");
+  if (!user.openId) {
+    throw new Error("[Database] User openId is required for upsert");
+  }
+
   const db = await getDb();
-  if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
-  try {
-    const values: InsertUser = { openId: user.openId };
-    const updateSet: Record<string, unknown> = {};
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-    textFields.forEach(assignNullable);
-    if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; updateSet.lastSignedIn = user.lastSignedIn; }
-    if (user.role !== undefined) { values.role = user.role; updateSet.role = user.role; }
-    else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; updateSet.role = 'admin'; }
-    if (!values.lastSignedIn) values.lastSignedIn = new Date();
-    if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
+
+  const values: InsertUser = {
+    openId: user.openId,
+  };
+
+  const updateSet: Record<string, unknown> = {};
+
+  const textFields = ["name", "email", "loginMethod"] as const;
+  type TextField = (typeof textFields)[number];
+
+  const assignNullable = (field: TextField) => {
+    const value = user[field];
+    if (value === undefined) return;
+    const normalized = value ?? null;
+    values[field] = normalized;
+    updateSet[field] = normalized;
+  };
+
+  textFields.forEach(assignNullable);
+
+  if (user.lastSignedIn !== undefined) {
+    values.lastSignedIn = user.lastSignedIn;
+    updateSet.lastSignedIn = user.lastSignedIn;
+  }
+
+  if (user.role !== undefined) {
+    values.role = user.role;
+    updateSet.role = user.role;
+  } else if (user.openId === ENV.ownerOpenId) {
+    values.role = "admin";
+    updateSet.role = "admin";
+  }
+
+  if (!values.lastSignedIn) {
+    const now = new Date();
+    values.lastSignedIn = now;
+    if (!updateSet.lastSignedIn) {
+      updateSet.lastSignedIn = now;
+    }
+  }
+
+  // If nothing but openId is provided, still update lastSignedIn
+  if (Object.keys(updateSet).length === 0) {
+    updateSet.lastSignedIn = values.lastSignedIn ?? new Date();
+  }
+
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.openId, user.openId))
+    .limit(1);
+
+  if (existing.length === 0) {
+    await db.insert(users).values(values);
+  } else {
+    await db
+      .update(users)
+      .set(updateSet)
+      .where(eq(users.openId, user.openId));
+  }
+}
+
+// ─── Example exports for other domains (types only, no logic here) ───────────
+
+// Re-export commonly used types so feature modules don’t need to reach
+// into `../drizzle/schema` directly if you want a narrower surface.
+export type {
+  Product,
+  InsertProduct,
+  InsertNotification,
+  SQL,
+};
+
+// You can gradually move domain-specific helpers (revenue, NFT, autopilot, etc.)
+// into their own modules (e.g. `server/revenue/revenue.db.ts`) and keep this
+// file focused on connection + very core primitives only.
     await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
   } catch (error) { console.error("[Database] Failed to upsert user:", error); throw error; }
 }
