@@ -1,5 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { Admin, MissionTask } from "../drizzle";
 import { type SQL } from "drizzle-orm";
 import {
   InsertUser, users, products, authentications, certificates, qrCodes,
