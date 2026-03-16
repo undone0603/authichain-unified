@@ -7,7 +7,7 @@ import { Loader2, Shield, Zap, Star, Trophy, TrendingUp, Coins, Sparkles, ArrowR
 
 function getLevelFromXP(xp: number) {
   if (xp >= 10000) return { level: 5, title: "Legendary", next: Infinity, color: "text-amber-400" };
-  if (xp >= 5000) return { level: 4, title: "Master", next: 10000, color: "text-purple-400" };
+  if (xp >= 5000) return { level: 4, title: "Master", next: 10000, color: "text-yellow-400" };
   if (xp >= 2000) return { level: 3, title: "Expert", next: 5000, color: "text-blue-400" };
   if (xp >= 500) return { level: 2, title: "Adept", next: 2000, color: "text-emerald-400" };
   return { level: 1, title: "Novice", next: 500, color: "text-gray-400" };
@@ -34,7 +34,7 @@ export default function CharacterDashboard() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white flex items-center justify-center">
         <div className="text-center space-y-6 max-w-md">
-          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-yellow-600 flex items-center justify-center">
             <Sparkles className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-2xl font-bold">No Agent Deployed</h2>
