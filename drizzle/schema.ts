@@ -1,39 +1,24 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, decimal, bigint } from "drizzle-orm/mysql-core";
-
-// ─── Users ───────────────────────────────────────────────────────────────────
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  walletAddress: varchar("walletAddress", { length: 128 }),
-  avatarUrl: text("avatarUrl"),
-  company: varchar("company", { length: 256 }),
-  title: varchar("title", { length: 256 }),
-  phone: varchar("phone", { length: 32 }),
-  onboardingCompleted: int("onboardingCompleted").default(0),
-  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
-  paddleCustomerId: varchar("paddleCustomerId", { length: 128 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+export const missions = mysqlTable("missions", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  status: mysqlEnum("status", ["pending", "active", "completed", "failed"]).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").onUpdateNow(),
 });
 
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
-
-// MissionTask table
-export const MissionTask = pgTable("mission_tasks", {
-  id: serial("id").primaryKey(),
-  // TODO: add real fields once known
-  // example:
-  // missionId: integer("mission_id").notNull(),
-  // title: text("title").notNull(),
-  // status: text("status").default("pending"),
+export const missionTasks = mysqlTable("mission_tasks", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  missionId: varchar("mission_id", { length: 36 })
+    .notNull()
+    .references(() => missions.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  status: mysqlEnum("status", ["pending", "in_progress", "completed", "failed"]).notNull(),
+  order: int("order").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").onUpdateNow(),
 });
-
 // ─── Products ────────────────────────────────────────────────────────────────
 export const products = mysqlTable("products", {
   id: int("id").autoincrement().primaryKey(),
