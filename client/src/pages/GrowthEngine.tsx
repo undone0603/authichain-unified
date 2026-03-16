@@ -44,8 +44,8 @@ function MetricCard({ title, value, change, changeType, icon: Icon, subtitle }: 
 function ConversionFunnel() {
   const stages = [
     { name: "Visitors", count: 12450, icon: Eye, color: "bg-blue-500" },
-    { name: "Sign-ups", count: 1867, icon: Users, color: "bg-indigo-500" },
-    { name: "Activated", count: 743, icon: MousePointer, color: "bg-purple-500" },
+    { name: "Sign-ups", count: 1867, icon: Users, color: "bg-yellow-600" },
+    { name: "Activated", count: 743, icon: MousePointer, color: "bg-yellow-500" },
     { name: "Trial Started", count: 412, icon: Zap, color: "bg-pink-500" },
     { name: "Paid Convert", count: 89, icon: ShoppingCart, color: "bg-green-500" },
   ];

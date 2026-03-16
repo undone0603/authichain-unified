@@ -27,7 +27,7 @@ export default function NetworkStats() {
             <Globe className="w-4 h-4" />
             Live Protocol Metrics
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-blue-400 to-yellow-600 bg-clip-text text-transparent">
             AuthiChain Network
           </h1>
           <p className="text-gray-400 mt-2">Real-time protocol health, agent activity, and QRON economics</p>
@@ -39,7 +39,7 @@ export default function NetworkStats() {
             { label: "Active Agents", value: s?.totalAgents || 0, icon: Users, color: "text-blue-400", bg: "bg-blue-500/10" },
             { label: "Total Verifications", value: s?.totalVerifications || 0, icon: Shield, color: "text-emerald-400", bg: "bg-emerald-500/10" },
             { label: "QRON Distributed", value: `${parseFloat(String(s?.totalQRONDistributed || "0")).toFixed(1)}`, icon: Coins, color: "text-amber-400", bg: "bg-amber-500/10" },
-            { label: "Consensus Rounds", value: s?.totalConsensus || 0, icon: Activity, color: "text-purple-400", bg: "bg-purple-500/10" },
+            { label: "Consensus Rounds", value: s?.totalConsensus || 0, icon: Activity, color: "text-yellow-400", bg: "bg-yellow-500/10" },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
@@ -73,7 +73,7 @@ export default function NetworkStats() {
                     const pct = ((t.count / total) * 100).toFixed(0);
                     const colors: Record<string, string> = {
                       guardian: "bg-blue-500",
-                      archivist: "bg-purple-500",
+                      archivist: "bg-yellow-500",
                       sentinel: "bg-red-500",
                       scout: "bg-emerald-500",
                       arbiter: "bg-amber-500",
@@ -119,7 +119,7 @@ export default function NetworkStats() {
                 </div>
                 <div className="p-3 rounded-lg bg-gray-800/50 border border-gray-700">
                   <div className="text-xs text-gray-400">Mint-Ready NFTs</div>
-                  <div className="text-xl font-bold text-purple-400">0</div>
+                  <div className="text-xl font-bold text-yellow-400">0</div>
                 </div>
                 <div className="p-3 rounded-lg bg-gray-800/50 border border-gray-700">
                   <div className="text-xs text-gray-400">Protocol Status</div>
@@ -211,7 +211,7 @@ export default function NetworkStats() {
 
         {/* CTA */}
         <div className="mt-8 text-center">
-          <Card className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border-blue-500/20">
+          <Card className="bg-gradient-to-r from-blue-900/30 to-yellow-600/30 border-blue-500/20">
             <CardContent className="p-8">
               <h3 className="text-xl font-bold text-white mb-2">Join the AuthiChain Protocol</h3>
               <p className="text-gray-400 mb-4">Create your AI agent, verify products, earn QRON rewards, and help build the world's most trusted authentication network.</p>

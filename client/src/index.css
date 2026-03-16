@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&display=swap');
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -45,38 +47,38 @@
 :root {
   --radius: 0.625rem;
   /* Dark blockchain theme */
-  --background: oklch(0.13 0.01 260);
-  --foreground: oklch(0.93 0.005 260);
-  --card: oklch(0.17 0.012 260);
-  --card-foreground: oklch(0.93 0.005 260);
-  --popover: oklch(0.17 0.012 260);
-  --popover-foreground: oklch(0.93 0.005 260);
-  --primary: oklch(0.65 0.2 160);
-  --primary-foreground: oklch(0.13 0.01 260);
-  --secondary: oklch(0.22 0.015 260);
-  --secondary-foreground: oklch(0.85 0.005 260);
-  --muted: oklch(0.22 0.015 260);
-  --muted-foreground: oklch(0.65 0.015 260);
-  --accent: oklch(0.22 0.02 260);
-  --accent-foreground: oklch(0.93 0.005 260);
+  --background: oklch(0.13 0.01 85);
+  --foreground: oklch(0.93 0.005 85);
+  --card: oklch(0.17 0.012 85);
+  --card-foreground: oklch(0.93 0.005 85);
+  --popover: oklch(0.17 0.012 85);
+  --popover-foreground: oklch(0.93 0.005 85);
+  --primary: oklch(0.65 0.2 85);
+  --primary-foreground: oklch(0.13 0.01 85);
+  --secondary: oklch(0.22 0.015 85);
+  --secondary-foreground: oklch(0.85 0.005 85);
+  --muted: oklch(0.22 0.015 85);
+  --muted-foreground: oklch(0.65 0.015 85);
+  --accent: oklch(0.22 0.02 85);
+  --accent-foreground: oklch(0.93 0.005 85);
   --destructive: oklch(0.6 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.28 0.015 260);
-  --input: oklch(0.22 0.015 260);
-  --ring: oklch(0.65 0.2 160);
-  --chart-1: oklch(0.65 0.2 160);
-  --chart-2: oklch(0.6 0.18 250);
+  --border: oklch(0.28 0.015 85);
+  --input: oklch(0.22 0.015 85);
+  --ring: oklch(0.65 0.2 85);
+  --chart-1: oklch(0.65 0.2 85);
+  --chart-2: oklch(0.6 0.15 85);
   --chart-3: oklch(0.7 0.15 80);
-  --chart-4: oklch(0.55 0.2 300);
+  --chart-4: oklch(0.55 0.2 85);
   --chart-5: oklch(0.6 0.2 30);
-  --sidebar: oklch(0.15 0.012 260);
-  --sidebar-foreground: oklch(0.85 0.005 260);
-  --sidebar-primary: oklch(0.65 0.2 160);
-  --sidebar-primary-foreground: oklch(0.13 0.01 260);
-  --sidebar-accent: oklch(0.22 0.02 260);
-  --sidebar-accent-foreground: oklch(0.93 0.005 260);
-  --sidebar-border: oklch(0.28 0.015 260);
-  --sidebar-ring: oklch(0.65 0.2 160);
+  --sidebar: oklch(0.15 0.012 85);
+  --sidebar-foreground: oklch(0.85 0.005 85);
+  --sidebar-primary: oklch(0.65 0.2 85);
+  --sidebar-primary-foreground: oklch(0.13 0.01 85);
+  --sidebar-accent: oklch(0.22 0.02 85);
+  --sidebar-accent-foreground: oklch(0.93 0.005 85);
+  --sidebar-border: oklch(0.28 0.015 85);
+  --sidebar-ring: oklch(0.65 0.2 85);
 }
 
 @layer base {
@@ -85,7 +87,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Geist', 'Geist Fallback', Arial, sans-serif;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -130,19 +132,21 @@
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, oklch(0.65 0.2 160), oklch(0.6 0.18 250));
+    background: linear-gradient(135deg, #E8C547 0%, #C9A227 50%, #A07D10 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .glass-card {
-    background: oklch(0.17 0.012 260 / 80%);
+    background: oklch(0.17 0.012 85 / 80%);
     backdrop-filter: blur(12px);
-    border: 1px solid oklch(0.28 0.015 260 / 50%);
+    border: 1px solid oklch(0.28 0.015 85 / 50%);
   }
 
-  .glow-green {
-    box-shadow: 0 0 20px oklch(0.65 0.2 160 / 20%);
+  .glow-gold {
+    box-shadow: 0 0 20px oklch(0.65 0.2 85 / 20%);
   }
 }
+
+.btn-gold { background: linear-gradient(135deg,#E8C547,#C9A227); color:#0a0a0a; font-weight:700; }
