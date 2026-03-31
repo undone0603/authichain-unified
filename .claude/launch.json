@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Backend (Express + tsx)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "Frontend (Vite)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "vite"],
+      "port": 5173
+    },
+    {
+      "name": "Cloudflare Worker (wrangler)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "authichain-worker", "run", "dev"],
+      "port": 8787
+    }
+  ]
+}
