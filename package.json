@@ -142,5 +142,8 @@
       "@trpc/server": ">=10.45.3",
       "@smithy/config-resolver": ">=4.4.0"
     }
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
