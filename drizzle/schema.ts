@@ -808,3 +808,19 @@ export const serviceOrders = mysqlTable("service_orders", {
 });
 export type ServiceOrder = typeof serviceOrders.$inferSelect;
 export type InsertServiceOrder = typeof serviceOrders.$inferInsert;
+
+// ─── Users ──────────────────────────────────────────────────────────────────
+export const users = mysqlTable("users", {
+  id: int("id").autoincrement().primaryKey(),
+  openId: varchar("open_id", { length: 256 }).notNull().unique(),
+  email: varchar("email", { length: 320 }),
+  name: varchar("name", { length: 256 }),
+  loginMethod: varchar("login_method", { length: 64 }),
+  role: mysqlEnum("role", ["user", "admin", "brand"]).default("user").notNull(),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
+  lastSignedIn: timestamp("last_signed_in"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
