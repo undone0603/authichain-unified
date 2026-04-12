@@ -125,3 +125,10 @@ Custom LoRA trigger word: **qronart**
 - AI CAN: write/test code, run scans, calculate rewards, monitor, generate content drafts
 - Requires Human: deploy contracts, sign transactions, change parameters, access treasury
 - Safe multisig: 3/5 standard, 2/5 emergency, 4/5 critical
+
+## Content Registry (Notion)
+
+Before creating new files, check the Notion Content Registry to avoid duplication:
+https://www.notion.so/3959bfd5dd9e4b9cb741ef7c2ea7cd78
+
+If a similar asset exists, update it instead of creating a new one. If creating new, register it in the Content Registry immediately with Source, Type, Status, Project, and Priority.
