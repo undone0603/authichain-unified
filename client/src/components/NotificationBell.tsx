@@ -24,7 +24,7 @@ const typeColors: Record<string, string> = {
   authentication: "bg-blue-500/10 text-blue-400",
   certificate: "bg-green-500/10 text-green-400",
   payment: "bg-emerald-500/10 text-emerald-400",
-  subscription: "bg-purple-500/10 text-purple-400",
+  subscription: "bg-yellow-500/10 text-yellow-400",
   nft: "bg-pink-500/10 text-pink-400",
   referral: "bg-orange-500/10 text-orange-400",
   system: "bg-gray-500/10 text-gray-400",

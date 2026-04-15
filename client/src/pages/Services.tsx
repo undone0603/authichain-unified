@@ -175,8 +175,8 @@ export default function Services() {
             <p className="text-sm text-muted-foreground">Shopify sellers, Etsy makers, small brands, creators, artisans</p>
           </div>
           <div className="text-center p-6">
-            <div className="h-14 w-14 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
-              <Building2 className="h-7 w-7 text-purple-500" />
+            <div className="h-14 w-14 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+              <Building2 className="h-7 w-7 text-yellow-400" />
             </div>
             <h3 className="font-semibold text-lg mb-2">Government & Enterprise</h3>
             <p className="text-sm text-muted-foreground">County offices, tribal governments, law enforcement, economic development boards</p>

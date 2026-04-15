@@ -10,7 +10,7 @@ import { Loader2, Sparkles, Shield, BookOpen, Eye, Compass, Scale, Check, Star, 
 
 const ARCHETYPES = [
   { key: "guardian" as const, name: "Guardian", icon: Shield, color: "from-blue-500 to-blue-700", description: "Protects brand integrity and product authenticity", abilities: ["Verify", "Protect", "Alert"] },
-  { key: "archivist" as const, name: "Archivist", icon: BookOpen, color: "from-purple-500 to-purple-700", description: "Records and preserves provenance data on-chain", abilities: ["Record", "Archive", "Query"] },
+  { key: "archivist" as const, name: "Archivist", icon: BookOpen, color: "from-yellow-500 to-yellow-600", description: "Records and preserves provenance data on-chain", abilities: ["Record", "Archive", "Query"] },
   { key: "sentinel" as const, name: "Sentinel", icon: Eye, color: "from-red-500 to-red-700", description: "Monitors supply chain integrity in real-time", abilities: ["Monitor", "Detect", "Respond"] },
   { key: "scout" as const, name: "Scout", icon: Compass, color: "from-emerald-500 to-emerald-700", description: "Discovers counterfeits and maps threat networks", abilities: ["Scan", "Discover", "Map"] },
   { key: "arbiter" as const, name: "Arbiter", icon: Scale, color: "from-amber-500 to-amber-700", description: "Resolves disputes and renders consensus verdicts", abilities: ["Judge", "Resolve", "Settle"] },
@@ -102,7 +102,7 @@ export default function CharacterCreate() {
             <Sparkles className="w-4 h-4" />
             AuthiCharacter Protocol
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-yellow-500 to-emerald-400 bg-clip-text text-transparent">
             Create Your Protocol Agent
           </h1>
           <p className="text-gray-400 mt-2 max-w-xl mx-auto">
@@ -239,7 +239,7 @@ export default function CharacterCreate() {
                 size="lg"
                 onClick={handleGenerate}
                 disabled={generateMutation.isPending}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8"
+                className="bg-gradient-to-r from-blue-600 to-yellow-600 hover:from-blue-700 hover:to-yellow-600 px-8"
               >
                 {generateMutation.isPending ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Starting...</>
@@ -254,7 +254,7 @@ export default function CharacterCreate() {
         {/* Step 3: Generating */}
         {step === "generating" && (
           <div className="text-center space-y-6">
-            <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center animate-pulse">
+            <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-yellow-600 flex items-center justify-center animate-pulse">
               <Sparkles className="w-12 h-12 text-white" />
             </div>
             <h2 className="text-2xl font-bold">Generating Your {selectedArchetype?.name}</h2>
@@ -398,7 +398,7 @@ export default function CharacterCreate() {
                 size="lg"
                 disabled={agentName.length < 2 || createAgentMutation.isPending}
                 onClick={handleCreateAgent}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8"
+                className="bg-gradient-to-r from-blue-600 to-yellow-600 hover:from-blue-700 hover:to-yellow-600 px-8"
               >
                 {createAgentMutation.isPending ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Deploying...</>

@@ -1,8 +1,14 @@
 {
-  "buildCommand": "pnpm install --no-frozen-lockfile && pnpm build",
-  "outputDirectory": "dist/public",
   "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist/public",
   "framework": null,
+  "functions": {
+    "api/server.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/server" },
     { "source": "/(.*)", "destination": "/index.html" }

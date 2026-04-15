@@ -14,7 +14,7 @@ export default function Dashboard() {
     { title: "Products", value: metrics?.totalProducts ?? 0, icon: Package, color: "text-blue-400", path: "/authenticate" },
     { title: "Authentications", value: metrics?.totalAuthentications ?? 0, icon: Shield, color: "text-green-400", path: "/authenticate" },
     { title: "Certificates", value: metrics?.totalCertificates ?? 0, icon: Award, color: "text-yellow-400", path: "/certificates" },
-    { title: "NFTs Owned", value: metrics?.totalNfts ?? 0, icon: Gem, color: "text-purple-400", path: "/nft" },
+    { title: "NFTs Owned", value: metrics?.totalNfts ?? 0, icon: Gem, color: "text-yellow-400", path: "/nft" },
   ];
 
   return (

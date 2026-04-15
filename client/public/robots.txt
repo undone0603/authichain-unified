@@ -2,10 +2,9 @@ User-agent: *
 Allow: /
 Allow: /pricing
 Allow: /certificate/
-
-Disallow: /admin
-Disallow: /admin/
-Disallow: /scheduled-tasks
-Disallow: /api/
+Allow: /admin
+Allow: /admin/
+Allow: /scheduled-tasks
+Allow: /api/
 
 Sitemap: https://authichain.com/sitemap.xml
