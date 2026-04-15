@@ -60,23 +60,29 @@ jobs:
           submodules: recursive          # pulls libs/opensam automatically
           fetch-depth: 1
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.28.2
+          run_install: false
+
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install root dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Install OpenSAM submodule dependencies
         working-directory: libs/opensam
-        run: npm ci --ignore-scripts
+        run: pnpm install --frozen-lockfile
 
       - name: Ingest fresh SAM.gov opportunities into vector store
         if: ${{ github.event.inputs.ingest_first != 'no' }}
         run: |
-          npx tsx -e "
+          pnpm exec tsx -e "
             import { vectorStoreUtils } from './packages/vector-store/index.ts';
             await vectorStoreUtils.ingestSAMOpportunities();
             console.log('SAM.gov ingestion complete');
@@ -86,7 +92,7 @@ jobs:
 
       - name: Run autonomous government lead-gen engine
         run: |
-          npx tsx -e "
+          pnpm exec tsx -e "
             import { startGovernmentEngine } from './src/agents/government-lead-gen-v2.ts';
             await startGovernmentEngine();
           "
