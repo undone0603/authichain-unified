@@ -1,0 +1,4 @@
+[submodule "libs/opensam"]
+	path = libs/opensam
+	url = https://github.com/akshayakula/OpenSAM.git
+	branch = main
