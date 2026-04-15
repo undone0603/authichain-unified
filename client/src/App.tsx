@@ -36,6 +36,7 @@ const CharacterDashboard = lazy(() => import("./pages/CharacterDashboard"));
 const NetworkStats = lazy(() => import("./pages/NetworkStats"));
 const Services = lazy(() => import("./pages/Services"));
 const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
+const QrArtGallery = lazy(() => import("./pages/QrArtGallery"));
 
 function PageLoader() {
   return (
@@ -95,6 +96,13 @@ function Router() {
         {() => (
           <Suspense fallback={<PageLoader />}>
             <Services />
+          </Suspense>
+        )}
+      </Route>
+      <Route path="/gallery">
+        {() => (
+          <Suspense fallback={<PageLoader />}>
+            <QrArtGallery />
           </Suspense>
         )}
       </Route>
