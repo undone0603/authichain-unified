@@ -32,6 +32,7 @@ jobs:
       POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
       AUTHICHAIN_API_KEY: ${{ secrets.AUTHICHAIN_API_KEY }}
       NEXT_PUBLIC_APP_URL: https://authichain.com
+      
     steps: 
     
       - name: Checkout repo (with submodules)
