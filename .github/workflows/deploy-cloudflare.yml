@@ -35,7 +35,10 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          # Node 22 required: wrangler 3.114+ bundles miniflare which pulls in
+          # undici@8, and undici@8's CacheStorage API fails to initialize on
+          # Node 20.
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies
