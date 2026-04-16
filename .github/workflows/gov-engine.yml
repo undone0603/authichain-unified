@@ -53,7 +53,7 @@ jobs:
         # NOW: dedicated ESM .ts file, tsx resolves module correctly
         run: pnpm exec tsx scripts/ingest-sam.ts
         env:
-          SAM_GOV_API_KEY:      ${{ secrets.SAM_GOV_API_KEY }}
+          SAM_GOV_API_KEY:      ${{ secrets.SAM_API_KEY }}
           OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
@@ -165,7 +165,7 @@ jobs:
         run: pnpm exec tsx scripts/mint-govchain-nfts.ts
         env:
           ALCHEMY_API_KEY:       ${{ secrets.ALCHEMY_API_KEY }}
-          WALLET_PRIVATE_KEY:    ${{ secrets.WALLET_PRIVATE_KEY }}
+          WALLET_PRIVATE_KEY:    ${{ secrets.POLYGON_PRIVATE_KEY }}
           CONTRACT_ADDRESS:      ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
           SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
