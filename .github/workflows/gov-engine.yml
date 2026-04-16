@@ -36,11 +36,12 @@ jobs:
       POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
       AUTHICHAIN_API_KEY: ${{ secrets.AUTHICHAIN_API_KEY }}
       NEXT_PUBLIC_APP_URL: https://authichain.com
-    steps:
-      - name: Checkout repo
+    steps: 
+      - name: Checkout repo (with submodules)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+              submodules: recursive
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
