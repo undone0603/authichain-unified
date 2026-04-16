@@ -109,6 +109,9 @@ console.log(`📦 Fetched ${opportunities.length} opportunities`);
 const count = await embedAndStore(opportunities);
 console.log(`✅ Ingested ${count} opportunities${isDryRun ? ' (DRY RUN — no writes)' : ''}`);
 
-// Set GitHub Actions output
-console.log(`::set-output name=count::${count}`);
+// Set GitHub Actions output via GITHUB_OUTPUT env file (::set-output is deprecated)
+if (process.env.GITHUB_OUTPUT) {
+  const { appendFileSync } = await import('node:fs');
+  appendFileSync(process.env.GITHUB_OUTPUT, `count=${count}\n`);
+}
 process.exit(0);
