@@ -40,7 +40,7 @@ jobs:
       - name: Checkout repo (with submodules)
         uses: actions/checkout@v4
         with:
-              submodules: recursive
+          submodules: recursive
           fetch-depth: 0
 
       - name: Setup pnpm
