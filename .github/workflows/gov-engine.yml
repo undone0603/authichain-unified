@@ -1,93 +1,70 @@
-name: Government Lead-Gen Engine
-
-on:
-  schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
-  workflow_dispatch:        # Manual trigger from GitHub Actions UI
-    inputs:
-      ingest_first:
-        description: 'Run SAM.gov ingestion before lead-gen (yes/no)'
-        required: false
-        default: 'no'
-  push:
-    branches: [main]
-    paths:
-      - 'src/agents/government-lead-gen-v2.ts'
-      - 'packages/vector-store/**'
-
-jobs:
-  run-gov-engine:
-    name: Autonomous Gov Lead-Gen + Pilot NFT Minting
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      VECTOR_STORE_PROVIDER: ${{ secrets.VECTOR_STORE_PROVIDER }}
-      PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-      PINECONE_INDEX: ${{ secrets.PINECONE_INDEX }}
-      PINECONE_ENVIRONMENT: ${{ secrets.PINECONE_ENVIRONMENT }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      LLM_PROVIDER: openai
-      SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
-      POLYGON_RPC_URL: ${{ secrets.POLYGON_RPC_URL }}
-      POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
-      AUTHICHAIN_API_KEY: ${{ secrets.AUTHICHAIN_API_KEY }}
-      NEXT_PUBLIC_APP_URL: https://authichain.com
-      
-    steps: 
-      - name: Checkout repo (with submodules)
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10.28.2
-          run_install: true
-
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install root dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Ingest fresh SAM.gov opportunities into vector store
-        if: ${{ github.event.inputs.ingest_first != 'no' }}
-        run: |
-          pnpm exec tsx --esm -e "
-            import { vectorStoreUtils } from './packages/vector-store/index.ts';
-            await vectorStoreUtils.ingestSAMOpportunities();
-            console.log('SAM.gov ingestion complete');
-          "
+name: Government Lead Engine
+    
+    on:
+      workflow_dispatch:
+        inputs:
+          ingest_first:
+            description: 'Ingest fresh SAM.gov opportunities first?'
+            required: true
+            default: 'no'
+            type: choice
+            options:
+              - 'yes'
+              - 'no'
+      schedule:
+        - cron: '0 10 * * *' # Runs at 10:00 UTC every day
+    
+    jobs:
+      run_engine:
+        runs-on: ubuntu-latest
+    
         env:
-          SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
-
-      - name: Run autonomous government lead-gen engine
-        run: |
-          pnpm exec tsx --esm -e "
-            import { startGovernmentEngine } from './src/agents/government-lead-gen-v2.ts';
-            await startGovernmentEngine();
-          "
-
-      - name: Upload run summary
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gov-engine-run-${{ github.run_id }}
-          path: |
-            logs/
-            *.log
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Notify on failure
-        if: failure()
-        run: |
-          echo "::error::Government lead-gen engine failed on run ${{ github.run_id }}"
-          echo "Check logs above. Common causes:"
-          echo " - Missing secrets (PINECONE_API_KEY, SAM_API_KEY, POLYGON_PRIVATE_KEY)"
-          echo " - Vector store not seeded (run with ingest_first=yes)"
-          echo " - Polygon RPC rate limit"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+          PINECONE_NAMESPACE: ${{ secrets.PINECONE_NAMESPACE }}
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          POSTGRES_PRISMA_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
+          POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DATABASE: ${{ secrets.POSTGRES_DATABASE }}
+          POLYGON_RPC_URL: ${{ secrets.POLYGON_RPC_URL }}
+          POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
+          AUTHICHAIN_API_KEY: ${{ secrets.AUTHICHAIN_API_KEY }}
+          NEXT_PUBLIC_APP_URL: https://authichain.com
+    
+        steps:
+          - name: Checkout repo (with subModules)
+            uses: actions/checkout@v4
+            with:
+              submodules: recursive
+              fetch-depth: 0
+    
+          - name: Setup pnpm
+            uses: pnpm/action-setup@v3
+            with:
+              version: 10.28.2
+              run_install: true
+    
+          - name: Setup Node.js 20
+            uses: actions/setup-node@v4
+            with:
+              node-version: '20'
+    
+          - name: Install root dependencies
+            run: pnpm install --no-frozen-lockfile
+    
+          - name: Ingest fresh SAM.gov opportunities into vector store
+            if: ${{ github.event.inputs.ingest_first == 'yes' }}
+            run: |
+              pnpm exec tsx --esm -e "import { vectorStoreUtils } from './packages/vector-store/index.ts'; await vectorStoreUtils.ingestSAMOpportunities();"
+    
+          - name: Run autonomous government lead-gen engine
+            run: |
+              pnpm exec tsx --esm -e "import { run } from './packages/gov-engine/index.ts'; await run();"
+    
