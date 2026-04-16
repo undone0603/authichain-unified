@@ -2,13 +2,12 @@
 # Autonomous Government Lead-Gen Engine
 # Runs every 6 hours (and on manual trigger / push to main)
 # Fires startGovernmentEngine() from src/agents/government-lead-gen-v2.ts
-
 name: Government Lead-Gen Engine
 
 on:
   schedule:
-    - cron: '0 */6 * * *'   # Every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
-  workflow_dispatch:         # Manual trigger from GitHub Actions UI
+    - cron: '0 */6 * * *'  # Every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
+  workflow_dispatch:        # Manual trigger from GitHub Actions UI
     inputs:
       ingest_first:
         description: 'Run SAM.gov ingestion before lead-gen (yes/no)'
@@ -25,39 +24,22 @@ jobs:
     name: Autonomous Gov Lead-Gen + Pilot NFT Minting
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     env:
-      # ───────────────────────────────────────────────────────────
-      # These must be added to: Settings > Secrets and variables > Actions
-      # ───────────────────────────────────────────────────────────
-
-      # Vector store
-      VECTOR_STORE_PROVIDER: ${{ secrets.VECTOR_STORE_PROVIDER }}   # pinecone | chroma
-      PINECONE_API_KEY:       ${{ secrets.PINECONE_API_KEY }}
-      PINECONE_INDEX:         ${{ secrets.PINECONE_INDEX }}          # authichain-opportunities
-      PINECONE_ENVIRONMENT:   ${{ secrets.PINECONE_ENVIRONMENT }}
-      CHROMA_HOST:            ${{ secrets.CHROMA_HOST }}
-
-      # Embeddings + LLM
-      OPENAI_API_KEY:         ${{ secrets.OPENAI_API_KEY }}
-      LLM_PROVIDER:           openai
-
-      # SAM.gov
-      SAM_API_KEY:            ${{ secrets.SAM_API_KEY }}
-
-      # Polygon / on-chain
-      POLYGON_RPC_URL:        ${{ secrets.POLYGON_RPC_URL }}
-      POLYGON_PRIVATE_KEY:    ${{ secrets.POLYGON_PRIVATE_KEY }}
-
-      # AuthiChain
-      AUTHICHAIN_API_KEY:     ${{ secrets.AUTHICHAIN_API_KEY }}
-      NEXT_PUBLIC_APP_URL:    https://authichain.com
-
+      VECTOR_STORE_PROVIDER: ${{ secrets.VECTOR_STORE_PROVIDER }}
+      PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+      PINECONE_INDEX: ${{ secrets.PINECONE_INDEX }}
+      PINECONE_ENVIRONMENT: ${{ secrets.PINECONE_ENVIRONMENT }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      LLM_PROVIDER: openai
+      SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
+      POLYGON_RPC_URL: ${{ secrets.POLYGON_RPC_URL }}
+      POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
+      AUTHICHAIN_API_KEY: ${{ secrets.AUTHICHAIN_API_KEY }}
+      NEXT_PUBLIC_APP_URL: https://authichain.com
     steps:
-      - name: Checkout repo (with submodules)
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          submodules: recursive          # pulls libs/opensam automatically
           fetch-depth: 1
 
       - name: Setup pnpm
@@ -70,14 +52,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
 
       - name: Install root dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install OpenSAM submodule dependencies
-        working-directory: libs/opensam
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Ingest fresh SAM.gov opportunities into vector store
         if: ${{ github.event.inputs.ingest_first != 'no' }}
@@ -113,6 +90,6 @@ jobs:
         run: |
           echo "::error::Government lead-gen engine failed on run ${{ github.run_id }}"
           echo "Check logs above. Common causes:"
-          echo "  - Missing secrets (PINECONE_API_KEY, SAM_API_KEY, POLYGON_PRIVATE_KEY)"
-          echo "  - Vector store not seeded (run with ingest_first=yes)"
-          echo "  - Polygon RPC rate limit"
+          echo " - Missing secrets (PINECONE_API_KEY, SAM_API_KEY, POLYGON_PRIVATE_KEY)"
+          echo " - Vector store not seeded (run with ingest_first=yes)"
+          echo " - Polygon RPC rate limit"
