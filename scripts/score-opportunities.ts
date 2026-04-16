@@ -1,12 +1,11 @@
 // scripts/score-opportunities.ts
 import { createClient } from '@supabase/supabase-js';
 import { Pinecone } from '@pinecone-database/pinecone';
-import OpenAI from 'openai';
+import { chat } from './lib/llm.ts';
 
 const isDryRun  = process.env.DRY_RUN === 'true';
 const supabase  = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
 const pinecone  = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
-const openai    = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const GOVCHAIN  = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
 const AUTHICHAIN_PROFILE = `
@@ -30,6 +29,7 @@ async function scoreOpportunities() {
   if (!opps?.length) { console.log('No new opportunities to score.'); return 0; }
 
   let scored = 0;
+  const providerHits: Record<string, number> = {};
 
   for (const opp of opps) {
     const prompt = `
@@ -54,14 +54,15 @@ Deadline: ${opp.deadline}
 Description: ${(opp.description ?? '').slice(0, 2000)}
 `;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const { content, provider } = await chat({
       messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
+      jsonMode: true,
       temperature: 0.2,
+      openaiModel: 'gpt-4o-mini',
     });
+    providerHits[provider] = (providerHits[provider] ?? 0) + 1;
 
-    const result = JSON.parse(completion.choices[0].message.content ?? '{}');
+    const result = JSON.parse(content || '{}');
 
     if (!isDryRun) {
       await supabase
@@ -81,6 +82,11 @@ Description: ${(opp.description ?? '').slice(0, 2000)}
     console.log(`  [${result.fit_score}/100] ${opp.title?.slice(0, 60)} → ${result.recommended_action}`);
     scored++;
   }
+
+  const breakdown = Object.entries(providerHits)
+    .map(([p, n]) => `${p}=${n}`)
+    .join(', ');
+  console.log(`🔌 LLM providers used: ${breakdown || 'none'}`);
 
   return scored;
 }

@@ -1,10 +1,9 @@
 // scripts/generate-proposals.ts
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import { chat } from './lib/llm.ts';
 
 const isDryRun = process.env.DRY_RUN === 'true';
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
-const openai   = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const GOVCHAIN = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
 async function generateProposals() {
@@ -20,6 +19,7 @@ async function generateProposals() {
   if (!opps?.length) { console.log('No high-fit opportunities for proposal generation.'); return 0; }
 
   let generated = 0;
+  const providerHits: Record<string, number> = {};
 
   for (const opp of opps) {
     const prompt = `
@@ -37,14 +37,15 @@ Key Requirements: ${JSON.stringify(opp.key_requirements)}
 AI Reasoning: ${opp.ai_reasoning}
 `;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const { content, provider } = await chat({
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.4,
-      max_tokens: 800,
+      maxTokens: 800,
+      openaiModel: 'gpt-4o',
     });
+    providerHits[provider] = (providerHits[provider] ?? 0) + 1;
 
-    const proposal_draft = completion.choices[0].message.content ?? '';
+    const proposal_draft = content;
 
     if (!isDryRun) {
       await supabase.from('gov_proposals').upsert({
@@ -69,6 +70,11 @@ AI Reasoning: ${opp.ai_reasoning}
     console.log(`  📝 Draft generated: ${opp.title?.slice(0, 60)}`);
     generated++;
   }
+
+  const breakdown = Object.entries(providerHits)
+    .map(([p, n]) => `${p}=${n}`)
+    .join(', ');
+  console.log(`🔌 LLM providers used: ${breakdown || 'none'}`);
 
   return generated;
 }

@@ -101,9 +101,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Score opportunities with AI
+        # LLM uses a cascading provider chain (scripts/lib/llm.ts):
+        # OpenAI -> Groq (llama-3.3-70b, free 14.4k/day) -> Gemini -> Mistral.
         run: pnpm exec tsx scripts/score-opportunities.ts
         env:
           OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
+          MISTRAL_API_KEY:      ${{ secrets.MISTRAL_API_KEY }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           PINECONE_API_KEY:     ${{ secrets.PINECONE_API_KEY }}
@@ -137,9 +142,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate AI proposal drafts
+        # LLM cascade (scripts/lib/llm.ts): OpenAI -> Groq -> Gemini -> Mistral.
         run: pnpm exec tsx scripts/generate-proposals.ts
         env:
           OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
+          MISTRAL_API_KEY:      ${{ secrets.MISTRAL_API_KEY }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           AIRTABLE_API_KEY:     ${{ secrets.AIRTABLE_API_KEY }}
