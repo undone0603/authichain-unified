@@ -1,4 +1,14 @@
 // scripts/report-failure.ts
+export {};
+
+// Skip gracefully if Slack isn't configured. Can't report a failure
+// without a bot token, and the real pipeline failure is already visible
+// in the GitHub Actions run.
+if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_CHANNEL_ID) {
+  console.warn('⚠️  Slack not configured — cannot report failure to Slack (pipeline failure is still visible in GitHub Actions).');
+  process.exit(0);
+}
+
 async function reportFailure() {
   const payload = {
     channel: process.env.SLACK_CHANNEL_ID!,
