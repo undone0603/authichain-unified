@@ -6,6 +6,19 @@ const isDryRun  = process.env.DRY_RUN === 'true';
 const supabase  = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
 const GOVCHAIN  = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
+// Skip gracefully when blockchain config is missing. All three are
+// required to mint; we'd rather skip cleanly than throw unhelpfully from
+// ethers. Dry runs can proceed without them (we only log the payload).
+const hasChainConfig = !!(
+  process.env.ALCHEMY_API_KEY &&
+  process.env.WALLET_PRIVATE_KEY &&
+  process.env.CONTRACT_ADDRESS
+);
+if (!hasChainConfig) {
+  console.warn('⚠️  Blockchain config missing (ALCHEMY_API_KEY / WALLET_PRIVATE_KEY / CONTRACT_ADDRESS) — skipping NFT minting.');
+  process.exit(0);
+}
+
 const MINT_ABI = [
   'function mintOpportunityNFT(address to, string calldata noticeId, string calldata metadataURI) external returns (uint256)',
   'event OpportunityMinted(uint256 indexed tokenId, string noticeId, address minter)',
