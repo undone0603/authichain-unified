@@ -3,7 +3,7 @@
 // Top-level await works correctly here when invoked via `pnpm exec tsx scripts/ingest-sam.ts`
 import { createClient } from '@supabase/supabase-js';
 import { Pinecone } from '@pinecone-database/pinecone';
-import OpenAI from 'openai';
+import { embed } from './lib/embed.ts';
 
 const isDryRun = process.env.DRY_RUN === 'true';
 
@@ -12,7 +12,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 );
 const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
-const openai   = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 const GOVCHAIN_URL = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
@@ -52,17 +51,15 @@ async function fetchSAMOpportunities(): Promise<any[]> {
 async function embedAndStore(opportunities: any[]): Promise<number> {
   const index = pinecone.index(process.env.PINECONE_INDEX!);
   let count = 0;
+  const providerHits: Record<string, number> = {};
 
   for (const opp of opportunities) {
     const text = [opp.title, opp.description ?? '', opp.naicsCode ?? '']
       .join(' ')
       .slice(0, 8000);
 
-    const embeddingRes = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: text,
-    });
-    const vector = embeddingRes.data[0].embedding;
+    const { vector, provider } = await embed(text);
+    providerHits[provider] = (providerHits[provider] ?? 0) + 1;
 
     if (!isDryRun) {
       await index.upsert([
@@ -97,6 +94,11 @@ async function embedAndStore(opportunities: any[]): Promise<number> {
     count++;
     if (count % 10 === 0) console.log(`  Processed ${count}/${opportunities.length}...`);
   }
+
+  const breakdown = Object.entries(providerHits)
+    .map(([p, n]) => `${p}=${n}`)
+    .join(', ');
+  console.log(`🔌 Embedding providers used: ${breakdown || 'none'}`);
 
   return count;
 }
