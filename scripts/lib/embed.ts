@@ -13,6 +13,8 @@ import { createHash } from 'node:crypto';
 
 const TARGET_DIM = Number(process.env.EMBED_TARGET_DIM ?? 1536);
 
+let warnedHashFallback = false;
+
 type Provider = {
   name: string;
   enabled: () => boolean;
@@ -165,10 +167,20 @@ const providers: Provider[] = [
   },
   {
     name: 'deterministic-hash-fallback',
-    enabled: () => process.env.EMBED_HASH_FALLBACK === 'true',
+    enabled: () => process.env.EMBED_HASH_FALLBACK !== 'false',
     run: async (text) => {
       // Not semantically meaningful — keeps the pipeline alive so downstream
-      // storage / workflow bookkeeping still runs. Opt-in only.
+      // storage / workflow bookkeeping still runs. Disable with EMBED_HASH_FALLBACK=false.
+      if (!warnedHashFallback) {
+        console.warn(
+          '⚠️  Using deterministic-hash-fallback for embeddings. ' +
+            'Vectors carry no semantic signal — downstream similarity search will be meaningless. ' +
+            'Add one of OPENAI_API_KEY / CLOUDFLARE_API_TOKEN (Workers AI scope) / GEMINI_API_KEY / ' +
+            'HUGGINGFACE_API_KEY / COHERE_API_KEY / JINA_API_KEY / MISTRAL_API_KEY / VOYAGE_API_KEY ' +
+            'to restore semantic embeddings.'
+        );
+        warnedHashFallback = true;
+      }
       const bytesNeeded = TARGET_DIM * 4;
       const chunks: Buffer[] = [];
       let seed = text;
