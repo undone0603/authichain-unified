@@ -38,14 +38,14 @@ async function sendSlackDigest() {
       {
         type: 'section',
         fields: [
-          { type: 'mrkdwn', text: \`*Opportunities Ingested*\n\${totalIngested ?? 0}\` },
-          { type: 'mrkdwn', text: \`*Proposals Drafted*\n\${totalDrafted ?? 0}\` },
+          { type: 'mrkdwn', text: `*Opportunities Ingested*\n${totalIngested ?? 0}` },
+          { type: 'mrkdwn', text: `*Proposals Drafted*\n${totalDrafted ?? 0}` },
         ],
       },
       { type: 'divider' },
       {
         type: 'section',
-        text: { type: 'mrkdwn', text: \`*🏆 Top Opportunities Today*\n\${oppLines || '_No high-fit opportunities today._'}\` },
+        text: { type: 'mrkdwn', text: `*🏆 Top Opportunities Today*\n${oppLines || '_No high-fit opportunities today._'}` },
       },
       {
         type: 'actions',
@@ -53,13 +53,13 @@ async function sendSlackDigest() {
           {
             type: 'button',
             text: { type: 'plain_text', text: '🌐 View GovChain Dashboard', emoji: true },
-            url: \`\${GOVCHAIN}/dashboard\`,
+            url: `${GOVCHAIN}/dashboard`,
             style: 'primary',
           },
           {
             type: 'button',
             text: { type: 'plain_text', text: '📋 All Proposals', emoji: true },
-            url: \`\${GOVCHAIN}/proposals\`,
+            url: `${GOVCHAIN}/proposals`,
           },
         ],
       },
@@ -71,12 +71,12 @@ async function sendSlackDigest() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: \`Bearer \${process.env.SLACK_BOT_TOKEN}\`,
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
       },
       body: JSON.stringify(payload),
     });
     const json = await res.json();
-    if (!json.ok) throw new Error(\`Slack error: \${json.error}\`);
+    if (!json.ok) throw new Error(`Slack error: ${json.error}`);
     console.log('✅ Slack digest sent');
   } else {
     console.log('[DRY RUN] Slack digest payload:', JSON.stringify(payload, null, 2));
