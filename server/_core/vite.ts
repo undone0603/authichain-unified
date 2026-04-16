@@ -5,6 +5,8 @@ import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
+import { resolveBrand } from "../../shared/brands";
+import { brandInjectionScript } from "./brand-middleware";
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -38,6 +40,15 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
+      // Inject brand-detection snippet before the main script so
+      // window.__BRAND__ is set before React mounts.
+      const brand = resolveBrand(
+        (req.headers["x-forwarded-host"] as string | undefined) ?? req.headers.host
+      );
+      template = template.replace(
+        '<div id="root"></div>',
+        `<div id="root"></div>\n    ${brandInjectionScript(brand)}`
+      );
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
@@ -60,8 +71,26 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // Cache the index.html template once; inject brand per-request.
+  let cachedTemplate: string | null = null;
+  const indexPath = path.resolve(distPath, "index.html");
+
+  app.use("*", (req, res) => {
+    try {
+      if (cachedTemplate === null) {
+        cachedTemplate = fs.readFileSync(indexPath, "utf-8");
+      }
+      const brand = resolveBrand(
+        (req.headers["x-forwarded-host"] as string | undefined) ?? req.headers.host
+      );
+      const html = cachedTemplate.replace(
+        '<div id="root"></div>',
+        `<div id="root"></div>\n    ${brandInjectionScript(brand)}`
+      );
+      res.status(200).set({ "Content-Type": "text/html" }).end(html);
+    } catch {
+      // Fallback: if injection fails for any reason, just serve the file
+      res.sendFile(indexPath);
+    }
   });
 }
