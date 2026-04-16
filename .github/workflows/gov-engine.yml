@@ -1,8 +1,70 @@
+name: Government Lead-Gen Engine
+
 on:
-      push:
-        branches: [ main ]
-      workflow_dispatch:
-      schedule:
-        - cron: '0 */6 * * *'
-    
-    
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+
+jobs:
+  run-engine:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Ingest SAM.gov Opportunities
+        run: |
+          pnpm exec tsx --esm -e "
+          import { vectorStoreUtils } from './packages/vector-store/index.ts';
+          async function main() {
+            try {
+              await vectorStoreUtils.ingestSAMOpportunities();
+              console.log('Ingestion complete');
+            } catch (e) {
+              console.error(e);
+              process.exit(1);
+            }
+          }
+          main();
+          "
+
+      - name: Run Lead-Gen Engine
+        run: |
+          pnpm exec tsx --esm -e "
+          import { engine } from './packages/engine/index.ts';
+          async function main() {
+            try {
+              await engine.run();
+              console.log('Engine run complete');
+            } catch (e) {
+              console.error(e);
+              process.exit(1);
+            }
+          }
+          main();
+          "
