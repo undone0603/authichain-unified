@@ -123,18 +123,15 @@
       "utf-8-validate",
       "keccak"
     ],
-    "patchedDependencies": {
-      "wouter@3.7.1": "patches/wouter@3.7.1.patch"
-    },
     "overrides": {
       "tailwindcss>nanoid": "3.3.7",
       "fast-xml-parser": ">=5.3.8",
       "socket.io-parser": ">=3.3.5",
       "h3": ">=2.0.1-rc.15",
       "undici": ">=6.24.0",
-      "hono": ">=4.12.7",
+      "hono": ">=4.12.14",
       "tar": ">=7.5.11",
-      "dompurify": ">=3.3.2",
+      "dompurify": ">=3.3.4",
       "rollup": ">=4.22.4",
       "axios": ">=1.13.5",
       "qs": ">=6.14.2",
