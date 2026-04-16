@@ -192,6 +192,72 @@ export async function logActivity(action: string, details?: string) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// STRIPE WEBHOOK STUBS (server/webhooks/stripe.ts)
+// ─────────────────────────────────────────────────────────────
+// These exports exist to satisfy the stripe webhook handler's bundle-time
+// imports. Real implementations belong on a billing table set that this
+// repo doesn't yet ship (stripe_webhook_events, revenue_records detail
+// columns, automation_audit). Until that lands, these log a warning and
+// no-op so wrangler can bundle the worker and the webhook path degrades
+// gracefully if Stripe ever posts to it.
+
+export async function hasWebhookEventProcessed(eventId: string): Promise<boolean> {
+  console.warn(`[stripe-stub] hasWebhookEventProcessed(${eventId}) — returning false (not tracked)`);
+  return false;
+}
+
+export async function upsertStripeSubscription(data: {
+  userId: number;
+  plan: string;
+  status: string;
+  monthlyQuota?: number;
+  billingCycle?: string;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string;
+  currentPeriodStart?: Date;
+  currentPeriodEnd?: Date;
+  trialEndsAt?: Date | null;
+}): Promise<void> {
+  console.warn(`[stripe-stub] upsertStripeSubscription user=${data.userId} plan=${data.plan} status=${data.status} — not persisted`);
+}
+
+export async function setSubscriptionStatusByStripeId(
+  stripeSubscriptionId: string,
+  status: string,
+  endedAt?: Date,
+): Promise<void> {
+  console.warn(`[stripe-stub] setSubscriptionStatusByStripeId(${stripeSubscriptionId}, ${status}${endedAt ? `, ended=${endedAt.toISOString()}` : ""}) — not persisted`);
+}
+
+export async function getSubscriptionByStripeSubscriptionId(
+  stripeSubscriptionId: string,
+): Promise<{ userId: number } | null> {
+  console.warn(`[stripe-stub] getSubscriptionByStripeSubscriptionId(${stripeSubscriptionId}) — returning null`);
+  return null;
+}
+
+export async function recordRevenue(data: {
+  source: string;
+  amount: string;
+  currency: string;
+  type: string;
+  userId: number | null;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  console.warn(`[stripe-stub] recordRevenue source=${data.source} amount=${data.amount} ${data.currency} — not persisted`);
+}
+
+export async function logAutomationAudit(
+  action: string,
+  details: Record<string, unknown>,
+  userId?: number,
+  entityType?: string,
+  entityId?: string,
+): Promise<void> {
+  console.warn(`[stripe-stub] logAutomationAudit action=${action}${userId ? ` user=${userId}` : ""}${entityType ? ` ${entityType}/${entityId ?? "?"}` : ""} — not persisted`);
+}
+
+// ─────────────────────────────────────────────────────────────
 // TASK QUEUE (used by agents, missions)
 // ─────────────────────────────────────────────────────────────
 
