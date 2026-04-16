@@ -17,22 +17,31 @@ const openai   = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const GOVCHAIN_URL = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
 // ── Fetch opportunities from SAM.gov API ──────────────────────────────────────
+// SAM.gov v2 requires MM/dd/yyyy format and BOTH postedFrom + postedTo.
+function samDate(d: Date): string {
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const yyyy = d.getUTCFullYear();
+  return `${mm}/${dd}/${yyyy}`;
+}
+
 async function fetchSAMOpportunities(): Promise<any[]> {
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0];
+  const now = new Date();
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const params = new URLSearchParams({
     api_key:    process.env.SAM_GOV_API_KEY!,
     limit:      '100',
-    postedFrom: sevenDaysAgo,
+    postedFrom: samDate(weekAgo),
+    postedTo:   samDate(now),
     ptype:      'o',
-    keyword:    'blockchain authentication provenance verification supply chain',
+    q:          'blockchain authentication provenance verification supply chain',
   });
 
   const res = await fetch(`https://api.sam.gov/opportunities/v2/search?${params}`);
   if (!res.ok) {
-    throw new Error(`SAM.gov API error: ${res.status} ${res.statusText}`);
+    const body = await res.text().catch(() => '');
+    throw new Error(`SAM.gov API error: ${res.status} ${res.statusText} — ${body.slice(0, 400)}`);
   }
 
   const data = await res.json();
