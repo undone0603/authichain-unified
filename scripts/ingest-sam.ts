@@ -52,6 +52,14 @@ async function fetchSAMOpportunities(): Promise<any[]> {
   const res = await fetch(`https://api.sam.gov/opportunities/v2/search?${params}`);
   if (!res.ok) {
     const body = await res.text().catch(() => '');
+    // SAM.gov enforces a low daily quota (~1k req/day on free keys). When
+    // exhausted it returns 429 with code 900804. Don't kill the workflow
+    // on quota — return 0 new opps so downstream jobs (score/propose) can
+    // still run against existing data in gov_opportunities.
+    if (res.status === 429) {
+      console.warn(`⚠️  SAM.gov quota exhausted (429) — skipping ingest. Body: ${body.slice(0, 200)}`);
+      return [];
+    }
     throw new Error(`SAM.gov API error: ${res.status} ${res.statusText} — ${body.slice(0, 400)}`);
   }
 
