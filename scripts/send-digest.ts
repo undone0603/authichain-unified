@@ -5,6 +5,14 @@ const isDryRun = process.env.DRY_RUN === 'true';
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
 const GOVCHAIN = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
+// Skip gracefully if Slack isn't configured. Digest is a nice-to-have —
+// failing this step marks the whole pipeline red even when ingest/score/
+// propose all succeeded, so missing Slack creds degrade to a warning.
+if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_CHANNEL_ID) {
+  console.warn('⚠️  Slack not configured (SLACK_BOT_TOKEN / SLACK_CHANNEL_ID missing) — skipping digest.');
+  process.exit(0);
+}
+
 async function sendSlackDigest() {
   const { data: topOpps } = await supabase
     .from('gov_proposals')
