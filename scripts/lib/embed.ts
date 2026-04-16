@@ -14,6 +14,7 @@ import { createHash } from 'node:crypto';
 const TARGET_DIM = Number(process.env.EMBED_TARGET_DIM ?? 1536);
 
 let warnedHashFallback = false;
+let warnedSkippedProviders = false;
 
 type Provider = {
   name: string;
@@ -79,8 +80,10 @@ const providers: Provider[] = [
     enabled: () => !!(process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN),
     run: async (text) => {
       const key = process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN;
+      // Current HF Inference path (router-based). Old api-inference.huggingface.co/pipeline/*
+      // paths return 404 as of late 2025.
       const res = await fetch(
-        'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-mpnet-base-v2',
+        'https://router.huggingface.co/hf-inference/models/sentence-transformers/all-mpnet-base-v2/pipeline/feature-extraction',
         {
           method: 'POST',
           headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -89,7 +92,6 @@ const providers: Provider[] = [
       );
       if (!res.ok) throw new Error(`HF ${res.status} ${(await res.text()).slice(0, 200)}`);
       const out = (await res.json()) as any;
-      // pipeline/feature-extraction returns 1D (sentence) or 2D (token-level). Pick first row.
       return Array.isArray(out[0]) ? out[0] : out;
     },
   },
@@ -225,6 +227,12 @@ export async function embed(
         const vec = await p.run(text);
         if (!Array.isArray(vec) || vec.length === 0) {
           throw new Error('empty vector');
+        }
+        if (errors.length > 0 && !warnedSkippedProviders) {
+          console.warn(
+            `ℹ️  embed() fell through failed providers before landing on ${p.name}:\n   - ${errors.join('\n   - ')}`
+          );
+          warnedSkippedProviders = true;
         }
         return { vector: normalizeDim(vec), provider: p.name };
       } catch (err: any) {
