@@ -9,7 +9,7 @@
 //   2. Groq llama-3.3-70b-versatile — FREE, ~100k tokens/day, fastest inference
 //   3. Groq llama-3.1-8b-instant    — FREE, ~500k tokens/day (separate bucket),
 //                                     fallback when 70B's daily limit is hit
-//   4. Gemini 1.5 Flash             — free tier
+//   4. Gemini Flash (latest)        — free tier
 //   5. Mistral open-mixtral-8x7b    — free tier
 //
 // Enable a provider by setting its env var. Missing keys are silently skipped.
@@ -86,7 +86,7 @@ const providers: Provider[] = [
   makeGroqProvider('llama-3.3-70b-versatile'),
   makeGroqProvider('llama-3.1-8b-instant'),
   {
-    name: 'google:gemini-1.5-flash',
+    name: 'google:gemini-flash-latest',
     enabled: () => !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
     run: async ({ messages, jsonMode, temperature, maxTokens }) => {
       const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
@@ -112,7 +112,7 @@ const providers: Provider[] = [
       }
 
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${key}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
