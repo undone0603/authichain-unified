@@ -1,3 +1,4 @@
+import{createRequire as _cr}from'module';const require=_cr(import.meta.url);
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
