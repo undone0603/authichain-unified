@@ -9204,8 +9204,8 @@ function createApp() {
   return app;
 }
 
-// api/server.ts
-var server_default = createApp();
+// server/vercel-entry.ts
+var vercel_entry_default = createApp();
 export {
-  server_default as default
+  vercel_entry_default as default
 };

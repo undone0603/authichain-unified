@@ -4,6 +4,6 @@
  * The Express app handles tRPC, OAuth, and Stripe webhooks.
  * Scheduled jobs run via Vercel Cron (see vercel.json crons section).
  */
-import { createApp } from "../server/_core/app";
+import { createApp } from "./_core/app";
 
 export default createApp();
