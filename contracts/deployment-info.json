@@ -1,0 +1,42 @@
+{
+  "network": "polygon",
+  "chain_id": 137,
+  "contracts": {
+    "AuthiChainNFT": {
+      "address": "0x4da4D2675e52374639C9c954f4f653887A9972BE",
+      "name": "AuthiChainProduct",
+      "symbol": "ACPT",
+      "standard": "ERC721",
+      "deployer": "0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d",
+      "deploy_tx": "0xc13c04dab7342b81e6e65af399bf4ff6d5093e392029d4e5df37e97c418747e3",
+      "deploy_block": 77535676,
+      "deploy_timestamp": 1760175988,
+      "compiler": "0.8.19",
+      "ipfs_cid": "QmbHvtSAhQHRXSFqD6sDyN32y8yoY3akn9QT2WXMoVNoe8",
+      "roles": {
+        "DEFAULT_ADMIN_ROLE": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "MINTER_ROLE": "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
+        "UPDATER_ROLE": "0x73e573f9566d61418a34d5de3ff49360f9c51fec37f7486551670290f6285dab",
+        "PAUSER_ROLE": "0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a"
+      }
+    },
+    "QRON": {
+      "address": "0xAebfA6b08fb25b59748c93273aB8880e20FfE437",
+      "name": "QRON",
+      "symbol": "$QRON",
+      "standard": "ERC20",
+      "decimals": 18,
+      "total_supply": "1000000000000000000000000000",
+      "owner": "0xc0d26735fd9e868eacc60400ef3171fa4161177f",
+      "tax_address": "0xc0d26735fd9e868eacc60400ef3171fa4161177f",
+      "deployer_wallet": "0x8df0057ffb210444b927511b2d416ad7854fb81e",
+      "factory": "0x46be54bbe239de5a6280c715017c10fc0a323353",
+      "factory_provider": "Smithii ERC20TokenFactory",
+      "deploy_tx": "0x900e18687b41d325108792da4a46318cae09a3a8bd93aa87bc69de4eb323f213",
+      "deploy_block": 81887002,
+      "deploy_timestamp": 1768893976,
+      "anti_bot": "0x291cd878f871a6a49dc360e3c1777bcc5458019d",
+      "anti_whale": "0x54afc8ff7877847cc89c5bfce05fa52828c740e9"
+    }
+  }
+}
