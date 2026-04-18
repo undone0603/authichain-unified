@@ -4,7 +4,7 @@
   "outputDirectory": "dist/public",
   "framework": null,
   "functions": {
-    "api/server.ts": {
+    "api/server.js": {
       "memory": 1024,
       "maxDuration": 30
     }

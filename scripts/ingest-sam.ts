@@ -11,7 +11,19 @@ const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY!
 );
-const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+
+// Pinecone is optional — Supabase is the source of truth for downstream
+// scoring/proposal jobs. A missing or misconfigured Pinecone index should
+// degrade gracefully rather than kill the whole pipeline.
+const pineconeIndex: ReturnType<Pinecone['index']> | null = (() => {
+  const { PINECONE_API_KEY, PINECONE_INDEX } = process.env;
+  if (!PINECONE_API_KEY || !PINECONE_INDEX) {
+    console.warn('⚠️  Pinecone not configured (PINECONE_API_KEY / PINECONE_INDEX missing) — vector writes will be skipped.');
+    return null;
+  }
+  return new Pinecone({ apiKey: PINECONE_API_KEY }).index(PINECONE_INDEX);
+})();
+let pineconeDisabled = pineconeIndex === null;
 
 const GOVCHAIN_URL = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
@@ -40,6 +52,14 @@ async function fetchSAMOpportunities(): Promise<any[]> {
   const res = await fetch(`https://api.sam.gov/opportunities/v2/search?${params}`);
   if (!res.ok) {
     const body = await res.text().catch(() => '');
+    // SAM.gov enforces a low daily quota (~1k req/day on free keys). When
+    // exhausted it returns 429 with code 900804. Don't kill the workflow
+    // on quota — return 0 new opps so downstream jobs (score/propose) can
+    // still run against existing data in gov_opportunities.
+    if (res.status === 429) {
+      console.warn(`⚠️  SAM.gov quota exhausted (429) — skipping ingest. Body: ${body.slice(0, 200)}`);
+      return [];
+    }
     throw new Error(`SAM.gov API error: ${res.status} ${res.statusText} — ${body.slice(0, 400)}`);
   }
 
@@ -49,7 +69,6 @@ async function fetchSAMOpportunities(): Promise<any[]> {
 
 // ── Embed text and store in Pinecone + Supabase ───────────────────────────────
 async function embedAndStore(opportunities: any[]): Promise<number> {
-  const index = pinecone.index(process.env.PINECONE_INDEX!);
   let count = 0;
   const providerHits: Record<string, number> = {};
 
@@ -62,20 +81,33 @@ async function embedAndStore(opportunities: any[]): Promise<number> {
     providerHits[provider] = (providerHits[provider] ?? 0) + 1;
 
     if (!isDryRun) {
-      await index.upsert([
-        {
-          id: opp.noticeId,
-          values: vector,
-          metadata: {
-            title:        opp.title,
-            agency:       opp.fullParentPathName ?? '',
-            deadline:     opp.responseDeadLine ?? '',
-            naics:        opp.naicsCode ?? '',
-            sam_url:      `https://sam.gov/opp/${opp.noticeId}/view`,
-            govchain_url: `${GOVCHAIN_URL}/opportunities/${opp.noticeId}`,
-          },
-        },
-      ]);
+      if (pineconeIndex && !pineconeDisabled) {
+        try {
+          await pineconeIndex.upsert([
+            {
+              id: opp.noticeId,
+              values: vector,
+              metadata: {
+                title:        opp.title,
+                agency:       opp.fullParentPathName ?? '',
+                deadline:     opp.responseDeadLine ?? '',
+                naics:        opp.naicsCode ?? '',
+                sam_url:      `https://sam.gov/opp/${opp.noticeId}/view`,
+                govchain_url: `${GOVCHAIN_URL}/opportunities/${opp.noticeId}`,
+              },
+            },
+          ]);
+        } catch (err: any) {
+          const msg = err?.message || String(err);
+          // 404 = index doesn't exist; disable for rest of run rather than flooding logs
+          if (/404|not\s*found/i.test(msg)) {
+            console.warn(`⚠️  Pinecone index not found (${process.env.PINECONE_INDEX}) — disabling vector writes for this run.`);
+            pineconeDisabled = true;
+          } else {
+            console.warn(`⚠️  Pinecone upsert failed for ${opp.noticeId}: ${msg.slice(0, 160)}`);
+          }
+        }
+      }
 
       await supabase.from('gov_opportunities').upsert({
         notice_id:    opp.noticeId,

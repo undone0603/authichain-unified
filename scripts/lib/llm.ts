@@ -5,12 +5,16 @@
 // `jsonMode: true` is requested.
 //
 // Provider order is cost-optimized for the gov-engine pipeline:
-//   1. OpenAI     — best quality, paid
-//   2. Groq       — llama-3.3-70b, FREE 14.4k req/day, fastest inference
-//   3. Gemini     — gemini-1.5-flash, free tier
-//   4. Mistral    — open-mixtral-8x7b, free tier
+//   1. OpenAI                       — best quality, paid
+//   2. Groq llama-3.3-70b-versatile — FREE, ~100k tokens/day, fastest inference
+//   3. Groq llama-3.1-8b-instant    — FREE, ~500k tokens/day (separate bucket),
+//                                     fallback when 70B's daily limit is hit
+//   4. Gemini Flash (latest)        — free tier
+//   5. Mistral open-mixtral-8x7b    — free tier
 //
 // Enable a provider by setting its env var. Missing keys are silently skipped.
+// Groq 70B and 8B both use GROQ_API_KEY but consume separate rate-limit pools,
+// so keeping both in the cascade meaningfully improves resilience.
 
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
@@ -30,7 +34,37 @@ type Provider = {
   run: (options: ChatOptions) => Promise<string>;
 };
 
+const MAX_ATTEMPTS_PER_PROVIDER = 3;
+// Exponential backoff (ms) with jitter added on top.
+const BACKOFF_SCHEDULE_MS = [2000, 5000, 10000];
+
 let warnedSkippedProviders = false;
+
+function makeGroqProvider(model: string): Provider {
+  return {
+    name: `groq:${model}`,
+    enabled: () => !!process.env.GROQ_API_KEY,
+    run: async ({ messages, jsonMode, temperature, maxTokens }) => {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: temperature ?? 0.2,
+          max_tokens: maxTokens,
+          response_format: jsonMode ? { type: 'json_object' } : undefined,
+        }),
+      });
+      if (!res.ok) throw new Error(`Groq ${res.status} ${(await res.text()).slice(0, 200)}`);
+      const json = (await res.json()) as any;
+      return json.choices?.[0]?.message?.content ?? '';
+    },
+  };
+}
 
 const providers: Provider[] = [
   {
@@ -49,31 +83,10 @@ const providers: Provider[] = [
       return res.choices[0]?.message?.content ?? '';
     },
   },
+  makeGroqProvider('llama-3.3-70b-versatile'),
+  makeGroqProvider('llama-3.1-8b-instant'),
   {
-    name: 'groq:llama-3.3-70b-versatile',
-    enabled: () => !!process.env.GROQ_API_KEY,
-    run: async ({ messages, jsonMode, temperature, maxTokens }) => {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages,
-          temperature: temperature ?? 0.2,
-          max_tokens: maxTokens,
-          response_format: jsonMode ? { type: 'json_object' } : undefined,
-        }),
-      });
-      if (!res.ok) throw new Error(`Groq ${res.status} ${(await res.text()).slice(0, 200)}`);
-      const json = (await res.json()) as any;
-      return json.choices?.[0]?.message?.content ?? '';
-    },
-  },
-  {
-    name: 'google:gemini-1.5-flash',
+    name: 'google:gemini-flash-latest',
     enabled: () => !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
     run: async ({ messages, jsonMode, temperature, maxTokens }) => {
       const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
@@ -99,7 +112,7 @@ const providers: Provider[] = [
       }
 
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${key}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -148,7 +161,7 @@ export async function chat(
 
   const errors: string[] = [];
   for (const p of enabled) {
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < MAX_ATTEMPTS_PER_PROVIDER; attempt++) {
       try {
         const content = await p.run(options);
         if (!content || typeof content !== 'string') {
@@ -165,8 +178,11 @@ export async function chat(
         const msg = err?.message || String(err);
         const transient = /429|rate.?limit|quota|5\d{2}|timeout|ETIMEDOUT|ECONNRESET/i.test(msg);
         errors.push(`${p.name} (try ${attempt + 1}): ${msg.slice(0, 160)}`);
-        if (transient && attempt === 0) {
-          await new Promise((r) => setTimeout(r, 400 + Math.random() * 600));
+        // Only retry on transient errors, and only if we have attempts left.
+        if (transient && attempt < MAX_ATTEMPTS_PER_PROVIDER - 1) {
+          const base = BACKOFF_SCHEDULE_MS[attempt] ?? 10000;
+          const jitter = Math.random() * 500;
+          await new Promise((r) => setTimeout(r, base + jitter));
           continue;
         }
         break;
