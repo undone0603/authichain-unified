@@ -7,29 +7,56 @@ import {
   timestamp,
   json,
   decimal,
+  index,
 } from "drizzle-orm/mysql-core";
+import { relations } from "drizzle-orm";
 
-export const missions = mysqlTable("missions", {
-  id: varchar("id", { length: 36 }).primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description").notNull(),
-  status: mysqlEnum("status", ["pending", "active", "completed", "failed"]).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").onUpdateNow(),
-});
+export const missions = mysqlTable(
+  "missions",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description").notNull(),
+    status: mysqlEnum("status", ["pending", "active", "completed", "failed"]).notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").onUpdateNow(),
+  },
+  (table) => [
+    index("missions_status_idx").on(table.status),
+    index("missions_created_idx").on(table.createdAt),
+  ]
+);
 
-export const missionTasks = mysqlTable("mission_tasks", {
-  id: varchar("id", { length: 36 }).primaryKey(),
-  missionId: varchar("mission_id", { length: 36 })
-    .notNull()
-    .references(() => missions.id),
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description").notNull(),
-  status: mysqlEnum("status", ["pending", "in_progress", "completed", "failed"]).notNull(),
-  order: int("order").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").onUpdateNow(),
-});
+export const missionTasks = mysqlTable(
+  "mission_tasks",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    missionId: varchar("mission_id", { length: 36 })
+      .notNull()
+      .references(() => missions.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description").notNull(),
+    status: mysqlEnum("status", ["pending", "in_progress", "completed", "failed"]).notNull(),
+    order: int("order").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").onUpdateNow(),
+  },
+  (table) => [
+    index("tasks_mission_idx").on(table.missionId),
+    index("tasks_mission_order_idx").on(table.missionId, table.order),
+  ]
+);
+
+export const missionsRelations = relations(missions, ({ many }) => ({
+  tasks: many(missionTasks),
+}));
+
+export const missionTasksRelations = relations(missionTasks, ({ one }) => ({
+  mission: one(missions, {
+    fields: [missionTasks.missionId],
+    references: [missions.id],
+  }),
+}));
 // ─── Products ────────────────────────────────────────────────────────────────
 export const products = mysqlTable("products", {
   id: int("id").autoincrement().primaryKey(),
