@@ -310,8 +310,8 @@ importers:
         specifier: ^4.70.0
         version: 4.104.0(ws@8.19.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(zod@4.1.12)
       pnpm:
-        specifier: '>=10.28.2'
-        version: 10.32.1
+        specifier: '>=10.33.0'
+        version: 10.33.0
       postcss:
         specifier: ^8.5.10
         version: 8.5.10
@@ -6176,8 +6176,8 @@ packages:
     resolution: {integrity: sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw==}
     engines: {node: '>=10.13.0'}
 
-  pnpm@10.32.1:
-    resolution: {integrity: sha512-pwaTjw6JrBRWtlY+q07fHR+vM2jRGR/FxZeQ6W3JGORFarLmfWE94QQ9LoyB+HMD5rQNT/7KnfFe8a1Wc0jyvg==}
+  pnpm@10.33.0:
+    resolution: {integrity: sha512-EFaLtKavtYyes2MNqQzJUWQXq+vT+rvmc58K55VyjaFJHp21pUTHatjrdXD1xLs9bGN7LLQb/c20f6gjyGSTGQ==}
     engines: {node: '>=18.12'}
     hasBin: true
 
@@ -15464,7 +15464,7 @@ snapshots:
 
   pngjs@5.0.0: {}
 
-  pnpm@10.32.1: {}
+  pnpm@10.33.0: {}
 
   points-on-curve@0.2.0: {}
 
