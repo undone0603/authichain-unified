@@ -2,6 +2,8 @@ name: Deploy to Cloudflare
 
 # Deploys the Workers app defined by `wrangler.toml`:
 #   - `main = "worker/index.ts"` is bundled by wrangler.
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 #   - `[assets] directory = "dist/public"` serves the static frontend,
 #     which vite builds into that exact path.
 #
@@ -42,7 +44,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install-ll --frozen-lockfile
 
       - name: Build frontend (→ dist/public for wrangler [assets])
         run: pnpm exec vite build
