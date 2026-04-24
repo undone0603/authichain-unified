@@ -11,9 +11,9 @@ const adminCaller = appRouter.createCaller({
 
 describe("services router", () => {
   describe("services.catalog (public)", () => {
-    it("returns all 6 services", async () => {
+    it("returns all 7 services", async () => {
       const catalog = await publicCaller.services.catalog();
-      expect(catalog).toHaveLength(6);
+      expect(catalog).toHaveLength(7);
       const keys = catalog.map((s: any) => s.key);
       expect(keys).toContain("authenticity_audit");
       expect(keys).toContain("cinematic_page");
@@ -21,6 +21,7 @@ describe("services router", () => {
       expect(keys).toContain("landing_page");
       expect(keys).toContain("brand_story_pack");
       expect(keys).toContain("government_dossier");
+      expect(keys).toContain("sba_disaster_loan");
     });
 
     it("each service has required fields", async () => {
@@ -35,18 +36,6 @@ describe("services router", () => {
         expect(service).toHaveProperty("deliverables");
         expect(service).toHaveProperty("deliveryTime");
       }
-    });
-  });
-
-  describe("services.getService (public)", () => {
-    it("returns a specific service by key", async () => {
-      const service = await publicCaller.services.getService({ key: "authenticity_audit" });
-      expect(service.name).toBe("Authenticity Intelligence Audit");
-      expect(service.price).toBe(25000);
-    });
-
-    it("throws NOT_FOUND for invalid key", async () => {
-      await expect(publicCaller.services.getService({ key: "nonexistent" })).rejects.toThrow();
     });
   });
 

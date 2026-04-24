@@ -32,12 +32,12 @@ export default function CharacterCreate() {
   const [agentName, setAgentName] = useState("");
 
   const generateMutation = trpc.character.generate.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setGenerationId(data.generationId);
       setStep("generating");
       toast.success("Character generation started!");
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: any) => toast.error(err.message),
   });
 
   const generationStatus = trpc.character.generationStatus.useQuery(
@@ -50,7 +50,7 @@ export default function CharacterCreate() {
       setStep("name");
       toast.success("Character selected! Now name your agent.");
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: any) => toast.error(err.message),
   });
 
   const createAgentMutation = trpc.character.createAgent.useMutation({
@@ -58,7 +58,7 @@ export default function CharacterCreate() {
       setStep("complete");
       toast.success("Protocol agent created!");
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: any) => toast.error(err.message),
   });
 
   // Auto-advance when generation completes
@@ -72,23 +72,25 @@ export default function CharacterCreate() {
     if (!selectedArchetype) return;
     generateMutation.mutate({
       archetype: selectedArchetype.key,
-      brand: brand || undefined,
-      object: object || undefined,
-      colorway: colorway || undefined,
-      mood: mood || undefined,
+      context: {
+        brand: brand || undefined,
+        object: object || undefined,
+        colorway: colorway || undefined,
+        mood: mood || undefined,
+      },
     });
   };
 
   const handleSelect = () => {
     if (!selectedAssetId) return;
-    selectMutation.mutate({ assetId: selectedAssetId });
+    selectMutation.mutate({ characterAssetId: selectedAssetId });
   };
 
   const handleCreateAgent = () => {
     if (!selectedAssetId || !agentName || !selectedArchetype) return;
     createAgentMutation.mutate({
       characterAssetId: selectedAssetId,
-      name: agentName,
+      agentName: agentName,
       agentType: selectedArchetype.key,
     });
   };
@@ -148,104 +150,70 @@ export default function CharacterCreate() {
                   >
                     <CardContent className="p-6">
                       <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${arch.color} flex items-center justify-center mb-4`}>
-                        <Icon className="w-7 h-7 text-white" />
+                        <Icon className="w-8 h-8 text-white" />
                       </div>
-                      <h3 className="text-lg font-bold text-white">{arch.name}</h3>
-                      <p className="text-sm text-gray-400 mt-1">{arch.description}</p>
-                      <div className="flex gap-1.5 mt-3">
+                      <h3 className="text-lg font-bold text-white mb-1">{arch.name}</h3>
+                      <p className="text-xs text-gray-400 leading-relaxed mb-4">{arch.description}</p>
+                      <div className="flex flex-wrap gap-1">
                         {arch.abilities.map((a) => (
-                          <Badge key={a} variant="outline" className="text-xs border-gray-700 text-gray-300">{a}</Badge>
+                          <Badge key={a} variant="secondary" className="text-[10px] py-0 bg-gray-800 text-gray-300 border-none">
+                            {a}
+                          </Badge>
                         ))}
                       </div>
-                      {isSelected && (
-                        <div className="mt-3 flex items-center gap-1 text-blue-400 text-sm">
-                          <Check className="w-4 h-4" /> Selected
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 );
               })}
             </div>
-            <div className="flex justify-center">
+            <div className="flex justify-center pt-4">
               <Button
                 size="lg"
                 disabled={!selectedArchetype}
                 onClick={() => setStep("context")}
                 className="bg-blue-600 hover:bg-blue-700 px-8"
               >
-                Continue <ChevronRight className="w-4 h-4 ml-1" />
+                Continue to Context <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           </div>
         )}
 
-        {/* Step 2: Context */}
-        {step === "context" && selectedArchetype && (
-          <div className="max-w-lg mx-auto space-y-6">
+        {/* Step 2: Generation Context */}
+        {step === "context" && (
+          <div className="max-w-2xl mx-auto space-y-6">
             <Card className="bg-gray-900/50 border-gray-800">
               <CardHeader>
-                <CardTitle className="text-white">Customize Your {selectedArchetype.name}</CardTitle>
-                <CardDescription>Optional context to personalize your character's appearance</CardDescription>
+                <CardTitle className="text-white">Define Visual Context</CardTitle>
+                <CardDescription>Tell the AI how your {selectedArchetype?.name} should look</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-gray-300">Brand Name (optional)</Label>
-                  <Input
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    placeholder="e.g., LVMH, Pfizer, Nike"
-                    className="bg-gray-800 border-gray-700 text-white"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">The brand your agent will protect</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-gray-300">Brand Influence</Label>
+                    <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g., Apple, Nike, Rolex" className="bg-gray-800 border-gray-700 text-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-300">Core Object</Label>
+                    <Input value={object} onChange={(e) => setObject(e.target.value)} placeholder="e.g., Drone, Sword, Tablet" className="bg-gray-800 border-gray-700 text-white" />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-gray-300">Product Type (optional)</Label>
-                  <Input
-                    value={object}
-                    onChange={(e) => setObject(e.target.value)}
-                    placeholder="e.g., luxury handbag, pharmaceutical, sneaker"
-                    className="bg-gray-800 border-gray-700 text-white"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">The type of product being authenticated</p>
-                </div>
-                <div>
-                  <Label className="text-gray-300">Color Direction (optional)</Label>
-                  <Input
-                    value={colorway}
-                    onChange={(e) => setColorway(e.target.value)}
-                    placeholder="e.g., midnight blue and gold, crimson and silver"
-                    className="bg-gray-800 border-gray-700 text-white"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Custom color palette for your character</p>
-                </div>
-                <div>
-                  <Label className="text-gray-300">Mood (optional)</Label>
-                  <Input
-                    value={mood}
-                    onChange={(e) => setMood(e.target.value)}
-                    placeholder="e.g., fierce and commanding, calm and wise"
-                    className="bg-gray-800 border-gray-700 text-white"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">The personality and energy of your character</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-gray-300">Color Palette</Label>
+                    <Input value={colorway} onChange={(e) => setColorway(e.target.value)} placeholder="e.g., Obsidian & Neon Cyan" className="bg-gray-800 border-gray-700 text-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-300">Atmospheric Mood</Label>
+                    <Input value={mood} onChange={(e) => setMood(e.target.value)} placeholder="e.g., Cyberpunk, Ethereal, Brutalist" className="bg-gray-800 border-gray-700 text-white" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            <div className="flex gap-3 justify-center">
-              <Button variant="outline" onClick={() => setStep("archetype")} className="border-gray-700 text-gray-300">
-                Back
-              </Button>
-              <Button
-                size="lg"
-                onClick={handleGenerate}
-                disabled={generateMutation.isPending}
-                className="bg-gradient-to-r from-blue-600 to-yellow-600 hover:from-blue-700 hover:to-yellow-600 px-8"
-              >
-                {generateMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Starting...</>
-                ) : (
-                  <><Sparkles className="w-4 h-4 mr-2" /> Generate 4 Variants</>
-                )}
+            <div className="flex justify-between">
+              <Button variant="ghost" onClick={() => setStep("archetype")} className="text-gray-400">Back</Button>
+              <Button size="lg" onClick={handleGenerate} className="bg-blue-600 hover:bg-blue-700 px-8">
+                Generate Character <Sparkles className="w-4 h-4 ml-2" />
               </Button>
             </div>
           </div>
@@ -253,70 +221,51 @@ export default function CharacterCreate() {
 
         {/* Step 3: Generating */}
         {step === "generating" && (
-          <div className="text-center space-y-6">
-            <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-yellow-600 flex items-center justify-center animate-pulse">
-              <Sparkles className="w-12 h-12 text-white" />
+          <div className="text-center py-20 space-y-8">
+            <div className="relative w-32 h-32 mx-auto">
+              <div className="absolute inset-0 rounded-full border-4 border-blue-500/20" />
+              <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin" />
+              <div className="absolute inset-4 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <Sparkles className="w-8 h-8 text-blue-400 animate-pulse" />
+              </div>
             </div>
-            <h2 className="text-2xl font-bold">Generating Your {selectedArchetype?.name}</h2>
-            <p className="text-gray-400">
-              Creating 4 unique variants with AI scoring... This may take 30-60 seconds.
-            </p>
-            <div className="flex items-center justify-center gap-2 text-blue-400">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>
-                {generationStatus.data?.status === "generating" ? "Generating variants..." :
-                 generationStatus.data?.status === "completed" ? "Complete!" :
-                 generationStatus.data?.status === "failed" ? "Generation failed" :
-                 "Initializing..."}
-              </span>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold">Synthesizing Protocol Entity...</h2>
+              <p className="text-gray-400 max-w-sm mx-auto">
+                Our neural engines are crafting four high-fidelity variants of your {selectedArchetype?.name}. This usually takes 15-20 seconds.
+              </p>
             </div>
-            {generationStatus.data?.assets && generationStatus.data.assets.length > 0 && (
-              <p className="text-sm text-gray-500">{generationStatus.data.assets.length} / 4 variants ready</p>
-            )}
-            {generationStatus.data?.status === "failed" && (
-              <Button onClick={() => setStep("context")} variant="outline" className="border-gray-700 text-gray-300">
-                Try Again
-              </Button>
-            )}
           </div>
         )}
 
-        {/* Step 4: Select Variant */}
-        {step === "select" && generationStatus.data?.assets && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-center">Select Your Character</h2>
-            <p className="text-center text-gray-400">Each variant has been scored across 7 dimensions. Choose your favorite.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {generationStatus.data.assets.map((asset) => {
+        {/* Step 4: Selection */}
+        {step === "select" && generationStatus.data && (
+          <div className="space-y-8">
+            <h2 className="text-xl font-semibold text-center">Select Your Preferred Avatar</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {generationStatus.data.assets.map((asset: any) => {
                 const isSelected = selectedAssetId === asset.id;
                 return (
-                  <Card
+                  <Card 
                     key={asset.id}
-                    className={`cursor-pointer transition-all hover:scale-[1.01] bg-gray-900/50 border-2 ${
-                      isSelected ? "border-blue-500 shadow-lg shadow-blue-500/20" : "border-gray-800 hover:border-gray-700"
-                    }`}
+                    className={`overflow-hidden cursor-pointer transition-all ${
+                      isSelected ? "ring-4 ring-blue-500" : "hover:scale-[1.02] border-gray-800"
+                    } bg-gray-900`}
                     onClick={() => setSelectedAssetId(asset.id)}
                   >
-                    <CardContent className="p-4">
-                      <div className="aspect-square rounded-lg overflow-hidden bg-gray-800 mb-4">
-                        <img src={asset.imageUrl} alt="Character variant" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-white">
-                            Score: {asset.totalScore || "Scoring..."}
-                          </span>
-                          {asset.isRecommended === 1 && (
-                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
-                              <Star className="w-3 h-3 mr-1" /> Recommended
-                            </Badge>
-                          )}
+                    <div className="aspect-square relative">
+                      <img src={asset.imageUrl} alt="Variant" className="w-full h-full object-cover" />
+                      {asset.totalScore && (
+                        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold border border-white/10">
+                          SCORE: {asset.totalScore}
                         </div>
-                        <div className="grid grid-cols-2 gap-1 text-xs">
+                      )}
+                    </div>
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
                           {[
-                            { label: "Protocol Fit", value: asset.protocolFitScore ? parseFloat(asset.protocolFitScore) * 10 : asset.scoreIconity },
-                            { label: "Thumbnail", value: asset.thumbnailClarityScore ? parseFloat(asset.thumbnailClarityScore) * 10 : asset.scoreTrustClarity },
-                            { label: "Premium", value: asset.premiumFeelScore ? parseFloat(asset.premiumFeelScore) * 10 : asset.scorePremiumFeel },
+                            { label: "Protocol Fit", value: asset.protocolFitScore ? parseFloat(asset.protocolFitScore) * 10 : asset.scoreClarity },
                             { label: "Silhouette", value: asset.silhouetteScore ? parseFloat(asset.silhouetteScore) * 10 : asset.scoreSilhouette },
                             { label: "Trust", value: asset.trustSymbolismScore ? parseFloat(asset.trustSymbolismScore) * 10 : asset.scoreUiCompat },
                             { label: "Mint Ready", value: asset.mintReadinessScore ? parseFloat(asset.mintReadinessScore) * 10 : asset.scoreMintReady },

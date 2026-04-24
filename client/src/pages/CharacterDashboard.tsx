@@ -1,223 +1,182 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Loader2, Shield, Zap, Star, Trophy, TrendingUp, Coins, Sparkles, ArrowRight } from "lucide-react";
-
-function getLevelFromXP(xp: number) {
-  if (xp >= 10000) return { level: 5, title: "Legendary", next: Infinity, color: "text-amber-400" };
-  if (xp >= 5000) return { level: 4, title: "Master", next: 10000, color: "text-yellow-400" };
-  if (xp >= 2000) return { level: 3, title: "Expert", next: 5000, color: "text-blue-400" };
-  if (xp >= 500) return { level: 2, title: "Adept", next: 2000, color: "text-emerald-400" };
-  return { level: 1, title: "Novice", next: 500, color: "text-gray-400" };
-}
+import { 
+  Shield, 
+  UserPlus, 
+  Zap, 
+  Star, 
+  History, 
+  TrendingUp, 
+  Activity, 
+  ArrowUpRight,
+  Loader2,
+  Award
+} from "lucide-react";
+import { Link, useLocation } from "wouter";
 
 export default function CharacterDashboard() {
-  const agent = trpc.character.myAgent.useQuery();
-  const assets = trpc.character.myAssets.useQuery();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const myAgent = trpc.character.myAgent.useQuery();
   const rewards = trpc.character.agentRewards.useQuery(
-    { agentId: agent.data?.id ?? 0 },
-    { enabled: !!agent.data?.id }
+    { agentId: myAgent.data?.id || 0 },
+    { enabled: !!myAgent.data }
   );
 
-  if (agent.isLoading) {
+  if (myAgent.isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-yellow-500" />
       </div>
     );
   }
 
-  // No agent yet — redirect to create
-  if (!agent.data) {
+  // If no agent, show onboarding
+  if (!myAgent.data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white flex items-center justify-center">
-        <div className="text-center space-y-6 max-w-md">
-          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-yellow-600 flex items-center justify-center">
-            <Sparkles className="w-10 h-10 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold">No Agent Deployed</h2>
-          <p className="text-gray-400">Create your AuthiCharacter and deploy a protocol agent to start earning QRON rewards.</p>
-          <Button asChild className="bg-blue-600 hover:bg-blue-700">
-            <a href="/character/create">Create Your Agent <ArrowRight className="w-4 h-4 ml-1" /></a>
+      <div className="max-w-4xl mx-auto py-12 px-6">
+        <div className="text-center mb-12">
+          <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 mb-4 px-3 py-1 font-mono tracking-widest uppercase text-[10px]">
+            Workforce Inactive
+          </Badge>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter uppercase italic mb-6">Deploy Your <span className="text-yellow-500">Agent.</span></h1>
+          <p className="text-slate-400 text-lg font-light mb-8 max-w-xl mx-auto">
+            You don't have an active protocol agent yet. Deploy a specialized AI character to automate your authentications and earn $QRON rewards.
+          </p>
+          <Button asChild size="lg" className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold h-16 px-10 rounded-xl shadow-2xl shadow-yellow-500/20">
+            <Link href="/character/create">Start Generation Protocol</Link>
           </Button>
         </div>
       </div>
     );
   }
 
-  const agentData = agent.data;
-  const xp = agentData.xp || 100;
-  const levelInfo = getLevelFromXP(xp);
-  const xpProgress = levelInfo.next === Infinity ? 100 : ((xp - (levelInfo.next === 500 ? 0 : levelInfo.next === 2000 ? 500 : levelInfo.next === 5000 ? 2000 : 5000)) / (levelInfo.next - (levelInfo.next === 500 ? 0 : levelInfo.next === 2000 ? 500 : levelInfo.next === 5000 ? 2000 : 5000))) * 100;
-  const selectedAsset = assets.data?.find((a: any) => a.asset.id === agentData.characterAssetId);
-  const totalQRON = rewards.data?.reduce((sum: number, r: any) => sum + parseFloat(r.qronAmount || "0"), 0) || 0;
+  const agent = myAgent.data;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">
-      <div className="container max-w-6xl py-8">
-        {/* Agent Hero Card */}
-        <Card className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-gray-700 mb-8 overflow-hidden">
+    <div className="space-y-8 animate-in fade-in duration-700">
+      {/* Agent Identity Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pb-8 border-b border-white/5">
+        <div className="flex items-center gap-6">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-yellow-500/20 blur-2xl rounded-full group-hover:bg-yellow-500/40 transition-all duration-500" />
+            <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden border-2 border-yellow-500/50 shadow-2xl">
+               <img src={""} alt={agent.name} className="w-full h-full object-cover" />
+               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl md:text-5xl font-bold tracking-tighter uppercase italic">{agent.name}</h1>
+              <Badge className="bg-yellow-500 text-black font-bold border-none text-[10px] px-2 py-0">LEVEL {Math.floor((agent.xp || 0) / 1000) + 1}</Badge>
+            </div>
+            <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.3em] flex items-center gap-2">
+              <Shield className="w-3 h-3" /> {agent.agentType} Protocol Specialist
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+           <Card className="bg-white/5 border-white/5 px-6 py-3 rounded-2xl flex flex-col items-center justify-center">
+              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">REPUTATION</span>
+              <span className="text-xl font-bold text-blue-400">{agent.reputationScore ?? 0}</span>
+           </Card>
+           <Card className="bg-yellow-500/10 border-yellow-500/20 px-6 py-3 rounded-2xl flex flex-col items-center justify-center">
+              <span className="text-[10px] font-mono text-yellow-500 uppercase tracking-widest mb-1">$QRON EARNED</span>
+              <span className="text-xl font-bold text-yellow-500">12.45</span>
+           </Card>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-white/5 border-white/5 p-6 hover:border-yellow-500/30 transition-all duration-500 group">
+          <div className="flex justify-between items-start mb-4">
+             <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
+               <Zap className="w-5 h-5 text-yellow-500" />
+             </div>
+             <TrendingUp className="w-4 h-4 text-slate-600 group-hover:text-yellow-500 transition-colors" />
+          </div>
+          <div className="text-2xl font-bold mb-1">{agent.xp} XP</div>
+          <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Protocol Experience Points</div>
+          <div className="mt-4 w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+             <div className="bg-yellow-500 h-full" style={{ width: `${((agent.xp ?? 0) % 1000) / 10}%` }} />
+          </div>
+        </Card>
+
+        <Card className="bg-white/5 border-white/5 p-6 hover:border-blue-500/30 transition-all duration-500 group">
+          <div className="flex justify-between items-start mb-4">
+             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+               <Shield className="w-5 h-5 text-blue-500" />
+             </div>
+             <Activity className="w-4 h-4 text-slate-600 group-hover:text-blue-500 transition-colors" />
+          </div>
+          <div className="text-2xl font-bold mb-1">94%</div>
+          <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Consensus Accuracy</div>
+        </Card>
+
+        <Card className="bg-white/5 border-white/5 p-6 hover:border-purple-500/30 transition-all duration-500 group">
+          <div className="flex justify-between items-start mb-4">
+             <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/30">
+               <Award className="w-5 h-5 text-purple-500" />
+             </div>
+             <ArrowUpRight className="w-4 h-4 text-slate-600 group-hover:text-purple-500 transition-colors" />
+          </div>
+          <div className="text-2xl font-bold mb-1">112</div>
+          <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Verified Provenance Chains</div>
+        </Card>
+      </div>
+
+      {/* Activity & Rewards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card className="bg-white/5 border-white/5 overflow-hidden">
+          <CardHeader className="border-b border-white/5 bg-white/[0.02]">
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-lg font-bold italic uppercase tracking-tight">Recent Proof of Work</CardTitle>
+                <CardDescription className="text-xs font-mono">Real-time ledger entries from your agent</CardDescription>
+              </div>
+              <History className="w-4 h-4 text-slate-600" />
+            </div>
+          </CardHeader>
           <CardContent className="p-0">
-            <div className="flex flex-col md:flex-row">
-              {/* Character Image */}
-              <div className="w-full md:w-64 h-64 bg-gray-800 flex-shrink-0">
-                {selectedAsset?.asset?.imageUrl ? (
-                  <img src={selectedAsset.asset.imageUrl} alt="Agent" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Shield className="w-16 h-16 text-gray-600" />
-                  </div>
-                )}
-              </div>
-              {/* Agent Info */}
-              <div className="flex-1 p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold">{agentData.name}</h1>
-                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 capitalize">
-                    {agentData.agentType}
-                  </Badge>
-                  <Badge className={`${levelInfo.color} bg-gray-800 border-gray-700`}>
-                    Lv.{levelInfo.level} {levelInfo.title}
-                  </Badge>
-                </div>
-                <p className="text-gray-400 text-sm">
-                  Status: <span className={`font-semibold ${agentData.status === "active" ? "text-emerald-400" : "text-amber-400"}`}>
-                    {agentData.status?.toUpperCase() || "ACTIVE"}
-                  </span>
-                </p>
-
-                {/* XP Bar */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-gray-400">
-                    <span>XP: {xp.toLocaleString()}</span>
-                    {levelInfo.next !== Infinity && <span>Next: {levelInfo.next.toLocaleString()}</span>}
-                  </div>
-                  <Progress value={Math.max(5, Math.min(100, xpProgress))} className="h-2 bg-gray-700" />
-                </div>
-
-                {/* Quick Stats Row */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-                  <div className="p-3 rounded-lg bg-gray-800/50 border border-gray-700">
-                    <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
-                      <Shield className="w-3 h-3" /> Reputation
+            <div className="divide-y divide-white/5">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 text-yellow-500 font-mono text-[10px]">
+                      0{i}
                     </div>
-                    <div className="text-lg font-bold">{agentData.reputationScore || 100}</div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-gray-800/50 border border-gray-700">
-                    <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
-                      <TrendingUp className="w-3 h-3" /> Verifications
+                    <div>
+                      <div className="text-sm font-bold">Verification Claim Sealed</div>
+                      <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Product ID: AC-TR-098872</div>
                     </div>
-                    <div className="text-lg font-bold">{agentData.totalVerifications || 0}</div>
                   </div>
-                  <div className="p-3 rounded-lg bg-gray-800/50 border border-gray-700">
-                    <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
-                      <Trophy className="w-3 h-3" /> Consensus Wins
-                    </div>
-                    <div className="text-lg font-bold">{agentData.consensusParticipations || 0}</div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-gray-800/50 border border-gray-700">
-                    <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
-                      <Coins className="w-3 h-3" /> QRON Earned
-                    </div>
-                    <div className="text-lg font-bold text-amber-400">{totalQRON.toFixed(2)}</div>
+                  <div className="text-right">
+                    <div className="text-xs font-mono text-yellow-500 font-bold">+0.50 QRON</div>
+                    <div className="text-[9px] text-slate-600 uppercase">2m ago</div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Reward History */}
-          <div className="lg:col-span-2">
-            <Card className="bg-gray-900/50 border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Coins className="w-5 h-5 text-amber-400" /> QRON Reward History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!rewards.data || rewards.data.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Coins className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                    <p>No rewards yet. Start verifying products to earn QRON.</p>
-                    <Button asChild variant="outline" className="mt-3 border-gray-700 text-gray-300">
-                      <a href="/authenticate">Verify a Product</a>
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {rewards.data.map((r: any) => (
-                      <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 border border-gray-700">
-                        <div>
-                          <span className="text-sm font-medium text-white capitalize">{r.rewardType?.replace(/_/g, " ")}</span>
-                          <p className="text-xs text-gray-500">{r.description}</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-amber-400 font-mono font-bold">+{parseFloat(r.qronAmount || "0").toFixed(2)}</span>
-                          <p className="text-xs text-gray-500">+{r.xpAmount || 0} XP</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Agent Actions */}
-          <div className="space-y-6">
-            <Card className="bg-gray-900/50 border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-blue-400" /> Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
-                  <a href="/authenticate">
-                    <Shield className="w-4 h-4 mr-2" /> Verify Product
-                  </a>
-                </Button>
-                <Button asChild variant="outline" className="w-full border-gray-700 text-gray-300">
-                  <a href="/network">
-                    <Trophy className="w-4 h-4 mr-2" /> View Leaderboard
-                  </a>
-                </Button>
-                <Button asChild variant="outline" className="w-full border-gray-700 text-gray-300">
-                  <a href="/character/create">
-                    <Star className="w-4 h-4 mr-2" /> Generate New Character
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Character Gallery */}
-            <Card className="bg-gray-900/50 border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-white text-sm">My Characters</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!assets.data || assets.data.length === 0 ? (
-                  <p className="text-sm text-gray-500">No characters generated yet.</p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {assets.data.slice(0, 6).map((a: any) => (
-                      <div key={a.asset.id} className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                        a.asset.id === agentData.characterAssetId ? "border-blue-500" : "border-gray-700"
-                      }`}>
-                        <img src={a.asset.imageUrl} alt="Character" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <Card className="bg-white/5 border-white/5 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-from)_0%,transparent_70%)] from-yellow-500/5 pointer-events-none" />
+          <Star className="w-12 h-12 text-yellow-500 mb-6 animate-pulse" />
+          <h3 className="text-2xl font-bold mb-3 italic uppercase tracking-tight">Protocol Advancement</h3>
+          <p className="text-slate-400 text-sm mb-8 max-w-xs mx-auto">
+            Your agent is performing in the top 5% of the network. Stake an additional 100 $QRON to unlock **Multi-ControlNet Artistry**.
+          </p>
+          <Button className="w-full bg-white text-black font-bold h-12 uppercase italic text-xs tracking-widest rounded-xl hover:bg-slate-200 transition-all">
+            Upgrade Agent Matrix
+          </Button>
+        </Card>
       </div>
     </div>
   );

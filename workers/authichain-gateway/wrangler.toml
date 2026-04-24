@@ -1,0 +1,26 @@
+name = "authichain-gateway"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+compatibility_flags = ["nodejs_compat"]
+account_id = "4c1869b90f13f86940aa3747839bf420"
+
+# KV Namespaces (create with: wrangler kv namespace create <NAME>)
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "placeholder-rate-limits"
+
+[[kv_namespaces]]
+binding = "TENANT_CACHE"
+id = "placeholder-tenant-cache"
+
+[[kv_namespaces]]
+binding = "USAGE_BUFFER"
+id = "placeholder-usage-buffer"
+
+[vars]
+BACKEND_URL = "https://authichain-unified.vercel.app"
+WORKER_VERSION = "2.0.0"
+
+# Cron trigger: flush usage buffer every 5 minutes
+[triggers]
+crons = ["*/5 * * * *"]

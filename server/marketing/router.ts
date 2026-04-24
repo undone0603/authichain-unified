@@ -39,6 +39,6 @@ export const marketingRouter = router({
         { role: "user", content: `Create ${input.type} content about: ${input.topic}. Target: ${input.targetAudience || "enterprise decision makers"}` },
       ],
     });
-    return { content: response.choices[0].message.content };
+    return { content: response.choices?.[0]?.message?.content || "Content generation failed. Please try again." };
   }),
 });

@@ -36,6 +36,9 @@ const CharacterDashboard = lazy(() => import("./pages/CharacterDashboard"));
 const NetworkStats = lazy(() => import("./pages/NetworkStats"));
 const Services = lazy(() => import("./pages/Services"));
 const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
+const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
+const Storymode = lazy(() => import("./pages/Storymode"));
+const GovOnboarding = lazy(() => import("./pages/GovOnboarding"));
 
 function PageLoader() {
   return (
@@ -73,6 +76,7 @@ function DashboardRoutes() {
           <Route path="/character/create" component={CharacterCreate} />
           <Route path="/network" component={NetworkStats} />
           <Route path="/orders" component={ServiceOrders} />
+          <Route path="/sba-loan" component={SbaDisasterLoan} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
@@ -102,6 +106,20 @@ function Router() {
         {(params) => (
           <Suspense fallback={<PageLoader />}>
             <CertificatePublic token={params.token} />
+          </Suspense>
+        )}
+      </Route>
+      <Route path="/story/:id">
+        {(params) => (
+          <Suspense fallback={<PageLoader />}>
+            <Storymode />
+          </Suspense>
+        )}
+      </Route>
+      <Route path="/onboard">
+        {() => (
+          <Suspense fallback={<PageLoader />}>
+            <GovOnboarding />
           </Suspense>
         )}
       </Route>

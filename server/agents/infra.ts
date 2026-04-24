@@ -1,5 +1,6 @@
 import { logActivity } from '../db.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import type { MissionTask } from '../../drizzle/schema.js';
+type Task = MissionTask;
 
 interface InfraPayload {
   domain?: string;

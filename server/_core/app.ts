@@ -4,6 +4,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { createInternalRouter } from "../internal-api";
 
 /**
  * Creates and configures the Express app without binding to a port.
@@ -99,9 +100,18 @@ export function createApp() {
     }
   });
 
+  // ─── Health check (used by Railway / load-balancers) ─────────────────────
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", uptime: process.uptime() });
+  });
+
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerOAuthRoutes(app);
+
+  // Internal API for gateway worker
+  app.use("/api/internal", createInternalRouter());
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({ router: appRouter, createContext }),

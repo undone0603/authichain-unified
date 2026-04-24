@@ -9,11 +9,17 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   thirdwebClientId: process.env.VITE_THIRDWEB_CLIENT_ID ?? "",
   thirdwebSecretKey: process.env.thirdweb_api_key ?? "",
+  blockchainPrivateKey: process.env.BLOCKCHAIN_PRIVATE_KEY ?? "",
   hubspotServiceKey: process.env.HUBSPOT_SERVICE_KEY ?? "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
   paddleApiKey: process.env.PADDLE_API_KEY ?? "",
   paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
+  paddleBasicPriceId: process.env.PADDLE_BASIC_PRICE_ID ?? "",
+  paddlePremiumPriceId: process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
+  paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
+  qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
+  defaultNftContract: process.env.DEFAULT_NFT_CONTRACT ?? "0xc3143254997d48fdc9983d618fb2e10067673eb5",
 
   // ── Autonomous Revenue Pipeline ──────────────────────────────────────────
   autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
@@ -45,9 +51,15 @@ export const ENV = {
   adsDailyCapUsd:         Number(process.env.ADS_DAILY_CAP_USD          ?? 300),
   enrichmentMonthlyCapUsd:Number(process.env.ENRICHMENT_MONTHLY_CAP_USD ?? 200),
 
+  // ── SMS / Owner alerts ──────────────────────────────────────────────────
+  smsRecipient: process.env.SMS_RECIPIENT ?? "",
+
   // ── Integrations ─────────────────────────────────────────────────────────
   airtableBaseId:  process.env.AIRTABLE_BASE_ID  ?? "",
   airtableApiKey:  process.env.AIRTABLE_API_KEY  ?? "",
   makeWebhookUrl:  process.env.MAKE_WEBHOOK_URL  ?? "",
   posthogApiKey:   process.env.POSTHOG_API_KEY   ?? "",
+
+  // ── Internal Gateway ────────────────────────────────────────────────────
+  internalApiSecret: process.env.INTERNAL_API_SECRET ?? "dev-internal-secret",
 };

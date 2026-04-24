@@ -1,32 +1,14 @@
 name = "authichain-unified"
-main = "worker/index.ts"
-tsconfig = "tsconfig.worker.json"
-compatibility_date = "2026-03-11"
-compatibility_flags = ["nodejs_compat"]
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+workers_dev = true
 
-[assets]
-directory = "dist/public"
-not_found_handling = "single-page-application"
+[vars]
+JWT_SECRET = "your-secret-here"   # move to Cloudflare dashboard for production
 
-[triggers]
-crons = ["*/5 * * * *"]
+[[kv_namespaces]]
+binding = "CACHE"
+id = "your-kv-id"   # optional – only if you add caching later
 
-# Set these via: wrangler secret put <NAME>
-# DATABASE_URL, JWT_SECRET, VITE_APP_ID, OAUTH_SERVER_URL
-# BUILT_IN_FORGE_API_URL, BUILT_IN_FORGE_API_KEY
-# HUBSPOT_SERVICE_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
-# AUTONOMOUS_PIPELINE_ENABLED=true
-# HEYGEN_API_KEY
-# QRON_AUTHICHAIN_KEY
-# TWITTER_API_KEY, TWITTER_API_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
-# TWITTER_QRON_API_KEY, TWITTER_QRON_API_SECRET, TWITTER_QRON_ACCESS_TOKEN, TWITTER_QRON_ACCESS_TOKEN_SECRET
-# YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN, YOUTUBE_CHANNEL_ID
-# YOUTUBE_QRON_REFRESH_TOKEN, YOUTUBE_QRON_CHANNEL_ID
-# FAL_KEY (for CLIP visual fingerprint embedding)
-# GITHUB_TOKEN (PAT: repo + actions + pull_requests scopes — for dev team build loop)
-# GITHUB_OWNER, GITHUB_REPO
-# REQUIRE_DEV_APPROVAL (default: true — gates MERGE_PR on human approval)
-# LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET
-# LINKEDIN_ACCESS_TOKEN, LINKEDIN_REFRESH_TOKEN (run: node scripts/linkedin-oauth-setup.mjs)
-# LINKEDIN_PERSON_URN (e.g. urn:li:person:XXXXXXXX — printed by setup script)
-# LINKEDIN_ORG_URN (optional — for company page posts)
+# Environment variables (Supabase + RapidAPI) – set via wrangler secret put
+# SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RAPIDAPI_KEY

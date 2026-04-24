@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background -->
+  <circle cx="32" cy="32" r="30" fill="#1a2e1a"/>
+  <!-- Cannabis leaf (simplified, iconic) -->
+  <path d="M32 12c0 0-4 8-4 14s2 8 4 10c2-2 4-4 4-10s-4-14-4-14z" fill="#4caf50"/>
+  <path d="M32 22c-6-2-14 2-16 8 4 0 10-1 14-4" fill="#66bb6a" opacity="0.9"/>
+  <path d="M32 22c6-2 14 2 16 8-4 0-10-1-14-4" fill="#66bb6a" opacity="0.9"/>
+  <path d="M32 30c-8 0-14 6-14 10 4-1 10-4 13-7" fill="#81c784" opacity="0.8"/>
+  <path d="M32 30c8 0 14 6 14 10-4-1-10-4-13-7" fill="#81c784" opacity="0.8"/>
+  <!-- Stem -->
+  <rect x="31" y="36" width="2" height="14" rx="1" fill="#388e3c"/>
+  <!-- Chain link at base -->
+  <ellipse cx="32" cy="52" rx="6" ry="3" stroke="#4fc3f7" stroke-width="1.5" fill="none"/>
+  <ellipse cx="32" cy="56" rx="6" ry="3" stroke="#4fc3f7" stroke-width="1.5" fill="none"/>
+  <!-- DNA helix hint -->
+  <path d="M26 48c2 1 4 1 6 0s4-1 6 0" stroke="#a5d6a7" stroke-width="1" fill="none" opacity="0.6"/>
+</svg>
