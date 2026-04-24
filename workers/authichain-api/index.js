@@ -23,7 +23,8 @@
  */
 
 const SUPA_URL = 'https://nhdnkzhtadfkkluiulhs.supabase.co';
-const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8';
+// SUPABASE_ANON_KEY is injected as a global by Cloudflare Workers secret bindings
+// (service-worker syntax). Set via: wrangler secret put SUPABASE_ANON_KEY --name authichain-api
 
 const PLANS = {
   free:       { name: 'Free',       price: '$0',      dailyLimit: 100,    hourlyLimit: 10   },
@@ -69,8 +70,8 @@ function j(data, status, extraHeaders) {
 // ── Supabase helpers ──────────────────────────────────────────────────────────
 function supaHeaders() {
   return {
-    'apikey': SUPA_ANON,
-    'Authorization': 'Bearer ' + SUPA_ANON,
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
     'Content-Type': 'application/json',
     'Prefer': 'return=representation',
   };
@@ -129,6 +130,10 @@ function classifyIndustry(text) {
   return { id: best, score: bestScore, industry: INDUSTRIES[best] || { name: 'General', icon: '📦' } };
 }
 
+function secretsConfigured() {
+  return typeof SUPABASE_ANON_KEY === 'string' && SUPABASE_ANON_KEY.length > 0;
+}
+
 addEventListener('fetch', function(event) { event.respondWith(handleRequest(event.request)); });
 
 async function handleRequest(req) {
@@ -140,7 +145,11 @@ async function handleRequest(req) {
 
   // ── Public endpoints (no auth) ─────────────────────────────────────────
   if (path === '/' || path === '/health' || path === '/api/v1/health') {
-    return j({ status: 'ok', version: '3.0.0', service: 'authichain-api', rapidapi: true, realData: true, timestamp: new Date().toISOString() });
+    return j({ status: secretsConfigured() ? 'ok' : 'missing_secrets', version: '3.0.1', service: 'authichain-api', rapidapi: true, realData: true, secrets_configured: secretsConfigured(), timestamp: new Date().toISOString() });
+  }
+
+  if (!secretsConfigured()) {
+    return j({ error: 'Worker secret not configured: set SUPABASE_ANON_KEY via wrangler secret put' }, 500);
   }
 
   if (path === '/api/v1/pricing') {

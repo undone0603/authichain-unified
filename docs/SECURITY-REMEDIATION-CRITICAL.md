@@ -166,11 +166,15 @@
 
 ### MED-2: Supabase Anon Key in 5 Workers
 
-**Status: PENDING MIGRATION**
-**Workers:** `gmail-relay-z`, `qron-stripe-webhook`, `qron-daily-ops`, `authichain-api`, `authichain-verify`
+**Status: PARTIALLY FIXED — 1 of 5 workers migrated (2026-04-24)**
+**Workers:** `gmail-relay-z`, `qron-stripe-webhook`, `qron-daily-ops`, `authichain-api` (FIX PREPARED), `authichain-verify`
 **Risk:** Key rotation requires redeploying all 5 workers.
 
-**Remediation:** Move to `env.SUPABASE_ANON_KEY` across all workers.
+**Remediation:** Move to `env.SUPABASE_ANON_KEY` (module) or `SUPABASE_ANON_KEY` global (service-worker) across all workers.
+
+**2026-04-24 progress:**
+- `authichain-api` v3.0.1: fix prepared in `workers/authichain-api/index.js` + `deploy.sh`. Also bumped autopilot (added as CRIT-3b) which shared the same key.
+- Remaining 4 workers (`gmail-relay-z`, `qron-stripe-webhook`, `qron-daily-ops`, `authichain-verify`) are not source-tracked in this repo — must be fixed via Cloudflare Dashboard Quick Edit or pulled into repo first.
 
 ### MED-3: Dashboard Password in Query Parameters
 
@@ -254,7 +258,8 @@ Run these in order. Check off as completed.
 - [ ] Move Telegram tokens to env in both workers
 
 ### Phase 3: Short-Term (This Month)
-- [ ] Move Supabase anon key to env in all 5 workers
+- [ ] Deploy `authichain-api` v3.0.1 via `workers/authichain-api/deploy.sh` (prepared 2026-04-24)
+- [ ] Move Supabase anon key to env in remaining 4 workers (`gmail-relay-z`, `qron-stripe-webhook`, `qron-daily-ops`, `authichain-verify`)
 - [ ] Replace dashboard password with Cloudflare Access
 - [ ] Rotate Notion integration token
 - [ ] Audit all Workers quarterly for new hardcoded secrets
@@ -273,7 +278,7 @@ Run these in order. Check off as completed.
 | qron-daily-ops | 4 | CRITICAL | PENDING |
 | qrontoken-telegram-bot | 1 | HIGH | PENDING |
 | gmail-relay-z | 1 | MEDIUM | PENDING |
-| authichain-api | 1 | MEDIUM | PENDING |
+| authichain-api | 1 | MEDIUM | FIX PREPARED |
 | authichain-dashboard | 1 | MEDIUM | PENDING |
 | authichain-verify | 1 | MEDIUM | PENDING |
 | qron-seo-engine | 1 (public) | LOW | OK |
