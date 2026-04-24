@@ -9,7 +9,8 @@
  *   pnpm tsx server/missions/seed.ts        (env loaded from .env automatically by tsx)
  */
 
-import { createMission, getMissions, getDb } from '../db.js';
+import { createMission, getMissions } from './missions.db.js';
+import { getDb } from '../db.js';
 import { leads, missionTasks } from '../../drizzle/schema.js';
 import { eq, and } from 'drizzle-orm';
 import type { MissionType } from './types.js';

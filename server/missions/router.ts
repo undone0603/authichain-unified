@@ -7,7 +7,7 @@ import {
   updateMissionStatus,
   getTasksByMission,
   retryTask,
-} from "../db";
+} from "./missions.db";
 import type { MissionType, MissionStatus } from "./types";
 
 export const missionsRouter = router({

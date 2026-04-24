@@ -34,6 +34,21 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Client-side fallback brand detection. Overridden by server injection
+      // (see server/_core/brand-middleware.ts brandInjectionScript) when
+      // the HTML comes from Express; this runs only when a pure static
+      // host serves index.html without injection.
+      if (!window.__BRAND__) {
+        var h = (location.hostname || '').toLowerCase();
+        var b = 'authichain';
+        if (h.includes('qron')) b = 'qron';
+        else if (h.includes('strainchain')) b = 'strainchain';
+        else if (h.includes('govchain')) b = 'govchain';
+        window.__BRAND__ = b;
+        document.documentElement.setAttribute('data-brand', b);
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

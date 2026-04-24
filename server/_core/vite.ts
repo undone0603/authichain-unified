@@ -1,29 +1,12 @@
-import express, { type Express, type Request } from "express";
+import express, { type Express } from "express";
 import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
-
-/**
- * Resolve the correct index.html based on the Host header.
- * Falls back to the default client/index.html if no domain match.
- */
-function getDomainHtml(host: string): string {
-  if (host.includes("qron.space")) return "qron";
-  if (host.includes("strainchain.io")) return "strainchain";
-  if (host.includes("govchain.us")) return "govchain";
-  return "authichain";
-}
-
-function getDomainTemplatePath(req: Request, baseDir: string): string {
-  const host = req.get("host") || "";
-  const domain = getDomainHtml(host);
-  const domainPath = path.resolve(baseDir, "client", "public", "domains", `${domain}.html`);
-  if (fs.existsSync(domainPath)) return domainPath;
-  return path.resolve(baseDir, "client", "index.html");
-}
+import { resolveBrand } from "../../shared/brands";
+import { brandInjectionScript } from "./brand-middleware";
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -44,14 +27,27 @@ export async function setupVite(app: Express, server: Server) {
     const url = req.originalUrl;
 
     try {
-      const baseDir = path.resolve(import.meta.dirname, "../..");
-      const templatePath = getDomainTemplatePath(req, baseDir);
+      const clientTemplate = path.resolve(
+        import.meta.dirname,
+        "../..",
+        "client",
+        "index.html"
+      );
 
       // always reload the index.html file from disk incase it changes
-      let template = await fs.promises.readFile(templatePath, "utf-8");
+      let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
+      );
+      // Inject brand-detection snippet before the main script so
+      // window.__BRAND__ is set before React mounts.
+      const brand = resolveBrand(
+        (req.headers["x-forwarded-host"] as string | undefined) ?? req.headers.host
+      );
+      template = template.replace(
+        '<div id="root"></div>',
+        `<div id="root"></div>\n    ${brandInjectionScript(brand)}`
       );
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
@@ -75,16 +71,26 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to domain-specific index.html if the file doesn't exist
-  app.use("*", (req, res) => {
-    const host = req.get("host") || "";
-    const domain = getDomainHtml(host);
-    const domainFile = path.resolve(distPath, "domains", `${domain}.html`);
+  // Cache the index.html template once; inject brand per-request.
+  let cachedTemplate: string | null = null;
+  const indexPath = path.resolve(distPath, "index.html");
 
-    if (fs.existsSync(domainFile)) {
-      res.sendFile(domainFile);
-    } else {
-      res.sendFile(path.resolve(distPath, "index.html"));
+  app.use("*", (req, res) => {
+    try {
+      if (cachedTemplate === null) {
+        cachedTemplate = fs.readFileSync(indexPath, "utf-8");
+      }
+      const brand = resolveBrand(
+        (req.headers["x-forwarded-host"] as string | undefined) ?? req.headers.host
+      );
+      const html = cachedTemplate.replace(
+        '<div id="root"></div>',
+        `<div id="root"></div>\n    ${brandInjectionScript(brand)}`
+      );
+      res.status(200).set({ "Content-Type": "text/html" }).end(html);
+    } catch {
+      // Fallback: if injection fails for any reason, just serve the file
+      res.sendFile(indexPath);
     }
   });
 }
