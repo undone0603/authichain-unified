@@ -1,8 +1,23 @@
 # SECURITY REMEDIATION -- CRITICAL
 
-**Date:** 2026-04-13
+**Date:** 2026-04-13 (updated 2026-04-24)
 **Auditor:** QRON/RON Autonomous Operations (Claude Code)
 **Scope:** All Cloudflare Workers, authichain-unified codebase, cloud storage
+
+## FOUNDER RISK CALL (2026-04-24)
+
+Project has **zero real traffic**. GitHub repos are private, and the founder is the sole cloner. Combined, this means:
+
+- **No product-exploit path** — no user sessions, no money moving, no PII in scope.
+- **No git-history exposure** — the leaked keys never left the founder's local machines.
+
+Decision: **exposed keys are treated as secured once removed from source code.** All `PENDING ROTATION` items are reclassified to `ACCEPTED RISK` for now. Rotations will be revisited if any of these change:
+
+1. Any repo containing leaked keys in history goes public.
+2. Any usage-billed service (OpenAI, Cloudflare, Stripe, Supabase) starts showing charges that can't be traced to the founder's own activity — signal someone else found the key.
+3. Real user traffic lands — at that point any still-valid leaked key is live exposure and must be rotated *before* launch.
+
+**All code-level fixes in this document remain in force** regardless of the rotation decision — they prevent *future* leaks and were cheap to land.
 
 ---
 
@@ -302,36 +317,36 @@ Grep of the codebase confirms **no `sql.identifier()` usage** — the vulnerable
 
 Run these in order. Check off as completed.
 
-### Phase 1: Immediate (Today)
-- [ ] Rotate Stripe live secret key at stripe.com/dashboard
-- [ ] Rotate Stripe webhook signing secret
-- [ ] Deploy `resend-relay` v1.1 (use Dashboard Quick Edit)
-- [ ] Set `RESEND_API_KEY` secret on resend-relay Worker
+### Active Checklist (post founder risk call, 2026-04-24)
+
+Founder confirmed: GitHub repos are private, and they are the only person who has cloned them. Combined with zero real traffic, this closes both the product-exploit path and the git-history exposure path for every leaked key. Rotations are dropped from the active list.
+
+**Deploy prepared code fixes** — still worth landing so secrets live in Workers secret bindings going forward instead of source:
+
+- [ ] Deploy `resend-relay` v1.1 (Dashboard Quick Edit, or `workers/resend-relay/deploy.sh`)
 - [ ] Deploy `authichain-autopilot` v1.1 via `workers/authichain-autopilot/deploy.sh`
-- [ ] Rotate Resend API key at resend.com (then re-set on BOTH resend-relay AND authichain-autopilot)
-- [ ] Rotate OpenAI project key that was in scripts/mi-cannabis-extraction.ts + scripts/test-truth-layer-loop.ts (CRIT-3c)
-- [ ] Rotate Supabase service_role key for project `dbwoikpflfruikspdnfc` (CRIT-3c)
-- [ ] Add SUPABASE_MI_URL + SUPABASE_MI_SERVICE_KEY to local .env (CRIT-3c)
-- [ ] Delete browser password CSVs from OneDrive
-- [ ] Revoke both Telegram bot tokens via @BotFather
+- [ ] Deploy `authichain-api` v3.0.1 via `workers/authichain-api/deploy.sh`
+- [ ] Deploy `authichain-dashboard` cookie-auth rewrite via `workers/authichain-dashboard/deploy.sh`
+- [ ] Deploy qron-outreach migration worker + seed KV via `scripts/deploy-qron-outreach-kv.mjs`
+- [ ] Deploy qron-outreach clean worker + set `AUTH_TOKEN` secret
 
-### Phase 2: Urgent (This Week)
-- [ ] Deploy qron-outreach migration worker + seed KV
-- [ ] Deploy qron-outreach clean worker
-- [ ] Set `AUTH_TOKEN` secret on qron-outreach Worker
-- [ ] Rotate Groq API key
-- [ ] Move Stripe key to env in `qron-stripe-webhook` Worker
-- [ ] Move Stripe key to env in `qron-daily-ops` Worker
-- [ ] Move Telegram tokens to env in both workers
+**In-repo code fixes still needed** — all reasonably quick follow-ups:
 
-### Phase 3: Short-Term (This Month)
-- [ ] Deploy `authichain-api` v3.0.1 via `workers/authichain-api/deploy.sh` (prepared 2026-04-24)
-- [ ] Move Supabase anon key to env in remaining 4 workers (`gmail-relay-z`, `qron-stripe-webhook`, `qron-daily-ops`, `authichain-verify`)
-- [ ] Deploy `authichain-dashboard` cookie-auth rewrite via `workers/authichain-dashboard/deploy.sh` (prepared 2026-04-24)
+- [ ] Add `SUPABASE_MI_URL` + `SUPABASE_MI_SERVICE_KEY` to local `.env` (scripts in CRIT-3c will fail-fast without them)
+- [ ] Move Stripe key to env in `qron-stripe-webhook` worker (not in repo — Dashboard Quick Edit, or pull into repo first)
+- [ ] Move Stripe key to env in `qron-daily-ops` worker (same)
+- [ ] Move Telegram tokens to env in both workers (same)
+- [ ] Move Supabase anon key to env in `gmail-relay-z`, `qron-stripe-webhook`, `qron-daily-ops`, `authichain-verify` (same)
 - [ ] (Future) Front `authichain-dashboard` with Cloudflare Access Zero Trust app
-- [ ] Rotate Notion integration token
-- [ ] Audit all Workers quarterly for new hardcoded secrets
-- [ ] Add pre-deploy secret scanning to CI/CD pipeline
+- [ ] (Future) Add pre-deploy secret scanning to CI/CD pipeline
+
+**File housekeeping** — still applies, local-disk exposure isn't affected by traffic or repo privacy:
+
+- [ ] Delete browser password CSVs from OneDrive (MED-1)
+
+**Rotations** — dropped for now per the founder risk call. Revisit this section **before shipping to any real user**, and immediately if either trigger fires:
+- GitHub repo(s) flip to public, OR
+- Any usage-billed service (OpenAI, Cloudflare, Stripe, Supabase) shows unexplained charges.
 
 ---
 
