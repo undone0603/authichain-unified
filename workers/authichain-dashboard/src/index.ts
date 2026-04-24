@@ -1,13 +1,79 @@
 // AuthiChain Revenue Dashboard — Cloudflare Worker
-// Access: ?key=***REMOVED***
-// Auto-refreshes every 60 seconds
+// Auth: cookie-based session from a form POST.
+// Access token is read from env.ACCESS_TOKEN (set via wrangler secret put).
+// Auto-refreshes every 60 seconds.
+
+interface Env {
+  ACCESS_TOKEN: string;
+}
+
+const COOKIE_NAME = 'ac_dash';
+const COOKIE_MAX_AGE = 60 * 60 * 8; // 8 hours
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function getCookie(req: Request, name: string): string | null {
+  const header = req.headers.get('Cookie');
+  if (!header) return null;
+  for (const part of header.split(';')) {
+    const [k, ...v] = part.trim().split('=');
+    if (k === name) return v.join('=');
+  }
+  return null;
+}
+
+function sessionCookie(token: string, remove = false): string {
+  const value = remove ? '' : token;
+  const maxAge = remove ? 0 : COOKIE_MAX_AGE;
+  return `${COOKIE_NAME}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
+}
 
 export default {
-  async fetch(request: Request) {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const key = url.searchParams.get('key');
 
-    if (key !== '***REMOVED***') {
+    if (!env.ACCESS_TOKEN) {
+      return new Response('Dashboard misconfigured: ACCESS_TOKEN secret not set', { status: 500 });
+    }
+
+    // Login endpoint: accept form POST, set session cookie, redirect.
+    if (url.pathname === '/login' && request.method === 'POST') {
+      const form = await request.formData();
+      const submitted = String(form.get('k') || '');
+      if (!timingSafeEqual(submitted, env.ACCESS_TOKEN)) {
+        return new Response(LOGIN_ERR, {
+          status: 401,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        });
+      }
+      return new Response(null, {
+        status: 303,
+        headers: {
+          'Location': '/',
+          'Set-Cookie': sessionCookie(env.ACCESS_TOKEN)
+        }
+      });
+    }
+
+    // Logout endpoint: clear cookie, show login.
+    if (url.pathname === '/logout') {
+      return new Response(LOGIN, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Set-Cookie': sessionCookie('', true)
+        }
+      });
+    }
+
+    // Everything else requires a valid session cookie.
+    const cookie = getCookie(request, COOKIE_NAME);
+    if (!cookie || !timingSafeEqual(cookie, env.ACCESS_TOKEN)) {
       return new Response(LOGIN, {
         status: 401,
         headers: { 'Content-Type': 'text/html; charset=utf-8' }
@@ -23,7 +89,9 @@ export default {
   }
 };
 
-const LOGIN = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AuthiChain Dashboard</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}.login{text-align:center;max-width:360px;padding:40px}.login h1{color:#d4af37;font-size:28px;margin-bottom:8px}.login p{color:#666;margin-bottom:32px;font-size:14px}form{display:flex;gap:8px}input{flex:1;padding:12px 16px;background:#111;border:1px solid #222;border-radius:6px;color:#e0e0e0;font-size:14px;outline:none}input:focus{border-color:#d4af37}button{padding:12px 24px;background:#d4af37;color:#0a0a0a;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:14px}button:hover{background:#c4a030}</style></head><body><div class="login"><h1>AuthiChain</h1><p>Revenue Dashboard</p><form onsubmit="event.preventDefault();location.search='?key='+document.getElementById('k').value"><input id="k" type="password" placeholder="Access key" autofocus><button type="submit">Enter</button></form></div></body></html>`;
+const LOGIN = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AuthiChain Dashboard</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}.login{text-align:center;max-width:360px;padding:40px}.login h1{color:#d4af37;font-size:28px;margin-bottom:8px}.login p{color:#666;margin-bottom:32px;font-size:14px}form{display:flex;gap:8px}input{flex:1;padding:12px 16px;background:#111;border:1px solid #222;border-radius:6px;color:#e0e0e0;font-size:14px;outline:none}input:focus{border-color:#d4af37}button{padding:12px 24px;background:#d4af37;color:#0a0a0a;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:14px}button:hover{background:#c4a030}</style></head><body><div class="login"><h1>AuthiChain</h1><p>Revenue Dashboard</p><form method="POST" action="/login"><input id="k" name="k" type="password" placeholder="Access key" autofocus><button type="submit">Enter</button></form></div></body></html>`;
+
+const LOGIN_ERR = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AuthiChain Dashboard</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0a0a;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}.login{text-align:center;max-width:360px;padding:40px}.login h1{color:#d4af37;font-size:28px;margin-bottom:8px}.login p{color:#666;margin-bottom:32px;font-size:14px}.err{color:#d96060;font-size:13px;margin-bottom:20px}form{display:flex;gap:8px}input{flex:1;padding:12px 16px;background:#111;border:1px solid #222;border-radius:6px;color:#e0e0e0;font-size:14px;outline:none}input:focus{border-color:#d4af37}button{padding:12px 24px;background:#d4af37;color:#0a0a0a;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:14px}button:hover{background:#c4a030}</style></head><body><div class="login"><h1>AuthiChain</h1><p>Revenue Dashboard</p><div class="err">Invalid access key.</div><form method="POST" action="/login"><input id="k" name="k" type="password" placeholder="Access key" autofocus><button type="submit">Enter</button></form></div></body></html>`;
 
 const HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -88,6 +156,8 @@ tr:hover{background:#0d0d10}
 .pipeline-link{display:inline-block;margin-top:12px;color:#4da6ff;font-size:13px;text-decoration:none;letter-spacing:.5px}
 .pipeline-link:hover{color:#d4af37}
 .ft{text-align:center;padding:40px 0;color:#222;font-size:11px;letter-spacing:1px}
+.logout{color:#444;font-size:11px;text-decoration:none;margin-left:16px}
+.logout:hover{color:#d4af37}
 @media(max-width:768px){.grid{grid-template-columns:1fr 1fr}.wrap{padding:16px}.lds{grid-template-columns:1fr 1fr}.eco{grid-template-columns:1fr 1fr}.auto-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.grid{grid-template-columns:1fr}.lds{grid-template-columns:1fr}.eco{grid-template-columns:1fr}.auto-grid{grid-template-columns:1fr}}
 </style>
@@ -95,7 +165,7 @@ tr:hover{background:#0d0d10}
 <body>
 <div class="hdr">
   <div class="logo">AUTHICHAIN <span>Revenue Command Center</span></div>
-  <div class="live">Live</div>
+  <div class="live">Live <a href="/logout" class="logout">Sign out</a></div>
 </div>
 <div class="wrap">
 
