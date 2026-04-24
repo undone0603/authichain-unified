@@ -45,10 +45,14 @@ if (fs.existsSync(envPath)) {
 }
 
 // Fallback to OpenAI if forge is not configured in .env for this test
-const realOpenAiKey = "***REMOVED***";
 if (!(ENV as any).forgeApiUrl || (ENV as any).forgeApiUrl.includes("manus.im")) {
+  const openAiKey = process.env.OPENAI_API_KEY;
+  if (!openAiKey) {
+    console.error("FATAL: OPENAI_API_KEY must be set in .env when forge URL is not configured.");
+    process.exit(1);
+  }
   (ENV as any).forgeApiUrl = "https://api.openai.com";
-  (ENV as any).forgeApiKey = realOpenAiKey;
+  (ENV as any).forgeApiKey = openAiKey;
 }
 
 /**

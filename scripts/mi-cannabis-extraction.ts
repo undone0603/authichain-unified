@@ -22,14 +22,26 @@ if (fs.existsSync(envPath)) {
 }
 
 // Force ENV values from process.env into the ENV singleton used by server core
-const realOpenAiKey = "***REMOVED***";
-(ENV as any).forgeApiKey = realOpenAiKey;
-(ENV as any).openaiApiKey = realOpenAiKey;
-(ENV as any).forgeApiUrl = "https://api.openai.com"; 
+const openAiKey = process.env.OPENAI_API_KEY;
+if (!openAiKey) {
+  console.error("FATAL: OPENAI_API_KEY must be set in .env (or process environment).");
+  process.exit(1);
+}
+(ENV as any).forgeApiKey = openAiKey;
+(ENV as any).openaiApiKey = openAiKey;
+(ENV as any).forgeApiUrl = "https://api.openai.com";
 
-// Initialize Supabase REST API Fallback
-const supabaseUrl = "https://dbwoikpflfruikspdnfc.supabase.co";
-const supabaseKey = "***REMOVED***";
+// Supabase REST API for the Michigan cannabis extraction workspace.
+// Service role is required (bypasses RLS for admin writes to leads / activity_log
+// / autopilot_decisions). Must be set in .env — never commit it.
+const supabaseUrl = process.env.SUPABASE_MI_URL;
+const supabaseKey = process.env.SUPABASE_MI_SERVICE_KEY;
+if (!supabaseUrl || !supabaseKey) {
+  console.error("FATAL: SUPABASE_MI_URL and SUPABASE_MI_SERVICE_KEY must be set in .env.");
+  console.error("The service_role key that was previously hardcoded MUST be rotated at");
+  console.error("https://supabase.com/dashboard/project/dbwoikpflfruikspdnfc/settings/api");
+  process.exit(1);
+}
 
 async function supabaseRest(table: string, method: string, body?: any, query?: string) {
   const url = `${supabaseUrl}/rest/v1/${table}${query ? `?${query}` : ''}`;
