@@ -5,6 +5,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { createInternalRouter } from "../internal-api";
+import { brandMiddleware } from "./brand-middleware";
 
 /**
  * Creates and configures the Express app without binding to a port.
@@ -12,6 +13,9 @@ import { createInternalRouter } from "../internal-api";
  */
 export function createApp() {
   const app = express();
+
+  // ─── Brand detection (Host → res.locals.brand + X-Brand header) ──────────
+  app.use(brandMiddleware);
 
   // ─── Stripe Webhook (MUST be before express.json()) ───────────────────────
   app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {

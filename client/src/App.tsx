@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { BrandProvider } from "./contexts/BrandContext";
 import { ThirdwebAppProvider } from "./components/ThirdwebProvider";
 import Home from "./pages/Home";
 import DashboardLayout from "./components/DashboardLayout";
@@ -39,6 +40,7 @@ const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
 const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
 const Storymode = lazy(() => import("./pages/Storymode"));
 const GovOnboarding = lazy(() => import("./pages/GovOnboarding"));
+const QrArtGallery = lazy(() => import("./pages/QrArtGallery"));
 
 function PageLoader() {
   return (
@@ -102,6 +104,13 @@ function Router() {
           </Suspense>
         )}
       </Route>
+      <Route path="/gallery">
+        {() => (
+          <Suspense fallback={<PageLoader />}>
+            <QrArtGallery />
+          </Suspense>
+        )}
+      </Route>
       <Route path="/certificate/:token">
         {(params) => (
           <Suspense fallback={<PageLoader />}>
@@ -133,14 +142,16 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
-        <ThirdwebAppProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </ThirdwebAppProvider>
-      </ThemeProvider>
+      <BrandProvider>
+        <ThemeProvider defaultTheme="dark">
+          <ThirdwebAppProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </ThirdwebAppProvider>
+        </ThemeProvider>
+      </BrandProvider>
     </ErrorBoundary>
   );
 }
