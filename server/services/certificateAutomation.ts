@@ -3,6 +3,8 @@ import { certificates } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { storagePut } from '../storage';
 import { notifyOwner } from '../_core/notification';
+import { buildAuthCertificateMetadata, mintAuthenticationNFT } from '../thirdweb';
+import { ENV } from '../_core/env';
 
 /**
  * Automated Certificate Generation Service
@@ -89,9 +91,9 @@ export async function generateCertificateAfterPayment(certificateId: number): Pr
 }
 
 /**
- * Generate NFT token on blockchain
- * For MVP, this simulates blockchain interaction
- * In production, integrate with actual blockchain (Polygon, Ethereum, etc.)
+ * Generate NFT token on blockchain via Thirdweb SDK (Polygon ERC-721).
+ * Falls back to a local placeholder when Thirdweb credentials are missing
+ * so that certificate generation still works in dev/test environments.
  */
 async function generateNFT(certificateData: any): Promise<{
   tokenId: string;
@@ -99,28 +101,46 @@ async function generateNFT(certificateData: any): Promise<{
   txHash: string;
   blockchainNetwork: string;
 }> {
-  console.log(`[NFT] Generating NFT for certificate ${certificateData.id}`);
+  const contractAddress = ENV.defaultNftContract;
+  const privateKey = ENV.blockchainPrivateKey;
 
-  // Simulate blockchain transaction
-  // TODO: Replace with actual blockchain integration
-  const tokenId = `NFT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  const contractAddress = '0x' + '0'.repeat(40); // Placeholder
-  const txHash = '0x' + '0'.repeat(64); // Placeholder
-  const blockchainNetwork = 'polygon';
+  // If blockchain keys are not configured, return a local-only placeholder
+  if (!contractAddress || !privateKey || !ENV.thirdwebSecretKey) {
+    console.log(`[NFT] Thirdweb not configured — generating local placeholder for certificate ${certificateData.id}`);
+    return {
+      tokenId: `LOCAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      contractAddress: contractAddress || '0x' + '0'.repeat(40),
+      txHash: '0x' + '0'.repeat(64),
+      blockchainNetwork: ENV.isProduction ? 'polygon' : 'polygon-amoy',
+    };
+  }
 
-  // In production, this would:
-  // 1. Connect to blockchain (Web3, Ethers.js)
-  // 2. Call smart contract mint function
-  // 3. Wait for transaction confirmation
-  // 4. Return actual token ID and tx hash
+  console.log(`[NFT] Minting on-chain NFT for certificate ${certificateData.id}`);
 
-  console.log(`[NFT] Generated token: ${tokenId}`);
+  const metadata = buildAuthCertificateMetadata({
+    productName: certificateData.productName || 'Authenticated Product',
+    confidenceScore: certificateData.confidenceScore ?? 0,
+    verificationDate: new Date().toISOString(),
+    certificateNumber: certificateData.certificateNumber,
+    imageUrl: certificateData.productImageUrl || undefined,
+    authenticatorId: certificateData.userId,
+    result: certificateData.isAuthentic ? 'authentic' : 'counterfeit',
+  });
+
+  const mintResult = await mintAuthenticationNFT({
+    contractAddress,
+    recipientAddress: contractAddress, // platform-owned; transfer to customer later
+    metadata,
+    privateKey,
+  });
+
+  console.log(`[NFT] Minted on-chain: tx ${mintResult.transactionHash}`);
 
   return {
-    tokenId,
+    tokenId: mintResult.transactionHash, // use tx hash as token reference until indexed
     contractAddress,
-    txHash,
-    blockchainNetwork,
+    txHash: mintResult.transactionHash,
+    blockchainNetwork: ENV.isProduction ? 'polygon' : 'polygon-amoy',
   };
 }
 
@@ -293,13 +313,11 @@ async function sendCertificateEmail(
     return;
   }
 
+  const { users } = await import('../../drizzle/schema');
   const userResult = await db
     .select()
-    .from({ users: (await import('../../drizzle/schema')).users })
-    .where((await import('drizzle-orm')).eq(
-      (await import('../../drizzle/schema')).users.id,
-      certificateData.userId
-    ))
+    .from(users)
+    .where(eq(users.id, certificateData.userId))
     .limit(1);
 
   if (!userResult || userResult.length === 0) {
@@ -308,7 +326,7 @@ async function sendCertificateEmail(
   }
 
   const user = userResult[0];
-  const customerEmail = user.email;
+  const customerEmail = (user as any).email;
 
   if (!customerEmail) {
     console.error('[Email] User email not available');
@@ -320,7 +338,7 @@ async function sendCertificateEmail(
   
   const emailSent = await sendEmail({
     to: customerEmail,
-    customerName: user.name || undefined,
+    customerName: (user as any).name || undefined,
     certificateNumber: certificateData.certificateNumber,
     productName: certificateData.productName,
     tier: certificateData.tier,

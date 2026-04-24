@@ -1,5 +1,6 @@
 import { markTaskRunning, markTaskDone, markTaskFailed, logActivity } from '../db.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import type { MissionTask } from '../../drizzle/schema.js';
+type Task = MissionTask;
 import { runLeadFinder } from '../agents/lead-finder.js';
 import { runOutboundEmail } from '../agents/outbound-email.js';
 import { runFollowupSequence } from '../agents/followup.js';
@@ -47,6 +48,18 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
         await runBuildPilotPacket(task);
         break;
 
+      case 'CHECK_DNS_CONFIG':
+        await runCheckDnsConfig(task);
+        break;
+
+      case 'VERIFY_SSL':
+        await runVerifySsl(task);
+        break;
+
+      case 'RUN_LIGHTHOUSE_AUDIT':
+        await runLighthouseAudit(task);
+        break;
+
       case 'DRAFT_INTEL_DOSSIER':
         await runDraftIntelDossier(task);
         break;
@@ -61,18 +74,6 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'PACKAGE_SKU_ONBOARDING':
         await runPackageSkuOnboarding(task);
-        break;
-
-      case 'CHECK_DNS_CONFIG':
-        await runCheckDnsConfig(task);
-        break;
-
-      case 'VERIFY_SSL':
-        await runVerifySsl(task);
-        break;
-
-      case 'RUN_LIGHTHOUSE_AUDIT':
-        await runLighthouseAudit(task);
         break;
 
       case 'GENERATE_LAUNCH_CHECKLIST':

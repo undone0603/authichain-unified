@@ -1,9 +1,11 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+
+// Import routers from subfolders
 import { referralRouter } from "./referral/router";
 import { affiliateRouter } from "./affiliate/router";
 import { bonusesRouter } from "./bonuses/router";
@@ -11,14 +13,28 @@ import { marketplaceRouter } from "./marketplace/router";
 import { emailDraftsRouter } from "./email-drafts/router";
 import { subscriptionsRouter } from "./subscriptions/router";
 import { missionsRouter, tasksRouter } from "./missions/router";
-import { SERVICE_CATALOG, SERVICE_LIST, type ServiceType } from "./service-catalog";
-import { createServiceOrder, getServiceOrderById, getServiceOrderBySessionId, getServiceOrdersByUser, getAllServiceOrders, updateServiceOrderStatus } from "./db";
-import { createPaymentCheckout, getStripe } from "./stripe-service";
+import { adminRouter } from "./admin/router";
+import { notificationsRouter } from "./notifications/router";
+import { aiRouter } from "./ai/router";
+import { autopilotRouter } from "./autopilot/router";
+import { blockchainRouter } from "./blockchain/router";
+import { marketingRouter } from "./marketing/router";
+import { nftRouter } from "./nft/router";
+import { personalizationRouter } from "./personalization/router";
+import { stakingRouter } from "./staking/router";
+import { supplyChainRouter } from "./supply-chain/router";
+import { whiteLabelRouter } from "./white-label/router";
+import { stripeConnectRouter } from "./stripe-connect-router";
+import { hubspotRouter } from "./hubspot/router";
+import { emailCampaignsRouter } from "./email-campaigns/router";
+import { dashboardRouter } from "./dashboard/router";
+import { characterRouter } from "./character/router";
 
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-  return next({ ctx });
-});
+// Import routers from routers/ folder
+import { metrcRouter } from "./routers/metrc";
+import { productsRouter as industrialProductsRouter } from "./routers/products";
+import { schedulerRouter } from "./routers/scheduler";
+import { servicesRouter } from "./routers/services";
 
 export const appRouter = router({
   system: systemRouter,
@@ -32,8 +48,9 @@ export const appRouter = router({
     }),
   }),
 
-  // ─── Products ────────────────────────────────────────────────────────────
+  // ─── Products (Merged Industrial + Standard) ──────────────────────────
   products: router({
+    // Standard Methods
     list: protectedProcedure.query(async ({ ctx }) => {
       const { getUserProducts } = await import("./db");
       return await getUserProducts(ctx.user.id);
@@ -56,6 +73,9 @@ export const appRouter = router({
       await logActivity({ userId: ctx.user.id, action: "product_created", entityType: "product", entityId: result.id });
       return result;
     }),
+    // Industrial Pipeline Methods
+    generateAssets: industrialProductsRouter.generateAssets,
+    retryFailedTasks: industrialProductsRouter.retryFailedTasks,
   }),
 
   // ─── AI Authentication ───────────────────────────────────────────────────
@@ -115,23 +135,12 @@ export const appRouter = router({
       if (sub) await updateSubscriptionUsage(ctx.user.id, (sub.usedQuota || 0) + 1);
       await recordUsage({ userId: ctx.user.id, subscriptionId: sub?.id, type: "authentication", quantity: 1 });
       await logActivity({ userId: ctx.user.id, action: "product_authenticated", entityType: "authentication", entityId: authResult.id });
-      // Auto-notification for authentication result
-      try {
-        const { createSystemNotification } = await import("./db");
-        const emoji = aiResult.result === "authentic" ? "Verified" : aiResult.result === "counterfeit" ? "Alert" : "Review Needed";
-        await createSystemNotification(
-          ctx.user.id,
-          `Authentication ${emoji}: ${product.name}`,
-          `${product.brand || "Product"} ${product.name} scored ${aiResult.confidence}% confidence as ${aiResult.result}. ${aiResult.recommendation}`,
-          aiResult.result === "counterfeit" ? "alert" : "authentication",
-          "/authenticate"
-        );
-      } catch (notifErr) { console.warn("[Notification] Failed:", notifErr); }
       // Award XP to user's agent for verification
       try {
         const { rewardAgentForVerification } = await import("./character-service");
         await rewardAgentForVerification(ctx.user.id, aiResult.result === "authentic");
       } catch (agentErr) { console.warn("[Agent XP] No agent or error:", agentErr); }
+
       return aiResult;
     }),
     history: protectedProcedure.query(async ({ ctx }) => {
@@ -155,21 +164,6 @@ export const appRouter = router({
       const product = await getProductById(cert.productId);
       return { valid: true, certificate: cert, product };
     }),
-    makePublic: protectedProcedure.input(z.object({ authenticationId: z.number() })).mutation(async ({ input }) => {
-      const { updateAuthenticationSharing } = await import("./db");
-      const crypto = await import("crypto");
-      const shareToken = crypto.randomBytes(32).toString("hex");
-      await updateAuthenticationSharing(input.authenticationId, true, shareToken);
-      return { shareToken, shareUrl: `/certificate/${shareToken}` };
-    }),
-    getPublic: publicProcedure.input(z.object({ shareToken: z.string() })).query(async ({ input }) => {
-      const { getAuthenticationByShareToken, getProductById, incrementShareCount } = await import("./db");
-      const auth = await getAuthenticationByShareToken(input.shareToken);
-      if (!auth || !auth.isPublic) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
-      const product = await getProductById(auth.productId);
-      await incrementShareCount(auth.id);
-      return { authentication: auth, product };
-    }),
   }),
 
   // ─── QR Codes ────────────────────────────────────────────────────────────
@@ -187,1004 +181,73 @@ export const appRouter = router({
       await createQrCode({ productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl });
       return { qrCodeDataUrl: qrDataUrl, verifyUrl };
     }),
-    scan: publicProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
-      const { getProductById, getProductQrCodes, incrementScanCount } = await import("./db");
-      const product = await getProductById(input.productId);
-      if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
-      const qrCodes = await getProductQrCodes(input.productId);
-      if (qrCodes.length > 0) await incrementScanCount(qrCodes[0].id);
-      return { product, scanCount: (qrCodes[0]?.scanCount || 0) + 1 };
-    }),
-    listForProduct: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
-      const { getProductQrCodes } = await import("./db");
-      return await getProductQrCodes(input.productId);
-    }),
   }),
 
-  // ─── NFT Marketplace ─────────────────────────────────────────────────────
-  nft: router({
-    list: publicProcedure.input(z.object({
-      collectionId: z.number().optional(),
-      status: z.string().optional(),
-      limit: z.number().optional().default(50),
-    })).query(async ({ input }) => {
-      const { listNfts } = await import("./db");
-      return await listNfts(input);
-    }),
-    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-      const { getNftById } = await import("./db");
-      return await getNftById(input.id);
-    }),
-    create: protectedProcedure.input(z.object({
-      name: z.string().min(1),
-      description: z.string().optional(),
-      imageUrl: z.string().optional(),
-      ipfsHash: z.string().optional(),
-      collectionId: z.number().optional(),
-      price: z.string().optional(),
-      currency: z.string().optional().default("ETH"),
-      traits: z.any().optional(),
+  // ─── Direct Mapped Routers ───────────────────────────────────────────────
+  admin: router({
+    ...adminRouter._def.procedures,
+    createSovereignDeal: adminProcedure.input(z.object({
+      manufacturerName: z.string(),
+      dealType: z.enum(["MADE_IN_USA", "GOV_CONTRACT", "INFRASTRUCTURE"]),
+      value: z.number(),
+      description: z.string(),
       productId: z.number().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { createNft, logActivity } = await import("./db");
-      const result = await createNft({ ...input, ownerId: ctx.user.id, creatorId: ctx.user.id, status: "listed" });
-      await logActivity({ userId: ctx.user.id, action: "nft_created", entityType: "nft", entityId: result.id });
-      return result;
-    }),
-    collections: router({
-      list: publicProcedure.query(async () => {
-        const { listCollections } = await import("./db");
-        return await listCollections();
-      }),
-      getBySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
-        const { getCollectionBySlug } = await import("./db");
-        return await getCollectionBySlug(input.slug);
-      }),
-      create: protectedProcedure.input(z.object({
-        name: z.string().min(1),
-        slug: z.string().min(1),
-        description: z.string().optional(),
-        imageUrl: z.string().optional(),
-        category: z.string().optional(),
-      })).mutation(async ({ ctx, input }) => {
-        const { createCollection } = await import("./db");
-        return await createCollection({ ...input, userId: ctx.user.id });
-      }),
-    }),
-    auctions: router({
-      list: publicProcedure.query(async () => {
-        const { getActiveAuctions } = await import("./db");
-        return await getActiveAuctions();
-      }),
-      getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-        const { getAuctionById, getAuctionBids } = await import("./db");
-        const auction = await getAuctionById(input.id);
-        const bids = await getAuctionBids(input.id);
-        return { auction, bids };
-      }),
-      create: protectedProcedure.input(z.object({
-        nftId: z.number(),
-        startPrice: z.string(),
-        reservePrice: z.string().optional(),
-        endsAt: z.string(),
-      })).mutation(async ({ ctx, input }) => {
-        const { createAuction } = await import("./db");
-        return await createAuction({ ...input, sellerId: ctx.user.id, endsAt: new Date(input.endsAt) });
-      }),
-      bid: protectedProcedure.input(z.object({
-        auctionId: z.number(),
-        amount: z.string(),
-      })).mutation(async ({ ctx, input }) => {
-        const { getAuctionById, placeBid } = await import("./db");
-        const auction = await getAuctionById(input.auctionId);
-        if (!auction) throw new TRPCError({ code: "NOT_FOUND" });
-        if (auction.status !== "active") throw new TRPCError({ code: "BAD_REQUEST", message: "Auction not active" });
-        if (auction.currentBid && parseFloat(input.amount) <= parseFloat(auction.currentBid)) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Bid must be higher than current bid" });
-        }
-        await placeBid(input.auctionId, ctx.user.id, input.amount);
-        return { success: true };
-      }),
-    }),
-  }),
-
-  // ─── Subscriptions ───────────────────────────────────────────────────────
-  subscription: router({
-    current: protectedProcedure.query(async ({ ctx }) => {
-      const { getUserSubscription } = await import("./db");
-      const sub = await getUserSubscription(ctx.user.id);
-      return sub ?? null;
-    }),
-    create: protectedProcedure.input(z.object({
-      plan: z.enum(["starter", "professional", "enterprise"]),
-      billingCycle: z.enum(["monthly", "annual"]).optional().default("monthly"),
-    })).mutation(async ({ ctx, input }) => {
-      const { createSubscription, logActivity } = await import("./db");
-      const quotas = { starter: 100, professional: 1000, enterprise: 10000 };
-      const result = await createSubscription({
-        userId: ctx.user.id, plan: input.plan, monthlyQuota: quotas[input.plan],
-        usedQuota: 0, billingCycle: input.billingCycle, status: "active",
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + (input.billingCycle === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000),
-      });
-      await logActivity({ userId: ctx.user.id, action: "subscription_created", entityType: "subscription", entityId: result.id });
-      return result;
-    }),
-    invoices: protectedProcedure.query(async ({ ctx }) => {
-      const { getUserInvoices } = await import("./db");
-      return await getUserInvoices(ctx.user.id);
-    }),
-    usage: protectedProcedure.query(async ({ ctx }) => {
-      const { getUserSubscription } = await import("./db");
-      const sub = await getUserSubscription(ctx.user.id);
-      if (!sub) return { plan: null, used: 0, limit: 0, percentage: 0 };
-      return { plan: sub.plan, used: sub.usedQuota || 0, limit: sub.monthlyQuota, percentage: Math.round(((sub.usedQuota || 0) / sub.monthlyQuota) * 100) };
-    }),
-    checkout: protectedProcedure.input(z.object({
-      plan: z.enum(["starter", "professional", "enterprise"]),
-      billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
-      origin: z.string(),
-    })).mutation(async ({ ctx, input }) => {
-      const { createSubscriptionCheckout } = await import("./stripe-service");
-      const url = await createSubscriptionCheckout({
+    })).mutation(async ({ ctx, input }: { ctx: any; input: any }) => {
+      const { createProduct, logActivity } = await import("./db");
+      const deal = await createProduct({
+        name: `${input.manufacturerName} - ${input.dealType}`,
+        brand: input.manufacturerName,
+        category: "SOVEREIGN_DEAL",
+        description: input.description,
         userId: ctx.user.id,
-        userEmail: ctx.user.email || "",
-        userName: ctx.user.name || "",
-        plan: input.plan,
-        billing: input.billing,
-        origin: input.origin,
-        stripeCustomerId: (ctx.user as any).stripeCustomerId || undefined,
+        metadata: { ...input, sealedAt: new Date().toISOString() }
       });
-      return { checkoutUrl: url };
-    }),
-    cancel: protectedProcedure.mutation(async ({ ctx }) => {
-      const { getUserSubscription } = await import("./db");
-      const sub = await getUserSubscription(ctx.user.id);
-      if (!sub?.stripeSubscriptionId) throw new TRPCError({ code: "NOT_FOUND", message: "No active Stripe subscription" });
-      const { cancelSubscription } = await import("./stripe-service");
-      await cancelSubscription(sub.stripeSubscriptionId);
-      return { success: true, message: "Subscription will cancel at end of billing period" };
-    }),
-    paymentHistory: protectedProcedure.query(async ({ ctx }) => {
-      const stripeCustomerId = (ctx.user as any).stripeCustomerId;
-      if (!stripeCustomerId) return { payments: [], invoices: [] };
-      const { getCustomerPayments, getCustomerInvoices } = await import("./stripe-service");
-      const [payments, invoices] = await Promise.all([
-        getCustomerPayments(stripeCustomerId).catch(() => []),
-        getCustomerInvoices(stripeCustomerId).catch(() => []),
-      ]);
-      return { payments, invoices };
-    }),
-    createPromoCode: adminProcedure.input(z.object({
-      code: z.string().min(1),
-      percentOff: z.number().min(1).max(100).default(99),
-      name: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const Stripe = (await import("stripe")).default;
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
-      const coupon = await stripe.coupons.create({
-        percent_off: input.percentOff,
-        duration: "forever",
-        name: input.name || `AuthiChain ${input.percentOff}% Off`,
-      });
-      const promo = await stripe.promotionCodes.create({
-        promotion: { type: 'coupon', coupon: coupon.id },
-        code: input.code,
-        active: true,
-      });
-      return { success: true, code: promo.code, id: promo.id, percentOff: input.percentOff };
-    }),
-    createPaddleCheckout: protectedProcedure.input(z.object({
-      plan: z.enum(["starter", "professional", "enterprise"]),
-      billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
-      successUrl: z.string(),
-    })).mutation(async ({ ctx, input }) => {
-      const PADDLE_PRICES: Record<string, Record<string, string>> = {
-        starter:      { monthly: process.env.PADDLE_PRICE_STARTER_MONTHLY || "", annual: process.env.PADDLE_PRICE_STARTER_ANNUAL || "" },
-        professional: { monthly: process.env.PADDLE_PRICE_PRO_MONTHLY || "",     annual: process.env.PADDLE_PRICE_PRO_ANNUAL || "" },
-        enterprise:   { monthly: process.env.PADDLE_PRICE_ENT_MONTHLY || "",     annual: process.env.PADDLE_PRICE_ENT_ANNUAL || "" },
-      };
-      const priceId = PADDLE_PRICES[input.plan]?.[input.billing];
-      if (!priceId) throw new TRPCError({ code: "BAD_REQUEST", message: `Paddle price not configured for ${input.plan}/${input.billing}` });
-      const { upsertPaddleCustomer, createPaddleTransaction } = await import("./paddle-service");
-      const customerId = await upsertPaddleCustomer({ email: ctx.user.email || "", name: ctx.user.name || "", userId: ctx.user.id });
-      const checkoutUrl = await createPaddleTransaction({ customerId, priceId, successUrl: input.successUrl });
-      return { checkoutUrl };
+      await logActivity({ userId: ctx.user.id, action: "sovereign_deal_created", entityType: "deal", entityId: deal.id });
+      return { success: true, dealId: deal.id, status: "SEALED" };
     }),
   }),
-
-  // ─── Payments ────────────────────────────────────────────────────────────
-  payments: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      const { getUserPayments } = await import("./db");
-      return await getUserPayments(ctx.user.id);
-    }),
-    createStripe: protectedProcedure.input(z.object({
-      amount: z.string(),
-      currency: z.string().optional().default("USD"),
-      metadata: z.any().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { createPayment } = await import("./db");
-      return await createPayment({ userId: ctx.user.id, amount: input.amount, currency: input.currency, method: "stripe", status: "pending", metadata: input.metadata });
-    }),
-    createCrypto: protectedProcedure.input(z.object({
-      amount: z.string(),
-      currency: z.string().optional().default("BTC"),
-      metadata: z.any().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { createPayment } = await import("./db");
-      return await createPayment({ userId: ctx.user.id, amount: input.amount, currency: input.currency, method: "crypto", status: "pending", metadata: input.metadata });
-    }),
-    createEscrow: protectedProcedure.input(z.object({
-      amount: z.string(),
-      releaseDate: z.string(),
-      metadata: z.any().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { createPayment } = await import("./db");
-      return await createPayment({
-        userId: ctx.user.id, amount: input.amount, method: "escrow", status: "escrowed",
-        escrowReleaseDate: new Date(input.releaseDate), metadata: input.metadata,
-      });
-    }),
-  }),
-
-  // ─── Autopilot ───────────────────────────────────────────────────────────
-  autopilot: router({
-    getStatus: protectedProcedure.query(async () => {
-      const { getAutopilotConfig, getRecentDecisions } = await import("./db");
-      const config = await getAutopilotConfig();
-      const decisions = await getRecentDecisions(5);
-      const executed = decisions.filter(d => d.status === "executed").length;
-      return {
-        enabled: config?.enabled || 0,
-        mode: config?.mode || "balanced",
-        guardrails: config?.guardrails,
-        uptime: 99.5,
-        decisionsToday: decisions.length,
-        actionsToday: executed,
-        successRate: decisions.length > 0 ? Math.round((executed / decisions.length) * 100) : 0,
-        recentDecisions: decisions,
-      };
-    }),
-    toggle: protectedProcedure.mutation(async ({ ctx }) => {
-      const { getAutopilotConfig, upsertAutopilotConfig } = await import("./db");
-      const config = await getAutopilotConfig();
-      await upsertAutopilotConfig({
-        enabled: config?.enabled === 1 ? 0 : 1,
-        mode: config?.mode || "balanced",
-        guardrails: config?.guardrails || JSON.stringify({ maxEmailsPerDay: 50, maxSocialPostsPerDay: 5, maxDiscountPercent: 30 }),
-        updatedBy: ctx.user.id,
-      });
-      return { success: true, enabled: config?.enabled === 1 ? 0 : 1 };
-    }),
-    updateMode: protectedProcedure.input(z.object({
-      mode: z.enum(["conservative", "balanced", "aggressive"]),
-    })).mutation(async ({ ctx, input }) => {
-      const { upsertAutopilotConfig } = await import("./db");
-      await upsertAutopilotConfig({ mode: input.mode, updatedBy: ctx.user.id });
-      return { success: true };
-    }),
-    getDecisions: protectedProcedure.input(z.object({ limit: z.number().optional().default(20) })).query(async ({ input }) => {
-      const { getRecentDecisions } = await import("./db");
-      return await getRecentDecisions(input.limit);
-    }),
-    overrideDecision: protectedProcedure.input(z.object({
-      decisionId: z.number(),
-      reason: z.string(),
-    })).mutation(async ({ ctx, input }) => {
-      const { getDb } = await import("./db");
-      const { autopilotDecisions } = await import("../drizzle/schema");
-      const { eq } = await import("drizzle-orm");
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
-      await db.update(autopilotDecisions).set({ status: "overridden", overriddenBy: ctx.user.id, overrideReason: input.reason }).where(eq(autopilotDecisions.id, input.decisionId));
-      return { success: true };
-    }),
-    executeAction: protectedProcedure.input(z.object({
-      type: z.string(),
-      action: z.string(),
-      reasoning: z.string().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { createAutopilotDecision, logActivity } = await import("./db");
-      const { invokeLLM } = await import("./_core/llm");
-      const response = await invokeLLM({
-        messages: [
-          { role: "system", content: "You are an AI business autopilot. Evaluate the proposed action and determine confidence level (0-100) and expected outcome." },
-          { role: "user", content: `Action type: ${input.type}\nAction: ${input.action}\nReasoning: ${input.reasoning || "N/A"}` },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "action_evaluation",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                confidence: { type: "integer" },
-                expectedOutcome: { type: "string" },
-                risks: { type: "string" },
-                proceed: { type: "boolean" },
-              },
-              required: ["confidence", "expectedOutcome", "risks", "proceed"],
-              additionalProperties: false,
-            },
-          },
-        },
-      });
-      const evaluation = JSON.parse(response.choices[0].message.content as string);
-      const decision = await createAutopilotDecision({
-        type: input.type, action: input.action, reasoning: input.reasoning,
-        confidence: evaluation.confidence, status: evaluation.proceed ? "executed" : "pending",
-        result: evaluation,
-      });
-      await logActivity({ userId: ctx.user.id, action: "autopilot_decision", entityType: "autopilot_decision", entityId: decision.id });
-      return { decision, evaluation };
-    }),
-  }),
-
-  // ─── Email Campaigns ─────────────────────────────────────────────────────
-  emailCampaigns: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      const { getUserEmailCampaigns } = await import("./db");
-      return await getUserEmailCampaigns(ctx.user.id);
-    }),
-    create: protectedProcedure.input(z.object({
-      name: z.string().min(1),
-      subject: z.string().min(1),
-      body: z.string().min(1),
-      type: z.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
-      scheduledAt: z.string().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { createEmailCampaign } = await import("./db");
-      return await createEmailCampaign({
-        ...input, userId: ctx.user.id, status: input.scheduledAt ? "scheduled" : "draft",
-        scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
-      });
-    }),
-    generateContent: protectedProcedure.input(z.object({
-      type: z.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
-      topic: z.string(),
-      targetAudience: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { invokeLLM } = await import("./_core/llm");
-      const response = await invokeLLM({
-        messages: [
-          { role: "system", content: "You are an expert email marketing specialist for a blockchain authentication platform. Create compelling, professional email content that drives conversions." },
-          { role: "user", content: `Create a ${input.type} email about: ${input.topic}. Target audience: ${input.targetAudience || "enterprise decision makers"}. Return JSON with subject and body fields.` },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "email_content",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: { subject: { type: "string" }, body: { type: "string" } },
-              required: ["subject", "body"],
-              additionalProperties: false,
-            },
-          },
-        },
-      });
-      return JSON.parse(response.choices[0].message.content as string);
-    }),
-  }),
-
-  // ─── Email Drafts (Approval Workflow) ─────────────────────────────────────
-  emailDrafts: emailDraftsRouter,
-
-  // ─── Supply Chain ────────────────────────────────────────────────────────
-  supplyChain: router({
-    getEvents: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
-      const { getProductSupplyChain } = await import("./db");
-      return await getProductSupplyChain(input.productId);
-    }),
-    addEvent: protectedProcedure.input(z.object({
-      productId: z.number(),
-      eventType: z.enum(["manufactured", "shipped", "in_transit", "customs", "delivered", "verified", "recalled"]),
-      location: z.string().optional(),
-      latitude: z.string().optional(),
-      longitude: z.string().optional(),
-      temperature: z.string().optional(),
-      humidity: z.string().optional(),
-      handler: z.string().optional(),
-      notes: z.string().optional(),
-      iotDeviceId: z.string().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { createSupplyChainEvent, logActivity } = await import("./db");
-      const result = await createSupplyChainEvent(input);
-      await logActivity({ userId: ctx.user.id, action: "supply_chain_event", entityType: "supply_chain", entityId: result.id });
-      return result;
-    }),
-  }),
-
-  // ─── Referrals ───────────────────────────────────────────────────────────
+  notifications: notificationsRouter,
+  ai: aiRouter,
+  autopilot: autopilotRouter,
+  blockchain: blockchainRouter,
+  marketing: marketingRouter,
+  nft: nftRouter,
+  personalization: personalizationRouter,
+  staking: stakingRouter,
+  supplyChain: supplyChainRouter,
+  whiteLabel: whiteLabelRouter,
+  scheduler: schedulerRouter,
+  metrc: metrcRouter,
+  referral: referralRouter,
   referrals: router({
-    myReferrals: protectedProcedure.query(async ({ ctx }) => {
-      const { getUserReferrals } = await import("./db");
-      return await getUserReferrals(ctx.user.id);
-    }),
-    generateCode: protectedProcedure.mutation(async ({ ctx }) => {
-      const { createReferral } = await import("./db");
-      const code = `AC-${ctx.user.id}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      return await createReferral({ referrerId: ctx.user.id, referralCode: code, status: "pending" });
-    }),
-    validate: publicProcedure.input(z.object({ code: z.string() })).query(async ({ input }) => {
-      const { getReferralByCode } = await import("./db");
-      const referral = await getReferralByCode(input.code);
-      return { valid: !!referral, referral };
-    }),
+    ...referralRouter._def.procedures,
+    myReferrals: referralRouter.getHistory,
   }),
-
-  // ─── Affiliates ──────────────────────────────────────────────────────────
+  affiliate: affiliateRouter,
   affiliates: router({
-    myProfile: protectedProcedure.query(async ({ ctx }) => {
-      const { getAffiliateByUserId } = await import("./db");
-      return await getAffiliateByUserId(ctx.user.id);
-    }),
-    join: protectedProcedure.mutation(async ({ ctx }) => {
-      const { createAffiliate } = await import("./db");
-      const code = `AFF-${ctx.user.id}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      return await createAffiliate({ userId: ctx.user.id, affiliateCode: code, status: "active", commissionRate: "10.00" });
-    }),
+    ...affiliateRouter._def.procedures,
+    myProfile: affiliateRouter.getStatus,
     commissions: protectedProcedure.query(async ({ ctx }) => {
       const { getAffiliateByUserId, getAffiliateCommissions } = await import("./db");
-      const affiliate = await getAffiliateByUserId(ctx.user.id);
-      if (!affiliate) return [];
-      return await getAffiliateCommissions(affiliate.id);
+      const aff = await getAffiliateByUserId(ctx.user.id);
+      if (!aff) return [];
+      return await getAffiliateCommissions(aff.id);
     }),
+    join: affiliateRouter.submitApplication,
   }),
-
-  // ─── A/B Testing ─────────────────────────────────────────────────────────
-  abTesting: router({
-    list: protectedProcedure.query(async () => {
-      const { getAllAbTests } = await import("./db");
-      return await getAllAbTests();
-    }),
-    create: protectedProcedure.input(z.object({
-      name: z.string().min(1),
-      description: z.string().optional(),
-      type: z.string(),
-      variants: z.any(),
-    })).mutation(async ({ input }) => {
-      const { createAbTest } = await import("./db");
-      return await createAbTest({ ...input, status: "draft" });
-    }),
-  }),
-
-  // ─── White Label ─────────────────────────────────────────────────────────
-  whiteLabel: router({
-    list: adminProcedure.query(async () => {
-      const { getWhiteLabelClients } = await import("./db");
-      return await getWhiteLabelClients();
-    }),
-    create: adminProcedure.input(z.object({
-      companyName: z.string().min(1),
-      domain: z.string().optional(),
-      logoUrl: z.string().optional(),
-      primaryColor: z.string().optional(),
-      secondaryColor: z.string().optional(),
-      apiCallLimit: z.number().optional().default(10000),
-    })).mutation(async ({ ctx, input }) => {
-      const { createWhiteLabelClient } = await import("./db");
-      const crypto = await import("crypto");
-      const apiKey = `wl_${crypto.randomBytes(24).toString("hex")}`;
-      const apiSecret = crypto.randomBytes(32).toString("hex");
-      return await createWhiteLabelClient({ ...input, userId: ctx.user.id, apiKey, apiSecret });
-    }),
-    validateApiKey: publicProcedure.input(z.object({ apiKey: z.string() })).query(async ({ input }) => {
-      const { getWhiteLabelByApiKey } = await import("./db");
-      const client = await getWhiteLabelByApiKey(input.apiKey);
-      return { valid: !!client && client.status === "active", client: client ? { companyName: client.companyName, domain: client.domain } : null };
-    }),
-  }),
-
-  // ─── Leads & Marketing ───────────────────────────────────────────────────
-  marketing: router({
-    leads: adminProcedure.query(async () => {
-      const { getAllLeads } = await import("./db");
-      return await getAllLeads();
-    }),
-    createLead: publicProcedure.input(z.object({
-      email: z.string().email(),
-      name: z.string().optional(),
-      company: z.string().optional(),
-      source: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { createLead } = await import("./db");
-      const result = await createLead(input);
-      // Auto-sync to HubSpot
-      try {
-        const { syncLeadToHubSpot } = await import("./hubspot-service");
-        await syncLeadToHubSpot(input);
-      } catch (e) { /* HubSpot sync is best-effort */ }
-      return result;
-    }),
-    updateLeadScore: adminProcedure.input(z.object({ id: z.number(), score: z.number() })).mutation(async ({ input }) => {
-      const { updateLeadScore } = await import("./db");
-      await updateLeadScore(input.id, input.score);
-      return { success: true };
-    }),
-    updateLeadStatus: adminProcedure.input(z.object({ id: z.number(), status: z.string() })).mutation(async ({ input }) => {
-      const { updateLeadStatus } = await import("./db");
-      await updateLeadStatus(input.id, input.status);
-      return { success: true };
-    }),
-    generateContent: protectedProcedure.input(z.object({
-      type: z.enum(["email", "social", "blog"]),
-      topic: z.string(),
-      targetAudience: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { invokeLLM } = await import("./_core/llm");
-      const response = await invokeLLM({
-        messages: [
-          { role: "system", content: "You are a marketing expert for a blockchain authentication platform. Create compelling, professional content." },
-          { role: "user", content: `Create ${input.type} content about: ${input.topic}. Target: ${input.targetAudience || "enterprise decision makers"}` },
-        ],
-      });
-      return { content: response.choices[0].message.content };
-    }),
-  }),
-
-  // ─── Admin Dashboard ─────────────────────────────────────────────────────
-  admin: router({
-    metrics: adminProcedure.query(async () => {
-      const { getAdminDashboardMetrics } = await import("./db");
-      return await getAdminDashboardMetrics();
-    }),
-    users: adminProcedure.query(async () => {
-      const { getAllUsers } = await import("./db");
-      return await getAllUsers();
-    }),
-    revenue: adminProcedure.input(z.object({
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    }).optional()).query(async ({ input }) => {
-      const { getRevenueAnalytics } = await import("./db");
-      return await getRevenueAnalytics(
-        input?.startDate ? new Date(input.startDate) : undefined,
-        input?.endDate ? new Date(input.endDate) : undefined,
-      );
-    }),
-    fraudAlerts: adminProcedure.query(async () => {
-      const { getOpenFraudAlerts } = await import("./db");
-      return await getOpenFraudAlerts();
-    }),
-    healthScores: adminProcedure.query(async () => {
-      const { getAllHealthScores } = await import("./db");
-      return await getAllHealthScores();
-    }),
-    activity: adminProcedure.input(z.object({ limit: z.number().optional().default(50) })).query(async ({ input }) => {
-      const { getRecentActivity } = await import("./db");
-      return await getRecentActivity(input.limit);
-    }),
-    subscriptions: adminProcedure.query(async () => {
-      const { getSubscriptionAnalytics } = await import("./db");
-      return await getSubscriptionAnalytics();
-    }),
-  }),
-
-  // ─── Blockchain (Thirdweb) ──────────────────────────────────────────────
-  blockchain: router({
-    status: publicProcedure.query(async () => {
-      const { checkThirdwebConnection } = await import("./thirdweb");
-      return await checkThirdwebConnection();
-    }),
-    uploadToIPFS: protectedProcedure.input(z.object({
-      name: z.string(),
-      description: z.string().optional(),
-      imageUrl: z.string().optional(),
-      attributes: z.array(z.object({ trait_type: z.string(), value: z.union([z.string(), z.number()]) })).optional(),
-    })).mutation(async ({ input }) => {
-      const { uploadMetadataToIPFS } = await import("./thirdweb");
-      const uri = await uploadMetadataToIPFS({
-        name: input.name,
-        description: input.description,
-        image: input.imageUrl,
-        attributes: input.attributes,
-      });
-      return { ipfsUri: uri };
-    }),
-    mintCertificateNFT: protectedProcedure.input(z.object({
-      productId: z.number(),
-      certificateNumber: z.string(),
-      walletAddress: z.string(),
-      contractAddress: z.string(),
-      privateKey: z.string(),
-      chainId: z.number().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { getProductById, getCertificateByNumber, logActivity } = await import("./db");
-      const { mintAuthenticationNFT, buildAuthCertificateMetadata } = await import("./thirdweb");
-      const product = await getProductById(input.productId);
-      if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
-      const cert = await getCertificateByNumber(input.certificateNumber);
-      if (!cert) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
-      const metadata = buildAuthCertificateMetadata({
-        productName: product.name,
-        productBrand: product.brand || undefined,
-        productSerial: product.serialNumber || undefined,
-        confidenceScore: 95,
-        verificationDate: new Date().toISOString(),
-        certificateNumber: input.certificateNumber,
-        imageUrl: product.imageUrl || undefined,
-        authenticatorId: ctx.user.id,
-      });
-      const result = await mintAuthenticationNFT({
-        contractAddress: input.contractAddress,
-        recipientAddress: input.walletAddress,
-        metadata,
-        privateKey: input.privateKey,
-        chainId: input.chainId,
-      });
-      await logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "certificate", entityId: cert.id });
-      return { transactionHash: result.transactionHash, metadataUri: result.metadataUri, chain: result.chain };
-    }),
-    mintNFT: protectedProcedure.input(z.object({
-      name: z.string(),
-      description: z.string().optional(),
-      imageUrl: z.string().optional(),
-      walletAddress: z.string(),
-      contractAddress: z.string(),
-      privateKey: z.string(),
-      chainId: z.number().optional(),
-      attributes: z.array(z.object({ trait_type: z.string(), value: z.union([z.string(), z.number()]) })).optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { mintAuthenticationNFT } = await import("./thirdweb");
-      const { logActivity } = await import("./db");
-      const result = await mintAuthenticationNFT({
-        contractAddress: input.contractAddress,
-        recipientAddress: input.walletAddress,
-        metadata: {
-          name: input.name,
-          description: input.description,
-          image: input.imageUrl,
-          attributes: input.attributes,
-        },
-        privateKey: input.privateKey,
-        chainId: input.chainId,
-      });
-      await logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "nft", entityId: 0 });
-      return { transactionHash: result.transactionHash, metadataUri: result.metadataUri, chain: result.chain };
-    }),
-    getNFTBalance: publicProcedure.input(z.object({
-      contractAddress: z.string(),
-      walletAddress: z.string(),
-      chainId: z.number().optional(),
-    })).query(async ({ input }) => {
-      const { getNFTBalance } = await import("./thirdweb");
-      const balance = await getNFTBalance(input.contractAddress, input.walletAddress, input.chainId);
-      return { balance };
-    }),
-    getContractSupply: publicProcedure.input(z.object({
-      contractAddress: z.string(),
-      chainId: z.number().optional(),
-    })).query(async ({ input }) => {
-      const { getContractTotalSupply } = await import("./thirdweb");
-      const supply = await getContractTotalSupply(input.contractAddress, input.chainId);
-      return { totalSupply: supply };
-    }),
-    getWalletNFTs: publicProcedure.input(z.object({
-      contractAddress: z.string(),
-      walletAddress: z.string(),
-      chainId: z.number().optional(),
-    })).query(async ({ input }) => {
-      const { getWalletNFTs } = await import("./thirdweb");
-      const nfts = await getWalletNFTs(input.contractAddress, input.walletAddress, input.chainId);
-      return { nfts };
-    }),
-    deployedContract: publicProcedure.query(() => {
-      const address = process.env.VITE_AUTHICHAIN_CONTRACT_ADDRESS || "";
-      return {
-        address,
-        chainId: 80002,
-        chain: "Polygon Amoy",
-        explorer: address ? `https://amoy.polygonscan.com/address/${address}` : "",
-        deployed: !!address,
-      };
-    }),
-  }),
-
-  // ─── Dashboard Metrics ───────────────────────────────────────────────────
-  dashboard: router({
-    metrics: protectedProcedure.query(async ({ ctx }) => {
-      const { getDashboardMetrics } = await import("./db");
-      return await getDashboardMetrics(ctx.user.id);
-    }),
-  }),
-
-  // ─── Notifications ──────────────────────────────────────────────────────
-  notifications: router({
-    list: protectedProcedure.input(z.object({
-      limit: z.number().optional().default(50),
-    }).optional()).query(async ({ ctx, input }) => {
-      const { getUserNotifications } = await import("./db");
-      return await getUserNotifications(ctx.user.id, input?.limit ?? 50);
-    }),
-    unreadCount: protectedProcedure.query(async ({ ctx }) => {
-      const { getUnreadNotificationCount } = await import("./db");
-      return { count: await getUnreadNotificationCount(ctx.user.id) };
-    }),
-    markRead: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
-      const { markNotificationRead } = await import("./db");
-      await markNotificationRead(input.id, ctx.user.id);
-      return { success: true };
-    }),
-    markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
-      const { markAllNotificationsRead } = await import("./db");
-      await markAllNotificationsRead(ctx.user.id);
-      return { success: true };
-    }),
-    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
-      const { deleteNotification } = await import("./db");
-      await deleteNotification(input.id, ctx.user.id);
-      return { success: true };
-    }),
-    // Create notification (for testing / admin use)
-    create: protectedProcedure.input(z.object({
-      title: z.string().min(1),
-      message: z.string().min(1),
-      type: z.enum(["authentication", "certificate", "payment", "subscription", "nft", "referral", "system", "alert", "supply_chain", "autopilot"]),
-      actionUrl: z.string().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { createNotification } = await import("./db");
-      return await createNotification({ ...input, userId: ctx.user.id, isRead: 0 });
-    }),
-  }),
-
-  // ─── HubSpot CRM ──────────────────────────────────────────────────────
-  hubspot: router({
-    status: protectedProcedure.query(async () => {
-      const { isHubSpotConfigured, getCRMStats } = await import("./hubspot-service");
-      if (!isHubSpotConfigured()) return { connected: false, contacts: 0, companies: 0, deals: 0, error: "HUBSPOT_SERVICE_KEY is not configured. Add it in Settings → Secrets." };
-      return await getCRMStats();
-    }),
-    contacts: router({
-      list: protectedProcedure.query(async () => {
-        const { listContacts } = await import("./hubspot-service");
-        return await listContacts();
-      }),
-      search: protectedProcedure.input(z.object({ query: z.string() })).query(async ({ input }) => {
-        const { searchContacts } = await import("./hubspot-service");
-        return await searchContacts(input.query);
-      }),
-      create: protectedProcedure.input(z.object({
-        email: z.string().email(),
-        firstname: z.string().optional(),
-        lastname: z.string().optional(),
-        phone: z.string().optional(),
-        company: z.string().optional(),
-      })).mutation(async ({ input }) => {
-        const { createContact } = await import("./hubspot-service");
-        return await createContact(input);
-      }),
-    }),
-    companies: router({
-      list: protectedProcedure.query(async () => {
-        const { listCompanies } = await import("./hubspot-service");
-        return await listCompanies();
-      }),
-      create: protectedProcedure.input(z.object({
-        name: z.string(),
-        domain: z.string().optional(),
-        industry: z.string().optional(),
-        description: z.string().optional(),
-      })).mutation(async ({ input }) => {
-        const { createCompany } = await import("./hubspot-service");
-        return await createCompany(input);
-      }),
-    }),
-    deals: router({
-      list: protectedProcedure.query(async () => {
-        const { listDeals } = await import("./hubspot-service");
-        return await listDeals();
-      }),
-      create: protectedProcedure.input(z.object({
-        dealname: z.string(),
-        amount: z.string().optional(),
-        pipeline: z.string().optional(),
-        dealstage: z.string().optional(),
-        closedate: z.string().optional(),
-      })).mutation(async ({ input }) => {
-        const { createDeal } = await import("./hubspot-service");
-        return await createDeal(input);
-      }),
-    }),
-  }),
-
-  // ─── AI Chat ───────────────────────────────────────────────────────────
-  ai: router({
-    chat: protectedProcedure.input(z.object({
-      messages: z.array(z.object({ role: z.enum(["user", "assistant", "system"]), content: z.string() })),
-    })).mutation(async ({ input }) => {
-      const { invokeLLM } = await import("./_core/llm");
-      const systemPrompt = "You are AuthiChain AI, an expert assistant for product authentication, blockchain verification, supply chain management, and anti-counterfeiting. Help users understand authentication results, manage their products, and optimize their supply chain security.";
-      const messages = [{ role: "system" as const, content: systemPrompt }, ...input.messages];
-      const response = await invokeLLM({ messages });
-      return { content: response.choices?.[0]?.message?.content || "I apologize, I could not generate a response." };
-    }),
-  }),
-  // ─── AuthiCharacter System ──────────────────────────────────────────
-  character: router({
-    generate: protectedProcedure.input(z.object({
-      archetype: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
-      brand: z.string().optional(),
-      object: z.string().optional(),
-      colorway: z.string().optional(),
-      mood: z.string().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const { startCharacterGeneration } = await import("./character-service");
-      return await startCharacterGeneration(ctx.user.id, input.archetype, { brand: input.brand, object: input.object, colorway: input.colorway, mood: input.mood });
-    }),
-    generationStatus: protectedProcedure.input(z.object({ generationId: z.number() })).query(async ({ input }) => {
-      const { getGenerationStatus } = await import("./character-service");
-      return await getGenerationStatus(input.generationId);
-    }),
-    myGenerations: protectedProcedure.query(async ({ ctx }) => {
-      const { getUserGenerations } = await import("./character-service");
-      return await getUserGenerations(ctx.user.id);
-    }),
-    myAssets: protectedProcedure.query(async ({ ctx }) => {
-      const { getUserCharacterAssets } = await import("./character-service");
-      return await getUserCharacterAssets(ctx.user.id);
-    }),
-    select: protectedProcedure.input(z.object({ assetId: z.number() })).mutation(async ({ ctx, input }) => {
-      const { selectCharacterAsset } = await import("./character-service");
-      return await selectCharacterAsset(ctx.user.id, input.assetId);
-    }),
-    createAgent: protectedProcedure.input(z.object({
-      characterAssetId: z.number(),
-      name: z.string().min(2).max(64),
-      agentType: z.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
-    })).mutation(async ({ ctx, input }) => {
-      const { createProtocolAgent } = await import("./character-service");
-      return await createProtocolAgent(ctx.user.id, input.characterAssetId, input.name, input.agentType);
-    }),
-    myAgent: protectedProcedure.query(async ({ ctx }) => {
-      const { getAgentByUser } = await import("./character-service");
-      return await getAgentByUser(ctx.user.id);
-    }),
-    agentRewards: protectedProcedure.input(z.object({ agentId: z.number() })).query(async ({ input }) => {
-      const { getAgentRewards } = await import("./character-service");
-      return await getAgentRewards(input.agentId);
-    }),
-    leaderboard: publicProcedure.input(z.object({ limit: z.number().optional().default(20) })).query(async ({ input }) => {
-      const { getAgentLeaderboard } = await import("./character-service");
-      return await getAgentLeaderboard(input.limit);
-    }),
-    networkStats: publicProcedure.query(async () => {
-      const { getNetworkStats } = await import("./character-service");
-      return await getNetworkStats();
-    }),
-    mintPrep: protectedProcedure.input(z.object({ assetId: z.number() })).mutation(async ({ ctx, input }) => {
-      const { prepareMint } = await import("./character-service");
-      return await prepareMint(ctx.user.id, input.assetId);
-    }),
-    submitClaim: protectedProcedure.input(z.object({
-      agentId: z.number(),
-      productId: z.number(),
-      authenticationId: z.number().nullable().optional(),
-      claimType: z.enum(["authentic", "counterfeit", "inconclusive", "needs_review"]),
-      confidence: z.number().min(0).max(100),
-      reasoning: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      const { submitVerificationClaim } = await import("./character-service");
-      return await submitVerificationClaim(
-        input.agentId, input.productId, input.authenticationId ?? null,
-        input.claimType, input.confidence, undefined, input.reasoning
-      );
-    }),
-  }),
-  // ─── Scheduled Jobs (Admin) ─────────────────────────────────────────
-  scheduler: router({
-    listJobs: adminProcedure.query(async () => {
-      const { getRegisteredJobs } = await import("./scheduled-jobs");
-      return getRegisteredJobs();
-    }),
-    getHistory: adminProcedure.input(z.object({
-      jobName: z.string().optional(),
-      limit: z.number().optional().default(50),
-    })).query(async ({ input }) => {
-      const { getJobHistory } = await import("./scheduled-jobs");
-      return await getJobHistory(input.jobName, input.limit);
-    }),
-    runManually: adminProcedure.input(z.object({
-      jobName: z.string(),
-    })).mutation(async ({ input }) => {
-      const { runJobManually } = await import("./scheduled-jobs");
-      const success = await runJobManually(input.jobName);
-      if (!success) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
-      return { success: true, message: `Job ${input.jobName} triggered successfully` };
-    }),
-  }),
-
-  // ─── Services (Revenue) ─────────────────────────────────────────────────
-  services: router({
-    catalog: publicProcedure.query(() => {
-      return SERVICE_LIST;
-    }),
-
-    getService: publicProcedure.input(z.object({ key: z.string() })).query(({ input }) => {
-      const service = SERVICE_CATALOG[input.key as ServiceType];
-      if (!service) throw new TRPCError({ code: "NOT_FOUND", message: "Service not found" });
-      return service;
-    }),
-
-    checkout: protectedProcedure.input(z.object({
-      serviceType: z.enum(["authenticity_audit", "cinematic_page", "automation_setup", "landing_page", "brand_story_pack", "government_dossier"]),
-      businessName: z.string().optional(),
-      businessType: z.string().optional(),
-      businessUrl: z.string().optional(),
-      notes: z.string().optional(),
-      origin: z.string(),
-    })).mutation(async ({ ctx, input }) => {
-      const service = SERVICE_CATALOG[input.serviceType];
-      if (!service) throw new TRPCError({ code: "NOT_FOUND", message: "Service not found" });
-
-      const order = await createServiceOrder({
-        userId: ctx.user.id,
-        customerEmail: ctx.user.email || "",
-        customerName: ctx.user.name || undefined,
-        serviceType: input.serviceType,
-        amount: service.price,
-        businessName: input.businessName,
-        businessType: input.businessType,
-        businessUrl: input.businessUrl,
-        notes: input.notes,
-      });
-
-      const checkoutUrl = await createPaymentCheckout({
-        userId: ctx.user.id,
-        userEmail: ctx.user.email || "",
-        userName: ctx.user.name || "Customer",
-        description: service.name,
-        amount: service.price,
-        origin: input.origin,
-        metadata: {
-          service_type: input.serviceType,
-          order_id: order.id.toString(),
-        },
-      });
-
-      await updateServiceOrderStatus(order.id, "pending", { stripePaymentIntentId: undefined });
-
-      return { checkoutUrl, orderId: order.id };
-    }),
-
-    myOrders: protectedProcedure.query(async ({ ctx }) => {
-      return await getServiceOrdersByUser(ctx.user.id);
-    }),
-
-    getOrder: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ ctx, input }) => {
-      const order = await getServiceOrderById(input.id);
-      if (!order) throw new TRPCError({ code: "NOT_FOUND" });
-      if (order.userId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
-      return order;
-    }),
-
-    // Admin endpoints
-    allOrders: adminProcedure.query(async () => {
-      return await getAllServiceOrders();
-    }),
-
-    updateStatus: adminProcedure.input(z.object({
-      id: z.number(),
-      status: z.enum(["pending", "paid", "in_progress", "delivered", "cancelled"]),
-      deliveryUrl: z.string().optional(),
-    })).mutation(async ({ input }) => {
-      await updateServiceOrderStatus(input.id, input.status, {
-        deliveryUrl: input.deliveryUrl,
-        deliveredAt: input.status === "delivered" ? new Date() : undefined,
-      });
-      return { success: true };
-    }),
-  }),
-
-  // ─── Modularized Routers (from dev branch) ──────────────────────────────
-  referral: referralRouter,
-  affiliate: affiliateRouter,
   bonuses: bonusesRouter,
   marketplace: marketplaceRouter,
   missions: missionsRouter,
   tasks: tasksRouter,
+  stripeConnect: stripeConnectRouter,
+  subscriptions: subscriptionsRouter,
+  subscription: subscriptionsRouter, // Alias
+  emailDrafts: emailDraftsRouter,
+  emailCampaigns: emailCampaignsRouter,
+  hubspot: hubspotRouter,
+  dashboard: dashboardRouter,
+  character: characterRouter,
+  services: servicesRouter,
 });
+
 export type AppRouter = typeof appRouter;

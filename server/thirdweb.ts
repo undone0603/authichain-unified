@@ -181,6 +181,7 @@ export interface AuthCertificateNFTData {
   certificateNumber: string;
   imageUrl?: string;
   authenticatorId: number;
+  result?: string;
 }
 
 export function buildAuthCertificateMetadata(data: AuthCertificateNFTData): NFTMetadata {

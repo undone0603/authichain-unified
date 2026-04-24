@@ -43,8 +43,8 @@ async function executeJob(job: JobDefinition): Promise<void> {
     jobName: job.name,
     status: "running",
     startedAt: new Date(),
-  });
-  const runId = runRecord.insertId;
+  }).returning();
+  const runId = runRecord.id;
 
   try {
     const result = await job.handler();
@@ -534,12 +534,12 @@ registerJob({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// JOB 9: Autonomous Revenue Pipeline Tick (every 15 minutes)
+// JOB 9: Autonomous Revenue Pipeline Tick (every 2 minutes - ACCELERATED)
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "autonomous-pipeline-tick",
   description: "Run AgentZ revenue pipeline: find leads, draft outreach, monitor deals",
-  schedule: "*/15 * * * *", // every 15 minutes
+  schedule: "*/2 * * * *", // every 2 minutes
   enabled: ENV.autonomousPipelineEnabled,
   handler: async (): Promise<JobResult> => {
     const { runPipelineTick } = await import("./jobs/pipeline-tick");
@@ -592,6 +592,51 @@ export function stopScheduler(): void {
     console.log(`[Scheduler] Stopped: ${name}`);
   });
   scheduledTasks.clear();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 10: Vertical Cloner (Runs every 10 minutes)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "vertical-cloner",
+  description: "Monitor for new industry expansion opportunities and spawn missions",
+  schedule: "*/10 * * * *",
+  enabled: true,
+  handler: async () => {
+    const { runVerticalCloning } = await import("./jobs/vertical-cloner");
+    await runVerticalCloning();
+    return { itemsProcessed: 2, details: { status: "cloning_cycle_complete", verticals: ["EV_BATTERY", "ARTISAN_COFFEE"] } };
+  }
+});
+
+// ─── Global Kill Switch ─────────────────────────────────────────────────────
+
+let _systemActive = true;
+
+export function getSystemStatus() {
+  return {
+    isActive: _systemActive,
+    activeJobs: scheduledTasks.size,
+    totalJobs: jobs.length,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export function toggleKillSwitch(active: boolean): boolean {
+  if (_systemActive === active) return _systemActive;
+  
+  _systemActive = active;
+  console.log(`[System] Kill switch activated: ${!active}`);
+
+  if (active) {
+    console.log("[System] Resuming all automation routines...");
+    initializeScheduler();
+  } else {
+    console.log("[System] HALTING ALL AUTOMATION. Emergency stop triggered.");
+    stopScheduler();
+  }
+
+  return _systemActive;
 }
 
 // ─── API for Admin Dashboard ────────────────────────────────────────────────

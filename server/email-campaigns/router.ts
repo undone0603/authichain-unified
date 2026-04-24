@@ -43,6 +43,8 @@ export const emailCampaignsRouter = router({
         },
       },
     });
-    return JSON.parse(response.choices[0].message.content as string);
+    const rawContent = response.choices?.[0]?.message?.content as string | undefined;
+    if (!rawContent) throw new Error("Email content generation returned empty response");
+    return JSON.parse(rawContent);
   }),
 });

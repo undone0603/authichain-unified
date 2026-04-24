@@ -1,194 +1,249 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { getLoginUrl } from "@/const";
-import {
-  Shield, ArrowRight, CheckCircle2, Zap, Globe, Lock,
-  BarChart3, Bot, Gem, QrCode, Truck, Mail,
+import { 
+  Shield, 
+  Sparkles, 
+  Leaf, 
+  Landmark, 
+  ArrowRight, 
+  CheckCircle2, 
+  Globe, 
+  Fingerprint,
+  Zap,
+  BarChart3
 } from "lucide-react";
-import { useLocation } from "wouter";
-import { useEffect } from "react";
-
-const features = [
-  { icon: Shield, title: "AI Authentication", desc: "Blockchain-verified product authentication with AI-powered image analysis and confidence scoring" },
-  { icon: QrCode, title: "QR Verification", desc: "Generate and scan QR codes for instant product verification certificates" },
-  { icon: Gem, title: "NFT Marketplace", desc: "Auctions, collections, rarity scoring, and IPFS storage for digital authenticity tokens" },
-  { icon: Bot, title: "AI Autopilot", desc: "Automated decision engine for email outreach, lead qualification, and social engagement" },
-  { icon: Truck, title: "Supply Chain", desc: "End-to-end tracking with IoT monitoring and blockchain verification at every checkpoint" },
-  { icon: Mail, title: "Email Campaigns", desc: "AI-generated content with SendGrid integration, approval workflows, and A/B testing" },
-  { icon: Lock, title: "Crypto Payments", desc: "Stripe + NOWPayments integration with escrow system and automated billing" },
-  { icon: BarChart3, title: "Admin Analytics", desc: "Revenue analytics, fraud detection, customer health scoring, and enterprise reporting" },
-  { icon: Globe, title: "White Label", desc: "Custom branding, API access, and enterprise solutions for your clients" },
-];
-
-const stats = [
-  { value: "99.7%", label: "Authentication Accuracy" },
-  { value: "<2s", label: "Verification Speed" },
-  { value: "50M+", label: "Products Verified" },
-  { value: "180+", label: "Countries Served" },
-];
+import { Link } from "wouter";
 
 export default function Home() {
-  const { user, loading } = useAuth();
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    document.title = "AuthiChain – Blockchain Product Authentication Platform";
-  }, []);
+  const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
-        <div className="container flex h-16 items-center justify-between">
+    <div className="min-h-screen bg-[#050507] text-slate-50 selection:bg-yellow-500/30 font-sans antialiased">
+      {/* Cinematic Background */}
+      <div className="fixed inset-0 bg-gradient-to-tr from-yellow-500/5 via-transparent to-blue-500/5 pointer-events-none" />
+      <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
+
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-black/50 backdrop-blur-xl">
+        <div className="container max-w-7xl h-20 flex items-center justify-between px-6">
           <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold gradient-text">AuthiChain</span>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg shadow-yellow-500/20">
+              <Shield className="w-6 h-6 text-black" strokeWidth={2.5} />
+            </div>
+            <span className="font-display text-2xl tracking-tighter font-bold uppercase">
+              Authi<span className="text-yellow-500">Chain</span>
+            </span>
           </div>
-          <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
-            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-            <a href="#stats" className="hover:text-foreground transition-colors">Stats</a>
-            <a href="/pricing" className="hover:text-foreground transition-colors">Pricing</a>
-            <a href="/services" className="hover:text-foreground transition-colors">Services</a>
+
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#ecosystem" className="text-xs font-mono uppercase tracking-widest text-slate-400 hover:text-yellow-500 transition-colors">Protocol</a>
+            <a href="#how" className="text-xs font-mono uppercase tracking-widest text-slate-400 hover:text-yellow-500 transition-colors">Utility</a>
+            <Link href="/pricing" className="text-xs font-mono uppercase tracking-widest text-slate-400 hover:text-yellow-500 transition-colors">Pricing</Link>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div>
             {user ? (
-              <Button onClick={() => setLocation("/dashboard")} size="sm">
-                Dashboard <ArrowRight className="ml-1 h-4 w-4" />
+              <Button asChild className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold h-10 px-6 rounded-lg transition-all active:scale-95 shadow-lg shadow-yellow-500/20">
+                <Link href="/dashboard">Open Dashboard</Link>
               </Button>
             ) : (
-              <>
-                <Button variant="ghost" size="sm" onClick={() => { window.location.href = getLoginUrl(); }}>
-                  Sign in
-                </Button>
-                <Button size="sm" onClick={() => { window.location.href = getLoginUrl(); }}>
-                  Get Started <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-              </>
+              <Button asChild className="bg-white/10 hover:bg-white/20 text-white font-bold h-10 px-6 rounded-lg transition-all active:scale-95 backdrop-blur-md border border-white/10">
+                <a href={getLoginUrl()}>Sign In</a>
+              </Button>
             )}
           </div>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="pt-32 pb-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,oklch(0.65_0.2_160_/_0.08),transparent_60%)]" />
-        <div className="container relative">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary text-sm mb-8">
-              <Zap className="h-3.5 w-3.5" />
-              Blockchain-Powered Authentication
-            </div>
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6">
-              Protect Every Product.{" "}
-              <span className="gradient-text">Verify Every Transaction.</span>
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              AuthiChain combines AI-powered image analysis, blockchain verification, and enterprise automation
-              to eliminate counterfeiting and build unbreakable trust in your supply chain.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="text-base px-8" onClick={() => { user ? setLocation("/dashboard") : (window.location.href = getLoginUrl()); }}>
-                Start Authenticating <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button variant="outline" size="lg" className="text-base px-8 bg-transparent" onClick={() => { user ? setLocation("/nft") : (window.location.href = getLoginUrl()); }}>
-                Explore NFT Marketplace
-              </Button>
-            </div>
+      <main className="relative z-10 pt-32">
+        {/* Hero Section */}
+        <section className="container max-w-7xl px-6 py-20 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-mono tracking-[0.2em] uppercase mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <Sparkles className="w-3 h-3" />
+            The Authentication Layer for the Physical World
           </div>
-        </div>
-      </section>
+          
+          <h1 className="font-display text-6xl md:text-9xl font-bold tracking-tight mb-8 leading-[0.85] uppercase animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+            Verify<br />
+            <span className="bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-600 bg-clip-text text-transparent">Everything.</span>
+          </h1>
 
-      {/* Stats */}
-      <section id="stats" className="py-16 border-y border-border/50">
-        <div className="container">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((s) => (
-              <div key={s.label} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold gradient-text">{s.value}</div>
-                <div className="text-sm text-muted-foreground mt-1">{s.label}</div>
+          <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-12 font-light leading-relaxed animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-400">
+            AuthiChain is the global truth layer. We bridge the gap between physical items and digital proof through AI classification, forensic QR art, and immutable ledgers.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-500">
+             <Button asChild size="lg" className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold h-16 px-10 text-lg rounded-xl shadow-2xl shadow-yellow-500/30 w-full sm:w-auto">
+               <a href={getLoginUrl()}>Get Started Free</a>
+             </Button>
+             <Button asChild variant="ghost" size="lg" className="h-16 px-10 text-lg rounded-xl border border-white/5 bg-white/5 backdrop-blur-xl hover:bg-white/10 w-full sm:w-auto">
+               <a href="#vision">Founder's Vision</a>
+             </Button>
+          </div>
+        </section>
+
+        {/* Vision Section / Video */}
+        <section id="vision" className="container max-w-5xl px-6 py-24">
+           <div className="glass bg-white/5 border-white/10 rounded-[40px] overflow-hidden p-12 text-center relative">
+              <div className="absolute top-0 right-0 p-12 opacity-5">
+                 <Shield className="w-64 h-64 text-yellow-500" />
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="features" className="py-24">
-        <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Complete Authentication Ecosystem</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Every tool you need to authenticate products, manage supply chains, and grow your business — all powered by blockchain and AI.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((f) => (
-              <div key={f.title} className="glass-card rounded-xl p-6 hover:border-primary/30 transition-all group">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                  <f.icon className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="font-semibold text-lg mb-2">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+              <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 mb-8 font-mono tracking-widest uppercase">The Protocol Vision</Badge>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tighter uppercase italic mb-8">Building the <span className="text-yellow-500">Authentication Layer</span> for the Physical World</h2>
+              
+              <div className="aspect-video bg-black rounded-2xl border border-white/10 mb-12 flex items-center justify-center group cursor-pointer relative overflow-hidden">
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-60" />
+                 <div className="w-20 h-20 rounded-full bg-yellow-500 flex items-center justify-center text-black shadow-2xl shadow-yellow-500/40 group-hover:scale-110 transition-transform relative z-10">
+                    <Zap className="w-8 h-8 fill-current" />
+                 </div>
+                 <div className="absolute bottom-8 left-8 text-left z-10">
+                    <p className="text-xs font-mono text-yellow-500 uppercase tracking-widest mb-1">Founder Spotlight</p>
+                    <p className="text-xl font-bold italic uppercase tracking-tight">Zach — Architect of the Truth Protocol</p>
+                 </div>
+                 {/* Video Placeholder — User to upload Founder_Video.mp4 to storage */}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Pricing Preview */}
-      <section id="pricing" className="py-24 border-t border-border/50">
-        <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Start free, scale as you grow. Every plan includes blockchain verification and AI analysis.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {[
-              { name: "Starter", price: "$49", period: "/mo", features: ["100 authentications/month", "Basic AI analysis", "QR code generation", "Certificate issuance", "Email support"] },
-              { name: "Professional", price: "$149", period: "/mo", features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email campaigns"], highlighted: true },
-              { name: "Enterprise", price: "$499", period: "/mo", features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA guarantee"] },
-            ].map((plan) => (
-              <div key={plan.name} className={`rounded-xl p-6 border ${plan.highlighted ? "border-primary/50 bg-primary/5 glow-green" : "border-border glass-card"}`}>
-                <h3 className="font-semibold text-lg mb-1">{plan.name}</h3>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-3xl font-bold">{plan.price}</span>
-                  <span className="text-muted-foreground text-sm">{plan.period}</span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                      <span className="text-muted-foreground">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="w-full"
-                  variant={plan.highlighted ? "default" : "outline"}
-                  onClick={() => { user ? setLocation("/subscriptions") : (window.location.href = getLoginUrl()); }}
-                >
-                  {plan.highlighted ? "Get Started" : "Choose Plan"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              <p className="text-xl text-slate-400 font-light leading-relaxed max-w-2xl mx-auto italic">
+                "Authenticity is essential infrastructure. Our product, QRON, transforms physical items into scannable identities. One scan unlocks the ground truth."
+              </p>
+           </div>
+        </section>
 
-      {/* Footer */}
-      <footer className="py-12 border-t border-border/50">
-        <div className="container">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              <span className="font-bold gradient-text">AuthiChain</span>
+        {/* The Truth Network */}
+        <section id="ecosystem" className="container max-w-7xl px-6 py-32 border-t border-white/5">
+          <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-16">
+            <div className="max-w-xl">
+              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 mb-4 px-3 py-1 font-mono tracking-widest text-[10px]">THE AUTHENTIC ECONOMY</Badge>
+              <h2 className="text-4xl md:text-6xl font-bold tracking-tighter uppercase italic italic-font">One Protocol.<br /><span className="text-blue-500">Four Verticals.</span></h2>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Blockchain-powered product authentication. Protecting authenticity worldwide.
-            </p>
+            <p className="text-slate-500 max-w-xs text-sm font-mono uppercase tracking-widest">Cross-industry verification powered by $QRON rewards.</p>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* QRON Studio */}
+            <div className="group relative p-8 rounded-3xl bg-white/5 border border-white/5 hover:border-yellow-500/50 transition-all duration-500 overflow-hidden">
+               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-20 transition-opacity">
+                  <Sparkles className="w-32 h-32 text-yellow-500" />
+               </div>
+               <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center mb-6 border border-yellow-500/30">
+                 <Sparkles className="w-6 h-6 text-yellow-500" />
+               </div>
+               <h3 className="text-2xl font-bold mb-3 tracking-tight italic">QRON STUDIO</h3>
+               <p className="text-slate-400 text-sm leading-relaxed mb-8">AI-powered artistic QR codes (QronCode). Forensic Magic Eye utility with BTC Ordinals anchoring.</p>
+               <a href="https://qron-space.undone-k.workers.dev" className="text-yellow-500 text-xs font-mono font-bold flex items-center gap-2 group-hover:translate-x-2 transition-transform">
+                 EXPLORE STUDIO <ArrowRight className="w-3 h-3" />
+               </a>
+            </div>
+
+            {/* StrainChain */}
+            <div className="group relative p-8 rounded-3xl bg-white/5 border border-white/5 hover:border-green-500/50 transition-all duration-500 overflow-hidden">
+               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-20 transition-opacity">
+                  <Leaf className="w-32 h-32 text-green-500" />
+               </div>
+               <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-6 border border-green-500/30">
+                 <Leaf className="w-6 h-6 text-green-500" />
+               </div>
+               <h3 className="text-2xl font-bold mb-3 tracking-tight italic">STRAINCHAIN</h3>
+               <p className="text-slate-400 text-sm leading-relaxed mb-8">Cannabis provenance vertical. Seed-to-sale storymode with NFT marketplace and real-time lab verification.</p>
+               <a href="https://strainchain-io.undone-k.workers.dev" className="text-green-500 text-xs font-mono font-bold flex items-center gap-2 group-hover:translate-x-2 transition-transform">
+                 VIEW MARKETPLACE <ArrowRight className="w-3 h-3" />
+               </a>
+            </div>
+
+            {/* GovChain */}
+            <div className="group relative p-8 rounded-3xl bg-white/5 border border-white/5 hover:border-blue-500/50 transition-all duration-500 overflow-hidden">
+               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-20 transition-opacity">
+                  <Landmark className="w-32 h-32 text-blue-500" />
+               </div>
+               <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-6 border border-blue-500/30">
+                 <Landmark className="w-6 h-6 text-blue-500" />
+               </div>
+               <h3 className="text-2xl font-bold mb-3 tracking-tight italic">GOVCHAIN</h3>
+               <p className="text-slate-400 text-sm leading-relaxed mb-8">Sovereign document verification. "Made in USA" manufacturer deals and federal procurement audit trails.</p>
+               <a href="https://govchain-us.undone-k.workers.dev" className="text-blue-500 text-xs font-mono font-bold flex items-center gap-2 group-hover:translate-x-2 transition-transform">
+                 Sovereign Intake <ArrowRight className="w-3 h-3" />
+               </a>
+            </div>
+
+            {/* AuthiChain API */}
+            <div className="group relative p-8 rounded-3xl bg-white/5 border border-white/5 hover:border-purple-500/50 transition-all duration-500 overflow-hidden">
+               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-20 transition-opacity">
+                  <Zap className="w-32 h-32 text-purple-500" />
+               </div>
+               <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-6 border border-purple-500/30">
+                 <Zap className="w-6 h-6 text-purple-500" />
+               </div>
+               <h3 className="text-2xl font-bold mb-3 tracking-tight italic">API GATEWAY</h3>
+               <p className="text-slate-400 text-sm leading-relaxed mb-8">B2B infrastructure for the physical economy. Agent-first endpoints for classification and verification.</p>
+               <a href="https://authichain-api-gateway.undone-k.workers.dev/docs" className="text-purple-500 text-xs font-mono font-bold flex items-center gap-2 group-hover:translate-x-2 transition-transform">
+                 EXPLORE DOCS <ArrowRight className="w-3 h-3" />
+               </a>
+            </div>
+          </div>
+        </section>
+
+        {/* Growth Band */}
+        <div className="bg-yellow-500 py-4 text-center overflow-hidden whitespace-nowrap">
+           <div className="flex gap-12 animate-marquee inline-block font-mono text-[10px] font-bold text-black uppercase tracking-[0.3em]">
+              <span>Join the Authentic Economy</span>
+              <span>Earn $QRON Rewards</span>
+              <span>Made in USA Protocol</span>
+              <span>Forensic QR Art</span>
+              <span>Seed-to-Sale Storymode</span>
+              <span>Decentralized Truth Layer</span>
+           </div>
+        </div>
+
+        {/* How it Works / Protocol Loop */}
+        <section id="how" className="container max-w-7xl px-6 py-32">
+          <div className="text-center mb-24">
+             <h2 className="text-5xl font-bold tracking-tighter uppercase italic mb-4">The Truth <span className="text-yellow-500">Substrate</span></h2>
+             <p className="text-slate-500 font-mono text-sm uppercase tracking-widest">Observe. Classify. Act. Log.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 text-center relative">
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-yellow-500 font-mono font-bold text-xl">01</div>
+              <h4 className="font-bold text-xl italic uppercase">Observe</h4>
+              <p className="text-slate-500 text-sm px-4">Verify physical state via Vision/QR scanners.</p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-yellow-500 font-mono font-bold text-xl">02</div>
+              <h4 className="font-bold text-xl italic uppercase">Classify</h4>
+              <p className="text-slate-500 text-sm px-4">Map to one of 10 verticals via AI AutoFlow.</p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-yellow-500 font-mono font-bold text-xl">03</div>
+              <h4 className="font-bold text-xl italic uppercase">Act</h4>
+              <p className="text-slate-500 text-sm px-4">Generate assets, mint NFTs, or trigger outreach.</p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-yellow-500 font-mono font-bold text-xl">04</div>
+              <h4 className="font-bold text-xl italic uppercase">Log</h4>
+              <p className="text-slate-500 text-sm px-4">Record every action to the immutable ledger.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="container max-w-7xl px-6 py-20 border-t border-white/5 mt-32">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+           <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-yellow-500 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-black" />
+            </div>
+            <span className="font-display text-xl tracking-tighter font-bold uppercase">
+              AuthiChain
+            </span>
+          </div>
+          <div className="flex gap-8 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+            <a href="#" className="hover:text-yellow-500 transition-colors">Privacy</a>
+            <a href="#" className="hover:text-yellow-500 transition-colors">Terms</a>
+            <a href="#" className="hover:text-yellow-500 transition-colors">SLA</a>
+          </div>
+          <p className="text-[10px] font-mono text-slate-600 uppercase tracking-widest">© 2026 AuthiChain LLC. All Rights Reserved.</p>
         </div>
       </footer>
     </div>

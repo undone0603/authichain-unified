@@ -25,7 +25,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
-  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Clock, Sparkles, Globe, Trophy, ShoppingBag, Package,
+  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Clock, Sparkles, Globe, Trophy, ShoppingBag, Package, CloudLightning,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -52,10 +52,14 @@ const menuItems = [
   { icon: Bell, label: "Notifications", path: "/notifications" },
 ];
 
+const govChainMenuItems = [
+  { icon: Rocket, label: "Gov Grants & RFPs", path: "/grants" },
+  { icon: CloudLightning, label: "SBA Disaster Loan", path: "/sba-loan" },
+];
+
 const adminMenuItems = [
   { icon: BarChart3, label: "Admin Dashboard", path: "/admin" },
   { icon: Building2, label: "White Label", path: "/white-label" },
-  { icon: Rocket, label: "Grants & Partners", path: "/grants" },
   { icon: TrendingUp, label: "Growth Engine", path: "/growth" },
   { icon: Users, label: "Manage Users", path: "/admin/users" },
   { icon: DollarSign, label: "CRM (HubSpot)", path: "/crm" },
@@ -137,7 +141,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const allItems = [...menuItems, ...(user?.role === "admin" ? adminMenuItems : [])];
+  const allItems = [...menuItems, ...govChainMenuItems, ...(user?.role === "admin" ? adminMenuItems : [])];
   const activeMenuItem = allItems.find(item => location.startsWith(item.path));
   const isMobile = useIsMobile();
 
@@ -193,6 +197,31 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
                 const isActive = location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path));
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => setLocation(item.path)}
+                      tooltip={item.label}
+                      className="h-9 transition-all font-normal text-[13px]"
+                    >
+                      <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+
+            {/* GovChain Vertical */}
+            {!isCollapsed && (
+              <div className="px-4 py-2 mt-2">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">GovChain Vertical</span>
+              </div>
+            )}
+            <SidebarMenu className="px-2 py-1">
+              {govChainMenuItems.map(item => {
+                const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
