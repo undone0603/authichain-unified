@@ -194,9 +194,9 @@ export async function startCharacterGeneration(
     variantCount: 4,
     status: "pending",
     context: context ? JSON.stringify(context) : null,
-  });
+  }).returning();
 
-  const generationId = result.insertId;
+  const generationId = result.id;
 
   // Start async generation (don't await - return immediately)
   generateVariants(generationId, prompt, archetype, userId).catch(err => {
@@ -255,9 +255,9 @@ async function generateVariants(
       imageUrl: variant.imageUrl,
       prompt: variant.variantPrompt,
       mintStatus: "not_minted",
-    });
+    }).returning();
 
-    const assetId = assetResult.insertId;
+    const assetId = assetResult.id;
 
     // Score and track best
     try {
@@ -552,9 +552,9 @@ export async function createProtocolAgent(
     reputationScore: 100,
     featureScopes: JSON.stringify(arch.featureScopes),
     policyConfig: JSON.stringify({ autoVerify: false, minConfidence: 70 }),
-  });
+  }).returning();
 
-  return { agentId: result.insertId };
+  return { agentId: result.id };
 }
 
 // ─── Agent Stats & Queries ──────────────────────────────────────────────────
@@ -737,7 +737,7 @@ export async function submitVerificationClaim(
     reasoning,
     weight,
     status: "pending",
-  });
+  }).returning();
 
   await db.update(protocolAgents)
     .set({
@@ -746,9 +746,9 @@ export async function submitVerificationClaim(
     })
     .where(eq(protocolAgents.id, agentId));
 
-  await awardQRON(agentId, agent?.userId || 0, "0.50", "verification_reward", "claim", result.insertId);
+  await awardQRON(agentId, agent?.userId || 0, "0.50", "verification_reward", "claim", result.id);
 
-  return { claimId: result.insertId };
+  return { claimId: result.id };
 }
 
 /**

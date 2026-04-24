@@ -147,7 +147,28 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type, duplicate: true };
   }
 
-  switch (event.type) {
+  const eventType = event.type as string;
+
+  switch (eventType) {
+    // ── V2 Core Account Events (Thin) ───────────────────────────────────────
+    case "v2.core.account.capability_status_updated": {
+      const accountEvent = (event as unknown as { data: { object: { account: string } } }).data.object;
+      const accountId = accountEvent.account;
+      console.log(`[stripe-webhook] Capability updated for account: ${accountId}`);
+      
+      const { setVendorKycStatus } = await import("../db");
+      await setVendorKycStatus(accountId, "completed");
+
+      await logAutomationAudit(
+        "vendor_kyc_completed",
+        {
+          eventId: event.id,
+          stripeAccountId: accountId,
+        }
+      );
+      break;
+    }
+
     // ── Subscription created / updated ──────────────────────────────────────
     case "customer.subscription.created":
     case "customer.subscription.updated": {
@@ -170,11 +191,11 @@ export async function handleStripeWebhook(
           billingCycle,
           stripeCustomerId: customerId ?? null,
           stripeSubscriptionId: sub.id,
-          currentPeriodStart: sub.current_period_start
-            ? new Date(sub.current_period_start * 1000)
+          currentPeriodStart: (sub as any).current_period_start
+            ? new Date((sub as any).current_period_start * 1000)
             : new Date(),
-          currentPeriodEnd: sub.current_period_end
-            ? new Date(sub.current_period_end * 1000)
+          currentPeriodEnd: (sub as any).current_period_end
+            ? new Date((sub as any).current_period_end * 1000)
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
         });
@@ -228,9 +249,9 @@ export async function handleStripeWebhook(
     case "invoice.paid": {
       const inv = event.data.object as Stripe.Invoice;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
-      const subscriptionId = typeof inv.subscription === "string"
-        ? inv.subscription
-        : (inv.subscription as any)?.id;
+      const subscriptionId = typeof (inv as any).subscription === "string"
+        ? (inv as any).subscription
+        : ((inv as any).subscription as any)?.id;
 
       // Resolve userId — try subscription metadata first, then customer
       let userId: number | undefined;
@@ -248,7 +269,7 @@ export async function handleStripeWebhook(
 
       // Detect plan from invoice line items
       const firstLine = inv.lines?.data?.[0];
-      const priceId = firstLine?.price?.id ?? null;
+      const priceId = (firstLine as any)?.price?.id ?? null;
       const plan = detectPlan(priceId, amountCents);
 
       if (amountUsd > 0) {
@@ -296,9 +317,9 @@ export async function handleStripeWebhook(
     case "invoice.payment_failed": {
       const inv = event.data.object as Stripe.Invoice;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
-      const subscriptionId = typeof inv.subscription === "string"
-        ? inv.subscription
-        : (inv.subscription as any)?.id;
+      const subscriptionId = typeof (inv as any).subscription === "string"
+        ? (inv as any).subscription
+        : ((inv as any).subscription as any)?.id;
 
       let userId: number | undefined;
       if (subscriptionId) {
@@ -341,12 +362,54 @@ export async function handleStripeWebhook(
       const userId = session.metadata?.user_id
         ? parseInt(session.metadata.user_id, 10)
         : undefined;
-      const plan = (session.metadata?.plan as Plan | undefined) ?? "starter";
+      const leadEmail = session.customer_email || session.metadata?.leadEmail;
+      const segment = session.metadata?.segment;
+      const plan = (session.metadata?.plan as Plan | undefined) ?? (segment === 'API_STARTER' ? 'starter' : 'starter');
       const billingCycle = session.metadata?.billing === "annual" ? "annual" : "monthly";
       const amountCents = session.amount_total ?? 0;
       const amountUsd = amountCents / 100;
       const customerId = typeof session.customer === "string" ? session.customer : undefined;
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : undefined;
+
+      // Record Pilot / Enterprise Revenue
+      if (amountUsd > 0) {
+        await recordRevenue({
+          source: "stripe",
+          amount: amountUsd.toFixed(2),
+          currency: (session.currency ?? "usd").toUpperCase(),
+          type: segment ? "pilot_program" : "subscription",
+          userId: userId ?? null,
+          metadata: {
+            eventId: event.id,
+            sessionId: session.id,
+            segment,
+            leadEmail,
+            stripeSubscriptionId: subscriptionId ?? null,
+            stripeCustomerId: customerId ?? null,
+          },
+        });
+
+        // 1. Trigger Physical Fulfillment Bridge (Security Seals)
+        try {
+          const { triggerFulfillmentFromPayment } = await import("../fulfillment-service");
+          await triggerFulfillmentFromPayment(session.id);
+        } catch (fillErr) {
+          console.warn("[Fulfillment] Trigger failed:", fillErr);
+        }
+
+        // 2. If it's a pilot lead, update status to WON
+        if (leadEmail) {
+          const { updateLeadStatusByEmail } = await import("../db");
+          await updateLeadStatusByEmail(leadEmail, "won");
+          
+          await logActivity({
+            userId: userId ?? null,
+            action: 'lead_closed_won',
+            entityType: 'lead',
+            details: { leadEmail, segment, amountUsd, sessionId: session.id }
+          });
+        }
+      }
 
       await logAutomationAudit(
         "billing_checkout_completed",
@@ -354,6 +417,7 @@ export async function handleStripeWebhook(
           eventId: event.id,
           userId: userId ?? null,
           plan,
+          segment,
           billingCycle,
           amountUsd,
           stripeSubscriptionId: subscriptionId ?? null,
@@ -362,7 +426,7 @@ export async function handleStripeWebhook(
         userId,
       );
 
-      console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);
+      console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan} segment=${segment} amount=${amountUsd}`);
       break;
     }
 

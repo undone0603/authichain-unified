@@ -2,6 +2,15 @@ import { Request, Response } from 'express';
 import { verifyPaddleWebhook } from '../_core/paddle';
 import { EventName } from '@paddle/paddle-node-sdk';
 import { ENV } from '../_core/env';
+import { 
+  createCertificate, 
+  createSubscription, 
+  updateSubscription, 
+  updateUser, 
+  logActivity,
+  setSubscriptionStatusByPaddleId
+} from '../db';
+import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../thirdweb';
 
 /**
  * Paddle webhook handler
@@ -81,90 +90,155 @@ async function handleTransactionCompleted(data: any) {
   const userId = metadata.userId ? parseInt(metadata.userId) : null;
   const productType = metadata.productType; // 'authentication_certificate'
   const productId = metadata.productId ? parseInt(metadata.productId) : null;
+  const authId = metadata.authenticationId ? parseInt(metadata.authenticationId) : null;
 
   if (!userId || !productType) {
     console.error('[Paddle] Missing required metadata in transaction');
     return;
   }
 
-  // TODO: Create authentication certificate record in database
-  // TODO: Mint NFT certificate on blockchain
-  // TODO: Send confirmation email with certificate details
+  if (productType === 'authentication_certificate' && productId && authId) {
+    // 1. Create certificate record
+    const certNumber = `AC-P-${Date.now()}-${data.id.substring(0, 8).toUpperCase()}`;
+    const cert = await createCertificate({
+      productId,
+      authenticationId: authId,
+      userId,
+      certificateNumber: certNumber,
+      status: "active",
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+    });
 
-  console.log(`[Paddle] Created authentication certificate for user ${userId}`);
+    // 2. Mint NFT on blockchain (background)
+    try {
+      const nftMetadata = await buildAuthCertificateMetadata({
+        certificateNumber: certNumber,
+        productName: metadata.productName || "Authenticated Product",
+        result: metadata.result || "authentic",
+        confidenceScore: metadata.confidenceScore ? parseFloat(metadata.confidenceScore) : 100,
+        verificationDate: new Date().toISOString(),
+        authenticatorId: authId,
+      });
+
+      const mintResult = await mintAuthenticationNFT({
+        contractAddress: ENV.defaultNftContract || "",
+        recipientAddress: metadata.walletAddress || "",
+        metadata: nftMetadata,
+        privateKey: ENV.blockchainPrivateKey || "",
+      });
+
+      console.log(`[Paddle] NFT Minted: ${mintResult.transactionHash}`);
+    } catch (mintErr) {
+      console.error('[Paddle] NFT Minting failed:', mintErr);
+    }
+
+    // 3. Log activity and Trigger Outreach
+    await logActivity({
+      userId,
+      action: "certificate_purchased",
+      entityType: "certificate",
+      entityId: cert.id,
+      details: { paddleTransactionId: data.id }
+    });
+
+    // 4. Executive Action: Push for immediate upselling/expansion
+    try {
+      const { createSystemNotification } = await import("../db");
+      await createSystemNotification(
+        userId,
+        "Welcome to the Elite Network",
+        "Your first certificate is live. Want to automate this for your entire inventory? Schedule a Pro session now.",
+        "announcement",
+        "/services"
+      );
+    } catch (e) { /* ignore */ }
+  }
+
+  console.log(`[Paddle] Processed transaction ${data.id} for user ${userId}`);
 }
 
 /**
  * Handle transaction.paid event
- * Fired when payment is captured for a transaction
  */
 async function handleTransactionPaid(data: any) {
   console.log(`[Paddle] Transaction paid: ${data.id}`);
-  
-  // Payment successful - transaction is now paid
-  // This fires before transaction.completed
 }
 
 /**
  * Handle transaction.payment_failed event
- * Fired when payment fails for a transaction
  */
 async function handleTransactionPaymentFailed(data: any) {
   console.log(`[Paddle] Transaction payment failed: ${data.id}`);
-
-  // TODO: Send payment failed email
-  // TODO: Update transaction status in database
-  // TODO: Notify user to update payment method
+  // In a real app, send email here
 }
 
 /**
  * Handle subscription.created event
- * Fired when a subscription is created
  */
 async function handleSubscriptionCreated(data: any) {
   console.log(`[Paddle] Subscription created: ${data.id}`);
 
   const metadata = data.customData || {};
   const userId = metadata.userId ? parseInt(metadata.userId) : null;
+  const plan = metadata.plan || 'starter';
 
   if (!userId) {
     console.error('[Paddle] Missing userId in subscription metadata');
     return;
   }
 
-  // TODO: Create subscription record in database
-  // TODO: Grant subscription access
-  // TODO: Send welcome email
+  const quotas: Record<string, number> = { starter: 100, professional: 1000, enterprise: 10000 };
+
+  // 1. Create subscription record
+  const sub = await createSubscription({
+    userId,
+    plan: plan as any,
+    status: "active",
+    monthlyQuota: quotas[plan] || 100,
+    usedQuota: 0,
+    paddleSubscriptionId: data.id,
+    paddleCustomerId: data.customerId,
+    billingCycle: (metadata.billingCycle || "monthly") as any,
+    currentPeriodStart: new Date(),
+    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  });
+
+  // 2. Update user plan/role
+  await updateUser(userId, { role: plan === 'enterprise' ? 'brand' : 'user' });
+
+  // 3. Log activity
+  await logActivity({
+    userId,
+    action: "subscription_created_paddle",
+    entityType: "subscription",
+    entityId: sub.id,
+    details: { paddleSubscriptionId: data.id, plan }
+  });
 }
 
 /**
  * Handle subscription.updated event
- * Fired when a subscription is updated
  */
 async function handleSubscriptionUpdated(data: any) {
   console.log(`[Paddle] Subscription updated: ${data.id}`);
+  
+  const plan = data.customData?.plan;
+  const status = data.status; // 'active', 'past_due', etc.
 
-  // TODO: Update subscription record in database
-  // TODO: Handle plan changes
-  // TODO: Update user access
+  const updateData: any = { status: status };
+  if (plan) {
+    updateData.plan = plan;
+    const quotas: Record<string, number> = { starter: 100, professional: 1000, enterprise: 10000 };
+    updateData.monthlyQuota = quotas[plan] || 100;
+  }
+
+  await updateSubscription(data.id, updateData);
 }
 
 /**
  * Handle subscription.canceled event
- * Fired when a subscription is canceled
  */
 async function handleSubscriptionCanceled(data: any) {
   console.log(`[Paddle] Subscription canceled: ${data.id}`);
-
-  const metadata = data.customData || {};
-  const userId = metadata.userId ? parseInt(metadata.userId) : null;
-
-  if (!userId) {
-    console.error('[Paddle] Missing userId in subscription metadata');
-    return;
-  }
-
-  // TODO: Update subscription status in database
-  // TODO: Revoke subscription access (at end of billing period)
-  // TODO: Send cancellation confirmation email
+  await setSubscriptionStatusByPaddleId(data.id, "cancelled", new Date());
 }

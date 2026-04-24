@@ -5,6 +5,7 @@ export type MissionType =
   | 'PARTNER_ONBOARDING'
   | 'TECH_OS_LOCK'
   | 'LAUNCH_AUTHICHAIN'
+  | 'GOVCHAIN_LAUNCH'
   | 'TECH_SPRINT';
 
 export type MissionStatus = 'PLANNED' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';

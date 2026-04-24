@@ -2,7 +2,8 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3 } from "lucide-react";
+import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3, Settings } from "lucide-react";
+import SystemControlPanel from "@/components/SystemControlPanel";
 
 export default function AdminDashboard() {
   const { data: metrics, isLoading } = trpc.admin.metrics.useQuery();
@@ -24,11 +25,13 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground text-sm mt-1">Platform overview and management (admin only)</p>
       </div>
 
+      <SystemControlPanel />
+
       {/* Metrics Overview */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon={Users} label="Total Users" value={metrics?.totalUsers ?? 0} />
         <MetricCard icon={Shield} label="Authentications" value={metrics?.totalAuthentications ?? 0} />
-        <MetricCard icon={DollarSign} label="Revenue" value={`$${metrics?.totalRevenue ?? "0"}`} />
+        <MetricCard icon={DollarSign} label="Revenue" value={`$${(metrics as any)?.totalRevenue ?? "0"}`} />
         <MetricCard icon={AlertTriangle} label="Fraud Alerts" value={fraudAlerts?.length ?? 0} color="text-red-400" />
       </div>
 
@@ -184,17 +187,19 @@ export default function AdminDashboard() {
         <TabsContent value="subs" className="mt-4">
           <Card>
             <CardContent className="p-4">
-              {subscriptions && subscriptions.length > 0 ? (
+              {subscriptions && subscriptions.total > 0 ? (
                 <div className="space-y-2">
-                  {subscriptions.map((s: any) => (
-                    <div key={s.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
-                      <div>
-                        <span className="text-sm font-medium capitalize">{s.plan}</span>
-                        <Badge variant="outline" className="ml-2 text-xs capitalize">{s.status}</Badge>
-                      </div>
-                      <span className="text-xs text-muted-foreground">User #{s.userId}</span>
+                  {[
+                    { label: "Active", count: subscriptions.active },
+                    { label: "Cancelled", count: subscriptions.cancelled },
+                    { label: "Past Due", count: subscriptions.pastDue },
+                  ].map((s) => (
+                    <div key={s.label} className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                      <span className="text-sm font-medium">{s.label}</span>
+                      <Badge variant="outline" className="text-xs">{s.count}</Badge>
                     </div>
                   ))}
+                  <div className="text-xs text-muted-foreground pt-2">Total: {subscriptions.total}</div>
                 </div>
               ) : <EmptyState text="No subscription data" />}
             </CardContent>

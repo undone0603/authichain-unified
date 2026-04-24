@@ -209,14 +209,17 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+const resolveApiUrl = () => {
+  const base = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+    ? ENV.forgeApiUrl.replace(/\/$/, "")
+    : "https://forge.manus.im";
+  
+  return `${base}/v1/chat/completions`;
+};
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+  if (!ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("Neither BUILT_IN_FORGE_API_KEY nor OPENAI_API_KEY is configured");
   }
 };
 
@@ -266,8 +269,6 @@ const normalizeResponseFormat = ({
 };
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
-
   const {
     messages,
     tools,
@@ -280,25 +281,18 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: "gpt-4o",
     messages: messages.map(normalizeMessage),
+    max_tokens: 32768,
   };
 
   if (tools && tools.length > 0) {
     payload.tools = tools;
   }
 
-  const normalizedToolChoice = normalizeToolChoice(
-    toolChoice || tool_choice,
-    tools
-  );
+  const normalizedToolChoice = normalizeToolChoice(toolChoice || tool_choice, tools);
   if (normalizedToolChoice) {
     payload.tool_choice = normalizedToolChoice;
-  }
-
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
@@ -312,21 +306,61 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
-  const response = await fetch(resolveApiUrl(), {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  // ─── Cascading Execution Logic ───────────────────────────────────────────
+  const endpoints = [
+    { url: resolveApiUrl(), key: ENV.forgeApiKey, name: "Forge" },
+    { url: "https://api.openai.com/v1/chat/completions", key: ENV.openaiApiKey, name: "OpenAI" }
+  ].filter(e => e.key); // Only use endpoints where we have keys
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
-    );
+  if (endpoints.length === 0) {
+    throw new Error("No LLM API keys configured (Neither Forge nor OpenAI)");
   }
 
-  return (await response.json()) as InvokeResult;
+  let lastError: Error | null = null;
+
+  for (const endpoint of endpoints) {
+    console.log(`[LLM] Attempting invoke via ${endpoint.name}...`);
+    
+    // Retry up to 2 times for each endpoint
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await fetch(endpoint.url, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${endpoint.key}`,
+          },
+          body: JSON.stringify(payload),
+          // Set a 30s timeout
+          signal: AbortSignal.timeout(30000)
+        });
+
+        if (response.ok) {
+          return (await response.json()) as InvokeResult;
+        }
+
+        const errorText = await response.text();
+        const status = response.status;
+        
+        // If it's a client error (4xx) other than 429, don't retry this endpoint
+        if (status >= 400 && status < 500 && status !== 429) {
+          throw new Error(`[${endpoint.name} Client Error] ${status}: ${errorText}`);
+        }
+        
+        console.warn(`[LLM] ${endpoint.name} attempt ${attempt} failed with ${status}.`);
+        lastError = new Error(`${endpoint.name} ${status}: ${errorText}`);
+        
+        // Exponential backoff before retry (500ms, 1000ms)
+        await new Promise(r => setTimeout(r, attempt * 500));
+        
+      } catch (err: any) {
+        console.warn(`[LLM] ${endpoint.name} attempt ${attempt} exception: ${err.message}`);
+        lastError = err;
+        if (attempt === 2) break; // Move to next endpoint
+        await new Promise(r => setTimeout(r, attempt * 500));
+      }
+    }
+  }
+
+  throw new Error(`All LLM endpoints failed. Last error: ${lastError?.message}`);
 }

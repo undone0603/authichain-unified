@@ -1,0 +1,8 @@
+name = "govchain-us"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = true
+
+
+

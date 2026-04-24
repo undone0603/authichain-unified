@@ -25,7 +25,8 @@ export type ServiceType =
   | "automation_setup"
   | "landing_page"
   | "brand_story_pack"
-  | "government_dossier";
+  | "government_dossier"
+  | "sba_disaster_loan";
 
 export const SERVICE_CATALOG: Record<ServiceType, ServiceDefinition> = {
   authenticity_audit: {
@@ -190,6 +191,34 @@ export const SERVICE_CATALOG: Record<ServiceType, ServiceDefinition> = {
     ],
     deliveryTime: "5-10 business days",
     icon: "Building2",
+    featured: true,
+  },
+
+  sba_disaster_loan: {
+    key: "sba_disaster_loan",
+    name: "SBA Disaster Loan Assistant",
+    tagline: "Expert AI-powered loan application preparation",
+    description:
+      "A complete preparation package for SBA Natural Disaster Loans (EIDL/Physical Damage). We use AI to analyze your business data, prepare the required economic injury statements, and generate a comprehensive application dossier.",
+    price: 49900,
+    displayPrice: "$499",
+    stripeProductId: "prod_SBA_LOAN_001",
+    stripePriceId: "price_SBA_LOAN_001",
+    deliverables: [
+      "Economic injury statement draft",
+      "Business debt schedule (SBA Form 2202)",
+      "Personal financial statement (SBA Form 413) advisor",
+      "Disaster loan application dossier",
+      "Submission readiness checklist",
+    ],
+    targetAudience: [
+      "Small business owners",
+      "Agricultural cooperatives",
+      "Private non-profits",
+      "Affected entrepreneurs",
+    ],
+    deliveryTime: "3-5 business days",
+    icon: "CloudLightning",
     featured: true,
   },
 };

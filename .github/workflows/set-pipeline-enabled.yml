@@ -7,25 +7,12 @@ jobs:
   set-secret:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Set AUTONOMOUS_PIPELINE_ENABLED=true on Cloudflare Worker
         env:
-          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_KEY }}
-          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          WORKER_NAME: authichain-unified
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -e
-          for SECRET_NAME in "AUTONOMOUS_PIPELINE_ENABLED"; do
-            SECRET_VALUE="true"
-            http_status=$(curl -s -o /tmp/cf_resp.json -w "%{http_code}" \
-              -X PUT \
-              "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/${WORKER_NAME}/secrets" \
-              -H "Authorization: Bearer ${CF_API_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d "{\"name\":\"${SECRET_NAME}\",\"text\":\"${SECRET_VALUE}\",\"type\":\"secret_text\"}")
-            if [ "$http_status" != "200" ] && [ "$http_status" != "201" ]; then
-              echo "ERROR setting $SECRET_NAME: HTTP $http_status"
-              cat /tmp/cf_resp.json
-              exit 1
-            fi
-            echo "✓ $SECRET_NAME=true set on $WORKER_NAME"
-          done
+          echo "true" | npx wrangler secret put AUTONOMOUS_PIPELINE_ENABLED
+          echo "✓ AUTONOMOUS_PIPELINE_ENABLED=true set"

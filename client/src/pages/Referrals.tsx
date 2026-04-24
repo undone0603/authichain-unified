@@ -24,7 +24,7 @@ export default function Referrals() {
 
   const handleJoinAffiliate = async () => {
     try {
-      await joinAffiliate.mutateAsync();
+      await joinAffiliate.mutateAsync({});
       toast.success("Joined affiliate program");
       utils.affiliates.myProfile.invalidate();
     } catch (e: any) { toast.error(e.message || "Failed"); }

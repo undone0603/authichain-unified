@@ -43,7 +43,9 @@ export const authenticateRouter = router({
         }
       }
     });
-    const aiResult = JSON.parse(response.choices[0].message.content as string);
+    const rawContent = response.choices?.[0]?.message?.content as string | undefined;
+    if (!rawContent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "AI analysis returned empty response" });
+    const aiResult = JSON.parse(rawContent);
     const authResult = await db.createAuthentication({
       productId: input.productId, userId: ctx.user.id, aiAnalysis: aiResult,
       confidenceScore: aiResult.confidence, result: aiResult.result, imageUrl: input.imageUrl,

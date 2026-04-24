@@ -78,7 +78,9 @@ export const autopilotRouter = router({
         },
       },
     });
-    const evaluation = JSON.parse(response.choices[0].message.content as string);
+    const rawContent = response.choices?.[0]?.message?.content as string | undefined;
+    if (!rawContent) throw new Error("Autopilot AI returned empty response");
+    const evaluation = JSON.parse(rawContent);
     const decision = await db.createAutopilotDecision({
       type: input.type, action: input.action, reasoning: input.reasoning,
       confidence: evaluation.confidence, status: evaluation.proceed ? "executed" : "pending",

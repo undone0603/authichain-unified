@@ -19,7 +19,8 @@
 import { invokeLLM } from '../../_core/llm.js';
 import { logActivity, markTaskWaitingHuman } from '../../db.js';
 import { ENV } from '../../_core/env.js';
-import type { MissionTask as Task } from '../../../drizzle/schema.js';
+import type { MissionTask } from '../../../drizzle/schema.js';
+type Task = MissionTask;
 import {
   createPR,
   getPR,

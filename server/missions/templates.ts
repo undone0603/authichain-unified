@@ -47,6 +47,11 @@ export const missionTemplates: Record<MissionType, MissionTemplate> = {
     title: 'AuthiChain.com – Full Launch Orchestration',
     priority: 10,
   },
+  GOVCHAIN_LAUNCH: {
+    type: 'GOVCHAIN_LAUNCH',
+    title: 'GovChain.us – Government Protocol Launch',
+    priority: 10,
+  },
 };
 
 export const taskTemplates: Record<MissionType, TaskTemplate[]> = {
@@ -58,7 +63,6 @@ export const taskTemplates: Record<MissionType, TaskTemplate[]> = {
         context: 'authichain-unified full-stack TypeScript Cloudflare Worker',
       },
     },
-    // PLAN_SPRINT dynamically enqueues: WRITE_CODE → OPEN_PR → RUN_TESTS → CODE_REVIEW → MERGE_PR → MONITOR_DEPLOY
   ],
   GOV_PILOT: [
     { kind: 'BUILD_PILOT_PACKET',      payload: { segment: 'GOV' } },
@@ -101,6 +105,14 @@ export const taskTemplates: Record<MissionType, TaskTemplate[]> = {
     { kind: 'GENERATE_LAUNCH_CHECKLIST', payload: { scope: 'full_launch' } },
     { kind: 'DRAFT_LAUNCH_EMAIL',       payload: { audience: 'founders' } },
     { kind: 'DRAFT_PRESS_RELEASE',      payload: {} },
+    { kind: 'SCHEDULE_SOCIAL_POSTS',    payload: { platforms: ['twitter', 'linkedin'] } },
+  ],
+  GOVCHAIN_LAUNCH: [
+    { kind: 'CHECK_DNS_CONFIG',          payload: { domain: 'govchain.us' } },
+    { kind: 'VERIFY_SSL',               payload: { domain: 'govchain.us' } },
+    { kind: 'DRAFT_INTEL_DOSSIER',      payload: { segment: 'GOV', focus: 'sovereign_trust' } },
+    { kind: 'GENERATE_LAUNCH_CHECKLIST', payload: { scope: 'govchain_launch' } },
+    { kind: 'DRAFT_PRESS_RELEASE',      payload: { focus: 'government_blockchain' } },
     { kind: 'SCHEDULE_SOCIAL_POSTS',    payload: { platforms: ['twitter', 'linkedin'] } },
   ],
 };
