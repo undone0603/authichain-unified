@@ -178,12 +178,26 @@
 
 ### MED-3: Dashboard Password in Query Parameters
 
-**Status: PENDING FIX**
+**Status: FIXED (code prepared, deployment pending) — 2026-04-24**
 **Worker:** `authichain-dashboard`
-**Password:** `authichain2026` (passed as `?key=authichain2026`)
+**Password:** `authichain2026` (was passed as `?key=authichain2026`)
 **Risk:** Trivially guessable, appears in logs/history/referer headers. Dashboard exposes internal links.
 
-**Remediation:** Replace with Cloudflare Access (Zero Trust) or header-based auth.
+**Fix Applied:**
+- Rewrote `workers/authichain-dashboard/src/index.ts`:
+  - Password removed from source; reads from `env.ACCESS_TOKEN` secret binding
+  - Auth is now cookie-based (HttpOnly, Secure, SameSite=Strict, 8-hour lifetime) set via POST /login
+  - Login form POSTs instead of rewriting URL query string — password never hits URL/logs/referer
+  - Added /logout endpoint and sign-out link
+  - Constant-time token comparison to avoid timing side channels
+- Deploy script at `workers/authichain-dashboard/deploy.sh` (requires wrangler because the TS worker needs a build)
+
+**Remaining Manual Steps:**
+1. Generate a strong token: `openssl rand -hex 32`
+2. `export ACCESS_TOKEN="..."` and run `bash workers/authichain-dashboard/deploy.sh`
+3. Update any bookmarks — `?key=...` URLs no longer work; visit root, log in, cookie sticks
+
+**Still Recommended (future):** Front with Cloudflare Access (Zero Trust) once the Access app is set up — the cookie fix is a solid interim but Access gives proper SSO/MFA.
 
 ### MED-4: Hardcoded Auth Token Fallback
 
@@ -260,7 +274,8 @@ Run these in order. Check off as completed.
 ### Phase 3: Short-Term (This Month)
 - [ ] Deploy `authichain-api` v3.0.1 via `workers/authichain-api/deploy.sh` (prepared 2026-04-24)
 - [ ] Move Supabase anon key to env in remaining 4 workers (`gmail-relay-z`, `qron-stripe-webhook`, `qron-daily-ops`, `authichain-verify`)
-- [ ] Replace dashboard password with Cloudflare Access
+- [ ] Deploy `authichain-dashboard` cookie-auth rewrite via `workers/authichain-dashboard/deploy.sh` (prepared 2026-04-24)
+- [ ] (Future) Front `authichain-dashboard` with Cloudflare Access Zero Trust app
 - [ ] Rotate Notion integration token
 - [ ] Audit all Workers quarterly for new hardcoded secrets
 - [ ] Add pre-deploy secret scanning to CI/CD pipeline
@@ -279,7 +294,7 @@ Run these in order. Check off as completed.
 | qrontoken-telegram-bot | 1 | HIGH | PENDING |
 | gmail-relay-z | 1 | MEDIUM | PENDING |
 | authichain-api | 1 | MEDIUM | FIX PREPARED |
-| authichain-dashboard | 1 | MEDIUM | PENDING |
+| authichain-dashboard | 1 | MEDIUM | FIX PREPARED |
 | authichain-verify | 1 | MEDIUM | PENDING |
 | qron-seo-engine | 1 (public) | LOW | OK |
 | qron-self-heal | 0 | CLEAN | OK |
