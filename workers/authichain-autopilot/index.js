@@ -17,8 +17,10 @@
  */
 
 const SUPA = 'https://nhdnkzhtadfkkluiulhs.supabase.co';
-const ANON = '***REMOVED***';
-const RESEND_KEY = '***REMOVED***';
+// SUPABASE_ANON_KEY and RESEND_API_KEY are injected as globals by Cloudflare Workers
+// secret bindings (service-worker syntax). Set via:
+//   wrangler secret put SUPABASE_ANON_KEY
+//   wrangler secret put RESEND_API_KEY
 const FROM_EMAIL = 'Zac at AuthiChain <z@authichain.com>';
 const DAILY_LIMIT = 15; // Conservative to protect domain reputation
 
@@ -29,7 +31,7 @@ function j(data, status) {
 }
 
 function supaH() {
-  return { 'apikey': ANON, 'Authorization': 'Bearer ' + ANON, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
 }
 
 async function supaGet(table, params) {
@@ -84,7 +86,7 @@ function followUp7(prospect) {
 async function sendEmail(to, subject, html, replyTo) {
   var res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + RESEND_KEY, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       from: FROM_EMAIL, to: [to], subject: subject, html: html,
       reply_to: replyTo || 'authichain@gmail.com',
@@ -198,8 +200,17 @@ addEventListener('fetch', function(event) { event.respondWith(handleRequest(even
 addEventListener('scheduled', function(event) { event.waitUntil(handleScheduled(event)); });
 
 async function handleScheduled(event) {
+  if (!secretsConfigured()) {
+    console.error('Autopilot cron aborted: SUPABASE_ANON_KEY or RESEND_API_KEY not set');
+    return;
+  }
   var result = await autonomousRun();
   console.log('Autopilot cron:', JSON.stringify(result));
+}
+
+function secretsConfigured() {
+  return typeof SUPABASE_ANON_KEY === 'string' && SUPABASE_ANON_KEY.length > 0
+      && typeof RESEND_API_KEY === 'string' && RESEND_API_KEY.length > 0;
 }
 
 async function handleRequest(event) {
@@ -209,12 +220,17 @@ async function handleRequest(event) {
 
   if (path === '/' || path === '/health') {
     return j({
-      service: 'authichain-autopilot', version: '1.0.0', status: 'ok',
+      service: 'authichain-autopilot', version: '1.1.0', status: secretsConfigured() ? 'ok' : 'missing_secrets',
       cron: '0 */6 * * *', daily_limit: DAILY_LIMIT,
       description: 'Autonomous cold outreach + drip follow-up engine',
       routes: ['/health', '/run', '/stats', '/add-prospect'],
+      secrets_configured: secretsConfigured(),
       timestamp: new Date().toISOString(),
     });
+  }
+
+  if (!secretsConfigured()) {
+    return j({ error: 'Worker secrets not configured: set SUPABASE_ANON_KEY and RESEND_API_KEY via wrangler secret put' }, 500);
   }
 
   // Manual trigger

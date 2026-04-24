@@ -117,3 +117,9 @@ temp/
 
 # Manus internal
 .manus/
+
+# Claude Code local state
+.claude/
+
+# Wrangler local state
+.wrangler/
