@@ -1,5 +1,22 @@
 name: Deploy to Cloudflare
 
+# Deploys the Workers app defined by `wrangler.toml`:
+#   - `main = "worker/index.ts"` is bundled by wrangler.
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+#   - `[assets] directory = "dist/public"` serves the static frontend,
+#     which vite builds into that exact path.
+#
+# CLOUDFLARE_API_TOKEN must have these scopes (rotate in Cloudflare
+# dashboard → My Profile → API Tokens):
+#   - Account · Workers Scripts: Edit
+#   - Account · Workers R2 Storage: Edit      (qron-images bucket)
+#   - Account · D1: Edit                      (DB ebd8081b-…)
+#   - Account · Workers KV Storage: Edit      (sessions)
+#   - Account · Account Settings: Read
+#   - User   · Memberships: Read
+# The "Edit Cloudflare Workers" template covers all of the above in one go.
+
 on:
   push:
     branches:
@@ -8,40 +25,35 @@ on:
 
 jobs:
   deploy:
-    name: Deploy Worker + Pages
+    name: Deploy Worker + Static Assets
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
-          version: 10
+          version: 10.28.2
           run_install: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22
-          cache: pnpm
+          # Node 22 required: wrangler 3.114+ bundles miniflare which pulls in
+          # undici@8, and undici@8's CacheStorage API fails to initialize on
+          # Node 20.
+          node-version: '22'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install-ll --frozen-lockfile
 
-      - name: Build frontend
+      - name: Build frontend (→ dist/public for wrangler [assets])
         run: pnpm exec vite build
         env:
           VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
 
-      - name: Deploy Worker
-        run: npx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Publish to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+      - name: Publish worker + assets
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
-          directory: dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: deploy
