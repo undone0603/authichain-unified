@@ -22,14 +22,26 @@ if (fs.existsSync(envPath)) {
 }
 
 // Force ENV values from process.env into the ENV singleton used by server core
-const realOpenAiKey = "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";
-(ENV as any).forgeApiKey = realOpenAiKey;
-(ENV as any).openaiApiKey = realOpenAiKey;
-(ENV as any).forgeApiUrl = "https://api.openai.com"; 
+const openAiKey = process.env.OPENAI_API_KEY;
+if (!openAiKey) {
+  console.error("FATAL: OPENAI_API_KEY must be set in .env (or process environment).");
+  process.exit(1);
+}
+(ENV as any).forgeApiKey = openAiKey;
+(ENV as any).openaiApiKey = openAiKey;
+(ENV as any).forgeApiUrl = "https://api.openai.com";
 
-// Initialize Supabase REST API Fallback
-const supabaseUrl = "https://dbwoikpflfruikspdnfc.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRid29pa3BmbGZydWlrc3BkbmZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDQ5NjQ3NywiZXhwIjoyMDgwMDcyNDc3fQ.gsZlk-tkUpkbRINZe1BH2Yr-NJXHNWNuVPTbkJLo5uA";
+// Supabase REST API for the Michigan cannabis extraction workspace.
+// Service role is required (bypasses RLS for admin writes to leads / activity_log
+// / autopilot_decisions). Must be set in .env — never commit it.
+const supabaseUrl = process.env.SUPABASE_MI_URL;
+const supabaseKey = process.env.SUPABASE_MI_SERVICE_KEY;
+if (!supabaseUrl || !supabaseKey) {
+  console.error("FATAL: SUPABASE_MI_URL and SUPABASE_MI_SERVICE_KEY must be set in .env.");
+  console.error("The service_role key that was previously hardcoded MUST be rotated at");
+  console.error("https://supabase.com/dashboard/project/dbwoikpflfruikspdnfc/settings/api");
+  process.exit(1);
+}
 
 async function supabaseRest(table: string, method: string, body?: any, query?: string) {
   const url = `${supabaseUrl}/rest/v1/${table}${query ? `?${query}` : ''}`;

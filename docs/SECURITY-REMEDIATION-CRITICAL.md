@@ -10,12 +10,16 @@
 
 | Severity | Findings | Status |
 |----------|----------|--------|
-| CRITICAL | 5 | 3 FIXED (code), 2 PENDING (rotation) |
+| CRITICAL | 6 | 4 FIXED (code), 2 PENDING (rotation) |
 | HIGH | 3 | 1 FIXED (code), 2 PENDING (rotation) |
-| MEDIUM | 5 | 1 FIXED (code), 4 PENDING (migration) |
+| MEDIUM | 5 | 3 FIXED (code), 2 PENDING (migration) |
 | LOW | 1 | No action needed |
 
-**2026-04-24 update:** CRIT-3b added — authichain-autopilot worker was missed by original audit. Fix prepared.
+**2026-04-24 update:**
+- CRIT-3b added: `authichain-autopilot` worker (missed by original audit). Fix prepared.
+- CRIT-3c added: `scripts/mi-cannabis-extraction.ts` + `scripts/test-truth-layer-loop.ts` leaked OpenAI + Supabase service_role. Fixed in code; rotation required.
+- MED-2 partial: `authichain-api` migrated to env secret (1 of 5).
+- MED-3 fixed: `authichain-dashboard` rewritten with cookie-based auth, password moved to `ACCESS_TOKEN` secret.
 
 ---
 
@@ -85,6 +89,29 @@
 1. Run `bash workers/authichain-autopilot/deploy.sh` with `CLOUDFLARE_API_TOKEN`, `RESEND_API_KEY`, `SUPABASE_ANON_KEY` exported
 2. Verify `/health` returns `secrets_configured: true`
 3. When rotating the Resend key, update BOTH `resend-relay` AND `authichain-autopilot` — they share the same key
+
+### CRIT-3c: OpenAI + Supabase service_role Hardcoded in Local Scripts
+
+**Status: FIXED (code), PENDING ROTATION**
+**Added: 2026-04-24 (missed by original audit)**
+**Files:**
+- `scripts/mi-cannabis-extraction.ts` — OpenAI `sk-proj-...` + Supabase service_role JWT for project `dbwoikpflfruikspdnfc`
+- `scripts/test-truth-layer-loop.ts` — same OpenAI `sk-proj-...` key
+
+**Risk:**
+- `service_role` keys **bypass RLS** — higher severity than anon keys. Full admin read/write to the Michigan cannabis extraction Supabase project.
+- `sk-proj-...` OpenAI keys are long-lived project keys; exposure = billing abuse + prompt-leak of anything previously sent through them.
+- Both were checked into git, so they live in history even after redaction. Rotation is required.
+
+**Fix Applied:**
+- Both scripts now read keys from `process.env` (`OPENAI_API_KEY`, `SUPABASE_MI_URL`, `SUPABASE_MI_SERVICE_KEY`).
+- Scripts `process.exit(1)` with a clear error message when the env vars are missing, instead of silently running with a stale hardcoded key.
+- `.env.example` updated with the two new `SUPABASE_MI_*` entries.
+
+**Remaining Manual Steps:**
+1. **Rotate the Supabase service_role key** at https://supabase.com/dashboard/project/dbwoikpflfruikspdnfc/settings/api
+2. **Rotate the OpenAI key** at https://platform.openai.com/api-keys (revoke `sk-proj-psYdqX1I1y3tpJQszNq...`)
+3. Populate `.env` locally with the new values before running either script again.
 
 ### CRIT-4: 9 Personal Email Addresses Hardcoded in Worker
 
@@ -259,6 +286,9 @@ Run these in order. Check off as completed.
 - [ ] Set `RESEND_API_KEY` secret on resend-relay Worker
 - [ ] Deploy `authichain-autopilot` v1.1 via `workers/authichain-autopilot/deploy.sh`
 - [ ] Rotate Resend API key at resend.com (then re-set on BOTH resend-relay AND authichain-autopilot)
+- [ ] Rotate OpenAI project key that was in scripts/mi-cannabis-extraction.ts + scripts/test-truth-layer-loop.ts (CRIT-3c)
+- [ ] Rotate Supabase service_role key for project `dbwoikpflfruikspdnfc` (CRIT-3c)
+- [ ] Add SUPABASE_MI_URL + SUPABASE_MI_SERVICE_KEY to local .env (CRIT-3c)
 - [ ] Delete browser password CSVs from OneDrive
 - [ ] Revoke both Telegram bot tokens via @BotFather
 
