@@ -10,10 +10,12 @@
 
 | Severity | Findings | Status |
 |----------|----------|--------|
-| CRITICAL | 4 | 2 FIXED (code), 2 PENDING (rotation) |
+| CRITICAL | 5 | 3 FIXED (code), 2 PENDING (rotation) |
 | HIGH | 3 | 1 FIXED (code), 2 PENDING (rotation) |
 | MEDIUM | 5 | 1 FIXED (code), 4 PENDING (migration) |
 | LOW | 1 | No action needed |
+
+**2026-04-24 update:** CRIT-3b added — authichain-autopilot worker was missed by original audit. Fix prepared.
 
 ---
 
@@ -59,6 +61,30 @@
 1. Deploy via Cloudflare Dashboard or `wrangler deploy`
 2. Add secret: `wrangler secret put RESEND_API_KEY`
 3. Rotate the key at https://resend.com/api-keys
+
+### CRIT-3b: Resend API Key + Supabase Anon Key Hardcoded in authichain-autopilot
+
+**Status: FIXED (code prepared, deployment pending)**
+**Added: 2026-04-24 (missed by original audit)**
+**Worker:** `authichain-autopilot`
+**Secrets:**
+- Resend API key `re_Lc5G2g2X_2o73cM6xhL8xZUeGvv12AQXE` (same key as CRIT-3)
+- Supabase anon JWT (same instance as MED-2)
+
+**Risk:** Same as CRIT-3 + MED-2. Worker runs on 6-hour cron (cold outreach + drip follow-ups) — compromise means attacker can send email as authichain.com and read/write `drip_prospects` table.
+
+**Fix Applied:**
+- `workers/authichain-autopilot/index.js` bumped to v1.1
+- Removed hardcoded `ANON` and `RESEND_KEY` constants
+- Now reads `SUPABASE_ANON_KEY` and `RESEND_API_KEY` from Workers secret bindings (service-worker global injection)
+- Added `secretsConfigured()` guard — returns 500 on HTTP and aborts cron if either secret is missing
+- Health endpoint now reports `secrets_configured` status
+- Deploy script at `workers/authichain-autopilot/deploy.sh` (sets secrets first, then uploads code)
+
+**Remaining Manual Steps:**
+1. Run `bash workers/authichain-autopilot/deploy.sh` with `CLOUDFLARE_API_TOKEN`, `RESEND_API_KEY`, `SUPABASE_ANON_KEY` exported
+2. Verify `/health` returns `secrets_configured: true`
+3. When rotating the Resend key, update BOTH `resend-relay` AND `authichain-autopilot` — they share the same key
 
 ### CRIT-4: 9 Personal Email Addresses Hardcoded in Worker
 
@@ -213,7 +239,8 @@ Run these in order. Check off as completed.
 - [ ] Rotate Stripe webhook signing secret
 - [ ] Deploy `resend-relay` v1.1 (use Dashboard Quick Edit)
 - [ ] Set `RESEND_API_KEY` secret on resend-relay Worker
-- [ ] Rotate Resend API key at resend.com
+- [ ] Deploy `authichain-autopilot` v1.1 via `workers/authichain-autopilot/deploy.sh`
+- [ ] Rotate Resend API key at resend.com (then re-set on BOTH resend-relay AND authichain-autopilot)
 - [ ] Delete browser password CSVs from OneDrive
 - [ ] Revoke both Telegram bot tokens via @BotFather
 
@@ -240,6 +267,7 @@ Run these in order. Check off as completed.
 | Worker | Secrets | Severity | Clean? |
 |--------|---------|----------|--------|
 | resend-relay | 1 (API key) | CRITICAL | FIX PREPARED |
+| authichain-autopilot | 2 (Resend + Supabase) | CRITICAL | FIX PREPARED |
 | qron-outreach | 10 (emails+token) | CRITICAL | FIX PREPARED |
 | qron-stripe-webhook | 5 | CRITICAL | PENDING |
 | qron-daily-ops | 4 | CRITICAL | PENDING |
