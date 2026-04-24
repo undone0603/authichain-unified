@@ -246,6 +246,29 @@
 
 ## LOW FINDINGS
 
+## DEPENDENCY VULNERABILITIES (2026-04-24)
+
+`pnpm audit --prod` pre-session: **36 advisories** (1 low / 27 moderate / 8 high).
+
+### Bumped (in this session)
+
+| Package | Before | After | Advisories resolved |
+|---|---|---|---|
+| `@trpc/server` + `@trpc/client` + `@trpc/react-query` | ^11.6.0 | ^11.16.0 | Prototype pollution (high) |
+| `axios` | ^1.13.5 | ^1.15.2 | SSRF via NO_PROXY bypass + cloud metadata exfiltration (moderate ×2) |
+| `hono` | ^4.12.8 | ^4.12.15 | Cookie handling, path traversal in toSSG, serveStatic bypass, ipRestriction, JSX injection (moderate ×6) |
+| `nodemailer` | ^8.0.1 | ^8.0.6 | SMTP command injection via envelope.size + CRLF (low + moderate) |
+
+Post-session: **24 advisories** (18 moderate / 6 high). All remaining are transitive — can only be fixed once upstream dependencies publish updated releases.
+
+### Remaining direct-dep vulnerability (not fixed)
+
+**`drizzle-orm@0.44.5` — SQL injection in `sql.identifier()`** (high, >=0.45.2 required)
+
+Grep of the codebase confirms **no `sql.identifier()` usage** — the vulnerable API is not called anywhere in `server/`, `client/`, `shared/`, or any script. All dynamic SQL uses parameterized template literals (e.g. `` sql`${column} + 1` ``) which remain safe.
+
+**Action:** Upgrade at the next Drizzle release that addresses something else — treating this as defense-in-depth only. The 0.44→0.45 minor bump may include other breaking changes that need a dedicated regression pass, which is out of scope for this audit session.
+
 ### LOW-1: IndexNow Key in Worker Source
 
 **Worker:** `qron-seo-engine`
