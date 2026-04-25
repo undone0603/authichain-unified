@@ -121,5 +121,8 @@ temp/
 # Claude Code local state
 .claude/
 
+# Gemini CLI local state
+.gemini/
+
 # Wrangler local state
 .wrangler/
