@@ -142,13 +142,13 @@ importers:
         specifier: ^11.16.0
         version: 11.16.0(@tanstack/react-query@5.100.1(react@19.2.5))(@trpc/client@11.16.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.16.0(typescript@5.9.3))(react@19.2.5)(typescript@5.9.3)
       '@trpc/server':
-        specifier: ^11.16.0
+        specifier: '>=11.8.0'
         version: 11.16.0(typescript@5.9.3)
       '@tsndr/cloudflare-worker-jwt':
         specifier: ^3.2.1
         version: 3.2.1
       axios:
-        specifier: ^1.15.2
+        specifier: '>=1.13.5'
         version: 1.15.2
       class-variance-authority:
         specifier: ^0.7.1
@@ -181,14 +181,14 @@ importers:
         specifier: ^12.38.0
         version: 12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       hono:
-        specifier: ^4.12.15
+        specifier: '>=4.12.14'
         version: 4.12.15
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       jose:
-        specifier: 6.1.0
-        version: 6.1.0
+        specifier: 6.2.2
+        version: 6.2.2
       lucide-react:
         specifier: ^1.11.0
         version: 1.11.0(react@19.2.5)
@@ -320,7 +320,7 @@ importers:
         specifier: ^0.31.10
         version: 0.31.10
       esbuild:
-        specifier: ^0.28.0
+        specifier: '>=0.25.0'
         version: 0.28.0
       ethers:
         specifier: ^6.16.0
@@ -350,7 +350,7 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
       vite:
-        specifier: ^7.3.2
+        specifier: '>=7.3.2 <8'
         version: 7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.3)
       vite-plugin-manus-runtime:
         specifier: ^0.0.57
@@ -5394,9 +5394,6 @@ packages:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
 
-  jose@6.1.0:
-    resolution: {integrity: sha512-TTQJyoEoKcC1lscpVDCSsVgYzUDg/0Bt3WE//WiTPK6uOCQC2KZS4MpugbMWt/zyjkopgZoXhZuCi00gLudfUA==}
-
   jose@6.2.2:
     resolution: {integrity: sha512-d7kPDd34KO/YnzaDOlikGpOurfF0ByC2sEV4cANCtdqLlTfBlw2p14O/5d/zv40gJPbIQxfES3nSx1/oYNyuZQ==}
 
@@ -8960,7 +8957,7 @@ snapshots:
       '@noble/hashes': 1.7.2
       '@scure/base': 1.2.6
       '@types/debug': 4.1.13
-      debug: 4.3.4
+      debug: 4.4.3
       pony-cause: 2.1.11
       semver: 7.7.4
       uuid: 14.0.0
@@ -14291,8 +14288,6 @@ snapshots:
       ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
   jiti@2.6.1: {}
-
-  jose@6.1.0: {}
 
   jose@6.2.2: {}
 
