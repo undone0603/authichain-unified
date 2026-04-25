@@ -16,6 +16,9 @@ concurrency:
   group: gov-engine
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: '20'
   PNPM_VERSION: '10.28.2'
