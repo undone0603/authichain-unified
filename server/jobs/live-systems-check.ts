@@ -35,14 +35,16 @@ async function checkStripe(): Promise<IntegrationCheckResult> {
   try {
     const { getStripe } = await import("../stripe-service");
     const stripe = getStripe();
-    const account = await stripe.accounts.retrieve();
+    // balance.retrieve() is the canonical no-arg credential probe and works
+    // across stripe-node v20+. accounts.retrieve()/account.retrieve() both
+    // require an explicit account-id argument starting in v22.
+    const balance = await stripe.balance.retrieve();
     return {
       configured: true,
       connected: true,
       details: {
-        accountId: account.id,
-        country: account.country,
-        chargesEnabled: account.charges_enabled,
+        livemode: balance.livemode,
+        availableCount: balance.available?.length ?? 0,
       },
     };
   } catch (error) {
