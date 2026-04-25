@@ -8,8 +8,8 @@ compatibility_flags = ["nodejs_compat"]
 directory = "dist/public"
 not_found_handling = "single-page-application"
 
-[triggers]
-crons = ["*/5 * * * *"]
+# [triggers]
+# crons = ["*/5 * * * *"]
 
 # Multi-tenant brand routing. The server reads the Host header and dispatches
 # to the matching brand landing (see server/_core/brand-middleware.ts +
@@ -18,17 +18,17 @@ crons = ["*/5 * * * *"]
 # domains in the Vercel dashboard → Project → Domains (all pointing at the
 # same deployment). No code changes needed per brand — the Host header drives
 # dispatch.
-#
-# routes = [
-#   { pattern = "authichain.com",     custom_domain = true },
-#   { pattern = "www.authichain.com", custom_domain = true },
-#   { pattern = "qron.space",         custom_domain = true },
-#   { pattern = "www.qron.space",     custom_domain = true },
-#   { pattern = "strainchain.io",     custom_domain = true },
-#   { pattern = "www.strainchain.io", custom_domain = true },
-#   { pattern = "govchain.us",        custom_domain = true },
-#   { pattern = "www.govchain.us",    custom_domain = true },
-# ]
+
+routes = [
+   { pattern = "authichain.com",     custom_domain = true },
+   { pattern = "www.authichain.com", custom_domain = true },
+   { pattern = "qron.space",         custom_domain = true },
+   { pattern = "www.qron.space",     custom_domain = true },
+   { pattern = "strainchain.io",     custom_domain = true },
+   { pattern = "www.strainchain.io", custom_domain = true },
+   { pattern = "govchain.us",        custom_domain = true },
+   { pattern = "www.govchain.us",    custom_domain = true },
+]
 
 # Set these via: wrangler secret put <NAME>
 # DATABASE_URL, JWT_SECRET, VITE_APP_ID, OAUTH_SERVER_URL

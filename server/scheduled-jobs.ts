@@ -1,4 +1,4 @@
-import cron, { type ScheduledTask } from "node-cron";
+// server/scheduled-jobs.ts
 import { getDb } from "./db";
 import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts } from "../drizzle/schema";
 import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
@@ -21,14 +21,14 @@ interface JobResult {
 }
 
 const jobs: JobDefinition[] = [];
-const scheduledTasks: Map<string, ScheduledTask> = new Map();
+const scheduledTasks: Map<string, any> = new Map();
 
 function registerJob(job: JobDefinition) {
   jobs.push(job);
 }
 
 // ─── Job Execution Wrapper ──────────────────────────────────────────────────
-async function executeJob(job: JobDefinition): Promise<void> {
+export async function executeJob(job: JobDefinition): Promise<void> {
   const db = await getDb();
   if (!db) {
     console.warn(`[Scheduler] Skipping ${job.name}: database not available`);
@@ -564,8 +564,22 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 // Scheduler Initialization
 // ═══════════════════════════════════════════════════════════════════════════
-export function initializeScheduler(): void {
+export async function initializeScheduler(): Promise<void> {
   console.log("[Scheduler] Initializing scheduled jobs...");
+
+  let cron;
+  try {
+    // Specifier is computed at runtime so the Worker bundler (esbuild) does
+    // NOT statically include node-cron — it references __dirname at module
+    // top level, which is undefined in Cloudflare Workers ESM and crashes the
+    // worker on startup. In Node this resolves normally; in Workers the
+    // dynamic import throws and we fall through to the warn+return below.
+    const moduleName = ["node", "cron"].join("-");
+    cron = (await import(/* @vite-ignore */ moduleName)).default;
+  } catch (err) {
+    console.warn("[Scheduler] node-cron not available in this environment, skipping initialization.");
+    return;
+  }
 
   for (const job of jobs) {
     if (!job.enabled) {

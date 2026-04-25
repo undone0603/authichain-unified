@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 const PLANS = [
   {
+    id: "starter",
     name: "StrainChain Basic",
     price: "$199",
     period: "/mo",
@@ -19,11 +20,11 @@ const PLANS = [
       "Basic Analytics",
       "Email Support"
     ],
-    stripeLink: "https://buy.stripe.com/14A4gz9brgbQdOG4ba1Nu0w",
     color: "green",
     icon: Shield
   },
   {
+    id: "professional",
     name: "AuthiChain Professional",
     price: "$499",
     period: "/mo",
@@ -35,12 +36,12 @@ const PLANS = [
       "AI AutoFlow Classification",
       "Priority 24h Support"
     ],
-    stripeLink: "https://buy.stripe.com/8x28wP5Zf1gWcKC4ba1Nu0x",
     color: "yellow",
     icon: Zap,
     featured: true
   },
   {
+    id: "enterprise",
     name: "Enterprise Sovereign",
     price: "$999",
     period: "/mo",
@@ -52,19 +53,29 @@ const PLANS = [
       "SLA Guarantee",
       "Dedicated CSM"
     ],
-    stripeLink: "https://buy.stripe.com/aFaaEX9br4t8dOG8rq1Nu0y",
     color: "blue",
     icon: Crown
   }
 ];
 
 export default function Pricing() {
-  const [loading, setLoading] = useState<string | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const checkout = trpc.subscriptions.checkout.useMutation();
 
-  const handleSubscribe = (link: string, name: string) => {
-    setLoading(name);
-    toast.success(`Redirecting to ${name} checkout...`);
-    window.location.href = link;
+  const handleSubscribe = async (planId: string, name: string) => {
+    setLoadingPlan(name);
+    try {
+      const { checkoutUrl } = await checkout.mutateAsync({
+        plan: planId as any,
+        billing: "monthly",
+        origin: window.location.origin,
+      });
+      toast.success(`Redirecting to ${name} checkout...`);
+      window.location.href = checkoutUrl;
+    } catch (error: any) {
+      toast.error(`Checkout failed: ${error.message}`);
+      setLoadingPlan(null);
+    }
   };
 
   return (
@@ -127,15 +138,15 @@ export default function Pricing() {
 
               <CardFooter className="p-8">
                 <Button 
-                  onClick={() => handleSubscribe(plan.stripeLink, plan.name)}
-                  disabled={loading === plan.name}
+                  onClick={() => handleSubscribe(plan.id, plan.name)}
+                  disabled={loadingPlan === plan.name}
                   className={`w-full h-14 text-lg font-bold uppercase italic rounded-xl transition-all ${
                     plan.featured 
                       ? 'bg-yellow-500 hover:bg-yellow-600 text-black shadow-lg shadow-yellow-500/20' 
                       : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
                   }`}
                 >
-                  {loading === plan.name ? <Loader2 className="w-5 h-5 animate-spin" /> : "Deploy Protocol"}
+                  {loadingPlan === plan.name ? <Loader2 className="w-5 h-5 animate-spin" /> : "Deploy Protocol"}
                 </Button>
               </CardFooter>
             </Card>
