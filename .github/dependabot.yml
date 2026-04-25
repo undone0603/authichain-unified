@@ -24,6 +24,7 @@ updates:
       - dependency-name: "mdast-util-to-hast"
       - dependency-name: "@smithy/config-resolver"
       - dependency-name: "path-to-regexp"
+      - dependency-name: "uuid"
       - dependency-name: "picomatch"
       - dependency-name: "lodash"
       - dependency-name: "lodash-es"
