@@ -167,6 +167,33 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Split vendor bundle so first-paint doesn't drag in the entire web3
+        // stack on routes that don't need it. Route-level code-splitting from
+        // wouter handles app code; this groups the heavy node_modules.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (
+            id.includes("/thirdweb/") ||
+            id.includes("/ethers/") ||
+            id.includes("/@solana/") ||
+            id.includes("/wagmi/") ||
+            id.includes("/viem/") ||
+            id.includes("/ox/") ||
+            id.includes("/@coinbase/") ||
+            id.includes("/@metamask/") ||
+            id.includes("/@walletconnect/") ||
+            id.includes("/@base-org/")
+          ) {
+            return "web3";
+          }
+          if (id.includes("/@radix-ui/")) return "radix";
+          if (id.includes("/framer-motion/")) return "motion";
+          if (id.includes("/recharts/") || id.includes("/d3-")) return "charts";
+        },
+      },
+    },
   },
   server: {
     host: true,
