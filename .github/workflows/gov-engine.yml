@@ -220,7 +220,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Slack notification is best-effort — a dead/expired SLACK_BOT_TOKEN
+      # should not mark the whole pipeline run as failed when ingest/score/
+      # generate all succeeded. The step still shows red in the UI so the
+      # token can be rotated, but the run conclusion reflects pipeline work.
       - name: Send Slack digest
+        continue-on-error: true
         run: pnpm exec tsx scripts/send-digest.ts
         env:
           SLACK_BOT_TOKEN:      ${{ secrets.SLACK_BOT_TOKEN }}
@@ -232,6 +237,7 @@ jobs:
 
       - name: Report pipeline failure to Slack
         if: failure()
+        continue-on-error: true
         run: pnpm exec tsx scripts/report-failure.ts
         env:
           SLACK_BOT_TOKEN:     ${{ secrets.SLACK_BOT_TOKEN }}
