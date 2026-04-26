@@ -3,7 +3,7 @@ import path from "path";
 
 // Set a dummy DATABASE_URL for tests to prevent getDb() from throwing.
 // Actual DB operations should be mocked in tests.
-process.env.DATABASE_URL = "mysql://root:password@localhost:3306/db";
+process.env.DATABASE_URL = "postgresql://test:password@localhost:5432/db";
 
 const templateRoot = path.resolve(import.meta.dirname);
 
