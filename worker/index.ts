@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { appRouter } from "../server/routers";
@@ -145,13 +144,21 @@ export default {
 
     // CORS preflight
     if (request.method === "OPTIONS") {
+      const origin = request.headers.get("Origin");
+      // Real browser preflights always include Origin. Reject anything else
+      // — the previous "?? '*'" fallback combined with credentials: true is
+      // rejected by browsers anyway and gave auditors something to flag.
+      if (!origin) {
+        return new Response(null, { status: 400 });
+      }
       return new Response(null, {
         status: 204,
         headers: {
-          "Access-Control-Allow-Origin": request.headers.get("Origin") ?? "*",
+          "Access-Control-Allow-Origin": origin,
           "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
           "Access-Control-Allow-Headers": "Content-Type, Authorization",
           "Access-Control-Allow-Credentials": "true",
+          "Vary": "Origin",
         },
       });
     }
