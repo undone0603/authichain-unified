@@ -2,7 +2,27 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3, Settings, ShoppingBag } from "lucide-react";
+import SystemControlPanel from "@/components/SystemControlPanel";
+import { ORDER_STATUSES, type OrderStatus } from "@shared/const";
+
+const SERVICE_NAMES: Record<string, string> = {
+  authenticity_audit: "Authenticity Audit",
+  cinematic_page: "Cinematic Product Page",
+  automation_setup: "Automation Setup",
+  landing_page: "Landing Page",
+  brand_story_pack: "Brand Story Pack",
+  government_dossier: "Government Dossier",
+};
+
+const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  pending: "outline",
+  paid: "secondary",
+  in_progress: "default",
+  delivered: "secondary",
+  cancelled: "destructive",
+};
 
 export default function AdminDashboard() {
   const { data: metrics, isLoading } = trpc.admin.metrics.useQuery();
@@ -236,7 +256,7 @@ export default function AdminDashboard() {
                                 value={o.status}
                                 onValueChange={(next) => {
                                   if (next !== o.status) {
-                                    updateOrderStatus.mutate({ id: o.id, status: next as typeof ORDER_STATUSES[number] });
+                                    updateOrderStatus.mutate({ id: o.id, status: next as OrderStatus });
                                   }
                                 }}
                                 disabled={updateOrderStatus.isPending}
