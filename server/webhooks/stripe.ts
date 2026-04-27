@@ -389,7 +389,17 @@ export async function handleStripeWebhook(
           },
         });
 
-        // 1. Trigger Physical Fulfillment Bridge (Security Seals)
+        // 1. Mark service order as paid + notify customer (idempotent —
+        //    no-op if order already past pending). Done before fulfillment
+        //    so downstream fulfillment runs on a paid order, not a pending one.
+        try {
+          const { handleServiceOrderPayment } = await import("../services/order-payment-handler");
+          await handleServiceOrderPayment(session);
+        } catch (orderErr) {
+          console.warn("[ServiceOrder] Mark-paid failed:", orderErr);
+        }
+
+        // 2. Trigger Physical Fulfillment Bridge (Security Seals)
         try {
           const { triggerFulfillmentFromPayment } = await import("../fulfillment-service");
           await triggerFulfillmentFromPayment(session.id);
@@ -397,7 +407,7 @@ export async function handleStripeWebhook(
           console.warn("[Fulfillment] Trigger failed:", fillErr);
         }
 
-        // 2. If it's a pilot lead, update status to WON
+        // 3. If it's a pilot lead, update status to WON
         if (leadEmail) {
           const { updateLeadStatusByEmail } = await import("../db");
           await updateLeadStatusByEmail(leadEmail, "won");
