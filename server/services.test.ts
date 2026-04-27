@@ -60,4 +60,18 @@ describe("services router", () => {
       expect(Array.isArray(orders)).toBe(true);
     });
   });
+
+  describe("services.updateStatus (admin)", () => {
+    it("rejects non-admin users", async () => {
+      await expect(
+        authedCaller.services.updateStatus({ id: 1, status: "paid" }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects invalid status values (zod enum)", async () => {
+      await expect(
+        adminCaller.services.updateStatus({ id: 1, status: "shipped" as any }),
+      ).rejects.toThrow();
+    });
+  });
 });
