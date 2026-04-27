@@ -41,6 +41,8 @@ const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
 const Storymode = lazy(() => import("./pages/Storymode"));
 const GovOnboarding = lazy(() => import("./pages/GovOnboarding"));
 const QrArtGallery = lazy(() => import("./pages/QrArtGallery"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 
 function PageLoader() {
   return (
@@ -129,6 +131,20 @@ function Router() {
         {() => (
           <Suspense fallback={<PageLoader />}>
             <GovOnboarding />
+          </Suspense>
+        )}
+      </Route>
+      <Route path="/terms">
+        {() => (
+          <Suspense fallback={<PageLoader />}>
+            <Terms />
+          </Suspense>
+        )}
+      </Route>
+      <Route path="/privacy">
+        {() => (
+          <Suspense fallback={<PageLoader />}>
+            <Privacy />
           </Suspense>
         )}
       </Route>
