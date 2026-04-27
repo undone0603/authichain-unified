@@ -13,11 +13,6 @@ export const ENV = {
   hubspotServiceKey: process.env.HUBSPOT_SERVICE_KEY ?? "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
-  paddleApiKey: process.env.PADDLE_API_KEY ?? "",
-  paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
-  paddleBasicPriceId: process.env.PADDLE_BASIC_PRICE_ID ?? "",
-  paddlePremiumPriceId: process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
-  paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
   qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
   defaultNftContract: process.env.DEFAULT_NFT_CONTRACT ?? "0xc3143254997d48fdc9983d618fb2e10067673eb5",
 

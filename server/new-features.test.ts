@@ -468,22 +468,6 @@ describe("New Features", () => {
     });
   });
 
-  // ── Paddle checkout ─────────────────────────────────────────────────────────
-  describe("subscription.createPaddleCheckout", () => {
-    it("requires auth", async () => {
-      await expect(appRouter.createCaller(createPublicContext()).subscription.createPaddleCheckout({
-        plan: "starter", successUrl: "https://app.authichain.com/success",
-      })).rejects.toThrow();
-    });
-
-    it("throws BAD_REQUEST when Paddle price env var not set", async () => {
-      // Paddle price env vars are not configured in test env
-      await expect(appRouter.createCaller(createAuthContext()).subscription.createPaddleCheckout({
-        plan: "starter", billing: "monthly", successUrl: "https://app.authichain.com/success",
-      })).rejects.toMatchObject({ code: "BAD_REQUEST" });
-    });
-  });
-
   // ── referral/core pure helpers ───────────────────────────────────────────────
   describe("referral/core pure helpers", () => {
     it("COMMISSION_RATES has the four expected tiers", async () => {

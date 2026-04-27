@@ -1280,23 +1280,3 @@ export async function markTaskFailed(id: string, error?: string) {
   await d.update(missionTasks).set({ status: "failed", lastError: error ?? null }).where(eq(missionTasks.id, id));
 }
 
-// ─────────────────────────────────────────────────────────────
-// PADDLE WEBHOOK HELPERS
-// ─────────────────────────────────────────────────────────────
-
-export async function updateSubscription(paddleSubscriptionId: string, data: Partial<typeof subscriptions.$inferInsert>) {
-  const d = await getDb();
-  await d.update(subscriptions).set(data as any).where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId));
-}
-
-export async function setSubscriptionStatusByPaddleId(paddleSubscriptionId: string, status: string, cancelledAt?: Date) {
-  const d = await getDb();
-  const updateData: any = { status: status as any };
-  if (cancelledAt) updateData.cancelledAt = cancelledAt;
-  await d.update(subscriptions).set(updateData).where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId));
-}
-
-export async function updateUser(userId: number, data: Partial<typeof users.$inferInsert>) {
-  const d = await getDb();
-  await d.update(users).set(data as any).where(eq(users.id, userId));
-}
