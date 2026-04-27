@@ -1,0 +1,11 @@
+name = "authichain-bridge"
+main = "src/index.ts"
+compatibility_date = "2026-03-11"
+compatibility_flags = ["nodejs_compat"]
+
+# Status: SCAFFOLDED — not currently deployed.
+# See STATUS.md for context. Set secrets before first deploy:
+#   wrangler secret put JWT_SECRET --name authichain-bridge
+#   wrangler secret put SUPABASE_URL --name authichain-bridge
+#   wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name authichain-bridge
+#   wrangler secret put RAPIDAPI_KEY --name authichain-bridge
