@@ -2,15 +2,13 @@ import { Request, Response } from 'express';
 import { verifyPaddleWebhook } from '../_core/paddle';
 import { EventName } from '@paddle/paddle-node-sdk';
 import { ENV } from '../_core/env';
-import {
-  createCertificate,
-  createSubscription,
-  updateSubscription,
-  updateUser,
+import { 
+  createCertificate, 
+  createSubscription, 
+  updateSubscription, 
+  updateUser, 
   logActivity,
-  setSubscriptionStatusByPaddleId,
-  claimWebhookEvent,
-  markWebhookEventProcessed,
+  setSubscriptionStatusByPaddleId
 } from '../db';
 import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../thirdweb';
 
@@ -41,22 +39,7 @@ export async function handlePaddleWebhook(req: Request, res: Response) {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  console.log(`[Paddle Webhook] Received event: ${eventData.eventType} (${eventData.notificationId})`);
-
-  if (!eventData.notificationId) {
-    console.error('[Paddle Webhook] Missing notification_id — cannot dedup');
-    return res.status(400).json({ error: 'Missing notification_id' });
-  }
-
-  // Idempotency — atomic claim against UNIQUE(provider, eventId).
-  // Paddle's notification_id is reused on retries, so it's the right dedup key.
-  // Without this, double-delivery causes double NFT mints (gas-burning) and
-  // double certificate rows in handleTransactionCompleted.
-  const claimed = await claimWebhookEvent('paddle', eventData.notificationId, eventData.eventType);
-  if (!claimed) {
-    console.log(`[Paddle Webhook] Duplicate notification ignored: ${eventData.notificationId}`);
-    return res.json({ received: true, duplicate: true });
-  }
+  console.log(`[Paddle Webhook] Received event: ${eventData.eventType}`);
 
   try {
     // Handle different event types
@@ -89,20 +72,9 @@ export async function handlePaddleWebhook(req: Request, res: Response) {
         console.log(`[Paddle Webhook] Unhandled event type: ${eventData.eventType}`);
     }
 
-    // Side effects ran successfully — stamp the claim. Rows left with
-    // processedAt = NULL indicate handlers that crashed mid-processing.
-    await markWebhookEventProcessed('paddle', eventData.notificationId);
     res.json({ received: true });
   } catch (error) {
     console.error('[Paddle Webhook] Error processing webhook:', error);
-    // Note: we deliberately do NOT mark processed on error — the row stays
-    // NULL so retries can re-claim. But the original claim row blocks the
-    // immediate retry. Paddle will retry with the same notification_id, and
-    // the next claim will fail (UNIQUE conflict) — meaning a one-shot failure
-    // here means the event is permanently dropped. This is a known trade-off
-    // documented in docs/superpowers/plans/2026-04-27-webhook-idempotency.md
-    // ("never double-execute" wins over "always eventually execute"). Stuck
-    // NULL rows surface in ops alerting for manual intervention.
     res.status(500).json({ error: 'Webhook processing failed' });
   }
 }
