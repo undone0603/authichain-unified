@@ -1,13 +1,52 @@
 import { eq, desc, and, sql, gte, lte, inArray, like, type SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
-  InsertUser, users, products, authentications, certificates, qrCodes,
-  nftCollections, nfts, auctions, auctionBids, subscriptions, usageRecords,
-  invoices, payments, leads, emailCampaigns, emailDrafts, supplyChainEvents,
-  referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions,
-  abTests, whiteLabelClients, activityLog, fraudAlerts, customerHealthScores,
-  revenueRecords, notifications,
-  type Product, type InsertProduct, type InsertNotification,
+  eq, desc, and, sql, gte, lte, inArray, like
+} from "drizzle-orm";
+import type { OrderStatus } from "../shared/const";
+
+import {
+  InsertUser,
+  users,
+  products,
+  authentications,
+  certificates,
+  qrCodes,
+  nftCollections,
+  nfts,
+  auctions,
+  auctionBids,
+  subscriptions,
+  usageRecords,
+  invoices,
+  payments,
+  leads,
+  emailCampaigns,
+  emailDrafts,
+  supplyChainEvents,
+  referrals,
+  affiliates,
+  affiliateCommissions,
+  autopilotConfig,
+  autopilotDecisions,
+  abTests,
+  whiteLabelClients,
+  activityLog,
+  fraudAlerts,
+  customerHealthScores,
+  revenueRecords,
+  notifications,
+  bonuses,
+  referralClicks,
+  aiModels,
+  modelPurchases,
+  modelReviews,
+  serviceOrders,
+  missions,
+  missionTasks,
+  type Product,
+  type InsertProduct,
+  type InsertNotification,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -81,6 +120,300 @@ export async function createProduct(data: Omit<InsertProduct, "id" | "createdAt"
   const result = await db.insert(products).values(data);
   return { id: result[0].insertId };
 }
+
+export async function getRecentActivity(limit = 20) {
+  const d = await getDb();
+  return d.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(limit);
+}
+
+export async function getRecentDecisions(limit = 10) {
+  const d = await getDb();
+  return d.select().from(autopilotDecisions).orderBy(desc(autopilotDecisions.createdAt)).limit(limit);
+}
+
+export async function logActivity(actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number; details?: any }, details?: string) {
+  const d = await getDb();
+  if (typeof actionOrData === "string") {
+    await d.insert(activityLog).values({ action: actionOrData, details: details ? { text: details } : undefined });
+  } else {
+    await d.insert(activityLog).values({
+      userId: actionOrData.userId ?? undefined,
+      action: actionOrData.action,
+      entityType: actionOrData.entityType,
+      entityId: actionOrData.entityId,
+      details: actionOrData.details,
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// TASK QUEUE (used by agents, missions)
+// ─────────────────────────────────────────────────────────────
+
+export async function enqueueTask(missionId: string, title: string, descriptionOrPayload?: string | Record<string, unknown>, orderOrScheduledAt?: number | Date) {
+  const d = await getDb();
+  const id = randomUUID();
+  const description = typeof descriptionOrPayload === "string" ? descriptionOrPayload : (title ?? "");
+  const payload = typeof descriptionOrPayload === "object" ? descriptionOrPayload : undefined;
+  const order = typeof orderOrScheduledAt === "number" ? orderOrScheduledAt : 0;
+  await d.insert(missionTasks).values({
+    id,
+    missionId,
+    title,
+    description,
+    kind: title,
+    payload: payload ?? undefined,
+    status: "pending",
+    order,
+  });
+  return id;
+}
+
+export async function getDueTasks(limit = 10) {
+  const d = await getDb();
+  return d.select().from(missionTasks).where(eq(missionTasks.status, "pending")).orderBy(missionTasks.order).limit(limit);
+}
+
+export async function getRunTaskCount() {
+  const d = await getDb();
+  const rows = await d.select({ count: sql<number>`count(*)` }).from(missionTasks).where(eq(missionTasks.status, "in_progress"));
+  return rows[0]?.count ?? 0;
+}
+
+export async function markTaskRunning(id: string) {
+  const d = await getDb();
+  await d.update(missionTasks).set({ status: "in_progress" }).where(eq(missionTasks.id, id));
+}
+
+export async function markTaskDone(id: string) {
+  const d = await getDb();
+  await d.update(missionTasks).set({ status: "completed" }).where(eq(missionTasks.id, id));
+}
+
+// markTaskFailed is defined below with error parameter support
+
+export async function markTaskWaitingHuman(id: string) {
+  const d = await getDb();
+  await d.update(missionTasks).set({ status: "pending" }).where(eq(missionTasks.id, id));
+}
+
+export async function getActiveMissionTypes(): Promise<string[]> {
+  const d = await getDb();
+  const rows = await d.select({ title: missions.title }).from(missions).where(eq(missions.status, "active"));
+  return rows.map(r => r.title);
+}
+
+export async function getAdaptivePriors() {
+  const d = await getDb();
+  const rows = await d.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(50);
+  return rows;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SERVICE ORDERS (used by service-orders router)
+// ─────────────────────────────────────────────────────────────
+
+export async function createServiceOrder(data: any) {
+  const d = await getDb();
+  const [row] = await d.insert(serviceOrders).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
+}
+
+export async function getAllServiceOrders() {
+  const d = await getDb();
+  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
+}
+
+export async function getServiceOrderById(id: number) {
+  const d = await getDb();
+  const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.id, id));
+  return rows[0] ?? null;
+}
+
+export async function getServiceOrdersByUser(userId: number) {
+  const d = await getDb();
+  return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId));
+}
+
+export async function updateServiceOrderStatus(id: number, status: OrderStatus, extra?: Record<string, any>) {
+  const d = await getDb();
+  const updateData: any = { status, ...(extra ?? {}) };
+  await d.update(serviceOrders).set(updateData).where(eq(serviceOrders.id, id));
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROPOSALS
+// ─────────────────────────────────────────────────────────────
+
+export async function createProposal(data: any) {
+  const d = await getDb();
+  await d.execute(sql`INSERT INTO proposals (data) VALUES (${JSON.stringify(data)})`);
+}
+
+// ─────────────────────────────────────────────────────────────
+// REPORTING & ANALYTICS (used by jobs/revenue-digest, value-report)
+// ─────────────────────────────────────────────────────────────
+
+export async function getWeeklyRevenueDigest() {
+  const d = await getDb();
+  const weekAgo = new Date(Date.now() - 7 * 86400000);
+  const rows = await d.select().from(revenueRecords).where(gte(revenueRecords.createdAt, weekAgo));
+  const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+  return {
+    leads: rows.length,
+    mqlToSql: 0,
+    demosBooked: 0,
+    trialToPaid: 0,
+    churn: 0,
+    mrr: total.toFixed(2),
+    arpa: rows.length ? (total / rows.length).toFixed(2) : "0.00",
+    rows,
+  };
+}
+
+export async function hasActionLogged(action: string, sinceDaysAgo = 1): Promise<boolean> {
+  const d = await getDb();
+  const since = new Date(Date.now() - sinceDaysAgo * 86400000);
+  const rows = await d.select().from(activityLog)
+    .where(and(eq(activityLog.action, action), gte(activityLog.createdAt, since)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function getQuarterlyValueReport() {
+  const d = await getDb();
+  const quarterAgo = new Date(Date.now() - 90 * 86400000);
+  const now = new Date();
+  const q = `${now.getFullYear()}-Q${Math.ceil((now.getMonth() + 1) / 3)}`;
+  const rows = await d.select().from(revenueRecords).where(gte(revenueRecords.createdAt, quarterAgo));
+  const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+  return {
+    period: q,
+    roiSummary: `Q${Math.ceil((now.getMonth() + 1) / 3)} revenue: $${total.toFixed(2)} across ${rows.length} records.`,
+    totalRevenue: total,
+    rows,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// USER SEGMENT QUERIES (used by jobs/retention.ts, onboarding)
+// ─────────────────────────────────────────────────────────────
+
+export async function listHighScanUsers(minScans = 10) {
+  const d = await getDb();
+  return d.select().from(users).orderBy(desc(users.lastSignedIn)).limit(50);
+}
+
+export async function listInactiveUsersNoRecentScans(daysSinceLastScan = 30) {
+  const d = await getDb();
+  const cutoff = new Date(Date.now() - daysSinceLastScan * 86400000);
+  return d.select().from(users).where(lte(users.lastSignedIn, cutoff));
+}
+
+export async function listUsersForOnboardingStep(step: string | number) {
+  const d = await getDb();
+  return d.select().from(users).orderBy(desc(users.createdAt)).limit(100);
+}
+
+// ─────────────────────────────────────────────────────────────
+// DUNNING & RETENTION (used by jobs/dunning.ts, jobs/retention.ts)
+// ─────────────────────────────────────────────────────────────
+
+export async function listPastDueSubscriptions() {
+  const d = await getDb();
+  return d.select().from(subscriptions).where(eq(subscriptions.status, "past_due"));
+}
+
+export async function hasDunningStepLogged(subscriptionId: number, step: string): Promise<boolean> {
+  const d = await getDb();
+  const rows = await d.select().from(activityLog)
+    .where(and(
+      like(activityLog.action, `dunning:${step}:%`),
+      sql`JSON_EXTRACT(${activityLog.details}, '$.text') LIKE ${'%sub:' + subscriptionId + '%'}`
+    )).limit(1);
+  return rows.length > 0;
+}
+
+export async function hasUserActionLogged(userId: number, action: string, sinceDaysAgo: number = 365): Promise<boolean> {
+  const d = await getDb();
+  const since = new Date(Date.now() - sinceDaysAgo * 86400000);
+  const rows = await d.select().from(activityLog)
+    .where(and(
+      eq(activityLog.action, action),
+      gte(activityLog.createdAt, since)
+    )).limit(1);
+  return rows.length > 0;
+}
+
+// ─────────────────────────────────────────────────────────────
+// MISSIONS CRUD (used by missions/router.ts)
+// ─────────────────────────────────────────────────────────────
+
+import type { MissionType, MissionStatus } from "./missions/types";
+
+export async function getMissions(statusFilter?: string) {
+  const d = await getDb();
+  if (statusFilter) {
+    return d.select().from(missions).where(eq(missions.status, statusFilter as any));
+  }
+  return d.select().from(missions).orderBy(desc(missions.createdAt));
+}
+
+export async function getMissionById(id: string) {
+  const d = await getDb();
+  const rows = await d.select().from(missions).where(eq(missions.id, id));
+  return rows[0] ?? null;
+}
+
+export async function createMission(type: MissionType) {
+  const d = await getDb();
+  const id = randomUUID();
+  await d.insert(missions).values({
+    id,
+    title: type,
+    description: `Mission: ${type}`,
+    status: "pending",
+  });
+  return id;
+}
+
+export async function updateMissionStatus(id: string, status: MissionStatus) {
+  const d = await getDb();
+  await d.update(missions).set({ status: status.toLowerCase() as any }).where(eq(missions.id, id));
+}
+
+export async function getTasksByMission(missionId: string) {
+  const d = await getDb();
+  return d.select().from(missionTasks).where(eq(missionTasks.missionId, missionId)).orderBy(missionTasks.order);
+}
+
+export async function retryTask(id: string) {
+  const d = await getDb();
+  await d.update(missionTasks).set({ status: "pending" }).where(eq(missionTasks.id, id));
+}
+
+// ─────────────────────────────────────────────────────────────
+// USER LOOKUPS
+// ─────────────────────────────────────────────────────────────
+
+export async function getUserByOpenId(openId: string) {
+  const d = await getDb();
+  const rows = await d.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return rows[0] ?? null;
+}
+
+// Duplicate function implementation.
+
+export async function getAllAdminIds(): Promise<number[]> {
+  const d = await getDb();
+  const rows = await d.select({ id: users.id }).from(users).where(eq(users.role, "admin"));
+  return rows.map(r => r.id);
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRODUCTS
+// ─────────────────────────────────────────────────────────────
 
 export async function getUserProducts(userId: number) {
   const db = await getDb();
