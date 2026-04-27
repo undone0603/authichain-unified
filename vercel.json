@@ -1,22 +1,13 @@
 {
-  "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm build",
+  "version": 3,
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm build",
   "outputDirectory": "dist/public",
-  "framework": null,
-  "functions": {
-    "api/server.js": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/server" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "builds": [
+    { "src": "api/server.js", "use": "@vercel/node" },
+    { "src": "dist/public/**/*", "use": "@vercel/static" }
   ],
-  "crons": [
-    {
-      "path": "/api/server?_cron=pipeline-tick",
-      "schedule": "0 9 * * *"
-    }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/server.js" },
+    { "src": "/(.*)", "dest": "/dist/public/index.html" }
   ]
 }
