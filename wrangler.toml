@@ -1,51 +1,33 @@
 name = "authichain-unified"
 main = "worker/index.ts"
-tsconfig = "tsconfig.worker.json"
-compatibility_date = "2026-03-11"
+compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Static assets built by Vite → dist/public
 [assets]
 directory = "dist/public"
-not_found_handling = "single-page-application"
+binding = "ASSETS"
 
-# [triggers]
-# crons = ["*/5 * * * *"]
+# Environment variables (injected via Cloudflare dashboard)
+[vars]
+APP_ENV = "production"
 
-# Multi-tenant brand routing. The server reads the Host header and dispatches
-# to the matching brand landing (see server/_core/brand-middleware.ts +
-# shared/brands.ts). Add the corresponding zone/route lines below when the
-# apex domains are moved onto Cloudflare. For Vercel-hosted deploys, add the
-# domains in the Vercel dashboard → Project → Domains (all pointing at the
-# same deployment). No code changes needed per brand — the Host header drives
-# dispatch.
+# KV namespaces
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "your-kv-id-here"
 
-routes = [
-   { pattern = "authichain.com",     custom_domain = true },
-   { pattern = "www.authichain.com", custom_domain = true },
-   { pattern = "qron.space",         custom_domain = true },
-   { pattern = "www.qron.space",     custom_domain = true },
-   { pattern = "strainchain.io",     custom_domain = true },
-   { pattern = "www.strainchain.io", custom_domain = true },
-   { pattern = "govchain.us",        custom_domain = true },
-   { pattern = "www.govchain.us",    custom_domain = true },
-]
+# D1 database
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-db"
+database_id = "your-d1-id-here"
 
-# Set these via: wrangler secret put <NAME>
-# DATABASE_URL, JWT_SECRET, VITE_APP_ID, OAUTH_SERVER_URL
-# BUILT_IN_FORGE_API_URL, BUILT_IN_FORGE_API_KEY
-# HUBSPOT_SERVICE_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
-# AUTONOMOUS_PIPELINE_ENABLED=true
-# HEYGEN_API_KEY
-# QRON_AUTHICHAIN_KEY
-# TWITTER_API_KEY, TWITTER_API_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
-# TWITTER_QRON_API_KEY, TWITTER_QRON_API_SECRET, TWITTER_QRON_ACCESS_TOKEN, TWITTER_QRON_ACCESS_TOKEN_SECRET
-# YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN, YOUTUBE_CHANNEL_ID
-# YOUTUBE_QRON_REFRESH_TOKEN, YOUTUBE_QRON_CHANNEL_ID
-# FAL_KEY (for CLIP visual fingerprint embedding)
-# GITHUB_TOKEN (PAT: repo + actions + pull_requests scopes — for dev team build loop)
-# GITHUB_OWNER, GITHUB_REPO
-# REQUIRE_DEV_APPROVAL (default: true — gates MERGE_PR on human approval)
-# LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET
-# LINKEDIN_ACCESS_TOKEN, LINKEDIN_REFRESH_TOKEN (run: node scripts/linkedin-oauth-setup.mjs)
-# LINKEDIN_PERSON_URN (e.g. urn:li:person:XXXXXXXX — printed by setup script)
-# LINKEDIN_ORG_URN (optional — for company page posts)
+# R2 bucket for QRON images
+[[r2_buckets]]
+binding = "QRON_IMAGES"
+bucket_name = "qron-images"
+
+# Cron triggers (monetization engine)
+[[triggers]]
+crons = ["0 * * * *"] # hourly
