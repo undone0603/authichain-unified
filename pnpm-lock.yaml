@@ -266,8 +266,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.3))
       '@pinecone-database/pinecone':
-        specifier: ^4.1.0
-        version: 4.1.0
+        specifier: ^7.2.0
+        version: 7.2.0
       '@resvg/resvg-js':
         specifier: ^2.6.2
         version: 2.6.2
@@ -1414,9 +1414,9 @@ packages:
     resolution: {integrity: sha512-IHnV6A+zxU7XwmKFinmYjUcwlyK9+xkG3/s9KcQhI9BjQKycrJ1JRO+FbNYPwZiPKW3je/DR0k7w8/gLa5eaxQ==}
     deprecated: 'The package is now available as "qr": npm install qr'
 
-  '@pinecone-database/pinecone@4.1.0':
-    resolution: {integrity: sha512-WoVsbvmCgvZfjm/nCasJXuQ/tw0es5BpedLHvRScAm6xJ/nL07s3B0TrsM8m8rACTiUgbdYsdLY1W6cEBhS9xA==}
-    engines: {node: '>=18.0.0'}
+  '@pinecone-database/pinecone@7.2.0':
+    resolution: {integrity: sha512-urGsnNDWSSqSaWdyEF2P6V5bTNtRA6yMQTheFYAKKwk7mkloRBBETtT2ADF5Y8gJTr88pW5D8NTcCCLe+f0e2Q==}
+    engines: {node: '>=20.0.0'}
 
   '@poppinss/colors@4.1.6':
     resolution: {integrity: sha512-H9xkIdFswbS8n1d6vmRd8+c10t2Qe+rZITbbDHHkQixH5+2x1FDGmi/0K+WgWiqQFKPSlIYB7jlH6Kpfn6Fleg==}
@@ -8877,7 +8877,7 @@ snapshots:
 
   '@paulmillr/qr@0.2.1': {}
 
-  '@pinecone-database/pinecone@4.1.0': {}
+  '@pinecone-database/pinecone@7.2.0': {}
 
   '@poppinss/colors@4.1.6':
     dependencies:

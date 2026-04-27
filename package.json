@@ -92,7 +92,7 @@
   },
   "devDependencies": {
     "@builder.io/vite-plugin-jsx-loc": "^0.1.1",
-    "@pinecone-database/pinecone": "^4.1.0",
+    "@pinecone-database/pinecone": "^7.2.0",
     "@resvg/resvg-js": "^2.6.2",
     "@supabase/supabase-js": "^2.104.1",
     "@tailwindcss/typography": "^0.5.19",
