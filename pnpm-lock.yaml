@@ -170,7 +170,7 @@ importers:
         version: 17.4.2
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(mysql2@3.22.2(@types/node@25.6.0))(postgres@3.4.9)
+        version: 0.45.2(mysql2@3.22.3(@types/node@25.6.0))(postgres@3.4.9)
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@19.2.5)
@@ -193,8 +193,8 @@ importers:
         specifier: ^1.11.0
         version: 1.11.0(react@19.2.5)
       mysql2:
-        specifier: ^3.22.2
-        version: 3.22.2(@types/node@25.6.0)
+        specifier: ^3.22.3
+        version: 3.22.3(@types/node@25.6.0)
       nanoid:
         specifier: ^5.1.9
         version: 5.1.9
@@ -5768,8 +5768,8 @@ packages:
   multiformats@9.9.0:
     resolution: {integrity: sha512-HoMUjhH9T8DDBNT+6xzkrd9ga/XiBI4xLr58LJACwK6G3HTOPeMz4nB4KJs33L2BelrIJa7P0VuNaVF3hMYfjg==}
 
-  mysql2@3.22.2:
-    resolution: {integrity: sha512-snC/L6YoCJPFpozZo3p3hiOlt9ItQ7sCnLSziFLlIttEzsPhrdcPT8g21BiQ7Oqif25W4Xq1IFuBzBvoFYDf0Q==}
+  mysql2@3.22.3:
+    resolution: {integrity: sha512-uWWxvZSRvRhtBdh2CdcuK83YcOfPdmEeEYB069bAmPnV93QApDGVPuvCQOLjlh7tYHEWdgQPrn6kosDxHBVLkA==}
     engines: {node: '>= 8.0'}
     peerDependencies:
       '@types/node': '>= 8'
@@ -13305,9 +13305,9 @@ snapshots:
       esbuild: 0.28.0
       tsx: 4.21.0
 
-  drizzle-orm@0.45.2(mysql2@3.22.2(@types/node@25.6.0))(postgres@3.4.9):
+  drizzle-orm@0.45.2(mysql2@3.22.3(@types/node@25.6.0))(postgres@3.4.9):
     optionalDependencies:
-      mysql2: 3.22.2(@types/node@25.6.0)
+      mysql2: 3.22.3(@types/node@25.6.0)
       postgres: 3.4.9
 
   dunder-proto@1.0.1:
@@ -14630,7 +14630,7 @@ snapshots:
 
   multiformats@9.9.0: {}
 
-  mysql2@3.22.2(@types/node@25.6.0):
+  mysql2@3.22.3(@types/node@25.6.0):
     dependencies:
       '@types/node': 25.6.0
       aws-ssl-profiles: 1.1.2
