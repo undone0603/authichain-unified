@@ -42,6 +42,7 @@ import {
   modelPurchases,
   modelReviews,
   serviceOrders,
+  webhookEvents,
   missions,
   missionTasks,
   type Product,
@@ -1191,15 +1192,37 @@ export async function getSubscriptionByStripeSubscriptionId(stripeSubscriptionId
   return rows[0] ?? null;
 }
 
-export async function hasWebhookEventProcessed(eventId: string): Promise<boolean> {
+/**
+ * Atomically claim a webhook event for processing.
+ * Returns true if this delivery is the first one (caller should run side effects).
+ * Returns false if the event was already claimed (caller should skip — duplicate).
+ *
+ * Backed by INSERT ... ON CONFLICT DO NOTHING against the UNIQUE(provider, eventId)
+ * index on webhook_events. Race-safe: two concurrent claims for the same eventId
+ * result in exactly one returned row.
+ */
+export async function claimWebhookEvent(
+  provider: string,
+  eventId: string,
+  eventType: string,
+): Promise<boolean> {
   const d = await getDb();
-  const rows = await d.select().from(activityLog)
-    .where(like(activityLog.action, `audit:%`))
-    .limit(100);
-  return rows.some(r => {
-    const details = r.details as any;
-    return details?.eventId === eventId;
-  });
+  const inserted = await d.insert(webhookEvents)
+    .values({ provider, eventId, eventType })
+    .onConflictDoNothing({ target: [webhookEvents.provider, webhookEvents.eventId] })
+    .returning({ id: webhookEvents.id });
+  return inserted.length > 0;
+}
+
+/**
+ * Stamp a successfully-processed webhook event with `processedAt = now()`.
+ * Rows with `processedAt = NULL` are stuck mid-processing — useful for ops alerting.
+ */
+export async function markWebhookEventProcessed(provider: string, eventId: string): Promise<void> {
+  const d = await getDb();
+  await d.update(webhookEvents)
+    .set({ processedAt: new Date() })
+    .where(and(eq(webhookEvents.provider, provider), eq(webhookEvents.eventId, eventId)));
 }
 
 // ─────────────────────────────────────────────────────────────
