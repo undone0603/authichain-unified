@@ -1,6 +1,6 @@
 import { getDb } from "../db";
 import { missions, activityLog } from "../../drizzle/schema";
-import { classifyIndustry } from "../../lib/industries";
+import { classifyIndustry } from "../../shared/industries";
 
 /**
  * Vertical Cloner — Autonomous Expansion Engine
