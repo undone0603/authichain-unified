@@ -75,6 +75,8 @@ vi.mock("./db", async (importOriginal) => {
     createQrCode: vi.fn().mockResolvedValue({ id: 1 }),
     getProductQrCodes: vi.fn().mockResolvedValue([]),
     incrementScanCount: vi.fn().mockResolvedValue(undefined),
+    claimWebhookEvent: vi.fn().mockResolvedValue(true),
+    markWebhookEventProcessed: vi.fn().mockResolvedValue(undefined),
   };
 });
 
