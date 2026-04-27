@@ -200,6 +200,77 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="orders" className="mt-4">
+          <Card>
+            <CardContent className="p-4">
+              {serviceOrders && serviceOrders.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">#</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Customer</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Service</th>
+                        <th className="text-right py-2 px-3 text-muted-foreground font-medium">Amount</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Status</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground font-medium">Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {serviceOrders.map((o: any) => (
+                        <tr key={o.id} className="border-b border-border/50 align-middle">
+                          <td className="py-2 px-3 font-mono text-xs text-muted-foreground">#{o.id}</td>
+                          <td className="py-2 px-3">
+                            <div>{o.customerName || "—"}</div>
+                            <div className="text-xs text-muted-foreground">{o.customerEmail}</div>
+                          </td>
+                          <td className="py-2 px-3">{SERVICE_NAMES[o.serviceType] || o.serviceType}</td>
+                          <td className="py-2 px-3 text-right font-medium">${(o.amount / 100).toFixed(2)}</td>
+                          <td className="py-2 px-3">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={STATUS_BADGE_VARIANT[o.status] || "outline"} className="text-xs capitalize">
+                                {o.status.replace(/_/g, " ")}
+                              </Badge>
+                              <Select
+                                value={o.status}
+                                onValueChange={(next) => {
+                                  if (next !== o.status) {
+                                    updateOrderStatus.mutate({ id: o.id, status: next as typeof ORDER_STATUSES[number] });
+                                  }
+                                }}
+                                disabled={updateOrderStatus.isPending}
+                              >
+                                <SelectTrigger className="h-7 w-[140px] text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ORDER_STATUSES.map((s) => (
+                                    <SelectItem key={s} value={s} className="text-xs capitalize">
+                                      {s.replace(/_/g, " ")}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </td>
+                          <td className="py-2 px-3 text-muted-foreground text-xs">
+                            {new Date(o.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <ShoppingBag className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No service orders yet.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
