@@ -54,7 +54,7 @@ server.tool(
     description: z.string().optional().describe("Description or physical attributes")
   },
   async ({ name, description }) => {
-    const { classifyIndustry } = await import("../../lib/industries");
+    const { classifyIndustry } = await import("../../shared/industries");
     const industry = classifyIndustry(name, description || "");
     return {
       content: [{ type: "text", text: `CLASSIFIED: Product mapped to industry vertical: ${industry.name}. Confidence: HIGH. Suggested workflow: ${industry.workflow.map((w: { name: string }) => w.name).join(" -> ")}` }]
