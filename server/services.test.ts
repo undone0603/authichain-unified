@@ -80,4 +80,18 @@ describe("services router", () => {
       expect(result).toEqual({ success: true });
     });
   });
+
+  describe("services.checkout (protected)", () => {
+    it("rejects unknown service keys (zod enum)", async () => {
+      await expect(
+        authedCaller.services.checkout({ serviceKey: "made_up_service" as any, origin: "https://x" }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects when neither serviceKey nor serviceType is provided", async () => {
+      await expect(
+        authedCaller.services.checkout({ origin: "https://x" }),
+      ).rejects.toThrow(/required/);
+    });
+  });
 });
