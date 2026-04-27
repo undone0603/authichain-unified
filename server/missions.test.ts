@@ -96,6 +96,7 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
       name: 'AgentZ Test',
       loginMethod: 'manus',
       role,
+      stripeCustomerId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),
