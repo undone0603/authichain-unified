@@ -8,6 +8,7 @@ import crypto from "node:crypto";
 
 interface PaddleEvent {
   eventType: string;
+  notificationId: string;
   data: Record<string, unknown>;
 }
 
@@ -45,6 +46,10 @@ export async function verifyPaddleWebhook(
     const body = JSON.parse(rawBody);
     return {
       eventType: body.event_type ?? body.eventType ?? "",
+      // Paddle sends a unique notification_id per delivery; retries reuse
+      // the same id, so it's the right key for dedup. Falls back to event_id
+      // for older payload shapes.
+      notificationId: body.notification_id ?? body.notificationId ?? body.event_id ?? body.eventId ?? "",
       data: body.data ?? body,
     };
   } catch {
