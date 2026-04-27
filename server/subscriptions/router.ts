@@ -1,17 +1,9 @@
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import * as stripeService from "../stripe-service";
-import * as paddleService from "../paddle-service";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { SUBSCRIPTION_PLANS } from "@shared/subscriptionPlans";
-
-// Paddle price IDs by plan/billing — override with env vars
-const PADDLE_PRICES: Record<string, Record<string, string>> = {
-  starter:      { monthly: process.env.PADDLE_PRICE_STARTER_MONTHLY || "", annual: process.env.PADDLE_PRICE_STARTER_ANNUAL || "" },
-  professional: { monthly: process.env.PADDLE_PRICE_PRO_MONTHLY || "",     annual: process.env.PADDLE_PRICE_PRO_ANNUAL || "" },
-  enterprise:   { monthly: process.env.PADDLE_PRICE_ENT_MONTHLY || "",     annual: process.env.PADDLE_PRICE_ENT_ANNUAL || "" },
-};
 
 export const subscriptionsRouter = router({
   current: protectedProcedure.query(async ({ ctx }) => {
@@ -59,25 +51,6 @@ export const subscriptionsRouter = router({
       stripeCustomerId: (ctx.user as any).stripeCustomerId || undefined,
     });
     return { checkoutUrl: url };
-  }),
-  createPaddleCheckout: protectedProcedure.input(z.object({
-    plan: z.enum(["starter", "professional", "enterprise"]),
-    billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
-    successUrl: z.string(),
-  })).mutation(async ({ ctx, input }) => {
-    const priceId = PADDLE_PRICES[input.plan]?.[input.billing];
-    if (!priceId) throw new TRPCError({ code: "BAD_REQUEST", message: `Paddle price not configured for ${input.plan}/${input.billing}` });
-    const customerId = await paddleService.upsertPaddleCustomer({
-      email: ctx.user.email || "",
-      name: ctx.user.name || "",
-      userId: ctx.user.id,
-    });
-    const checkoutUrl = await paddleService.createPaddleTransaction({
-      customerId,
-      priceId,
-      successUrl: input.successUrl,
-    });
-    return { checkoutUrl };
   }),
   cancel: protectedProcedure.mutation(async ({ ctx }) => {
     const sub = await db.getUserSubscription(ctx.user.id);
