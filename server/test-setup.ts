@@ -59,6 +59,7 @@ vi.mock("./db", async (importOriginal) => {
     getWhiteLabelClients: vi.fn().mockResolvedValue([]),
     getServiceOrdersByUser: vi.fn().mockResolvedValue([]),
     getAllServiceOrders: vi.fn().mockResolvedValue([]),
+    updateServiceOrderStatus: vi.fn().mockResolvedValue(undefined),
     createNotification: vi.fn().mockResolvedValue({ id: 1 }),
     getUserNotifications: vi.fn().mockResolvedValue([]),
     getUnreadNotificationCount: vi.fn().mockResolvedValue(0),
