@@ -29,6 +29,7 @@ import { hubspotRouter } from "./hubspot/router";
 import { emailCampaignsRouter } from "./email-campaigns/router";
 import { dashboardRouter } from "./dashboard/router";
 import { characterRouter } from "./character/router";
+import { analyticsRouter } from "./analytics/router";
 
 // Import routers from routers/ folder
 import { metrcRouter } from "./routers/metrc";
@@ -248,6 +249,7 @@ export const appRouter = router({
   dashboard: dashboardRouter,
   character: characterRouter,
   services: servicesRouter,
+  analytics: analyticsRouter,
 });
 
 export type AppRouter = typeof appRouter;
