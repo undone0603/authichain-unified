@@ -35,6 +35,18 @@ export function createApp() {
         return res.json({ verified: true });
       }
 
+      // Idempotency — atomic claim against UNIQUE(provider, eventId).
+      // First delivery: claim returns true, side effects run.
+      // Duplicate / concurrent retry: claim returns false, skip.
+      // Without this, Stripe retries (up to 3 days) cause db.insert(subscriptions)
+      // below to create duplicate subscription rows for one customer.
+      const { claimWebhookEvent, markWebhookEventProcessed } = await import("../db");
+      const claimed = await claimWebhookEvent("stripe", event.id, event.type);
+      if (!claimed) {
+        console.log(`[Stripe Webhook] Duplicate event ignored: ${event.id}`);
+        return res.json({ received: true, type: event.type, duplicate: true });
+      }
+
       const result = await processWebhookEvent(event);
 
       if (result.handled && result.eventType === "checkout.session.completed" && result.userId && result.plan) {
@@ -97,9 +109,19 @@ export function createApp() {
         }
       }
 
+      // Side effects ran without throwing — stamp the claim. Rows left with
+      // processedAt = NULL indicate a handler that crashed mid-processing
+      // (caught by the catch below); useful for ops alerting.
+      await markWebhookEventProcessed("stripe", event.id);
       res.json({ received: true, type: event.type });
     } catch (err: any) {
       console.error(`[Stripe Webhook] Error: ${err.message}`);
+      // Note: claim row stays NULL on error. Stripe retries the same event.id;
+      // claim will UNIQUE-conflict and return duplicate=true, permanently
+      // dropping the event. This trades "always eventually execute" for
+      // "never double-execute" — the right call for billing webhooks where
+      // double-execution = duplicate subscription rows / double-charged ops.
+      // Stuck NULL rows surface in ops alerting for manual recovery.
       res.status(400).json({ error: err.message });
     }
   });

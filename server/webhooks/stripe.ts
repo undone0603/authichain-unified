@@ -22,7 +22,8 @@ import {
   setSubscriptionStatusByStripeId,
   getSubscriptionByStripeSubscriptionId,
   createSystemNotification,
-  hasWebhookEventProcessed,
+  claimWebhookEvent,
+  markWebhookEventProcessed,
 } from "../db";
 import { getPlanQuota } from "../stripe-products";
 
@@ -141,8 +142,11 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type };
   }
 
-  // Idempotency — skip if we already processed this event
-  if (await hasWebhookEventProcessed(event.id)) {
+  // Idempotency — atomic claim against UNIQUE(provider, eventId).
+  // First delivery: claim returns true, side effects run.
+  // Duplicate / concurrent retry: claim returns false, skip.
+  const claimed = await claimWebhookEvent("stripe", event.id, event.type);
+  if (!claimed) {
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
     return { received: true, type: event.type, duplicate: true };
   }
@@ -466,8 +470,14 @@ export async function handleStripeWebhook(
 
     default:
       console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
+      // Mark processed — we've made a terminal decision (skip), so the row
+      // shouldn't show up in stuck-NULL alerts.
+      await markWebhookEventProcessed("stripe", event.id);
       return { received: true, type: event.type, handled: false };
   }
 
+  // Side effects ran successfully — stamp the claim. Rows left with
+  // processedAt = NULL indicate handlers that crashed mid-processing.
+  await markWebhookEventProcessed("stripe", event.id);
   return { received: true, type: event.type, handled: true };
 }
