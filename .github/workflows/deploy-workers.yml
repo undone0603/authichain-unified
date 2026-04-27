@@ -1,0 +1,85 @@
+name: Deploy Workers (workers/*)
+
+# Deploys the 12 standalone workers under `workers/<name>/` that are
+# DEPLOYED on Cloudflare per the Phase 0 inventory
+# (docs/superpowers/plans/worker-status-2026-04-27.md).
+#
+# This is separate from `deploy-cloudflare.yml` which deploys the root
+# worker (`worker/index.ts`) plus the static frontend.
+#
+# CLOUDFLARE_API_TOKEN must have these scopes:
+#   - Account · Workers Scripts: Edit
+# Same token used by deploy-cloudflare.yml is fine.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'workers/**'
+      - '.github/workflows/deploy-workers.yml'
+  workflow_dispatch:
+    inputs:
+      worker:
+        description: 'Specific worker dir to deploy (e.g. authichain-api). Leave blank for all.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  deploy:
+    name: Deploy ${{ matrix.worker }}
+    runs-on: ubuntu-latest
+    # Skip workers not matching the dispatch input (when one is given).
+    if: github.event_name != 'workflow_dispatch' || inputs.worker == '' || inputs.worker == matrix.worker
+    strategy:
+      fail-fast: false
+      matrix:
+        worker:
+          - authichain-api
+          - authichain-api-gateway
+          - authichain-automation
+          - authichain-com
+          - authichain-dashboard
+          - govchain-us
+          - qron-automation
+          - qron-image-gen
+          - qron-outreach
+          - qron-space
+          - resend-relay
+          - strainchain-io
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 10.28.2
+          run_install: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install root deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install worker deps (if package.json)
+        working-directory: workers/${{ matrix.worker }}
+        run: |
+          if [ -f package.json ]; then
+            pnpm install --frozen-lockfile
+          else
+            echo "No package.json in worker dir — skipping install"
+          fi
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/${{ matrix.worker }}
