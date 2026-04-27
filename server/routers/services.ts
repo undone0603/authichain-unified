@@ -16,7 +16,7 @@ export const servicesRouter = router({
   }),
   updateStatus: adminProcedure.input(z.object({
     id: z.number(),
-    status: z.string(),
+    status: z.enum(["pending", "paid", "in_progress", "delivered", "cancelled"]),
   })).mutation(async ({ input }) => {
     await db.updateServiceOrderStatus(input.id, input.status);
     return { success: true };

@@ -13,7 +13,7 @@ export async function listModels(filters?: { category?: string; status?: string;
   return await query.orderBy(desc(aiModels.downloads)).limit(filters?.limit || 50);
 }
 
-export async function getModelById(id: number) {
+export async function getModelById(id: number): Promise<typeof aiModels.$inferSelect | undefined> {
   const [model] = await db.select().from(aiModels).where(eq(aiModels.id, id)).limit(1);
   return model;
 }

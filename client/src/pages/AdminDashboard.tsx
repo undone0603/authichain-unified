@@ -267,7 +267,7 @@ export default function AdminDashboard() {
                                 value={o.status}
                                 onValueChange={(next) => {
                                   if (next !== o.status) {
-                                    updateOrderStatus.mutate({ id: o.id, status: next });
+                                    updateOrderStatus.mutate({ id: o.id, status: next as typeof ORDER_STATUSES[number] });
                                   }
                                 }}
                                 disabled={updateOrderStatus.isPending}
