@@ -73,5 +73,10 @@ describe("services router", () => {
         adminCaller.services.updateStatus({ id: 1, status: "shipped" as any }),
       ).rejects.toThrow();
     });
+
+    it("succeeds for admin with a valid status value", async () => {
+      const result = await adminCaller.services.updateStatus({ id: 1, status: "paid" });
+      expect(result).toEqual({ success: true });
+    });
   });
 });
