@@ -50,7 +50,7 @@
 - [x] Add Services link to homepage nav
 - [x] Write tests for services router (8 tests)
 - [ ] Build admin service order management UI
-- [ ] Add webhook handler for service order payment completion
+- [x] Add webhook handler for service order payment completion
 
 ## Switch to Live Mode
 - [x] Verify Stripe live account exists (acct_1SPZEFPUXqpBpzb3)
