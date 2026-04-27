@@ -60,4 +60,37 @@ describe("services router", () => {
       expect(Array.isArray(orders)).toBe(true);
     });
   });
+
+  describe("services.updateStatus (admin)", () => {
+    it("rejects non-admin users", async () => {
+      await expect(
+        authedCaller.services.updateStatus({ id: 1, status: "paid" }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects invalid status values (zod enum)", async () => {
+      await expect(
+        adminCaller.services.updateStatus({ id: 1, status: "shipped" as any }),
+      ).rejects.toThrow();
+    });
+
+    it("succeeds for admin with a valid status value", async () => {
+      const result = await adminCaller.services.updateStatus({ id: 1, status: "paid" });
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe("services.checkout (protected)", () => {
+    it("rejects unknown service keys (zod enum)", async () => {
+      await expect(
+        authedCaller.services.checkout({ serviceKey: "made_up_service" as any, origin: "https://x" }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects when neither serviceKey nor serviceType is provided", async () => {
+      await expect(
+        authedCaller.services.checkout({ origin: "https://x" }),
+      ).rejects.toThrow(/required/);
+    });
+  });
 });

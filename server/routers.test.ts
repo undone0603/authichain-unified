@@ -139,6 +139,7 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     name: "Test User",
     loginMethod: "manus",
     role,
+    stripeCustomerId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
@@ -714,7 +715,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("requires auth for agent creation", async () => {
       const caller = appRouter.createCaller(createPublicContext());
       await expect(
-        caller.character.createAgent({ characterAssetId: 1, agentName: "TestAgent" })
+        caller.character.createAgent({ characterAssetId: 1, agentName: "TestAgent", agentType: "guardian" })
       ).rejects.toThrow();
     });
 

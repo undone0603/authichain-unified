@@ -49,7 +49,7 @@
 - [x] Add Services/Orders to sidebar navigation
 - [x] Add Services link to homepage nav
 - [x] Write tests for services router (8 tests)
-- [ ] Build admin service order management UI
+- [x] Build admin service order management UI
 - [x] Add webhook handler for service order payment completion
 
 ## Switch to Live Mode
