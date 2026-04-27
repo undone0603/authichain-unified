@@ -1,12 +1,10 @@
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { SERVICE_LIST, SERVICE_CATALOG, SERVICE_KEYS, type ServiceType } from "../service-catalog";
-import { ORDER_STATUSES, type OrderStatus } from "../../shared/const";
 import * as db from "../db";
 import { createPaymentCheckout } from "../stripe-service";
 
 const serviceKeyEnum = z.enum(SERVICE_KEYS as [ServiceType, ...ServiceType[]]);
-const orderStatusEnum = z.enum(ORDER_STATUSES as unknown as [OrderStatus, ...OrderStatus[]]);
 
 export const servicesRouter = router({
   catalog: publicProcedure.query(() => {
