@@ -70,20 +70,33 @@ function makeTask(kind: string, payload: Record<string, unknown> = {}): MissionT
   return {
     id: 'task-test-001',
     missionId: 'mission-test-001',
+    title: 'test task',
+    description: 'test task description',
     kind,
     payload,
     status: 'RUNNING',
-    runAt: new Date(),
     lastError: null,
-    retryCount: 0,
-    retryAfter: null,
+    order: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
 }
 
-function llmJsonResponse(data: unknown) {
-  return { choices: [{ message: { content: JSON.stringify(data) } }] };
+function llmContentResponse(content: string): import('./_core/llm.js').InvokeResult {
+  return {
+    id: 'mock',
+    created: 0,
+    model: 'mock',
+    choices: [{
+      index: 0,
+      message: { role: 'assistant', content },
+      finish_reason: 'stop',
+    }],
+  };
+}
+
+function llmJsonResponse(data: unknown): import('./_core/llm.js').InvokeResult {
+  return llmContentResponse(JSON.stringify(data));
 }
 
 // ─── lead-finder ─────────────────────────────────────────────────────────────
@@ -312,7 +325,7 @@ describe('runBuildPilotPacket', () => {
 
   it('throws on unparseable LLM JSON', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    vi.mocked(invokeLLM).mockResolvedValueOnce({ choices: [{ message: { content: '{{bad' } }] });
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmContentResponse('{{bad'));
 
     const { runBuildPilotPacket } = await import('./agents/pilot-packet.js');
     await expect(runBuildPilotPacket(makeTask('BUILD_PILOT_PACKET')))
@@ -401,7 +414,7 @@ describe('runFinalizeRetailSignage', () => {
 
   it('throws on unparseable JSON', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    vi.mocked(invokeLLM).mockResolvedValueOnce({ choices: [{ message: { content: '{{' } }] });
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmContentResponse('{{'));
 
     const { runFinalizeRetailSignage } = await import('./agents/retail.js');
     await expect(runFinalizeRetailSignage(makeTask('FINALIZE_RETAIL_SIGNAGE')))
@@ -485,7 +498,7 @@ describe('content agents', () => {
 
   it('throws on unparseable content JSON', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    vi.mocked(invokeLLM).mockResolvedValueOnce({ choices: [{ message: { content: 'bad{{' } }] });
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmContentResponse('bad{{'));
 
     const { runGenerateLaunchChecklist } = await import('./agents/content.js');
     await expect(runGenerateLaunchChecklist(makeTask('GENERATE_LAUNCH_CHECKLIST')))

@@ -46,13 +46,13 @@ function makeTask(kind: string): MissionTask {
   return {
     id: `task-${kind}`,
     missionId: 'mission-001',
+    title: `task-${kind}`,
+    description: `task-${kind} desc`,
     kind,
     payload: {},
     status: 'PENDING',
-    runAt: new Date(),
     lastError: null,
-    retryCount: 0,
-    retryAfter: null,
+    order: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
