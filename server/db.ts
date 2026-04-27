@@ -3,6 +3,7 @@ import type { SQL } from "drizzle-orm";
 import {
   eq, desc, and, sql, gte, lte, inArray, like
 } from "drizzle-orm";
+import type { OrderStatus } from "../shared/const";
 
 import {
   InsertUser,
@@ -308,10 +309,9 @@ export async function getServiceOrdersByUser(userId: number) {
   return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId));
 }
 
-export async function updateServiceOrderStatus(id: number, status: string, extra?: Record<string, any>) {
+export async function updateServiceOrderStatus(id: number, status: OrderStatus, extra?: Record<string, any>) {
   const d = await getDb();
-  const updateData: any = { status: status as any };
-  if (extra) Object.assign(updateData, extra);
+  const updateData: any = { status, ...(extra ?? {}) };
   await d.update(serviceOrders).set(updateData).where(eq(serviceOrders.id, id));
 }
 
