@@ -2,32 +2,40 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
 import { EcosystemNav } from "@/components/EcosystemNav";
+import { Reveal, GlowCard, ANIMATION_STYLES } from "@/lib/animations";
 import {
   ShieldCheck, ArrowRight, CheckCircle2, Flag, FileCheck2,
   Building2, Scan, Lock, Globe, BarChart3, Landmark,
-  Scale, Award, Fingerprint,
+  Scale, Award, Fingerprint, ChevronDown,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
-/* ─── Scroll-reveal ─── */
-function useReveal() {
+/* ─── Animated counter ─── */
+function useAnimCounter(target: number, suffix = "", prefix = "") {
+  const [display, setDisplay] = useState(prefix + "0" + suffix);
   const ref = useRef<HTMLDivElement>(null);
+  const ran = useRef(false);
+  const go = useCallback(() => {
+    if (ran.current) return;
+    ran.current = true;
+    const start = performance.now();
+    const step = (now: number) => {
+      const p = Math.min((now - start) / 2000, 1);
+      const e = 1 - Math.pow(1 - p, 3);
+      setDisplay(prefix + Math.round(e * target) + suffix);
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [target, suffix, prefix]);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { el.classList.add("reveal-visible"); io.unobserve(el); } },
-      { threshold: 0.12 },
-    );
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { go(); io.unobserve(el); } }, { threshold: 0.3 });
     io.observe(el);
     return () => io.disconnect();
-  }, []);
-  return ref;
-}
-function Reveal({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  const ref = useReveal();
-  return <div ref={ref} className={`reveal-hidden ${className}`}>{children}</div>;
+  }, [go]);
+  return { display, ref };
 }
 
 /* ─── Data ─── */
@@ -47,26 +55,26 @@ const features = [
   { icon: Landmark, title: "Federal Integration", desc: "SAM.gov, CAGE code, and DUNS number integration. Automated cross-referencing with federal debarment and exclusion lists." },
   { icon: Scale, title: "Buy American Act", desc: "Automated BAA/TAA compliance verification. Track domestic content percentages and country-of-origin at the component level." },
   { icon: Award, title: "Certification Tracking", desc: "ISO 9001, AS9100, CMMC, and FedRAMP certification status monitoring with automated renewal alerts and audit preparation." },
-  { icon: BarChart3, title: "Compliance Dashboard", desc: "Real-time compliance posture scoring, risk assessment, and regulatory change monitoring across all registered entities." },
+  { icon: BarChart3, title: "Compliance Dashboard", desc: "Real-time compliance posture scoring, risk assessment heat maps, and automated reporting for federal contracting officers." },
 ];
 
-const workflow = [
-  { num: "01", title: "Entity Registration", desc: "Manufacturer or agency registers with CAGE code, DUNS, and facility details. SAM.gov integration validates entity status automatically." },
-  { num: "02", title: "Compliance Verification", desc: "Automated screening against ITAR, EAR, BAA/TAA requirements. Certification documents are Ed25519-signed and anchored on-chain." },
-  { num: "03", title: "QRON Issuance", desc: "Verified entities receive AuthiChain QRON codes for products and documents. Each code carries the full compliance payload." },
-  { num: "04", title: "Field Verification", desc: "Any authorized personnel scans a QRON to instantly verify manufacturer status, compliance certificates, and chain-of-custody." },
-];
-
-const pricing = [
-  { name: "Agency", price: "$99", period: "/mo", desc: "Government agencies & contractors", features: ["100 document verifications/mo", "SAM.gov integration", "Basic QRON codes", "Compliance dashboard", "Email support"], highlighted: false },
-  { name: "Defense", price: "$299", period: "/mo", desc: "Defense contractors & manufacturers", features: ["1,000 verifications/mo", "ITAR compliance tracking", "Manufacturer registry", "Buy American Act verification", "Advanced analytics", "Priority support"], highlighted: true },
-  { name: "Enterprise", price: "$799", period: "/mo", desc: "Multi-facility operations", features: ["Unlimited verifications", "White-label platform", "Custom API access", "CMMC compliance tools", "Federal integration suite", "Dedicated account manager", "SLA guarantee"], highlighted: false },
+const stack = [
+  { num: "01", title: "Entity Registration", desc: "Manufacturers and contractors register with verified credentials — CAGE codes, DUNS numbers, SAM.gov profiles — all cryptographically anchored." },
+  { num: "02", title: "Compliance Verification", desc: "Automated screening against ITAR, EAR, BAA/TAA, and debarment lists. Continuous monitoring with instant alerts on status changes." },
+  { num: "03", title: "QRON Issuance", desc: "AuthiChain-verified QR codes generated for each certified entity and product. Embedded with Ed25519 signatures and compliance metadata." },
+  { num: "04", title: "Field Verification", desc: "Inspectors and contracting officers scan QRONs in the field to instantly verify provenance, certifications, and compliance posture." },
 ];
 
 const ecosystem = [
-  { name: "AuthiChain", href: "https://authichain.com", desc: "The core authentication protocol. GovChain is the sovereign verification vertical of the AuthiChain truth substrate." },
-  { name: "QRON Studio", href: "https://qron.space", desc: "Create custom AI QR art for government seals and official documents. Free tier available." },
-  { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance vertical \u2014 see how AuthiChain powers industry-specific compliance." },
+  { name: "AuthiChain", href: "https://authichain.com", desc: "The truth layer. Blockchain-verified product authentication with AI-powered analysis.", live: true },
+  { name: "QRON", href: "https://qron.space", desc: "AI-generated QR art studio. Create scannable, cryptographically signed visual codes.", live: true },
+  { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance on the blockchain. Seed-to-sale tracking with METRC compliance.", live: true },
+];
+
+const pricing = [
+  { name: "Agency", price: "$99", period: "/mo", features: ["Up to 50 verified entities", "BAA/TAA screening", "Document authentication", "Basic compliance dashboard", "Email support"] },
+  { name: "Defense", price: "$299", period: "/mo", features: ["Unlimited entities", "ITAR compliance tracking", "QRON field verification", "SAM.gov integration", "Real-time monitoring", "Priority support"], highlighted: true },
+  { name: "Enterprise", price: "$799", period: "/mo", features: ["Multi-agency deployment", "CMMC/FedRAMP tracking", "White-label portal", "API access", "Custom integrations", "Dedicated CSM"] },
 ];
 
 /* ─── Component ─── */
@@ -84,48 +92,46 @@ export default function GovChainHome() {
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
-      {/* ── Cinematic styles ── */}
-      <style>{`
-        .reveal-hidden{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
-        .reveal-visible{opacity:1;transform:translateY(0)}
-        @keyframes orbDrift1{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,30px)}}
-        @keyframes orbDrift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-35px,-20px)}}
-        @keyframes orbDrift3{0%,100%{transform:translate(0,0)}50%{transform:translate(-25px,35px)}}
-        .orb{position:fixed;border-radius:9999px;pointer-events:none;z-index:0;filter:blur(130px)}
-        .orb-n1{width:600px;height:600px;top:-200px;right:-100px;background:radial-gradient(circle,hsl(220 60% 35%/.30),transparent 70%);animation:orbDrift1 20s ease-in-out infinite}
-        .orb-n2{width:450px;height:450px;bottom:-150px;left:-80px;background:radial-gradient(circle,hsl(0 72% 45%/.18),transparent 70%);animation:orbDrift2 24s ease-in-out infinite}
-        .orb-n3{width:350px;height:350px;top:50%;left:40%;background:radial-gradient(circle,hsl(40 60% 55%/.12),transparent 70%);animation:orbDrift3 28s ease-in-out infinite}
+      <style>{ANIMATION_STYLES}{`
         .gov-gradient{background:linear-gradient(135deg,hsl(220 60% 55%),hsl(40 60% 55%));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .orb-1{width:600px;height:600px;top:-200px;left:-100px;background:radial-gradient(circle,hsl(220 60% 55%/.35),transparent 70%);animation:orbDrift1 18s ease-in-out infinite,orbPulse 8s ease-in-out infinite}
+        .orb-2{width:500px;height:500px;bottom:-150px;right:-100px;background:radial-gradient(circle,hsl(40 60% 55%/.3),transparent 70%);animation:orbDrift2 22s ease-in-out infinite,orbPulse 10s ease-in-out infinite 2s}
+        .orb-3{width:350px;height:350px;top:40%;left:60%;background:radial-gradient(circle,hsl(210 50% 45%/.2),transparent 70%);animation:orbDrift3 25s ease-in-out infinite,orbPulse 12s ease-in-out infinite 4s}
+        .gov-glow{box-shadow:0 0 40px hsl(220 60% 55%/.15)}
+        @keyframes govPulseGlow{0%,100%{box-shadow:0 0 20px 0 hsl(220 60% 55%/.15)}50%{box-shadow:0 0 40px 8px hsl(220 60% 55%/.25)}}
+        .gov-pulse{animation:govPulseGlow 3s ease-in-out infinite}
       `}</style>
 
-      <div className="orb orb-n1" />
-      <div className="orb orb-n2" />
-      <div className="orb orb-n3" />
+      <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" />
+
+      {/* Particles */}
+      <div className="particle" style={{ top: "15%", left: "8%", "--px": "12px", "--py": "-18px", "--dur": "4s", "--del": "0s", background: "hsl(220 60% 55%/.5)" } as React.CSSProperties} />
+      <div className="particle" style={{ top: "28%", right: "12%", "--px": "-14px", "--py": "16px", "--dur": "4.8s", "--del": "1s", background: "hsl(40 60% 55%/.5)" } as React.CSSProperties} />
+      <div className="particle" style={{ top: "50%", left: "22%", "--px": "10px", "--py": "-14px", "--dur": "5.2s", "--del": "0.6s", background: "hsl(220 60% 55%/.4)" } as React.CSSProperties} />
+      <div className="particle" style={{ top: "65%", right: "18%", "--px": "-8px", "--py": "10px", "--dur": "3.6s", "--del": "1.8s", background: "hsl(40 60% 55%/.4)" } as React.CSSProperties} />
+      <div className="particle" style={{ top: "80%", left: "40%", "--px": "6px", "--py": "-12px", "--dur": "4.4s", "--del": "2.5s", background: "hsl(210 50% 45%/.35)" } as React.CSSProperties} />
 
       {/* ── Nav ── */}
       <nav className="fixed top-0 w-full z-50 border-b border-border/40 bg-background/70 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <a href="https://authichain.com" className="text-[10px] uppercase tracking-[.1em] text-muted-foreground/60 hover:text-blue-400 transition-colors">&#9670; AuthiChain Protocol</a>
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-6 w-6 text-blue-400" />
-              <span className="text-lg font-bold tracking-tight gov-gradient">GovChain</span>
-            </div>
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="h-6 w-6 text-[hsl(220,60%,55%)]" />
+            <span className="text-lg font-bold tracking-tight gov-gradient">GovChain</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-            <a href="#workflow" className="hover:text-foreground transition-colors">How It Works</a>
+            <a href="#protocol" className="hover:text-foreground transition-colors">Protocol</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
           </div>
           <div className="flex items-center gap-3">
             {user ? (
-              <Button onClick={() => setLocation("/dashboard")} size="sm" className="bg-blue-700 hover:bg-blue-800">
+              <Button onClick={() => setLocation("/dashboard")} size="sm" className="bg-[hsl(220,60%,55%)] hover:bg-[hsl(220,60%,45%)] text-white">
                 Dashboard <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => go("/dashboard")}>Sign in</Button>
-                <Button size="sm" className="bg-blue-700 hover:bg-blue-800" onClick={() => go("/dashboard")}>
+                <Button size="sm" className="bg-[hsl(220,60%,55%)] hover:bg-[hsl(220,60%,45%)] text-white" onClick={() => go("/dashboard")}>
                   Get Started <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </>
@@ -136,130 +142,105 @@ export default function GovChainHome() {
 
       {/* ── Hero ── */}
       <section className="relative pt-36 pb-24">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(220_60%_35%_/_0.06),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(220_60%_55%_/_0.06),transparent_60%)]" />
         <div className="container relative z-10">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/5 text-blue-400 text-xs font-medium tracking-wide uppercase mb-8">
-              <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-blue-400" /></span>
-              AuthiChain Protocol &mdash; Sovereign Vertical
+            <div className="hero-enter inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[hsl(220,60%,55%)]/30 bg-[hsl(220,60%,55%)]/5 text-[hsl(220,60%,55%)] text-xs font-medium tracking-wide uppercase mb-8">
+              <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[hsl(220,60%,55%)] opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-[hsl(220,60%,55%)]" /></span>
+              Sovereign Verification
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6">
-              Sovereign Verification for{" "}
-              <span className="gov-gradient">Government &amp; Defense</span>
+            <h1 className="hero-enter hero-enter-delay-1 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6">
+              Trust, Verified.{" "}
+              <span className="gov-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(220 60% 55%), hsl(40 60% 55%), hsl(210 50% 45%), hsl(220 60% 55%))", backgroundSize: "200% 200%" }}>Made in USA.</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              Made in USA manufacturer authentication, ITAR compliance tracking, and military-grade QRON verification &mdash; built on the AuthiChain truth substrate.
+            <p className="hero-enter hero-enter-delay-2 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+              Blockchain-anchored verification for government procurement, defense manufacturing, and domestic origin authentication &mdash; built on zero-trust architecture with Ed25519 cryptographic signing.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="text-base px-8 h-12 bg-blue-700 hover:bg-blue-800" onClick={() => go("/dashboard")}>
-                Register Entity <ArrowRight className="ml-2 h-5 w-5" />
+            <div className="hero-enter hero-enter-delay-3 flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="text-base px-8 h-12 bg-[hsl(220,60%,55%)] hover:bg-[hsl(220,60%,45%)] text-white gov-pulse" onClick={() => go("/supply-chain")}>
+                Start Verifying <ShieldCheck className="ml-2 h-5 w-5" />
               </Button>
-              <Button variant="outline" size="lg" className="text-base px-8 h-12 bg-transparent" asChild>
-                <a href="#workflow">See the Workflow &rarr;</a>
+              <Button variant="outline" size="lg" className="text-base px-8 h-12 bg-transparent" onClick={() => go("/services")}>
+                Explore Services &rarr;
               </Button>
+            </div>
+            <div className="hero-enter hero-enter-delay-4 mt-12">
+              <ChevronDown className="h-6 w-6 text-muted-foreground/50 mx-auto scroll-indicator" />
             </div>
           </div>
         </div>
       </section>
 
       {/* ── Stats ── */}
-      <section className="relative z-10 border-y border-border/40 bg-card/30 backdrop-blur-sm">
-        <div className="container py-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((s) => (
-              <div key={s.label} className="text-center">
-                <div className="text-2xl md:text-3xl font-bold gov-gradient">{s.value}</div>
-                <div className="text-xs text-muted-foreground mt-1.5 uppercase tracking-widest">{s.label}</div>
-              </div>
-            ))}
+      <Reveal>
+        <section className="relative z-10 border-y border-border/40 bg-card/30 backdrop-blur-sm">
+          <div className="container py-10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {stats.map((s) => (
+                <div key={s.label} className="text-center">
+                  <div className="text-3xl md:text-4xl font-bold gov-gradient stat-glow">{s.value}</div>
+                  <div className="text-xs text-muted-foreground mt-1.5 uppercase tracking-widest">{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </Reveal>
+
+      <div className="section-divider shimmer-line h-px" style={{ background: "linear-gradient(90deg,transparent,hsl(220 60% 55%/.3),transparent)" }} />
 
       {/* ── Features ── */}
       <section id="features" className="relative z-10 py-24">
         <div className="container">
           <Reveal>
             <div className="text-center mb-16">
-              <p className="text-xs uppercase tracking-[.2em] text-blue-400 font-semibold mb-3">Capabilities</p>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">The Sovereign Verification Stack</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Everything government agencies, defense contractors, and domestic manufacturers need for blockchain-grade verification and compliance.
-              </p>
+              <p className="text-xs uppercase tracking-[.2em] text-[hsl(220,60%,55%)] font-semibold mb-3">Platform</p>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Government-Grade Verification Infrastructure</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">From ITAR compliance to Buy American Act verification &mdash; built for the rigor of federal procurement.</p>
             </div>
           </Reveal>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {features.map((f) => (
-              <Reveal key={f.title}>
-                <div className="glass-card rounded-xl p-6 hover:border-blue-500/30 transition-all group h-full">
-                  <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
-                    <f.icon className="h-5 w-5 text-blue-400" />
+            {features.map((f, i) => (
+              <Reveal key={f.title} delay={i * 80}>
+                <GlowCard className="glass-card rounded-xl p-6 hover:border-[hsl(220,60%,55%)]/30 transition-all group h-full tilt-card border-glow-hover">
+                  <div className="h-10 w-10 rounded-lg bg-[hsl(220,60%,55%)]/10 flex items-center justify-center mb-4 group-hover:bg-[hsl(220,60%,55%)]/20 transition-colors">
+                    <f.icon className="h-5 w-5 text-[hsl(220,60%,55%)] animate-float" style={{ animationDelay: `${i * 0.3}s` }} />
                   </div>
                   <h3 className="font-semibold text-lg mb-2">{f.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-                </div>
+                </GlowCard>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Workflow ── */}
-      <section id="workflow" className="relative z-10 py-24 border-y border-border/40 bg-card/20">
+      <div className="section-divider shimmer-line h-px" style={{ background: "linear-gradient(90deg,transparent,hsl(40 60% 55%/.3),transparent)" }} />
+
+      {/* ── Protocol Stack ── */}
+      <section id="protocol" className="relative z-10 py-24 border-t border-border/40">
         <div className="container">
           <Reveal>
             <div className="mb-16">
-              <p className="text-xs uppercase tracking-[.2em] text-blue-400 font-semibold mb-3">Verification Workflow</p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">From Registration to Field Scan</h2>
-              <p className="text-muted-foreground max-w-lg text-lg">Four steps of sovereign verification &mdash; every entity validated, every document signed, every scan logged.</p>
+              <p className="text-xs uppercase tracking-[.2em] text-[hsl(220,60%,55%)] font-semibold mb-3">Verification Workflow</p>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">How GovChain Works</h2>
+              <p className="text-muted-foreground max-w-lg text-lg">Four stages from entity registration to field-level verification.</p>
             </div>
           </Reveal>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {workflow.map((s) => (
-              <Reveal key={s.num}>
-                <div className="glass-card rounded-xl p-6 hover:border-blue-500/30 transition-all group h-full relative overflow-hidden">
-                  <span className="absolute top-3 right-4 text-3xl font-bold text-blue-500/10 leading-none">{s.num}</span>
-                  <h4 className="font-semibold text-base mb-2 mt-2">{s.title}</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Pricing ── */}
-      <section id="pricing" className="relative z-10 py-24">
-        <div className="container">
-          <Reveal>
-            <div className="text-center mb-16">
-              <p className="text-xs uppercase tracking-[.2em] text-blue-400 font-semibold mb-3">Pricing</p>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Plans for Government &amp; Defense</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">From agency verification to enterprise-scale defense contractor compliance. All plans include AuthiChain Protocol verification.</p>
-            </div>
-          </Reveal>
-          <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
-            {pricing.map((plan) => (
-              <Reveal key={plan.name}>
-                <div className={`rounded-xl p-6 border h-full flex flex-col ${plan.highlighted ? "border-blue-500/50 bg-blue-500/5 ring-1 ring-blue-500/20" : "border-border glass-card"}`}>
-                  <h3 className="font-semibold text-lg mb-1">{plan.name}</h3>
-                  <div className="flex items-baseline gap-1 mb-1">
-                    <span className="text-3xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground text-sm">{plan.period}</span>
+          <div className="grid md:grid-cols-2 gap-5">
+            {stack.map((s, i) => (
+              <Reveal key={s.num} delay={i * 120}>
+                <GlowCard className="glass-card rounded-xl p-6 hover:border-[hsl(220,60%,55%)]/30 transition-all group h-full tilt-card">
+                  <div className="flex items-start gap-4">
+                    <div className="h-11 w-11 rounded-lg bg-[hsl(220,60%,55%)]/10 flex items-center justify-center shrink-0 group-hover:bg-[hsl(220,60%,55%)]/20 transition-colors animate-float" style={{ animationDelay: `${i * 0.5}s` }}>
+                      <span className="text-sm font-bold text-[hsl(220,60%,55%)]">{s.num}</span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-1.5">{s.title}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-5">{plan.desc}</p>
-                  <ul className="space-y-3 mb-8 flex-1">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
-                        <span className="text-muted-foreground">{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button className={`w-full ${plan.highlighted ? "bg-blue-700 hover:bg-blue-800" : ""}`} variant={plan.highlighted ? "default" : "outline"} onClick={() => go("/subscriptions")}>
-                    {plan.highlighted ? "Get Started" : "Choose Plan"}
-                  </Button>
-                </div>
+                </GlowCard>
               </Reveal>
             ))}
           </div>
@@ -270,18 +251,19 @@ export default function GovChainHome() {
       <section className="relative z-10 py-24 border-t border-border/40">
         <div className="container">
           <Reveal>
-            <div className="mb-12">
-              <p className="text-xs uppercase tracking-[.2em] text-blue-400 font-semibold mb-3">Ecosystem</p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Part of the AuthiChain Protocol</h2>
-              <p className="text-muted-foreground max-w-lg text-lg">GovChain is the sovereign verification vertical of the AuthiChain truth substrate.</p>
+            <div className="mb-16">
+              <p className="text-xs uppercase tracking-[.2em] text-[hsl(220,60%,55%)] font-semibold mb-3">Ecosystem</p>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Powered by AuthiChain</h2>
+              <p className="text-muted-foreground max-w-lg text-lg">GovChain is the government and defense vertical of the AuthiChain Protocol.</p>
             </div>
           </Reveal>
           <div className="grid sm:grid-cols-3 gap-4">
-            {ecosystem.map((e) => (
-              <Reveal key={e.name}>
-                <a href={e.href} className="glass-card rounded-xl p-5 hover:border-blue-500/30 transition-all group block h-full" target="_blank" rel="noopener noreferrer">
+            {ecosystem.map((e, i) => (
+              <Reveal key={e.name} delay={i * 100} direction={i % 2 === 0 ? "left" : "right"}>
+                <a href={e.href} className="glass-card rounded-xl p-5 hover:border-[hsl(220,60%,55%)]/30 transition-all group block h-full tilt-card" target="_blank" rel="noopener noreferrer">
                   <h4 className="font-semibold flex items-center gap-2 mb-2">
-                    <span className="text-blue-400">&#9670;</span> {e.name}
+                    <span className="text-[hsl(220,60%,55%)]">&#9670;</span> {e.name}
+                    {e.live && <span className="text-[10px] bg-[hsl(220,60%,55%)] text-white px-2 py-0.5 rounded font-bold tracking-wide animate-pulse">LIVE</span>}
                   </h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">{e.desc}</p>
                 </a>
@@ -291,20 +273,60 @@ export default function GovChainHome() {
         </div>
       </section>
 
+      <div className="section-divider shimmer-line h-px" style={{ background: "linear-gradient(90deg,transparent,hsl(220 60% 55%/.3),transparent)" }} />
+
+      {/* ── Pricing ── */}
+      <section id="pricing" className="relative z-10 py-24 border-t border-border/40">
+        <div className="container">
+          <Reveal>
+            <div className="text-center mb-16">
+              <p className="text-xs uppercase tracking-[.2em] text-[hsl(220,60%,55%)] font-semibold mb-3">Pricing</p>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Built for Government & Defense</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">From municipal agencies to defense contractors. Every plan includes blockchain verification and zero-trust architecture.</p>
+            </div>
+          </Reveal>
+          <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+            {pricing.map((plan, i) => (
+              <Reveal key={plan.name} delay={i * 120}>
+                <GlowCard className={`rounded-xl p-6 border h-full flex flex-col tilt-card ${plan.highlighted ? "border-[hsl(220,60%,55%)]/50 bg-[hsl(220,60%,55%)]/5 gov-pulse" : "border-border glass-card"}`}>
+                  <h3 className="font-semibold text-lg mb-1">{plan.name}</h3>
+                  <div className="flex items-baseline gap-1 mb-6">
+                    <span className="text-3xl font-bold">{plan.price}</span>
+                    <span className="text-muted-foreground text-sm">{plan.period}</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-[hsl(220,60%,55%)] mt-0.5 shrink-0" />
+                        <span className="text-muted-foreground">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button className={`w-full ${plan.highlighted ? "bg-[hsl(220,60%,55%)] hover:bg-[hsl(220,60%,45%)] text-white" : ""}`} variant={plan.highlighted ? "default" : "outline"} onClick={() => go("/supply-chain")}>
+                    {plan.highlighted ? "Start Now" : "Choose Plan"}
+                  </Button>
+                </GlowCard>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA ── */}
       <section className="relative z-10 py-28">
         <div className="container">
-          <Reveal className="text-center">
+          <Reveal direction="scale" className="text-center">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
-              Trust. <span className="gov-gradient">Verified.</span>
+              Every Source,{" "}
+              <span className="gov-gradient animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(220 60% 55%), hsl(40 60% 55%), hsl(210 50% 45%), hsl(220 60% 55%))", backgroundSize: "200% 200%" }}>Verified.</span>
             </h2>
-            <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">Sovereign authentication infrastructure for the agencies and manufacturers protecting national interests.</p>
+            <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">Sovereign verification for government procurement and defense manufacturing. Start verifying today.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="text-base px-8 h-12 bg-blue-700 hover:bg-blue-800" onClick={() => go("/dashboard")}>
-                Register Your Entity <ArrowRight className="ml-2 h-5 w-5" />
+              <Button size="lg" className="text-base px-8 h-12 bg-[hsl(220,60%,55%)] hover:bg-[hsl(220,60%,45%)] text-white gov-pulse" onClick={() => go("/supply-chain")}>
+                Launch GovChain <ShieldCheck className="ml-2 h-5 w-5" />
               </Button>
               <Button variant="outline" size="lg" className="text-base px-8 h-12 bg-transparent" asChild>
-                <a href="mailto:authichain@gmail.com">Contact Government Sales &rarr;</a>
+                <a href="mailto:authichain@gmail.com">Partner Inquiry &rarr;</a>
               </Button>
             </div>
           </Reveal>
@@ -316,17 +338,13 @@ export default function GovChainHome() {
         <div className="container space-y-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-blue-400" />
+              <ShieldCheck className="h-5 w-5 text-[hsl(220,60%,55%)]" />
               <span className="font-bold gov-gradient">GovChain</span>
             </div>
-            <p className="text-sm text-muted-foreground text-center">
-              Sovereign Verification for Government &amp; Defense. An AuthiChain Protocol vertical.
-            </p>
+            <p className="text-sm text-muted-foreground text-center">Sovereign Verification for Government &amp; Defense. Powered by AuthiChain.</p>
           </div>
-          <div className="pt-4 border-t border-border/40">
-            <EcosystemNav />
-          </div>
-          <p className="text-center text-xs text-muted-foreground/60">&copy; 2026 AuthiChain, Inc. &mdash; GovChain is a vertical of the AuthiChain Protocol</p>
+          <div className="pt-4 border-t border-border/40"><EcosystemNav /></div>
+          <p className="text-center text-xs text-muted-foreground/60">&copy; 2026 GovChain by AuthiChain, Inc.</p>
         </div>
       </footer>
     </div>
