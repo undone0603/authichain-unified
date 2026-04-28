@@ -26,7 +26,8 @@ export type ServiceType =
   | "landing_page"
   | "brand_story_pack"
   | "government_dossier"
-  | "sba_disaster_loan";
+  | "sba_disaster_loan"
+  | "contract_setup";
 
 export const SERVICE_CATALOG: Record<ServiceType, ServiceDefinition> = {
   authenticity_audit: {
@@ -220,6 +221,33 @@ export const SERVICE_CATALOG: Record<ServiceType, ServiceDefinition> = {
     deliveryTime: "3-5 business days",
     icon: "CloudLightning",
     featured: true,
+  },
+
+  contract_setup: {
+    key: "contract_setup",
+    name: "AuthiChain Contract Pilot — Setup Fee",
+    tagline: "Custom integration + compliance reporting onboarding",
+    description:
+      "One-time implementation fee for AuthiChain Contract Pilot customers (signed Service Agreement). Covers METRC/DSCSA compliance reporting setup, custom API integration, dedicated onboarding, and Stripe subscription provisioning at the Professional tier ($499/mo).",
+    price: 250000,
+    displayPrice: "$2,500",
+    // Stripe IDs are populated by scripts/setup-stripe-products.ts.
+    stripeProductId: "",
+    stripePriceId: "",
+    deliverables: [
+      "METRC / DSCSA compliance reporting configuration",
+      "Custom API integration & webhook setup",
+      "Dedicated onboarding session",
+      "Provisioning of recurring B2B Professional subscription",
+    ],
+    targetAudience: [
+      "Manufacturers",
+      "Dispensaries",
+      "Brand-protection directors",
+      "Compliance officers",
+    ],
+    deliveryTime: "5-10 business days",
+    icon: "FileSignature",
   },
 };
 
