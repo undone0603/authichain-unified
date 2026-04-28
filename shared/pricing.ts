@@ -78,8 +78,19 @@ export type AnyPlanKey = B2BPlanKey | QronPlanKey;
  * amount-based heuristics.
  */
 export const STRIPE_PRICE_TO_PLAN: Record<string, AnyPlanKey | "contract_setup"> = {
-  // Filled in by scripts/setup-stripe-products.ts output. Example:
-  // "price_1ABC...": "starter",
+  // Test-mode IDs from scripts/setup-stripe-products.ts (Stripe acct sk_test_51SXIy…).
+  // Run the script against the live account separately and append (or fork into a
+  // mode-specific config) before production cutover.
+  "price_1TRJZBGqTruSqV8T3waViPX1": "starter",      // b2b_starter monthly
+  "price_1TRJZCGqTruSqV8TppJx9TyF": "starter",      // b2b_starter annual
+  "price_1TRJZEGqTruSqV8TPXbVnE8G": "professional", // b2b_professional monthly
+  "price_1TRJZEGqTruSqV8T8DggGOmB": "professional", // b2b_professional annual
+  "price_1TRJZFGqTruSqV8TeHoPf226": "enterprise",   // b2b_enterprise monthly
+  "price_1TRJZFGqTruSqV8Tn3iGixBn": "enterprise",   // b2b_enterprise annual
+  "price_1TRJZGGqTruSqV8TETqpIDAY": "launch_pack",  // qron_launch_pack one-time
+  "price_1TRJZHGqTruSqV8T4xwLjpa5": "studio",       // qron_studio monthly
+  "price_1TRJZJGqTruSqV8TVJeCoXIb": "studio_pro",   // qron_studio_pro monthly
+  "price_1TRJZKGqTruSqV8TyPJKpKpN": "contract_setup", // contract_setup one-time
 };
 
 /** Returns the monthly cents for a B2B plan. */
