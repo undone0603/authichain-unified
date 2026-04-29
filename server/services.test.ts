@@ -11,9 +11,9 @@ const adminCaller = appRouter.createCaller({
 
 describe("services router", () => {
   describe("services.catalog (public)", () => {
-    it("returns all 7 services", async () => {
+    it("returns all 8 services", async () => {
       const catalog = await publicCaller.services.catalog();
-      expect(catalog).toHaveLength(7);
+      expect(catalog).toHaveLength(8);
       const keys = catalog.map((s: any) => s.key);
       expect(keys).toContain("authenticity_audit");
       expect(keys).toContain("cinematic_page");
@@ -22,6 +22,7 @@ describe("services router", () => {
       expect(keys).toContain("brand_story_pack");
       expect(keys).toContain("government_dossier");
       expect(keys).toContain("sba_disaster_loan");
+      expect(keys).toContain("contract_setup");
     });
 
     it("each service has required fields", async () => {

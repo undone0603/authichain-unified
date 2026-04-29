@@ -4,7 +4,59 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, CreditCard, Loader2, ExternalLink, Receipt, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { SUBSCRIPTION_PLANS, type PlanKey } from "@shared/subscriptionPlans";
+import { B2B_PLANS, type B2BPlanKey as PlanKey } from "@shared/pricing";
+
+// Adapter preserving the legacy field shape this page reads
+// (name / monthlyPrice / annualPrice / features / highlighted).
+// Feature copy reflects the new B2B quotas; numbers themselves come from B2B_PLANS.
+const SUBSCRIPTION_PLANS = {
+  starter: {
+    name: "Starter",
+    monthlyPrice: B2B_PLANS.starter.monthlyCents / 100,
+    annualPrice: Math.round(B2B_PLANS.starter.monthlyCents / 100 * 12 * 0.8),
+    features: [
+      `${B2B_PLANS.starter.quota.toLocaleString()} authentications/month`,
+      "QR code generation",
+      "Certificate issuance",
+      "Email support",
+      "1 team member",
+      "Basic analytics dashboard",
+    ],
+    highlighted: false,
+  },
+  professional: {
+    name: "Professional",
+    monthlyPrice: B2B_PLANS.professional.monthlyCents / 100,
+    annualPrice: Math.round(B2B_PLANS.professional.monthlyCents / 100 * 12 * 0.8),
+    features: [
+      `${B2B_PLANS.professional.quota.toLocaleString()} authentications/month`,
+      "NFT certificate minting",
+      "AI Autopilot engine",
+      "Supply chain tracking",
+      "Email campaigns (5,000/mo)",
+      "Priority support (4hr SLA)",
+      "5 team members",
+      "Revenue analytics",
+    ],
+    highlighted: true,
+  },
+  enterprise: {
+    name: "Enterprise",
+    monthlyPrice: B2B_PLANS.enterprise.monthlyCents / 100,
+    annualPrice: Math.round(B2B_PLANS.enterprise.monthlyCents / 100 * 12 * 0.8),
+    features: [
+      `${B2B_PLANS.enterprise.quota.toLocaleString()} authentications/month`,
+      "White-label solutions",
+      "Custom API access & webhooks",
+      "AI Autopilot (all modes)",
+      "Unlimited email campaigns",
+      "Dedicated account manager",
+      "Unlimited team members",
+      "99.9% uptime SLA",
+    ],
+    highlighted: false,
+  },
+} as const;
 import { useState, useEffect } from "react";
 
 export default function Subscriptions() {

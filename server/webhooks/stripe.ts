@@ -25,7 +25,8 @@ import {
   claimWebhookEvent,
   markWebhookEventProcessed,
 } from "../db";
-import { getPlanQuota } from "../stripe-products";
+import { getPlanQuota } from "../../shared/pricing";
+import { detectPlan } from "./stripe-plan-detection";
 
 // ─── Stripe client (lazy, uses env at call time) ─────────────────────────────
 
@@ -40,35 +41,9 @@ function getStripeClient(): Stripe {
   return _stripe;
 }
 
-// ─── Plan detection from price ID or amount ───────────────────────────────────
+// Plan detection lives in ./stripe-plan-detection.ts (lookup table → amount fallback).
 
 type Plan = "starter" | "professional" | "enterprise";
-
-function detectPlanFromPriceId(priceId: string | null | undefined): Plan {
-  if (!priceId) return "starter";
-  const lower = priceId.toLowerCase();
-  if (lower.includes("enterprise")) return "enterprise";
-  if (lower.includes("professional") || lower.includes("pro")) return "professional";
-  if (lower.includes("starter")) return "starter";
-  return "starter";
-}
-
-function detectPlanFromAmount(amountCents: number): Plan {
-  // $799/mo = 79900, $199/mo = 19900, $49/mo = 4900
-  // Also handle annual pricing which is higher
-  if (amountCents >= 70000) return "enterprise";
-  if (amountCents >= 15000) return "professional";
-  return "starter";
-}
-
-function detectPlan(priceId: string | null | undefined, amountCents: number): Plan {
-  if (priceId) {
-    const fromId = detectPlanFromPriceId(priceId);
-    // If we got a non-default answer from the price ID, trust it
-    if (fromId !== "starter" || priceId.toLowerCase().includes("starter")) return fromId;
-  }
-  return detectPlanFromAmount(amountCents);
-}
 
 // ─── Stripe → internal status mapping ────────────────────────────────────────
 
@@ -205,6 +180,9 @@ export async function handleStripeWebhook(
         });
       }
 
+      const brand = (sub.metadata?.brand as string | undefined) ?? null;
+      const isContract = sub.metadata?.contract === "true";
+
       await logAutomationAudit(
         event.type === "customer.subscription.created"
           ? "billing_subscription_created"
@@ -216,6 +194,8 @@ export async function handleStripeWebhook(
           plan,
           status,
           billingCycle,
+          brand,
+          contract: isContract,
           userId: userId ?? null,
         },
         userId,
@@ -289,6 +269,8 @@ export async function handleStripeWebhook(
             stripeSubscriptionId: subscriptionId ?? null,
             stripeCustomerId: customerId ?? null,
             plan,
+            brand: (inv as any).subscription_details?.metadata?.brand ?? null,
+            contract: (inv as any).subscription_details?.metadata?.contract === "true",
           },
         });
       }
@@ -390,6 +372,9 @@ export async function handleStripeWebhook(
             leadEmail,
             stripeSubscriptionId: subscriptionId ?? null,
             stripeCustomerId: customerId ?? null,
+            brand: session.metadata?.brand ?? null,
+            contract: session.metadata?.contract === "true",
+            setupOrderId: session.metadata?.setup_order_id ?? null,
           },
         });
 
