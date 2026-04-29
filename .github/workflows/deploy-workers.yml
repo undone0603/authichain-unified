@@ -32,10 +32,10 @@ env:
 
 jobs:
   deploy:
-    name: Deploy ${{ matrix.worker }}
+        name: Deploy ${{ matrix.worker }}
     runs-on: ubuntu-latest
     # Skip workers not matching the dispatch input (when one is given).
-    if: github.event_name != 'workflow_dispatch' || inputs.worker == '' || inputs.worker == matrix.worker
+            if: github.event_name != 'workflow_dispatch' || inputs.worker == ''
     strategy:
       fail-fast: false
       matrix:
@@ -78,6 +78,7 @@ jobs:
           fi
 
       - name: Deploy
+                if: inputs.worker == '' || inputs.worker == matrix.worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
