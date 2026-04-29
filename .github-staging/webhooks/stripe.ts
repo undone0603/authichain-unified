@@ -24,7 +24,7 @@ import {
   createSystemNotification,
   hasWebhookEventProcessed,
 } from "../db";
-import { getPlanQuota } from "../stripe-products";
+import { getPlanQuota } from "../../shared/pricing";
 
 // ─── Stripe client (lazy, uses env at call time) ─────────────────────────────
 

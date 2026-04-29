@@ -3,7 +3,7 @@ import * as db from "../db";
 import * as stripeService from "../stripe-service";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { SUBSCRIPTION_PLANS } from "@shared/subscriptionPlans";
+import { B2B_PLANS, B2B_BRANDS, type B2BBrand } from "@shared/pricing";
 
 export const subscriptionsRouter = router({
   current: protectedProcedure.query(async ({ ctx }) => {
@@ -15,9 +15,9 @@ export const subscriptionsRouter = router({
     billingCycle: z.enum(["monthly", "annual"]).optional().default("monthly"),
   })).mutation(async ({ ctx, input }) => {
     const quotas = {
-      starter: SUBSCRIPTION_PLANS.starter.monthlyQuota,
-      professional: SUBSCRIPTION_PLANS.professional.monthlyQuota,
-      enterprise: SUBSCRIPTION_PLANS.enterprise.monthlyQuota,
+      starter: B2B_PLANS.starter.quota,
+      professional: B2B_PLANS.professional.quota,
+      enterprise: B2B_PLANS.enterprise.quota,
     };
     const result = await db.createSubscription({
       userId: ctx.user.id, plan: input.plan, monthlyQuota: quotas[input.plan],
@@ -40,6 +40,8 @@ export const subscriptionsRouter = router({
     plan: z.enum(["starter", "professional", "enterprise"]),
     billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
     origin: z.string(),
+    brand: z.enum(B2B_BRANDS as unknown as [B2BBrand, ...B2BBrand[]]).optional(),
+    contractSetupOrderId: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
     const url = await stripeService.createSubscriptionCheckout({
       userId: ctx.user.id,
@@ -49,6 +51,8 @@ export const subscriptionsRouter = router({
       billing: input.billing,
       origin: input.origin,
       stripeCustomerId: (ctx.user as any).stripeCustomerId || undefined,
+      brand: input.brand,
+      contractSetupOrderId: input.contractSetupOrderId,
     });
     return { checkoutUrl: url };
   }),

@@ -55,7 +55,7 @@ export function createApp() {
         if (db) {
           const { subscriptions, users } = await import("../../drizzle/schema");
           const { eq } = await import("drizzle-orm");
-          const { getPlanQuota } = await import("../stripe-products");
+          const { getPlanQuota } = await import("../../shared/pricing");
           const plan = result.plan as "starter" | "professional" | "enterprise";
           await db.insert(subscriptions).values({
             userId: result.userId,
