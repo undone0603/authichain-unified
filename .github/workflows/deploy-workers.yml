@@ -32,10 +32,8 @@ env:
 
 jobs:
   deploy:
-        name: Deploy ${{ matrix.worker }}
+    name: Deploy ${{ matrix.worker }}
     runs-on: ubuntu-latest
-    # Skip workers not matching the dispatch input (when one is given).
-            if: github.event_name != 'workflow_dispatch' || inputs.worker == ''
     strategy:
       fail-fast: false
       matrix:
@@ -53,32 +51,27 @@ jobs:
           - resend-relay
           - strainchain-io
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v5
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
         with:
           version: 10.28.2
           run_install: false
 
-      - uses: actions/setup-node@v5
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'pnpm'
 
-      - name: Install root deps
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Install worker deps (if package.json)
         working-directory: workers/${{ matrix.worker }}
-        run: |
-          if [ -f package.json ]; then
-            pnpm install --frozen-lockfile
-          else
-            echo "No package.json in worker dir — skipping install"
-          fi
 
-      - name: Deploy
-                if: inputs.worker == '' || inputs.worker == matrix.worker
+      - name: Deploy ${{ matrix.worker }}
+        if: inputs.worker == '' || inputs.worker == matrix.worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
