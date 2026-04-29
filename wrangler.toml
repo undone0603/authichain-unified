@@ -29,5 +29,5 @@ binding = "QRON_IMAGES"
 bucket_name = "qron-images"
 
 # Cron triggers (monetization engine)
-[[triggers]]
+[triggers]
 crons = ["0 * * * *"] # hourly
