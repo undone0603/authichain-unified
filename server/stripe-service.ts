@@ -3,7 +3,15 @@
  * Handles checkout sessions, subscription management, and webhook processing
  */
 import Stripe from "stripe";
-import { STRIPE_PRODUCTS, type PlanKey, getPlanQuota } from "./stripe-products";
+import {
+  B2B_PLANS,
+  getMonthlyAmountCents,
+  getAnnualAmountCents,
+  type B2BPlanKey,
+  type B2BBrand,
+} from "../shared/pricing";
+
+type PlanKey = B2BPlanKey;
 
 let _stripe: Stripe | null = null;
 
@@ -26,14 +34,18 @@ export interface CreateCheckoutParams {
   billing: "monthly" | "annual";
   origin: string;
   stripeCustomerId?: string;
+  /** B2B brand attribution. Omit for non-branded checkouts (e.g. QRON). */
+  brand?: B2BBrand;
+  /** When set, the recurring subscription was preceded by a contract setup service order. */
+  contractSetupOrderId?: string;
 }
 
 export async function createSubscriptionCheckout(params: CreateCheckoutParams): Promise<string> {
   const stripe = getStripe();
-  const product = STRIPE_PRODUCTS[params.plan];
+  const product = B2B_PLANS[params.plan];
   const priceAmount = params.billing === "annual"
-    ? product.priceAnnual
-    : product.priceMonthly;
+    ? getAnnualAmountCents(params.plan)
+    : getMonthlyAmountCents(params.plan);
 
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
@@ -48,6 +60,10 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
       customer_name: params.userName,
       plan: params.plan,
       billing: params.billing,
+      ...(params.brand ? { brand: params.brand } : {}),
+      ...(params.contractSetupOrderId
+        ? { contract: "true", setup_order_id: params.contractSetupOrderId }
+        : {}),
     },
     line_items: [
       {
@@ -55,7 +71,6 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
           currency: "usd",
           product_data: {
             name: product.name,
-            description: product.description,
           },
           unit_amount: priceAmount,
           recurring: {
