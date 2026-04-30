@@ -95,7 +95,40 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
   const fromName = input.fromName || "AuthiChain";
 
-  // ── Try Gmail first (if OAuth tokens are configured) ─────────────────────
+  // ── Try Resend first (if API key is configured) ─────────────────────────
+  // Resend uses its own RESEND_FROM_EMAIL when set, otherwise falls back to
+  // the same fromEmail used by Gmail/SendGrid. The address's domain must be
+  // verified in the Resend dashboard.
+  if (ENV.resendApiKey) {
+    const resendFrom = process.env.RESEND_FROM_EMAIL || fromEmail || "outreach@authichain.com";
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${ENV.resendApiKey}`,
+      },
+      body: JSON.stringify({
+        from: `${fromName} <${resendFrom}>`,
+        to: [to],
+        subject: input.subject,
+        text: input.body,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json().catch(() => ({} as any));
+      return {
+        status: "sent",
+        provider: "resend",
+        providerMessageId: data?.id,
+      };
+    }
+
+    const errTxt = await res.text().catch(() => "");
+    console.warn("[email] Resend failed, falling back:", res.status, errTxt.slice(0, 200));
+  }
+
+  // ── Try Gmail next (if OAuth tokens are configured) ──────────────────────
   if (fromEmail) {
     const gmailAccessToken = await getGmailAccessToken();
     if (gmailAccessToken) {

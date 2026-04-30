@@ -400,13 +400,48 @@ export async function handleStripeWebhook(
         if (leadEmail) {
           const { updateLeadStatusByEmail } = await import("../db");
           await updateLeadStatusByEmail(leadEmail, "won");
-          
+
           await logActivity({
             userId: userId ?? null,
             action: 'lead_closed_won',
             entityType: 'lead',
             details: { leadEmail, segment, amountUsd, sessionId: session.id }
           });
+        }
+
+        // 4. Send a payment-confirmation email via the unified provider
+        //    (Resend → Gmail → SendGrid). Wrapped in try/catch so a provider
+        //    failure can't crash the webhook — the customer still has the
+        //    in-app notification from handleServiceOrderPayment as a backstop.
+        const confirmTo = session.customer_email
+          || session.metadata?.customer_email
+          || leadEmail
+          || null;
+        if (confirmTo) {
+          try {
+            const { sendEmail } = await import("../email-service");
+            const customerName = session.metadata?.customer_name || "there";
+            const serviceKey = session.metadata?.service_key || session.metadata?.plan || "your purchase";
+            const amountStr = `$${amountUsd.toFixed(2)} ${(session.currency ?? "usd").toUpperCase()}`;
+            const body = [
+              `Hi ${customerName},`,
+              ``,
+              `Thanks — your payment of ${amountStr} for ${serviceKey} is confirmed.`,
+              ``,
+              `You can track this order anytime at https://authichain.com/orders.`,
+              ``,
+              `If you have any questions, just reply to this email.`,
+              ``,
+              `— The AuthiChain Team`,
+            ].join("\n");
+            await sendEmail({
+              to: confirmTo,
+              subject: `Payment confirmed — ${serviceKey}`,
+              body,
+            });
+          } catch (emailErr) {
+            console.warn("[Email] Payment confirmation send failed:", emailErr);
+          }
         }
       }
 
