@@ -10,7 +10,7 @@
 //   process.env.DRY_RUN !== 'false'  →  no emails sent, no NFTs minted, no chain writes
 //   process.env.DRY_RUN === 'false'  →  performs real outreach + minting (requires real impls wired in)
 
-import { vectorStoreUtils, type GovernmentOpportunity } from '@authichain/vector-store';
+import { vectorStoreUtils, type GovernmentOpportunity } from '../../packages/vector-store/index';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Active entity (the GovChain.us pilot signer)
