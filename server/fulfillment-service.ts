@@ -83,26 +83,40 @@ export async function processPhysicalFulfillment(request: FulfillmentRequest) {
 /**
  * Webhook Trigger for Fulfillment
  * Called by Stripe webhook handler when a physical product is purchased.
+ *
+ * Gated behind FULFILLMENT_MOCK_ENABLED — the printing partner integration in
+ * processPhysicalFulfillment is a stub that mints a fake tracking number and
+ * marks the order delivered immediately, and the Stripe checkout doesn't
+ * collect shipping addresses, so without this gate a real customer payment
+ * would phantom-deliver to a hardcoded address. Flip the flag on only when
+ * real address collection + a real partner API are wired.
  */
 export async function triggerFulfillmentFromPayment(sessionId: string) {
   const order = await db.getServiceOrderBySessionId(sessionId);
   if (!order) return;
 
-  // Only trigger for specific physical service types
   const physicalServices = ["brand_story_pack", "automation_setup"];
-  if (physicalServices.includes(order.serviceType)) {
-    return await processPhysicalFulfillment({
-      orderId: order.id,
-      customerName: order.customerName || "AuthiChain Customer",
-      shippingAddress: {
-        line1: "123 Main St", // In real scenario, pull from Stripe Session shipping details
-        city: "Detroit",
-        state: "MI",
-        zip: "48226",
-        country: "US"
-      },
-      artworkUrl: order.deliveryUrl || "", // Pull generated QRON art
-      quantity: 1000
-    });
+  if (!physicalServices.includes(order.serviceType)) return;
+
+  if (process.env.FULFILLMENT_MOCK_ENABLED !== "true") {
+    console.log(
+      `[Fulfillment] Skipped for order #${order.id} (${order.serviceType}) — ` +
+      `FULFILLMENT_MOCK_ENABLED not set. Order remains in 'paid' status for human fulfillment.`,
+    );
+    return;
   }
+
+  return await processPhysicalFulfillment({
+    orderId: order.id,
+    customerName: order.customerName || "AuthiChain Customer",
+    shippingAddress: {
+      line1: "123 Main St",
+      city: "Detroit",
+      state: "MI",
+      zip: "48226",
+      country: "US",
+    },
+    artworkUrl: order.deliveryUrl || "",
+    quantity: 1000,
+  });
 }
