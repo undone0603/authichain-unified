@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Loader2, Shield, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { B2B_PLANS, QRON_PLANS, type B2BBrand } from "@shared/pricing";
+import { useBrand } from "@/contexts/BrandContext";
 
-// ─── Cluster + brand detection by host ───────────────────────────────────────
+// ─── B2B plan rendering ──────────────────────────────────────────────────────
+// ... (rest of the file)
 
 type Cluster = "b2b" | "qron";
 
@@ -109,11 +111,12 @@ const QRON_DISPLAY = [
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Pricing() {
+  const { brand } = useBrand();
   const [host, setHost] = useState<string>("");
   useEffect(() => setHost(window.location.host), []);
 
   const cluster = useMemo<Cluster>(() => clusterFromHost(host), [host]);
-  const brand = useMemo<B2BBrand | undefined>(() => brandFromHost(host), [host]);
+  const b2bBrand = useMemo<B2BBrand | undefined>(() => brandFromHost(host), [host]);
 
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const checkout = trpc.subscriptions.checkout.useMutation();
@@ -123,7 +126,7 @@ export default function Pricing() {
     // it should route through services.checkout once a Stripe service-order
     // entry is wired. Until then, we surface a friendly toast.
     if (planId === "launch_pack") {
-      toast.info("QRON Launch Pack is a one-time purchase — checkout coming soon.");
+      toast.info(`${brand.displayName} Launch Pack is a one-time purchase — checkout coming soon.`);
       return;
     }
     setLoadingPlan(planId);
@@ -132,7 +135,7 @@ export default function Pricing() {
         plan: planId as any,
         billing: "monthly",
         origin: window.location.origin,
-        ...(cluster === "b2b" && brand ? { brand } : {}),
+        ...(cluster === "b2b" && b2bBrand ? { brand: b2bBrand } : {}),
       });
       toast.success(`Redirecting to ${displayName} checkout…`);
       window.location.href = checkoutUrl;
@@ -149,12 +152,12 @@ export default function Pricing() {
     <div className="container mx-auto py-12 px-4">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-3">
-          {isQron ? "QRON Pricing" : "AuthiChain Pricing"}
+          {brand.displayName} Pricing
         </h1>
         <p className="text-muted-foreground">
           {isQron
             ? "Living QR portals for small businesses, makers, and single-location brands."
-            : "Brand-protection authentication that scales with your supply chain."}
+            : brand.description}
         </p>
       </div>
 

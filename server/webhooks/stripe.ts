@@ -201,6 +201,29 @@ export async function handleStripeWebhook(
         userId,
       );
 
+      // HubSpot deal sync — only on first creation, not updates. Non-fatal:
+      // a HubSpot outage must not block billing-state writes.
+      if (event.type === "customer.subscription.created") {
+        try {
+          const customerEmail = sub.metadata?.customer_email
+            || (typeof sub.customer === "string" ? null : (sub.customer as Stripe.Customer | undefined)?.email)
+            || null;
+          if (customerEmail) {
+            const { syncPaymentToHubSpot } = await import("../hubspot-service");
+            const customerName = sub.metadata?.customer_name || undefined;
+            const subscriptionAmount = (firstItem?.price?.unit_amount ?? 0) / 100;
+            await syncPaymentToHubSpot({
+              email: customerEmail,
+              name: customerName,
+              amount: subscriptionAmount,
+              plan,
+            });
+          }
+        } catch (hsErr) {
+          console.warn("[HubSpot] Subscription sync failed (non-fatal):", hsErr);
+        }
+      }
+
       console.log(`[stripe-webhook] Subscription ${event.type === "customer.subscription.created" ? "created" : "updated"}: ${sub.id} → plan=${plan} status=${status}`);
       break;
     }

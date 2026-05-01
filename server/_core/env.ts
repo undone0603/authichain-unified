@@ -36,6 +36,7 @@ export const ENV = {
   openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
   groqApiKey:       process.env.GROQ_API_KEY ?? "",
   openaiApiKey:     process.env.OPENAI_API_KEY ?? "",
+  geminiApiKey:     process.env.GEMINI_API_KEY ?? "",
 
   // ── Video / Media ─────────────────────────────────────────────────────────
   heygenApiKey: process.env.HEYGEN_API_KEY ?? "",

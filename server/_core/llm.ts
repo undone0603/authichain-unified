@@ -280,56 +280,45 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
-  const payload: Record<string, unknown> = {
-    model: "gpt-4o",
-    messages: messages.map(normalizeMessage),
-    max_tokens: 32768,
-  };
-
-  if (tools && tools.length > 0) {
-    payload.tools = tools;
-  }
-
-  const normalizedToolChoice = normalizeToolChoice(toolChoice || tool_choice, tools);
-  if (normalizedToolChoice) {
-    payload.tool_choice = normalizedToolChoice;
-  }
-
-  const normalizedResponseFormat = normalizeResponseFormat({
-    responseFormat,
-    response_format,
-    outputSchema,
-    output_schema,
-  });
-
-  if (normalizedResponseFormat) {
-    payload.response_format = normalizedResponseFormat;
-  }
-
   // ─── Cascading Execution Logic ───────────────────────────────────────────
   const endpoints = [
-    { url: resolveApiUrl(), key: ENV.forgeApiKey, name: "Forge" },
-    { url: "https://api.openai.com/v1/chat/completions", key: ENV.openaiApiKey, name: "OpenAI" }
+    { url: resolveApiUrl(), key: ENV.forgeApiKey, name: "Forge", model: "gpt-4o" },
+    { url: "https://api.openai.com/v1/chat/completions", key: ENV.openaiApiKey, name: "OpenAI", model: "gpt-4o" },
+    { url: "https://api.groq.com/openai/v1/chat/completions", key: ENV.groqApiKey, name: "Groq", model: "llama-3.1-8b-instant" },
+    { url: `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, key: ENV.geminiApiKey, name: "Gemini", model: "gemini-1.5-flash" }
   ].filter(e => e.key); // Only use endpoints where we have keys
 
   if (endpoints.length === 0) {
-    throw new Error("No LLM API keys configured (Neither Forge nor OpenAI)");
+    throw new Error("No LLM API keys configured (Neither Forge, OpenAI, Groq, nor Gemini)");
   }
 
   let lastError: Error | null = null;
 
   for (const endpoint of endpoints) {
-    console.log(`[LLM] Attempting invoke via ${endpoint.name}...`);
+    console.log(`[LLM] Attempting invoke via ${endpoint.name} (${endpoint.model})...`);
+    
+    // Throttle Groq to avoid 429s
+    if (endpoint.name === "Groq") {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    const payload: Record<string, unknown> = {
+      model: endpoint.model,
+      messages: messages.map(normalizeMessage),
+      max_tokens: endpoint.name === "Gemini" ? 8192 : 4096,
+    };
+
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+      "authorization": `Bearer ${endpoint.key}`,
+    };
     
     // Retry up to 2 times for each endpoint
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const response = await fetch(endpoint.url, {
           method: "POST",
-          headers: {
-            "content-type": "application/json",
-            authorization: `Bearer ${endpoint.key}`,
-          },
+          headers,
           body: JSON.stringify(payload),
           // Set a 30s timeout
           signal: AbortSignal.timeout(30000)
@@ -344,6 +333,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
         
         // If it's a client error (4xx) other than 429, don't retry this endpoint
         if (status >= 400 && status < 500 && status !== 429) {
+          console.warn(`[LLM] ${endpoint.name} Client Error ${status}: ${errorText}`);
           throw new Error(`[${endpoint.name} Client Error] ${status}: ${errorText}`);
         }
         

@@ -1,11 +1,46 @@
-// scripts/score-opportunities.ts
+import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
+
+// Load from qron-platform/.env.local since it has the real keys
+const qronEnvPath = path.join(process.cwd(), "..", "qron-platform", ".env.local");
+if (fs.existsSync(qronEnvPath)) {
+  const envContent = fs.readFileSync(qronEnvPath, "utf-8");
+  envContent.split("\n").forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return;
+    const [key, ...valueParts] = trimmed.split("=");
+    if (key && valueParts.length > 0) {
+      const k = key.trim();
+      const v = valueParts.join("=").trim();
+      if (!process.env[k]) process.env[k] = v;
+    }
+  });
+}
+
 import { createClient } from '@supabase/supabase-js';
 import { Pinecone } from '@pinecone-database/pinecone';
-import { chat } from './lib/llm.ts';
 
 const isDryRun  = process.env.DRY_RUN === 'true';
-const supabase  = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
-const pinecone  = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("FATAL: SUPABASE_URL and SUPABASE_SERVICE_KEY must be set.");
+  process.exit(1);
+}
+
+const supabase  = createClient(supabaseUrl, supabaseKey);
+const pineconeIndex = (() => {
+  const { PINECONE_API_KEY, PINECONE_INDEX, VECTOR_BACKEND } = process.env;
+  if (VECTOR_BACKEND === 'pgvector') {
+    return null;
+  }
+  if (!PINECONE_API_KEY) {
+    return null;
+  }
+  return new Pinecone({ apiKey: PINECONE_API_KEY });
+})();
 const GOVCHAIN  = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
 const AUTHICHAIN_PROFILE = `
@@ -19,6 +54,9 @@ IoT-linked authentication, zero-trust verification.
 `;
 
 async function scoreOpportunities(): Promise<{ scored: number; failed: number; total: number }> {
+  // Dynamically import llm so it picks up the manually injected env keys
+  const { chat } = await import('./lib/llm.ts');
+  
   const { data: opps, error } = await supabase
     .from('gov_opportunities')
     .select('*')

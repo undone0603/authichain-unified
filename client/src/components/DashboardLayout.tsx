@@ -26,12 +26,14 @@ import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
   Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Clock, Sparkles, Globe, Trophy, ShoppingBag, Package, CloudLightning,
+  Leaf, Flag, Landmark
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { useBrand } from "@/contexts/BrandContext";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -71,11 +73,19 @@ const DEFAULT_WIDTH = 260;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 
+const BRAND_ICONS: Record<string, React.ElementType> = {
+  authichain: Shield,
+  qron: QrCode,
+  strainchain: Leaf,
+  govchain: Landmark,
+};
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { brandId, brand } = useBrand();
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
@@ -91,19 +101,20 @@ export default function DashboardLayout({
   }
 
   if (!user) {
+    const BrandIcon = BRAND_ICONS[brandId] || Shield;
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold gradient-text">AuthiChain</span>
+              <BrandIcon className="h-8 w-8 text-primary" />
+              <span className="text-2xl font-bold gradient-text">{brand.displayName}</span>
             </div>
             <h1 className="text-xl font-semibold tracking-tight text-center">
               Sign in to continue
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to the AuthiChain platform requires authentication.
+              Access to the {brand.displayName} platform requires authentication.
             </p>
           </div>
           <Button
@@ -135,6 +146,7 @@ type DashboardLayoutContentProps = {
 };
 
 function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutContentProps) {
+  const { brandId, brand } = useBrand();
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
@@ -144,6 +156,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
   const allItems = [...menuItems, ...govChainMenuItems, ...(user?.role === "admin" ? adminMenuItems : [])];
   const activeMenuItem = allItems.find(item => location.startsWith(item.path));
   const isMobile = useIsMobile();
+  const BrandIcon = BRAND_ICONS[brandId] || Shield;
 
   useEffect(() => {
     if (isCollapsed) setIsResizing(false);
@@ -186,8 +199,8 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
               </button>
               {!isCollapsed && (
                 <div className="flex items-center gap-2 min-w-0">
-                  <Shield className="h-5 w-5 text-primary shrink-0" />
-                  <span className="font-bold tracking-tight truncate gradient-text">AuthiChain</span>
+                  <BrandIcon className="h-5 w-5 text-primary shrink-0" />
+                  <span className="font-bold tracking-tight truncate gradient-text">{brand.displayName}</span>
                 </div>
               )}
             </div>
@@ -214,29 +227,31 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
             </SidebarMenu>
 
             {/* GovChain Vertical */}
-            {!isCollapsed && (
+            {!isCollapsed && brandId === 'govchain' && (
               <div className="px-4 py-2 mt-2">
                 <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">GovChain Vertical</span>
               </div>
             )}
-            <SidebarMenu className="px-2 py-1">
-              {govChainMenuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className="h-9 transition-all font-normal text-[13px]"
-                    >
-                      <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            {brandId === 'govchain' && (
+              <SidebarMenu className="px-2 py-1">
+                {govChainMenuItems.map(item => {
+                  const isActive = location === item.path;
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => setLocation(item.path)}
+                        tooltip={item.label}
+                        className="h-9 transition-all font-normal text-[13px]"
+                      >
+                        <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            )}
 
             {user?.role === "admin" && (
               <>

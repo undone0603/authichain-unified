@@ -6,7 +6,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 import { resolveBrand } from "../../shared/brands";
-import { brandInjectionScript } from "./brand-middleware";
+import { brandInjectionScript, injectBrandMetadata } from "./brand-middleware";
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -40,11 +40,11 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
-      // Inject brand-detection snippet before the main script so
-      // window.__BRAND__ is set before React mounts.
+      // Inject brand-detection snippet and metadata before the main script
       const brand = resolveBrand(
         (req.headers["x-forwarded-host"] as string | undefined) ?? req.headers.host
       );
+      template = injectBrandMetadata(template, brand);
       template = template.replace(
         '<div id="root"></div>',
         `<div id="root"></div>\n    ${brandInjectionScript(brand)}`
@@ -83,7 +83,8 @@ export function serveStatic(app: Express) {
       const brand = resolveBrand(
         (req.headers["x-forwarded-host"] as string | undefined) ?? req.headers.host
       );
-      const html = cachedTemplate.replace(
+      let html = injectBrandMetadata(cachedTemplate, brand);
+      html = html.replace(
         '<div id="root"></div>',
         `<div id="root"></div>\n    ${brandInjectionScript(brand)}`
       );
