@@ -50,7 +50,7 @@
     "@trpc/react-query": "^11.16.0",
     "@trpc/server": "^11.16.0",
     "@tsndr/cloudflare-worker-jwt": "^3.2.1",
-    "axios": "^1.15.2",
+    "axios": "^1.16.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
