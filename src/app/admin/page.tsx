@@ -118,8 +118,10 @@ export default function AdminDashboard() {
                     <div className="space-y-4">
                         <div className="flex justify-between items-end">
                             <div>
-                                <h3 className="text-lg font-black uppercase text-white">QRON.space</h3>
-                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-tight">Creative AI Utility</p>
+                                <h3 className="text-lg font-black uppercase text-white flex items-center gap-2">
+                                    QRON.space <span className="px-2 py-0.5 rounded bg-gold/10 text-gold text-[8px] font-black uppercase">Story Mode Active</span>
+                                </h3>
+                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-tight">Creative AI Utility & Digital Reveal</p>
                             </div>
                             <p className="text-sm font-black text-gold">{stats?.creative?.total_qrons} Creations</p>
                         </div>
@@ -132,13 +134,15 @@ export default function AdminDashboard() {
                     <div className="space-y-4">
                         <div className="flex justify-between items-end">
                             <div>
-                                <h3 className="text-lg font-black uppercase text-white">StrainChain.io</h3>
-                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-tight">Industrial Provenance</p>
+                                <h3 className="text-lg font-black uppercase text-white flex items-center gap-2">
+                                    StrainChain.io <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[8px] font-black uppercase animate-pulse">Watchdog Enabled</span>
+                                </h3>
+                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-tight">Industrial Provenance & Geo-fencing</p>
                             </div>
-                            <p className="text-sm font-black text-gold">{stats?.industrial?.total_certifications} Certifications</p>
+                            <p className="text-sm font-black text-blue-400">{stats?.industrial?.total_certifications} Certifications</p>
                         </div>
                         <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
-                            <div className="bg-gold h-full w-[45%]" />
+                            <div className="bg-blue-400 h-full w-[45%]" />
                         </div>
                     </div>
 
@@ -146,13 +150,15 @@ export default function AdminDashboard() {
                     <div className="space-y-4">
                         <div className="flex justify-between items-end">
                             <div>
-                                <h3 className="text-lg font-black uppercase text-white">GovChain.us</h3>
-                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-tight">Ecosystem Governance</p>
+                                <h3 className="text-lg font-black uppercase text-white flex items-center gap-2">
+                                    GovChain.us <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[8px] font-black uppercase">Yield: 12.4%</span>
+                                </h3>
+                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-tight">Ecosystem Governance & DAO Rewards</p>
                             </div>
-                            <p className="text-sm font-black text-gold">{stats?.governance?.active_brands} Registered Brands</p>
+                            <p className="text-sm font-black text-purple-400">{stats?.governance?.active_brands} Registered Brands</p>
                         </div>
                         <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
-                            <div className="bg-gold h-full w-[65%]" />
+                            <div className="bg-purple-400 h-full w-[65%]" />
                         </div>
                     </div>
                 </div>

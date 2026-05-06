@@ -208,26 +208,53 @@ export default function Dashboard() {
                     <h2 className="text-xl font-black uppercase tracking-tight">Affiliate Hub</h2>
                 </div>
                 
-                <div className="protocol-card p-8 bg-gold/5 border-gold/10">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-                        <div className="max-w-md">
-                            <h3 className="text-lg font-bold text-white mb-2">Earn 20% Recurring Commission</h3>
-                            <p className="text-zinc-500 text-sm leading-relaxed">
-                                Share QRON with your audience. For every user who signs up via your link, 
-                                you earn 20% of their generation pack or subscription purchases for life.
-                            </p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2 protocol-card p-8 bg-gold/5 border-gold/10">
+                      <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                          <div className="max-w-md">
+                              <h3 className="text-lg font-bold text-white mb-2">Earn 20% Recurring Commission</h3>
+                              <p className="text-zinc-500 text-sm leading-relaxed">
+                                  Share QRON with your audience. For every user who signs up via your link, 
+                                  you earn 20% of their generation pack or subscription purchases for life.
+                              </p>
+                          </div>
+                          <button 
+                              onClick={async () => {
+                                  const res = await fetch('/api/affiliate/join', { method: 'POST' });
+                                  if (res.ok) alert('Welcome to the Affiliate Program!');
+                                  window.location.reload();
+                              }}
+                              className="btn-gold px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px]"
+                          >
+                              Activate My Affiliate Link
+                          </button>
+                      </div>
+                  </div>
+
+                  {/* Growth Leaderboard */}
+                  <div className="protocol-card p-6 bg-zinc-950">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-6">Local Growth Leaderboard</h3>
+                    <div className="space-y-4">
+                      {[
+                        { name: 'Elite Partners', count: 142, earned: '$2,480' },
+                        { name: 'Visual Web', count: 89, earned: '$1,640' },
+                        { name: 'Industrial Supply', count: 64, earned: '$1,120' },
+                        { name: 'Beta Block', count: 42, earned: '$620' },
+                        { name: 'Modern Mkt', count: 31, earned: '$440' }
+                      ].map((a, i) => (
+                        <div key={i} className="flex justify-between items-center group">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black text-zinc-800">0{i+1}</span>
+                            <span className="text-xs font-bold text-zinc-400 group-hover:text-gold transition-colors uppercase">{a.name}</span>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-black text-white">{a.count}</p>
+                            <p className="text-[8px] font-bold text-zinc-700 uppercase">Referrals</p>
+                          </div>
                         </div>
-                        <button 
-                            onClick={async () => {
-                                const res = await fetch('/api/affiliate/join', { method: 'POST' });
-                                if (res.ok) alert('Welcome to the Affiliate Program!');
-                                window.location.reload();
-                            }}
-                            className="btn-gold px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px]"
-                        >
-                            Activate My Affiliate Link
-                        </button>
+                      ))}
                     </div>
+                  </div>
                 </div>
             </section>
         )}

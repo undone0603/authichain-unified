@@ -272,3 +272,21 @@ export const telemetryEvents = pgTable(
     index('idx_telemetry_hash').on(table.stateHash),
   ]
 );
+
+export const leadSequences = pgTable(
+  'lead_sequences',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    leadId: uuid('lead_id').notNull(),
+    currentStage: integer('current_stage').default(1).notNull(),
+    status: text('status').default('active').notNull(), // 'active', 'paused', 'completed'
+    lastActionAt: timestamp('last_action_at'),
+    nextActionAt: timestamp('next_action_at'),
+    metadata: jsonb('metadata').default({}),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_sequence_lead').on(table.leadId),
+    index('idx_sequence_status').on(table.status),
+  ]
+);

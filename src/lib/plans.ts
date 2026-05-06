@@ -2,7 +2,7 @@
 // Products and prices are pre-created in the Stripe dashboard.
 // priceId values are LIVE; keep in sync with Stripe.
 
-export type PlanId = 'free' | 'starter' | 'creator' | 'studio' | 'business';
+export type PlanId = 'free' | 'starter' | 'creator' | 'studio' | 'business' | 'theater_1' | 'theater_3';
 
 export interface Plan {
   id: PlanId;
@@ -60,7 +60,7 @@ export const PLANS: Plan[] = [
     id: 'creator',
     name: 'Creator Pack',
     price: 99,
-    description: '500 AI QR generations â€” best value',
+    description: '500 AI QR generations — best value',
     generations: 500,
     stripe_price_id: 'price_1TGAiZGqTruSqV8Tb4ZdCVKr',
     stripe_payment_link: 'https://buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d',
@@ -77,44 +77,45 @@ export const PLANS: Plan[] = [
     highlighted: true,
   },
   {
-    id: 'studio',
-    name: 'Studio Pack',
-    price: 299,
-    description: '2,000 generations for agencies & studios',
-    generations: 2000,
-    stripe_price_id: 'price_1TGOMBGqTruSqV8TBxL9yYLU',
-    stripe_payment_link: 'https://buy.stripe.com/9B66oJ1uz7dHabA1MgaIM0e',
-    stripe_mode: 'payment',
-    tier: 'pro',
-    features: [
-      '2,000 generations (one-time)',
-      'All Pro modes',
-      'White-label ready',
-      'API access (1,000 calls/mo)',
-      'Ed25519-signed on AuthiChain',
-    ],
-    cta: 'Buy Studio Pack',
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    price: 49,
+    id: 'theater_1',
+    name: 'Theater 1: AgTech',
+    price: 499,
     price_suffix: '/month',
-    description: 'Unlimited generations for growing teams',
-    generations: 0,
-    stripe_price_id: 'price_1TGOMCGqTruSqV8TpQsP9KY3',
-    stripe_payment_link: 'https://buy.stripe.com/bJeeVf7SXapTdnMez2aIM0f',
+    description: 'Industrial AgTech & StrainChain Provenance',
+    generations: 5000,
+    stripe_price_id: 'price_theater_1',
+    stripe_payment_link: 'https://qron.space/contact',
     stripe_mode: 'subscription',
     tier: 'enterprise',
     features: [
-      'Unlimited generations',
-      'All modes including Enterprise',
-      'API access (1,000 calls/mo)',
-      'AuthiChain verification dashboard',
-      '5 team seats',
-      'Priority support',
+      '5,000 Industrial generations / mo',
+      'Full DPP Data Integration',
+      'StrainChain Genetic Mapping',
+      'Supply Chain Watchdog Alerts',
+      'Geo-fencing Security',
     ],
-    cta: 'Start Business Plan',
+    cta: 'Initialize Theater 1',
+  },
+  {
+    id: 'theater_3',
+    name: 'Theater 3: Elite',
+    price: 1499,
+    price_suffix: '/month',
+    description: 'The Ultimate Industrial & Luxury Security',
+    generations: 0,
+    stripe_price_id: 'price_theater_3',
+    stripe_payment_link: 'https://qron.space/contact',
+    stripe_mode: 'subscription',
+    tier: 'enterprise',
+    features: [
+      'Unlimited Industrial Artifacts',
+      'Custom AI Model Training',
+      'On-Chain Product Narratives',
+      'Real-time Security Webhooks',
+      '24/7 AuthiChain Core Support',
+    ],
+    cta: 'Contact for Theater 3',
+    highlighted: true,
   },
 ];
 
@@ -124,7 +125,9 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   starter: 100,
   creator: 500,
   studio: 2000,
-  business: 999999, // effectively unlimited
+  business: 999999,
+  theater_1: 5000,
+  theater_3: 999999,
 };
 
 // Tier granted per plan
@@ -134,4 +137,6 @@ export const PLAN_TIER: Record<PlanId, 'free' | 'pro' | 'enterprise'> = {
   creator: 'pro',
   studio: 'pro',
   business: 'enterprise',
+  theater_1: 'enterprise',
+  theater_3: 'enterprise',
 };

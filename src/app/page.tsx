@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Sparkles,
   Download,
@@ -9,6 +10,9 @@ import {
   Shield,
   Zap,
   Lock,
+  Package,
+  Vote,
+  ArrowRight,
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -972,6 +976,75 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </section>
+
+        <div className="gold-divider my-12" />
+
+        {/* Ecosystem Pillars */}
+        <section className="mb-24 px-6">
+            <div className="text-center mb-16">
+                <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4">Ecosystem <span className="gold-text">Pillars</span></h2>
+                <p className="text-zinc-500 uppercase tracking-widest text-xs font-bold">The Multi-Domain Protocol Architecture</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {[
+                    {
+                        name: 'QRON.space',
+                        role: 'Creative Studio',
+                        feature: 'Story Mode Active',
+                        desc: 'The visual gateway to the protocol. AI QR art with cinematic digital reveals.',
+                        icon: Sparkles,
+                        color: 'text-gold',
+                        link: 'https://qron.space'
+                    },
+                    {
+                        name: 'StrainChain.io',
+                        role: 'Industrial Provenance',
+                        feature: 'Watchdog Enabled',
+                        desc: 'Elite AgTech supply chain security with real-time geographic drift monitoring.',
+                        icon: Package,
+                        color: 'text-blue-400',
+                        link: 'https://strainchain.io'
+                    },
+                    {
+                        name: 'GovChain.us',
+                        role: 'Ecosystem Governance',
+                        feature: 'DAO Staking Yield',
+                        desc: 'The economic heart. Stake $QRON to govern the protocol and earn yield.',
+                        icon: Vote,
+                        color: 'text-purple-400',
+                        link: 'https://govchain.us'
+                    },
+                    {
+                        name: 'AuthiChain.com',
+                        role: 'Foundational Layer',
+                        feature: 'Ed25519 Verified',
+                        desc: 'The core cryptographic engine powering sub-protocols and API security.',
+                        icon: Shield,
+                        color: 'text-zinc-300',
+                        link: 'https://authichain.com'
+                    }
+                ].map((p) => (
+                    <div key={p.name} className="protocol-card p-8 group hover:border-gold/30 transition-all bg-zinc-950/30">
+                        <div className={`p-3 rounded-xl bg-zinc-900 border border-zinc-800 w-fit mb-6 ${p.color}`}>
+                            <p.icon className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-xl font-black uppercase text-white mb-1">{p.name}</h3>
+                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">{p.role}</p>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-6 group-hover:text-gold transition-colors">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                            {p.feature}
+                        </div>
+                        <p className="text-sm text-zinc-500 leading-relaxed mb-8">
+                            {p.desc}
+                        </p>
+                        <Link href={p.link} className="flex items-center gap-2 text-[10px] font-black uppercase text-zinc-600 group-hover:text-gold tracking-widest">
+                            Explore Pillar <ArrowRight className="w-3 h-3" />
+                        </Link>
+                    </div>
+                ))}
+            </div>
         </section>
 
         <div className="gold-divider my-12" />
