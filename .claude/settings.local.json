@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 200)",
+      "PowerShell(npx tsc --noEmit; \"EXIT:$LASTEXITCODE\")"
+    ]
+  }
+}

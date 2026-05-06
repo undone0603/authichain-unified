@@ -53,7 +53,7 @@ export async function handleLeadAutomation(lead: {
       });
     }
 
-    // 3. Sync to Pipeline CRM (if enterprise potential detected)
+    // 3. Sync to HubSpot (if enterprise potential detected)
     if (enriched.is_enterprise || enriched.lead_score > 60) {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
@@ -63,7 +63,7 @@ export async function handleLeadAutomation(lead: {
           body: JSON.stringify(finalLead)
         });
       } catch (crmErr) {
-        console.warn('[automation] Pipeline CRM sync deferred:', crmErr);
+        console.warn('[automation] HubSpot sync deferred:', crmErr);
       }
     }
 

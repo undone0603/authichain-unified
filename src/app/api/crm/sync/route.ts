@@ -9,69 +9,73 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * CRM SYNC HANDLER (Pipeline CRM)
+ * CRM SYNC HANDLER (HubSpot)
  * Part of the "Real Contacts for CRM" solution.
- * Refined from Z-kie/AuthiChain repository logic.
  */
 
-const PIPELINE_API_KEY = process.env.PIPELINE_CRM_API_KEY;
-const PIPELINE_API_URL = "https://api.pipelinedeals.com/api/v3/people";
+const HUBSPOT_API_KEY = process.env.HUBSPOT_ACCESS_TOKEN;
+const HUBSPOT_API_URL = "https://api.hubapi.com/crm/v3/objects/contacts";
 
 export async function POST(req: NextRequest) {
   try {
     const { email, first_name, last_name, company_name, job_title, lead_score } = await req.json();
 
-    if (!PIPELINE_API_KEY) {
-      console.warn('[CRM-Sync] PIPELINE_CRM_API_KEY missing');
+    if (!HUBSPOT_API_KEY) {
+      console.warn('[CRM-Sync] HUBSPOT_ACCESS_TOKEN missing');
       return NextResponse.json({ error: 'CRM not configured' }, { status: 503 });
     }
 
-    console.log(`[CRM-Sync] Syncing high-value lead: ${email} (Score: ${lead_score})`);
+    console.log(`[CRM-Sync] Syncing high-value lead to HubSpot: ${email} (Score: ${lead_score})`);
 
-    // 1. Prepare Pipeline CRM Payload
+    // 1. Prepare HubSpot CRM Payload
     const payload = {
-      person: {
-        first_name: first_name || 'Protocol',
-        last_name: last_name || 'Lead',
+      properties: {
         email: email,
-        organization_name: company_name || 'Unknown Enterprise',
-        type: 'Lead',
-        lead_status_id: lead_score > 70 ? 1 : 2, // 1: Hot, 2: Warm
-        custom_fields: {
-          custom_field_lead_score: lead_score,
-          custom_field_source: 'AuthiChain Protocol'
-        }
+        firstname: first_name || 'Protocol',
+        lastname: last_name || 'Lead',
+        company: company_name || 'Unknown Enterprise',
+        jobtitle: job_title || '',
+        hs_lead_status: lead_score > 70 ? 'OPEN' : 'NEW',
+        lead_score: lead_score.toString()
       }
     };
 
     // 2. Execute Sync
-    const res = await fetch(`${PIPELINE_API_URL}?api_key=${PIPELINE_API_KEY}`, {
+    const res = await fetch(HUBSPOT_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${HUBSPOT_API_KEY}`
+      },
       body: JSON.stringify(payload)
     });
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Pipeline CRM API Error: ${res.status} - ${errText}`);
+      // If contact exists (409), we could handle an update, but for now we log it.
+      if (res.status === 409) {
+          console.log(`[CRM-Sync] Contact already exists in HubSpot: ${email}`);
+          return NextResponse.json({ success: true, message: 'Contact already exists' });
+      }
+      throw new Error(`HubSpot API Error: ${res.status} - ${errText}`);
     }
 
     const data = await res.json();
 
     // 3. Log Success to Supabase
     await admin.from('automation_logs').insert({
-      workflow_name: 'crm_sync',
+      workflow_name: 'hubspot_sync',
       trigger_type: 'event',
       status: 'success',
-      payload: JSON.stringify({ email, person_id: data.id })
+      payload: JSON.stringify({ email, contact_id: data.id })
     });
 
-    return NextResponse.json({ success: true, person_id: data.id });
+    return NextResponse.json({ success: true, contact_id: data.id });
 
   } catch (err: unknown) {
     console.error('[CRM-Sync] Critical Failure:', err);
     return NextResponse.json({ 
-      error: 'CRM synchronization failed',
+      error: 'HubSpot synchronization failed',
       detail: err instanceof Error ? err.message : String(err)
     }, { status: 500 });
   }
@@ -79,7 +83,6 @@ export async function POST(req: NextRequest) {
 
 /**
  * GET handler for Vercel Cron invocation
- * Pulled from Z-kie/AuthiChain/workers/pipeline-deals
  */
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');

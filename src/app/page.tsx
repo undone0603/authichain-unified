@@ -146,7 +146,7 @@ export default function Home() {
       const img = d.previewUrl || d.downloadUrl || d.imageUrl || d.url;
       if (img) {
         setResult(img);
-        setDownloadName(`qron-${selectedMode.id}-${Date.now()}.png`);
+        setDownloadName(`qron-${selectedMode.id}-${new Date().getTime()}.png`);
         setGuestUsed((prev) => {
           const next = prev + 1;
           if (next >= 1) setTimeout(() => setShowEmailCapture(true), 2000);
@@ -243,7 +243,7 @@ export default function Home() {
       const data = await response.json();
       if (response.ok) {
         setResult(data.qron.imageUrl);
-        setDownloadName(`qron-${selectedMode.id}-${Date.now()}.png`);
+        setDownloadName(`qron-${selectedMode.id}-${new Date().getTime()}.png`);
         setGenerationsUsed((prev) => prev + 1);
       } else {
         setError(data.message || 'Generation failed.');
