@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, startTransition } from 'react';
+import React, { useState, useEffect, useCallback, startTransition } from 'react';
 import { X, Sparkles, ArrowRight } from 'lucide-react';
 
 import { getBrandFromHost, BRANDS } from '@/lib/brand-config';

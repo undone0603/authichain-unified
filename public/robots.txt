@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
 
 Sitemap: https://qron.space/sitemap.xml

@@ -40,6 +40,7 @@ export async function GET(
   // 3. Evaluate Rules
   if (rules && rules.length > 0) {
     const userAgent = request.headers.get('user-agent') || '';
+    const country = request.headers.get('x-vercel-ip-country') || request.headers.get('cf-ipcountry') || 'US'; // Default to US for local testing
     const now = new Date();
 
     for (const rule of rules) {
@@ -56,6 +57,13 @@ export async function GET(
         if (targetDevice === 'mobile' && !isMobile) continue;
         if (targetDevice === 'tablet' && !isTablet) continue;
         if (targetDevice === 'desktop' && (isMobile || isTablet)) continue;
+      }
+
+      // Geo check (NEW: Fulfills US vs EU routing)
+      if (rule.rule_type === 'location' && rule.geo_targets) {
+        const targets = rule.geo_targets;
+        // Check if the current country is in the target list (e.g., ['US'], ['EU', 'FR', 'DE'])
+        if (targets.length > 0 && !targets.includes(country)) continue;
       }
 
       // A/B Test check

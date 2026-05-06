@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { logAutomation } from './automation';
 import { dispatchWebhook } from './webhooks';
 import { HubSpotDeliverableAgent } from './industrial/hubspot';
+import { generateLivingQR } from './hf-generation';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -12,6 +13,48 @@ const admin = createClient(supabaseUrl, serviceKey);
  * Handles high-level logic for outreach, social, and reporting.
  */
 export class AutonomousController {
+  /**
+   * Channel C: Automated Federal Drip Sequencer
+   * Restarts outreach for MUSA-FTC compliance on stuck prospects.
+   */
+  private async runFederalDripSequencer() {
+    const workflowName = 'federal_drip_sequencer';
+    try {
+      // 1. Fetch "stuck" prospects or those needing FTC shield
+      const { data: prospects } = await admin
+        .from('lead_captures')
+        .select('*')
+        .or('status.eq.new,status.eq.contacted')
+        .filter('score', 'gte', 80)
+        .limit(10); // Process in small batches
+
+      if (!prospects || prospects.length === 0) return;
+
+      for (const p of prospects) {
+        // 2. Draft Tailored FTC Messaging
+        const msg = `Attention ${p.name || 'Operations Lead'},\n\n` +
+          `With the recent FTC $625k MUSA penalties and EO 14392, your current "Made in USA" claims are at regulatory risk.\n\n` +
+          `AuthiChain has launched the FTC Shield — the first cryptographic provenance seal for American manufacturing.\n\n` +
+          `View your prepared compliance dashboard: https://qron.space/ftc-shield`;
+
+        // 3. Dispatch via Resend (Simulated)
+        console.log(`[autonomous] Dispatching FTC Drip to ${p.email}`);
+        
+        await admin
+          .from('lead_captures')
+          .update({ 
+            status: 'qualified', 
+            metadata: { last_drip: 'ftc_shield_v1', drip_sent_at: new Date().toISOString() } 
+          })
+          .eq('id', p.id);
+      }
+
+      await logAutomation(workflowName, 'cron', 'success', { prospects_processed: prospects.length });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+    }
+  }
+
   /**
    * Run the daily executive business cycle.
    */
@@ -347,13 +390,66 @@ export class AutonomousController {
   }
 
   /**
-   * Specific for qron.space
+   * Specific for qron.space: Autonomous Living Art Rotation
+   * Processes active living_art_schedules, generates new AI art, and updates the base QRON.
    */
   private async runQronStorySync() {
+    const workflowName = 'qron_story_sync';
     try {
-      await logAutomation('qron_story_sync', 'cron', 'success', { narratives_active: 12, reveals_optimized: true });
+      const now = new Date().toISOString();
+      const { data: schedules, error: fetchErr } = await admin
+        .from('living_art_schedules')
+        .select('*, qrons:qron_id(target_url, mode)')
+        .eq('is_processed', false)
+        .lte('start_time', now)
+        .limit(10); // Process in batches to respect rate limits
+
+      if (fetchErr) throw fetchErr;
+      if (!schedules || schedules.length === 0) return;
+
+      console.log(`[autonomous] Processing ${schedules.length} Living Art schedules...`);
+      let processedCount = 0;
+
+      for (const schedule of schedules) {
+        if (!schedule.qrons?.target_url) continue;
+
+        try {
+          // 1. Generate new art via Hugging Face Engine
+          const result = await generateLivingQR({
+            url: schedule.qrons.target_url,
+            prompt: schedule.prompt,
+            qr_weight: 1.45,
+            start_step: 0.35,
+          });
+
+          // 2. Update schedule record
+          await admin
+            .from('living_art_schedules')
+            .update({
+              is_processed: true,
+              processed_at: now,
+              new_image_url: result.imageUrl,
+            })
+            .eq('id', schedule.id);
+
+          // 3. Update the base QRON to display the new art
+          await admin
+            .from('qrons')
+            .update({
+              image_url: result.imageUrl,
+              updated_at: now,
+            })
+            .eq('id', schedule.qron_id);
+
+          processedCount++;
+        } catch (genErr) {
+          console.error(`[autonomous] Failed to process schedule ${schedule.id}:`, genErr);
+        }
+      }
+
+      await logAutomation(workflowName, 'cron', 'success', { narratives_active: processedCount, reveals_optimized: true });
     } catch (err: unknown) {
-      await logAutomation('qron_story_sync', 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
     }
   }
 

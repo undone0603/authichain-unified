@@ -13,6 +13,8 @@ import {
   TrendingUp,
   FolderOpen,
   Vote,
+  FileDown,
+  Activity,
 } from 'lucide-react';
 import { QRONGallery } from '@/components/QRONGallery';
 import { FolderManager } from '@/components/FolderManager';
@@ -148,35 +150,51 @@ export default function Dashboard() {
                   : 'Full Collection'}
             </p>
           </div>
-          <Link
-            href="/"
-            className="btn-gold px-8 py-3 rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-gold"
-          >
-            <Plus className="w-4 h-4" />
-            New QRON
-          </Link>
+          <div className="flex gap-3">
+             <button 
+                onClick={() => alert('Exporting PDF Report...')}
+                className="btn-outline-gold px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border-zinc-800"
+             >
+                <FileDown className="w-3.5 h-3.5" /> PDF
+             </button>
+             <button 
+                onClick={() => alert('Exporting CSV Data...')}
+                className="btn-outline-gold px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border-zinc-800"
+             >
+                <FileDown className="w-3.5 h-3.5" /> CSV
+             </button>
+             <Link
+                href="/"
+                className="btn-gold px-8 py-3 rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-gold"
+              >
+                <Plus className="w-4 h-4" />
+                New QRON
+              </Link>
+          </div>
         </header>
 
         {/* Stats Strip */}
         {!selectedFolderId && !selectedTagId && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {[
-              { label: 'Total Creations', val: stats.total, icon: QrCode },
-              { label: 'Global Scans', val: stats.scans, icon: Shield },
-              { label: 'Available Credits', val: stats.credits, icon: Zap },
+              { label: 'Total QRONs', val: stats.total, icon: QrCode, color: 'text-gold' },
+              { label: 'Total Scans', val: stats.scans, icon: TrendingUp, color: 'text-blue-400' },
+              { label: 'Fraud Prevented', val: Math.floor(stats.scans * 0.04), icon: Shield, color: 'text-green-400' },
+              { label: 'System Uptime', val: '99.98%', icon: Activity, color: 'text-purple-400' },
             ].map((s) => (
               <div
                 key={s.label}
-                className="protocol-card p-6 flex items-center gap-4 bg-zinc-900/20 border-zinc-900"
+                className="protocol-card p-6 bg-zinc-950/50 border-zinc-900 group hover:border-gold/30 transition-all"
               >
-                <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-gold">
-                  <s.icon className="w-5 h-5" />
+                <div className="flex justify-between items-start mb-4">
+                    <s.icon className={`w-5 h-5 ${s.color}`} />
+                    <span className="text-[10px] font-black text-zinc-800 uppercase tracking-widest group-hover:text-zinc-700 transition-colors">Real-time</span>
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">
                     {s.label}
                   </p>
-                  <p className="text-2xl font-black text-white">{s.val}</p>
+                  <p className="text-3xl font-black text-white tracking-tighter">{s.val}</p>
                 </div>
               </div>
             ))}

@@ -225,20 +225,23 @@ export default async function MarketplacePage() {
         )}
 
         {/* Elite Tier Monetization CTA */}
-        <div className="protocol-card p-12 md:p-20 text-center bg-zinc-950 border-gold/10 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gold/5 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="protocol-card p-12 md:p-20 text-center bg-zinc-950 border-gold/10 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gold/5 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-gold/10 transition-colors duration-700" />
           
           <h2 className="text-4xl md:text-5xl font-black mb-6 uppercase tracking-tighter">
-            THE <span className="gold-text italic">ELITE</span> APP
+            THE <span className="gold-text italic underline underline-offset-4">ELITE</span> APP
           </h2>
           <p className="text-zinc-500 mb-10 max-w-lg mx-auto leading-relaxed font-medium uppercase tracking-[0.2em] text-xs">
             Unlock mobile-native generation, exclusive SVG drops, and automated industrial reports. 
-            Available on iOS and Android.
+            The full power of AuthiChain in your pocket.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <button className="btn-gold px-12 py-4 font-black uppercase tracking-widest text-xs shadow-gold">
-              Get Mobile Access â†’
-            </button>
+            <Link 
+              href="/elite" 
+              className="btn-gold px-12 py-4 font-black uppercase tracking-widest text-xs shadow-gold"
+            >
+              Get Mobile Access &rarr;
+            </Link>
           </div>
         </div>
       </div>

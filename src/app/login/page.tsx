@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Shield, Sparkles, ArrowRight } from 'lucide-react';
 

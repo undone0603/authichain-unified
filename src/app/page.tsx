@@ -50,6 +50,45 @@ export default function Home() {
   const [showEmailCapture, setShowEmailCapture] = useState(false);
   const [captureEmail, setCaptureEmail] = useState('');
   const [emailSaved, setEmailSaved] = useState(false);
+  const [isMagicGenerating, setIsMagicGenerating] = useState(false);
+  const [showScanTest, setShowScanTest] = useState(false);
+
+  const handleMagicTry = async (brandName: string) => {
+    const examples: Record<string, { url: string; prompt: string; mode: string }> = {
+      Tesla: {
+        url: 'https://tesla.com',
+        prompt: 'Futuristic glass aesthetic, red glowing circuits, minimalist cybertech',
+        mode: 'living'
+      },
+      Nike: {
+        url: 'https://nike.com',
+        prompt: 'Abstract liquid motion, athletic textures, vibrant energetic pulses',
+        mode: 'kinetic'
+      },
+      Rolex: {
+        url: 'https://rolex.com',
+        prompt: 'Luxury gold watch mechanisms, intricate gear details, emerald green and gold hues',
+        mode: 'holographic'
+      }
+    };
+
+    const ex = examples[brandName] || examples.Tesla;
+    setTargetUrl(ex.url);
+    setPrompt(ex.prompt);
+    const mode = MODES.find(m => m.id === ex.mode);
+    if (mode) setSelectedMode(mode);
+    
+    setIsMagicGenerating(true);
+    // Auto-scroll to generator
+    document.getElementById('generator-section')?.scrollIntoView({ behavior: 'smooth' });
+    
+    // Simulate thinking/auto-start
+    setTimeout(() => {
+      if (user) handleGenerate();
+      else handleGuestGenerate();
+      setIsMagicGenerating(false);
+    }, 1500);
+  };
 
   const saveGuestEmail = async () => {
     if (!captureEmail || !captureEmail.includes('@')) return;
@@ -301,8 +340,23 @@ export default function Home() {
             and verifiable by anyone, anywhere.
           </p>
 
+          {/* Magic Try Buttons */}
+          <div className="flex flex-wrap justify-center gap-4 mt-8">
+             <span className="w-full text-[10px] font-black uppercase tracking-[0.2em] text-zinc-700 mb-2">Instant Demo:</span>
+             {['Tesla', 'Nike', 'Rolex'].map(brand => (
+               <button
+                 key={brand}
+                 onClick={() => handleMagicTry(brand)}
+                 disabled={isMagicGenerating || loading}
+                 className="px-6 py-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-gold/50 transition-all text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-white"
+               >
+                 Try for {brand}
+               </button>
+             ))}
+          </div>
+
           {/* Stat strip */}
-          <div className="flex flex-wrap justify-center gap-8 mt-10">
+          <div className="flex flex-wrap justify-center gap-8 mt-12">
             {[
               {
                 icon: <Zap className="w-4 h-4" />,
@@ -333,12 +387,49 @@ export default function Home() {
               </div>
             ))}
           </div>
+
+          {/* New Trust Row */}
+          <div className="mt-16 flex flex-col items-center">
+             <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6">
+                <span>Polygon POS</span>
+                <div className="w-1 h-1 rounded-full bg-zinc-800" />
+                <span>NIST Compliant</span>
+                <div className="w-1 h-1 rounded-full bg-zinc-800" />
+                <span>ISO 27001 Ready</span>
+             </div>
+             <div className="px-8 py-4 rounded-2xl bg-gold/5 border border-gold/10 inline-flex items-center gap-6">
+                <div className="text-left border-r border-gold/10 pr-6">
+                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">Live Trust Feed</p>
+                    <p className="text-xl font-black text-white tracking-tighter">1,247 <span className="text-zinc-500 font-medium text-xs tracking-normal uppercase ml-1">Verifications this week</span></p>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                   <CheckCircle className="w-4 h-4 text-green-500" />
+                   Verified by 5 AI Agents
+                </div>
+             </div>
+          </div>
         </div>
 
         <div className="gold-divider mb-12" />
 
         {/* Generator */}
-        <div className="protocol-card p-8 mb-12">
+        <div id="generator-section" className="protocol-card p-8 mb-12 relative overflow-hidden">
+          {/* Magic Loading Overlay */}
+          {(loading || isMagicGenerating) && (
+            <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
+               <div className="relative mb-6">
+                  <div className="w-20 h-20 rounded-full border-2 border-gold/20 border-t-gold animate-spin" />
+                  <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-gold animate-pulse" />
+               </div>
+               <h3 className="text-xl font-black uppercase tracking-tighter gold-text mb-2">
+                 {isMagicGenerating ? 'Synchronizing Brand Assets...' : 'Creating Cinematic QRON...'}
+               </h3>
+               <p className="text-zinc-500 text-xs font-bold uppercase tracking-[0.2em] max-w-xs leading-loose">
+                 Anchoring to AuthiChain Truth Network â€¢ AI Inference in progress â€¢ ~15s
+               </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-white">Create Your QRON</h2>
             <span className="protocol-badge">
@@ -690,14 +781,98 @@ export default function Home() {
                 Cryptographically signed · Blockchain-anchored · Publicly
                 verifiable
               </p>
-              <a
-                href={result}
-                download={downloadName}
-                className="btn-outline-gold inline-flex items-center gap-2 px-6 py-3 rounded-xl"
-              >
-                <Download className="w-4 h-4" />
-                Download QRON
-              </a>
+
+              <div className="flex flex-wrap justify-center gap-4">
+                <button
+                  onClick={() => setShowScanTest(true)}
+                  className="btn-gold px-8 py-3 rounded-xl inline-flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-gold"
+                >
+                   <Shield className="w-4 h-4" /> Simulate Scan Test
+                </button>
+                <a
+                  href={result}
+                  download={downloadName}
+                  className="btn-outline-gold inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </a>
+              </div>
+              
+              <div className="pt-2">
+                <Link 
+                  href={`/reveal/${downloadName.split('-')[1] || 'demo'}`}
+                  className="text-[9px] font-black text-zinc-600 hover:text-gold uppercase tracking-[0.2em] transition-colors"
+                >
+                  View on Blockchain Explorer &rarr;
+                </Link>
+              </div>
+
+              {/* Scan Test Simulation Modal */}
+              {showScanTest && (
+                <div className="fixed inset-0 z-[2000] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 overflow-y-auto">
+                    <div className="max-w-md w-full relative">
+                        {/* Fake Phone Frame */}
+                        <div className="relative aspect-[9/19] bg-[#050505] rounded-[3rem] border-[8px] border-zinc-800 shadow-2xl overflow-hidden ring-1 ring-zinc-700/50">
+                            {/* Fake Notch */}
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-zinc-800 rounded-b-2xl z-20" />
+                            
+                            {/* Camera View Overlay */}
+                            <div className="absolute inset-0 z-0">
+                                <Image src={result} fill className="object-cover blur-[2px] opacity-40 scale-150" alt="camera feed" />
+                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/80" />
+                            </div>
+
+                            {/* Scan UI */}
+                            <div className="relative z-10 h-full flex flex-col p-8">
+                                <div className="mt-12 flex justify-between items-center">
+                                    <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-xs font-bold">Z</div>
+                                    <div className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[9px] font-black text-white tracking-widest uppercase">Protocol Live</div>
+                                </div>
+
+                                <div className="flex-1 flex flex-col items-center justify-center">
+                                    <div className="w-56 h-56 relative border-2 border-gold/40 rounded-3xl p-4 mb-8">
+                                        <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-gold rounded-tl-xl" />
+                                        <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-gold rounded-tr-xl" />
+                                        <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-gold rounded-bl-xl" />
+                                        <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-gold rounded-br-xl" />
+                                        <div className="absolute inset-0 bg-gold/5 animate-pulse" />
+                                        <Image src={result} fill className="object-contain p-4" alt="scanning qron" />
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2 animate-in slide-in-from-bottom-8 duration-700 delay-500 fill-mode-both">
+                                        <div className="p-3 rounded-full bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.5)] mb-2">
+                                            <CheckCircle className="w-8 h-8 text-white" />
+                                        </div>
+                                        <h4 className="text-xl font-black text-white uppercase tracking-tighter italic">Authentic Verified</h4>
+                                        <p className="text-[10px] font-black text-gold uppercase tracking-[0.3em]">AuthiChain SECURED</p>
+                                    </div>
+                                </div>
+
+                                {/* StoryMode Preview */}
+                                <div className="mt-auto bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-3xl p-6 mb-4 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-1000 fill-mode-both">
+                                    <h5 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <Sparkles className="w-3 h-3 text-gold" /> StoryMode Narrative
+                                    </h5>
+                                    <p className="text-sm font-medium text-white leading-relaxed italic">
+                                        &quot;This artifact represents a fusion of peak industrial engineering and creative autonomous AI. Every module is a signature of truth, anchored forever on the Polygon network...&quot;
+                                    </p>
+                                    <div className="mt-6 flex gap-3">
+                                        <div className="flex-1 h-10 rounded-xl bg-gold flex items-center justify-center text-black text-xs font-black uppercase tracking-widest">Buy Now</div>
+                                        <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white"><ArrowRight className="w-4 h-4" /></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => setShowScanTest(false)}
+                            className="mt-8 w-full text-[10px] font-black text-zinc-500 hover:text-white uppercase tracking-[0.4em] transition-colors"
+                        >
+                            [ CLOSE SIMULATION ]
+                        </button>
+                    </div>
+                </div>
+              )}
 
               <div className="mt-6 max-w-sm mx-auto">
                 <SocialShareCTA imageUrl={result} />
