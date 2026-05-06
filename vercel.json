@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/automation/cron",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/crm/sync",
+      "schedule": "0 */12 * * *"
+    }
+  ]
+}
