@@ -10,6 +10,14 @@ import {
 } from 'lucide-react';
 import { ConnectButton } from 'thirdweb/react';
 import { thirdwebClient, activeChain } from '@/lib/thirdweb';
+import { createWallet, inAppWallet } from 'thirdweb/wallets';
+
+const wallets = [
+  inAppWallet(),
+  createWallet('io.metamask'),
+  createWallet('com.coinbase.wallet'),
+  createWallet('me.rainbow'),
+];
 
 export default function Governance() {
   const [stakedAmount] = useState('5,000');
@@ -69,6 +77,7 @@ export default function Governance() {
             <ConnectButton
               client={thirdwebClient}
               chain={activeChain}
+              wallets={wallets}
               connectButton={{
                 label: 'Connect Wallet',
                 style: {

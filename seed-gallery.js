@@ -8,72 +8,51 @@ const DEMO_USER_ID = '00000000-0000-0000-0000-000000000000';
 
 const galleryItems = [
   {
+    mode: 'industrial',
+    target_url: 'https://authichain.com',
+    image_url: '/media/samples/03_flux_authichain.png',
+    prompt: 'AuthiChain - Renaissance Marble · Baroque Gold. Blockchain/Authentication seal.',
+    style: 'renaissance-gold',
+  },
+  {
+    mode: 'industrial',
+    target_url: 'https://strainchain.io',
+    image_url: '/media/samples/02_flux_strainchain.png',
+    prompt: 'StrainChain - Bioluminescent Jungle · Sacred Geometry. Cannabis/AgTech provenance.',
+    style: 'bio-jungle',
+  },
+  {
+    mode: 'industrial',
+    target_url: 'https://luxury.fashion',
+    image_url: '/media/samples/06_flux_haute_couture.png',
+    prompt: 'Haute Couture - Art Deco Gold · Black Obsidian Velvet. Luxury Fashion validation.',
+    style: 'art-deco-velvet',
+  },
+  {
+    mode: 'industrial',
+    target_url: 'https://ev-industry.ai',
+    image_url: '/media/samples/04_flux_ev_industry.png',
+    prompt: 'EV Industry - Plasma Lightning · Chrome Supercar. Electric Automotive telemetry.',
+    style: 'plasma-chrome',
+  },
+  {
     mode: 'holographic',
-    target_url: 'https://qron.space/demo/chromatic',
-    image_url: '/media/gallery-chromatic-portal-1080.svg',
-    prompt: 'Full-spectrum AI art woven around the QR matrix. Maximum visual impact.',
-    style: 'chromatic-portal',
-  },
-  {
-    mode: 'static',
-    target_url: 'https://qron.space/demo/static',
-    image_url: '/media/gallery-static-portal-1080.svg',
-    prompt: 'Clean black-and-gold geometry. AuthiChain Protocol seal at center.',
-    style: 'static-portal',
-  },
-  {
-    mode: 'enterprise',
-    target_url: 'https://qron.space/demo/event',
-    image_url: '/media/gallery-event-poster-1350x1080.svg',
-    prompt: 'Event poster with AuthiChain-verified QRON for luxury retail.',
-    style: 'luxury-brand',
-  },
-  {
-    mode: 'pro',
-    target_url: 'https://qron.space/demo/ecommerce',
-    image_url: '/media/gallery-ecommerce-card-1080.svg',
-    prompt: 'Product card with chromatic QRON for high-end fashion validation.',
-    style: 'ecommerce-premium',
-  },
-  {
-    mode: 'living',
-    target_url: 'https://qron.space/demo/merch',
-    image_url: '/media/gallery-creator-merch-1080.svg',
-    prompt: 'Tech gadget with living QR corner for creator merchandise tracking.',
-    style: 'creator-merch',
+    target_url: 'https://qron.space/demo/holographic',
+    image_url: '/media/samples/02-holographic-mosaic.png',
+    prompt: 'Holographic Mosaic - Shimmering iridescent tiles that shift color based on viewing angle.',
+    style: 'holo-mosaic',
   },
   {
     mode: 'cyberpunk',
     target_url: 'https://qron.space/demo/neon',
-    image_url: '/media/neon-matrix.svg',
-    prompt: 'Glowing grid of pulsating neon lines with matrix-like streams of energy.',
-    style: 'neon-matrix',
-  },
-  {
-    mode: 'space',
-    target_url: 'https://qron.space/demo/galactic',
-    image_url: '/media/galactic.svg',
-    prompt: 'Cosmic starfields and swirling galaxies — particles orbiting a living QRON.',
-    style: 'galactic',
-  },
-  {
-    mode: 'dimensional',
-    target_url: 'https://qron.space/demo/portfolio-1',
-    image_url: '/media/portfolio-qron-1.svg',
-    prompt: 'Architectural depth layering, spatial anchor for industrial blueprints.',
-    style: 'dimensional-gate',
-  },
-  {
-    mode: 'layered',
-    target_url: 'https://qron.space/demo/portfolio-2',
-    image_url: '/media/portfolio-qron-2.svg',
-    prompt: 'Multi-layered cryptographic signature marks for secure documentation.',
-    style: 'secure-mark',
+    image_url: '/media/samples/01-neon-glitch.png',
+    prompt: 'Neon Glitch - High-contrast cyan and magenta digital noise with glowing scan lines.',
+    style: 'neon-glitch',
   }
 ];
 
 async function seed() {
-  console.log('Seeding QRON Gallery...');
+  console.log('Seeding QRON Gallery with new Flux Masterpieces...');
   try {
     // Clear existing demos to avoid duplicates
     console.log('Cleaning existing demo items...');
@@ -94,4 +73,3 @@ async function seed() {
 }
 
 seed();
-

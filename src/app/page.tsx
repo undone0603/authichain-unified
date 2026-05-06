@@ -259,8 +259,8 @@ export default function Home() {
           {/* Hero QR Art */}
           <div className="flex justify-center mb-6 animate-float">
             <Image
-              src="/media/hero-qron-art.svg"
-              alt="QRON Gold QR Art"
+              src="/media/samples/01_flux_qron_space.png"
+              alt="QRON Space Artistic AI"
               width={220}
               height={220}
               priority
@@ -710,14 +710,14 @@ export default function Home() {
           description="Beautifully designed QRON styles — each one cryptographically signed by the AuthiChain Protocol."
           images={[
             {
-              src: '/media/gallery-static-portal-1080.svg',
-              alt: 'Centered scannable QR with cyan/blue glowing ring.',
+              src: '/media/samples/03_flux_authichain.png',
+              alt: 'AuthiChain Renaissance Gold AI QR.',
               width: 1080,
               height: 1080,
             },
             {
-              src: '/media/gallery-chromatic-portal-1080.svg',
-              alt: 'Chromatic portal QR code.',
+              src: '/media/samples/02_flux_strainchain.png',
+              alt: 'StrainChain Bio Jungle AI QR.',
               width: 1080,
               height: 1080,
             },
@@ -729,26 +729,26 @@ export default function Home() {
           description="Enterprise-grade QR authentication across luxury, retail, events, and supply chain."
           images={[
             {
-              src: '/media/gallery-event-poster-1350x1080.svg',
-              alt: 'Event poster with AuthiChain-verified QRON.',
-              width: 1350,
-              height: 1080,
-            },
-            {
-              src: '/media/gallery-event-badge-1080.svg',
-              alt: 'Night city wall poster with QRON CTA.',
+              src: '/media/samples/06_flux_haute_couture.png',
+              alt: 'Luxury Fashion validation QRON.',
               width: 1080,
               height: 1080,
             },
             {
-              src: '/media/gallery-ecommerce-card-1080.svg',
-              alt: 'Product card with chromatic QRON.',
+              src: '/media/samples/04_flux_ev_industry.png',
+              alt: 'Electric Automotive telemetry QRON.',
               width: 1080,
               height: 1080,
             },
             {
-              src: '/media/gallery-creator-merch-1080.svg',
-              alt: 'Tech gadget with living QR corner.',
+              src: '/media/samples/07_flux_artisan_roasters.png',
+              alt: 'Food & Beverage tracking QRON.',
+              width: 1080,
+              height: 1080,
+            },
+            {
+              src: '/media/samples/08_flux_propchain.png',
+              alt: 'Real Estate/PropTech blueprint QRON.',
               width: 1080,
               height: 1080,
             },
@@ -795,28 +795,28 @@ export default function Home() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             {[
               {
-                image: '/media/gallery-chromatic-portal-1080.svg',
-                brand: 'Nike QRON',
-                style: 'Hypebeast',
-                category: 'Sport',
+                image: '/media/samples/01-neon-glitch.png',
+                brand: 'Cyberpunk',
+                style: 'Glitch Art',
+                category: 'Tech',
               },
               {
-                image: '/media/gallery-static-portal-1080.svg',
-                brand: 'Louis Vuitton',
-                style: 'Luxury',
+                image: '/media/samples/02-holographic-mosaic.png',
+                brand: 'Holographic',
+                style: 'Mosaic',
                 category: 'Luxury',
               },
               {
-                image: '/media/gallery-event-poster-1350x1080.svg',
-                brand: 'Drake OVO',
-                style: 'Gold Art',
-                category: 'Celebrity',
+                image: '/media/samples/09_flux_streamvault.png',
+                brand: 'StreamVault',
+                style: 'Film Noir',
+                category: 'Media',
               },
               {
-                image: '/media/gallery-ecommerce-card-1080.svg',
-                brand: 'Ferrari',
-                style: 'Supercar',
-                category: 'Luxury',
+                image: '/media/samples/10_flux_athletedao.png',
+                brand: 'AthleteDAO',
+                style: 'Kinetic',
+                category: 'Sports',
               },
             ].map(({ image, brand, style, category }) => (
               <div key={brand} className="protocol-card overflow-hidden group">

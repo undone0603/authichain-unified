@@ -18,6 +18,14 @@ import Image from 'next/image';
 import { useActiveAccount } from 'thirdweb/react';
 import { ConnectButton } from 'thirdweb/react';
 import { thirdwebClient, activeChain } from '@/lib/thirdweb';
+import { createWallet, inAppWallet } from 'thirdweb/wallets';
+
+const wallets = [
+  inAppWallet(),
+  createWallet('io.metamask'),
+  createWallet('com.coinbase.wallet'),
+  createWallet('me.rainbow'),
+];
 
 interface QRDisplayProps {
   qron: GeneratedQRON | null;
@@ -312,6 +320,7 @@ export function QRDisplay({ qron, isGenerating, mode }: QRDisplayProps) {
             <ConnectButton
               client={thirdwebClient}
               chain={activeChain}
+              wallets={wallets}
               connectButton={{
                 label: 'Connect Wallet to Mint',
                 style: {

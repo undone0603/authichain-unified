@@ -166,6 +166,23 @@ export class AutonomousController {
 
           // 4. Dispatch Webhook to Manufacturer
           dispatchWebhook(scan.qrons.user_id, 'security_anomaly', anomaly);
+
+          // 5. Real-Time Alert to Admin channel (Discord/Slack)
+          const securityWebhook = process.env.SECURITY_ALERTS_WEBHOOK_URL;
+          if (securityWebhook) {
+            await fetch(securityWebhook, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: `🚨 **SECURITY ALERT: Industrial Anomaly Detected**\n` +
+                  `**Type**: Geographic Drift\n` +
+                  `**Asset**: QRON-${scan.qron_id}\n` +
+                  `**Location**: ${scan.city}, ${scan.country}\n` +
+                  `**Severity**: HIGH\n` +
+                  `**Protocol Action**: Logged & Verified`,
+              }),
+            });
+          }
           
           anomaliesFound++;
         }

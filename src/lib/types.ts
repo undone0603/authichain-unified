@@ -40,7 +40,7 @@ export type QRONEntry = {
   mode: QRONMode;
   qr_content: string;
   prompt: string;
-  image_url: string; // e.g., /media/gallery-chromatic-portal-1080.svg
+  image_url: string; // e.g., /media/samples/01_flux_qron_space.png
   target_url: string;
   is_demo: boolean;
   scan_count: number;

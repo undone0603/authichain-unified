@@ -112,5 +112,11 @@ export async function GET(
   });
 
   // 5. Execute Redirect
+  if (qron.story_enabled) {
+    const revealUrl = new URL(`/reveal/${qron.id}`, request.url);
+    revealUrl.searchParams.set('dest', destination);
+    return NextResponse.redirect(revealUrl);
+  }
+
   return NextResponse.redirect(new URL(destination));
 }

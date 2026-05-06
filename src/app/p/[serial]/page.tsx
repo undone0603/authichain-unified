@@ -98,7 +98,7 @@ export default async function CertificationPage({ params }: PageProps) {
             ) : (
               <div className="flex flex-col items-center gap-6 text-zinc-300 group">
                 <Image
-                  src="/media/hero-qron-art.svg"
+                  src="/media/samples/01_flux_qron_space.png"
                   alt="Authentic Protocol Load"
                   width={200}
                   height={200}

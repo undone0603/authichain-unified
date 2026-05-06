@@ -39,7 +39,16 @@ export default async function MarketplacePage() {
     .from('qrons')
     .select('*')
     .eq('is_demo', true)
-    .limit(6);
+    .order('scan_count', { ascending: false })
+    .limit(24);
+
+  // 3. Fetch Artistic Samples specifically
+  const { data: artisticSamples } = await supabase
+    .from('qrons')
+    .select('*')
+    .eq('is_demo', true)
+    .like('image_url', '%/samples/%')
+    .limit(12);
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden selection:bg-gold selection:text-black">
@@ -178,6 +187,42 @@ export default async function MarketplacePage() {
                 ))}
             </div>
         </section>
+
+        {/* Artistic AI Masterpieces Section */}
+        {artisticSamples && artisticSamples.length > 0 && (
+          <section className="mb-32 pt-24 border-t border-zinc-900">
+            <div className="flex items-center justify-between mb-12">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-gold" />
+                <h2 className="text-xl font-black uppercase tracking-tight italic">Artistic AI Masterpieces</h2>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {artisticSamples.map((sample) => (
+                <div key={sample.id} className="protocol-card group bg-zinc-950/30 border-zinc-900 hover:border-gold/30 transition-all">
+                  <div className="relative aspect-square overflow-hidden">
+                    <Image 
+                      src={sample.image_url} 
+                      alt={sample.prompt} 
+                      fill 
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end">
+                      <p className="text-[10px] font-bold text-white uppercase tracking-widest leading-relaxed">
+                        {sample.prompt}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-4 border-t border-zinc-900 flex justify-between items-center">
+                    <span className="text-[9px] font-black text-gold uppercase tracking-[0.2em]">{sample.mode}</span>
+                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">{sample.scan_count} Scans</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Elite Tier Monetization CTA */}
         <div className="protocol-card p-12 md:p-20 text-center bg-zinc-950 border-gold/10 relative overflow-hidden">
