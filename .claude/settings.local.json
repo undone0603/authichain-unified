@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 200)",
-      "PowerShell(npx tsc --noEmit; \"EXIT:$LASTEXITCODE\")"
+      "PowerShell(npx tsc --noEmit; \"EXIT:$LASTEXITCODE\")",
+      "PowerShell(npx eslint . --max-warnings 0; \"EXIT:$LASTEXITCODE\")",
+      "PowerShell(npx tsc --noEmit; \"TSC_EXIT:$LASTEXITCODE\")"
     ]
   }
 }

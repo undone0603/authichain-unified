@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-01-27' as any,
+  apiVersion: '2025-01-27' as Stripe.StripeConfig['apiVersion'],
 });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -59,8 +59,17 @@ export async function reportAgentUsage(userId: string, toolName: keyof typeof ME
 
     // 3. Report usage units based on tool value
     const quantity = METERED_PRICING[toolName] || 1;
-    
-    await (stripe as any).subscriptionItems.createUsageRecord(meteredItem.id, {
+
+    const legacyStripe = stripe as unknown as {
+      subscriptionItems: {
+        createUsageRecord: (
+          id: string,
+          params: { quantity: number; timestamp: number; action: 'increment' | 'set' }
+        ) => Promise<unknown>;
+      };
+    };
+
+    await legacyStripe.subscriptionItems.createUsageRecord(meteredItem.id, {
       quantity,
       timestamp: Math.floor(Date.now() / 1000),
       action: 'increment',

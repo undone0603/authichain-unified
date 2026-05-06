@@ -44,7 +44,7 @@ export default function PartnerBriefPage() {
                     <p className="leading-relaxed">
                         With **EO 14392** and recent FTC enforcement sweeps (e.g., the $625k TouchTunes penalty), 
                         American manufacturers are facing unprecedented pressure to provide **verifiable proof** 
-                        for "Made in USA" (MUSA) claims.
+                        for &quot;Made in USA&quot; (MUSA) claims.
                     </p>
                     <p className="leading-relaxed font-bold">
                         The era of self-certification is over. Brands now require a consumer-facing 
@@ -84,7 +84,7 @@ export default function PartnerBriefPage() {
                     </div>
                     <h3 className="text-xl font-black uppercase mb-4 text-gold">Channel A: Label Printers</h3>
                     <p className="text-zinc-400 text-sm leading-relaxed mb-8">
-                        Embed QRON technology into existing printing workflows. Offer "AuthiChain-Verified" 
+                        Embed QRON technology into existing printing workflows. Offer &quot;AuthiChain-Verified&quot;
                         label stock as a high-margin premium service to MUSA clients.
                     </p>
                     <ul className="space-y-3 mb-10">
@@ -103,8 +103,8 @@ export default function PartnerBriefPage() {
                     </div>
                     <h3 className="text-xl font-black uppercase mb-4 text-black">Channel B: Trade Associations</h3>
                     <p className="text-zinc-600 text-sm leading-relaxed mb-8">
-                        Partner for industry-wide endorsement. Position AuthiChain as the "Recommended 
-                        Provenance Standard" for national manufacturing associations.
+                        Partner for industry-wide endorsement. Position AuthiChain as the &quot;Recommended
+                        Provenance Standard&quot; for national manufacturing associations.
                     </p>
                     <ul className="space-y-3 mb-10">
                         {['Association Endorsements', 'Member Incentives', 'Compliance Webinars'].map(li => (
@@ -125,9 +125,9 @@ export default function PartnerBriefPage() {
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-[9px] font-black uppercase tracking-widest mb-6">
                         Live Demo Preview
                     </div>
-                    <h3 className="text-3xl font-black uppercase tracking-tight mb-6">The "Story Mode" <br />Digital Reveal</h3>
+                    <h3 className="text-3xl font-black uppercase tracking-tight mb-6">The &quot;Story Mode&quot; <br />Digital Reveal</h3>
                     <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-tighter mb-8">
-                        When a consumer scans the industrial seal, they don't just see a URL. 
+                        When a consumer scans the industrial seal, they don&apos;t just see a URL.
                         They witness the cinematic narrative of American craftsmanship.
                     </p>
                     <Link href="/gallery" className="btn-gold px-8 py-3 text-[10px] font-black uppercase tracking-widest">

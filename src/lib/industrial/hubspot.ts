@@ -11,12 +11,20 @@ const admin = createClient(supabaseUrl, serviceKey);
  * Unblocks stalled drip sequencers by providing tangible artifacts.
  */
 
+export interface HubSpotDealMetadata {
+  type?: string;
+  style?: string;
+  identity?: string;
+  batch?: string;
+  rfid?: string;
+}
+
 export interface HubSpotDeal {
   id: string;
   dealname: string;
   dealstage: string;
   amount?: string;
-  metadata?: Record<string, any>;
+  metadata?: HubSpotDealMetadata;
 }
 
 export class HubSpotDeliverableAgent {

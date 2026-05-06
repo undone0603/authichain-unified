@@ -35,8 +35,8 @@ async function registerWebhook() {
     } else {
       console.error('❌ API ERROR:', data.description);
     }
-  } catch (error: any) {
-    console.error('💥 NETWORK ERROR:', error.message);
+  } catch (error) {
+    console.error('💥 NETWORK ERROR:', error instanceof Error ? error.message : String(error));
   }
 }
 
