@@ -1,0 +1,251 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
+import { User } from '@supabase/supabase-js';
+import Link from 'next/link';
+import {
+  LayoutDashboard,
+  QrCode,
+  Zap,
+  Shield,
+  Plus,
+  TrendingUp,
+  FolderOpen,
+  Vote,
+} from 'lucide-react';
+import { QRONGallery } from '@/components/QRONGallery';
+import { FolderManager } from '@/components/FolderManager';
+import { TagManager } from '@/components/TagManager';
+import { APIKeyManager } from '@/components/APIKeyManager';
+import { WebhookManager } from '@/components/WebhookManager';
+
+export default function Dashboard() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
+  const [stats, setStats] = useState({ total: 0, scans: 0, credits: 0 });
+  const supabase = createClient();
+
+  useEffect(() => {
+    const getData = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.assign('/login');
+        return;
+      }
+      setUser(user);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      const { data: userQrons } = await supabase
+        .from('qrons')
+        .select('scan_count')
+        .eq('user_id', user.id);
+
+      if (userQrons) {
+        const totalScans = userQrons.reduce(
+          (acc, q) => acc + (q.scan_count || 0),
+          0
+        );
+        setStats({
+          total: userQrons.length,
+          scans: totalScans,
+          credits: profile ? profile.generations_limit - profile.generations_used : 0,
+        });
+      }
+      setLoading(false);
+    };
+    getData();
+  }, [supabase]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white flex flex-col md:flex-row">
+      {/* Sidebar */}
+      <aside className="w-full md:w-80 border-r border-zinc-900 flex flex-col p-6 space-y-8">
+        <div className="flex items-center gap-2 px-2">
+          <Shield className="w-6 h-6 text-gold" />
+          <span className="text-xl font-black gold-text">QRON</span>
+        </div>
+
+        <div className="space-y-6">
+          <nav className="space-y-1">
+            <button
+              onClick={() => {
+                setSelectedFolderId(null);
+                setSelectedTagId(null);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                !selectedFolderId && !selectedTagId
+                  ? 'bg-gold/10 text-gold'
+                  : 'text-zinc-500 hover:text-white hover:bg-zinc-900'
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Overview
+            </button>
+            <Link
+              href="/governance"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-zinc-500 hover:text-white hover:bg-zinc-900 transition-all"
+            >
+              <Vote className="w-4 h-4 text-gold/40" />
+              Governance
+            </Link>
+          </nav>
+
+          <FolderManager
+            userId={user?.id || ''}
+            onFolderSelected={setSelectedFolderId}
+          />
+          <TagManager userId={user?.id || ''} onTagSelected={setSelectedTagId} />
+
+          <div className="p-4 rounded-xl bg-gold/5 border border-gold/10">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-[10px] font-black uppercase text-zinc-500">
+                Credits
+              </p>
+              <p className="text-[10px] font-black uppercase text-gold">
+                {stats.credits} Left
+              </p>
+            </div>
+            <div className="w-full bg-zinc-900 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-gold h-full"
+                style={{ width: `${(stats.credits / 10) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 p-6 md:p-12 overflow-y-auto">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+          <div>
+            <h1 className="text-4xl font-black tracking-tight uppercase">
+              My <span className="gold-text">Registry</span>
+            </h1>
+            <p className="text-zinc-500 text-sm font-medium mt-1 uppercase tracking-widest">
+              {selectedFolderId
+                ? 'Filtered by Folder'
+                : selectedTagId
+                  ? 'Filtered by Tag'
+                  : 'Full Collection'}
+            </p>
+          </div>
+          <Link
+            href="/"
+            className="btn-gold px-8 py-3 rounded-xl flex items-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-gold"
+          >
+            <Plus className="w-4 h-4" />
+            New QRON
+          </Link>
+        </header>
+
+        {/* Stats Strip */}
+        {!selectedFolderId && !selectedTagId && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {[
+              { label: 'Total Creations', val: stats.total, icon: QrCode },
+              { label: 'Global Scans', val: stats.scans, icon: Shield },
+              { label: 'Available Credits', val: stats.credits, icon: Zap },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="protocol-card p-6 flex items-center gap-4 bg-zinc-900/20 border-zinc-900"
+              >
+                <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-gold">
+                  <s.icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">
+                    {s.label}
+                  </p>
+                  <p className="text-2xl font-black text-white">{s.val}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Library */}
+        <section>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-lg font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+              <FolderOpen className="w-5 h-5 text-gold/40" />
+              Library
+            </h2>
+            <div className="h-px flex-1 bg-zinc-900 mx-6" />
+          </div>
+
+          <QRONGallery
+            currentUserId={user?.id}
+            selectedFolderId={selectedFolderId}
+            selectedTagId={selectedTagId}
+          />
+        </section>
+
+        {/* Affiliate Hub */}
+        {!selectedFolderId && !selectedTagId && (
+            <section className="mt-16 pt-12 border-t border-zinc-900">
+                <div className="flex items-center gap-3 mb-8">
+                    <TrendingUp className="w-5 h-5 text-gold" />
+                    <h2 className="text-xl font-black uppercase tracking-tight">Affiliate Hub</h2>
+                </div>
+                
+                <div className="protocol-card p-8 bg-gold/5 border-gold/10">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                        <div className="max-w-md">
+                            <h3 className="text-lg font-bold text-white mb-2">Earn 20% Recurring Commission</h3>
+                            <p className="text-zinc-500 text-sm leading-relaxed">
+                                Share QRON with your audience. For every user who signs up via your link, 
+                                you earn 20% of their generation pack or subscription purchases for life.
+                            </p>
+                        </div>
+                        <button 
+                            onClick={async () => {
+                                const res = await fetch('/api/affiliate/join', { method: 'POST' });
+                                if (res.ok) alert('Welcome to the Affiliate Program!');
+                                window.location.reload();
+                            }}
+                            className="btn-gold px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px]"
+                        >
+                            Activate My Affiliate Link
+                        </button>
+                    </div>
+                </div>
+            </section>
+        )}
+
+        {/* Industrial Access (API Keys) */}
+        {!selectedFolderId && !selectedTagId && (
+            <section className="mt-16 pt-12 border-t border-zinc-900">
+                <APIKeyManager userId={user?.id || ''} />
+            </section>
+        )}
+
+        {/* Webhooks Hub */}
+        {!selectedFolderId && !selectedTagId && (
+            <section className="mt-16 pt-12 border-t border-zinc-900">
+                <WebhookManager userId={user?.id || ''} />
+            </section>
+        )}
+      </main>
+    </div>
+  );
+}
