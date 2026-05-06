@@ -20,6 +20,14 @@ export const metadata: Metadata = {
 
 const DEMOS = [
   {
+    id: 'demo-musa-shield',
+    name: 'FTC "Made in USA" Shield',
+    style: 'Patriotic Heritage',
+    image: '/media/usa/unnamed.jpg',
+    description: 'EO 14392 compliant origin proof for American manufacturing.',
+    hash: '0x8f2a...1b9c'
+  },
+  {
     id: 'demo-bmw',
     name: 'BMW iX Pilot',
     style: 'Brushed Aluminum',
@@ -42,6 +50,14 @@ const DEMOS = [
     image: '/media/samples/10_flux_athletedao.png',
     description: 'Dynamic athlete storytelling through scannable sports art.',
     hash: '0x9p4l...2d11'
+  },
+  {
+    id: 'demo-heritage',
+    name: 'American Heritage',
+    style: 'Vintage Industrial',
+    image: '/media/usa/unnamed2.jpg',
+    description: 'Verifiable craftsmanship and origin tracking for premium goods.',
+    hash: '0x4c1e...8d33'
   }
 ];
 

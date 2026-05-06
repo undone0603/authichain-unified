@@ -55,7 +55,7 @@ export default function FtcShieldPage() {
                 </div>
             </div>
             {/* Fallback to static if video is not loaded yet */}
-            <div className="absolute inset-0 bg-[url('/media/samples/01_flux_qron_space.png')] bg-cover bg-center opacity-40 blur-sm" />
+            <div className="absolute inset-0 bg-[url('/media/usa/patriotic-pride-unleashed-honoring-the-red-white-and-blue-with-qr-code-tank-art-artvizual.jpg')] bg-cover bg-center opacity-40 blur-sm" />
             <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black to-transparent z-20">
                 <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">Demo: The Patriot's Shield</p>
                 <p className="text-xl font-black uppercase tracking-tight">Instant Origin Verification</p>

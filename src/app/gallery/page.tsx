@@ -97,6 +97,81 @@ export default async function MarketplacePage() {
           </p>
         </div>
 
+        {/* Featured Drop: Myles High Collection */}
+        <section className="mb-32">
+          <div className="flex items-center justify-between mb-12">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-5 h-5 text-gold" />
+              <h2 className="text-2xl font-black uppercase tracking-tight italic">Featured Drop: Myles High Collection</h2>
+            </div>
+            <div className="px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest">
+                Exclusive SVG Artifacts
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+            {[
+              { name: 'Myles High Original', file: 'myles-high-nft.svg', price: '0.15 ETH' },
+              { name: 'Diamond Edition', file: 'diamond-nft.svg', price: '0.50 ETH' },
+              { name: 'Watermelon Zmartini', file: 'watermelon-zmartini-nft.svg', price: '0.25 ETH' },
+              { name: 'Jared Signature', file: 'jared-nft.svg', price: '0.20 ETH' },
+              { name: 'Bag EZ Edition', file: 'bag_ez_nft_logo.svg', price: '0.30 ETH' },
+              { name: 'Concept Design', file: 'nft-design.svg', price: '0.10 ETH' },
+            ].map((nft, idx) => (
+              <div
+                key={`mh-${idx}`}
+                className="protocol-card group relative bg-zinc-950/50 border-zinc-900 hover:border-gold/40 transition-all duration-500 hover:-translate-y-2"
+              >
+                <div className="absolute top-4 right-4 z-20 px-3 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-gold/20 text-[9px] font-black text-gold uppercase tracking-widest">
+                    5% Royalty
+                </div>
+
+                <div className="relative aspect-square overflow-hidden bg-zinc-900 p-8">
+                  <Image
+                    src={`/media/myles-high/${nft.file}`}
+                    alt={nft.name}
+                    fill
+                    className="object-contain p-8 transition-transform duration-700 group-hover:scale-110 drop-shadow-[0_0_30px_rgba(201,162,39,0.2)]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent flex flex-col justify-end p-8">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="p-1 rounded bg-gold/10 text-gold border border-gold/20">
+                            <Shield className="w-3 h-3" />
+                        </span>
+                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Premium SVG Artifact</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-8 space-y-6">
+                  <div>
+                    <h3 className="text-lg font-black uppercase tracking-tight text-white mb-2 line-clamp-1">
+                      {nft.name}
+                    </h3>
+                    <div className="flex items-center gap-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
+                        <span className="flex items-center gap-1 text-gold"><Leaf className="w-3 h-3" /> Exclusive</span>
+                        <span>&bull;</span>
+                        <span>{nft.price}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                      <button className="btn-gold py-3 text-[10px] font-black uppercase tracking-widest shadow-gold">
+                          Collect Now
+                      </button>
+                      <Link 
+                        href={`/p/myles-high-${idx}`}
+                        className="btn-outline-gold py-3 text-[10px] font-black uppercase tracking-widest border-zinc-800 text-center flex items-center justify-center gap-2"
+                      >
+                          Verify <ExternalLink className="w-3 h-3 opacity-50" />
+                      </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Marketplace Grid: SVG Artifacts */}
         <section className="mb-32">
           <div className="flex items-center justify-between mb-12">
