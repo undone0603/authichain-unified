@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { deductCredit } from '@/lib/business-tier';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { generateLivingQR } from '@/lib/hf-generation';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
@@ -129,42 +130,23 @@ export async function POST(request: Request) {
         { status: 400 }
       );
 
-    // â”€â”€ Generate via QRON CF Worker (HuggingFace backend) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const workerRes = await fetch(`${CF_WORKER_URL}/v1/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    // â”€â”€ Generate via Hugging Face Inference API (Phase 3) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    let imageUrl = '';
+    let hfResult: Awaited<ReturnType<typeof generateLivingQR>> | null = null;
+    try {
+      hfResult = await generateLivingQR({
         url: targetUrl,
         prompt: finalPrompt,
-        style: 'space',
-      }),
-      signal: AbortSignal.timeout(110_000),
-    });
-
-    if (!workerRes.ok) {
-      const errText = await workerRes.text();
-      console.error('[generate] Worker error:', workerRes.status, errText);
-      if (workerRes.status === 503)
-        return NextResponse.json(
-          {
-            message: 'Generation service warming up â€” retry in 30s',
-            code: 'WARMING_UP',
-          },
-          { status: 503 }
-        );
+      });
+      imageUrl = hfResult.imageUrl;
+    } catch (err: unknown) {
+      console.error('[generate] HF Generation failed:', err);
       return NextResponse.json(
-        { message: 'AI generation failed' },
+        { message: 'AI generation engine is temporarily unavailable. Try again in 60s.' },
         { status: 502 }
       );
     }
 
-    const workerData = (await workerRes.json()) as {
-      id?: string;
-      previewUrl?: string;
-      downloadUrl?: string;
-      status?: string;
-    };
-    const imageUrl = workerData.downloadUrl || workerData.previewUrl || '';
     if (!imageUrl)
       return NextResponse.json({ message: 'No image returned' }, { status: 502 });
 
@@ -189,6 +171,12 @@ export async function POST(request: Request) {
         preset_id: presetId || null,
         mode,
         provider: 'huggingface',
+        // Log scannability data in a flexible field (mode or metadata)
+        metadata: {
+          scannable: hfResult?.scannable,
+          attempts: hfResult?.attempts,
+          hf_model: 'controlnet-v1p-sd15'
+        }
       })
       .then(({ error }) => {
         if (error)

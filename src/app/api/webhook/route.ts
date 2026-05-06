@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { PLAN_CREDITS, PLAN_TIER, type PlanId } from '@/lib/plans';
-
-const CF_WORKER_URL =
-  process.env.QRON_WORKER_URL ||
-  'https://qron-ai-api.undone-k.workers.dev';
+import { generateLivingQR } from '@/lib/hf-generation';
 
 export const runtime = 'nodejs';
 
@@ -215,41 +212,22 @@ async function generateAndDeliverQr(session: Stripe.Checkout.Session) {
     );
     return;
   }
-  if (!process.env.FAL_KEY) {
-    console.warn('[webhook] FAL_KEY not set â€” skipping QR generation');
-    return;
-  }
 
-  const QRCode = (await import('qrcode')).default;
-  const _qrDataUrl = await QRCode.toDataURL(url, {
-    errorCorrectionLevel: 'H',
-    width: 1024,
-    margin: 2,
-  });
-
-  const workerRes1 = await fetch(`${CF_WORKER_URL}/v1/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  try {
+    const hfResult = await generateLivingQR({
       url,
       prompt: `highly detailed QR code art, scannable, ${prompt}`,
-      style: 'space',
-    }),
-    signal: AbortSignal.timeout(110_000),
-  });
-  if (!workerRes1.ok) throw new Error(`Worker error: ${workerRes1.status}`);
-  const workerData1 = (await workerRes1.json()) as {
-    previewUrl?: string;
-    downloadUrl?: string;
-  };
-  const imageUrl: string | undefined =
-    workerData1.downloadUrl || workerData1.previewUrl || undefined;
-  if (!imageUrl) throw new Error('Fal.ai returned no image URL');
+    });
 
-  await Promise.all([
-    sendQrEmail(customerEmail, imageUrl, url, prompt),
-    recordDelivery(session.id, customerEmail, imageUrl, url, prompt),
-  ]);
+    const imageUrl = hfResult.imageUrl;
+
+    await Promise.all([
+      sendQrEmail(customerEmail, imageUrl, url, prompt),
+      recordDelivery(session.id, customerEmail, imageUrl, url, prompt),
+    ]);
+  } catch (err) {
+    console.error('[webhook] generateAndDeliverQr error:', err);
+  }
 }
 
 // â”€â”€â”€ Targeted QRON generation for custom_qron purchases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -269,12 +247,6 @@ async function generateAndDeliverTargetedQron(session: Stripe.Checkout.Session) 
   if (!url || !subject || !customerEmail) {
     console.warn(
       '[webhook] Skipping targeted QRON â€” missing url/subject/email in metadata'
-    );
-    return;
-  }
-  if (!process.env.FAL_KEY) {
-    console.warn(
-      '[webhook] FAL_KEY not set â€” skipping targeted QRON generation'
     );
     return;
   }
@@ -323,69 +295,58 @@ async function generateAndDeliverTargetedQron(session: Stripe.Checkout.Session) 
     'highly detailed, photorealistic, award-winning digital art',
   ].join(' ');
 
-  const QRCode = (await import('qrcode')).default;
-  const _qrDataUrl = await QRCode.toDataURL(url, {
-    errorCorrectionLevel: 'H',
-    width: 1024,
-    margin: 2,
-  });
+  try {
+    const hfResult = await generateLivingQR({
+      url,
+      prompt,
+    });
 
-  const workerRes2 = await fetch(`${CF_WORKER_URL}/v1/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, prompt, style: 'space' }),
-    signal: AbortSignal.timeout(110_000),
-  });
-  if (!workerRes2.ok) throw new Error(`Worker error: ${workerRes2.status}`);
-  const workerData2 = (await workerRes2.json()) as {
-    previewUrl?: string;
-    downloadUrl?: string;
-  };
-  const imageUrl: string | undefined =
-    workerData2.downloadUrl || workerData2.previewUrl || undefined;
-  if (!imageUrl) throw new Error('Fal.ai returned no image URL');
+    const imageUrl = hfResult.imageUrl;
 
-  // Optional NFT mint for Elite tier
-  let txHash: string | undefined;
-  if (
-    mintNft === 'true' &&
-    process.env.QRON_NFT_CONTRACT_ADDRESS &&
-    process.env.THIRDWEB_MINTER_KEY
-  ) {
-    try {
-      const mintRes = await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space'}/api/qron/mint-nft`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recipient:
-              session.metadata?.walletAddress || process.env.DEMO_WALLET_ADDRESS,
-            imageUrl,
-            destinationUrl: url,
-            qronId: `custom-${session.id}`,
-          }),
+    // Optional NFT mint for Elite tier
+    let txHash: string | undefined;
+    if (
+      mintNft === 'true' &&
+      process.env.QRON_NFT_CONTRACT_ADDRESS &&
+      process.env.THIRDWEB_MINTER_KEY
+    ) {
+      try {
+        const mintRes = await fetch(
+          `${process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space'}/api/qron/mint-nft`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipient:
+                session.metadata?.walletAddress || process.env.DEMO_WALLET_ADDRESS,
+              imageUrl,
+              destinationUrl: url,
+              qronId: `custom-${session.id}`,
+            }),
+          }
+        );
+        if (mintRes.ok) {
+          const mintData = await mintRes.json();
+          txHash = mintData.txHash;
         }
-      );
-      if (mintRes.ok) {
-        const mintData = await mintRes.json();
-        txHash = mintData.txHash;
+      } catch (mintErr) {
+        console.warn('[webhook] Non-fatal NFT mint error:', mintErr);
       }
-    } catch (mintErr) {
-      console.warn('[webhook] Non-fatal NFT mint error:', mintErr);
     }
-  }
 
-  // Send enhanced email for targeted QRON
-  await sendTargetedQronEmail(
-    customerEmail,
-    imageUrl,
-    url,
-    subject,
-    style,
-    txHash
-  );
-  await recordDelivery(session.id, customerEmail, imageUrl, url, prompt);
+    // Send enhanced email for targeted QRON
+    await sendTargetedQronEmail(
+      customerEmail,
+      imageUrl,
+      url,
+      subject,
+      style,
+      txHash
+    );
+    await recordDelivery(session.id, customerEmail, imageUrl, url, prompt);
+  } catch (err) {
+    console.error('[webhook] generateAndDeliverTargetedQron error:', err);
+  }
 }
 
 // â”€â”€â”€ Enhanced email for targeted QRON delivery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

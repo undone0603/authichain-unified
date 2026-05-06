@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyApiKey } from '@/lib/auth-api';
 import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { generateLivingQR } from '@/lib/hf-generation';
 
-const CF_WORKER_URL = process.env.QRON_WORKER_URL || 'https://qron-ai-api.undone-k.workers.dev';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const admin = createClient(supabaseUrl, serviceKey);
@@ -50,28 +50,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Valid URL is required' }, { status: 400 });
     }
 
-    // 3. Trigger Generation (Internal Worker)
-    const workerRes = await fetch(`${CF_WORKER_URL}/v1/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, prompt, style: 'industrial' }),
-      signal: AbortSignal.timeout(110_000),
-    });
-
-    if (!workerRes.ok) {
-      return NextResponse.json({ error: 'Generation engine failed' }, { status: 502 });
+    // 3. Trigger Generation (Phase 3: HF)
+    let imageUrl = '';
+    let scannable = false;
+    let attempts = 1;
+    try {
+      const hfResult = await generateLivingQR({
+        url,
+        prompt: prompt || 'Industrial tech aesthetic, metallic structure',
+      });
+      imageUrl = hfResult.imageUrl;
+      scannable = hfResult.scannable;
+      attempts = hfResult.attempts;
+    } catch (err: unknown) {
+      console.error('[v1/generate] HF Generation failed:', err);
+      return NextResponse.json({ error: 'Generation engine temporarily unavailable' }, { status: 502 });
     }
 
-    const data = await workerRes.json() as { downloadUrl: string };
+    if (!imageUrl) {
+      return NextResponse.json({ error: 'No image generated' }, { status: 502 });
+    }
 
     // 4. Log and Track (Non-blocking)
     admin.from('qrons').insert({
       user_id: userId,
       mode: mode,
       target_url: url,
-      image_url: data.downloadUrl,
+      image_url: imageUrl,
       prompt: prompt,
       is_demo: false,
+      metadata: {
+        scannable,
+        attempts,
+        hf_model: 'controlnet-v1p-sd15',
+        api_version: 'v1'
+      }
     }).then();
 
     // 5. Deduct Credits
@@ -79,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      imageUrl: data.downloadUrl,
+      imageUrl,
       url,
       timestamp: new Date().toISOString()
     });

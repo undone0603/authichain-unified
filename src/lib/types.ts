@@ -54,7 +54,7 @@ export type QRONEntry = {
     tx_hash?: string;
     anchor_id?: string;
     anchored_at?: string;
-  } | any;
+  } | Record<string, unknown>;
   story_enabled?: boolean;
   story_tier?: string;
   story_unlocked_at?: string;

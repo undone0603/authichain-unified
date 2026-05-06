@@ -167,7 +167,7 @@ export default function PricingPage() {
       {/* Footer */}
       <footer className="py-12 px-6">
         <p className="text-center text-[10px] font-bold text-zinc-800 uppercase tracking-widest">
-            Payments secured by Stripe Â· AI Engine by Fal.ai Â· Settlement on Polygon & Bitcoin
+            Payments secured by Stripe · AI Engine by Hugging Face · Settlement on Polygon & Bitcoin
         </p>
       </footer>
     </div>

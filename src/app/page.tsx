@@ -1075,7 +1075,7 @@ export default function Home() {
               },
               {
                 q: 'What AI model generates the QR art?',
-                a: 'We use Fal.ai\'s illusion-diffusion model, fine-tuned to maximize scan reliability while maximizing visual quality.',
+                a: 'We use a specialized ControlNet-augmented Stable Diffusion pipeline via Hugging Face, fine-tuned to maximize scan reliability while maximizing visual quality.',
               },
               {
                 q: 'Is there a refund policy?',
@@ -1104,7 +1104,7 @@ export default function Home() {
             signing &nbsp;·&nbsp; AuthiChain blockchain anchoring
           </p>
           <p className="text-xs" style={{ color: '#3a3a3a' }}>
-            Powered by Fal.ai · Supabase · Stripe · AuthiChain Protocol
+            Powered by Hugging Face · Supabase · Stripe · AuthiChain Protocol
           </p>
         </div>
 

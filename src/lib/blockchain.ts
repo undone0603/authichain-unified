@@ -38,7 +38,11 @@ export async function anchorEdgeHash(edgeHash: string, metadata: string) {
   const receipt = await tx.wait();
   
   // Extract anchor ID from event if available
-  const event = receipt.logs.find((log: any) => log.fragment && log.fragment.name === 'HashAnchored');
+  const event = (receipt.logs as unknown[]).find((log) => {
+    const anyLog = log as { fragment?: { name: string } };
+    return anyLog.fragment?.name === 'HashAnchored';
+  }) as unknown as { args: { anchorId: { toString(): string } } } | undefined;
+  
   const anchorId = event ? event.args.anchorId.toString() : null;
 
   return {

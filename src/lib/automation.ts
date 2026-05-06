@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { enrichLead } from './industrial/enrichment';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -38,20 +39,38 @@ export async function handleLeadAutomation(lead: {
 }) {
   const workflowName = 'lead_captured';
   try {
-    // 1. Sync to HubSpot / Make.com
+    // 1. Enrich Lead with Professional Data
+    const enriched = await enrichLead(lead.email);
+    const finalLead = { ...lead, ...enriched };
+
+    // 2. Sync Enriched Data to HubSpot / Make.com
     const makeWebhook = process.env.MAKE_LEAD_WEBHOOK_URL;
     if (makeWebhook) {
       await fetch(makeWebhook, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...lead, timestamp: new Date().toISOString() }),
+        body: JSON.stringify({ ...finalLead, timestamp: new Date().toISOString() }),
       });
     }
 
-    // 2. Trigger Welcome Email via SendGrid (simulated or direct)
+    // 3. Sync to Pipeline CRM (if enterprise potential detected)
+    if (enriched.is_enterprise || enriched.lead_score > 60) {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
+        await fetch(`${baseUrl}/api/crm/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(finalLead)
+        });
+      } catch (crmErr) {
+        console.warn('[automation] Pipeline CRM sync deferred:', crmErr);
+      }
+    }
+
+    // 4. Trigger Welcome Email via SendGrid (simulated or direct)
     // For now, we'll log it. In a real scenario, call SendGrid.
     
-    await logAutomation(workflowName, 'event', 'success', lead);
+    await logAutomation(workflowName, 'event', 'success', finalLead);
   } catch (err: unknown) {
     await logAutomation(workflowName, 'event', 'failure', lead, err instanceof Error ? err.message : 'Unknown error');
   }

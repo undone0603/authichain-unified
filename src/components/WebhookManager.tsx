@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { 
   Webhook, 
   Plus, 
@@ -19,7 +18,7 @@ interface WebhookData {
   event_types: string[];
 }
 
-export function WebhookManager({ userId }: { userId: string }) {
+export function WebhookManager({ userId: _userId }: { userId: string }) {
   const [webhooks, setWebhooks] = useState<WebhookData[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);

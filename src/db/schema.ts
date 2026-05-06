@@ -251,3 +251,24 @@ export const qronGenerations = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
   }
 );
+
+export const telemetryEvents = pgTable(
+  'telemetry_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id'),
+    brandId: uuid('brand_id'),
+    productId: uuid('product_id'),
+    theater: text('theater').notNull(), // 'theater_1', 'theater_3', etc.
+    rawPayload: jsonb('raw_payload').notNull(),
+    parsedState: jsonb('parsed_state').notNull(),
+    stateHash: text('state_hash').notNull(),
+    anchoredTxHash: text('anchored_tx_hash'),
+    timestamp: timestamp('timestamp').defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('idx_telemetry_theater').on(table.theater),
+    index('idx_telemetry_hash').on(table.stateHash),
+  ]
+);

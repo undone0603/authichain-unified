@@ -291,7 +291,7 @@ export function TargetedQRONGenerator({
         </button>
 
         <p className="text-xs text-slate-500 text-center">
-          Uses high error-correction QR + fal.ai illusion-diffusion Â· ~20â€“45
+          Uses high error-correction QR + Hugging Face ControlNet Â· ~20â€“45
           seconds
         </p>
       </div>

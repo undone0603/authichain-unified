@@ -23,10 +23,6 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**.fal.ai',
-      },
-      {
-        protocol: 'https',
         hostname: '**.supabase.co',
       },
       {

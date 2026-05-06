@@ -36,7 +36,6 @@ export default function QronManagementPage({
   const [targetUrl, setTargetUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isAnchoring, setIsAnchoring] = useState(false);
-  const [anchorResult, setAnchorResult] = useState<{ txHash: string; anchorId: string } | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -98,7 +97,6 @@ export default function QronManagementPage({
     
     const result = await anchorQRONAction(qron.id, mockEdgeHash);
     if (result.success && result.txHash) {
-      setAnchorResult({ txHash: result.txHash, anchorId: result.anchorId || '' });
       // Update local state to show anchored status
       setQron({
         ...qron,
@@ -323,7 +321,7 @@ export default function QronManagementPage({
                     </p>
                   </div>
                 </div>
-                {qron.metadata?.tx_hash && (
+                {!!(qron.metadata && 'tx_hash' in qron.metadata && qron.metadata.tx_hash) && (
                   <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-[9px] font-black uppercase tracking-widest">
                     <CheckCircle2 className="w-3 h-3" />
                     Anchored
@@ -331,16 +329,16 @@ export default function QronManagementPage({
                 )}
               </div>
 
-              {qron.metadata?.tx_hash ? (
+              {qron.metadata && 'tx_hash' in qron.metadata && qron.metadata.tx_hash ? (
                 <div className="space-y-6">
                   <div className="p-4 rounded-xl bg-black/40 border border-zinc-800/50">
                     <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2">Transaction Hash</p>
                     <div className="flex items-center justify-between gap-4">
                       <code className="text-xs font-mono text-gold truncate">
-                        {qron.metadata.tx_hash}
+                        {String(qron.metadata.tx_hash)}
                       </code>
                       <a 
-                        href={`https://polygonscan.com/tx/${qron.metadata.tx_hash}`}
+                        href={`https://polygonscan.com/tx/${String(qron.metadata.tx_hash)}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-[10px] font-black text-white hover:text-gold uppercase flex items-center gap-1 shrink-0"
@@ -357,7 +355,7 @@ export default function QronManagementPage({
                     <div className="p-3 rounded-lg bg-zinc-900/50 border border-zinc-800/30">
                       <p className="text-[9px] font-black text-zinc-700 uppercase mb-1">Timestamp</p>
                       <p className="text-[10px] font-bold text-zinc-300">
-                        {new Date(qron.metadata.anchored_at).toLocaleString()}
+                        {qron.metadata.anchored_at ? new Date(String(qron.metadata.anchored_at)).toLocaleString() : 'N/A'}
                       </p>
                     </div>
                   </div>
