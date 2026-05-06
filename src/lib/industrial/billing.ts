@@ -1,8 +1,11 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
+// Pinned to legacy API version because subscriptionItems.createUsageRecord
+// is only available on pre-meterEvents Stripe API versions.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-01-27' as Stripe.StripeConfig['apiVersion'],
+  apiVersion: '2025-01-27' as any,
 });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
