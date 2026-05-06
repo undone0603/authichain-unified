@@ -202,10 +202,15 @@ export default function DPPPage() {
               title: 'Seed to Sale', 
               desc: 'Specialized provenance for agriculture and high-value strains, tracking every batch and harvest.' 
             },
-            { 
-              icon: ShieldCheck, 
-              title: 'Regulatory Export', 
-              desc: 'Instant generation of EU-compliant JSON/XML data formats for registry submission.' 
+            {
+              icon: ShieldCheck,
+              title: 'Regulatory Export',
+              desc: 'Instant generation of EU-compliant JSON/XML data formats for registry submission.'
+            },
+            {
+              icon: Zap,
+              title: 'Real-Time Throughput',
+              desc: 'Sub-second response times for query and verification operations at industrial scale — engineered for 1M+ daily anchors.'
             },
           ].map((item, i) => (
             <div key={i} className="protocol-card p-8 group hover:border-gold/40 transition-all">

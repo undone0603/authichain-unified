@@ -78,7 +78,7 @@ async function seed() {
           `;
         }
     } catch (e) {
-        console.warn('Leads seeding skipped');
+        console.warn('Leads seeding skipped:', e.message);
     }
 
     // 5. Add some mock Folders and Tags for organization demo
@@ -94,12 +94,22 @@ async function seed() {
       RETURNING id
     `;
 
-    // Link some QRONs to these
-    await sql`
-      UPDATE qrons 
-      SET folder_id = ${folder.id}, story_enabled = true 
+    // Link some QRONs to the folder
+    const linkedQrons = await sql`
+      UPDATE qrons
+      SET folder_id = ${folder.id}, story_enabled = true
       WHERE is_demo = true AND mode = 'industrial' AND prompt LIKE '%AuthiChain%'
+      RETURNING id
     `;
+
+    // Link the same QRONs to the Priority tag via the join table
+    for (const q of linkedQrons) {
+      await sql`
+        INSERT INTO qron_tags (qron_id, tag_id)
+        VALUES (${q.id}, ${tag.id})
+        ON CONFLICT DO NOTHING
+      `;
+    }
 
     console.log('✅ Full Potential Mock Data seeded successfully.');
   } catch (err) {

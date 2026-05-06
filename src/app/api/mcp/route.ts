@@ -103,7 +103,9 @@ export async function POST(req: NextRequest) {
 
         case "authichain_verify_product":
           // Autonomous Revenue Event
-          reportAgentUsage(userId, 'verify_product').then();
+          reportAgentUsage(userId, 'verify_product').catch((err) => {
+            console.error('[MCP] reportAgentUsage(verify_product) failed:', err);
+          });
 
           return NextResponse.json({
             content: [{
@@ -114,7 +116,9 @@ export async function POST(req: NextRequest) {
 
         case "authichain_check_eu_dpp":
           // Autonomous Revenue Event
-          reportAgentUsage(userId, 'check_eu_dpp').then();
+          reportAgentUsage(userId, 'check_eu_dpp').catch((err) => {
+            console.error('[MCP] reportAgentUsage(check_eu_dpp) failed:', err);
+          });
 
           return NextResponse.json({
             content: [{
@@ -125,7 +129,9 @@ export async function POST(req: NextRequest) {
 
         case "authichain_register_product":
           // Autonomous Revenue Event
-          reportAgentUsage(userId, 'register_product').then();
+          reportAgentUsage(userId, 'register_product').catch((err) => {
+            console.error('[MCP] reportAgentUsage(register_product) failed:', err);
+          });
           
           return NextResponse.json({
             content: [{

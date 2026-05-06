@@ -78,6 +78,14 @@ async function seed() {
       `;
     }
 
+    // 5. Seed a demo-user-scoped folder so the dashboard renders org metadata for this seed
+    console.log('Seeding demo-user folder for "Full Potential" showcase...');
+    await sql`
+      INSERT INTO folders (user_id, name, created_at)
+      VALUES (${DEMO_USER_ID}, 'Full Potential 2026', ${new Date().toISOString()})
+      ON CONFLICT DO NOTHING
+    `;
+
     console.log('✅ Full Potential Showcase seeded.');
   } catch (err) {
     console.error('❌ Seeding failed:', err.message);

@@ -78,11 +78,26 @@ export default function DemoGalleryPage() {
         </header>
 
         {/* Hero */}
-        <div className="text-center mb-24">
+        <div className="text-center mb-16">
           <h1 className="text-6xl font-black uppercase tracking-tighter mb-6 gold-text italic">The Masterpiece Gallery</h1>
           <p className="max-w-2xl mx-auto text-zinc-500 text-lg font-medium uppercase tracking-widest leading-relaxed">
             Experience how the world&apos;s leading brands use AuthiChain to turn packaging into verifiable digital assets.
           </p>
+        </div>
+
+        {/* Feature Strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-24 max-w-4xl mx-auto">
+          {[
+            { icon: QrCode, label: 'One-Tap Scan' },
+            { icon: Zap, label: 'Instant Verify' },
+            { icon: Sparkles, label: 'StoryMode Reveals' },
+            { icon: Lock, label: 'Cryptographic' },
+          ].map((f) => (
+            <div key={f.label} className="protocol-card p-5 bg-zinc-950/50 border-zinc-900 flex flex-col items-center gap-2 text-center">
+              <f.icon className="w-5 h-5 text-gold" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-300">{f.label}</p>
+            </div>
+          ))}
         </div>
 
         {/* Demo Grid */}
@@ -136,11 +151,11 @@ export default function DemoGalleryPage() {
               Join the 1,200+ brands using the AuthiChain protocol to eliminate counterfeiting and increase customer engagement by ~25%.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6">
-                <Link href="/" className="btn-gold px-12 py-5 font-black uppercase tracking-widest text-xs shadow-gold">
-                   Start Free Generation
+                <Link href="/" className="btn-gold inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs shadow-gold">
+                   Start Free Generation <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link href="/enterprise" className="btn-outline-gold px-12 py-5 font-black uppercase tracking-widest text-xs border-zinc-800">
-                   Request Industrial Access
+                <Link href="/enterprise" className="btn-outline-gold inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs border-zinc-800">
+                   Request Industrial Access <ArrowRight className="w-4 h-4" />
                 </Link>
             </div>
         </div>

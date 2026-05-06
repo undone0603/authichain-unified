@@ -188,7 +188,9 @@ export default function Dashboard() {
               >
                 <div className="flex justify-between items-start mb-4">
                     <s.icon className={`w-5 h-5 ${s.color}`} />
-                    <span className="text-[10px] font-black text-zinc-800 uppercase tracking-widest group-hover:text-zinc-700 transition-colors">Real-time</span>
+                    <span className="text-[10px] font-black text-zinc-800 uppercase tracking-widest group-hover:text-zinc-700 transition-colors flex items-center gap-1">
+                      <Zap className="w-3 h-3" /> Real-time
+                    </span>
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">

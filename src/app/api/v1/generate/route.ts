@@ -85,10 +85,14 @@ export async function POST(req: NextRequest) {
         hf_model: 'controlnet-v1p-sd15',
         api_version: 'v1'
       }
-    }).then();
+    }).then(undefined, (err) => {
+      console.error('[v1/generate] Failed to insert qron record:', err);
+    });
 
     // 5. Deduct Credits
-    admin.rpc('increment_generations_used', { user_id: userId }).then();
+    admin.rpc('increment_generations_used', { user_id: userId }).then(undefined, (err) => {
+      console.error('[v1/generate] Failed to increment generations_used:', err);
+    });
 
     return NextResponse.json({
       success: true,

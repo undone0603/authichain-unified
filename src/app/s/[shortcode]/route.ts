@@ -95,7 +95,9 @@ export async function GET(
     .from('qrons')
     .update({ scan_count: (qron.scan_count || 0) + 1 })
     .eq('id', qron.id)
-    .then();
+    .then(undefined, (err) => {
+      console.error('[shortcode] Failed to increment scan_count:', err);
+    });
 
   // 4b. Log granular scan event
   supabase
@@ -108,7 +110,9 @@ export async function GET(
       city,
       user_agent: userAgent
     })
-    .then();
+    .then(undefined, (err) => {
+      console.error('[shortcode] Failed to insert scan_log:', err);
+    });
 
   // 4c. Dispatch Real-Time Webhook
   dispatchWebhook(qron.user_id, 'qron_scanned', {

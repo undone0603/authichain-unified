@@ -181,6 +181,9 @@ export async function POST(request: Request) {
       .then(({ error }) => {
         if (error)
           console.warn('[generate] Supabase insert warning:', error.message);
+      })
+      .catch((err) => {
+        console.error('[generate] Supabase insert failed (non-fatal):', err);
       });
 
     // â”€â”€ Register provenance with AuthiChain â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -150,11 +150,11 @@ export default function PartnerBriefPage() {
                 Limited Pilot Slots Available for 2026.Q3
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6">
-                <a href="mailto:partners@authichain.com" className="bg-black text-white px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px]">
-                    Email Partnership Lead
+                <a href="mailto:partners@authichain.com" className="bg-black text-white inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px]">
+                    Email Partnership Lead <ArrowRight className="w-3 h-3" />
                 </a>
-                <a href="https://qron.space/ftc-shield" className="bg-zinc-100 text-black px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px] border border-zinc-200">
-                    View Compliance Portal
+                <a href="https://qron.space/ftc-shield" className="bg-zinc-100 text-black inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-[10px] border border-zinc-200">
+                    View Compliance Portal <ArrowRight className="w-3 h-3" />
                 </a>
             </div>
         </footer>

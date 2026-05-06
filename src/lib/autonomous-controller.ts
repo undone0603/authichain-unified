@@ -30,6 +30,8 @@ export class AutonomousController {
 
       if (!prospects || prospects.length === 0) return;
 
+      const resendKey = process.env.RESEND_API_KEY;
+
       for (const p of prospects) {
         // 2. Draft Tailored FTC Messaging
         const msg = `Attention ${p.name || 'Operations Lead'},\n\n` +
@@ -37,14 +39,31 @@ export class AutonomousController {
           `AuthiChain has launched the FTC Shield — the first cryptographic provenance seal for American manufacturing.\n\n` +
           `View your prepared compliance dashboard: https://qron.space/ftc-shield`;
 
-        // 3. Dispatch via Resend (Simulated)
-        console.log(`[autonomous] Dispatching FTC Drip to ${p.email}`);
-        
+        // 3. Dispatch via Resend
+        if (resendKey && p.email) {
+          console.log(`[autonomous] Dispatching FTC Drip to ${p.email}`);
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${resendKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: 'AuthiChain Compliance <compliance@qron.space>',
+              to: p.email,
+              subject: 'Action Required: FTC Made-in-USA Compliance (EO 14392)',
+              text: msg,
+            }),
+          });
+        } else {
+          console.log(`[autonomous] FTC Drip skipped for ${p.email || p.id} (RESEND_API_KEY missing or no email)`);
+        }
+
         await admin
           .from('lead_captures')
-          .update({ 
-            status: 'qualified', 
-            metadata: { last_drip: 'ftc_shield_v1', drip_sent_at: new Date().toISOString() } 
+          .update({
+            status: 'qualified',
+            metadata: { last_drip: 'ftc_shield_v1', drip_sent_at: new Date().toISOString() }
           })
           .eq('id', p.id);
       }

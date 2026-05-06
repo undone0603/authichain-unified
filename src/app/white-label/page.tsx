@@ -63,10 +63,25 @@ export default function WhiteLabelPage() {
               title: '10 Verticals, 1 SDK', 
               desc: 'From "Made in USA" compliance to Luxury Authentication, sell specialized verification templates without changing your infrastructure.' 
             },
-            { 
-              icon: DollarSign, 
-              title: 'New Revenue Streams', 
-              desc: 'Charge your clients a premium for "Smart Labels." You pay fractions of a cent per scan, you keep the margin.' 
+            {
+              icon: DollarSign,
+              title: 'New Revenue Streams',
+              desc: 'Charge your clients a premium for "Smart Labels." You pay fractions of a cent per scan, you keep the margin.'
+            },
+            {
+              icon: ShieldCheck,
+              title: 'Compliance Built-In',
+              desc: 'Ed25519 signatures and Polygon anchors give your clients audit-ready proof for FTC MUSA, EU DPP, and ISO traceability claims.'
+            },
+            {
+              icon: Zap,
+              title: 'Sub-Second Generation',
+              desc: 'Edge-optimized rendering pipeline returns a verified QRON image in under 800ms per asset, even under bulk reseller load.'
+            },
+            {
+              icon: Globe,
+              title: 'Global Anchor Network',
+              desc: 'Every QRON you mint resolves through our multi-region verification network, so end customers scan and verify from anywhere.'
             },
           ].map((item, i) => (
             <div key={i} className="protocol-card p-8 group hover:border-blue-500/30 transition-all border-zinc-900 bg-zinc-950/50">

@@ -38,11 +38,11 @@ export default function FtcShieldPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/dashboard" className="bg-red-600 hover:bg-red-500 text-white px-12 py-5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors">
-              Secure Your Brand
+            <Link href="/dashboard" className="bg-red-600 hover:bg-red-500 text-white inline-flex items-center justify-center gap-3 px-12 py-5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors">
+              Secure Your Brand <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/docs" className="btn-outline-gold border-zinc-800 text-zinc-300 px-12 py-5 font-black uppercase tracking-widest text-xs">
-              View Legal Spec
+            <Link href="/docs" className="btn-outline-gold border-zinc-800 text-zinc-300 inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs">
+              View Legal Spec <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
@@ -99,9 +99,10 @@ export default function FtcShieldPage() {
       </section>
 
       <footer className="py-12 px-6 border-t border-zinc-900 mt-20">
-        <div className="max-w-6xl mx-auto text-center opacity-40">
+        <div className="max-w-6xl mx-auto text-center opacity-40 flex items-center justify-center gap-3">
+          <Shield className="w-4 h-4 text-zinc-500" />
           <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-            &copy; 2026 AuthiChain Protocol ◆ Legal & Compliance Operations
+            &copy; 2026 AuthiChain Protocol ◆ Legal &amp; Compliance Operations
           </p>
         </div>
       </footer>

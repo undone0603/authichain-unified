@@ -38,18 +38,33 @@ export async function POST(req: NextRequest) {
     // Command: Generate QRON
     if (text.startsWith('http://') || text.startsWith('https://')) {
       await sendTelegramMessage(chatId, 'ðŸ”„ Generating your QRON. This may take up to 20 seconds...');
-      
+
       try {
         const result = await generateLivingQR({
           url: text,
           prompt: 'futuristic tech aesthetic, neon lights, highly detailed',
         });
-        
+
         await sendTelegramPhoto(chatId, result.imageUrl, `âœ… Your QRON is ready!\n\nðŸ”’ Ed25519 Secured\nðŸ”— Target: ${text}`);
+
+        await admin.from('automation_logs').insert({
+          workflow_name: 'telegram_qron_generation',
+          trigger_type: 'event',
+          status: 'success',
+          payload: JSON.stringify({ chat_id: chatId, url: text, image_url: result.imageUrl }),
+        });
       } catch (err) {
+        console.error('[Telegram] Generation failed:', err);
+        await admin.from('automation_logs').insert({
+          workflow_name: 'telegram_qron_generation',
+          trigger_type: 'event',
+          status: 'failure',
+          payload: JSON.stringify({ chat_id: chatId, url: text }),
+          error_message: err instanceof Error ? err.message : String(err),
+        });
         await sendTelegramMessage(chatId, 'â Œ Generation failed. Please try again later.');
       }
-      
+
       return NextResponse.json({ status: 'ok' });
     }
 

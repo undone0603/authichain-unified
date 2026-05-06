@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Pinned to legacy API version because subscriptionItems.createUsageRecord
 // is only available on pre-meterEvents Stripe API versions.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   apiVersion: '2025-01-27' as any,
 });
 
@@ -96,6 +96,8 @@ export async function reportAgentUsage(userId: string, toolName: keyof typeof ME
       trigger_type: 'event',
       status: 'failure',
       error_message: err instanceof Error ? err.message : String(err)
-    }).then();
+    }).then(undefined, (logErr) => {
+      console.error('[Billing] Failed to write failure log:', logErr);
+    });
   }
 }

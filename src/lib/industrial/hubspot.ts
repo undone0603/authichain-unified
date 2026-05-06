@@ -85,7 +85,7 @@ export class HubSpotDeliverableAgent {
       switch (type) {
         case 'anchor_proof':
           // Phase 2 logic: Anchor a mock state for the pilot
-          const mockHash = `0x${Buffer.from(deal.id + deal.metadata?.identity).toString('hex').slice(0, 64)}`;
+          const mockHash = `0x${Buffer.from(`${deal.id}:${deal.metadata?.identity ?? ''}`).toString('hex').slice(0, 64)}`;
           const anchor = await anchorEdgeHash(mockHash, `pilot:${deal.dealname}`);
           artifactUrl = `https://polygonscan.com/tx/${anchor.txHash}`;
           break;

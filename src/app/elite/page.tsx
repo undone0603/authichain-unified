@@ -56,12 +56,14 @@ export default function EliteAppPage() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start">
                     <div className="px-8 py-4 rounded-xl bg-zinc-900 border border-zinc-800 opacity-50 cursor-not-allowed flex items-center gap-4">
+                        <Download className="w-5 h-5 text-zinc-500" />
                         <div className="text-left">
                             <p className="text-[8px] font-black text-zinc-600 uppercase">Coming Soon to</p>
                             <p className="text-xs font-black text-zinc-400 uppercase">App Store</p>
                         </div>
                     </div>
                     <div className="px-8 py-4 rounded-xl bg-zinc-900 border border-zinc-800 opacity-50 cursor-not-allowed flex items-center gap-4">
+                        <Download className="w-5 h-5 text-zinc-500" />
                         <div className="text-left">
                             <p className="text-[8px] font-black text-zinc-600 uppercase">Coming Soon to</p>
                             <p className="text-xs font-black text-zinc-400 uppercase">Google Play</p>
@@ -84,11 +86,20 @@ export default function EliteAppPage() {
                                  <span className="text-[8px] font-black text-zinc-500 uppercase">Node: Active</span>
                              </div>
                              <p className="text-[10px] font-bold text-white uppercase mb-1">BMW-BAT-992</p>
-                             <p className="text-[14px] font-black text-gold tracking-tight">VERIFIED AUTHENTIC</p>
+                             <p className="text-[14px] font-black text-gold tracking-tight flex items-center gap-1.5">
+                                 <CheckCircle2 className="w-4 h-4" /> VERIFIED AUTHENTIC
+                             </p>
                          </div>
                          <div className="grid grid-cols-2 gap-3 mb-6">
-                             {[1,2,3,4].map(i => (
-                                 <div key={i} className="aspect-square rounded-xl bg-zinc-900 border border-zinc-800/50 animate-pulse" />
+                             {[
+                                 '/media/samples/01_flux_qron_space.png',
+                                 '/media/samples/03_flux_authichain.png',
+                                 '/media/samples/04_flux_ev_industry.png',
+                                 '/media/samples/06_flux_haute_couture.png',
+                             ].map((src) => (
+                                 <div key={src} className="aspect-square relative rounded-xl bg-zinc-900 border border-zinc-800/50 overflow-hidden">
+                                     <Image src={src} alt="QRON sample" fill className="object-cover opacity-80" />
+                                 </div>
                              ))}
                          </div>
                          <div className="mt-auto p-4 rounded-2xl bg-zinc-900 border border-zinc-800">
@@ -144,8 +155,8 @@ export default function EliteAppPage() {
                     placeholder="PROTOCOL@ENTERPRISE.COM"
                     className="flex-1 bg-black border border-zinc-800 rounded-xl px-6 py-4 text-xs font-black uppercase tracking-widest text-gold outline-none focus:border-gold/50 transition-all"
                 />
-                <button className="btn-gold px-10 py-4 rounded-xl font-black uppercase tracking-widest text-xs shadow-gold">
-                    JOIN PHASE 1
+                <button className="btn-gold inline-flex items-center justify-center gap-3 px-10 py-4 rounded-xl font-black uppercase tracking-widest text-xs shadow-gold">
+                    JOIN PHASE 1 <ArrowRight className="w-4 h-4" />
                 </button>
             </div>
             <p className="mt-8 text-[9px] font-black text-zinc-700 uppercase tracking-[0.4em]">

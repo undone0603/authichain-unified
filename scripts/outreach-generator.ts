@@ -45,8 +45,10 @@ async function generateOutreach() {
 
       if (wlError && wlError.code !== '23505') { // Ignore unique violation if already exists
           console.warn(`⚠️ Could not register White-Label schema: ${wlError.message}`);
+      } else if (wlClient?.id) {
+          console.log(`✅ White-Label schema pre-provisioned with prefix: ${apiKeyPrefix} (client_id: ${wlClient.id})`);
       } else {
-          console.log(`✅ White-Label schema pre-provisioned with prefix: ${apiKeyPrefix}`);
+          console.log(`✅ White-Label schema already exists for prefix: ${apiKeyPrefix}`);
       }
 
       // 2. Generate Custom Demo Artifact
@@ -76,7 +78,7 @@ I actually ran ${shop.domain} through our engine to show you what a ${shop.name}
 
 You charge your clients a premium for these "Smart Labels." You pay us fractions of a cent per scan via our API.
 
-We've already pre-provisioned a white-label sandbox for you (API Prefix: ${apiKeyPrefix}).
+We've already pre-provisioned a white-label sandbox for you (API Prefix: ${apiKeyPrefix}${wlClient?.id ? `, Client Ref: ${wlClient.id}` : ''}).
 
 Would you be open to a 10-minute call next week to see the dashboard?
 

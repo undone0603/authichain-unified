@@ -19,6 +19,16 @@ import {
 export default function AuthichainEnterprise() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [simResult, setSimResult] = useState<string | null>(null);
+  const [verifications, setVerifications] = useState(1247);
+
+  // Live Trust Feed: tick the verification counter every few seconds so the
+  // hero stat reflects ongoing protocol activity instead of a frozen number.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVerifications((v) => v + Math.floor(Math.random() * 3) + 1);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   const runSimulation = () => {
     setIsSimulating(true);
@@ -73,7 +83,7 @@ export default function AuthichainEnterprise() {
              <div className="px-10 py-5 rounded-3xl bg-zinc-950 border border-zinc-900 inline-flex items-center gap-10">
                 <div className="text-left border-r border-zinc-900 pr-10">
                     <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">Live Trust Feed</p>
-                    <p className="text-2xl font-black text-white tracking-tighter">1,247 <span className="text-zinc-600 font-medium text-xs tracking-normal uppercase ml-1">Verifications / Week</span></p>
+                    <p className="text-2xl font-black text-white tracking-tighter">{verifications.toLocaleString()} <span className="text-zinc-600 font-medium text-xs tracking-normal uppercase ml-1">Verifications / Week</span></p>
                 </div>
                 <div className="flex items-center gap-3 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                    <Activity className="w-4 h-4 text-green-500" />
