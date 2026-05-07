@@ -46,7 +46,8 @@
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.88.0"
   },
   "overrides": {
     "axios": "^1.16.0",
