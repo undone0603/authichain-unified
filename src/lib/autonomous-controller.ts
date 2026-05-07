@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 import { logAutomation } from './automation';
 import { dispatchWebhook } from './webhooks';
 import { HubSpotDeliverableAgent } from './industrial/hubspot';
-import { generateLivingQR } from './hf-generation';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -413,7 +412,8 @@ export class AutonomousController {
 
   /**
    * Specific for qron.space: Autonomous Living Art Rotation
-   * Processes active living_art_schedules, generates new AI art, and updates the base QRON.
+   * Rotates each active schedule's qron through the pre-rendered images[] array
+   * based on last_run_at. The full daily cycle advances each schedule one slot.
    */
   private async runQronStorySync() {
     const workflowName = 'qron_story_sync';
@@ -421,55 +421,38 @@ export class AutonomousController {
       const now = new Date().toISOString();
       const { data: schedules, error: fetchErr } = await admin
         .from('living_art_schedules')
-        .select('*, qrons:qron_id(target_url, mode)')
-        .eq('is_processed', false)
-        .lte('start_time', now)
-        .limit(10); // Process in batches to respect rate limits
+        .select('id, qron_id, images, last_run_at')
+        .eq('is_active', true)
+        .limit(50);
 
       if (fetchErr) throw fetchErr;
       if (!schedules || schedules.length === 0) return;
 
-      console.log(`[autonomous] Processing ${schedules.length} Living Art schedules...`);
       let processedCount = 0;
-
       for (const schedule of schedules) {
-        if (!schedule.qrons?.target_url) continue;
+        const images = (schedule.images as Array<{ url?: string } | string> | null) ?? [];
+        if (images.length === 0) continue;
 
-        try {
-          // 1. Generate new art via Hugging Face Engine
-          const result = await generateLivingQR({
-            url: schedule.qrons.target_url,
-            prompt: schedule.prompt,
-            qr_weight: 1.45,
-            start_step: 0.35,
-          });
+        const dayIndex = Math.floor(Date.now() / 86_400_000);
+        const slot = dayIndex % images.length;
+        const next = images[slot];
+        const nextUrl = typeof next === 'string' ? next : next?.url;
+        if (!nextUrl) continue;
 
-          // 2. Update schedule record
-          await admin
-            .from('living_art_schedules')
-            .update({
-              is_processed: true,
-              processed_at: now,
-              new_image_url: result.imageUrl,
-            })
-            .eq('id', schedule.id);
+        await admin
+          .from('qrons')
+          .update({ image_url: nextUrl, updated_at: now })
+          .eq('id', schedule.qron_id);
 
-          // 3. Update the base QRON to display the new art
-          await admin
-            .from('qrons')
-            .update({
-              image_url: result.imageUrl,
-              updated_at: now,
-            })
-            .eq('id', schedule.qron_id);
+        await admin
+          .from('living_art_schedules')
+          .update({ last_run_at: now, updated_at: now })
+          .eq('id', schedule.id);
 
-          processedCount++;
-        } catch (genErr) {
-          console.error(`[autonomous] Failed to process schedule ${schedule.id}:`, genErr);
-        }
+        processedCount++;
       }
 
-      await logAutomation(workflowName, 'cron', 'success', { narratives_active: processedCount, reveals_optimized: true });
+      await logAutomation(workflowName, 'cron', 'success', { rotated: processedCount, schedules: schedules.length });
     } catch (err: unknown) {
       await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
     }
