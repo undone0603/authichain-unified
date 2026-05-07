@@ -1,3 +1,5 @@
+import nodemailer from 'nodemailer';
+
 type SendArgs = {
   to: string;
   from: string;
@@ -8,7 +10,7 @@ type SendArgs = {
 
 type SendResult = {
   ok: boolean;
-  provider: 'resend' | 'brevo' | 'sendgrid' | 'none';
+  provider: 'gmail' | 'resend' | 'brevo' | 'sendgrid' | 'none';
   status?: number;
   error?: string;
 };
@@ -17,6 +19,29 @@ function parseFrom(from: string): { email: string; name?: string } {
   const m = from.match(/^(.*)<(.+)>\s*$/);
   if (m) return { name: m[1].trim(), email: m[2].trim() };
   return { email: from.trim() };
+}
+
+async function viaGmail(args: SendArgs, key: string): Promise<SendResult> {
+  const user = process.env.GMAIL_USER;
+  if (!user) return { ok: false, provider: 'gmail', error: 'GMAIL_USER not set' };
+  try {
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { user, pass: key.replace(/\s+/g, '') },
+    });
+    const info = await transporter.sendMail({
+      from: args.from,
+      to: args.to,
+      subject: args.subject,
+      text: args.text,
+      html: args.html,
+    });
+    return { ok: !!info.messageId, provider: 'gmail' };
+  } catch (e) {
+    return { ok: false, provider: 'gmail', error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 async function viaResend(args: SendArgs, key: string): Promise<SendResult> {
@@ -69,6 +94,7 @@ async function viaSendGrid(args: SendArgs, key: string): Promise<SendResult> {
  */
 export async function sendEmail(args: SendArgs): Promise<SendResult> {
   const providers: Array<[string | undefined, (a: SendArgs, k: string) => Promise<SendResult>]> = [
+    [process.env.GMAIL_APP_PASSWORD, viaGmail],
     [process.env.RESEND_API_KEY, viaResend],
     [process.env.BREVO_API_KEY, viaBrevo],
     [process.env.SENDGRID_API_KEY, viaSendGrid],
