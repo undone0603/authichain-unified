@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   Shield,
   TrendingUp,
@@ -292,6 +293,21 @@ export default function Governance() {
           </div>
         </div>
       </div>
+
+      <footer className="py-12 px-6 border-t border-zinc-900 mt-20">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 opacity-40 hover:opacity-100 transition-opacity">
+          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+            &copy; 2026 AuthiChain Protocol ◆ Governance DAO
+          </p>
+          <div className="flex gap-6 flex-wrap justify-center">
+             <Link href="/tokenomics" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Tokenomics</Link>
+             <Link href="/proposals" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Proposals</Link>
+             <span className="text-zinc-800">|</span>
+             <Link href="/terms" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Terms</Link>
+             <Link href="/privacy" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Privacy</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

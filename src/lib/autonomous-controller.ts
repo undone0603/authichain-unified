@@ -85,9 +85,12 @@ export class AutonomousController {
       const results = await Promise.allSettled([
         this.processPendingLeads(),
         this.processHubSpotDeliverables(),
-        this.runDripSequencer(), // NEW: Manages follow-ups and artifacts
+        this.runDripSequencer(),
+        this.runFederalDripSequencer(),
         this.runViralMarketingAgent(),
+        this.generateSocialShowcase(),
         this.runRevenueRecyclingAgent(),
+        this.executeTokenomicsDaily(),
         this.runIndustrialWatchdog(),
         this.runGovernanceArbiter(),
         this.runStrainChainAudit(),

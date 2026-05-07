@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/crm/sync",
-      "schedule": "0 */12 * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }
