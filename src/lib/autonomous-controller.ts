@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { logAutomation } from './automation';
+import { logAutomation, formatErr } from './automation';
 import { dispatchWebhook } from './webhooks';
 import { HubSpotDeliverableAgent } from './industrial/hubspot';
 import { sendEmail } from './email';
@@ -76,7 +76,7 @@ export class AutonomousController {
         : (skipped === prospects.length ? 'all prospects skipped (no email)' : undefined);
       await logAutomation(workflowName, 'cron', status, { prospects: prospects.length, sent, failed, skipped }, errMsg);
     } catch (err: unknown) {
-      await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
   }
 
@@ -114,7 +114,7 @@ export class AutonomousController {
         agent_version: 'v3.0-autonomous',
       });
     } catch (err: unknown) {
-      await logAutomation('daily_business_cycle', 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation('daily_business_cycle', 'cron', 'failure', null, formatErr(err));
     }
   }
 
@@ -126,7 +126,7 @@ export class AutonomousController {
       const agent = new HubSpotDeliverableAgent();
       await agent.unblockStalledDeals();
     } catch (err: unknown) {
-      await logAutomation('hubspot_deliverable_cycle', 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation('hubspot_deliverable_cycle', 'cron', 'failure', null, formatErr(err));
     }
   }
 
@@ -187,7 +187,7 @@ export class AutonomousController {
 
       await logAutomation(workflowName, 'cron', 'success', { actions_executed: sequences.length });
     } catch (err: unknown) {
-      await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
   }
 
@@ -213,7 +213,10 @@ export class AutonomousController {
         body: JSON.stringify({ url: 'https://qron.space', prompt, style: 'cinematic' }),
       });
 
-      if (!genRes.ok) throw new Error('Marketing generation failed');
+      if (!genRes.ok) {
+        const body = await genRes.text().catch(() => '');
+        throw new Error(`Marketing generation failed: ${genRes.status} ${genRes.statusText} ${body.slice(0, 200)}`);
+      }
       const data = await genRes.json() as { downloadUrl: string };
 
       // 4. Social Publishing (Buffer Webhook)
@@ -231,7 +234,7 @@ export class AutonomousController {
 
       await logAutomation(workflowName, 'cron', 'success', { trend: currentTrend, imageUrl: data.downloadUrl });
     } catch (err: unknown) {
-      await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
   }
 
@@ -266,7 +269,7 @@ export class AutonomousController {
 
       await logAutomation(workflowName, 'cron', 'success', { buybackAmount, totalRevenue });
     } catch (err: unknown) {
-      await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
   }
 
@@ -343,7 +346,7 @@ export class AutonomousController {
         anomalies_detected: anomaliesFound 
       });
     } catch (err: unknown) {
-      await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
   }
 
@@ -391,7 +394,7 @@ export class AutonomousController {
 
       await logAutomation(workflowName, 'cron', 'success', { proposals_monitored: proposals.length });
     } catch (err: unknown) {
-      await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
   }
 
@@ -453,7 +456,7 @@ export class AutonomousController {
 
       await logAutomation(workflowName, 'cron', 'success', { rotated: processedCount, schedules: schedules.length });
     } catch (err: unknown) {
-      await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
   }
 
@@ -630,7 +633,7 @@ export class AutonomousController {
         count: pendingRewards.length,
       });
     } catch (err: unknown) {
-      await logAutomation('daily_tokenomics_dist', 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation('daily_tokenomics_dist', 'cron', 'failure', null, formatErr(err));
     }
   }
 
@@ -667,7 +670,7 @@ export class AutonomousController {
         count: pendingReferrals.length,
       });
     } catch (err: unknown) {
-      await logAutomation('affiliate_payout_cycle', 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+      await logAutomation('affiliate_payout_cycle', 'cron', 'failure', null, formatErr(err));
     }
   }
 

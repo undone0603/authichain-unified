@@ -7,6 +7,24 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const admin = createClient(supabaseUrl, serviceKey);
 
 /**
+ * Capture an arbitrary thrown value as a useful string. Handles JS Errors,
+ * Supabase-style `{message, code, details, hint}` objects, and anything else.
+ */
+export function formatErr(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === 'object') {
+    const obj = err as Record<string, unknown>;
+    if (typeof obj.message === 'string') {
+      const code = typeof obj.code === 'string' ? ` [${obj.code}]` : '';
+      const details = typeof obj.details === 'string' && obj.details ? ` — ${obj.details}` : '';
+      return `${obj.message}${code}${details}`;
+    }
+    try { return JSON.stringify(err); } catch { return String(err); }
+  }
+  return String(err);
+}
+
+/**
  * Log an automation event for tracking and debugging.
  */
 export async function logAutomation(
@@ -72,7 +90,7 @@ export async function handleLeadAutomation(lead: {
     
     await logAutomation(workflowName, 'event', 'success', finalLead);
   } catch (err: unknown) {
-    await logAutomation(workflowName, 'event', 'failure', lead, err instanceof Error ? err.message : 'Unknown error');
+    await logAutomation(workflowName, 'event', 'failure', lead, formatErr(err));
   }
 }
 
@@ -99,7 +117,7 @@ export async function queueSocialShowcase(qron: {
     }
     await logAutomation(workflowName, 'event', 'success', qron);
   } catch (err: unknown) {
-    await logAutomation(workflowName, 'event', 'failure', qron, err instanceof Error ? err.message : 'Unknown error');
+    await logAutomation(workflowName, 'event', 'failure', qron, formatErr(err));
   }
 }
 
@@ -127,6 +145,6 @@ export async function runDailyMaintenance() {
 
     await logAutomation(workflowName, 'cron', 'success', { generations, leads });
   } catch (err: unknown) {
-    await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
+    await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
   }
 }
