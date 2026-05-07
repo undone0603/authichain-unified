@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { logAutomation } from './automation';
 import { dispatchWebhook } from './webhooks';
 import { HubSpotDeliverableAgent } from './industrial/hubspot';
+import { sendEmail } from './email';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -29,39 +30,33 @@ export class AutonomousController {
 
       if (!prospects || prospects.length === 0) return;
 
-      const resendKey = process.env.RESEND_API_KEY;
       let sent = 0;
       let failed = 0;
       let skipped = 0;
+      let lastError: string | undefined;
 
       for (const p of prospects) {
+        if (!p.email) {
+          skipped++;
+          continue;
+        }
+
         const msg = `Attention ${p.name || 'Operations Lead'},\n\n` +
           `With the recent FTC $625k MUSA penalties and EO 14392, your current "Made in USA" claims are at regulatory risk.\n\n` +
           `AuthiChain has launched the FTC Shield — the first cryptographic provenance seal for American manufacturing.\n\n` +
           `View your prepared compliance dashboard: https://qron.space/ftc-shield`;
 
-        if (!resendKey || !p.email) {
-          skipped++;
-          continue;
-        }
-
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${resendKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: 'AuthiChain Compliance <compliance@qron.space>',
-            to: p.email,
-            subject: 'Action Required: FTC Made-in-USA Compliance (EO 14392)',
-            text: msg,
-          }),
+        const result = await sendEmail({
+          from: 'AuthiChain Compliance <compliance@qron.space>',
+          to: p.email,
+          subject: 'Action Required: FTC Made-in-USA Compliance (EO 14392)',
+          text: msg,
         });
 
-        if (!res.ok) {
+        if (!result.ok) {
           failed++;
-          console.warn(`[autonomous] FTC drip failed for ${p.email}: ${res.status}`);
+          lastError = `${result.provider}: ${result.error}`;
+          console.warn(`[autonomous] FTC drip failed for ${p.email}: ${lastError}`);
           continue;
         }
 
@@ -70,15 +65,15 @@ export class AutonomousController {
           .from('lead_captures')
           .update({
             status: 'qualified',
-            metadata: { last_drip: 'ftc_shield_v1', drip_sent_at: new Date().toISOString() }
+            metadata: { last_drip: 'ftc_shield_v1', drip_sent_at: new Date().toISOString(), provider: result.provider }
           })
           .eq('id', p.id);
       }
 
       const status = failed > 0 || (sent === 0 && prospects.length > 0) ? 'failure' : 'success';
       const errMsg = failed > 0
-        ? `${failed}/${prospects.length} drip sends failed (likely RESEND_API_KEY invalid)`
-        : (skipped === prospects.length ? 'all prospects skipped (missing key or email)' : undefined);
+        ? `${failed}/${prospects.length} drip sends failed: ${lastError}`
+        : (skipped === prospects.length ? 'all prospects skipped (no email)' : undefined);
       await logAutomation(workflowName, 'cron', status, { prospects: prospects.length, sent, failed, skipped }, errMsg);
     } catch (err: unknown) {
       await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
@@ -546,9 +541,8 @@ export class AutonomousController {
    * 3. Executive Report: Synthesize stats and email to admin.
    */
   private async sendExecutiveReport() {
-    const resendKey = process.env.RESEND_API_KEY;
     const adminEmail = process.env.ADMIN_EMAIL;
-    if (!resendKey || !adminEmail) return;
+    if (!adminEmail) return;
 
     // Fetch 24h stats
     const past24h = new Date(Date.now() - 86400000).toISOString();
@@ -584,18 +578,11 @@ export class AutonomousController {
       </div>
     `;
 
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'QRON Autonomous <ops@qron.space>',
-        to: adminEmail,
-        subject: `Daily Business Report - ${new Date().toLocaleDateString()}`,
-        html: reportHtml,
-      }),
+    await sendEmail({
+      from: 'QRON Autonomous <ops@qron.space>',
+      to: adminEmail,
+      subject: `Daily Business Report - ${new Date().toLocaleDateString()}`,
+      html: reportHtml,
     });
   }
 
