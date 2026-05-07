@@ -1251,14 +1251,58 @@ export default function Home() {
               className="rounded-xl shadow-2xl max-w-full h-auto"
               style={{ border: '1px solid rgba(201,162,39,0.15)' }}
             />
-            <Image
-              src="/media/docs-scannability-1080.svg"
-              alt="Plain QR vs AuthiChain QRON — scan rate comparison"
-              width={1080}
-              height={1080}
-              className="rounded-xl shadow-2xl max-w-full h-auto"
-              style={{ border: '1px solid rgba(201,162,39,0.15)' }}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
+              {/* Plain QR */}
+              <div className="protocol-card p-6 bg-zinc-950/60 border-zinc-800">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[10px] uppercase tracking-widest text-zinc-400 font-black">
+                    Plain QR Code
+                  </span>
+                  <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 font-black">
+                    75% scan
+                  </span>
+                </div>
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-white flex items-center justify-center p-6">
+                  <svg viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg" className="w-full h-full" shapeRendering="crispEdges" aria-hidden="true">
+                    <rect width="21" height="21" fill="#fff" />
+                    <g fill="#000">
+                      <path d="M0 0h7v7H0zm1 1v5h5V1zm1 1h3v3H2zM14 0h7v7h-7zm1 1v5h5V1zm1 1h3v3h-3zM0 14h7v7H0zm1 1v5h5v-5zm1 1h3v3H2z" />
+                      <path d="M8 0h1v1H8zm2 0h1v2h-1zm2 1h1v1h-1zM9 2h1v2H9zm3 1h1v3h-1zM8 4h1v1H8zm2 1h1v1h-1zM8 6h2v1H8zm5 0h1v2h-1zM0 8h1v1H0zm2 0h2v1H2zm3 0h1v2H5zm2 0h1v1H7zm2 0h1v1H9zm2 0h2v1h-2zm4 0h1v2h-1zm3 0h1v1h-1zm-19 1h1v1H1zm3 0h1v1H4zm4 0h1v3H8zm3 0h1v1h-1zm5 0h1v3h-1zm3 0h1v1h-1zM0 10h2v1H0zm3 0h1v1H3zm2 0h1v1H5zm5 0h1v2h-1zm3 0h1v2h-1zm5 0h1v2h-1zm-15 1h1v1H1zm5 0h1v1H6zm6 0h1v2h-1zm4 0h1v1h-1zm3 0h1v1h-1zM0 12h2v1H0zm3 0h1v1H3zm2 0h1v1H5zm4 0h1v1H9zm6 0h1v1h-1zm3 0h1v1h-1zM8 13h1v1H8zm6 0h1v3h-1zm3 0h1v1h-1zm2 0h1v3h-1zM8 14h1v1H8zm2 0h2v1h-2zm5 0h1v3h-1zm-5 1h1v3h-1zm2 0h1v3h-1zm5 0h1v1h-1zM8 16h1v1H8zm10 0h1v1h-1zm-9 1h1v3H9zm6 0h1v1h-1zm3 0h1v1h-1zM8 18h1v1H8zm5 0h1v1h-1zm3 0h1v1h-1zm3 0h1v1h-1zm-7 1h1v2h-1zm3 0h1v1h-1zm3 0h1v2h-1zM8 20h1v1H8zm5 0h1v1h-1zm4 0h1v1h-1z" />
+                    </g>
+                  </svg>
+                </div>
+                <p className="text-[10px] uppercase tracking-widest text-zinc-600 mt-4 leading-relaxed font-medium">
+                  Generic. Easily ignored. ~25% scan abandonment.
+                </p>
+              </div>
+
+              {/* QRON Art */}
+              <div
+                className="protocol-card p-6 border-gold/30"
+                style={{ background: 'linear-gradient(135deg, rgba(201,162,39,0.08) 0%, rgba(13,13,13,0.6) 60%)' }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[10px] uppercase tracking-widest text-gold font-black">
+                    AuthiChain QRON
+                  </span>
+                  <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold font-black">
+                    ~100% scan
+                  </span>
+                </div>
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-950">
+                  <Image
+                    src="/media/qron-grid-9.png"
+                    alt="AuthiChain QRON gallery — phoenix, dragon, tree of life, eagle, snowflake, galaxy, clock, prism"
+                    fill
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                </div>
+                <p className="text-[10px] uppercase tracking-widest text-zinc-400 mt-4 leading-relaxed font-medium">
+                  Ed25519-signed art. Eyes lock on. ~25% scan lift, every time.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1345,16 +1389,25 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Trust Strip */}
-        <div className="text-center space-y-2 py-6">
-          <p className="text-xs" style={{ color: '#6b6b6b' }}>
-            ◆ 100% scannable guarantee &nbsp;·&nbsp; Ed25519 cryptographic
-            signing &nbsp;·&nbsp; AuthiChain blockchain anchoring
-          </p>
-          <p className="text-xs" style={{ color: '#3a3a3a' }}>
-            Powered by Hugging Face · Supabase · Stripe · AuthiChain Protocol
-          </p>
-        </div>
+        {/* Footer Navigation */}
+        <footer className="text-center py-12 border-t border-zinc-900 mt-12">
+          <div className="flex justify-center gap-6 mb-6">
+             <Link href="/about" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">About</Link>
+             <Link href="/creators" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Creators</Link>
+             <span className="text-zinc-800">|</span>
+             <Link href="/terms" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Terms</Link>
+             <Link href="/privacy" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Privacy</Link>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs" style={{ color: '#6b6b6b' }}>
+              ◆ 100% scannable guarantee &nbsp;·&nbsp; Ed25519 cryptographic
+              signing &nbsp;·&nbsp; AuthiChain blockchain anchoring
+            </p>
+            <p className="text-[10px] font-bold text-zinc-800 uppercase tracking-widest">
+              Powered by Hugging Face · Supabase · Stripe · AuthiChain Protocol
+            </p>
+          </div>
+        </footer>
 
         <LeadCapturePopup />
       </div>

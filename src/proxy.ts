@@ -45,22 +45,25 @@ export function proxy(request: NextRequest) {
   }
 
   // 2. Multi-domain routing logic
-  // Only rewrite the ROOT path ('/') for branded domains.
+  // Rewrite the ROOT path ('/') and all sub-paths for branded domains.
   const hostname = host.toLowerCase().split(':')[0];
   
   // GovChain.us
-  if (hostname.includes('govchain.us') && url.pathname === '/') {
-    return NextResponse.rewrite(new URL('/governance', request.url));
+  if (hostname.includes('govchain.us')) {
+    const path = url.pathname === '/' ? '/governance' : `/governance${url.pathname}`;
+    return NextResponse.rewrite(new URL(path, request.url));
   }
 
   // StrainChain.io
-  if (hostname.includes('strainchain.io') && url.pathname === '/') {
-    return NextResponse.rewrite(new URL('/digital-product-passport', request.url));
+  if (hostname.includes('strainchain.io')) {
+    const path = url.pathname === '/' ? '/digital-product-passport' : `/digital-product-passport${url.pathname}`;
+    return NextResponse.rewrite(new URL(path, request.url));
   }
 
   // Authichain.com
-  if (hostname.includes('authichain.com') && url.pathname === '/') {
-    return NextResponse.rewrite(new URL('/authichain', request.url));
+  if (hostname.includes('authichain.com')) {
+    const path = url.pathname === '/' ? '/authichain' : `/authichain${url.pathname}`;
+    return NextResponse.rewrite(new URL(path, request.url));
   }
 
   // Default (QRON.space or unknown)

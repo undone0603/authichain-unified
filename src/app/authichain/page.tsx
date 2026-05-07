@@ -275,6 +275,9 @@ export default function AuthichainEnterprise() {
               &copy; 2026 AuthiChain Protocol ◆ All Rights Reserved
             </p>
             <div className="flex gap-8">
+                <Link href="/about" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold">About</Link>
+                <Link href="/technology" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold">Technology</Link>
+                <Link href="/pilots" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold">Pilots</Link>
                 <Link href="/terms" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold">Terms</Link>
                 <Link href="/privacy" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold">Privacy</Link>
             </div>

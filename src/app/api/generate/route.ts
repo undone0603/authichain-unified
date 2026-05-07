@@ -178,13 +178,15 @@ export async function POST(request: Request) {
           hf_model: 'controlnet-v1p-sd15'
         }
       })
-      .then(({ error }) => {
-        if (error)
-          console.warn('[generate] Supabase insert warning:', error.message);
-      })
-      .catch((err) => {
-        console.error('[generate] Supabase insert failed (non-fatal):', err);
-      });
+      .then(
+        ({ error }) => {
+          if (error)
+            console.warn('[generate] Supabase insert warning:', error.message);
+        },
+        (err) => {
+          console.error('[generate] Supabase insert failed (non-fatal):', err);
+        }
+      );
 
     // â”€â”€ Register provenance with AuthiChain â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let registrationId: string | null = null;

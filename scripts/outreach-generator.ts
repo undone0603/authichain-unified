@@ -8,6 +8,7 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const admin = createClient(supabaseUrl, serviceKey);
 
 const PRINT_SHOPS = [
+  { name: 'USPS Innovation', domain: 'usps.com', contact: 'Postmaster General - Innovation Office', prompt: 'patriotic american stamp, bald eagle in flight over vintage blue post box, sharp red white and blue oil painting style, high contrast for postal scanners' },
   { name: 'FASTSIGNS', domain: 'fastsigns.com', contact: 'Innovation Lead', prompt: 'bold industrial signage, high contrast commercial printing, modern commercial aesthetic' },
   { name: 'Signarama', domain: 'signarama.com', contact: 'Franchise Director', prompt: 'vibrant commercial storefront sign, glowing neon colors, sharp vector art' },
   { name: 'MOO', domain: 'moo.com', contact: 'Product Manager', prompt: 'premium textured business card, gold foil embossing, luxury paper texture, minimalist design' },
