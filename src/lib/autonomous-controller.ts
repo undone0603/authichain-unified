@@ -542,7 +542,10 @@ export class AutonomousController {
    */
   private async sendExecutiveReport() {
     const adminEmail = process.env.ADMIN_EMAIL;
-    if (!adminEmail) return;
+    if (!adminEmail) {
+      await logAutomation('executive_report', 'cron', 'failure', null, 'ADMIN_EMAIL not set');
+      return;
+    }
 
     // Fetch 24h stats
     const past24h = new Date(Date.now() - 86400000).toISOString();
@@ -578,12 +581,19 @@ export class AutonomousController {
       </div>
     `;
 
-    await sendEmail({
+    const result = await sendEmail({
       from: 'QRON Autonomous <ops@qron.space>',
       to: adminEmail,
       subject: `Daily Business Report - ${new Date().toLocaleDateString()}`,
       html: reportHtml,
     });
+    await logAutomation(
+      'executive_report',
+      'cron',
+      result.ok ? 'success' : 'failure',
+      { provider: result.provider, newLeads: newLeads || 0, gens: gens || 0 },
+      result.ok ? undefined : `${result.provider}: ${result.error}`
+    );
   }
 
   /**
