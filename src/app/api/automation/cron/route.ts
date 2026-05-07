@@ -8,13 +8,13 @@ export const dynamic = 'force-dynamic';
  * GET /api/automation/cron
  *
  * Trigger daily business operations.
- * Security: Requires a CRON_API_KEY header.
+ * Security: Requires a CRON_SECRET bearer token (auto-injected by Vercel cron).
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get('Authorization');
-  const expectedKey = process.env.CRON_API_KEY;
+  const expectedKey = process.env.CRON_SECRET;
   if (!expectedKey) {
-    return NextResponse.json({ error: 'CRON_API_KEY not configured' }, { status: 503 });
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
   }
 
   if (authHeader !== `Bearer ${expectedKey}`) {
