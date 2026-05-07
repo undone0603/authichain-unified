@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { logAutomation } from '@/lib/automation';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,9 +58,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data);
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[qron/scan-validate] Error:', err);
+    await logAutomation('scan_validate.post', 'event', 'failure', null, msg);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Scan validation failed' },
+      { error: msg || 'Scan validation failed' },
       { status: 500 }
     );
   }
@@ -108,8 +111,11 @@ export async function GET(request: Request) {
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[qron/scan-validate GET] Error:', err);
+    await logAutomation('scan_validate.get', 'event', 'failure', null, msg);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to fetch scan result' },
+      { error: msg || 'Failed to fetch scan result' },
       { status: 500 }
     );
   }

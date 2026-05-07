@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyApiKey } from '@/lib/auth-api';
 import { reportAgentUsage } from '@/lib/industrial/billing';
+import { logAutomation } from '@/lib/automation';
 
 /**
  * MCP ENDPOINT (Model Context Protocol)
@@ -104,7 +105,9 @@ export async function POST(req: NextRequest) {
         case "authichain_verify_product":
           // Autonomous Revenue Event
           reportAgentUsage(userId, 'verify_product').catch((err) => {
+            const msg = err instanceof Error ? err.message : String(err);
             console.error('[MCP] reportAgentUsage(verify_product) failed:', err);
+            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'verify_product' }, msg);
           });
 
           return NextResponse.json({
@@ -117,7 +120,9 @@ export async function POST(req: NextRequest) {
         case "authichain_check_eu_dpp":
           // Autonomous Revenue Event
           reportAgentUsage(userId, 'check_eu_dpp').catch((err) => {
+            const msg = err instanceof Error ? err.message : String(err);
             console.error('[MCP] reportAgentUsage(check_eu_dpp) failed:', err);
+            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'check_eu_dpp' }, msg);
           });
 
           return NextResponse.json({
@@ -130,7 +135,9 @@ export async function POST(req: NextRequest) {
         case "authichain_register_product":
           // Autonomous Revenue Event
           reportAgentUsage(userId, 'register_product').catch((err) => {
+            const msg = err instanceof Error ? err.message : String(err);
             console.error('[MCP] reportAgentUsage(register_product) failed:', err);
+            void logAutomation('mcp.report_usage', 'event', 'failure', { userId, tool: 'register_product' }, msg);
           });
           
           return NextResponse.json({
@@ -148,7 +155,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Method not found" }, { status: 404 });
 
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[MCP] Execution error:', err);
+    await logAutomation('mcp', 'event', 'failure', null, msg);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

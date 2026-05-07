@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasUnlimitedPlan } from '@/lib/business-tier';
 import { createClient } from '@/utils/supabase/server';
+import { logAutomation } from '@/lib/automation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -154,7 +155,9 @@ export async function POST(req: NextRequest) {
         minted_at: new Date().toISOString(),
       });
     } catch (dbErr) {
+      const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
       console.warn('[qron/mint-nft] Non-fatal DB error:', dbErr);
+      await logAutomation('mint_nft.persist', 'event', 'failure', { recipient, txHash: receipt.transactionHash, qronId }, msg);
     }
 
     // â”€â”€ Update AuthiChain provenance to 'minted' â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -175,8 +178,10 @@ export async function POST(req: NextRequest) {
           }),
           signal: AbortSignal.timeout(5000),
         });
-      } catch {
+      } catch (provErr) {
+        const msg = provErr instanceof Error ? provErr.message : String(provErr);
         console.warn('[qron/mint-nft] Provenance mint update failed (non-fatal)');
+        await logAutomation('mint_nft.provenance_update', 'event', 'failure', { registration_id, txHash: receipt.transactionHash }, msg);
       }
     }
 
@@ -187,7 +192,9 @@ export async function POST(req: NextRequest) {
       registration_id,
     });
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[qron/mint-nft] Error:', err);
+    await logAutomation('mint_nft', 'event', 'failure', null, msg);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Mint failed' },
       { status: 500 }

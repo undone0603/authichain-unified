@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { logAutomation } from '@/lib/automation';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +49,9 @@ export async function POST() {
 
     return NextResponse.json({ apiKey });
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[api/keys] Error:', err);
+    await logAutomation('api_keys.create', 'event', 'failure', null, msg);
     return NextResponse.json({ error: 'Failed to generate key' }, { status: 500 });
   }
 }
@@ -77,7 +80,10 @@ export async function GET() {
     if (error) throw error;
 
     return NextResponse.json({ keys: data });
-  } catch (_err: unknown) {
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[api/keys GET] Error:', err);
+    await logAutomation('api_keys.list', 'event', 'failure', null, msg);
     return NextResponse.json({ error: 'Failed to fetch keys' }, { status: 500 });
   }
 }

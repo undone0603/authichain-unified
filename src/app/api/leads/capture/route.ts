@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleLeadAutomation } from '@/lib/automation';
+import { handleLeadAutomation, logAutomation } from '@/lib/automation';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
         product_interest: body.product_interest || 'qron',
       });
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('[lead-capture] DB error:', err);
+      await logAutomation('lead_capture.db_insert', 'event', 'failure', { email: body.email, source: body.source }, msg);
     }
 
     // 2. Trigger Automation (HubSpot, Make.com, Email)
@@ -51,7 +53,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[lead-capture] Error:', err);
+    await logAutomation('lead_capture', 'event', 'failure', null, msg);
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }
 }

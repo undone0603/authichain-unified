@@ -3,6 +3,7 @@ import { verifyApiKey } from '@/lib/auth-api';
 import { createClient } from '@supabase/supabase-js';
 import { processIndustrialEvent, IndustrialTheater } from '@/lib/industrial/telemetry';
 import { anchorEdgeHash } from '@/lib/blockchain';
+import { logAutomation } from '@/lib/automation';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -52,7 +53,9 @@ export async function POST(req: NextRequest) {
       anchoredTxHash = anchorResult.txHash;
       console.log(`[Industrial] Anchored ${theater} state: ${anchoredTxHash}`);
     } catch (anchorErr) {
+      const msg = anchorErr instanceof Error ? anchorErr.message : String(anchorErr);
       console.error(`[Industrial] Anchoring failed for ${theater}:`, anchorErr);
+      await logAutomation('industrial_telemetry.anchor', 'event', 'failure', { theater, userId, productId, stateHash }, msg);
     }
 
     // 5. Store Telemetry Event
@@ -82,10 +85,12 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[Industrial/Telemetry] Ingestion error:', err);
-    return NextResponse.json({ 
+    await logAutomation('industrial_telemetry', 'event', 'failure', null, msg);
+    return NextResponse.json({
       error: 'Ingestion pipeline failure',
-      detail: err instanceof Error ? err.message : String(err)
+      detail: msg
     }, { status: 500 });
   }
 }

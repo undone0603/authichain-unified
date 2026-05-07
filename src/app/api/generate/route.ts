@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { deductCredit } from '@/lib/business-tier';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { generateLivingQR } from '@/lib/hf-generation';
+import { logAutomation } from '@/lib/automation';
 
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
@@ -140,7 +141,9 @@ export async function POST(request: Request) {
       });
       imageUrl = hfResult.imageUrl;
     } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('[generate] HF Generation failed:', err);
+      await logAutomation('generate.hf', 'event', 'failure', { userId: session.user.id, presetId, mode }, msg);
       return NextResponse.json(
         { message: 'AI generation engine is temporarily unavailable. Try again in 60s.' },
         { status: 502 }
@@ -180,11 +183,15 @@ export async function POST(request: Request) {
       })
       .then(
         ({ error }) => {
-          if (error)
+          if (error) {
             console.warn('[generate] Supabase insert warning:', error.message);
+            void logAutomation('generate.persist', 'event', 'failure', { qronId, userId: session.user.id }, error.message);
+          }
         },
         (err) => {
+          const msg = err instanceof Error ? err.message : String(err);
           console.error('[generate] Supabase insert failed (non-fatal):', err);
+          void logAutomation('generate.persist', 'event', 'failure', { qronId, userId: session.user.id }, msg);
         }
       );
 
@@ -214,10 +221,12 @@ export async function POST(request: Request) {
           registrationId = regData.id || null;
         }
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
         console.warn(
           '[generate] Provenance registration failed (non-fatal):',
           err
         );
+        await logAutomation('generate.provenance_register', 'event', 'failure', { qronId, userId: session.user.id }, msg);
       }
     }
 
@@ -235,7 +244,9 @@ export async function POST(request: Request) {
       remaining_credits: creditResult.remaining,
     });
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[generate] Error:', err);
+    await logAutomation('generate', 'event', 'failure', null, msg);
     return NextResponse.json(
       { message: err instanceof Error ? err.message : 'Unexpected error.' },
       { status: 500 }

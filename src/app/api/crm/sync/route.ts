@@ -73,10 +73,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, contact_id: data.id });
 
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[CRM-Sync] Critical Failure:', err);
-    return NextResponse.json({ 
+    await admin.from('automation_logs').insert({
+      workflow_name: 'hubspot_sync',
+      trigger_type: 'event',
+      status: 'failure',
+      error_message: msg,
+    });
+    return NextResponse.json({
       error: 'HubSpot synchronization failed',
-      detail: err instanceof Error ? err.message : String(err)
+      detail: msg
     }, { status: 500 });
   }
 }

@@ -72,7 +72,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'ok' });
 
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[Telegram] Webhook error:', err);
+    await admin.from('automation_logs').insert({
+      workflow_name: 'telegram_webhook',
+      trigger_type: 'event',
+      status: 'failure',
+      error_message: msg,
+    });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

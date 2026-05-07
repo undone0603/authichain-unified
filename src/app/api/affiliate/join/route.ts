@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { logAutomation } from '@/lib/automation';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +36,9 @@ export async function POST(_request: Request) {
 
     return NextResponse.json({ ok: true, affiliateId });
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[affiliate/join] Error:', err);
+    await logAutomation('affiliate_join', 'event', 'failure', null, msg);
     return NextResponse.json({ error: 'Failed to join program' }, { status: 500 });
   }
 }

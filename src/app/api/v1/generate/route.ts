@@ -3,6 +3,7 @@ import { verifyApiKey } from '@/lib/auth-api';
 import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { generateLivingQR } from '@/lib/hf-generation';
+import { logAutomation } from '@/lib/automation';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -63,7 +64,9 @@ export async function POST(req: NextRequest) {
       scannable = hfResult.scannable;
       attempts = hfResult.attempts;
     } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('[v1/generate] HF Generation failed:', err);
+      await logAutomation('v1_generate.hf', 'event', 'failure', { userId, mode }, msg);
       return NextResponse.json({ error: 'Generation engine temporarily unavailable' }, { status: 502 });
     }
 
@@ -86,12 +89,16 @@ export async function POST(req: NextRequest) {
         api_version: 'v1'
       }
     }).then(undefined, (err) => {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('[v1/generate] Failed to insert qron record:', err);
+      void logAutomation('v1_generate.persist', 'event', 'failure', { userId, url }, msg);
     });
 
     // 5. Deduct Credits
     admin.rpc('increment_generations_used', { user_id: userId }).then(undefined, (err) => {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('[v1/generate] Failed to increment generations_used:', err);
+      void logAutomation('v1_generate.credit_increment', 'event', 'failure', { userId }, msg);
     });
 
     return NextResponse.json({
@@ -102,7 +109,9 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[v1/generate] Error:', err);
+    await logAutomation('v1_generate', 'event', 'failure', null, msg);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
