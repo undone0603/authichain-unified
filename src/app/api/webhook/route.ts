@@ -3,6 +3,7 @@ import type Stripe from 'stripe';
 import { PLAN_CREDITS, PLAN_TIER, type PlanId } from '@/lib/plans';
 import { generateLivingQR } from '@/lib/hf-generation';
 import { logAutomation } from '@/lib/automation';
+import { sendEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 
@@ -174,17 +175,10 @@ async function sendQrEmail(
   qrUrl: string,
   prompt: string
 ) {
-  const apiKey = process.env.SENDGRID_API_KEY;
-  if (!apiKey) {
-    console.warn('[email] SENDGRID_API_KEY not set â€” skipping');
-    return;
-  }
-  const sgMail = (await import('@sendgrid/mail')).default;
-  sgMail.setApiKey(apiKey);
-  await sgMail.send({
+  const result = await sendEmail({
     to,
-    from: process.env.SENDGRID_FROM_EMAIL || 'hello@qron.space',
-    subject: 'Your QRON QR Code is Ready ðŸŽ¨',
+    from: process.env.SENDGRID_FROM_EMAIL || 'QRON <hello@qron.space>',
+    subject: 'Your QRON QR Code is Ready',
     html: `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#ededed;padding:32px;border-radius:12px;">
         <h1 style="color:#c9a227;margin-bottom:8px;">Your QRON is Ready</h1>
@@ -207,7 +201,12 @@ async function sendQrEmail(
       </div>`,
     text: `Your QRON QR Code is ready!\n\nDownload: ${imageUrl}\nLinks to: ${qrUrl}\nStyle: ${prompt}`,
   });
-  console.log('[email] QR delivered to', to);
+  if (!result.ok) {
+    console.warn('[email] QR delivery failed:', result.provider, result.error);
+    await logAutomation('stripe_webhook.sendQrEmail', 'event', 'failure', { to, provider: result.provider }, result.error);
+    return;
+  }
+  console.log(`[email] QR delivered to ${to} via ${result.provider}`);
 }
 
 // â”€â”€â”€ QR generation for one-time pack purchases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -374,23 +373,14 @@ async function sendTargetedQronEmail(
   style: string,
   txHash?: string
 ) {
-  const apiKey = process.env.SENDGRID_API_KEY;
-  if (!apiKey) {
-    console.warn('[email] SENDGRID_API_KEY not set â€” skipping');
-    return;
-  }
-
-  const sgMail = (await import('@sendgrid/mail')).default;
-  sgMail.setApiKey(apiKey);
-
   const nftSection = txHash
     ? `<p><strong style="color:#c9a227;">NFT Minted:</strong> <a href="https://basescan.org/tx/${txHash}" style="color:#c9a227;">${txHash.slice(0, 20)}...</a></p>`
     : '';
 
-  await sgMail.send({
+  const result = await sendEmail({
     to,
-    from: process.env.SENDGRID_FROM_EMAIL || 'hello@qron.space',
-    subject: `Your Custom QRON is Ready â€” ${subject.slice(0, 40)} ðŸŽ¨`,
+    from: process.env.SENDGRID_FROM_EMAIL || 'QRON <hello@qron.space>',
+    subject: `Your Custom QRON is Ready — ${subject.slice(0, 40)}`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#ededed;padding:40px 32px;border-radius:16px;border:1px solid rgba(201,162,39,0.2);">
         <div style="text-align:center;margin-bottom:28px;">
@@ -430,7 +420,12 @@ async function sendTargetedQronEmail(
       </div>`,
     text: `Your Custom QRON is ready!\n\nSubject: ${subject}\nStyle: ${style}\nLinks to: ${qrUrl}\n\nDownload: ${imageUrl}${txHash ? `\nNFT: https://basescan.org/tx/${txHash}` : ''}\n\nWant another? Use RETURN10 for 10% off.`,
   });
-  console.log('[email] Custom targeted QRON delivered to', to);
+  if (!result.ok) {
+    console.warn('[email] Custom QRON delivery failed:', result.provider, result.error);
+    await logAutomation('stripe_webhook.sendTargetedQronEmail', 'event', 'failure', { to, provider: result.provider, subject }, result.error);
+    return;
+  }
+  console.log(`[email] Custom targeted QRON delivered to ${to} via ${result.provider}`);
 }
 
 // â”€â”€â”€ Story Mode fulfillment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -481,17 +476,12 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
   const customerEmail =
     session.customer_email || session.customer_details?.email;
   if (customerEmail) {
-    const apiKey = process.env.SENDGRID_API_KEY;
-    if (apiKey) {
-      const sgMail = (await import('@sendgrid/mail')).default;
-      sgMail.setApiKey(apiKey);
-      const dashUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space'}/dashboard`;
-      await sgMail
-        .send({
-          to: customerEmail,
-          from: process.env.SENDGRID_FROM_EMAIL || 'hello@qron.space',
-          subject: 'AI Story Mode Unlocked ðŸŽ¬',
-          html: `
+    const dashUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space'}/dashboard`;
+    const result = await sendEmail({
+      to: customerEmail,
+      from: process.env.SENDGRID_FROM_EMAIL || 'QRON <hello@qron.space>',
+      subject: 'AI Story Mode Unlocked',
+      html: `
           <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#ededed;padding:40px 32px;border-radius:16px;border:1px solid rgba(201,162,39,0.2);">
             <h1 style="color:#c9a227;">AI Story Mode Unlocked</h1>
             <p style="color:#9e9e9e;">Your QRON now has Story Mode (<strong style="color:#c8c8c8;">${tier}</strong> tier) activated.</p>
@@ -504,15 +494,17 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
             </ul>
             <div style="margin:28px 0;">
               <a href="${dashUrl}" style="background:linear-gradient(135deg,#c9a227,#a07c10);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:800;">
-                Open Dashboard â†’
+                Open Dashboard
               </a>
             </div>
             <hr style="border:none;border-top:1px solid rgba(201,162,39,0.15);margin:24px 0;" />
-            <p style="color:#3a3a3a;font-size:11px;text-align:center;">QRON Â· AuthiChain Protocol</p>
+            <p style="color:#3a3a3a;font-size:11px;text-align:center;">QRON · AuthiChain Protocol</p>
           </div>`,
-          text: `AI Story Mode (${tier}) unlocked! Manage your QRON at ${dashUrl}`,
-        })
-        .catch((e) => console.warn('[webhook] story mode email error:', e));
+      text: `AI Story Mode (${tier}) unlocked! Manage your QRON at ${dashUrl}`,
+    });
+    if (!result.ok) {
+      console.warn('[webhook] story mode email failed:', result.provider, result.error);
+      await logAutomation('stripe_webhook.fulfillStoryMode.email', 'event', 'failure', { to: customerEmail, qronId, tier, provider: result.provider }, result.error);
     }
   }
 
