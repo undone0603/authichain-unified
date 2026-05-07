@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { PLAN_CREDITS, PLAN_TIER, type PlanId } from '@/lib/plans';
 import { generateLivingQR } from '@/lib/hf-generation';
+import { logAutomation } from '@/lib/automation';
 
 export const runtime = 'nodejs';
 
@@ -56,7 +57,9 @@ async function fulfillPlan(
       `[webhook] Fulfilled plan="${id}" for user=${userId} credits=${credits} tier=${tier}`
     );
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[webhook] fulfillPlan error (non-fatal):', err);
+    await logAutomation('stripe_webhook.fulfillPlan', 'event', 'failure', { userId, planId }, msg);
   }
 }
 
@@ -84,7 +87,9 @@ async function triggerTokenomics(userId: string | null | undefined, amount: numb
       });
     }
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[webhook] tokenomics trigger error:', err);
+    await logAutomation('stripe_webhook.triggerTokenomics', 'event', 'failure', { userId, amount }, msg);
   }
 }
 
@@ -103,7 +108,9 @@ async function downgradeUser(stripeCustomerId: string) {
       .eq('stripe_customer_id', stripeCustomerId);
     console.log('[webhook] Downgraded customer', stripeCustomerId);
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[webhook] downgradeUser error (non-fatal):', err);
+    await logAutomation('stripe_webhook.downgradeUser', 'event', 'failure', { stripeCustomerId }, msg);
   }
 }
 
@@ -124,7 +131,9 @@ async function saveCustomerId(
       })
       .eq('id', userId);
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[webhook] saveCustomerId error (non-fatal):', err);
+    await logAutomation('stripe_webhook.saveCustomerId', 'event', 'failure', { userId, customerId }, msg);
   }
 }
 
@@ -151,7 +160,9 @@ async function recordDelivery(
       { onConflict: 'stripe_session_id' }
     );
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[webhook] recordDelivery error (non-fatal):', err);
+    await logAutomation('stripe_webhook.recordDelivery', 'event', 'failure', { sessionId, email }, msg);
   }
 }
 
@@ -226,7 +237,9 @@ async function generateAndDeliverQr(session: Stripe.Checkout.Session) {
       recordDelivery(session.id, customerEmail, imageUrl, url, prompt),
     ]);
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[webhook] generateAndDeliverQr error:', err);
+    await logAutomation('stripe_webhook.generateAndDeliverQr', 'event', 'failure', { sessionId: session.id, customerEmail }, msg);
   }
 }
 
@@ -345,7 +358,9 @@ async function generateAndDeliverTargetedQron(session: Stripe.Checkout.Session) 
     );
     await recordDelivery(session.id, customerEmail, imageUrl, url, prompt);
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[webhook] generateAndDeliverTargetedQron error:', err);
+    await logAutomation('stripe_webhook.generateAndDeliverTargetedQron', 'event', 'failure', { sessionId: session.id, customerEmail }, msg);
   }
 }
 
@@ -511,6 +526,7 @@ export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!stripeSecretKey || !webhookSecret) {
+    await logAutomation('stripe_webhook', 'event', 'failure', null, 'Stripe env not configured');
     return NextResponse.json(
       { error: 'Stripe not configured' },
       { status: 500 }
@@ -519,6 +535,7 @@ export async function POST(request: Request) {
 
   const signature = request.headers.get('stripe-signature');
   if (!signature) {
+    await logAutomation('stripe_webhook', 'event', 'failure', null, 'missing stripe-signature header');
     return NextResponse.json(
       { error: 'No stripe-signature header' },
       { status: 400 }
@@ -537,7 +554,9 @@ export async function POST(request: Request) {
       webhookSecret
     );
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('[webhook] Signature verification failed:', err);
+    await logAutomation('stripe_webhook', 'event', 'failure', null, `signature verification failed: ${msg}`);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
@@ -595,11 +614,14 @@ export async function POST(request: Request) {
       }
 
       default:
-        // Unhandled event types â€” ignore silently
+        // Unhandled event types — ignore silently
         break;
     }
+    await logAutomation('stripe_webhook', 'event', 'success', { event_type: event.type, event_id: event.id });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error(`[webhook] Handler error for ${event.type}:`, err);
+    await logAutomation('stripe_webhook', 'event', 'failure', { event_type: event.type, event_id: event.id }, msg);
     // Return 200 so Stripe doesn't retry; errors are logged
   }
 

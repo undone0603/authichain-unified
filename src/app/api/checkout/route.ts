@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PLANS } from '@/lib/plans';
 import { createClient } from '@/utils/supabase/server';
+import { logAutomation } from '@/lib/automation';
 
 export const runtime = 'nodejs';
 
@@ -86,6 +87,7 @@ return NextResponse.json({ url: session.url });
 console.error('[checkout] Error:', error);
 
 const err = error as { type?: string; message?: string };
+await logAutomation('checkout_session_create', 'event', 'failure', null, `${err?.type || 'Error'}: ${err?.message || 'unknown'}`);
 
 if (
   err?.type === 'StripeInvalidRequestError' &&
