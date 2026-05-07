@@ -563,6 +563,42 @@ export class AutonomousController {
       .select('*', { count: 'exact', head: true })
       .gte('created_at', past24h);
 
+    // Fetch failed workflows in last 24h, grouped by name
+    const { data: failureRows } = await admin
+      .from('automation_logs')
+      .select('workflow_name, error_message, created_at')
+      .eq('status', 'failure')
+      .gte('created_at', past24h)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    const failuresByWorkflow = new Map<string, { count: number; lastError: string; lastSeen: string }>();
+    for (const row of failureRows ?? []) {
+      const existing = failuresByWorkflow.get(row.workflow_name);
+      if (existing) {
+        existing.count++;
+      } else {
+        failuresByWorkflow.set(row.workflow_name, {
+          count: 1,
+          lastError: row.error_message || '(no message)',
+          lastSeen: row.created_at,
+        });
+      }
+    }
+    const totalFailures = failureRows?.length ?? 0;
+    const failuresHtml = totalFailures === 0
+      ? `<p style="color: #4caf50; font-size: 13px; margin: 0;">✓ No failed workflows in the last 24h.</p>`
+      : Array.from(failuresByWorkflow.entries())
+          .map(([name, info]) => `
+            <div style="background: #1a0808; border-left: 3px solid #ef5350; padding: 10px 14px; margin: 8px 0; border-radius: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <strong style="color: #ef9a9a; font-size: 13px;">${name}</strong>
+                <span style="color: #ef5350; font-size: 11px;">×${info.count}</span>
+              </div>
+              <div style="color: #a18888; font-size: 11px; margin-top: 4px; font-family: monospace; white-space: pre-wrap; word-break: break-word;">${info.lastError.slice(0, 240)}</div>
+            </div>
+          `).join('');
+
     const reportHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #fff; padding: 32px; border-radius: 12px; border: 1px solid #c9a227;">
         <h1 style="color: #c9a227;">Daily Executive Digest</h1>
@@ -578,6 +614,11 @@ export class AutonomousController {
             <div style="font-size: 12px; color: #666;">GENERATIONS</div>
           </div>
         </div>
+        <hr style="border: none; border-top: 1px solid #333; margin: 24px 0;" />
+        <h2 style="color: ${totalFailures === 0 ? '#4caf50' : '#ef5350'}; font-size: 16px; margin: 0 0 12px 0;">
+          ${totalFailures === 0 ? '✓ Operational' : `⚠ ${totalFailures} failure${totalFailures === 1 ? '' : 's'} in last 24h`}
+        </h2>
+        ${failuresHtml}
         <p style="font-size: 12px; color: #3a3a3a; margin-top: 32px; text-align: center;">
           System Timestamp: ${new Date().toLocaleString()}
         </p>
