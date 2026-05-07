@@ -30,34 +30,42 @@ export class AutonomousController {
       if (!prospects || prospects.length === 0) return;
 
       const resendKey = process.env.RESEND_API_KEY;
+      let sent = 0;
+      let failed = 0;
+      let skipped = 0;
 
       for (const p of prospects) {
-        // 2. Draft Tailored FTC Messaging
         const msg = `Attention ${p.name || 'Operations Lead'},\n\n` +
           `With the recent FTC $625k MUSA penalties and EO 14392, your current "Made in USA" claims are at regulatory risk.\n\n` +
           `AuthiChain has launched the FTC Shield — the first cryptographic provenance seal for American manufacturing.\n\n` +
           `View your prepared compliance dashboard: https://qron.space/ftc-shield`;
 
-        // 3. Dispatch via Resend
-        if (resendKey && p.email) {
-          console.log(`[autonomous] Dispatching FTC Drip to ${p.email}`);
-          await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${resendKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              from: 'AuthiChain Compliance <compliance@qron.space>',
-              to: p.email,
-              subject: 'Action Required: FTC Made-in-USA Compliance (EO 14392)',
-              text: msg,
-            }),
-          });
-        } else {
-          console.log(`[autonomous] FTC Drip skipped for ${p.email || p.id} (RESEND_API_KEY missing or no email)`);
+        if (!resendKey || !p.email) {
+          skipped++;
+          continue;
         }
 
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${resendKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'AuthiChain Compliance <compliance@qron.space>',
+            to: p.email,
+            subject: 'Action Required: FTC Made-in-USA Compliance (EO 14392)',
+            text: msg,
+          }),
+        });
+
+        if (!res.ok) {
+          failed++;
+          console.warn(`[autonomous] FTC drip failed for ${p.email}: ${res.status}`);
+          continue;
+        }
+
+        sent++;
         await admin
           .from('lead_captures')
           .update({
@@ -67,7 +75,11 @@ export class AutonomousController {
           .eq('id', p.id);
       }
 
-      await logAutomation(workflowName, 'cron', 'success', { prospects_processed: prospects.length });
+      const status = failed > 0 || (sent === 0 && prospects.length > 0) ? 'failure' : 'success';
+      const errMsg = failed > 0
+        ? `${failed}/${prospects.length} drip sends failed (likely RESEND_API_KEY invalid)`
+        : (skipped === prospects.length ? 'all prospects skipped (missing key or email)' : undefined);
+      await logAutomation(workflowName, 'cron', status, { prospects: prospects.length, sent, failed, skipped }, errMsg);
     } catch (err: unknown) {
       await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
     }
@@ -128,7 +140,7 @@ export class AutonomousController {
    * Stage 1: Artifact Delivery, Stage 2: Nudge, Stage 3: Elite Offer.
    */
   private async runDripSequencer() {
-    const workflowName = 'lead_drip_sequencer';
+    const workflowName = '[stub]_lead_drip_sequencer';
     try {
       const now = new Date().toISOString();
       const { data: sequences } = await admin
@@ -389,25 +401,17 @@ export class AutonomousController {
   }
 
   /**
-   * Specific for strainchain.io
+   * Stub: real strainchain.io audit not yet implemented.
    */
   private async runStrainChainAudit() {
-    try {
-      await logAutomation('strainchain_audit', 'cron', 'success', { items_audited: 42, anomalies: 0 });
-    } catch (err: unknown) {
-      await logAutomation('strainchain_audit', 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
-    }
+    await logAutomation('[stub]_strainchain_audit', 'cron', 'success', { stub: true });
   }
 
   /**
-   * Specific for govchain.us
+   * Stub: real govchain.us sync not yet implemented.
    */
   private async runGovChainSync() {
-    try {
-      await logAutomation('govchain_sync', 'cron', 'success', { yield_calculated: '12.4%', proposals_active: 3 });
-    } catch (err: unknown) {
-      await logAutomation('govchain_sync', 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
-    }
+    await logAutomation('[stub]_govchain_sync', 'cron', 'success', { stub: true });
   }
 
   /**
@@ -671,23 +675,10 @@ export class AutonomousController {
   }
 
   /**
-   * 6. Growth Engine Trigger: Wake up the desktop AgentZ for active outreach.
+   * Stub: would trigger desktop AgentZ for outreach via webhook/GH Action.
+   * Currently records intent only.
    */
   private async triggerGrowthEngine() {
-    const workflowName = 'desktop_growth_outreach';
-    try {
-      // In a real environment, this might trigger a GitHub Action or a local webhook
-      // that the desktop AgentZ daemon is listening to.
-      // For now, we log the intent.
-      
-      const targets = ['LinkedIn Prospection', 'Reddit Viral Thread', 'Competitor Price Scan'];
-      
-      await logAutomation(workflowName, 'cron', 'success', {
-        triggered_tasks: targets,
-        agent_version: 'v2.1',
-      });
-    } catch (err: unknown) {
-      await logAutomation(workflowName, 'cron', 'failure', null, err instanceof Error ? err.message : 'Unknown error');
-    }
+    await logAutomation('[stub]_desktop_growth_outreach', 'cron', 'success', { stub: true });
   }
 }
