@@ -4,7 +4,7 @@ import { validateQRScannability } from './vision';
 
 const HF_TOKEN = process.env.HUGGINGFACE_TOKEN || process.env.HF_TOKEN;
 const HF_MODEL = 'DionTimmer/controlnet_qrcode-control_v1p_sd15';
-const HF_API_URL = `https://api-inference.huggingface.co/models/${HF_MODEL}`;
+const HF_API_URL = `https://router.huggingface.co/hf-inference/models/${HF_MODEL}`;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
