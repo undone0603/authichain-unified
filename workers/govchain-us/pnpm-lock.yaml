@@ -1,0 +1,17 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    devDependencies:
+      wrangler:
+        specifier: ^3.0.0
+        version: 3.103.2
+
+packages:
+
+snapshots:
