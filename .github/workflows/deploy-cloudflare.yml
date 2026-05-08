@@ -34,8 +34,9 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-      run: pnpm install --no-frozen-lockfile
-      - name: Build frontend (→ dist/public for Wrangler [assets])
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build frontend (+ dist/public for Wrangler [assets])
         run: pnpm exec vite build
         env:
           VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
