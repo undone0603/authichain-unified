@@ -79,6 +79,10 @@ function DashboardRoutes() {
           <Route path="/network" component={NetworkStats} />
           <Route path="/orders" component={ServiceOrders} />
           <Route path="/sba-loan" component={SbaDisasterLoan} />
+          <Route path="/services" component={Services} />
+          <Route path="/story/:id" component={Storymode} />
+          <Route path="/gov-onboard" component={GovOnboarding} />
+          <Route path="/qr-gallery" component={QrArtGallery} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
