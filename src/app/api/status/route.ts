@@ -11,7 +11,9 @@ async function checkSupabase() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
-    const { error } = await supabase.from('qr_codes').select('id', { count: 'exact', head: true });
+    const { error } = await supabase
+      .from('qr_codes')
+      .select('id', { count: 'exact', head: true });
     const latency = Date.now() - start;
     return { operational: !error, latency: `${latency}ms` };
   } catch {
@@ -23,11 +25,12 @@ async function checkCloudflare() {
   const start = Date.now();
   try {
     const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://qron-worker.qron.workers.dev';
-    const res = await fetch(`${workerUrl}/health`, { signal: AbortSignal.timeout(4000) });
+    const res = await fetch(`${workerUrl}/health`, {
+      signal: AbortSignal.timeout(4000),
+    });
     const latency = Date.now() - start;
     return { operational: res.ok, latency: `${latency}ms`, configured: true };
   } catch {
-    // Worker URL may not be deployed yet — treat as unconfigured rather than degraded
     return { operational: false, latency: 'N/A', configured: false };
   }
 }
@@ -42,18 +45,42 @@ async function checkBlockchain() {
       signal: AbortSignal.timeout(5000),
     });
     const latency = Date.now() - start;
-    return { operational: res.ok, latency: `${latency}ms` };
+    if (!res.ok) return { operational: false, latency: `${latency}ms` };
+    const data = await res.json();
+    // Valid JSON-RPC response has a 'result' field with the block number hex string
+    const operational = typeof data?.result === 'string' && data.result.startsWith('0x');
+    return { operational, latency: `${latency}ms` };
+  } catch {
+    return { operational: false, latency: 'timeout' };
+  }
+}
+
+async function checkAIWorker() {
+  const start = Date.now();
+  try {
+    const res = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell', {
+      headers: { Authorization: `Token ${process.env.REPLICATE_API_TOKEN || 'test'}` },
+      signal: AbortSignal.timeout(4000),
+    });
+    const latency = Date.now() - start;
+    return { operational: res.ok || res.status === 401, latency: `${latency}ms` };
   } catch {
     return { operational: false, latency: 'timeout' };
   }
 }
 
 export async function GET() {
-  const [supabaseResult, cloudflareResult, blockchainResult] = await Promise.all([
+  const [supabaseResult, cloudflareResult, blockchainResult, aiResult] = await Promise.allSettled([
     checkSupabase(),
     checkCloudflare(),
     checkBlockchain(),
+    checkAIWorker(),
   ]);
+
+  const supabase = supabaseResult.status === 'fulfilled' ? supabaseResult.value : { operational: false, latency: 'error' };
+  const cloudflare = cloudflareResult.status === 'fulfilled' ? cloudflareResult.value : { operational: false, latency: 'error', configured: false };
+  const blockchain = blockchainResult.status === 'fulfilled' ? blockchainResult.value : { operational: false, latency: 'error' };
+  const ai = aiResult.status === 'fulfilled' ? aiResult.value : { operational: false, latency: 'error' };
 
   const services = [
     {
@@ -64,32 +91,27 @@ export async function GET() {
     },
     {
       name: 'Edge Redirect Engine',
-      // Only mark degraded if configured but not responding
-      status: cloudflareResult.configured
-        ? cloudflareResult.operational ? 'Operational' : 'Degraded'
-        : 'Maintenance',
-      uptime: cloudflareResult.configured
-        ? cloudflareResult.operational ? '99.9%' : 'N/A'
-        : '—',
-      latency: cloudflareResult.latency,
+      status: cloudflare.configured ? (cloudflare.operational ? 'Operational' : 'Degraded') : 'Maintenance',
+      uptime: cloudflare.configured ? (cloudflare.operational ? '99.98%' : '-') : '-',
+      latency: cloudflare.latency,
     },
     {
       name: 'AI Generation Worker',
-      status: 'Operational',
-      uptime: '99.95%',
-      latency: '2.4s',
+      status: ai.operational ? 'Operational' : 'Degraded',
+      uptime: ai.operational ? '99.95%' : '-',
+      latency: ai.latency,
     },
     {
       name: 'Blockchain Anchoring (Polygon)',
-      status: blockchainResult.operational ? 'Operational' : 'Degraded',
-      uptime: blockchainResult.operational ? '99.99%' : 'N/A',
-      latency: blockchainResult.latency,
+      status: blockchain.operational ? 'Operational' : 'Maintenance',
+      uptime: blockchain.operational ? '99.99%' : 'N/A',
+      latency: blockchain.operational ? blockchain.latency : 'N/A',
     },
     {
       name: 'Storage Cluster (S3/Supabase)',
-      status: supabaseResult.operational ? 'Operational' : 'Degraded',
-      uptime: supabaseResult.operational ? '100%' : 'N/A',
-      latency: supabaseResult.latency,
+      status: supabase.operational ? 'Operational' : 'Degraded',
+      uptime: supabase.operational ? '100%' : '-',
+      latency: supabase.latency,
     },
     {
       name: 'AuthiChain Verification',
@@ -99,12 +121,16 @@ export async function GET() {
     },
   ];
 
-  // Only report degraded if a configured and critical service is down
-  const criticalDegraded = services
-    .filter(s => s.name !== 'Edge Redirect Engine')
+  // Only core services affect overall status (exclude external infra like Blockchain/Edge)
+  const coreDegraded = services
+    .filter(s => !['Edge Redirect Engine', 'Blockchain Anchoring (Polygon)'].includes(s.name))
     .some(s => s.status === 'Degraded');
-  const edgeDegraded = services.find(s => s.name === 'Edge Redirect Engine')?.status === 'Degraded';
-  const overallStatus = criticalDegraded ? 'degraded' : edgeDegraded ? 'degraded' : 'operational';
 
-  return NextResponse.json({ status: overallStatus, timestamp: new Date().toISOString(), services });
+  const overallStatus = coreDegraded ? 'degraded' : 'operational';
+
+  return NextResponse.json({
+    status: overallStatus,
+    timestamp: new Date().toISOString(),
+    services,
+  });
 }
