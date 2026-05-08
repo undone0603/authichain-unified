@@ -202,7 +202,7 @@ export default function Home() {
           }
         }
       } catch {
-        // silently fail â€” presets will be empty
+                // silently fail — presets will be empty
       }
     };
 
