@@ -26,9 +26,18 @@ import { abTestingRouter } from '../ab-testing/router';
 import { characterRouter } from '../character/router';
 import { macrohardRouter } from '../macrohard/router';
 import { whiteLabelRouter } from '../white-label/router';
+import { adminRouter } from '../admin/router';
+import { marketplaceRouter } from '../marketplace/router';
+import { marketingRouter } from '../marketing/router';
+import { missionsRouter } from '../missions/router';
+import { emailDraftsRouter } from '../email-drafts/router';
+import { emailCampaignsRouter } from '../email-campaigns/router';
+import { stakingRouter } from '../staking/router';
+import { supplyChainRouter } from '../supply-chain/router';
+import { certificatesRouter } from '../certificates/router';
 
 /**
- * Root tRPC router — merges all sub-routers.
+ * Root tRPC router — merges all 36 sub-routers.
  * Imported by server/_core/app.ts as appRouter.
  */
 export const appRouter = router({
@@ -59,6 +68,15 @@ export const appRouter = router({
   character: characterRouter,
   macrohard: macrohardRouter,
   whiteLabel: whiteLabelRouter,
+  admin: adminRouter,
+  marketplace: marketplaceRouter,
+  marketing: marketingRouter,
+  missions: missionsRouter,
+  emailDrafts: emailDraftsRouter,
+  emailCampaigns: emailCampaignsRouter,
+  staking: stakingRouter,
+  supplyChain: supplyChainRouter,
+  certificates: certificatesRouter,
 });
 
 export type AppRouter = typeof appRouter;
