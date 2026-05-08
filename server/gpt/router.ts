@@ -13,12 +13,13 @@ const router = Router();
 // POST /api/gpt/verify - Verify product authenticity
 router.post("/verify", async (req, res) => {
   try {
-    const { productId, imageUrl, barcode } = req.body;
-    if (!productId && !barcode) {
-      return res.status(400).json({ error: "productId or barcode required" });
+    const { productId } = req.body;
+    if (!productId) {
+      return res.status(400).json({ error: "productId required" });
     }
-    const query = productId ? eq(products.id, productId) : eq(products.barcode, barcode);
-    const product = await db.query.products.findFirst({ where: query });
+    const product = await db.query.products.findFirst({
+      where: eq(products.id, Number(productId)),
+    });
     if (!product) {
       return res.json({
         verified: false,
@@ -34,7 +35,7 @@ router.post("/verify", async (req, res) => {
       verified: !!cert,
       trustScore: cert ? 95 : 20,
       productName: product.name,
-      brand: product.brand,
+      brand: product.brand ?? null,
       certificateId: cert?.id ?? null,
       blockchain: cert ? { status: "SECURED", network: "Polygon" } : null,
       message: cert
@@ -53,7 +54,6 @@ router.post("/qr/generate", async (req, res) => {
     const { productId, style, size } = req.body;
     if (!productId) return res.status(400).json({ error: "productId required" });
     const verifyUrl = `https://authichain.com/verify/${productId}`;
-    // Return the QR data URL reference — actual rendering done by client
     return res.json({
       qrUrl: verifyUrl,
       embedUrl: `https://authichain.com/api/qr/${productId}?style=${style || "default"}&size=${size || 256}`,
@@ -77,7 +77,7 @@ router.get("/certificates/verify", async (req, res) => {
     return res.json({
       valid: true,
       certificateId: cert.id,
-      issuedAt: cert.createdAt,
+      issuedAt: cert.issuedAt,
       blockchain: { status: "SECURED", network: "Polygon" },
       message: "Certificate is valid and blockchain-secured.",
     });
@@ -87,14 +87,13 @@ router.get("/certificates/verify", async (req, res) => {
   }
 });
 
-// POST /api/gpt/cannabis/verify - Verify cannabis strain
+// POST /api/gpt/cannabis/verify - Verify cannabis strain (by product name)
 router.post("/cannabis/verify", async (req, res) => {
   try {
-    const { strainName, batchId, dispensaryId } = req.body;
+    const { strainName, batchId } = req.body;
     if (!batchId && !strainName) {
       return res.status(400).json({ error: "strainName or batchId required" });
     }
-    // Look up product by name (strain) - cannabis products stored in products table
     const product = strainName
       ? await db.query.products.findFirst({ where: eq(products.name, strainName) })
       : null;
@@ -102,7 +101,7 @@ router.post("/cannabis/verify", async (req, res) => {
       verified: !!product,
       strainName: strainName || "Unknown",
       batchId: batchId || null,
-      metrxCompliant: !!product,
+      metrcCompliant: !!product,
       blockchain: product ? { status: "SECURED", network: "Polygon" } : null,
       message: product
         ? `VERIFIED: ${product.name} - METRC compliant, blockchain secured.`
@@ -117,27 +116,23 @@ router.post("/cannabis/verify", async (req, res) => {
 // POST /api/gpt/trust-score - Compute trust score
 router.post("/trust-score", async (req, res) => {
   try {
-    const { productId, factors } = req.body;
+    const { productId } = req.body;
     if (!productId) return res.status(400).json({ error: "productId required" });
     const product = await db.query.products.findFirst({
-      where: eq(products.id, productId),
+      where: eq(products.id, Number(productId)),
     });
     if (!product) return res.json({ trustScore: 0, verdict: "UNKNOWN", message: "Product not found" });
     const cert = await db.query.certificates.findFirst({
       where: eq(certificates.productId, product.id),
     });
     const baseScore = cert ? 85 : 15;
-    const supplierScore = product.supplierId ? 10 : 0;
-    const trustScore = Math.min(100, baseScore + supplierScore);
+    const trustScore = Math.min(100, baseScore);
     const verdict = trustScore >= 80 ? "TRUSTED" : trustScore >= 50 ? "MODERATE" : "SUSPICIOUS";
     return res.json({
       trustScore,
       verdict,
-      breakdown: {
-        blockchainCert: cert ? 85 : 0,
-        supplierVerification: supplierScore,
-      },
-      message: `Trust score for ${product.name}: ${trustScore}/100 — ${verdict}`,
+      breakdown: { blockchainCert: cert ? 85 : 0 },
+      message: `Trust score for ${product.name}: ${trustScore}/100 \u2014 ${verdict}`,
     });
   } catch (err) {
     console.error("[GPT /trust-score]", err);
