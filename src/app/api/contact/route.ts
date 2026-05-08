@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import sgMail from '@sendgrid/mail';
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,33 +21,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (resendApiKey) {
-      const resend = new Resend(resendApiKey);
-      await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'contact@qron.space',
-        to: process.env.CONTACT_TO_EMAIL || 'hello@qron.space',
-        subject: `New Contact Form Submission from ${name}`,
-        html: `
-          <h2>New QRON Contact Form Submission</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          ${company ? `<p><strong>Company:</strong> ${company}</p>` : ''}
-          <p><strong>Message:</strong></p>
-          <p>${message.replace(/\n/g, '<br>')}</p>
-        `,
+    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+    const toEmail = process.env.CONTACT_EMAIL || 'hello@qron.space';
+    const fromEmail = process.env.FROM_EMAIL || 'noreply@qron.space';
+
+    if (sendgridApiKey) {
+      sgMail.setApiKey(sendgridApiKey);
+      await sgMail.send({
+        to: toEmail,
+        from: fromEmail,
         replyTo: email,
+        subject: `New Contact Form Submission from ${name}`,
+        text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || 'N/A'}\n\nMessage:\n${message}`,
+        html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${company || 'N/A'}</p><p><strong>Message:</strong></p><p>${message}</p>`,
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Thank you for your message. We will respond within 24 hours.',
-    });
-  } catch (error) {
-    console.error('[/api/contact] Error:', error);
+    // Always return success (graceful degradation when email not configured)
     return NextResponse.json(
-      { success: false, error: 'Failed to send message. Please try again.' },
+      {
+        success: true,
+        message: 'Thank you for reaching out. We will get back to you shortly.',
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Contact form error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to process your request. Please try again.' },
       { status: 500 }
     );
   }
