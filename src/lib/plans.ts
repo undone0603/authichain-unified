@@ -1,4 +1,4 @@
-// â”€â”€â”€ QRON Plans â€” mapped to real Stripe products/prices â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- QRON Plans — mapped to real Stripe products/prices ---
 // Products and prices are pre-created in the Stripe dashboard.
 // priceId values are LIVE; keep in sync with Stripe.
 
