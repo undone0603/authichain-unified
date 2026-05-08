@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'StrainChain NFT Marketplace â€” High-Value Industrial SVGs',
+    title: 'QRON Gallery — AI QR Marketplace & SVG Artifacts',
   description:
     'The premier marketplace for cryptographically-verified industrial artifacts and AI QR masterpieces on Base.',
 };
