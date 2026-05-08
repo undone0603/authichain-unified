@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-/** Static fallback presets â€” used when DB table doesn't exist yet */
+/** Static fallback presets — used when DB table doesn't exist yet */
 const STATIC_PRESETS: FalaiPreset[] = [
   {
     id: 'static-portal',
@@ -82,7 +82,7 @@ const STATIC_PRESETS: FalaiPreset[] = [
     id: 'galactic',
     name: 'Galactic',
     description:
-      'Cosmic starfields and swirling galaxies â€” particles orbiting a living QRON.',
+              'Cosmic starfields and swirling galaxies — particles orbiting a living QRON.',
     is_premium: true,
     tier: 'pro',
   },
