@@ -312,6 +312,11 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === '/api/generate/free') {
        return new Response(JSON.stringify({ success: true, qrImageUrl: 'https://quickchart.io/qr?text=https://qron.space&ecLevel=H' }), { headers: { 'Content-Type': 'application/json' } });
+        if (url.pathname === '/health') {
+              return new Response(JSON.stringify({ status: 'ok', worker: 'qron-space', timestamp: new Date().toISOString() }), {
+                      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                    });
+            }
     }
     return new Response(HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
