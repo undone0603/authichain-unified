@@ -35,26 +35,80 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${BASE}/authichain`,
       lastModified: now,
       changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    // SEO landing pages
-    {
-      url: `${BASE}/ai-qr-code-generator`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.9,
+      priority: 0.7,
     },
     {
-      url: `${BASE}/qr-code-art`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.85,
-    },
-        {
       url: `${BASE}/contact`,
       lastModified: now,
       changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    // Marketing / business pages
+    {
+      url: `${BASE}/about`,
+      lastModified: now,
+      changeFrequency: 'monthly',
       priority: 0.7,
+    },
+    {
+      url: `${BASE}/studio`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: `${BASE}/demo`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: `${BASE}/elite`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE}/enterprise`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE}/white-label`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE}/affiliate`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${BASE}/creators`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${BASE}/ftc-shield`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${BASE}/docs`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE}/status`,
+      lastModified: now,
+      changeFrequency: 'always',
+      priority: 0.5,
     },
   ];
 }
