@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 const router = Router();
 
@@ -24,26 +24,27 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    // Send email notification via Resend if configured
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (resendApiKey) {
-      const resend = new Resend(resendApiKey);
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'contact@authichain.com';
-      const toEmail = process.env.CONTACT_TO_EMAIL || 'hello@authichain.com';
+    // Send email via nodemailer if SMTP is configured
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const toEmail = process.env.CONTACT_EMAIL || 'hello@authichain.com';
 
-      await resend.emails.send({
-        from: fromEmail,
-        to: toEmail,
-        subject: subject || `New Contact Form Submission from ${name}`,
-        html: `
-          <h2>New Contact Form Submission</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          ${company ? `<p><strong>Company:</strong> ${company}</p>` : ''}
-          <p><strong>Message:</strong></p>
-          <p>${message.replace(/\n/g, '<br>')}</p>
-        `,
+    if (smtpHost && smtpUser && smtpPass) {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: false,
+        auth: { user: smtpUser, pass: smtpPass },
+      });
+
+      await transporter.sendMail({
+        from: `"${name}" <${smtpUser}>`,
         replyTo: email,
+        to: toEmail,
+        subject: subject || `Contact form: ${name}`,
+        text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || 'N/A'}\n\nMessage:\n${message}`,
+        html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${company || 'N/A'}</p><p><strong>Message:</strong></p><p>${message}</p>`,
       });
     }
 
@@ -52,10 +53,10 @@ router.post('/', async (req: Request, res: Response) => {
       message: 'Thank you for your message. We will be in touch shortly.',
     });
   } catch (error) {
-    console.error('[contact] Error processing contact form:', error);
+    console.error('Contact form error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to send message. Please try again later.',
+      error: 'Failed to process your request. Please try again.',
     });
   }
 });
