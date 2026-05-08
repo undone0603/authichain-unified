@@ -79,7 +79,7 @@ export function QRDisplay({ qron, isGenerating, mode }: QRDisplayProps) {
 
   const handleScanValidate = async () => {
     if (!qron?.imageUrl || !qron.registration_id) {
-      toast.error('No registration ID â€” generate a new QRON first');
+            toast.error('No registration ID — generate a new QRON first');
       return;
     }
 
