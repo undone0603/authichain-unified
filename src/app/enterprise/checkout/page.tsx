@@ -19,30 +19,32 @@ export default function EnterpriseCheckout() {
                 <p className="text-gray-400 mt-1">Michigan Retail & Cultivation</p>
               </div>
               <div className="text-right">
-                <p className="text-4xl font-extrabold text-white">$1,499</p>
+                <p className="text-4xl font-extrabold text-white">$500</p>
                 <p className="text-sm text-gray-500">/ month</p>
               </div>
             </div>
 
             <ul className="space-y-4 mb-8 text-gray-300">
-              <li className="flex items-center"><span className="text-green-500 mr-3">✓</span> Unlimited METRC Tag Mints (TruMark)</li>
-              <li className="flex items-center"><span className="text-green-500 mr-3">✓</span> Sub-2-Second Edge AI Verification</li>
-              <li className="flex items-center"><span className="text-green-500 mr-3">✓</span> Dedicated Polygon RPC Node</li>
-              <li className="flex items-center"><span className="text-green-500 mr-3">✓</span> White-Glove Onboarding & API Keys</li>
+              <li className="flex items-center"><span className="text-green-500 mr-3">✓</span> Unlimited Tag Mints (TruMark)</li>
+              <li className="flex items-center"><span className="text-green-500 mr-3">✓</span> On-site AI Verification</li>
+              <li className="flex items-center"><span className="text-green-500 mr-3">✓</span> Polygon RPC Node</li>
+              <li className="flex items-center"><span className="text-green-500 mr-3">✓</span> Onboarding & API Keys</li>
             </ul>
 
             <form action="/api/checkout/enterprise" method="POST" className="mt-8">
               <button
                 type="submit"
-                className="w-full flex justify-center py-4 px-8 border border-transparent rounded-xl shadow-sm text-lg font-bold text-black bg-white hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                className="w-full flex justify-center py-4 px-8 border border-transparent rounded-xl shadow-sm text-lg font-bold text-black bg-white hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-colors"
               >
                 Proceed to Secure Payment
               </button>
-              <p className="text-center text-xs text-gray-500 mt-4 flex items-center justify-center">
-                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg>
-                Secured by Stripe
-              </p>
             </form>
+            <p className="text-center text-xs text-gray-500 mt-4 flex items-center justify-center">
+              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              Secured by Stripe
+            </p>
           </div>
         </div>
       </div>
