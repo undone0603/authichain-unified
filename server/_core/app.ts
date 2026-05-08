@@ -6,6 +6,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { createInternalRouter } from "../internal-api";
 import { brandMiddleware } from "./brand-middleware";
+import contactRouter from "../contact";
 
 /**
  * Creates and configures the Express app without binding to a port.
@@ -46,6 +47,7 @@ export function createApp() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerOAuthRoutes(app);
+    app.use("/api/contact", contactRouter);
 
   // Internal API for gateway worker
   app.use("/api/internal", createInternalRouter());
