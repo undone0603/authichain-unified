@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         { status: 503 }
       );
 
-    // â”€â”€ Scan validation gate (if provenance registration exists) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // --- Scan validation gate (if provenance registration exists) ---
     const authichainUrl = process.env.AUTHICHAIN_API_URL;
     if (registration_id && authichainUrl) {
       try {
