@@ -7,7 +7,7 @@ import { sendEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 
-// â”€â”€â”€ Supabase helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Supabase helper ---
 
 async function getServiceClient() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -17,7 +17,7 @@ async function getServiceClient() {
   );
 }
 
-// â”€â”€â”€ Grant credits + upgrade tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Grant credits + upgrade tier ---
 
 async function fulfillPlan(
   userId: string | null | undefined,
