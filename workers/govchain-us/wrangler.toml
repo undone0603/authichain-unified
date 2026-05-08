@@ -3,6 +3,6 @@ main = "src/index.ts"
 compatibility_date = "2026-05-08"
 account_id = "4c1869b90f13f86940aa3747839bf420"
 workers_dev = true
-
+# Build with subdirectory path: workers/govchain-us
 
 
