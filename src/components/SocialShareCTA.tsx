@@ -12,10 +12,9 @@ interface SocialShareCTAProps {
 export function SocialShareCTA({
   imageUrl: _imageUrl,
   title = 'Check out my AI QR Code!',
-  description = 'Created with QRON â€” AI QR Code Art Generator',
+      description = 'Created with QRON — AI QR Code Art Generator',
 }: SocialShareCTAProps) {
-  const [copied, setCopied] = useState(false);
-
+      
   const shareUrl = 'https://qron.space';
   const shareText = `${title}\n\n${description}\n\nCreate yours free:`;
 
