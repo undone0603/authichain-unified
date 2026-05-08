@@ -6,7 +6,7 @@ import { QRDisplay } from '@/components/QRDisplay';
 import type { GeneratedQRON } from '@/lib/types';
 import { createClient } from '@/utils/supabase/client';
 
-// â”€â”€ Style presets (must match API route keys) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Style presets (must match API route keys) ---
 const STYLE_OPTIONS = [
   { key: 'portrait', label: 'Oil Portrait', emoji: 'ðŸŽ¨', tier: 'free' },
   { key: 'watercolor', label: 'Watercolor', emoji: 'ðŸ–Œï¸', tier: 'free' },
