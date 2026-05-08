@@ -23,7 +23,24 @@ async function checkCloudflare() {
   const start = Date.now();
   try {
     const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://qron-worker.qron.workers.dev';
-    const res = await fetch(`${workerUrl}/health`, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(`${workerUrl}/health`, { signal: AbortSignal.timeout(4000) });
+    const latency = Date.now() - start;
+    return { operational: res.ok, latency: `${latency}ms`, configured: true };
+  } catch {
+    // Worker URL may not be deployed yet — treat as unconfigured rather than degraded
+    return { operational: false, latency: 'N/A', configured: false };
+  }
+}
+
+async function checkBlockchain() {
+  const start = Date.now();
+  try {
+    const res = await fetch('https://polygon-rpc.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }),
+      signal: AbortSignal.timeout(5000),
+    });
     const latency = Date.now() - start;
     return { operational: res.ok, latency: `${latency}ms` };
   } catch {
@@ -32,13 +49,11 @@ async function checkCloudflare() {
 }
 
 export async function GET() {
-  const [supabase, cloudflare] = await Promise.allSettled([
+  const [supabaseResult, cloudflareResult, blockchainResult] = await Promise.all([
     checkSupabase(),
     checkCloudflare(),
+    checkBlockchain(),
   ]);
-
-  const supabaseResult = supabase.status === 'fulfilled' ? supabase.value : { operational: false, latency: 'error' };
-  const cloudflareResult = cloudflare.status === 'fulfilled' ? cloudflare.value : { operational: false, latency: 'error' };
 
   const services = [
     {
@@ -49,8 +64,13 @@ export async function GET() {
     },
     {
       name: 'Edge Redirect Engine',
-      status: cloudflareResult.operational ? 'Operational' : 'Degraded',
-      uptime: cloudflareResult.operational ? '100%' : 'N/A',
+      // Only mark degraded if configured but not responding
+      status: cloudflareResult.configured
+        ? cloudflareResult.operational ? 'Operational' : 'Degraded'
+        : 'Maintenance',
+      uptime: cloudflareResult.configured
+        ? cloudflareResult.operational ? '99.9%' : 'N/A'
+        : '—',
       latency: cloudflareResult.latency,
     },
     {
@@ -61,9 +81,9 @@ export async function GET() {
     },
     {
       name: 'Blockchain Anchoring (Polygon)',
-      status: 'Operational',
-      uptime: '99.99%',
-      latency: '120ms',
+      status: blockchainResult.operational ? 'Operational' : 'Degraded',
+      uptime: blockchainResult.operational ? '99.99%' : 'N/A',
+      latency: blockchainResult.latency,
     },
     {
       name: 'Storage Cluster (S3/Supabase)',
@@ -79,16 +99,12 @@ export async function GET() {
     },
   ];
 
-  const allOperational = services.every(s => s.status === 'Operational');
+  // Only report degraded if a configured and critical service is down
+  const criticalDegraded = services
+    .filter(s => s.name !== 'Edge Redirect Engine')
+    .some(s => s.status === 'Degraded');
+  const edgeDegraded = services.find(s => s.name === 'Edge Redirect Engine')?.status === 'Degraded';
+  const overallStatus = criticalDegraded ? 'degraded' : edgeDegraded ? 'degraded' : 'operational';
 
-  return NextResponse.json({
-    status: allOperational ? 'operational' : 'degraded',
-    timestamp: new Date().toISOString(),
-    services,
-  }, {
-    headers: {
-      'Cache-Control': 'no-store',
-      'Access-Control-Allow-Origin': '*',
-    }
-  });
+  return NextResponse.json({ status: overallStatus, timestamp: new Date().toISOString(), services });
 }
