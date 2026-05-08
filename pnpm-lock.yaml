@@ -323,7 +323,7 @@ importers:
         specifier: ^6.16.0
         version: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       openai:
-        specifier: ^6.34.0
+        specifier: ^6.36.0
         version: 6.34.0(ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3)
       pnpm:
         specifier: ^10.33.2
