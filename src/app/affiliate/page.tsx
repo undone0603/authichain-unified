@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Shield, Target, Zap, CheckCircle } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'QRON Affiliate Program â€” Earn 20% Per Sale',
+    title: 'QRON Affiliate Program — Earn 20% Per Sale',
   description:
     'Earn 20% recurring commission on every QRON sale you refer. Custom link, real-time dashboard, monthly payouts.',
 };
@@ -11,14 +11,14 @@ export const metadata: Metadata = {
 const TIERS = [
   {
     name: 'Starter',
-    sales: '1â€“10/mo',
+        sales: '1–10/mo',
     commission: '20%',
     payout: 'Monthly',
     perks: 'Custom link, basic dashboard',
   },
   {
     name: 'Partner',
-    sales: '11â€“50/mo',
+        sales: '11–50/mo',
     commission: '25%',
     payout: 'Monthly',
     perks: 'Priority support, co-marketing',
