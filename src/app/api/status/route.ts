@@ -24,7 +24,7 @@ async function checkSupabase() {
 async function checkCloudflare() {
   const start = Date.now();
   try {
-    const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://qron-worker.qron.workers.dev';
+    const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://qron.space';
     const res = await fetch(`${workerUrl}/health`, {
       signal: AbortSignal.timeout(4000),
     });
