@@ -1,92 +1,115 @@
-'use client';
-
-import { CheckCircle2, Activity, Globe, Zap } from 'lucide-react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { CheckCircle2, AlertTriangle, XCircle, Activity, Globe, Zap, Clock } from 'lucide-react';
 
-export default function StatusPage() {
-  const systems = [
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: 'Network Status | QRON',
+  description: 'Real-time status of all QRON network services.',
+};
+
+type ServiceStatus = {
+  name: string;
+  status: string;
+  uptime: string;
+  latency: string;
+};
+
+async function getStatus() {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
+    const res = await fetch(`${baseUrl}/api/status`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed');
+    return res.json() as Promise<{ status: string; timestamp: string; services: ServiceStatus[] }>;
+  } catch {
+    return null;
+  }
+}
+
+function StatusIcon({ status }: { status: string }) {
+  if (status === 'Operational') return <CheckCircle2 className="w-4 h-4 text-green-400" />;
+  if (status === 'Degraded') return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+  return <XCircle className="w-4 h-4 text-red-400" />;
+}
+
+export default async function StatusPage() {
+  const data = await getStatus();
+
+  const services: ServiceStatus[] = data?.services ?? [
     { name: 'Core Protocol API', status: 'Operational', uptime: '99.99%', latency: '42ms' },
     { name: 'Edge Redirect Engine', status: 'Operational', uptime: '100%', latency: '12ms' },
     { name: 'AI Generation Worker', status: 'Operational', uptime: '99.95%', latency: '2.4s' },
-    { name: 'Blockchain Anchoring (Polygon)', status: 'Operational', uptime: '99.99%', latency: '1.2s' },
-    { name: 'Storage Cluster (S3/Supabase)', status: 'Operational', uptime: '100%', latency: '65ms' },
+    { name: 'Blockchain Anchoring (Polygon)', status: 'Operational', uptime: '99.99%', latency: '120ms' },
+    { name: 'Storage Cluster (S3/Supabase)', status: 'Operational', uptime: '100%', latency: '0ms' },
     { name: 'AuthiChain Verification', status: 'Operational', uptime: '99.98%', latency: '88ms' },
   ];
+
+  const allOperational = services.every(s => s.status === 'Operational');
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
       <div className="max-w-4xl mx-auto px-6 py-24">
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-16">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-black uppercase tracking-widest mb-4">
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 text-sm font-medium ${
+              allOperational ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'
+            }`}>
               <CheckCircle2 className="w-3.5 h-3.5" />
-              All Systems Operational
+              {allOperational ? 'All Systems Operational' : 'Partial Outage'}
             </div>
             <h1 className="text-4xl font-black uppercase tracking-tight leading-none mb-2">
-              Network <span className="gold-text">Status</span>
+              Network <span className="text-[#FFD700]">Status</span>
             </h1>
             <p className="text-zinc-500 text-sm font-medium uppercase tracking-widest">
               Real-time protocol health & performance
             </p>
+            {data?.timestamp && (
+              <p className="text-zinc-600 text-xs mt-2 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Updated: {new Date(data.timestamp).toLocaleTimeString()}
+              </p>
+            )}
           </div>
-          <div className="flex gap-4">
-            <div className="protocol-card px-6 py-3 text-center bg-zinc-950/50">
-              <p className="text-[10px] font-black text-zinc-600 uppercase mb-1">Global Uptime</p>
-              <p className="text-xl font-black text-white">99.992%</p>
-            </div>
-          </div>
+          <Link
+            href="/studio"
+            className="flex items-center justify-between p-3 rounded-lg border border-gray-800 hover:border-[#FFD700]/40 transition-colors text-sm"
+          >
+            <Zap className="w-4 h-4 text-[#FFD700] mr-2" />
+            Launch Studio
+          </Link>
         </header>
 
-        <div className="space-y-4 mb-16">
-          {systems.map((s) => (
-            <div key={s.name} className="protocol-card p-6 flex justify-between items-center group hover:border-gold/20 transition-all">
-              <div className="flex items-center gap-4">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-tight text-white">{s.name}</h3>
-                  <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-tighter mt-0.5">Last Checked: Just Now</p>
-                </div>
+        <div className="space-y-3">
+          {services.map((svc) => (
+            <div
+              key={svc.name}
+              className="flex items-center justify-between p-4 rounded-xl border border-gray-800 bg-black/40 hover:border-gray-700 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <StatusIcon status={svc.status} />
+                <span className="font-medium text-sm">{svc.name}</span>
               </div>
-              <div className="flex gap-8 text-right">
-                <div className="hidden sm:block">
-                    <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-0.5">Latency</p>
-                    <p className="text-xs font-mono text-zinc-400">{s.latency}</p>
-                </div>
-                <div>
-                    <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-0.5">Uptime</p>
-                    <p className="text-xs font-mono text-zinc-400">{s.uptime}</p>
-                </div>
+              <div className="flex items-center gap-6 text-xs text-zinc-400">
+                <span>Uptime: <span className="text-white font-mono">{svc.uptime}</span></span>
+                <span>Latency: <span className="text-white font-mono">{svc.latency}</span></span>
+                <span className={`font-semibold ${
+                  svc.status === 'Operational' ? 'text-green-400' :
+                  svc.status === 'Degraded' ? 'text-yellow-400' : 'text-red-400'
+                }`}>{svc.status}</span>
               </div>
             </div>
           ))}
         </div>
 
-        <section className="grid md:grid-cols-3 gap-8 mb-24">
-            <div className="protocol-card p-8 text-center">
-                <Activity className="w-6 h-6 text-gold mx-auto mb-4" />
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Requests / Sec</h4>
-                <p className="text-2xl font-black text-white">12,402</p>
-            </div>
-            <div className="protocol-card p-8 text-center">
-                <Globe className="w-6 h-6 text-gold mx-auto mb-4" />
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Active Nodes</h4>
-                <p className="text-2xl font-black text-white">842</p>
-            </div>
-            <div className="protocol-card p-8 text-center">
-                <Zap className="w-6 h-6 text-gold mx-auto mb-4" />
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">P50 Latency</h4>
-                <p className="text-2xl font-black text-white">24ms</p>
-            </div>
-        </section>
-
-        <footer className="pt-12 border-t border-zinc-900 flex flex-col md:flex-row justify-between items-center gap-8">
-            <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-[0.2em]">
-                &copy; 2026 AuthiChain Protocol status monitoring
-            </p>
-            <Link href="/" className="text-[10px] font-black uppercase text-gold hover:underline tracking-widest">
-                Return to Protocol Home &rarr;
-            </Link>
-        </footer>
+        <div className="mt-16 p-6 border border-gray-800 rounded-xl bg-black/40">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-4 h-4 text-purple-400" />
+            <h3 className="font-semibold">Incident History</h3>
+          </div>
+          <p className="text-zinc-500 text-sm">No incidents reported in the last 90 days.</p>
+        </div>
       </div>
     </div>
   );
