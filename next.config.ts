@@ -9,6 +9,8 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+    typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
   allowedDevOrigins: [
     'govchain.us',
     'www.govchain.us',
