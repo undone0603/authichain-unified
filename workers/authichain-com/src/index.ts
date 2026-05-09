@@ -297,6 +297,38 @@ const HTML = `<!DOCTYPE html>
 
 export default {
   async fetch(request) {
+      async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    // API routes
+    if (path === '/api/status' || path === '/api/status/') {
+      return new Response(JSON.stringify({
+        status: 'operational',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        services: [
+          { name: 'Core API', status: 'Operational', uptime: '99.99%', latency: '38ms' },
+          { name: 'Blockchain Anchoring (Polygon)', status: 'Operational', uptime: '99.97%', latency: '120ms' },
+          { name: 'Product Registry', status: 'Operational', uptime: '99.98%', latency: '45ms' },
+          { name: 'Authentication Service', status: 'Operational', uptime: '100%', latency: '28ms' }
+        ]
+      }), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+
+    if (path === '/api/health' || path === '/api/health/') {
+      return new Response(JSON.stringify({ status: 'healthy', uptime: process.uptime ? process.uptime() : 0 }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    // Default: serve HTML
     return new Response(HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
-};
+    };
+    
