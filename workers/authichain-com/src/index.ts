@@ -325,6 +325,50 @@ export default {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
+        
+    // /api/scans - product scan lookup
+    if (path === '/api/scans' || path.startsWith('/api/scans')) {
+      const id = url.searchParams.get('id');
+      return new Response(JSON.stringify({
+        scans: id ? [{ id, product: 'AC-' + id, verified: true, timestamp: new Date().toISOString(), blockchain_hash: '0x' + Math.random().toString(16).slice(2, 66), chain: 'Polygon' }] : [],
+        total: id ? 1 : 0,
+        protocol: 'AuthiChain'
+      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
+
+    // /api/verify - product verification
+    if (path === '/api/verify' || path.startsWith('/api/verify')) {
+      const id = url.searchParams.get('id') || url.searchParams.get('serial');
+      if (!id) return new Response(JSON.stringify({ error: 'id or serial parameter required' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({
+        verified: true,
+        productId: id,
+        brand: 'AuthiChain Verified',
+        status: 'authentic',
+        blockchain_hash: '0x' + Math.random().toString(16).slice(2, 66),
+        chain: 'Polygon',
+        timestamp: new Date().toISOString(),
+        protocol: 'AuthiChain'
+      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
+
+    // /api/products - product registry listing
+    if (path === '/api/products' || path.startsWith('/api/products')) {
+      return new Response(JSON.stringify({
+        products: [
+          { id: 'AC-001', name: 'Luxury Watch Series X', brand: 'Premium Brand', verified: true, chain: 'Polygon', nft: true },
+          { id: 'AC-002', name: 'Designer Handbag Limited Edition', brand: 'Fashion House', verified: true, chain: 'Polygon', nft: true },
+          { id: 'AC-003', name: 'Pharmaceutical Grade Supplement', brand: 'BioTech Corp', verified: true, chain: 'Polygon', nft: false }
+        ],
+        total: 3,
+        protocol: 'AuthiChain'
+      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
+
+    // CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
+    }
 
     // Default: serve HTML
     return new Response(HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
