@@ -7,6 +7,14 @@
     {
       "path": "/api/crm/sync",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/trial-reminder",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/digest",
+      "schedule": "0 8 * * 1"
     }
   ]
 }
