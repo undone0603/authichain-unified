@@ -38,7 +38,7 @@ async function checkCloudflare() {
 async function checkBlockchain() {
   const start = Date.now();
   try {
-    const res = await fetch('https://polygon-rpc.com', {
+        const res = await fetch('https://rpc.ankr.com/polygon', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }),
