@@ -1,3 +1,4 @@
+// v3 - blockchain status: static operational (Polygon Mainnet active)
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
