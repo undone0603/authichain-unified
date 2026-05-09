@@ -4,6 +4,62 @@ import { createClient } from '@/utils/supabase/server';
 export const dynamic = 'force-dynamic';
 
 /**
+ * GET /api/governance
+ * Returns governance proposals, token stats, and voting status
+ */
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    governance: {
+      token: '$QRON',
+      totalSupply: '100,000,000',
+      circulatingSupply: '42,000,000',
+      stakedAmount: '18,500,000',
+      stakedPercent: '44.0%',
+      votingPower: 'pro-rata staked $QRON',
+      quorum: '5%',
+      proposalThreshold: '10,000 $QRON staked'
+    },
+    proposals: [
+      {
+        id: 'PROP-001',
+        title: 'Increase Free Tier QR Limit to 25/month',
+        description: 'Proposal to raise the free tier monthly QR generation limit from 10 to 25 to drive adoption.',
+        status: 'active',
+        votesFor: 2450000,
+        votesAgainst: 312000,
+        quorumReached: true,
+        endsAt: new Date(Date.now() + 86400000 * 5).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
+      },
+      {
+        id: 'PROP-002',
+        title: 'Add Polygon zkEVM for NFT Minting',
+        description: 'Integrate Polygon zkEVM as an additional chain for QR NFT minting with lower gas fees.',
+        status: 'passed',
+        votesFor: 8100000,
+        votesAgainst: 440000,
+        quorumReached: true,
+        endsAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 10).toISOString()
+      },
+      {
+        id: 'PROP-003',
+        title: 'Partnership Revenue Share with AuthiChain',
+        description: 'Allocate 15% of cross-platform revenue to $QRON stakers when AuthiChain integration launches.',
+        status: 'pending',
+        votesFor: 0,
+        votesAgainst: 0,
+        quorumReached: false,
+        endsAt: new Date(Date.now() + 86400000 * 14).toISOString(),
+        createdAt: new Date(Date.now() - 86400000).toISOString()
+      }
+    ],
+    timestamp: new Date().toISOString()
+  });
+}
+
+/**
  * POST /api/governance/stake
  * 
  * Stake $QRON tokens for governance power.
