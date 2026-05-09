@@ -296,7 +296,6 @@ const HTML = `<!DOCTYPE html>
 </html>`;
 
 export default {
-  async fetch(request) {
       async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
