@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure, publicProcedure, adminProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import {
   createFeedback,
@@ -92,7 +92,7 @@ export const feedbackRouter = router({
     }),
 
   // Admin: Update feedback status
-  updateStatus: adminProcedure
+  updateStatus: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -100,20 +100,36 @@ export const feedbackRouter = router({
         adminResponse: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // Check if user is admin
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins can update feedback status",
+        });
+      }
+
       await updateFeedbackStatus(input.id, input.status, input.adminResponse);
       return { success: true };
     }),
 
   // Admin: Update feedback priority
-  updatePriority: adminProcedure
+  updatePriority: protectedProcedure
     .input(
       z.object({
         id: z.number(),
         priority: z.enum(["low", "medium", "high", "critical"]),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // Check if user is admin
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins can update feedback priority",
+        });
+      }
+
       await updateFeedbackPriority(input.id, input.priority);
       return { success: true };
     }),

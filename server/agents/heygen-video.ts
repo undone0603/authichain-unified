@@ -15,8 +15,7 @@
  * and enqueues DRAFT_OUTBOUND_EMAIL with video_url in payload.
  */
 
-import type { MissionTask } from '../../drizzle/schema.js';
-type Task = MissionTask;
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 import { logActivity } from '../db.js';
 import {
   listAvatars,

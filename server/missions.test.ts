@@ -31,12 +31,9 @@ const TITLES: Record<string, string> = {
   LAUNCH_AUTHICHAIN:  'AuthiChain.com – Full Launch Orchestration',
 };
 
-// ─── Mock missions.db module ──────────────────────────────────────────────────
-// The router imports missions CRUD from ./missions/missions.db (split out from
-// ./db in bb8e6ec). Tests need to mock that exact path so the in-memory store
-// substitutes for the real Drizzle queries.
+// ─── Mock db module ───────────────────────────────────────────────────────────
 
-vi.mock('./missions/missions.db', () => ({
+vi.mock('./db', () => ({
   getMissions: async (statusFilter?: string) => {
     const all = [...store.missions.values()];
     return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
@@ -83,6 +80,12 @@ vi.mock('./missions/missions.db', () => ({
     const t = store.tasks.get(id);
     if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
   },
+
+  // getDb returns null — tests using direct db access guard with if (db)
+  getDb: async () => null,
+
+  logActivity:               vi.fn().mockResolvedValue(undefined),
+  createSystemNotification:  vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Shared test context ──────────────────────────────────────────────────────
@@ -96,7 +99,6 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
       name: 'AgentZ Test',
       loginMethod: 'manus',
       role,
-      stripeCustomerId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),
@@ -249,7 +251,7 @@ describe('tasks.retry', () => {
   let failedTaskId: string;
 
   beforeAll(async () => {
-    const { createMission, getTasksByMission } = await import('./missions/missions.db');
+    const { createMission, getTasksByMission, getDb } = await import('./db');
 
     const missionId = await createMission('TECH_OS_LOCK');
     const tasks = await getTasksByMission(missionId);
@@ -258,6 +260,16 @@ describe('tasks.retry', () => {
     // Directly mark the task FAILED in the in-memory store
     const t = store.tasks.get(failedTaskId);
     if (t) store.tasks.set(failedTaskId, { ...t, status: 'FAILED', lastError: 'test failure', updatedAt: new Date() });
+
+    const db = await getDb();
+    if (db) {
+      // If a real DB were present, we'd update there too (won't run in mock env)
+      const { missionTasks } = await import('../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      await (db as any).update(missionTasks)
+        .set({ status: 'FAILED', lastError: 'test failure', updatedAt: new Date() })
+        .where(eq(missionTasks.id, failedTaskId));
+    }
   });
 
   it('retries a FAILED task — resets to PENDING', async () => {
