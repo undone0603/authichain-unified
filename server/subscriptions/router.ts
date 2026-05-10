@@ -1,9 +1,17 @@
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import * as stripeService from "../stripe-service";
+import * as paddleService from "../paddle-service";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { B2B_PLANS, B2B_BRANDS, type B2BBrand } from "@shared/pricing";
+import { SUBSCRIPTION_PLANS } from "@shared/subscriptionPlans";
+
+// Paddle price IDs by plan/billing — override with env vars
+const PADDLE_PRICES: Record<string, Record<string, string>> = {
+  starter:      { monthly: process.env.PADDLE_PRICE_STARTER_MONTHLY || "", annual: process.env.PADDLE_PRICE_STARTER_ANNUAL || "" },
+  professional: { monthly: process.env.PADDLE_PRICE_PRO_MONTHLY || "",     annual: process.env.PADDLE_PRICE_PRO_ANNUAL || "" },
+  enterprise:   { monthly: process.env.PADDLE_PRICE_ENT_MONTHLY || "",     annual: process.env.PADDLE_PRICE_ENT_ANNUAL || "" },
+};
 
 export const subscriptionsRouter = router({
   current: protectedProcedure.query(async ({ ctx }) => {
@@ -15,9 +23,9 @@ export const subscriptionsRouter = router({
     billingCycle: z.enum(["monthly", "annual"]).optional().default("monthly"),
   })).mutation(async ({ ctx, input }) => {
     const quotas = {
-      starter: B2B_PLANS.starter.quota,
-      professional: B2B_PLANS.professional.quota,
-      enterprise: B2B_PLANS.enterprise.quota,
+      starter: SUBSCRIPTION_PLANS.starter.monthlyQuota,
+      professional: SUBSCRIPTION_PLANS.professional.monthlyQuota,
+      enterprise: SUBSCRIPTION_PLANS.enterprise.monthlyQuota,
     };
     const result = await db.createSubscription({
       userId: ctx.user.id, plan: input.plan, monthlyQuota: quotas[input.plan],
@@ -40,8 +48,6 @@ export const subscriptionsRouter = router({
     plan: z.enum(["starter", "professional", "enterprise"]),
     billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
     origin: z.string(),
-    brand: z.enum(B2B_BRANDS as unknown as [B2BBrand, ...B2BBrand[]]).optional(),
-    contractSetupOrderId: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
     const url = await stripeService.createSubscriptionCheckout({
       userId: ctx.user.id,
@@ -51,10 +57,27 @@ export const subscriptionsRouter = router({
       billing: input.billing,
       origin: input.origin,
       stripeCustomerId: (ctx.user as any).stripeCustomerId || undefined,
-      brand: input.brand,
-      contractSetupOrderId: input.contractSetupOrderId,
     });
     return { checkoutUrl: url };
+  }),
+  createPaddleCheckout: protectedProcedure.input(z.object({
+    plan: z.enum(["starter", "professional", "enterprise"]),
+    billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
+    successUrl: z.string(),
+  })).mutation(async ({ ctx, input }) => {
+    const priceId = PADDLE_PRICES[input.plan]?.[input.billing];
+    if (!priceId) throw new TRPCError({ code: "BAD_REQUEST", message: `Paddle price not configured for ${input.plan}/${input.billing}` });
+    const customerId = await paddleService.upsertPaddleCustomer({
+      email: ctx.user.email || "",
+      name: ctx.user.name || "",
+      userId: ctx.user.id,
+    });
+    const checkoutUrl = await paddleService.createPaddleTransaction({
+      customerId,
+      priceId,
+      successUrl: input.successUrl,
+    });
+    return { checkoutUrl };
   }),
   cancel: protectedProcedure.mutation(async ({ ctx }) => {
     const sub = await db.getUserSubscription(ctx.user.id);

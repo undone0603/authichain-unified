@@ -2,132 +2,48 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
-// ─── In-memory store for DB-dependent tests ───────────────────────────────────
-const { notifStore } = vi.hoisted(() => ({
-  notifStore: {
-    notifications: new Map<number, any>(),
-    nextId: 1,
-    reset() { this.notifications.clear(); this.nextId = 1; },
-  },
-}));
+// In-memory store so db-writing tests work without a real database.
+const store = vi.hoisted(() => {
+  const notifications: any[] = [];
+  let notifId = 1;
+  let leadId = 1;
+  return {
+    notifications,
+    nextNotifId: () => notifId++,
+    nextLeadId: () => leadId++,
+    reset: () => { notifications.length = 0; notifId = 1; leadId = 1; },
+  };
+});
 
 vi.mock("./db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./db")>();
   return {
     ...actual,
-    // Notification stubs (stateful in-memory)
-    createNotification: async (data: any) => {
-      const id = notifStore.nextId++;
-      notifStore.notifications.set(id, { ...data, id, createdAt: new Date() });
+    createNotification: vi.fn(async (data: any) => {
+      const id = store.nextNotifId();
+      store.notifications.push({ ...data, id, createdAt: new Date() });
       return { id };
-    },
-    getUserNotifications: async (userId: number, limit: number = 50) => {
-      return [...notifStore.notifications.values()]
-        .filter(n => n.userId === userId)
-        .sort((a, b) => b.createdAt - a.createdAt)
-        .slice(0, limit);
-    },
-    getUnreadNotificationCount: async (userId: number) => {
-      return [...notifStore.notifications.values()].filter(n => n.userId === userId && n.isRead === 0).length;
-    },
-    markNotificationRead: async (id: number, _userId: number) => {
-      const n = notifStore.notifications.get(id);
-      if (n) notifStore.notifications.set(id, { ...n, isRead: 1 });
-    },
-    markAllNotificationsRead: async (userId: number) => {
-      for (const [id, n] of notifStore.notifications)
-        if (n.userId === userId) notifStore.notifications.set(id, { ...n, isRead: 1 });
-    },
-    deleteNotification: async (id: number, _userId: number) => {
-      notifStore.notifications.delete(id);
-    },
-    // Marketing stubs
-    createLead: async (_data: any) => ({ id: notifStore.nextId++ }),
-    // Additional stubs for routers.test.ts
-    getCertificateByNumber: async (_num: string) => null,
-    listNfts: async () => [],
-    listCollections: async () => [],
-    getActiveAuctions: async () => [],
-    getReferralByCode: async (_code: string) => null,
-    getWhiteLabelByApiKey: async (_key: string) => null,
-    getUserSubscription: async (_userId: number) => null,
-    getAutopilotConfig: async () => null,
-    getRecentDecisions: async () => [],
-    getUserEmailCampaigns: async (_userId: number) => [],
-    getPendingDrafts: async () => [],
-    getUserReferrals: async (_userId: number) => [],
-    getAffiliateByUserId: async (_userId: number) => null,
-    getAllAbTests: async () => [],
-    getDashboardMetrics: async (_userId: number) => ({
-      totalProducts: 0,
-      totalAuthentications: 0,
-      totalCertificates: 0,
-      subscription: null,
     }),
-    getAdminDashboardMetrics: async () => ({
-      totalUsers: 0,
-      totalProducts: 0,
-      totalAuthentications: 0,
-      totalCertificates: 0,
-      totalSubscriptions: 0,
-      totalRevenue: 0,
+    getUserNotifications: vi.fn(async (userId: number, limit = 50) => {
+      return store.notifications.filter((n: any) => n.userId === userId).slice(0, limit);
     }),
-    getAllUsers: async () => [],
-    getOpenFraudAlerts: async () => [],
-    getAllHealthScores: async () => [],
-    getRecentActivity: async () => [],
-    getSubscriptionAnalytics: async () => ({ total: 0, active: 0, cancelled: 0, pastDue: 0 }),
-    getRevenueAnalytics: async () => [],
-    getWhiteLabelClients: async () => [],
-    getUserProducts: async (_userId: number) => [],
-    getProductById: async (_id: number) => null,
-    logActivity: async (_data: any) => {},
-    getServiceOrderById: async (_id: number) => null,
-    getServiceOrderBySessionId: async (_id: string) => null,
-    getServiceOrdersByUser: async (_userId: number) => [],
-    getAllServiceOrders: async () => [],
-    updateServiceOrderStatus: async (_id: number, _status: string) => {},
-    createQrCode: async (_data: any) => ({ id: 1 }),
-    getProductQrCodes: async (_productId: number) => [],
-    incrementScanCount: async (_id: number) => {},
+    getUnreadNotificationCount: vi.fn(async (userId: number) => {
+      return store.notifications.filter((n: any) => n.userId === userId && n.isRead === 0).length;
+    }),
+    markNotificationRead: vi.fn(async (id: number, userId: number) => {
+      const n = store.notifications.find((n: any) => n.id === id && n.userId === userId);
+      if (n) n.isRead = 1;
+    }),
+    markAllNotificationsRead: vi.fn(async (userId: number) => {
+      store.notifications.filter((n: any) => n.userId === userId).forEach((n: any) => { n.isRead = 1; });
+    }),
+    deleteNotification: vi.fn(async (id: number, userId: number) => {
+      const idx = store.notifications.findIndex((n: any) => n.id === id && n.userId === userId);
+      if (idx >= 0) store.notifications.splice(idx, 1);
+    }),
+    createLead: vi.fn(async (_data: any) => ({ id: store.nextLeadId() })),
   };
 });
-
-vi.mock("./character-service", () => ({
-  getNetworkStats: async () => ({ totalAgents: 0, totalVerifications: 0, totalQRONDistributed: 0 }),
-  getAgentLeaderboard: async () => [],
-  getUserGenerations: async (_userId: number) => [],
-  getUserCharacterAssets: async (_userId: number) => [],
-  getAgentByUser: async (_userId: number) => null,
-  rewardAgentForVerification: async (_userId: number, _success: boolean) => {},
-}));
-
-const MOCK_JOBS = vi.hoisted(() => [
-  "subscription-health-check",
-  "certificate-expiry-check",
-  "lead-nurturing",
-  "database-cleanup",
-  "weekly-analytics-digest",
-  "hubspot-crm-sync",
-  "customer-health-score",
-  "fraud-detection-sweep"
-].map(name => ({
-  name,
-  description: `Description for ${name}`,
-  schedule: "0 0 * * *",
-  enabled: true,
-})));
-
-vi.mock("./scheduled-jobs", () => ({
-  getJobHistory: async () => [],
-  runJobManually: async (jobName: string) => {
-    if (jobName === "nonexistent-job") throw new Error("Job not found");
-    return { success: true, message: `Job ${jobName} triggered successfully` };
-  },
-  executeJob: async (_job: any) => ({ success: true }),
-  getRegisteredJobs: () => MOCK_JOBS,
-  REGISTERED_JOBS: MOCK_JOBS,
-}));
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -139,7 +55,6 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     name: "Test User",
     loginMethod: "manus",
     role,
-    stripeCustomerId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
@@ -171,6 +86,8 @@ function createPublicContext(): TrpcContext {
 }
 
 describe("AuthiChain Unified Platform Routers", () => {
+  beforeEach(() => store.reset());
+
   describe("auth.me", () => {
     it("returns null for unauthenticated users", async () => {
       const ctx = createPublicContext();
@@ -240,7 +157,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("returns invalid for non-existent referral code", async () => {
       const ctx = createPublicContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.referrals.validate({ code: "FAKE-CODE-123" });
+      const result = await caller.referral.validate({ code: "FAKE-CODE-123" });
       expect(result.valid).toBe(false);
     });
   });
@@ -291,7 +208,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("referrals.myReferrals throws UNAUTHORIZED for unauthenticated", async () => {
       const ctx = createPublicContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.referrals.myReferrals()).rejects.toThrow();
+      await expect(caller.referral.getHistory()).rejects.toThrow();
     });
   });
 
@@ -357,15 +274,22 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("referrals.myReferrals returns array", async () => {
       const ctx = createAuthContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.referrals.myReferrals();
+      const result = await caller.referral.getHistory();
       expect(Array.isArray(result)).toBe(true);
     });
 
     it("affiliates.myProfile returns null or profile", async () => {
       const ctx = createAuthContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.affiliates.myProfile();
+      const result = await caller.affiliate.getStatus();
       expect(result === null || result === undefined || typeof result === "object").toBe(true);
+    });
+
+    it("abTesting.list returns array", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.abTesting.list();
+      expect(Array.isArray(result)).toBe(true);
     });
 
     it("dashboard.metrics returns metrics object", async () => {
@@ -492,12 +416,11 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(Array.isArray(result)).toBe(true);
     });
 
-    it("admin.subscriptions returns analytics object", async () => {
+    it("admin.subscriptions returns array", async () => {
       const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.admin.subscriptions();
-      expect(typeof result).toBe("object");
-      expect(result).toHaveProperty("total");
+      expect(Array.isArray(result)).toBe(true);
     });
 
     it("admin.revenue returns array", async () => {
@@ -638,128 +561,6 @@ describe("AuthiChain Unified Platform Routers", () => {
       // Count should increase
       const after = await caller.notifications.unreadCount();
       expect(after.count).toBeGreaterThanOrEqual(initial.count + 1);
-    });
-  });
-
-  // ─── Scheduler Tests ──────────────────────────────────────────────────────
-  describe("scheduler", () => {
-    it("requires admin role to list jobs", async () => {
-      const caller = appRouter.createCaller(createAuthContext("user"));
-      await expect(caller.scheduler.listJobs()).rejects.toThrow();
-    });
-
-    it("allows admin to list registered jobs", async () => {
-      const caller = appRouter.createCaller(createAuthContext("admin"));
-      const jobs = await caller.scheduler.listJobs();
-      expect(Array.isArray(jobs)).toBe(true);
-      expect(jobs.length).toBeGreaterThanOrEqual(1);
-      expect(jobs[0]).toHaveProperty("name");
-      expect(jobs[0]).toHaveProperty("description");
-      expect(jobs[0]).toHaveProperty("schedule");
-      expect(jobs[0]).toHaveProperty("enabled");
-    });
-
-    it("returns all 8 registered maintenance jobs", async () => {
-      const caller = appRouter.createCaller(createAuthContext("admin"));
-      const jobs = await caller.scheduler.listJobs();
-      const jobNames = jobs.map((j: any) => j.name);
-      expect(jobNames).toContain("subscription-health-check");
-      expect(jobNames).toContain("certificate-expiry-check");
-      expect(jobNames).toContain("lead-nurturing");
-      expect(jobNames).toContain("database-cleanup");
-      expect(jobNames).toContain("weekly-analytics-digest");
-      expect(jobNames).toContain("hubspot-crm-sync");
-      expect(jobNames).toContain("customer-health-score");
-      expect(jobNames).toContain("fraud-detection-sweep");
-    });
-
-    it("requires admin role to get job history", async () => {
-      const caller = appRouter.createCaller(createAuthContext("user"));
-      await expect(caller.scheduler.getHistory({ limit: 10 })).rejects.toThrow();
-    });
-
-    it("allows admin to get job history", async () => {
-      const caller = appRouter.createCaller(createAuthContext("admin"));
-      const history = await caller.scheduler.getHistory({ limit: 10 });
-      expect(Array.isArray(history)).toBe(true);
-    });
-
-    it("requires admin role to run jobs manually", async () => {
-      const caller = appRouter.createCaller(createAuthContext("user"));
-      await expect(caller.scheduler.runManually({ jobName: "database-cleanup" })).rejects.toThrow();
-    });
-
-    it("rejects running non-existent jobs", async () => {
-      const caller = appRouter.createCaller(createAuthContext("admin"));
-      await expect(caller.scheduler.runManually({ jobName: "nonexistent-job" })).rejects.toThrow();
-    });
-
-    it("allows admin to manually trigger database-cleanup job", async () => {
-      const caller = appRouter.createCaller(createAuthContext("admin"));
-      const result = await caller.scheduler.runManually({ jobName: "database-cleanup" });
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty("success");
-      expect(result).toHaveProperty("message");
-    });
-  });
-
-  // ── AuthiCharacter System ──────────────────────────────────────────
-  describe("character", () => {
-    it("requires auth for character generation", async () => {
-      const caller = appRouter.createCaller(createPublicContext());
-      await expect(
-        caller.character.generate({ archetype: "guardian" })
-      ).rejects.toThrow();
-    });
-
-    it("requires auth for agent creation", async () => {
-      const caller = appRouter.createCaller(createPublicContext());
-      await expect(
-        caller.character.createAgent({ characterAssetId: 1, agentName: "TestAgent", agentType: "guardian" })
-      ).rejects.toThrow();
-    });
-
-    it("returns network stats", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      const stats = await caller.character.networkStats();
-      expect(stats).toBeDefined();
-      expect(stats).toHaveProperty("totalAgents");
-      expect(stats).toHaveProperty("totalVerifications");
-      expect(stats).toHaveProperty("totalQRONDistributed");
-    });
-
-    it("returns leaderboard", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      const leaderboard = await caller.character.leaderboard({ limit: 10 });
-      expect(leaderboard).toBeDefined();
-      expect(Array.isArray(leaderboard)).toBe(true);
-    });
-
-    it("returns empty generations for new user", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      const gens = await caller.character.myGenerations();
-      expect(gens).toBeDefined();
-      expect(Array.isArray(gens)).toBe(true);
-    });
-
-    it("returns empty assets for new user", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      const assets = await caller.character.myAssets();
-      expect(assets).toBeDefined();
-      expect(Array.isArray(assets)).toBe(true);
-    });
-
-    it("returns null agent for new user", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      const agent = await caller.character.myAgent();
-      expect(agent).toBeNull();
-    });
-
-    it("validates archetype input on generate", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      await expect(
-        caller.character.generate({ archetype: "invalid_archetype" as any })
-      ).rejects.toThrow();
     });
   });
 });

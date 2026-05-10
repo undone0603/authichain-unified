@@ -4,8 +4,7 @@ import { sendEmail } from '../email-service.js';
 import { logActivity, getDb, markTaskWaitingHuman, enqueueTask } from '../db.js';
 import { emailDrafts, leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
-import type { MissionTask } from '../../drizzle/schema.js';
-type Task = MissionTask;
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 import {
   selectTone,
   SEGMENT_PRIORS,
@@ -128,7 +127,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
   const db = await getDb();
   if (db) {
     await db.update(leads)
-      .set({ status: 'contacted', lastContactedAt: new Date(), updatedAt: new Date() })
+      .set({ status: 'CONTACTED', lastContactedAt: new Date(), updatedAt: new Date() })
       .where(eq(leads.email, payload.leadEmail.toLowerCase()));
   }
 
