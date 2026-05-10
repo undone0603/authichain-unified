@@ -12,5 +12,35 @@ zone_name = "authichain.com"
 pattern = "www.authichain.com/"
 zone_name = "authichain.com"
 
+# Asset routes — explicit paths (cannot use glob, conflicts with
+# authichain-landing-com worker which holds authichain.com/*).
+[[routes]]
+pattern = "authichain.com/og-image.svg"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/og-image.png"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/favicon.svg"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/favicon.ico"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/favicon.png"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/apple-touch-icon.svg"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/apple-touch-icon.png"
+zone_name = "authichain.com"
+
 
 
