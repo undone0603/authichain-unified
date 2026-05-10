@@ -151,7 +151,7 @@ function vitePluginManusDebugCollector(): Plugin {
 
 
 export default defineConfig({
-  plugins,
+  plugins: [react(), tailwindcss(), vitePluginManusRuntime()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
