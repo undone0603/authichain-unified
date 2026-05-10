@@ -1,15 +1,7 @@
 import type { NextConfig } from 'next';
-import withPWAInit from 'next-pwa';
-
-const withPWA = withPWAInit({
-  dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
-  register: true,
-  skipWaiting: true,
-});
 
 const nextConfig: NextConfig = {
-    typescript: { ignoreBuildErrors: true },
+  typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   allowedDevOrigins: [
     'govchain.us',
@@ -23,42 +15,29 @@ const nextConfig: NextConfig = {
   ],
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**.supabase.co',
-      },
-      {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-      },
+      { protocol: 'https', hostname: '**' },
     ],
+    unoptimized: false,
   },
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
-          },
-        ],
-      },
-    ];
+  experimental: {
+    serverActions: { allowedOrigins: ['qron.space', 'www.qron.space'] },
   },
-  turbopack: {},
 };
 
-export default withPWA(nextConfig);
+// Optionally wrap with PWA if available
+let exportedConfig: NextConfig = nextConfig;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const withPWAInit = require('next-pwa');
+  const withPWA = withPWAInit({
+    dest: 'public',
+    disable: process.env.NODE_ENV === 'development',
+    register: true,
+    skipWaiting: true,
+  });
+  exportedConfig = withPWA(nextConfig);
+} catch {
+  // next-pwa not available or incompatible, skip PWA
+}
+
+export default exportedConfig;
