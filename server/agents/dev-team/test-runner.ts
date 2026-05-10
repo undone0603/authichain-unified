@@ -22,8 +22,7 @@
 
 import { invokeLLM } from '../../_core/llm.js';
 import { logActivity, createSystemNotification } from '../../db.js';
-import type { MissionTask } from '../../../drizzle/schema.js';
-type Task = MissionTask;
+import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
   getPR,
   getLatestRunForSha,

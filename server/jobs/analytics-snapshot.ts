@@ -59,8 +59,8 @@ export async function runAnalyticsSnapshot() {
       outputPath,
       generatedAt: payload.timestamp,
       totals: {
-        totalRevenue: (metrics as any).totalRevenue ?? 0,
-        totalLeads: (metrics as any).totalLeads ?? metrics.totalUsers ?? 0,
+        totalRevenue: metrics.totalRevenue,
+        totalLeads: metrics.totalLeads,
       },
     },
   });

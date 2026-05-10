@@ -22,11 +22,9 @@ import {
   setSubscriptionStatusByStripeId,
   getSubscriptionByStripeSubscriptionId,
   createSystemNotification,
-  claimWebhookEvent,
-  markWebhookEventProcessed,
+  hasWebhookEventProcessed,
 } from "../db";
-import { getPlanQuota } from "../../shared/pricing";
-import { detectPlan } from "./stripe-plan-detection";
+import { getPlanQuota } from "../stripe-products";
 
 // ─── Stripe client (lazy, uses env at call time) ─────────────────────────────
 
@@ -41,9 +39,35 @@ function getStripeClient(): Stripe {
   return _stripe;
 }
 
-// Plan detection lives in ./stripe-plan-detection.ts (lookup table → amount fallback).
+// ─── Plan detection from price ID or amount ───────────────────────────────────
 
 type Plan = "starter" | "professional" | "enterprise";
+
+function detectPlanFromPriceId(priceId: string | null | undefined): Plan {
+  if (!priceId) return "starter";
+  const lower = priceId.toLowerCase();
+  if (lower.includes("enterprise")) return "enterprise";
+  if (lower.includes("professional") || lower.includes("pro")) return "professional";
+  if (lower.includes("starter")) return "starter";
+  return "starter";
+}
+
+function detectPlanFromAmount(amountCents: number): Plan {
+  // $799/mo = 79900, $199/mo = 19900, $49/mo = 4900
+  // Also handle annual pricing which is higher
+  if (amountCents >= 70000) return "enterprise";
+  if (amountCents >= 15000) return "professional";
+  return "starter";
+}
+
+function detectPlan(priceId: string | null | undefined, amountCents: number): Plan {
+  if (priceId) {
+    const fromId = detectPlanFromPriceId(priceId);
+    // If we got a non-default answer from the price ID, trust it
+    if (fromId !== "starter" || priceId.toLowerCase().includes("starter")) return fromId;
+  }
+  return detectPlanFromAmount(amountCents);
+}
 
 // ─── Stripe → internal status mapping ────────────────────────────────────────
 
@@ -117,37 +141,13 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type };
   }
 
-  // Idempotency — atomic claim against UNIQUE(provider, eventId).
-  // First delivery: claim returns true, side effects run.
-  // Duplicate / concurrent retry: claim returns false, skip.
-  const claimed = await claimWebhookEvent("stripe", event.id, event.type);
-  if (!claimed) {
+  // Idempotency — skip if we already processed this event
+  if (await hasWebhookEventProcessed(event.id)) {
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
     return { received: true, type: event.type, duplicate: true };
   }
 
-  const eventType = event.type as string;
-
-  switch (eventType) {
-    // ── V2 Core Account Events (Thin) ───────────────────────────────────────
-    case "v2.core.account.capability_status_updated": {
-      const accountEvent = (event as unknown as { data: { object: { account: string } } }).data.object;
-      const accountId = accountEvent.account;
-      console.log(`[stripe-webhook] Capability updated for account: ${accountId}`);
-      
-      const { setVendorKycStatus } = await import("../db");
-      await setVendorKycStatus(accountId, "completed");
-
-      await logAutomationAudit(
-        "vendor_kyc_completed",
-        {
-          eventId: event.id,
-          stripeAccountId: accountId,
-        }
-      );
-      break;
-    }
-
+  switch (event.type) {
     // ── Subscription created / updated ──────────────────────────────────────
     case "customer.subscription.created":
     case "customer.subscription.updated": {
@@ -170,18 +170,15 @@ export async function handleStripeWebhook(
           billingCycle,
           stripeCustomerId: customerId ?? null,
           stripeSubscriptionId: sub.id,
-          currentPeriodStart: (sub as any).current_period_start
-            ? new Date((sub as any).current_period_start * 1000)
+          currentPeriodStart: sub.current_period_start
+            ? new Date(sub.current_period_start * 1000)
             : new Date(),
-          currentPeriodEnd: (sub as any).current_period_end
-            ? new Date((sub as any).current_period_end * 1000)
+          currentPeriodEnd: sub.current_period_end
+            ? new Date(sub.current_period_end * 1000)
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
         });
       }
-
-      const brand = (sub.metadata?.brand as string | undefined) ?? null;
-      const isContract = sub.metadata?.contract === "true";
 
       await logAutomationAudit(
         event.type === "customer.subscription.created"
@@ -194,35 +191,10 @@ export async function handleStripeWebhook(
           plan,
           status,
           billingCycle,
-          brand,
-          contract: isContract,
           userId: userId ?? null,
         },
         userId,
       );
-
-      // HubSpot deal sync — only on first creation, not updates. Non-fatal:
-      // a HubSpot outage must not block billing-state writes.
-      if (event.type === "customer.subscription.created") {
-        try {
-          const customerEmail = sub.metadata?.customer_email
-            || (typeof sub.customer === "string" ? null : (sub.customer as Stripe.Customer | undefined)?.email)
-            || null;
-          if (customerEmail) {
-            const { syncPaymentToHubSpot } = await import("../hubspot-service");
-            const customerName = sub.metadata?.customer_name || undefined;
-            const subscriptionAmount = (firstItem?.price?.unit_amount ?? 0) / 100;
-            await syncPaymentToHubSpot({
-              email: customerEmail,
-              name: customerName,
-              amount: subscriptionAmount,
-              plan,
-            });
-          }
-        } catch (hsErr) {
-          console.warn("[HubSpot] Subscription sync failed (non-fatal):", hsErr);
-        }
-      }
 
       console.log(`[stripe-webhook] Subscription ${event.type === "customer.subscription.created" ? "created" : "updated"}: ${sub.id} → plan=${plan} status=${status}`);
       break;
@@ -256,9 +228,9 @@ export async function handleStripeWebhook(
     case "invoice.paid": {
       const inv = event.data.object as Stripe.Invoice;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
-      const subscriptionId = typeof (inv as any).subscription === "string"
-        ? (inv as any).subscription
-        : ((inv as any).subscription as any)?.id;
+      const subscriptionId = typeof inv.subscription === "string"
+        ? inv.subscription
+        : (inv.subscription as any)?.id;
 
       // Resolve userId — try subscription metadata first, then customer
       let userId: number | undefined;
@@ -276,7 +248,7 @@ export async function handleStripeWebhook(
 
       // Detect plan from invoice line items
       const firstLine = inv.lines?.data?.[0];
-      const priceId = (firstLine as any)?.price?.id ?? null;
+      const priceId = firstLine?.price?.id ?? null;
       const plan = detectPlan(priceId, amountCents);
 
       if (amountUsd > 0) {
@@ -292,8 +264,6 @@ export async function handleStripeWebhook(
             stripeSubscriptionId: subscriptionId ?? null,
             stripeCustomerId: customerId ?? null,
             plan,
-            brand: (inv as any).subscription_details?.metadata?.brand ?? null,
-            contract: (inv as any).subscription_details?.metadata?.contract === "true",
           },
         });
       }
@@ -326,9 +296,9 @@ export async function handleStripeWebhook(
     case "invoice.payment_failed": {
       const inv = event.data.object as Stripe.Invoice;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
-      const subscriptionId = typeof (inv as any).subscription === "string"
-        ? (inv as any).subscription
-        : ((inv as any).subscription as any)?.id;
+      const subscriptionId = typeof inv.subscription === "string"
+        ? inv.subscription
+        : (inv.subscription as any)?.id;
 
       let userId: number | undefined;
       if (subscriptionId) {
@@ -371,102 +341,12 @@ export async function handleStripeWebhook(
       const userId = session.metadata?.user_id
         ? parseInt(session.metadata.user_id, 10)
         : undefined;
-      const leadEmail = session.customer_email || session.metadata?.leadEmail;
-      const segment = session.metadata?.segment;
-      const plan = (session.metadata?.plan as Plan | undefined) ?? (segment === 'API_STARTER' ? 'starter' : 'starter');
+      const plan = (session.metadata?.plan as Plan | undefined) ?? "starter";
       const billingCycle = session.metadata?.billing === "annual" ? "annual" : "monthly";
       const amountCents = session.amount_total ?? 0;
       const amountUsd = amountCents / 100;
       const customerId = typeof session.customer === "string" ? session.customer : undefined;
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : undefined;
-
-      // Record Pilot / Enterprise Revenue
-      if (amountUsd > 0) {
-        await recordRevenue({
-          source: "stripe",
-          amount: amountUsd.toFixed(2),
-          currency: (session.currency ?? "usd").toUpperCase(),
-          type: segment ? "pilot_program" : "subscription",
-          userId: userId ?? null,
-          metadata: {
-            eventId: event.id,
-            sessionId: session.id,
-            segment,
-            leadEmail,
-            stripeSubscriptionId: subscriptionId ?? null,
-            stripeCustomerId: customerId ?? null,
-            brand: session.metadata?.brand ?? null,
-            contract: session.metadata?.contract === "true",
-            setupOrderId: session.metadata?.setup_order_id ?? null,
-          },
-        });
-
-        // 1. Mark service order as paid + notify customer (idempotent —
-        //    no-op if order already past pending). Done before fulfillment
-        //    so downstream fulfillment runs on a paid order, not a pending one.
-        try {
-          const { handleServiceOrderPayment } = await import("../services/order-payment-handler");
-          await handleServiceOrderPayment(session);
-        } catch (orderErr) {
-          console.warn("[ServiceOrder] Mark-paid failed:", orderErr);
-        }
-
-        // 2. Trigger Physical Fulfillment Bridge (Security Seals)
-        try {
-          const { triggerFulfillmentFromPayment } = await import("../fulfillment-service");
-          await triggerFulfillmentFromPayment(session.id);
-        } catch (fillErr) {
-          console.warn("[Fulfillment] Trigger failed:", fillErr);
-        }
-
-        // 3. If it's a pilot lead, update status to WON
-        if (leadEmail) {
-          const { updateLeadStatusByEmail } = await import("../db");
-          await updateLeadStatusByEmail(leadEmail, "won");
-
-          await logActivity({
-            userId: userId ?? null,
-            action: 'lead_closed_won',
-            entityType: 'lead',
-            details: { leadEmail, segment, amountUsd, sessionId: session.id }
-          });
-        }
-
-        // 4. Send a payment-confirmation email via the unified provider
-        //    (Resend → Gmail → SendGrid). Wrapped in try/catch so a provider
-        //    failure can't crash the webhook — the customer still has the
-        //    in-app notification from handleServiceOrderPayment as a backstop.
-        const confirmTo = session.customer_email
-          || session.metadata?.customer_email
-          || leadEmail
-          || null;
-        if (confirmTo) {
-          try {
-            const { sendEmail } = await import("../email-service");
-            const customerName = session.metadata?.customer_name || "there";
-            const serviceKey = session.metadata?.service_key || session.metadata?.plan || "your purchase";
-            const amountStr = `$${amountUsd.toFixed(2)} ${(session.currency ?? "usd").toUpperCase()}`;
-            const body = [
-              `Hi ${customerName},`,
-              ``,
-              `Thanks — your payment of ${amountStr} for ${serviceKey} is confirmed.`,
-              ``,
-              `You can track this order anytime at https://authichain.com/orders.`,
-              ``,
-              `If you have any questions, just reply to this email.`,
-              ``,
-              `— The AuthiChain Team`,
-            ].join("\n");
-            await sendEmail({
-              to: confirmTo,
-              subject: `Payment confirmed — ${serviceKey}`,
-              body,
-            });
-          } catch (emailErr) {
-            console.warn("[Email] Payment confirmation send failed:", emailErr);
-          }
-        }
-      }
 
       await logAutomationAudit(
         "billing_checkout_completed",
@@ -474,7 +354,6 @@ export async function handleStripeWebhook(
           eventId: event.id,
           userId: userId ?? null,
           plan,
-          segment,
           billingCycle,
           amountUsd,
           stripeSubscriptionId: subscriptionId ?? null,
@@ -483,7 +362,7 @@ export async function handleStripeWebhook(
         userId,
       );
 
-      console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan} segment=${segment} amount=${amountUsd}`);
+      console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);
       break;
     }
 
@@ -513,14 +392,8 @@ export async function handleStripeWebhook(
 
     default:
       console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
-      // Mark processed — we've made a terminal decision (skip), so the row
-      // shouldn't show up in stuck-NULL alerts.
-      await markWebhookEventProcessed("stripe", event.id);
       return { received: true, type: event.type, handled: false };
   }
 
-  // Side effects ran successfully — stamp the claim. Rows left with
-  // processedAt = NULL indicate handlers that crashed mid-processing.
-  await markWebhookEventProcessed("stripe", event.id);
   return { received: true, type: event.type, handled: true };
 }

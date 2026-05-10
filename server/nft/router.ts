@@ -70,8 +70,7 @@ export const nftRouter = router({
       const auction = await db.getAuctionById(input.auctionId);
       if (!auction) throw new TRPCError({ code: "NOT_FOUND" });
       if (auction.status !== "active") throw new TRPCError({ code: "BAD_REQUEST", message: "Auction not active" });
-      const currentBidNum = auction.currentBid ? parseFloat(auction.currentBid) : 0;
-      if (auction.currentBid && (isNaN(currentBidNum) || parseFloat(input.amount) <= currentBidNum)) {
+      if (auction.currentBid && parseFloat(input.amount) <= parseFloat(auction.currentBid)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Bid must be higher than current bid" });
       }
       await db.placeBid(input.auctionId, ctx.user.id, input.amount);

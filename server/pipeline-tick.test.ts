@@ -19,20 +19,7 @@ vi.mock('./jobs/quarterly-value.js',   () => ({ runQuarterlyValueReportDispatch:
 vi.mock('./jobs/organic-traffic.js',   () => ({ runOrganicTrafficAutomation:    vi.fn().mockResolvedValue({ executed: true }) }));
 vi.mock('./jobs/task-runner.js',       () => ({ runTask:                        vi.fn().mockResolvedValue({ ok: true }) }));
 
-// Drizzle-style chainable stub: every chain method returns the same object;
-// terminal methods (.limit, .values) resolve to empty/no-op so the blitz path
-// in pipeline-tick.ts can run without throwing.
-const dbChainStub: any = {
-  select: () => dbChainStub,
-  from:   () => dbChainStub,
-  where:  () => dbChainStub,
-  limit:  () => Promise.resolve([]),
-  insert: () => dbChainStub,
-  values: () => Promise.resolve(undefined),
-};
-
 vi.mock('./db.js', () => ({
-  getDb:                 vi.fn().mockResolvedValue(dbChainStub),
   getDueTasks:           vi.fn().mockResolvedValue([]),
   getRunTaskCount:       vi.fn().mockResolvedValue(100),
   getAdaptivePriors:     vi.fn().mockResolvedValue({
@@ -116,8 +103,8 @@ describe('runPipelineTick', () => {
     const { runTask } = await import('./jobs/task-runner.js');
 
     vi.mocked(getDueTasks).mockResolvedValueOnce([
-      { id: 't1', kind: 'FIND_GOV_LEADS',      missionId: 'm1', title: 't1', description: 'd1', payload: {}, status: 'PENDING', lastError: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
-      { id: 't2', kind: 'DRAFT_PRESS_RELEASE', missionId: 'm1', title: 't2', description: 'd2', payload: {}, status: 'PENDING', lastError: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
+      { id: 't1', kind: 'FIND_GOV_LEADS',    missionId: 'm1', payload: {}, status: 'PENDING', runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null, createdAt: new Date(), updatedAt: new Date() },
+      { id: 't2', kind: 'DRAFT_PRESS_RELEASE', missionId: 'm1', payload: {}, status: 'PENDING', runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null, createdAt: new Date(), updatedAt: new Date() },
     ]);
 
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
@@ -134,8 +121,8 @@ describe('runPipelineTick', () => {
     const { runTask } = await import('./jobs/task-runner.js');
 
     vi.mocked(getDueTasks).mockResolvedValueOnce([
-      { id: 't1', kind: 'FIND_GOV_LEADS', missionId: 'm1', title: 't1', description: 'd1', payload: {}, status: 'PENDING', lastError: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
-      { id: 't2', kind: 'CRM_UPDATE',     missionId: 'm1', title: 't2', description: 'd2', payload: {}, status: 'PENDING', lastError: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
+      { id: 't1', kind: 'FIND_GOV_LEADS', missionId: 'm1', payload: {}, status: 'PENDING', runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null, createdAt: new Date(), updatedAt: new Date() },
+      { id: 't2', kind: 'CRM_UPDATE',     missionId: 'm1', payload: {}, status: 'PENDING', runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null, createdAt: new Date(), updatedAt: new Date() },
     ]);
 
     vi.mocked(runTask)
@@ -165,7 +152,7 @@ describe('runPipelineTick', () => {
 
     // Task kind not in kindToSegment map — falls back to DEFAULT prior
     vi.mocked(getDueTasks).mockResolvedValueOnce([
-      { id: 't1', kind: 'UNKNOWN_FUTURE_KIND', missionId: 'm1', title: 't1', description: 'd1', payload: {}, status: 'PENDING', lastError: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
+      { id: 't1', kind: 'UNKNOWN_FUTURE_KIND', missionId: 'm1', payload: {}, status: 'PENDING', runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null, createdAt: new Date(), updatedAt: new Date() },
     ]);
 
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');

@@ -108,12 +108,12 @@ export const personalizationRouter = router({
           utmSource: profile.utmSource || undefined,
           utmMedium: profile.utmMedium || undefined,
           utmCampaign: profile.utmCampaign || undefined,
-          deviceType: (profile.deviceType as "desktop" | "mobile" | "tablet" | undefined) || undefined,
+          deviceType: profile.deviceType || undefined,
           segment: profile.segment || undefined,
         },
         rules.map(r => ({
           id: r.id,
-          conditions: String(r.conditions ?? "{}"),
+          conditions: r.conditions,
           content: r.content,
           priority: r.priority,
         }))
@@ -404,7 +404,7 @@ export const personalizationRouter = router({
       const analysis = await analyzePersonalizationPerformance(
         rules.map(r => ({
           name: r.name,
-          conditions: String(r.conditions ?? "{}"),
+          conditions: r.conditions,
           views: r.views,
           conversions: r.conversions,
           conversionRate: r.conversionRate,

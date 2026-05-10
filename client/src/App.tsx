@@ -4,7 +4,6 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { BrandProvider } from "./contexts/BrandContext";
 import { ThirdwebAppProvider } from "./components/ThirdwebProvider";
 import Home from "./pages/Home";
 import DashboardLayout from "./components/DashboardLayout";
@@ -31,16 +30,8 @@ const GrowthEngine = lazy(() => import("./pages/GrowthEngine"));
 const Blockchain = lazy(() => import("./pages/Blockchain"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const CRM = lazy(() => import("./pages/CRM"));
-const ScheduledTasks = lazy(() => import("./pages/ScheduledTasks"));
-const CharacterCreate = lazy(() => import("./pages/CharacterCreate"));
-const CharacterDashboard = lazy(() => import("./pages/CharacterDashboard"));
-const NetworkStats = lazy(() => import("./pages/NetworkStats"));
-const Services = lazy(() => import("./pages/Services"));
-const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
-const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
-const Storymode = lazy(() => import("./pages/Storymode"));
-const GovOnboarding = lazy(() => import("./pages/GovOnboarding"));
-const QrArtGallery = lazy(() => import("./pages/QrArtGallery"));
+const HeyGen = lazy(() => import("./pages/HeyGen"));
+const Macrohard = lazy(() => import("./pages/Macrohard"));
 
 function PageLoader() {
   return (
@@ -73,16 +64,8 @@ function DashboardRoutes() {
           <Route path="/blockchain" component={Blockchain} />
           <Route path="/notifications" component={Notifications} />
           <Route path="/crm" component={CRM} />
-          <Route path="/scheduled-tasks" component={ScheduledTasks} />
-          <Route path="/character" component={CharacterDashboard} />
-          <Route path="/character/create" component={CharacterCreate} />
-          <Route path="/network" component={NetworkStats} />
-          <Route path="/orders" component={ServiceOrders} />
-          <Route path="/sba-loan" component={SbaDisasterLoan} />
-          <Route path="/services" component={Services} />
-          <Route path="/story/:id" component={Storymode} />
-          <Route path="/gov-onboard" component={GovOnboarding} />
-          <Route path="/qr-gallery" component={QrArtGallery} />
+          <Route path="/heygen" component={HeyGen} />
+          <Route path="/macrohard" component={Macrohard} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
@@ -101,38 +84,10 @@ function Router() {
           </Suspense>
         )}
       </Route>
-      <Route path="/services">
-        {() => (
-          <Suspense fallback={<PageLoader />}>
-            <Services />
-          </Suspense>
-        )}
-      </Route>
-      <Route path="/gallery">
-        {() => (
-          <Suspense fallback={<PageLoader />}>
-            <QrArtGallery />
-          </Suspense>
-        )}
-      </Route>
       <Route path="/certificate/:token">
         {(params) => (
           <Suspense fallback={<PageLoader />}>
             <CertificatePublic token={params.token} />
-          </Suspense>
-        )}
-      </Route>
-      <Route path="/story/:id">
-        {(params) => (
-          <Suspense fallback={<PageLoader />}>
-            <Storymode />
-          </Suspense>
-        )}
-      </Route>
-      <Route path="/onboard">
-        {() => (
-          <Suspense fallback={<PageLoader />}>
-            <GovOnboarding />
           </Suspense>
         )}
       </Route>
@@ -146,16 +101,14 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <BrandProvider>
-        <ThemeProvider defaultTheme="dark">
-          <ThirdwebAppProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-            </TooltipProvider>
-          </ThirdwebAppProvider>
-        </ThemeProvider>
-      </BrandProvider>
+      <ThemeProvider defaultTheme="dark">
+        <ThirdwebAppProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </ThirdwebAppProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

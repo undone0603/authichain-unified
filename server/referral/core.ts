@@ -26,12 +26,12 @@ export function generateAffiliateCode(userId: number): string {
 
 export async function createReferralCode(referrerId: number): Promise<{ id: number; referralCode: string }> {
   const code = generateReferralCode(referrerId);
-  const [result] = await db.insert(referrals).values({
+  const result = await db.insert(referrals).values({
     referrerId,
     referralCode: code,
     status: "pending",
-  }).returning();
-  return { id: result.id, referralCode: code };
+  });
+  return { id: result[0].insertId, referralCode: code };
 }
 
 export async function trackReferralClick(params: {
@@ -64,12 +64,12 @@ export async function completeReferral(params: {
 
 export async function getReferralStats(referrerId: number) {
   const all = await db.select().from(referrals).where(eq(referrals.referrerId, referrerId));
-  const converted = all.filter((r: typeof all[number]) => r.status === "converted");
-  const totalCommission = converted.reduce((sum: number, r: typeof all[number]) => sum + parseFloat(r.commissionPaid || "0"), 0);
+  const converted = all.filter(r => r.status === "converted");
+  const totalCommission = converted.reduce((sum, r) => sum + parseFloat(r.commissionPaid || "0"), 0);
   return {
     totalReferrals: all.length,
     convertedReferrals: converted.length,
-    pendingReferrals: all.filter((r: typeof all[number]) => r.status === "pending").length,
+    pendingReferrals: all.filter(r => r.status === "pending").length,
     totalCommission,
     conversionRate: all.length > 0 ? Math.round((converted.length / all.length) * 100) : 0,
   };

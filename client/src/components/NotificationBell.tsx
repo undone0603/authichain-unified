@@ -7,16 +7,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useLocation } from "wouter";
 
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  type: string;
-  isRead: boolean | number;
-  createdAt: string | Date;
-  actionUrl?: string | null;
-}
-
 const typeIcons: Record<string, string> = {
   authentication: "🔒",
   certificate: "📜",
@@ -34,7 +24,7 @@ const typeColors: Record<string, string> = {
   authentication: "bg-blue-500/10 text-blue-400",
   certificate: "bg-green-500/10 text-green-400",
   payment: "bg-emerald-500/10 text-emerald-400",
-  subscription: "bg-yellow-500/10 text-yellow-400",
+  subscription: "bg-purple-500/10 text-purple-400",
   nft: "bg-pink-500/10 text-pink-400",
   referral: "bg-orange-500/10 text-orange-400",
   system: "bg-gray-500/10 text-gray-400",
@@ -155,7 +145,7 @@ export default function NotificationBell() {
               </div>
             ) : (
               <div>
-                {notifications.map((notification: Notification, index: number) => (
+                {notifications.map((notification, index) => (
                   <div key={notification.id}>
                     <div
                       className={`flex gap-3 px-4 py-3 hover:bg-accent/50 transition-colors cursor-pointer ${

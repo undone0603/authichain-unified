@@ -13,7 +13,7 @@ export async function listModels(filters?: { category?: string; status?: string;
   return await query.orderBy(desc(aiModels.downloads)).limit(filters?.limit || 50);
 }
 
-export async function getModelById(id: number): Promise<typeof aiModels.$inferSelect | undefined> {
+export async function getModelById(id: number) {
   const [model] = await db.select().from(aiModels).where(eq(aiModels.id, id)).limit(1);
   return model;
 }
@@ -25,8 +25,8 @@ export async function createModel(data: {
   price: number;
   creatorId: number;
 }) {
-  const [result] = await db.insert(aiModels).values({ ...data, status: "draft" }).returning();
-  return { id: result.id };
+  const result = await db.insert(aiModels).values({ ...data, status: "draft" });
+  return { id: result[0].insertId };
 }
 
 export async function purchaseModel(data: {
@@ -36,12 +36,12 @@ export async function purchaseModel(data: {
   purchaseType: "purchase" | "subscription" | "rental";
   expiresAt?: Date;
 }) {
-  const [result] = await db.insert(modelPurchases).values({ ...data, status: "active" }).returning();
+  const result = await db.insert(modelPurchases).values({ ...data, status: "active" });
   // Increment download count
   await db.update(aiModels)
     .set({ downloads: sql`${aiModels.downloads} + 1` })
     .where(eq(aiModels.id, data.modelId));
-  return { id: result.id };
+  return { id: result[0].insertId };
 }
 
 export async function getUserPurchases(userId: number) {
@@ -51,7 +51,7 @@ export async function getUserPurchases(userId: number) {
 }
 
 export async function addReview(data: { modelId: number; userId: number; rating: number; review?: string }) {
-  const [result] = await db.insert(modelReviews).values(data).returning();
+  const result = await db.insert(modelReviews).values(data);
   // Update model rating average
   const [avg] = await db.select({ avg: sql<string>`AVG(rating)`, count: sql<number>`COUNT(*)` })
     .from(modelReviews)
@@ -59,7 +59,7 @@ export async function addReview(data: { modelId: number; userId: number; rating:
   await db.update(aiModels)
     .set({ rating: avg.avg, reviewCount: avg.count })
     .where(eq(aiModels.id, data.modelId));
-  return { id: result.id };
+  return { id: result[0].insertId };
 }
 
 export async function getModelReviews(modelId: number) {

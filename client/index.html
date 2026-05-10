@@ -1,54 +1,26 @@
 <!doctype html>
 <html lang="en">
+
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <meta name="theme-color" content="#d4af37" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
-    <title>AuthiChain — Blockchain Product Authentication Platform</title>
-    <meta name="description" content="Protect your brand with AI-powered blockchain authentication. Mint ERC-721 NFTs tied to physical products, verify authenticity with five AI agents, and track supply chains on Polygon." />
-    <meta name="keywords" content="blockchain authentication, anti-counterfeiting, product verification, NFT certificates, supply chain tracking, brand protection" />
-
-    <!-- Open Graph -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="AuthiChain" />
-    <meta property="og:title" content="AuthiChain — The Trust Layer for Physical Products" />
-    <meta property="og:description" content="Enterprise blockchain authentication. Five AI agents reach consensus on product authenticity. ES256-signed scans recorded on-chain." />
-    <meta property="og:url" content="https://authichain.com" />
-    <meta property="og:image" content="https://authichain.com/og-authichain.png" />
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="AuthiChain — Blockchain Product Authentication" />
-    <meta name="twitter:description" content="Five AI agents. One truth. Protect your brand with on-chain verification." />
-
-    <!-- Canonical -->
-    <link rel="canonical" href="https://authichain.com" />
-
-    <!-- Fonts -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>AuthiChain – Blockchain Product Authentication Platform</title>
+    <meta name="description" content="Protect your brand with AI-powered blockchain authentication. NFT certificates, supply chain tracking, and anti-counterfeiting verification." />
+    <meta name="keywords" content="blockchain authentication, product verification, anti-counterfeiting, NFT certificates, supply chain tracking, AI image analysis, brand protection, QR code verification, enterprise authentication, counterfeit detection" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
+
   <body>
     <div id="root"></div>
-    <script>
-      // Client-side fallback brand detection. Overridden by server injection
-      // (see server/_core/brand-middleware.ts brandInjectionScript) when
-      // the HTML comes from Express; this runs only when a pure static
-      // host serves index.html without injection.
-      if (!window.__BRAND__) {
-        var h = (location.hostname || '').toLowerCase();
-        var b = 'authichain';
-        if (h.includes('qron')) b = 'qron';
-        else if (h.includes('strainchain')) b = 'strainchain';
-        else if (h.includes('govchain')) b = 'govchain';
-        window.__BRAND__ = b;
-        document.documentElement.setAttribute('data-brand', b);
-      }
-    </script>
     <script type="module" src="/src/main.tsx"></script>
+    <script
+      defer
+      src="%VITE_ANALYTICS_ENDPOINT%/umami"
+      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
   </body>
+
 </html>

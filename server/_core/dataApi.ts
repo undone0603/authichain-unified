@@ -31,7 +31,6 @@ export async function callDataApi(
   const response = await fetch(fullUrl, {
     method: "POST",
     headers: {
-                          
       accept: "application/json",
       "content-type": "application/json",
       "connect-protocol-version": "1",
