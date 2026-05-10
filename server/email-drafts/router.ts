@@ -1,6 +1,7 @@
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
+import { sendEmail } from "../email/smtp";
 
 export const emailDraftsRouter = router({
   listPending: protectedProcedure.query(async () => {
@@ -23,7 +24,11 @@ export const emailDraftsRouter = router({
     // Send the actual email after approval
     if (draft) {
       try {
-        await db.sendApprovalEmail(draft.prospectEmail, draft.subject, draft.body);
+        await sendEmail({
+          to: draft.prospectEmail,
+          subject: draft.subject,
+          html: draft.body,
+        });
         await db.updateDraftStatus(input.id, "sent", ctx.user.id);
       } catch (err) {
         console.error("[EmailDrafts] Failed to send approved email:", err);

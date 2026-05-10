@@ -93,106 +93,56 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   }
 
   const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
+  if (!fromEmail) {
+    return {
+      status: "skipped",
+      reason: "gmail_not_configured",
+      provider: "gmail",
+    };
+  }
+
+  const gmailAccessToken = await getGmailAccessToken();
+  if (!gmailAccessToken) {
+    return { status: "skipped", reason: "gmail_token_unavailable", provider: "gmail" };
+  }
+
   const fromName = input.fromName || "AuthiChain";
+  const mime = [
+    `From: ${fromName} <${fromEmail}>`,
+    `To: ${to}`,
+    `Subject: ${input.subject}`,
+    "MIME-Version: 1.0",
+    "Content-Type: text/plain; charset=UTF-8",
+    "",
+    input.body,
+  ].join("\r\n");
 
-  // ── Try Resend first (if API key is configured) ─────────────────────────
-  // Resend uses its own RESEND_FROM_EMAIL when set, otherwise falls back to
-  // the same fromEmail used by Gmail/SendGrid. The address's domain must be
-  // verified in the Resend dashboard.
-  if (ENV.resendApiKey) {
-    const resendFrom = process.env.RESEND_FROM_EMAIL || fromEmail || "outreach@authichain.com";
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${ENV.resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: `${fromName} <${resendFrom}>`,
-        to: [to],
-        subject: input.subject,
-        text: input.body,
-      }),
-    });
+  const raw = toBase64Url(mime);
+  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${gmailAccessToken}`,
+    },
+    body: JSON.stringify({ raw }),
+  });
 
-    if (res.ok) {
-      const data = await res.json().catch(() => ({} as any));
-      return {
-        status: "sent",
-        provider: "resend",
-        providerMessageId: data?.id,
-      };
-    }
-
-    const errTxt = await res.text().catch(() => "");
-    console.warn("[email] Resend failed, falling back:", res.status, errTxt.slice(0, 200));
+  if (!response.ok) {
+    const txt = await response.text().catch(() => "");
+    return {
+      status: "skipped",
+      provider: "gmail",
+      reason: `gmail_send_failed:${response.status}:${txt.slice(0, 200)}`,
+    };
   }
 
-  // ── Try Gmail next (if OAuth tokens are configured) ──────────────────────
-  if (fromEmail) {
-    const gmailAccessToken = await getGmailAccessToken();
-    if (gmailAccessToken) {
-      const mime = [
-        `From: ${fromName} <${fromEmail}>`,
-        `To: ${to}`,
-        `Subject: ${input.subject}`,
-        "MIME-Version: 1.0",
-        "Content-Type: text/plain; charset=UTF-8",
-        "",
-        input.body,
-      ].join("\r\n");
-
-      const raw = toBase64Url(mime);
-      const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${gmailAccessToken}`,
-        },
-        body: JSON.stringify({ raw }),
-      });
-
-      if (response.ok) {
-        const data = await response.json().catch(() => ({} as any));
-        return {
-          status: "sent",
-          provider: "gmail",
-          providerMessageId: data?.id,
-          threadId: data?.threadId,
-        };
-      }
-      console.warn("[email] Gmail send failed, falling back to SendGrid");
-    }
-  }
-
-  // ── Fallback: SendGrid ────────────────────────────────────────────────────
-  if (ENV.sendgridApiKey) {
-    const senderEmail = fromEmail || "outreach@authichain.com";
-    const sgRes = await fetch("https://api.sendgrid.com/v3/mail/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${ENV.sendgridApiKey}`,
-      },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: to }] }],
-        from: { email: senderEmail, name: fromName },
-        subject: input.subject,
-        content: [{ type: "text/plain", value: input.body }],
-      }),
-    });
-
-    if (sgRes.ok || sgRes.status === 202) {
-      const msgId = sgRes.headers.get("X-Message-Id") ?? undefined;
-      return { status: "sent", provider: "sendgrid", providerMessageId: msgId };
-    }
-
-    const errTxt = await sgRes.text().catch(() => "");
-    console.error("[email] SendGrid failed:", sgRes.status, errTxt.slice(0, 200));
-    return { status: "skipped", provider: "sendgrid", reason: `sendgrid_failed:${sgRes.status}` };
-  }
-
-  return { status: "skipped", reason: "no_email_provider_configured" };
+  const data = await response.json().catch(() => ({} as any));
+  return {
+    status: "sent",
+    provider: "gmail",
+    providerMessageId: data?.id,
+    threadId: data?.threadId,
+  };
 }
 
 /** Check whether a Gmail thread has received a reply (any message NOT in SENT labels). */

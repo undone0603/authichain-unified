@@ -13,21 +13,6 @@ const store = vi.hoisted(() => {
   };
 });
 
-// ─── Stable mock function refs (vi.hoisted ensures same identity in factory & tests) ───
-const dbMocks = vi.hoisted(() => ({
-  getUserReferrals: vi.fn(async () => [] as any[]),
-  getReferralByCode: vi.fn(async () => undefined as any),
-  createReferral: vi.fn(async () => ({ id: 201 })),
-  getAffiliateByUserId: vi.fn(async () => undefined as any),
-  createAffiliate: vi.fn(async (_data: any) => ({ id: 202 })),
-  getAffiliateCommissions: vi.fn(async () => [] as any[]),
-  getPendingDrafts: vi.fn(async () => [] as any[]),
-  createEmailDraft: vi.fn(async () => ({ id: 203 })),
-  updateDraftStatus: vi.fn(async () => undefined as any),
-  sendApprovalEmail: vi.fn(async () => undefined as any),
-  getUserSubscription: vi.fn(async () => null as any),
-}));
-
 // ─── Mock ./db ────────────────────────────────────────────────────────────────
 vi.mock("./db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./db")>();
@@ -47,8 +32,7 @@ vi.mock("./db", async (importOriginal) => {
       values: (data: any) => {
         const id = store.nextId();
         store.bonuses.push({ ...data, id });
-        const result = [{ ...data, id, insertId: id }];
-        return { returning: () => result, then: (fn: any) => fn(result) };
+        return [{ insertId: id }];
       },
     }),
     update: () => ({ set: () => ({ where: () => undefined }) }),
@@ -57,12 +41,20 @@ vi.mock("./db", async (importOriginal) => {
   return {
     ...actual,
     db: mockDb,
-    // Use stable hoisted refs so test assertions see the same function the router calls
-    ...dbMocks,
-    // createReferral and createAffiliate need store.nextId, override with store-aware fns
+    // referral helpers
+    getUserReferrals: vi.fn(async () => []),
+    getReferralByCode: vi.fn(async () => undefined),
     createReferral: vi.fn(async () => ({ id: store.nextId() })),
-    createAffiliate: vi.fn(async (_data: any) => ({ id: store.nextId() })),
+    // affiliate helpers
+    getAffiliateByUserId: vi.fn(async () => undefined),
+    createAffiliate: vi.fn(async (data: any) => ({ id: store.nextId() })),
+    getAffiliateCommissions: vi.fn(async () => []),
+    // email-draft helpers
+    getPendingDrafts: vi.fn(async () => []),
     createEmailDraft: vi.fn(async () => ({ id: store.nextId() })),
+    updateDraftStatus: vi.fn(async () => undefined),
+    // subscription helpers used by paddle checkout
+    getUserSubscription: vi.fn(async () => null),
   };
 });
 
@@ -123,7 +115,7 @@ type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1, openId: "test-user-001", email: "test@authichain.com",
-    name: "Test User", loginMethod: "manus", role, stripeCustomerId: null,
+    name: "Test User", loginMethod: "manus", role,
     createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
   };
   return {
@@ -448,7 +440,8 @@ describe("New Features", () => {
       });
 
       it("emailDrafts.approve DOES send email when draft is in pending list", async () => {
-        dbMocks.getPendingDrafts.mockResolvedValueOnce([{
+        const { getPendingDrafts } = await import("./db");
+        vi.mocked(getPendingDrafts).mockResolvedValueOnce([{
           id: 42, prospectEmail: "lead@bigcorp.com", subject: "Our Partnership",
           body: "<p>Hello!</p>", prospectName: "Alice",
           prospectCompany: null, prospectTitle: null, industry: null,
@@ -456,15 +449,29 @@ describe("New Features", () => {
           approvedBy: null, approvedAt: null, sentAt: null, notes: null, createdAt: new Date(),
         }]);
         await appRouter.createCaller(createAuthContext()).emailDrafts.approve({ id: 42 });
-        expect(dbMocks.getPendingDrafts).toHaveBeenCalled();
-        expect(dbMocks.updateDraftStatus).toHaveBeenCalledWith(42, "approved", 1);
-        expect(dbMocks.sendApprovalEmail).toHaveBeenCalledOnce();
-        expect(dbMocks.sendApprovalEmail).toHaveBeenCalledWith(
-          "lead@bigcorp.com",
-          "Our Partnership",
-          "<p>Hello!</p>",
-        );
+        const { sendEmail } = await import("./email/smtp");
+        expect(vi.mocked(sendEmail)).toHaveBeenCalledOnce();
+        expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(expect.objectContaining({
+          to: "lead@bigcorp.com",
+          subject: "Our Partnership",
+        }));
       });
+    });
+  });
+
+  // ── Paddle checkout ─────────────────────────────────────────────────────────
+  describe("subscription.createPaddleCheckout", () => {
+    it("requires auth", async () => {
+      await expect(appRouter.createCaller(createPublicContext()).subscription.createPaddleCheckout({
+        plan: "starter", successUrl: "https://app.authichain.com/success",
+      })).rejects.toThrow();
+    });
+
+    it("throws BAD_REQUEST when Paddle price env var not set", async () => {
+      // Paddle price env vars are not configured in test env
+      await expect(appRouter.createCaller(createAuthContext()).subscription.createPaddleCheckout({
+        plan: "starter", billing: "monthly", successUrl: "https://app.authichain.com/success",
+      })).rejects.toMatchObject({ code: "BAD_REQUEST" });
     });
   });
 

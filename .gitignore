@@ -108,21 +108,3 @@ temp/
 
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
-
-.vercel
-
-# AgentZ
-.agentz.lock
-.agentz-supervisor.compiled.mjs
-
-# Manus internal
-.manus/
-
-# Claude Code local state
-.claude/
-
-# Gemini CLI local state
-.gemini/
-
-# Wrangler local state
-.wrangler/
