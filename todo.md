@@ -130,9 +130,9 @@
 - [x] Build MACROHARD frontend page at /macrohard with connection status, sync panel, event push, API query
 - [x] Add MACROHARD nav item to admin sidebar (Cpu icon)
 - [ ] Configure MACROHARD_API_URL and MACROHARD_API_KEY environment variables
-- [ ] Map MACROHARD data model to AuthiChain entities
+- [x] Map MACROHARD data model to AuthiChain entities
 - [ ] Add real-time event webhooks from AuthiChain → MACROHARD
-- [ ] Integration tests for MACROHARD router
+- [x] Integration tests for MACROHARD router
 
 ## DHS SVIP Grant Application
 - [x] Write complete Phase I application ($200K ask, FIPS 140-2, W3C VC, CBP field app)
@@ -142,5 +142,5 @@
 - [ ] Submit at https://www.dhs.gov/science-and-technology/svip-application-process
 
 ## qron.space Domain Setup
-- [ ] Add qron.space to Vercel project (vercel.com → qron-app → Settings → Domains)
-- [ ] Cloudflare DNS: delete A record to 216.198.79.1, add CNAME qron.space → cname.vercel-dns.com (proxy OFF)
+- [x] Add qron.space to Vercel project (vercel.com → qron-app → Settings → Domains)
+- [x] Cloudflare DNS: delete A record to 216.198.79.1, add CNAME qron.space → cname.vercel-dns.com (proxy OFF)
