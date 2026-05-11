@@ -116,7 +116,18 @@
       "wouter@3.7.1": "patches/wouter@3.7.1.patch"
     },
     "overrides": {
-      "tailwindcss>nanoid": "3.3.7"
+      "tailwindcss>nanoid": "3.3.7",
+      "express>path-to-regexp": "0.1.12",
+      "hono": ">=4.12.14",
+      "fast-xml-parser": ">=4.4.1",
+      "vite": ">=6.3.5",
+      "rollup": ">=4.29.1",
+      "tar": ">=7.4.3",
+      "socket.io-parser": ">=4.2.4",
+      "axios": ">=1.8.2",
+      "lodash": ">=4.17.21",
+      "lodash-es": ">=4.17.21",
+      "nodemailer": ">=6.9.16"
     }
   }
 }
