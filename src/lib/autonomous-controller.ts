@@ -428,7 +428,10 @@ export class AutonomousController {
         .limit(50);
 
       if (fetchErr) throw fetchErr;
-      if (!schedules || schedules.length === 0) return;
+      if (!schedules || schedules.length === 0) {
+        await logAutomation(workflowName, 'cron', 'success', { rotated: 0, schedules: 0, skipped: 'no active schedules' });
+        return;
+      }
 
       let processedCount = 0;
       for (const schedule of schedules) {

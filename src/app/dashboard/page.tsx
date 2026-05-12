@@ -21,6 +21,8 @@ import { FolderManager } from '@/components/FolderManager';
 import { TagManager } from '@/components/TagManager';
 import { APIKeyManager } from '@/components/APIKeyManager';
 import { WebhookManager } from '@/components/WebhookManager';
+import WatchdogSimulator from '@/components/WatchdogSimulator';
+import GilmoreAutomotiveArt from '@/components/GilmoreAutomotiveArt';
 
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -173,6 +175,41 @@ export default function Dashboard() {
           </div>
         </header>
 
+        {/* System Health Status Bar */}
+        <div className="flex flex-wrap gap-4 mb-12 p-1 rounded-2xl bg-zinc-950 border border-zinc-900 shadow-2xl">
+          <div className="flex-1 min-w-[200px] p-4 rounded-xl bg-zinc-900/30 border border-zinc-800/50 flex items-center justify-between">
+             <div>
+                <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">Network Status</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-sm font-bold text-emerald-400 uppercase tracking-tighter">Core L1 Active</p>
+                </div>
+             </div>
+             <Activity className="w-5 h-5 text-zinc-700" />
+          </div>
+          <div className="flex-1 min-w-[200px] p-4 rounded-xl bg-zinc-900/30 border border-zinc-800/50 flex items-center justify-between">
+             <div>
+                <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">Active Fleets</p>
+                <p className="text-xl font-black text-white font-mono">1,402</p>
+             </div>
+             <Box className="w-5 h-5 text-zinc-700" />
+          </div>
+          <div className="flex-1 min-w-[200px] p-4 rounded-xl bg-zinc-900/30 border border-zinc-800/50 flex items-center justify-between">
+             <div>
+                <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">Total Anchors</p>
+                <p className="text-xl font-black text-gold font-mono">428,912</p>
+             </div>
+             <Shield className="w-5 h-5 text-zinc-700" />
+          </div>
+          <div className="flex-1 min-w-[200px] p-4 rounded-xl bg-zinc-900/30 border border-zinc-800/50 flex items-center justify-between">
+             <div>
+                <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">Response Time</p>
+                <p className="text-xl font-black text-purple-400 font-mono">14ms</p>
+             </div>
+             <Zap className="w-5 h-5 text-zinc-700" />
+          </div>
+        </div>
+
         {/* Stats Strip */}
         {!selectedFolderId && !selectedTagId && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
@@ -201,6 +238,138 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Autonomous Compliance Simulator */}
+        {!selectedFolderId && !selectedTagId && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-lg font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-gold/40" />
+                Autonomous Compliance
+              </h2>
+              <div className="h-px flex-1 bg-zinc-900 mx-6" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <WatchdogSimulator />
+                <GilmoreAutomotiveArt />
+              </div>
+              
+              {/* Live Network Audit Log */}
+              <div className="protocol-card bg-zinc-950 border-zinc-900 flex flex-col">
+                <div className="p-4 border-b border-zinc-900 flex items-center justify-between">
+                   <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                      <Activity className="w-3 h-3 text-emerald-500" />
+                      Live Network Audit
+                   </h3>
+                   <span className="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-black uppercase">Active</span>
+                </div>
+                <div className="flex-1 p-4 font-mono text-[9px] space-y-3 overflow-hidden">
+                   {[
+                      { t: '14:28:12', msg: 'Fleet-04: Temp 72°F - Compliant', type: 'info' },
+                      { t: '14:27:04', msg: 'Fleet-09: BREACH - Humid 68%', type: 'error' },
+                      { t: '14:26:55', msg: 'L1: Anchor 0x82f... Verified', type: 'success' },
+                      { t: '14:25:30', msg: 'Gilmore: 1929 Duesenberg Minted', type: 'success' },
+                      { t: '14:24:12', msg: 'Fleet-12: GPS sync - Detroit, MI', type: 'info' },
+                      { t: '14:22:08', msg: 'System: 5-Agent Consensus reached', type: 'info' },
+                   ].map((log, i) => (
+                      <div key={i} className="flex gap-3 animate-in fade-in slide-in-from-bottom-1 duration-500">
+                         <span className="text-zinc-600">{log.t}</span>
+                         <span className={
+                            log.type === 'error' ? 'text-red-400 font-bold' : 
+                            log.type === 'success' ? 'text-emerald-400' : 
+                            'text-zinc-400'
+                         }>
+                            {log.msg}
+                         </span>
+                      </div>
+                   ))}
+                </div>
+                <div className="p-3 bg-zinc-900/30 text-center border-t border-zinc-900">
+                   <p className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
+                      Processing 1,402 edge nodes
+                   </p>
+                </div>
+              </div>
+            </div>
+            
+              </div>
+            </div>
+            
+            {/* Recent Global Artifacts */}
+            <div className="mt-12">
+               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-700 mb-6 flex items-center gap-4">
+                  <div className="h-px flex-1 bg-zinc-900" />
+                  Recent Global Artifacts
+                  <div className="h-px flex-1 bg-zinc-900" />
+               </h3>
+               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {[
+                    { name: 'Rolex Submariner', brand: 'Rolex', time: '2m ago', img: '/media/samples/04_flux_rolex.png' },
+                    { name: 'Hermes Birkin 35', brand: 'Hermes', time: '14m ago', img: '/media/samples/05_flux_hermes.png' },
+                    { name: 'Duesenberg J', brand: 'Gilmore', time: '28m ago', img: '/media/samples/12_flux_gilmore.png' },
+                    { name: 'StrainChain Batch', brand: 'Metrc', time: '1h ago', img: '/media/samples/08_flux_metrc.png' },
+                    { name: 'Tesla Model S', brand: 'Tesla', time: '3h ago', img: '/media/samples/01_flux_tesla.png' },
+                    { name: 'Nike Jordan 1', brand: 'Nike', time: '5h ago', img: '/media/samples/02_flux_nike.png' },
+                  ].map((a, i) => (
+                    <div key={i} className="group relative aspect-square rounded-xl bg-zinc-950 border border-zinc-900 overflow-hidden hover:border-gold/50 transition-all">
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
+                       {/* Placeholder for images - using stylized divs since real images might not exist yet */}
+                       <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-[10px] font-black text-zinc-800 uppercase text-center p-4">
+                          {a.brand}<br/>{a.name}
+                       </div>
+                       <div className="absolute bottom-3 left-3 right-3 z-20">
+                          <p className="text-[9px] font-black text-white uppercase truncate">{a.name}</p>
+                          <p className="text-[7px] font-bold text-gold/60 uppercase tracking-widest">{a.time}</p>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
+              <div className="protocol-card p-8 bg-zinc-950 border-zinc-900 flex flex-col justify-center">
+                <h3 className="text-xl font-black uppercase mb-4">Edge Watchdog Active</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed mb-6">
+                  Our Edge Watchdog system monitors environmental conditions in real-time. 
+                  When parameters exceed regulatory thresholds (e.g., CRA Temperature/Humidity limits), 
+                  the system automatically anchors the breach to the Polygon blockchain, 
+                  creating a tamper-proof record for regulators without human intervention.
+                </p>
+                <div className="flex gap-4">
+                  <div className="flex-1 p-4 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                    <p className="text-[10px] font-black text-zinc-600 uppercase mb-1">CRA Threshold</p>
+                    <p className="text-lg font-bold">75°F / 60%</p>
+                  </div>
+                  <div className="flex-1 p-4 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                    <p className="text-[10px] font-black text-zinc-600 uppercase mb-1">L1 Finality</p>
+                    <p className="text-lg font-bold text-purple-400">~2.1s</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="protocol-card p-8 bg-zinc-950 border-zinc-900 flex flex-col justify-center">
+                <h3 className="text-xl font-black uppercase mb-4">Elite Provenance</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed mb-6">
+                  Theater 3 assets utilize specialized Hugging Face inference models 
+                  to generate museum-grade digital twins. These QRONs are cryptographically 
+                  sealed and provide tamper-proof provenance for high-value automotive artifacts, 
+                  luxury goods, and collectible hardware.
+                </p>
+                <div className="flex gap-4">
+                  <div className="flex-1 p-4 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                    <p className="text-[10px] font-black text-zinc-600 uppercase mb-1">Inference Model</p>
+                    <p className="text-lg font-bold">FLUX.1-Dev</p>
+                  </div>
+                  <div className="flex-1 p-4 rounded-xl bg-zinc-900/50 border border-zinc-800">
+                    <p className="text-[10px] font-black text-zinc-600 uppercase mb-1">Avg Gen Time</p>
+                    <p className="text-lg font-bold text-amber-400">~14.2s</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Library */}

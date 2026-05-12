@@ -69,6 +69,31 @@ export default function Home() {
         url: 'https://rolex.com',
         prompt: 'Luxury gold watch mechanisms, intricate gear details, emerald green and gold hues',
         mode: 'holographic'
+      },
+      Hermes: {
+        url: 'https://hermes.com',
+        prompt: 'Hermes Birkin leather texture, signature orange and brown tones, luxury equestrian aesthetic',
+        mode: 'living'
+      },
+      Chanel: {
+        url: 'https://chanel.com',
+        prompt: 'Chanel classic flap quilting, interlocking CC logo gold metal, black and white pearls',
+        mode: 'holographic'
+      },
+      Moderna: {
+        url: 'https://modernatx.com',
+        prompt: 'mRNA molecular structures, medical laboratory aesthetics, clean sterile blue and white',
+        mode: 'layered'
+      },
+      Gilmore: {
+        url: 'https://gilmorecarmuseum.org',
+        prompt: '1929 Duesenberg Model J at the Gilmore Car Museum. Elegant museum photography, soft studio lighting.',
+        mode: 'living'
+      },
+      Metrc: {
+        url: 'https://metrc.com',
+        prompt: 'StrainChain Bio Jungle AI QR. Organic forest textures, cannabis leaf veins, deep emerald green.',
+        mode: 'living'
       }
     };
 
@@ -343,7 +368,7 @@ export default function Home() {
           {/* Magic Try Buttons */}
           <div className="flex flex-wrap justify-center gap-4 mt-8">
              <span className="w-full text-[10px] font-black uppercase tracking-[0.2em] text-zinc-700 mb-2">Instant Demo:</span>
-             {['Tesla', 'Nike', 'Rolex'].map(brand => (
+             {['Tesla', 'Nike', 'Rolex', 'Hermes', 'Chanel', 'Moderna', 'Gilmore', 'Metrc'].map(brand => (
                <button
                  key={brand}
                  onClick={() => handleMagicTry(brand)}
@@ -951,6 +976,101 @@ export default function Home() {
             </div>
           ))}
         </div>
+
+        <div className="gold-divider my-12" />
+
+        {/* Elite Capabilities Section */}
+        <section className="mb-16">
+          <div className="text-center mb-12">
+            <span className="protocol-badge mb-4 inline-flex">
+              <Zap className="w-3 h-3" />
+              Elite / Theater 3 Capabilities
+            </span>
+            <h2 className="text-3xl md:text-5xl font-black mt-4 mb-4 uppercase tracking-tighter">
+              <span className="gold-text">Cryptographic Art Engine</span>
+            </h2>
+            <p className="text-base max-w-2xl mx-auto text-zinc-400 leading-relaxed">
+              QRON.space combines Hugging Face ControlNet pipelines with advanced quantitative imaging to create scannable, cryptographically anchored masterpieces.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* ControlNet & HF */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
+              <div className="w-10 h-10 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center mb-4">
+                <Palette className="w-5 h-5 text-gold" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">Hugging Face ControlNet</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Powered by SDXL and custom ControlNet models via the Hugging Face Inference API. Our pipeline perfectly balances QR scannability with hyper-realistic artistic generation.
+              </p>
+            </div>
+
+            {/* Magic Eye / Autostereography */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4">
+                <Eye className="w-5 h-5 text-purple-500" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">Magic Eye Autostereograms</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Pioneering autostereography techniques to embed scannable cryptographic payloads inside 3D stereogram patterns. Look past the image to see the underlying TrueMark.
+              </p>
+            </div>
+
+            {/* Quantitative Imaging & Colorimetry */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
+                <Activity className="w-5 h-5 text-blue-500" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">Quantitative Colorimetry</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Utilizing spectrophotometry principles and precise colorimetry to calculate structural contrast limits, guaranteeing the QR anchor remains functional in extreme light conditions.
+              </p>
+            </div>
+
+            {/* TrueMark Integration */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
+                <ShieldCheck className="w-5 h-5 text-emerald-500" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">TrueMark™ Anchor</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Every generated asset receives an immutable TrueMark ID. Scannable AI art acts as a physical-to-digital bridge, anchoring the item to Polygon and Base layer-2 networks.
+              </p>
+            </div>
+
+            {/* GPT Vision Validation */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4">
+                <ScanLine className="w-5 h-5 text-cyan-500" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">GPT-4o Vision Verification</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Pre-flight scans are executed autonomously by GPT-4o Vision agents to ensure error-correction integrity and aesthetic alignment before the QRON is delivered.
+              </p>
+            </div>
+
+            {/* Living Portals & $QRON */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left relative overflow-hidden">
+              <div className="absolute inset-0 bg-gold/5 blur-2xl rounded-full" />
+              <div className="relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-gold/20 border border-gold/40 flex items-center justify-center mb-4">
+                  <Coins className="w-5 h-5 text-gold" />
+                </div>
+                <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-gold">Living Portals & $QRON</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                  Generators create "Living Portals"—dynamic redirect hubs that update based on time, location, or user profile. Powered by the $QRON utility token for high-volume enterprise minting.
+                </p>
+                <div className="inline-flex items-center gap-2 bg-zinc-900 px-3 py-1 rounded text-[10px] font-mono border border-zinc-800">
+                  <span className="text-zinc-500">Contract:</span>
+                  <span className="text-gold">0xAebf...E437</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="gold-divider my-12" />
 
         {/* Demo Gallery Preview */}
         <section className="mb-16" id="demo-gallery">
