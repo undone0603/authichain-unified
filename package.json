@@ -32,8 +32,9 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "resend": "^6.12.3",
     "sonner": "^2.0.7",
-    "stripe": "^^17.4.0",
+    "stripe": "^17.4.0",
     "thirdweb": "^5.119.4"
   },
   "devDependencies": {

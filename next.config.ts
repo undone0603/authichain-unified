@@ -2,7 +2,6 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
   allowedDevOrigins: [
     'govchain.us',
     'www.govchain.us',
@@ -22,6 +21,7 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: { allowedOrigins: ['qron.space', 'www.qron.space'] },
   },
+  turbopack: {},
 };
 
 // Optionally wrap with PWA if available

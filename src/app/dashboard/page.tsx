@@ -169,10 +169,11 @@ export default async function Dashboard() {
                 New QRON
               </Link>
           </div>
-        </header>
+        </div>
+      </div>
 
-        {/* System Health Status Bar */}
-        <div className="flex flex-wrap gap-4 mb-12 p-1 rounded-2xl bg-zinc-950 border border-zinc-900 shadow-2xl">
+      {/* System Health Status Bar */}
+      <div className="flex flex-wrap gap-4 mb-12 p-1 rounded-2xl bg-zinc-950 border border-zinc-900 shadow-2xl">
           <div className="flex-1 min-w-[200px] p-4 rounded-xl bg-zinc-900/30 border border-zinc-800/50 flex items-center justify-between">
              <div>
                 <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">Network Status</p>
