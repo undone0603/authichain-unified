@@ -31,19 +31,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    matrix:
-      worker:
-        - authichain-api
-        - authichain-api-gateway
-        - authichain-automation
-        - authichain-com
-        - authichain-dashboard
-        - qron-automation
-        - qron-image-gen
-        - qron-outreach
-        - qron-space
-        - resend-relay
-        - strainchain-io
+      matrix:
+        worker:
+          - authichain-api
+          - authichain-api-gateway
+          - authichain-automation
+          - authichain-com
+          - authichain-dashboard
+          - qron-automation
+          - qron-image-gen
+          - qron-outreach
+          - qron-space
+          - resend-relay
+          - strainchain-io
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
