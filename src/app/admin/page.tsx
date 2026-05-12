@@ -190,6 +190,18 @@ export default function AdminDashboard() {
                     </div>
                     <ChevronRight className="w-4 h-4 text-zinc-800" />
                 </Link>
+                <Link href="/admin/ops" className="protocol-card p-6 flex items-center justify-between group hover:border-gold/40 transition-all md:col-span-2">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-lg bg-zinc-900 text-zinc-500 group-hover:text-gold transition-colors">
+                            <Activity className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-white uppercase text-sm">Operations Console</h4>
+                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Workflow health · last 24h</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-zinc-800" />
+                </Link>
             </div>
           </div>
 

@@ -63,6 +63,7 @@ export const qrons = pgTable(
     storyEnabled: boolean('story_enabled').default(false), // Added for Story Mode
     storyTier: text('story_tier'), // Added for Story Mode
     storyUnlockedAt: timestamp('story_unlocked_at'), // Added for Story Mode
+    metadata: jsonb('metadata').default({}), // Added for Phase 2: Blockchain Anchoring
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
