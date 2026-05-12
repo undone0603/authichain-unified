@@ -50,12 +50,11 @@ jobs:
           - resend-relay
           - strainchain-io
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Use PNPM 9
+        run: corepack prepare pnpm@9 --activate
+       with:
           version: 10.28.2
           run_install: false
 
