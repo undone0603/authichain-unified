@@ -1,32 +1,26 @@
 name: Deploy Workers (workers/*)
-
 on:
   push:
     branches: [main]
     paths:
       - 'workers/**'
       - '.github/workflows/deploy-workers.yml'
-
   workflow_dispatch:
     inputs:
       worker:
         description: 'Specific worker dir to deploy (e.g. authichain-api). Leave blank for all.'
         required: false
         type: string
-
 permissions:
   contents: read
   id-token: write
   deployments: write
-
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   deploy:
     name: Deploy ${{ matrix.worker }}
     runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
@@ -42,34 +36,27 @@ jobs:
           - qron-space
           - resend-relay
           - strainchain-io
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Enable Corepack
         run: corepack enable
-
       - name: Activate PNPM 9
         run: corepack prepare pnpm@9 --activate
-
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
         working-directory: workers/${{ matrix.worker }}
-
       - name: Authenticate with Cloudflare (OIDC)
         run: echo "OIDC token acquired"
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
       - name: Deploy ${{ matrix.worker }}
         if: inputs.worker == '' || inputs.worker == matrix.worker
         run: pnpm exec wrangler deploy --minify
         working-directory: workers/${{ matrix.worker }}
         env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLO
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
