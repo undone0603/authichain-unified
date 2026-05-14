@@ -40,6 +40,21 @@ export function createApp() {
     }
   });
 
+  // ─── Paddle Webhook (MUST be before express.json()) ──────────────────────
+  app.post("/api/paddle/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const sig = req.headers["paddle-signature"] as string;
+    if (!sig) {
+      return res.status(400).json({ error: "Missing paddle-signature header" });
+    }
+    try {
+      const { handlePaddleWebhook } = await import("../paddle/webhook");
+      await handlePaddleWebhook(req, res);
+    } catch (err: any) {
+      console.error(`[Paddle Webhook] Error: ${err.message}`);
+      res.status(400).json({ error: err.message });
+    }
+  });
+
   // ─── Health check (used by Railway / load-balancers) ─────────────────────
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", uptime: process.uptime() });
