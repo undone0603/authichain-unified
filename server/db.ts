@@ -1,8 +1,5 @@
-import { eq, desc, and, sql, gte, lte, inArray, like, type SQL } from "drizzle-orm";
+import { eq, desc, and, sql, gte, lte, inArray, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import {
-  eq, desc, and, sql, gte, lte, inArray, like
-} from "drizzle-orm";
 import type { OrderStatus } from "../shared/const";
 
 import {
@@ -105,6 +102,13 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result[0];
 }
 
 export async function getAllUsers() {
