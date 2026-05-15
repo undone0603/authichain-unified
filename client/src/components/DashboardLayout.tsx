@@ -26,6 +26,7 @@ import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
   Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Video, Cpu,
+  Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -46,6 +47,11 @@ const menuItems = [
   { icon: Link2, label: "Referrals", path: "/referrals" },
   { icon: Blocks, label: "Blockchain Hub", path: "/blockchain" },
   { icon: Bell, label: "Notifications", path: "/notifications" },
+  { icon: Sparkles, label: "AI Characters", path: "/character" },
+  { icon: Image, label: "QR Art Gallery", path: "/qr-gallery" },
+  { icon: BookOpen, label: "Story Mode", path: "/storymode" },
+  { icon: Briefcase, label: "Services", path: "/services" },
+  { icon: ShoppingCart, label: "Service Orders", path: "/service-orders" },
 ];
 
 const adminMenuItems = [
@@ -57,6 +63,10 @@ const adminMenuItems = [
   { icon: DollarSign, label: "CRM (HubSpot)", path: "/crm" },
   { icon: Video, label: "AI Avatar Videos", path: "/heygen" },
   { icon: Cpu, label: "MACROHARD", path: "/macrohard" },
+  { icon: Activity, label: "Network Stats", path: "/network-stats" },
+  { icon: Calendar, label: "Scheduled Tasks", path: "/scheduled-tasks" },
+  { icon: Landmark, label: "Gov Onboarding", path: "/gov-onboarding" },
+  { icon: HandCoins, label: "SBA Loan Hub", path: "/sba-loan" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -291,3 +301,4 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
     </>
   );
 }
+
