@@ -32,6 +32,16 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const CRM = lazy(() => import("./pages/CRM"));
 const HeyGen = lazy(() => import("./pages/HeyGen"));
 const Macrohard = lazy(() => import("./pages/Macrohard"));
+const CharacterDashboard = lazy(() => import("./pages/CharacterDashboard"));
+const CharacterCreate = lazy(() => import("./pages/CharacterCreate"));
+const GovOnboarding = lazy(() => import("./pages/GovOnboarding"));
+const NetworkStats = lazy(() => import("./pages/NetworkStats"));
+const QrArtGallery = lazy(() => import("./pages/QrArtGallery"));
+const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
+const ScheduledTasks = lazy(() => import("./pages/ScheduledTasks"));
+const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
+const Services = lazy(() => import("./pages/Services"));
+const Storymode = lazy(() => import("./pages/Storymode"));
 
 function PageLoader() {
   return (
@@ -66,6 +76,16 @@ function DashboardRoutes() {
           <Route path="/crm" component={CRM} />
           <Route path="/heygen" component={HeyGen} />
           <Route path="/macrohard" component={Macrohard} />
+          <Route path="/character" component={CharacterDashboard} />
+          <Route path="/character/create" component={CharacterCreate} />
+          <Route path="/gov-onboarding" component={GovOnboarding} />
+          <Route path="/network-stats" component={NetworkStats} />
+          <Route path="/qr-gallery" component={QrArtGallery} />
+          <Route path="/sba-loan" component={SbaDisasterLoan} />
+          <Route path="/scheduled-tasks" component={ScheduledTasks} />
+          <Route path="/service-orders" component={ServiceOrders} />
+          <Route path="/services" component={Services} />
+          <Route path="/storymode" component={Storymode} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
@@ -114,3 +134,4 @@ function App() {
 }
 
 export default App;
+
