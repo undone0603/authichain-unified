@@ -1,0 +1,23 @@
+# Secrets — NEVER commit
+.env
+.env.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+
+# Operational data (continuously generated)
+logs/
+agentz/logs/
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+Thumbs.db
