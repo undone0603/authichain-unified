@@ -2394,6 +2394,12 @@ export default {
     if (p === '/apple-touch-icon.svg' || p === '/apple-touch-icon.png' || p === '/apple-touch-icon-precomposed.png') {
       return assetResponse(FAVICON_SVG);
     }
+    if (p === '/dapp' || p.startsWith('/dapp/')) {
+      return Response.redirect('https://authichain.com/dashboard', 302);
+    }
+    if (p === '/demo' || p.startsWith('/demo/')) {
+      return Response.redirect('https://authichain.com/subscriptions', 302);
+    }
     return new Response(HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 };

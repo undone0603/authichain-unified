@@ -40,9 +40,38 @@ export function createApp() {
     }
   });
 
+  // ─── Paddle Webhook (MUST be before express.json()) ──────────────────────
+  app.post("/api/paddle/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const sig = req.headers["paddle-signature"] as string;
+    if (!sig) {
+      return res.status(400).json({ error: "Missing paddle-signature header" });
+    }
+    try {
+      const { handlePaddleWebhook } = await import("../paddle/webhook");
+      await handlePaddleWebhook(req, res);
+    } catch (err: any) {
+      console.error(`[Paddle Webhook] Error: ${err.message}`);
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // ─── Paddle config guard (startup warning, not a hard error) ────────────
+  if (!process.env.PADDLE_WEBHOOK_SECRET) {
+    console.warn(
+      "[Paddle] PADDLE_WEBHOOK_SECRET is not set. " +
+      "Register https://<your-domain>/api/paddle/webhook in the Paddle dashboard " +
+      "(Developer → Notifications) and set PADDLE_WEBHOOK_SECRET to the signing secret.",
+    );
+  }
+
   // ─── Health check (used by Railway / load-balancers) ─────────────────────
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", uptime: process.uptime() });
+    res.json({
+      status: "ok",
+      uptime: process.uptime(),
+      paddle: !!process.env.PADDLE_WEBHOOK_SECRET,
+      stripe: !!process.env.STRIPE_WEBHOOK_SECRET,
+    });
   });
 
   app.use(express.json({ limit: "50mb" }));

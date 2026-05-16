@@ -1,8 +1,5 @@
-import { eq, desc, and, sql, gte, lte, inArray, like, type SQL } from "drizzle-orm";
+import { eq, desc, and, sql, gte, lte, inArray, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import {
-  eq, desc, and, sql, gte, lte, inArray, like
-} from "drizzle-orm";
 import type { OrderStatus } from "../shared/const";
 
 import {
@@ -105,6 +102,13 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result[0];
 }
 
 export async function getAllUsers() {
@@ -990,4 +994,219 @@ export async function deleteNotification(id: number, userId: number) {
 
 export async function createSystemNotification(userId: number, title: string, message: string, type: InsertNotification["type"], actionUrl?: string) {
   return createNotification({ userId, type: type as any, title, message, isRead: 0, actionUrl });
+}
+
+// ─── Automation Audit ────────────────────────────────────────────────────────
+
+export async function logAutomationAudit(action: string, data: Record<string, unknown>, userId?: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(activityLog).values({ userId, action, details: { text: action, ...data } });
+}
+
+// ─── Lead Upsert & Scoring ──────────────────────────────────────────────────
+
+export async function upsertLeadByEmail(input: {
+  email: string;
+  name?: string;
+  company?: string;
+  title?: string;
+  phone?: string;
+  source?: string;
+  industry?: string;
+  metadata?: Record<string, unknown>;
+}): Promise<{ id: number; created: boolean }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await db.select({ id: leads.id }).from(leads).where(eq(leads.email, input.email)).limit(1);
+  if (existing[0]) {
+    await db.update(leads).set({
+      name: input.name,
+      company: input.company,
+      title: input.title,
+      phone: input.phone,
+      source: input.source,
+      industry: input.industry,
+      metadata: input.metadata,
+    }).where(eq(leads.id, existing[0].id));
+    return { id: existing[0].id, created: false };
+  }
+  const result = await db.insert(leads).values({
+    email: input.email,
+    name: input.name,
+    company: input.company,
+    title: input.title,
+    phone: input.phone,
+    source: input.source || "website_form",
+    industry: input.industry,
+    metadata: input.metadata,
+  });
+  return { id: result[0].insertId, created: true };
+}
+
+export function computeLeadScore(signals: {
+  segmentFit?: number;
+  intent?: number;
+  urgency?: number;
+  budgetProxy?: number;
+}): { score: number; band: "hot" | "warm" | "cold"; route: string } {
+  const w = { segmentFit: 0.3, intent: 0.35, urgency: 0.2, budgetProxy: 0.15 };
+  const score = Math.round(
+    (signals.segmentFit ?? 50) * w.segmentFit +
+    (signals.intent ?? 50) * w.intent +
+    (signals.urgency ?? 50) * w.urgency +
+    (signals.budgetProxy ?? 50) * w.budgetProxy,
+  );
+  const band: "hot" | "warm" | "cold" = score >= 80 ? "hot" : score >= 50 ? "warm" : "cold";
+  const route = band === "hot" ? "sales_direct" : band === "warm" ? "nurture_sequence" : "newsletter";
+  return { score, band, route };
+}
+
+// ─── Stripe Subscription Helpers ─────────────────────────────────────────────
+
+export async function upsertStripeSubscription(data: {
+  userId: number;
+  plan: "starter" | "professional" | "enterprise";
+  status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
+  monthlyQuota: number;
+  billingCycle: "monthly" | "annual";
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  trialEndsAt: Date | null;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, data.stripeSubscriptionId))
+    .limit(1);
+  if (existing[0]) {
+    await db.update(subscriptions).set({
+      plan: data.plan,
+      status: data.status,
+      monthlyQuota: data.monthlyQuota,
+      billingCycle: data.billingCycle,
+      stripeCustomerId: data.stripeCustomerId ?? undefined,
+      currentPeriodStart: data.currentPeriodStart,
+      currentPeriodEnd: data.currentPeriodEnd,
+      trialEndsAt: data.trialEndsAt ?? undefined,
+    }).where(eq(subscriptions.id, existing[0].id));
+  } else {
+    await db.insert(subscriptions).values({
+      userId: data.userId,
+      plan: data.plan,
+      status: data.status,
+      monthlyQuota: data.monthlyQuota,
+      billingCycle: data.billingCycle,
+      stripeCustomerId: data.stripeCustomerId ?? undefined,
+      stripeSubscriptionId: data.stripeSubscriptionId,
+      currentPeriodStart: data.currentPeriodStart,
+      currentPeriodEnd: data.currentPeriodEnd,
+      trialEndsAt: data.trialEndsAt ?? undefined,
+    });
+  }
+}
+
+export async function setSubscriptionStatusByStripeId(
+  stripeSubscriptionId: string,
+  status: "active" | "cancelled" | "past_due" | "trialing" | "paused",
+  cancelledAt?: Date,
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(subscriptions)
+    .set({ status, cancelledAt: cancelledAt ?? undefined })
+    .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId));
+}
+
+export async function getSubscriptionByStripeSubscriptionId(stripeSubscriptionId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId))
+    .limit(1);
+  return result[0];
+}
+
+export async function hasWebhookEventProcessed(eventId: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const [row] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(activityLog)
+    .where(sql`JSON_EXTRACT(${activityLog.details}, '$.eventId') = ${eventId}`);
+  return (row?.count ?? 0) > 0;
+}
+
+// ─── Paddle Subscription Helpers ──────────────────────────────────────────────
+
+export async function upsertPaddleSubscription(data: {
+  userId: number;
+  plan: "starter" | "professional" | "enterprise";
+  status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
+  monthlyQuota: number;
+  billingCycle: "monthly" | "annual";
+  paddleCustomerId: string | null;
+  paddleSubscriptionId: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(eq(subscriptions.paddleSubscriptionId, data.paddleSubscriptionId))
+    .limit(1);
+  if (existing[0]) {
+    await db.update(subscriptions).set({
+      plan: data.plan,
+      status: data.status,
+      monthlyQuota: data.monthlyQuota,
+      billingCycle: data.billingCycle,
+      paddleCustomerId: data.paddleCustomerId ?? undefined,
+      currentPeriodStart: data.currentPeriodStart,
+      currentPeriodEnd: data.currentPeriodEnd,
+    }).where(eq(subscriptions.id, existing[0].id));
+  } else {
+    await db.insert(subscriptions).values({
+      userId: data.userId,
+      plan: data.plan,
+      status: data.status,
+      monthlyQuota: data.monthlyQuota,
+      billingCycle: data.billingCycle,
+      paddleCustomerId: data.paddleCustomerId ?? undefined,
+      paddleSubscriptionId: data.paddleSubscriptionId,
+      currentPeriodStart: data.currentPeriodStart,
+      currentPeriodEnd: data.currentPeriodEnd,
+    });
+  }
+}
+
+export async function setSubscriptionStatusByPaddleId(
+  paddleSubscriptionId: string,
+  status: "active" | "cancelled" | "past_due" | "trialing" | "paused",
+  cancelledAt?: Date,
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(subscriptions)
+    .set({ status, cancelledAt: cancelledAt ?? undefined })
+    .where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId));
+}
+
+export async function getSubscriptionByPaddleSubscriptionId(paddleSubscriptionId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId))
+    .limit(1);
+  return result[0];
 }

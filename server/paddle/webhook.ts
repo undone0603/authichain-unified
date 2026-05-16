@@ -1,7 +1,30 @@
 import { Request, Response } from 'express';
-import { verifyPaddleWebhook } from '../_core/paddle';
-import { EventName } from '@paddle/paddle-node-sdk';
+import { getPaddle } from '../paddle-service';
 import { ENV } from '../_core/env';
+import {
+  logAutomationAudit,
+  recordRevenue,
+  upsertPaddleSubscription,
+  setSubscriptionStatusByPaddleId,
+  getSubscriptionByPaddleSubscriptionId,
+  createSystemNotification,
+  createInvoice,
+} from '../db';
+import { getPlanQuota } from '../stripe-products';
+
+type PaddlePlan = "starter" | "professional" | "enterprise";
+
+function detectPlanFromPaddleData(priceId: string | null | undefined, amountCents: number): PaddlePlan {
+  if (priceId) {
+    const lower = priceId.toLowerCase();
+    if (lower.includes("enterprise")) return "enterprise";
+    if (lower.includes("professional") || lower.includes("pro")) return "professional";
+    if (lower.includes("starter")) return "starter";
+  }
+  if (amountCents >= 70000) return "enterprise";
+  if (amountCents >= 15000) return "professional";
+  return "starter";
+}
 
 /**
  * Paddle webhook handler
@@ -22,40 +45,44 @@ export async function handlePaddleWebhook(req: Request, res: Response) {
     return res.status(401).json({ error: 'Missing signature' });
   }
 
-  // Verify webhook signature
-  const eventData = await verifyPaddleWebhook(rawBody, signature, webhookSecret);
+  let eventData: any;
+  try {
+    const paddle = await getPaddle();
+    eventData = await (paddle as any).webhooks.unmarshal(rawBody, webhookSecret, signature);
+  } catch {
+    console.error('[Paddle Webhook] Invalid signature or malformed payload');
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
 
   if (!eventData) {
-    console.error('[Paddle Webhook] Invalid signature');
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
   console.log(`[Paddle Webhook] Received event: ${eventData.eventType}`);
 
   try {
-    // Handle different event types
     switch (eventData.eventType) {
-      case EventName.TransactionCompleted:
+      case 'transaction.completed':
         await handleTransactionCompleted(eventData.data);
         break;
 
-      case EventName.TransactionPaid:
-        await handleTransactionPaid(eventData.data);
+      case 'transaction.paid':
+        // Payment captured — fires before transaction.completed; no action needed
         break;
 
-      case EventName.TransactionPaymentFailed:
+      case 'transaction.payment_failed':
         await handleTransactionPaymentFailed(eventData.data);
         break;
 
-      case EventName.SubscriptionCreated:
+      case 'subscription.created':
         await handleSubscriptionCreated(eventData.data);
         break;
 
-      case EventName.SubscriptionUpdated:
+      case 'subscription.updated':
         await handleSubscriptionUpdated(eventData.data);
         break;
 
-      case EventName.SubscriptionCanceled:
+      case 'subscription.canceled':
         await handleSubscriptionCanceled(eventData.data);
         break;
 
@@ -70,101 +97,220 @@ export async function handlePaddleWebhook(req: Request, res: Response) {
   }
 }
 
-/**
- * Handle transaction.completed event
- * Fired when a transaction is completed (payment successful)
- */
 async function handleTransactionCompleted(data: any) {
   console.log(`[Paddle] Transaction completed: ${data.id}`);
 
-  const metadata = data.customData || {};
-  const userId = metadata.userId ? parseInt(metadata.userId) : null;
-  const productType = metadata.productType; // 'authentication_certificate'
-  const productId = metadata.productId ? parseInt(metadata.productId) : null;
+  const customData = data.customData || {};
+  const userId = customData.userId ? parseInt(customData.userId) : null;
+  const firstItem = data.items?.[0];
+  const priceId = firstItem?.price?.id ?? null;
+  const amountCents = data.details?.totals?.total ? parseInt(data.details.totals.total) : 0;
+  const amountUsd = amountCents / 100;
+  const currency = (data.currencyCode ?? 'USD').toUpperCase();
+  const plan = detectPlanFromPaddleData(priceId, amountCents);
 
-  if (!userId || !productType) {
-    console.error('[Paddle] Missing required metadata in transaction');
-    return;
+  if (amountUsd > 0) {
+    await recordRevenue({
+      source: 'paddle',
+      amount: amountUsd.toFixed(2),
+      currency,
+      type: 'subscription',
+      userId: userId ?? null,
+      metadata: {
+        eventType: 'transaction.completed',
+        transactionId: data.id,
+        paddleCustomerId: data.customerId ?? null,
+        plan,
+      },
+    });
   }
 
-  // TODO: Create authentication certificate record in database
-  // TODO: Mint NFT certificate on blockchain
-  // TODO: Send confirmation email with certificate details
+  if (userId) {
+    await createInvoice({
+      userId,
+      amount: amountUsd.toFixed(2),
+      currency,
+      status: 'paid',
+    });
+  }
 
-  console.log(`[Paddle] Created authentication certificate for user ${userId}`);
+  await logAutomationAudit('billing_paddle_transaction_completed', {
+    transactionId: data.id,
+    amountUsd,
+    currency,
+    plan,
+    userId: userId ?? null,
+  }, userId ?? undefined);
+
+  console.log(`[Paddle] Transaction completed recorded: ${data.id} amount=${amountUsd}`);
 }
 
-/**
- * Handle transaction.paid event
- * Fired when payment is captured for a transaction
- */
-async function handleTransactionPaid(data: any) {
-  console.log(`[Paddle] Transaction paid: ${data.id}`);
-  
-  // Payment successful - transaction is now paid
-  // This fires before transaction.completed
-}
-
-/**
- * Handle transaction.payment_failed event
- * Fired when payment fails for a transaction
- */
 async function handleTransactionPaymentFailed(data: any) {
   console.log(`[Paddle] Transaction payment failed: ${data.id}`);
 
-  // TODO: Send payment failed email
-  // TODO: Update transaction status in database
-  // TODO: Notify user to update payment method
+  const customData = data.customData || {};
+  const userId = customData.userId ? parseInt(customData.userId) : null;
+  const subscriptionId = data.subscriptionId ?? null;
+
+  if (subscriptionId) {
+    await setSubscriptionStatusByPaddleId(subscriptionId, 'past_due');
+  }
+
+  if (userId) {
+    await createSystemNotification(
+      userId,
+      'Payment Failed',
+      'A payment for your AuthiChain subscription failed. Please update your payment method to avoid service interruption.',
+      'alert',
+      '/subscriptions',
+    );
+  }
+
+  await logAutomationAudit('billing_paddle_payment_failed', {
+    transactionId: data.id,
+    paddleSubscriptionId: subscriptionId ?? null,
+    userId: userId ?? null,
+  }, userId ?? undefined);
 }
 
-/**
- * Handle subscription.created event
- * Fired when a subscription is created
- */
 async function handleSubscriptionCreated(data: any) {
   console.log(`[Paddle] Subscription created: ${data.id}`);
 
-  const metadata = data.customData || {};
-  const userId = metadata.userId ? parseInt(metadata.userId) : null;
+  const customData = data.customData || {};
+  const userId = customData.userId ? parseInt(customData.userId) : null;
 
   if (!userId) {
     console.error('[Paddle] Missing userId in subscription metadata');
     return;
   }
 
-  // TODO: Create subscription record in database
-  // TODO: Grant subscription access
-  // TODO: Send welcome email
+  const firstItem = data.items?.[0];
+  const priceId = firstItem?.price?.id ?? null;
+  const amountCents = firstItem?.price?.unitPrice?.amount ? parseInt(firstItem.price.unitPrice.amount) : 0;
+  const plan = detectPlanFromPaddleData(priceId, amountCents);
+  const billingCycle: 'monthly' | 'annual' =
+    firstItem?.price?.billingCycle?.interval === 'year' ? 'annual' : 'monthly';
+
+  const now = new Date();
+  const periodEnd = data.currentBillingPeriod?.endsAt
+    ? new Date(data.currentBillingPeriod.endsAt)
+    : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const periodStart = data.currentBillingPeriod?.startsAt
+    ? new Date(data.currentBillingPeriod.startsAt)
+    : now;
+
+  await upsertPaddleSubscription({
+    userId,
+    plan,
+    status: 'active',
+    monthlyQuota: getPlanQuota(plan),
+    billingCycle,
+    paddleCustomerId: data.customerId ?? null,
+    paddleSubscriptionId: data.id,
+    currentPeriodStart: periodStart,
+    currentPeriodEnd: periodEnd,
+  });
+
+  await createSystemNotification(
+    userId,
+    'Subscription Activated',
+    `Your AuthiChain ${plan} plan is now active. Welcome!`,
+    'subscription',
+    '/subscriptions',
+  );
+
+  await logAutomationAudit('billing_paddle_subscription_created', {
+    paddleSubscriptionId: data.id,
+    paddleCustomerId: data.customerId ?? null,
+    plan,
+    billingCycle,
+    userId,
+  }, userId);
+
+  console.log(`[Paddle] Subscription created: ${data.id} user=${userId} plan=${plan}`);
 }
 
-/**
- * Handle subscription.updated event
- * Fired when a subscription is updated
- */
 async function handleSubscriptionUpdated(data: any) {
   console.log(`[Paddle] Subscription updated: ${data.id}`);
 
-  // TODO: Update subscription record in database
-  // TODO: Handle plan changes
-  // TODO: Update user access
+  const firstItem = data.items?.[0];
+  const priceId = firstItem?.price?.id ?? null;
+  const amountCents = firstItem?.price?.unitPrice?.amount ? parseInt(firstItem.price.unitPrice.amount) : 0;
+  const plan = detectPlanFromPaddleData(priceId, amountCents);
+
+  const paddleStatusMap: Record<string, "active" | "cancelled" | "past_due" | "trialing" | "paused"> = {
+    active: 'active',
+    trialing: 'trialing',
+    past_due: 'past_due',
+    paused: 'paused',
+    canceled: 'cancelled',
+  };
+  const status = paddleStatusMap[data.status] ?? 'active';
+
+  const customData = data.customData || {};
+  const userId = customData.userId ? parseInt(customData.userId) : null;
+
+  const now = new Date();
+  const periodEnd = data.currentBillingPeriod?.endsAt
+    ? new Date(data.currentBillingPeriod.endsAt)
+    : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const periodStart = data.currentBillingPeriod?.startsAt
+    ? new Date(data.currentBillingPeriod.startsAt)
+    : now;
+  const billingCycle: 'monthly' | 'annual' =
+    firstItem?.price?.billingCycle?.interval === 'year' ? 'annual' : 'monthly';
+
+  if (userId) {
+    await upsertPaddleSubscription({
+      userId,
+      plan,
+      status,
+      monthlyQuota: getPlanQuota(plan),
+      billingCycle,
+      paddleCustomerId: data.customerId ?? null,
+      paddleSubscriptionId: data.id,
+      currentPeriodStart: periodStart,
+      currentPeriodEnd: periodEnd,
+    });
+  } else {
+    await setSubscriptionStatusByPaddleId(data.id, status);
+  }
+
+  await logAutomationAudit('billing_paddle_subscription_updated', {
+    paddleSubscriptionId: data.id,
+    plan,
+    status,
+    userId: userId ?? null,
+  }, userId ?? undefined);
+
+  console.log(`[Paddle] Subscription updated: ${data.id} status=${status} plan=${plan}`);
 }
 
-/**
- * Handle subscription.canceled event
- * Fired when a subscription is canceled
- */
 async function handleSubscriptionCanceled(data: any) {
   console.log(`[Paddle] Subscription canceled: ${data.id}`);
 
-  const metadata = data.customData || {};
-  const userId = metadata.userId ? parseInt(metadata.userId) : null;
+  const customData = data.customData || {};
+  const userId = customData.userId ? parseInt(customData.userId) : null;
 
-  if (!userId) {
-    console.error('[Paddle] Missing userId in subscription metadata');
-    return;
+  const cancelledAt = data.canceledAt ? new Date(data.canceledAt) : new Date();
+  await setSubscriptionStatusByPaddleId(data.id, 'cancelled', cancelledAt);
+
+  if (userId) {
+    await createSystemNotification(
+      userId,
+      'Subscription Cancelled',
+      'Your AuthiChain subscription has been cancelled. You will retain access until the end of your billing period.',
+      'subscription',
+      '/subscriptions',
+    );
   }
 
-  // TODO: Update subscription status in database
-  // TODO: Revoke subscription access (at end of billing period)
-  // TODO: Send cancellation confirmation email
+  await logAutomationAudit('billing_paddle_subscription_cancelled', {
+    paddleSubscriptionId: data.id,
+    paddleCustomerId: data.customerId ?? null,
+    cancelledAt: cancelledAt.toISOString(),
+    userId: userId ?? null,
+  }, userId ?? undefined);
+
+  console.log(`[Paddle] Subscription cancelled: ${data.id}`);
 }
