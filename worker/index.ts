@@ -54,16 +54,17 @@ app.get("/api/scans", (c) => {
   });
 });
 
-// API products endpoint
-app.get("/api/products", (c) => c.json({
-  products: [
-    { id: "AC-001", name: "Luxury Watch Series X", brand: "Premium Brand", verified: true, chain: "Polygon", nft: true },
-    { id: "AC-002", name: "Designer Handbag Limited Edition", brand: "Fashion House", verified: true, chain: "Polygon", nft: true },
-    { id: "AC-003", name: "Pharmaceutical Grade Supplement", brand: "BioTech Corp", verified: true, chain: "Polygon", nft: false }
-  ],
-  total: 3,
-  protocol: "AuthiChain"
-}));
+// API products endpoint — tenant-scoped
+app.get("/api/products", async (c) => {
+  const tenantId = c.req.header("x-tenant-id") ?? c.req.query("tenant_id");
+  if (!tenantId) {
+    return c.json({ error: "Missing tenant_id (header x-tenant-id or query param)" }, 400);
+  }
+  const { results } = await c.env.DB.prepare(
+    "SELECT * FROM products WHERE tenant_id = ?"
+  ).bind(tenantId).all();
+  return c.json({ products: results, total: results.length, protocol: "AuthiChain" });
+});
 
 // GitHub Marketplace Webhook
 app.post("/webhook/github", async (c) => {
