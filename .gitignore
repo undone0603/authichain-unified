@@ -112,3 +112,5 @@ temp/
 # Vercel CLI link
 .vercel
 
+__pycache__/
+*.py[cod]
