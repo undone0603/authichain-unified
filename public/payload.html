@@ -169,7 +169,8 @@
 
     <!-- Runtime Interaction Engine -->
     <script>
-        // Track references to target structural components
+        let currentState = 'normal';
+
         const parts = {
             base: document.getElementById('part-base'),
             housing: document.getElementById('part-housing'),
@@ -179,8 +180,8 @@
             housingMat: document.getElementById('part-housing')
         };
 
-        // Execution states matching your targeted layout loops
         function setTwinState(state, element) {
+            currentState = state;
             // Update UI buttons visible on interface overlay
             document.querySelectorAll('.hud-btn').forEach(btn => {
                 if(!btn.innerText.includes('Pipeline')) btn.classList.remove('active');
@@ -210,7 +211,7 @@
 
                 let flicker = true;
                 const faultLoop = setInterval(() => {
-                    if(parts.housing.getAttribute('color') === '#e53e3e') {
+                    if (currentState === 'fault') {
                         parts.housing.setAttribute('color', flicker ? '#dd6b20' : '#e53e3e');
                         flicker = !flicker;
                     } else {
