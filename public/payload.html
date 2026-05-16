@@ -118,7 +118,7 @@
         <h2>Pipeline Validated.</h2>
         <p>This digital twin is rendering in pure WebXR with zero application footprint, pulling dynamic matrix parameters smoothly over 6 orientation faces simultaneously.</p>
         <p>Let's skip the procurement loop. Connect directly with our core engineering team to inspect our native optimization pipeline architecture.</p>
-        <a href="mailto:devteam@yourdomain.com?subject=QRON Cube Engineering Feedback" class="cta-btn">Initialize Technical Review</a>
+        <a href="mailto:authichain@gmail.com?subject=QRON Cube Engineering Feedback" class="cta-btn">Initialize Technical Review</a>
     </div>
 
     <!-- WebXR Scene Definition -->
@@ -169,7 +169,8 @@
 
     <!-- Runtime Interaction Engine -->
     <script>
-        // Track references to target structural components
+        let currentState = 'normal';
+
         const parts = {
             base: document.getElementById('part-base'),
             housing: document.getElementById('part-housing'),
@@ -179,8 +180,8 @@
             housingMat: document.getElementById('part-housing')
         };
 
-        // Execution states matching your targeted layout loops
         function setTwinState(state, element) {
+            currentState = state;
             // Update UI buttons visible on interface overlay
             document.querySelectorAll('.hud-btn').forEach(btn => {
                 if(!btn.innerText.includes('Pipeline')) btn.classList.remove('active');
@@ -210,7 +211,7 @@
 
                 let flicker = true;
                 const faultLoop = setInterval(() => {
-                    if(parts.housing.getAttribute('color') === '#e53e3e') {
+                    if (currentState === 'fault') {
                         parts.housing.setAttribute('color', flicker ? '#dd6b20' : '#e53e3e');
                         flicker = !flicker;
                     } else {
