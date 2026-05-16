@@ -168,19 +168,24 @@ class LimitProofLLM:
 
 def get_llm(model: str = "gpt-4o", temperature: float = 0.0):
     """
-    Return a properly wrapped LLM instance. 
-    Returns LimitProofLLM by default for robustness.
+    Return a wrapped LLM. Defaults to the LimitProofLLM waterfall.
+
+    A `model` string of "gemini-*" opts into a direct Gemini client when a real
+    GEMINI_API_KEY is set; otherwise it falls back to the waterfall. Any other
+    model name routes through the waterfall — callers asking for e.g. "llama3.2"
+    get the active waterfall rather than a broken OpenAI passthrough.
     """
-    if model == "limit-proof" or model == "gpt-4o":
-        return LLMProxy(LimitProofLLM(temperature=temperature))
-
-    # Single provider fallbacks
     if model.startswith("gemini"):
-        from langchain_google_genai import ChatGoogleGenerativeAI
         api_key = os.environ.get("GEMINI_API_KEY")
-        llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=temperature, google_api_key=api_key)
-        return LLMProxy(llm)
+        if api_key and "INVALID" not in api_key:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            llm = ChatGoogleGenerativeAI(
+                model=model, temperature=temperature, google_api_key=api_key
+            )
+            return LLMProxy(llm)
+        logger.warning(
+            f"get_llm('{model}'): Gemini key missing or placeholder; "
+            "falling back to LimitProof waterfall."
+        )
 
-    api_key = get("openai_api_key") or os.environ.get("OPENAI_API_KEY")
-    llm = ChatOpenAI(model=model, temperature=temperature, api_key=api_key)
-    return LLMProxy(llm)
+    return LLMProxy(LimitProofLLM(temperature=temperature))
