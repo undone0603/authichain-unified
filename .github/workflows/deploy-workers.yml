@@ -36,6 +36,8 @@ jobs:
           - qron-space
           - resend-relay
           - strainchain-io
+          - bitcoin-auth
+          - outreach-queue
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
