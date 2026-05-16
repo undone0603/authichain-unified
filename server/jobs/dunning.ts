@@ -5,7 +5,9 @@ import {
   hasDunningStepLogged,
   listPastDueSubscriptions,
   logActivity,
+  getUserById,
 } from "../db";
+import { sendEmail } from "../email-service";
 
 function daysSince(date: Date | null | undefined) {
   if (!date) return 0;
@@ -14,6 +16,21 @@ function daysSince(date: Date | null | undefined) {
 }
 
 type Step = "day_3" | "day_7" | "day_14";
+
+const EMAIL_SUBJECTS: Record<Step, string> = {
+  day_3: "Action required: Your AuthiChain payment failed",
+  day_7: "Reminder: Your AuthiChain account is past due",
+  day_14: "Final notice: AuthiChain account at risk of suspension",
+};
+
+const EMAIL_BODY: Record<Step, (name: string, plan: string) => string> = {
+  day_3: (name, plan) =>
+    `Hi ${name},\n\nWe were unable to process your payment for AuthiChain ${plan}. Please update your payment method to keep your account active.\n\nUpdate billing: https://authichain.com/subscriptions\n\nThe AuthiChain Team`,
+  day_7: (name, plan) =>
+    `Hi ${name},\n\nYour AuthiChain ${plan} subscription payment is still outstanding. Your account will be suspended if payment is not received within 7 days.\n\nUpdate billing: https://authichain.com/subscriptions\n\nThe AuthiChain Team`,
+  day_14: (name, plan) =>
+    `Hi ${name},\n\nThis is a final notice. Your AuthiChain ${plan} subscription payment is 14 days overdue. Please update your billing details immediately to avoid account suspension.\n\nUpdate billing: https://authichain.com/subscriptions\n\nThe AuthiChain Team`,
+};
 
 async function runStep(subscription: any, step: Step, message: string) {
   const alreadyLogged = await hasDunningStepLogged(subscription.id, step);
@@ -26,6 +43,25 @@ async function runStep(subscription: any, step: Step, message: string) {
     "alert",
     "/subscriptions",
   );
+
+  if (subscription.userId) {
+    try {
+      const user = await getUserById(subscription.userId);
+      if (user?.email) {
+        const planLabel = (subscription.plan || "starter");
+        const planDisplay = planLabel.charAt(0).toUpperCase() + planLabel.slice(1);
+        await sendEmail({
+          to: user.email,
+          subject: EMAIL_SUBJECTS[step],
+          body: EMAIL_BODY[step](user.name || "there", planDisplay),
+          fromName: "AuthiChain Billing",
+        });
+      }
+    } catch {
+      // Email failure must not abort the dunning step log
+    }
+  }
+
   await logActivity({
     userId: subscription.userId,
     action: `billing_dunning_${step}`,

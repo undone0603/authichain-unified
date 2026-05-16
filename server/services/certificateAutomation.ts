@@ -1,8 +1,10 @@
 import { getDb } from '../db';
-import { certificates } from '../../drizzle/schema';
+import { certificates, products, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { storagePut } from '../storage';
 import { notifyOwner } from '../_core/notification';
+import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../thirdweb';
+import { ENV } from '../_core/env';
 
 /**
  * Automated Certificate Generation Service
@@ -88,11 +90,6 @@ export async function generateCertificateAfterPayment(certificateId: number): Pr
   }
 }
 
-/**
- * Generate NFT token on blockchain
- * For MVP, this simulates blockchain interaction
- * In production, integrate with actual blockchain (Polygon, Ethereum, etc.)
- */
 async function generateNFT(certificateData: any): Promise<{
   tokenId: string;
   contractAddress: string;
@@ -101,26 +98,51 @@ async function generateNFT(certificateData: any): Promise<{
 }> {
   console.log(`[NFT] Generating NFT for certificate ${certificateData.id}`);
 
-  // Simulate blockchain transaction
-  // TODO: Replace with actual blockchain integration
-  const tokenId = `NFT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  const contractAddress = '0x' + '0'.repeat(40); // Placeholder
-  const txHash = '0x' + '0'.repeat(64); // Placeholder
-  const blockchainNetwork = 'polygon';
+  const contractAddress = process.env.VITE_AUTHICHAIN_CONTRACT_ADDRESS;
+  const privateKey = ENV.walletPrivateKey;
 
-  // In production, this would:
-  // 1. Connect to blockchain (Web3, Ethers.js)
-  // 2. Call smart contract mint function
-  // 3. Wait for transaction confirmation
-  // 4. Return actual token ID and tx hash
+  if (!contractAddress || !privateKey) {
+    console.warn('[NFT] Blockchain env vars not set — using placeholder values');
+    return {
+      tokenId: `NFT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      contractAddress: '0x' + '0'.repeat(40),
+      txHash: '0x' + '0'.repeat(64),
+      blockchainNetwork: 'polygon',
+    };
+  }
 
-  console.log(`[NFT] Generated token: ${tokenId}`);
+  const db = await getDb();
+  const [product, userRecord] = await Promise.all([
+    db ? db.select().from(products).where(eq(products.id, certificateData.productId)).limit(1).then(r => r[0]) : null,
+    db ? db.select({ walletAddress: users.walletAddress }).from(users).where(eq(users.id, certificateData.userId)).limit(1).then(r => r[0]) : null,
+  ]);
+
+  const metadata = buildAuthCertificateMetadata({
+    productName: product?.name ?? `Product #${certificateData.productId}`,
+    productBrand: product?.brand ?? undefined,
+    productSerial: product?.serialNumber ?? undefined,
+    confidenceScore: certificateData.confidenceScore ?? 95,
+    verificationDate: new Date().toISOString(),
+    certificateNumber: certificateData.certificateNumber,
+    authenticatorId: certificateData.userId,
+  });
+
+  const recipientAddress = userRecord?.walletAddress ?? contractAddress;
+
+  const result = await mintAuthenticationNFT({
+    contractAddress,
+    recipientAddress,
+    metadata,
+    privateKey,
+  });
+
+  console.log(`[NFT] Minted on-chain: txHash=${result.transactionHash}`);
 
   return {
-    tokenId,
+    tokenId: result.transactionHash,
     contractAddress,
-    txHash,
-    blockchainNetwork,
+    txHash: result.transactionHash,
+    blockchainNetwork: ENV.isProduction ? 'polygon' : 'polygon-amoy',
   };
 }
 
