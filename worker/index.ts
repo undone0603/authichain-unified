@@ -468,6 +468,18 @@ app.get("/api/analytics", (c) => {
   });
 });
 
+// API products endpoint — tenant-scoped
+app.get("/api/products", async (c) => {
+  const tenantId = c.req.header("x-tenant-id") ?? c.req.query("tenant_id");
+  if (!tenantId) {
+    return c.json({ error: "Missing tenant_id (header x-tenant-id or query param)" }, 400);
+  }
+  const { results } = await c.env.DB.prepare(
+    "SELECT * FROM products WHERE tenant_id = ?"
+  ).bind(tenantId).all();
+  return c.json({ products: results, total: results.length, protocol: "AuthiChain" });
+});
+
 // ---------------------------------------------------------------------------
 // User lookup (D1)
 // ---------------------------------------------------------------------------
