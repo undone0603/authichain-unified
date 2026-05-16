@@ -89,4 +89,9 @@ export const adminRouter = router({
   subscriptions: adminProcedure.query(async () => {
     return await db.getSubscriptionAnalytics();
   }),
+  platformStaking: adminProcedure.query(async () => {
+    // stakingPositions schema table is scaffolded but not yet migrated;
+    // return safe zeros until the staking feature is fully deployed.
+    return { totalStaked: 0, activeStakers: 0, totalRewardsDistributed: 0, avgApy: 0 };
+  }),
 });

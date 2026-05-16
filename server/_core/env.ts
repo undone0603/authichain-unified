@@ -14,4 +14,5 @@ export const ENV = {
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
   paddleApiKey: process.env.PADDLE_API_KEY ?? "",
   paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
+  walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
 };

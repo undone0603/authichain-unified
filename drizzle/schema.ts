@@ -77,8 +77,12 @@ export const certificates = mysqlTable("certificates", {
   issuedAt: timestamp("issuedAt").defaultNow().notNull(),
   expiresAt: timestamp("expiresAt"),
   blockchainTxHash: varchar("blockchainTxHash", { length: 128 }),
+  nftTokenId: varchar("nftTokenId", { length: 256 }),
+  nftContractAddress: varchar("nftContractAddress", { length: 64 }),
+  certificateUrl: text("certificateUrl"),
   metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type Certificate = typeof certificates.$inferSelect;
