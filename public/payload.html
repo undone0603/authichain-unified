@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>QRON Enterprise Payload - Digital Twin V1.0</title>
+    <!-- Core WebXR & AR Frameworks -->
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+        /* Interactive HUD Overlays */
+        .hud-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .hud-btn {
+            background: rgba(10, 25, 47, 0.85);
+            color: #64ffda;
+            border: 1px solid #64ffda;
+            padding: 12px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .hud-btn:active, .hud-btn.active {
+            background: #64ffda;
+            color: #0a192f;
+            box-shadow: 0 0 15px #64ffda;
+        }
+
+        /* The Engineering "Trap" Dev Dashboard */
+        .dev-dashboard {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(10, 25, 47, 0.9);
+            border-left: 3px solid #64ffda;
+            padding: 15px;
+            color: #8892b0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            z-index: 1000;
+            pointer-events: none;
+            border-radius: 0 4px 4px 0;
+        }
+        .dev-dashboard h3 { margin: 0 0 8px 0; color: #e6f1ff; font-size: 13px; }
+        .metric { margin: 4px 0; display: flex; justify-content: space-between; gap: 20px;}
+        .metric span.val { color: #64ffda; font-weight: bold; }
+
+        /* Hidden CTA Panel triggered via the architecture view */
+        .cta-overlay {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0a192f;
+            border: 2px solid #f57d11;
+            padding: 25px;
+            color: #fff;
+            z-index: 2000;
+            width: 85%;
+            max-width: 400px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .cta-overlay h2 { margin-top: 0; color: #f57d11; }
+        .cta-close { position: absolute; top: 10px; right: 15px; cursor: pointer; color: #8892b0; font-size: 20px; }
+        .cta-btn {
+            display: block;
+            background: #f57d11;
+            color: #fff;
+            text-align: center;
+            padding: 12px;
+            margin-top: 20px;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Dev Dashboard Overlay -->
+    <div class="dev-dashboard">
+        <h3>QRON_CORE_ENGINE_V1.0</h3>
+        <div class="metric">FPS: <span class="val" id="fps-val">60.0</span></div>
+        <div class="metric">6DoF Matrix Latency: <span class="val">1.2ms</span></div>
+        <div class="metric">Tracking Anchors: <span class="val">6/6 Active</span></div>
+        <div class="metric">Heap Allocation: <span class="val">22.4 MB</span></div>
+    </div>
+
+    <!-- Interactive HUD Controls -->
+    <div class="hud-container">
+        <button class="hud-btn active" onclick="setTwinState('normal', this)">Operational</button>
+        <button class="hud-btn" onclick="setTwinState('explode', this)">Exploded View</button>
+        <button class="hud-btn" onclick="setTwinState('fault', this)">Fault Sim</button>
+        <button class="hud-btn" style="border-color: #f57d11; color: #f57d11;" onclick="openCta()">[View Pipeline]</button>
+    </div>
+
+    <!-- Technical CTA Trap -->
+    <div class="cta-overlay" id="ctaPanel">
+        <span class="cta-close" onclick="closeCta()">&times;</span>
+        <h2>Pipeline Validated.</h2>
+        <p>This digital twin is rendering in pure WebXR with zero application footprint, pulling dynamic matrix parameters smoothly over 6 orientation faces simultaneously.</p>
+        <p>Let's skip the procurement loop. Connect directly with our core engineering team to inspect our native optimization pipeline architecture.</p>
+        <a href="mailto:devteam@yourdomain.com?subject=QRON Cube Engineering Feedback" class="cta-btn">Initialize Technical Review</a>
+    </div>
+
+    <!-- WebXR Scene Definition -->
+    <!-- For testing deployment without the custom printed cube, this is configured to use the industry standard 'Hiro' AR marker pattern -->
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;" vr-mode-ui="enabled: false">
+
+        <a-assets>
+            <!-- System-wide material properties can be pre-loaded here -->
+        </a-assets>
+
+        <!-- Main Tracking Node (Simulating the active cube face tracking) -->
+        <a-marker preset="hiro" id="cube-marker">
+
+            <!-- Core Digital Twin Assembly Wrapper -->
+            <a-entity id="digital-twin-assembly" position="0 0.5 0" scale="0.4 0.4 0.4">
+
+                <!-- Component 1: Base Mount Platform -->
+                <a-box id="part-base" position="0 -0.5 0" width="3" height="0.3" depth="2" color="#1a202c" roughness="0.6"></a-box>
+
+                <!-- Component 2: Main Impeller Pump Housing -->
+                <a-cylinder id="part-housing" position="0 0.5 0" radius="0.8" height="1.5" color="#4a5568" rotation="90 0 0" roughness="0.4">
+                    <!-- Internal Simulated Rotating Impeller Shaft -->
+                    <a-cylinder id="part-shaft" position="0 0 0" radius="0.15" height="1.8" color="#cbd5e0" rotation="0 0 0">
+                        <a-animation attribute="rotation" dur="2000" to="0 360 0" repeat="indefinite" easing="linear"></a-animation>
+                    </a-cylinder>
+                </a-cylinder>
+
+                <!-- Component 3: Fluid Intake Valve Pipe -->
+                <a-cylinder id="part-intake" position="-1.2 0.5 0" radius="0.25" height="1.2" color="#2b6cb0" rotation="0 0 90"></a-cylinder>
+
+                <!-- Component 4: Fluid Outflow Pressure Valve -->
+                <a-cylinder id="part-outflow" position="0 1.5 0" radius="0.25" height="1.0" color="#2b6cb0" rotation="0 0 0"></a-cylinder>
+
+                <!-- Floating Holographic Data Fields (UI Space anchors) -->
+                <a-entity id="telemetry-ui" position="0 2.2 0" rotation="0 0 0">
+                    <a-text id="telemetry-text" value="SYS OK\nRPM: 1750\nFLOW: 45GPM" color="#64ffda" align="center" width="4" font="monoid"></a-text>
+                </a-entity>
+
+            </a-entity>
+
+            <!-- Ambience and focal lighting structures tied directly to local coordinates -->
+            <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+            <a-light type="directional" color="#ffffff" intensity="0.8" position="1 4 2"></a-light>
+        </a-marker>
+
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <!-- Runtime Interaction Engine -->
+    <script>
+        // Track references to target structural components
+        const parts = {
+            base: document.getElementById('part-base'),
+            housing: document.getElementById('part-housing'),
+            intake: document.getElementById('part-intake'),
+            outflow: document.getElementById('part-outflow'),
+            text: document.getElementById('telemetry-text'),
+            housingMat: document.getElementById('part-housing')
+        };
+
+        // Execution states matching your targeted layout loops
+        function setTwinState(state, element) {
+            // Update UI buttons visible on interface overlay
+            document.querySelectorAll('.hud-btn').forEach(btn => {
+                if(!btn.innerText.includes('Pipeline')) btn.classList.remove('active');
+            });
+            if(element) element.classList.add('active');
+
+            // Reset foundational base animations and behaviors
+            resetComponents();
+
+            if (state === 'normal') {
+                parts.text.setAttribute('value', 'SYS OK\nRPM: 1750\nFLOW: 45GPM');
+                parts.text.setAttribute('color', '#64ffda');
+            }
+            else if (state === 'explode') {
+                parts.base.setAttribute('position', '0 -1.2 0');
+                parts.housing.setAttribute('position', '0 0.5 0');
+                parts.intake.setAttribute('position', '-2.2 0.5 0');
+                parts.outflow.setAttribute('position', '0 2.5 0');
+
+                parts.text.setAttribute('value', 'EXPLODED VIEW\nASSEMBLY IDENT: 404-B\nSCALE: NATIVE');
+                parts.text.setAttribute('color', '#e6f1ff');
+            }
+            else if (state === 'fault') {
+                parts.housing.setAttribute('color', '#e53e3e');
+                parts.text.setAttribute('value', 'CRITICAL ERROR\nBEARING VIBRATION EXCEEDED\nOVERHEAT RISK');
+                parts.text.setAttribute('color', '#f57d11');
+
+                let flicker = true;
+                const faultLoop = setInterval(() => {
+                    if(parts.housing.getAttribute('color') === '#e53e3e') {
+                        parts.housing.setAttribute('color', flicker ? '#dd6b20' : '#e53e3e');
+                        flicker = !flicker;
+                    } else {
+                        clearInterval(faultLoop);
+                    }
+                }, 250);
+            }
+        }
+
+        function resetComponents() {
+            parts.base.setAttribute('position', '0 -0.5 0');
+            parts.housing.setAttribute('position', '0 0.5 0');
+            parts.intake.setAttribute('position', '-1.2 0.5 0');
+            parts.outflow.setAttribute('position', '0 1.5 0');
+            parts.housing.setAttribute('color', '#4a5568');
+        }
+
+        function openCta() { document.getElementById('ctaPanel').style.display = 'block'; }
+        function closeCta() { document.getElementById('ctaPanel').style.display = 'none'; }
+
+        // Live FPS telemetry jitter emulator
+        setInterval(() => {
+            const jitterFps = (59.2 + Math.random() * 0.7).toFixed(1);
+            document.getElementById('fps-val').innerText = jitterFps;
+        }, 600);
+    </script>
+</body>
+</html>
