@@ -5,12 +5,13 @@ import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ThirdwebAppProvider } from "./components/ThirdwebProvider";
-import Home from "./pages/Home";
 import DashboardLayout from "./components/DashboardLayout";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
-// Lazy load dashboard pages
+// Lazy load home + dashboard pages
+const Home = lazy(() => import("./pages/brand/AuthiChainHome"));
+
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Authenticate = lazy(() => import("./pages/Authenticate"));
 const QrCodes = lazy(() => import("./pages/QrCodes"));
@@ -96,7 +97,13 @@ function DashboardRoutes() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/">
+        {() => (
+          <Suspense fallback={<PageLoader />}>
+            <Home />
+          </Suspense>
+        )}
+      </Route>
       <Route path="/dapp">
         <Redirect to="/dashboard" />
       </Route>
