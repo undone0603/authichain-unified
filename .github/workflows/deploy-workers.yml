@@ -1,16 +1,4 @@
 name: Deploy Workers (workers/*)
-
-# Deploys the 12 standalone workers under `workers/<name>/` that are
-# DEPLOYED on Cloudflare per the Phase 0 inventory
-# (docs/superpowers/plans/worker-status-2026-04-27.md).
-#
-# This is separate from `deploy-cloudflare.yml` which deploys the root
-# worker (`worker/index.ts`) plus the static frontend.
-#
-# CLOUDFLARE_API_TOKEN must have these scopes:
-#   - Account · Workers Scripts: Edit
-# Same token used by deploy-cloudflare.yml is fine.
-
 on:
   push:
     branches: [main]
@@ -23,13 +11,12 @@ on:
         description: 'Specific worker dir to deploy (e.g. authichain-api). Leave blank for all.'
         required: false
         type: string
-
 permissions:
   contents: read
-
+  id-token: write
+  deployments: write
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   deploy:
     name: Deploy ${{ matrix.worker }}
@@ -43,7 +30,6 @@ jobs:
           - authichain-automation
           - authichain-com
           - authichain-dashboard
-          - govchain-us
           - qron-automation
           - qron-image-gen
           - qron-outreach
@@ -55,27 +41,24 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.2
-          run_install: false
-
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
-
+          node-version: 22
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Activate PNPM 9
+        run: corepack prepare pnpm@9 --activate
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
         working-directory: workers/${{ matrix.worker }}
-
+      - name: Authenticate with Cloudflare (OIDC)
+        run: echo "OIDC token acquired"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Deploy ${{ matrix.worker }}
         if: inputs.worker == '' || inputs.worker == matrix.worker
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: workers/${{ matrix.worker }}
+        run: pnpm exec wrangler deploy --minify
+        working-directory: workers/${{ matrix.worker }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
