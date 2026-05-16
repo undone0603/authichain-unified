@@ -1,4 +1,4 @@
-name = 'govchain-us'
+name = 'authichain'
 main = "worker/index.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
@@ -22,3 +22,8 @@ id = "7c8e9466e57843199f6f768615e42a5c"
 binding = "DB"
 database_name = "authichain-db"
 database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
+
+# R2 bucket for subdomain microsites
+[[r2_buckets]]
+binding = "MICROSITES_BUCKET"
+bucket_name = "authichain-microsites"
