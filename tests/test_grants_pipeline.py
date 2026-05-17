@@ -109,3 +109,31 @@ def test_update_status_rejects_unknown_status(tmp_path: Path):
 
 def test_ledger_statuses_constant():
     assert LEDGER_STATUSES == ("drafted", "reviewed", "submitted", "won", "lost")
+
+
+import asyncio
+import agentz.core.grants_pipeline as gp
+import agentz.core.grants as grants
+
+
+def test_scout_uses_pipeline_loader(tmp_path: Path, monkeypatch):
+    csv = tmp_path / "gov_pursue_list.csv"
+    csv.write_text(
+        textwrap.dedent(
+            """\
+            notice_id,title,agency,deadline,fit_score
+            real_one,Real Opportunity,DOD,2099-01-01T00:00:00-04:00,90
+            mock_dead,Dead,DOD,2000-01-01T00:00:00-04:00,90
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(gp, "DEFAULT_CSV", csv)
+
+    out = asyncio.run(grants.scout_grant_opportunities(ctx=None))
+
+    notice_ids = [o["notice_id"] for o in out]
+    assert "real_one" in notice_ids
+    assert "dla-secure-logistics" not in notice_ids
+    assert "nih-counterfeit-detection" not in notice_ids
