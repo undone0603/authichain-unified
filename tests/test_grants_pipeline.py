@@ -66,3 +66,46 @@ def test_qualified_opportunities_sorts_descending_by_fit(tmp_path: Path):
     out = qualified_opportunities(csv, now=now, min_fit=80)
 
     assert [o["notice_id"] for o in out] == ["b", "a", "c"]
+
+
+from agentz.core.grants_pipeline import (
+    read_ledger,
+    update_status,
+    status_of,
+    LEDGER_STATUSES,
+)
+
+
+def test_ledger_is_empty_when_missing(tmp_path: Path):
+    ledger_path = tmp_path / "pipeline_ledger.json"
+    assert read_ledger(ledger_path) == {}
+    assert status_of("never_seen", ledger_path) is None
+
+
+def test_update_status_persists_and_round_trips(tmp_path: Path):
+    ledger_path = tmp_path / "pipeline_ledger.json"
+
+    update_status(
+        "abc123",
+        "drafted",
+        ledger_path=ledger_path,
+        title="Sample",
+        agency="DOD",
+    )
+
+    assert status_of("abc123", ledger_path) == "drafted"
+    data = read_ledger(ledger_path)
+    assert data["abc123"]["status"] == "drafted"
+    assert data["abc123"]["title"] == "Sample"
+    assert "history" in data["abc123"]
+    assert data["abc123"]["history"][-1]["status"] == "drafted"
+
+
+def test_update_status_rejects_unknown_status(tmp_path: Path):
+    import pytest
+    with pytest.raises(ValueError):
+        update_status("abc", "bogus", ledger_path=tmp_path / "x.json")
+
+
+def test_ledger_statuses_constant():
+    assert LEDGER_STATUSES == ("drafted", "reviewed", "submitted", "won", "lost")
