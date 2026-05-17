@@ -9,6 +9,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import RegulatoryDemo from "./pages/RegulatoryDemo";
+import Pricing from "./pages/Pricing";
 
 // Lazy load home + dashboard pages
 const Home = lazy(() => import("./pages/brand/AuthiChainHome"));
@@ -123,4 +124,5 @@ function App() {
   );
 }
 
+export default App;
 export default App;
