@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { createHmac, createHash } from "node:crypto";
 
 // ---------------------------------------------------------------------------
 // Cloudflare environment bindings
@@ -38,7 +37,7 @@ const BRANDS = {
   },
 } as const;
 
-const FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">`;
+const FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">`;
 
 function svgLogo(brand: keyof typeof BRANDS, size = 36) {
   const b = BRANDS[brand];
@@ -323,13 +322,31 @@ const MARKETING_HTML = `<!DOCTYPE html>
           <a href="mailto:authichain@gmail.com" style="color: var(--primary); text-decoration: none; font-size: 15px; font-weight: 700">authichain@gmail.com</a>
         </div>
       </div>
-      <div style="margin-top: 80px; padding-top: 32px; border-top: 1px solid var(--border-dim); text-align: center; color: var(--text-dim); font-size: 12px; font-family: var(--mono); letter-spacing: 0.1em">
+      <div style="margin-top: 80px; padding-top: 32px; border-top: 1px solid var(--border-dim); text-align: center; color: var(--text-dim); font-size: 12px; font-family: var(--mono); letter-spacing: 0.2em;">
         &copy; 2026 AUTHICHAIN, INC. | ANCHORED TO POLYGON &amp; BITCOIN
       </div>
     </div>
   </footer>
 </body>
 </html>`;
+
+// ---------------------------------------------------------------------------
+// Utility: Web Crypto helpers (works in Cloudflare Workers)
+// ---------------------------------------------------------------------------
+async function sha256Hex(input: string) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function hmacSha256Hex(key: string, message: string) {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(key);
+  const cryptoKey = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(message));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 // ---------------------------------------------------------------------------
 // App
@@ -357,7 +374,7 @@ app.use("/api/v1/*", async (c, next) => {
     return c.text("Unauthorized: Missing API Key", 401);
   }
 
-  const keyHash = createHash("sha256").update(rawKey).digest("hex");
+  const keyHash = await sha256Hex(rawKey);
 
   const keyRecord = await c.env.DB.prepare(
     "SELECT id FROM authichain_api_keys WHERE key_hash = ? LIMIT 1"
@@ -400,6 +417,7 @@ app.get("/verify/:id", async (c) => {
 // ---------------------------------------------------------------------------
 // Product registration
 // ---------------------------------------------------------------------------
+
 type RegisterPayload = {
   serialNumber?: string;
   productName?: string;
@@ -423,8 +441,8 @@ app.post("/api/register", async (c) => {
   }
 
   const registrationId = "AC-" + Date.now();
-  const blockchainHash = "0x" + crypto.getRandomValues(new Uint8Array(32)).reduce((s, b) => s + b.toString(16).padStart(2, "0"), "");
-  const polygonTxHash = "0x" + crypto.getRandomValues(new Uint8Array(32)).reduce((s, b) => s + b.toString(16).padStart(2, "0"), "");
+  const blockchainHash = "0x" + Array.from(crypto.getRandomValues(new Uint8Array(32))).reduce((s, b) => s + b.toString(16).padStart(2, "0"), "");
+  const polygonTxHash = "0x" + Array.from(crypto.getRandomValues(new Uint8Array(32))).reduce((s, b) => s + b.toString(16).padStart(2, "0"), "");
 
   return c.json(
     {
@@ -502,15 +520,18 @@ app.get("/cron/hourly", async (c) => {
 });
 
 // ---------------------------------------------------------------------------
-// GitHub Marketplace webhook — HMAC-SHA256 verified
+// GitHub Marketplace webhook — HMAC-SHA256 verified (Web Crypto friendly)
 // ---------------------------------------------------------------------------
 app.post("/webhook/github", async (c) => {
   const signature = c.req.header("X-Hub-Signature-256");
   const body = await c.req.text();
 
-  const expected = `sha256=${createHmac("sha256", c.env.GITHUB_WEBHOOK_SECRET)
-    .update(body)
-    .digest("hex")}`;
+  if (!c.env.GITHUB_WEBHOOK_SECRET) {
+    return c.json({ error: "webhook secret not configured" }, 500);
+  }
+
+  const computed = await hmacSha256Hex(c.env.GITHUB_WEBHOOK_SECRET, body);
+  const expected = `sha256=${computed}`;
 
   if (signature !== expected) {
     return c.json({ error: "invalid signature" }, 401);
@@ -581,6 +602,20 @@ app.all("*", async (c) => {
 
   if (pathname === "/" && isApex) {
     return c.html(MARKETING_HTML);
+  }
+
+  // If the request is for /demo on the apex host, serve the demo static file from ASSETS (dist/public/demo/index.html)
+  if (pathname === "/demo" && isApex) {
+    try {
+      // Try primary app proxy first if configured
+      if (c.env.PRIMARY_APP_URL) {
+        return fetch(new Request(`${c.env.PRIMARY_APP_URL}${pathname}${search}`, c.req.raw));
+      }
+      // Otherwise fall back to static assets under /demo
+      return c.env.ASSETS.fetch(new Request(new URL('/demo/index.html', c.env.APP_ENV ? c.env.APP_ENV : c.req.url).toString(), c.req.raw));
+    } catch (e) {
+      return c.text('Demo not available', 503);
+    }
   }
 
   // Proxy everything else to the primary Vite/Express app
