@@ -72,9 +72,9 @@ const ecosystem = [
 ];
 
 const pricing = [
-  { name: "Cultivator", price: "$199", period: "/mo", features: ["Up to 500 plants tracked", "METRC sync", "Lab result hashing", "Basic analytics", "QR verification labels"] },
-  { name: "Dispensary", price: "$499", period: "/mo", features: ["Unlimited SKU tracking", "POS integration", "Consumer verification portal", "QRON smart labels", "Compliance reporting", "Priority support"], highlighted: true },
-  { name: "Enterprise", price: "$999", period: "/mo", features: ["Multi-location management", "White-label portal", "API access", "Strain NFT minting", "Bagiez marketplace", "Dedicated CSM"] },
+  { name: "Cultivator", price: "$199", period: "/mo", paymentLink: "https://buy.stripe.com/28E4gzbjze3I7qi4ba1Nu3s", features: ["Up to 500 plants tracked", "METRC sync", "Lab result hashing", "Basic analytics", "QR verification labels"] },
+  { name: "Dispensary", price: "$299", period: "/mo", paymentLink: "https://buy.stripe.com/3cIfZhafvbVA3a2ePO1Nu3v", features: ["Unlimited SKU tracking", "POS integration", "Consumer verification portal", "QRON smart labels", "Compliance reporting", "Priority support"], highlighted: true },
+  { name: "Enterprise", price: "$799", period: "/mo", paymentLink: "https://buy.stripe.com/6oU5kDfzP7Fk6medLK1Nu3t", features: ["Multi-location management", "White-label portal", "API access", "Strain NFT minting", "Bagiez marketplace", "Dedicated CSM"] },
 ];
 
 /* ─── Component ─── */
@@ -302,8 +302,8 @@ export default function StrainChainHome() {
                       </li>
                     ))}
                   </ul>
-                  <Button className={`w-full ${plan.highlighted ? "bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-black" : ""}`} variant={plan.highlighted ? "default" : "outline"} onClick={() => go("/supply-chain")}>
-                    {plan.highlighted ? "Start Now" : "Choose Plan"}
+                  <Button className={`w-full ${plan.highlighted ? "bg-[hsl(142,71%,45%)] hover:bg-[hsl(142,71%,35%)] text-black" : ""}`} variant={plan.highlighted ? "default" : "outline"} onClick={() => window.open(plan.paymentLink, "_blank")}>
+                    {plan.highlighted ? "Start Now" : "Buy Now"}
                   </Button>
                 </GlowCard>
               </Reveal>
