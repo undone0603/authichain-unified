@@ -58,7 +58,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Deploy ${{ matrix.worker }}
         if: inputs.worker == '' || inputs.worker == matrix.worker
-        run: pnpm exec wrangler deploy --minify
+        run: npx wrangler deploy --minify
         working-directory: workers/${{ matrix.worker }}
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
