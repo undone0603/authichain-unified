@@ -67,6 +67,8 @@ async def scout_businesses(city: str, ctx: Optional[ExecutionContext] = None) ->
         
     # Extract JSON from history
     last_content = history.final_result()
+    if not last_content:
+        return []
     try:
         # Simple cleanup if the LLM wrapped it in code blocks
         if "```json" in last_content:
