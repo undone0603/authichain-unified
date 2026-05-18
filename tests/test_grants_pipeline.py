@@ -1,6 +1,8 @@
+# tests/test_grants_pipeline.py
 from pathlib import Path
 import textwrap
 from agentz.core.grants_pipeline import load_pursue_list
+
 
 def test_load_pursue_list_parses_csv(tmp_path: Path):
     csv = tmp_path / "gov_pursue_list.csv"
@@ -23,10 +25,6 @@ def test_load_pursue_list_parses_csv(tmp_path: Path):
     assert rows[1]["fit_score"] == 60
 
 
-from datetime import datetime, timezone
-from agentz.core.grants_pipeline import qualified_opportunities
-
-
 def _write_csv(tmp_path: Path, body: str) -> Path:
     csv = tmp_path / "gov_pursue_list.csv"
     csv.write_text(textwrap.dedent(body), encoding="utf-8")
@@ -34,6 +32,8 @@ def _write_csv(tmp_path: Path, body: str) -> Path:
 
 
 def test_qualified_opportunities_filters_by_fit_and_deadline(tmp_path: Path):
+    from datetime import datetime, timezone
+    from agentz.core.grants_pipeline import qualified_opportunities
     csv = _write_csv(
         tmp_path,
         """\
@@ -52,6 +52,8 @@ def test_qualified_opportunities_filters_by_fit_and_deadline(tmp_path: Path):
 
 
 def test_qualified_opportunities_sorts_descending_by_fit(tmp_path: Path):
+    from datetime import datetime, timezone
+    from agentz.core.grants_pipeline import qualified_opportunities
     csv = _write_csv(
         tmp_path,
         """\
@@ -68,21 +70,15 @@ def test_qualified_opportunities_sorts_descending_by_fit(tmp_path: Path):
     assert [o["notice_id"] for o in out] == ["b", "a", "c"]
 
 
-from agentz.core.grants_pipeline import (
-    read_ledger,
-    update_status,
-    status_of,
-    LEDGER_STATUSES,
-)
-
-
 def test_ledger_is_empty_when_missing(tmp_path: Path):
+    from agentz.core.grants_pipeline import read_ledger, status_of
     ledger_path = tmp_path / "pipeline_ledger.json"
     assert read_ledger(ledger_path) == {}
     assert status_of("never_seen", ledger_path) is None
 
 
 def test_update_status_persists_and_round_trips(tmp_path: Path):
+    from agentz.core.grants_pipeline import read_ledger, update_status, status_of
     ledger_path = tmp_path / "pipeline_ledger.json"
 
     update_status(
@@ -103,20 +99,20 @@ def test_update_status_persists_and_round_trips(tmp_path: Path):
 
 def test_update_status_rejects_unknown_status(tmp_path: Path):
     import pytest
+    from agentz.core.grants_pipeline import update_status
     with pytest.raises(ValueError):
         update_status("abc", "bogus", ledger_path=tmp_path / "x.json")
 
 
 def test_ledger_statuses_constant():
+    from agentz.core.grants_pipeline import LEDGER_STATUSES
     assert LEDGER_STATUSES == ("drafted", "reviewed", "submitted", "won", "lost")
 
 
-import asyncio
-import agentz.core.grants_pipeline as gp
-import agentz.core.grants as grants
-
-
 def test_scout_uses_pipeline_loader(tmp_path: Path, monkeypatch):
+    import asyncio
+    import agentz.core.grants_pipeline as gp
+    import agentz.core.grants as grants
     csv = tmp_path / "gov_pursue_list.csv"
     csv.write_text(
         textwrap.dedent(
@@ -135,5 +131,6 @@ def test_scout_uses_pipeline_loader(tmp_path: Path, monkeypatch):
 
     notice_ids = [o["notice_id"] for o in out]
     assert "real_one" in notice_ids
+    # Old hardcoded mocks must be gone
     assert "dla-secure-logistics" not in notice_ids
     assert "nih-counterfeit-detection" not in notice_ids
