@@ -41,7 +41,7 @@ async def create_campaign(supabase, business_id: str, vertical: str) -> Dict[str
     }
     
     # Real Supabase Insert
-    response = supabase.table("campaigns").insert(payload).execute()
+    response = supabase.table("email_campaigns").insert(payload).execute()
     
     return {
         "campaign": payload,
@@ -53,7 +53,7 @@ async def optimize_campaigns(supabase):
     Analyzes scan velocity and engagement to adjust campaign rewards.
     """
     # 1. Fetch active campaigns
-    campaigns = supabase.table("campaigns").select("*").eq("active", True).execute().data
+    campaigns = supabase.table("email_campaigns").select("*").eq("active", True).execute().data
     
     optimizations = []
     for camp in campaigns:
@@ -64,7 +64,7 @@ async def optimize_campaigns(supabase):
         if scans and scans < 5:
             # Low engagement: Boost rewards
             new_amount = camp["reward_amount"] * 1.2
-            supabase.table("campaigns").update({"reward_amount": new_amount}).eq("id", camp["id"]).execute()
+            supabase.table("email_campaigns").update({"reward_amount": new_amount}).eq("id", camp["id"]).execute()
             optimizations.append(f"Boosted {camp['id']} to {new_amount} (Low engagement)")
             
     return optimizations
