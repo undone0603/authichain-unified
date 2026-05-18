@@ -146,7 +146,7 @@ st.sidebar.subheader(f"{pulse_icon} {pulse_msg}")
 if deep_health:
     with st.sidebar.expander("Deep Health Metrics"):
         for k, v in deep_health.items():
-            icon = "✅" if v == "ok" else "❌"
+            icon = "[OK]" if v == "ok" else "[XX]"
             st.write(f"{icon} **{k.title()}**: {v}")
 
 st.sidebar.divider()
@@ -233,7 +233,7 @@ elif page == "Federal Capture":
         st.bar_chart(status_counts, x='Status', y='Count')
 
 elif page == "Revenue Siphon":
-    st.header("💰 Real-time Revenue Siphon")
+    st.header("$$ Real-time Revenue Siphon")
     
     # Real Pipeline Projections
     pipeline_total = 172 # Total deals in backlog

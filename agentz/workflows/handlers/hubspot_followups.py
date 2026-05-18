@@ -11,12 +11,17 @@ from agentz.core.modes import ExecutionContext
 HUBSPOT_BASE = "https://api.hubapi.com"
 
 def run(ctx: ExecutionContext) -> str:
+    from agentz.core.modes import Mode
     token = get_or_placeholder("hubspot_token", ctx)
     owner_id = get_or_placeholder("hubspot_owner_id", ctx)
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    
+
     # 1. Find the follow-up tasks
     ctx.step("Querying HubSpot for pending follow-up tasks...")
+
+    if ctx.mode == Mode.DRY_RUN:
+        return "dry-run: would query HubSpot tasks and send follow-up emails for near-term deals"
+
     body = {
         "filterGroups": [{
             "filters": [

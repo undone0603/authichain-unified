@@ -13,7 +13,7 @@ from agentz.workflows.handlers import vercel_fix_preset
 logger = logging.getLogger("agentz.sovereign_healer")
 
 def run(ctx: ExecutionContext) -> str:
-    ctx.step("🏔️ --- INITIALIZING SOVEREIGN INFRASTRUCTURE HEALER --- 🏔️")
+    ctx.step("[^] --- INITIALIZING SOVEREIGN INFRASTRUCTURE HEALER --- [^]")
     
     # 1. Perform Deep Health Check
     pulse = PulseAgent()

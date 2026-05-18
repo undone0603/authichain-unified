@@ -19,7 +19,7 @@ def patch_workerd():
         found_files.extend(glob.glob(pattern, recursive=True))
     
     if not found_files:
-        print("❌ Could not find workerd/lib/main.js to patch.")
+        print("[XX] Could not find workerd/lib/main.js to patch.")
         return
 
     old_string = '"win32 x64 LE": "@cloudflare/workerd-windows-64"'
@@ -30,7 +30,7 @@ def patch_workerd():
             content = f.read()
         
         if '"win32 arm64 LE"' in content:
-            print(f"✅ {file_path} is already patched.")
+            print(f"[OK] {file_path} is already patched.")
             continue
             
         if old_string in content:
@@ -39,7 +39,7 @@ def patch_workerd():
                 f.write(new_content)
             print(f"🛠️ Patched {file_path}")
         else:
-            print(f"⚠️ Could not find target string in {file_path}")
+            print(f"[!] Could not find target string in {file_path}")
 
 if __name__ == "__main__":
     patch_workerd()

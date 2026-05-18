@@ -16,7 +16,7 @@ from dotenv import load_dotenv, set_key
 
 logger = logging.getLogger("agentz.credentials")
 
-# Map registry credential keys → env var names.
+# Map registry credential keys -> env var names.
 # Add new entries here when introducing new workflows.
 CRED_KEY_TO_ENV = {
     "vercel_session":       "VERCEL_TOKEN",
@@ -167,7 +167,7 @@ def _ensure_loaded() -> None:
 
 
 def get(key: str, required: bool = True) -> Optional[str]:
-    """Resolve a credential key from registry → env var."""
+    """Resolve a credential key from registry -> env var."""
     _ensure_loaded()
     env_name = CRED_KEY_TO_ENV.get(key)
     if not env_name:

@@ -13,7 +13,7 @@ import traceback
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import yaml
 
@@ -77,7 +77,7 @@ def resolve_order(
         if wf_id in selected:
             return
         if wf_id in trail:
-            cycle = " → ".join(trail + (wf_id,))
+            cycle = " -> ".join(trail + (wf_id,))
             raise RuntimeError(f"Prerequisite cycle: {cycle}")
         wf = registry.get(wf_id)
         if not wf:
@@ -126,7 +126,7 @@ def execute(
                 notes=msg,
             )
 
-    # 2. Credential preflight — block live execution, warn-only for dry-run
+    # 2. Credential preflight - block live execution, warn-only for dry-run
     present, missing = check_all(wf.requires)
     if missing and mode != Mode.DRY_RUN:
         msg = f"missing credentials: {missing}"
@@ -139,12 +139,12 @@ def execute(
             notes=msg,
         )
     if missing and mode == Mode.DRY_RUN and verbose:
-        print(f"   (dry-run note: missing creds {missing} — would block in live mode)")
+        print(f"   (dry-run note: missing creds {missing} - would block in live mode)")
 
     # Promote confirm if workflow self-flags it
     effective_mode = Mode.CONFIRM if wf.confirm_before_run and mode == Mode.AUTO else mode
 
-    print(f"\n[{wf.priority.upper()}] {wf.id} — {wf.title}")
+    print(f"\n[{wf.priority.upper()}] {wf.id} : {wf.title}")
     print(f"   mode={effective_mode.value}  type={wf.type}  est={wf.estimated_minutes}min")
     if wf.description:
         print(f"   {wf.description.strip().splitlines()[0]}")

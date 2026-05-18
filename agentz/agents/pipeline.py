@@ -1,4 +1,4 @@
-"""All platform agents — mirrors server/jobs/task-runner.ts task kinds."""
+"""All platform agents - mirrors server/jobs/task-runner.ts task kinds."""
 
 from __future__ import annotations
 
@@ -105,9 +105,9 @@ class CrmUpdateAgent(BaseAgent):
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": (
                 "Generate a CRM update report for 3 mock AuthiChain deals: "
-                "(1) LVMH pilot — stalled at legal review; "
-                "(2) Pfizer POC — demo scheduled next week; "
-                "(3) Walmart pilot — contract sent, awaiting signature. "
+                "(1) LVMH pilot - stalled at legal review; "
+                "(2) Pfizer POC - demo scheduled next week; "
+                "(3) Walmart pilot - contract sent, awaiting signature. "
                 "For each, suggest the next best action and a follow-up date. Return JSON."
             )},
         ]
@@ -190,7 +190,7 @@ class GenerateProposalAgent(BaseAgent):
         ]
 
 
-# Registry — every agent class that power_launch_all will run
+# Registry - every agent class that power_launch_all will run
 ALL_AGENTS: list[type[BaseAgent]] = [
     LeadFinderGovAgent,
     LeadFinderRetailAgent,

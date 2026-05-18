@@ -14,7 +14,7 @@ def run(ctx: ExecutionContext) -> Optional[str]:
     # 1. Check for token, but allow simulation if missing
     token = get("docusign_token", required=False)
     if not token:
-        ctx.step("⚠️ docusign_token missing. Operating in SIMULATION MODE.")
+        ctx.step("[!] docusign_token missing. Operating in SIMULATION MODE.")
 
     ctx.step("Scanning for high-value agreements in logs/agreements...")
     agreements = glob.glob("agentz/logs/agreements/*.md")

@@ -2,7 +2,7 @@
 agentz.workflows.handlers.authichain_compliance_audit
 -----------------------------------------------------
 EU Digital Product Passport (DPP) compliance audit:
-research mandates → scan the ledger → flag non-compliant items.
+research mandates -> scan the ledger -> flag non-compliant items.
 
 Delegates the audit logic to agentz.core.compliance; this handler is the
 ctx-aware orchestration shell so it composes with the runner's modes.
@@ -37,13 +37,13 @@ def run(ctx: ExecutionContext) -> str:
             "carbon_footprint_total",
             "circularity_index",
         ]
-        ctx.step(f"   → (dry-run mandate set: {len(requirements)} fields)")
+        ctx.step(f"   -> (dry-run mandate set: {len(requirements)} fields)")
     else:
         requirements = ctx.step(
             "Fetch DPP mandates from EU Commission portal",
             action=lambda: asyncio.run(research_dpp_requirements("luxury", ctx)),
         ) or []
-        ctx.step(f"   → {len(requirements)} mandatory field(s) identified")
+        ctx.step(f"   -> {len(requirements)} mandatory field(s) identified")
 
     # 2. Audit the live ledger
     ctx.step("Auditing product ledger against mandate set...")
@@ -51,7 +51,7 @@ def run(ctx: ExecutionContext) -> str:
         results = [
             {"product_id": "<dry-run-sample>", "status": "NON_COMPLIANT", "missing": requirements[:2]},
         ]
-        ctx.step("   → (dry-run: would scan up to 10 products)")
+        ctx.step("   -> (dry-run: would scan up to 10 products)")
     else:
         results = ctx.step(
             "Scan products and write dpp_compliance metadata",
@@ -68,7 +68,7 @@ def run(ctx: ExecutionContext) -> str:
     if flagged:
         sample = flagged[0]
         ctx.step(
-            f"   → e.g. product {sample.get('product_id')} missing {sample.get('missing')}"
+            f"   -> e.g. product {sample.get('product_id')} missing {sample.get('missing')}"
         )
 
     return (

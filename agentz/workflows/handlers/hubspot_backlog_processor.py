@@ -76,7 +76,7 @@ def run(ctx: ExecutionContext) -> str:
                 action=lambda t=topic: asyncio.run(generate_social_post(t, "Twitter DM"))
             )
             
-            ctx.step(f"   → Outreach drafted and logged as PENDING for {name}.")
+            ctx.step(f"   -> Outreach drafted and logged as PENDING for {name}.")
             processed += 1
             
             # Rate limiting / Sleep for 1s between deals to prevent API congestion

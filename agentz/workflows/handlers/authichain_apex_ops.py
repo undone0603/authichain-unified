@@ -17,7 +17,7 @@ def run(ctx: ExecutionContext) -> str:
     supabase_key = get_or_placeholder("supabase_service_key", ctx)
     supabase: Client = create_client(supabase_url, supabase_key)
     
-    ctx.step("🏔️ --- EXECUTING APEX EVOLUTION OPS --- 🏔️")
+    ctx.step("[^] --- EXECUTING APEX EVOLUTION OPS --- [^]")
     
     # 2. Verified Checkout (Layer 3 Revenue)
     ctx.step("Initializing 'Verified Checkout' on qron.space...")
@@ -32,7 +32,7 @@ def run(ctx: ExecutionContext) -> str:
             f"Process verified purchase for product {product_id_sample}",
             action=lambda: asyncio.run(mkt.create_verified_order(supabase, product_id_sample, "0xBuyer...", 2500.0))
         )
-    ctx.step(f"   → Checkout Live. Projected Layer 3 Siphon: ${order_res['platform_fee_projected']}")
+    ctx.step(f"   -> Checkout Live. Projected Layer 3 Siphon: ${order_res['platform_fee_projected']}")
 
     # 3. Legal Shield (IP Enforcement)
     brand_target = "Detroit Artisan Brews"
@@ -48,7 +48,7 @@ def run(ctx: ExecutionContext) -> str:
         )
         
     for inf in infringements[:1]: # Process first match for demo
-        ctx.step(f"   → Infringement Detected: {inf['seller']} ({inf['url']})")
+        ctx.step(f"   -> Infringement Detected: {inf['seller']} ({inf['url']})")
         notice = ctx.step(
             f"Drafting Cease & Desist for {inf['seller']}",
             action=lambda: asyncio.run(draft_enforcement_notice(inf, brand_target))

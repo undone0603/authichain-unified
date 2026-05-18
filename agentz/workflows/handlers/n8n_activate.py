@@ -18,7 +18,7 @@ from agentz.core.modes import ExecutionContext
 def run(ctx: ExecutionContext) -> str:
     api_key  = get_or_placeholder("n8n_api_key", ctx)
     base     = get_or_placeholder("n8n_base_url", ctx)
-    resend   = get_or_placeholder("resend_api_key", ctx)  # raises if missing — required dependency
+    resend   = get_or_placeholder("resend_api_key", ctx)  # raises if missing - required dependency
 
     headers = {"X-N8N-API-KEY": api_key, "Content-Type": "application/json"}
 
@@ -37,7 +37,7 @@ def run(ctx: ExecutionContext) -> str:
         return "all workflows already active"
 
     # Verify Resend env var is present in n8n
-    ctx.step(f"verify RESEND_API_KEY exposed to n8n (key starts with {resend[:8]}…)")
+    ctx.step(f"verify RESEND_API_KEY exposed to n8n (key starts with {resend[:8]}...)")
 
     activated = []
     for wf in inactive:

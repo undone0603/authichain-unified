@@ -45,7 +45,7 @@ def run(ctx: ExecutionContext) -> str:
     hook_count = len(hooks.get("data", []))
 
     ctx.step(
-        "MCP reconnect: open Claude.ai → Settings → Connectors → Stripe → Reconnect",
+        "MCP reconnect: open Claude.ai > Settings > Connectors > Stripe > Reconnect",
     )
 
     return f"key OK, {n} recent charges, {hook_count} webhooks configured"

@@ -20,7 +20,7 @@ class AgentResult:
 
     def __str__(self) -> str:
         status = "OK" if self.ok else "FAIL"
-        suffix = f" — {self.error}" if not self.ok else ""
+        suffix = f" - {self.error}" if not self.ok else ""
         return f"[{status}] {self.name} ({self.duration_ms}ms){suffix}"
 
 

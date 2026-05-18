@@ -30,7 +30,7 @@ def run(ctx: ExecutionContext) -> str:
             "Simulate QRON Burn event: 50 QRON -> $5.00 Discount",
             action=lambda: asyncio.run(burn_qron_for_discount(supabase, "0x742d...", 50.0, "detroit-brews"))
         )
-    ctx.step(f"   → Burn Complete. Merchant Siphon Billed: ${burn_res['siphon_billed']}")
+    ctx.step(f"   -> Burn Complete. Merchant Siphon Billed: ${burn_res['siphon_billed']}")
     
     # 3. Autonomous Auto-Closer
     ctx.step("Running Autonomous Closer: Monitoring Demo Views...")
@@ -43,9 +43,9 @@ def run(ctx: ExecutionContext) -> str:
             action=lambda: asyncio.run(run_closing_loop(supabase))
         )
     if closings:
-        ctx.step(f"   → Closings Initiated: {len(closings)} leads moved to Agreement stage.")
+        ctx.step(f"   -> Closings Initiated: {len(closings)} leads moved to Agreement stage.")
     else:
-        ctx.step("   → No new closings ready (awaiting demo views).")
+        ctx.step("   -> No new closings ready (awaiting demo views).")
         
     # 4. Authenticity Index (SEO Authority)
     ctx.step("Generating Global Authenticity Index for AuthiChain.com...")
@@ -57,6 +57,6 @@ def run(ctx: ExecutionContext) -> str:
             "Aggregate industry rankings",
             action=lambda: asyncio.run(publish_index_to_web(supabase))
         )
-    ctx.step(f"   → Industry Leader: {index[0]['industry']} ({index[0]['avg_score']}%)")
+    ctx.step(f"   -> Industry Leader: {index[0]['industry']} ({index[0]['avg_score']}%)")
     
     return "Terminal ecosystem evolutions operationalized. Kill chain is active."
