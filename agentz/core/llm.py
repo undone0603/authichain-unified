@@ -79,6 +79,7 @@ class LimitProofLLM:
         self.providers = [
             ("gpt-4o", self._get_openai),
             ("gemini-pro", self._get_gemini),
+            ("openrouter-auto", self._get_openrouter),
             ("cerebras-llama3.1", self._get_cerebras),
             ("deepseek-chat", self._get_deepseek),
             ("local-lmstudio", self._get_lmstudio),
@@ -140,6 +141,18 @@ class LimitProofLLM:
         api_key = get("openai_api_key", required=False) or os.environ.get("OPENAI_API_KEY")
         if not api_key: raise RuntimeError("Missing OpenAI Key")
         llm = ChatOpenAI(model="gpt-4o", temperature=self.temperature, api_key=api_key, max_retries=1)
+        return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
+
+    def _get_openrouter(self):
+        api_key = get("openrouter_api_key", required=False) or os.environ.get("OPENROUTER_API_KEY")
+        if not api_key: raise RuntimeError("Missing OpenRouter Key")
+        llm = ChatOpenAI(
+            model="openai/gpt-4o",
+            temperature=self.temperature,
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            max_retries=1,
+        )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def _get_gemini(self):

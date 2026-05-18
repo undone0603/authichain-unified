@@ -114,6 +114,31 @@ CRED_KEY_TO_ENV = {
     # ── Pinecone extended ──
     "pinecone_index":           "PINECONE_INDEX",
     "pinecone_host":            "PINECONE_HOST",
+    # ── Anthropic / OpenRouter ──
+    "anthropic_api_key":        "ANTHROPIC_API_KEY",
+    "openrouter_api_key":       "OPENROUTER_API_KEY",
+    # ── Airtable ──
+    "airtable_api_key":         "AIRTABLE_API_KEY",
+    "airtable_base_id":         "AIRTABLE_BASE_ID",
+    # ── Apollo ──
+    "apollo_api_key":           "APOLLO_API_KEY",
+    # ── Video / Media ──
+    "runway_api_key":           "RUNWAY_API_KEY",
+    # ── Email ──
+    "sendgrid_api_key":         "SENDGRID_API_KEY",
+    # ── Analytics ──
+    "posthog_api_key":          "POSTHOG_API_KEY",
+    "posthog_host":             "POSTHOG_HOST",
+    "ga4_measurement_id":       "GA4_MEASUREMENT_ID",
+    # ── Auth / Web3 ──
+    "jwt_secret":               "JWT_SECRET",
+    "thirdweb_secret_key":      "THIRDWEB_SECRET_KEY",
+    "thirdweb_client_id":       "THIRDWEB_CLIENT_ID",
+    # ── Twilio ──
+    "twilio_api_key":           "TWILIO_API_KEY",
+    "twilio_sid":               "TWILIO_SID",
+    # ── Make ──
+    "make_webhook_url":         "MAKE_WEBHOOK_URL",
 }
 
 _loaded = False
