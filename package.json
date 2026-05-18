@@ -1,0 +1,28 @@
+{
+  "name": "agentz",
+  "version": "1.0.0",
+  "description": "Autonomous Trust Infrastructure",
+  "main": "index.js",
+  "scripts": {
+    "test": "venv\\Scripts\\python.exe -m pytest tests",
+    "build:router": "wrangler deploy --dry-run authichain-router/src/index.ts",
+    "build:worker": "wrangler deploy --dry-run outreach-worker/src/index.ts",
+    "build": "pnpm run build:router && pnpm run build:worker",
+    "patch:workerd": "python scripts/patch_workerd.py",
+    "postinstall": "pnpm run patch:workerd",
+    "prepare": "husky"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.30.3",
+  "devDependencies": {
+    "@cloudflare/workerd-windows-64": "^1.20260517.1",
+    "@cloudflare/workers-types": "^4.20260517.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0",
+    "wrangler": "^4.92.0"
+  }
+}
