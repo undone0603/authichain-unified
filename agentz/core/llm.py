@@ -78,7 +78,7 @@ class LimitProofLLM:
         
         self.providers = [
             ("gpt-4o", self._get_openai),
-            ("gemini-pro", self._get_gemini),
+            ("gemini-2.0-flash", self._get_gemini),
             ("openrouter-auto", self._get_openrouter),
             ("cerebras-llama3.1", self._get_cerebras),
             ("deepseek-chat", self._get_deepseek),
@@ -159,7 +159,7 @@ class LimitProofLLM:
         from langchain_google_genai import ChatGoogleGenerativeAI
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key or "INVALID" in api_key: raise RuntimeError("Missing Gemini Key")
-        llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=self.temperature, google_api_key=api_key)
+        llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=self.temperature, google_api_key=api_key)
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def _get_ollama(self):
