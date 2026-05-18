@@ -26,3 +26,46 @@ const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const Referrals = lazy(() => import("./pages/Referrals"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const Services = lazy(() => import("./pages/Services"));
+
+function App() {
+  return (
+    <ThemeProvider>
+      <ThirdwebProvider>
+        <TooltipProvider>
+          <ErrorBoundary>
+            <Suspense fallback={
+              <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            }>
+              <DashboardLayout>
+                <Switch>
+                  <Route path="/" component={Home} />
+                  <Route path="/dashboard" component={Dashboard} />
+                  <Route path="/authenticate" component={Authenticate} />
+                  <Route path="/qrcodes" component={QrCodes} />
+                  <Route path="/certificates" component={Certificates} />
+                  <Route path="/certificates/public/:id" component={CertificatePublic} />
+                  <Route path="/marketplace" component={NftMarketplace} />
+                  <Route path="/supplychain" component={SupplyChain} />
+                  <Route path="/autopilot" component={Autopilot} />
+                  <Route path="/email-campaigns" component={EmailCampaigns} />
+                  <Route path="/subscriptions" component={Subscriptions} />
+                  <Route path="/referrals" component={Referrals} />
+                  <Route path="/admin" component={AdminDashboard} />
+                  <Route path="/services" component={Services} />
+                  <Route path="/pricing" component={Pricing} />
+                  <Route path="/regulatory-demo" component={RegulatoryDemo} />
+                  <Route component={NotFound} />
+                </Switch>
+              </DashboardLayout>
+            </Suspense>
+          </ErrorBoundary>
+          <Toaster />
+        </TooltipProvider>
+      </ThirdwebProvider>
+    </ThemeProvider>
+  );
+}
+
+export default App;
