@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timezone
 
 def check_tasks():
-    token = "HUBSPOT_SERVICE_KEY_REDACTED"
+    token = os.environ.get("HUBSPOT_SERVICE_KEY", "")
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     print("Checking for Zac's tasks in HubSpot...")
