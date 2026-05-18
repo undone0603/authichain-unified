@@ -34,6 +34,7 @@ CRED_KEY_TO_ENV = {
     "linkedin_session":     "LINKEDIN_SESSION_COOKIE",
     "reddit_session":       "REDDIT_SESSION_COOKIE",
     "twitter_session":      "TWITTER_SESSION_COOKIE",
+    "sam_auth":             "SAM_AUTH_COOKIE",
     "polygon_session":      "POLYGON_SESSION_COOKIE",
     "github_pat_zkie":      "GITHUB_PAT_ZKIE",
     "github_pat_undone":    "GITHUB_PAT_UNDONE",

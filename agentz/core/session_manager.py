@@ -27,6 +27,10 @@ COOKIE_MAP = {
     "google_session": {
         "name": "SID",
         "domain": ".google.com"
+    },
+    "sam_auth": {
+        "name": "SAM_AUTH",
+        "domain": ".sam.gov"
     }
 }
 
