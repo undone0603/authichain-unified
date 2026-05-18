@@ -73,9 +73,9 @@ const ecosystem = [
 ];
 
 const pricing = [
-  { name: "Starter", price: "$49", period: "/mo", features: ["100 authentications/month", "Basic AI analysis", "QR code generation", "Certificate issuance", "Email support"] },
-  { name: "Professional", price: "$149", period: "/mo", features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email campaigns"], highlighted: true },
-  { name: "Enterprise", price: "$499", period: "/mo", features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA guarantee"] },
+  { name: "Starter", price: "$49", period: "/mo", paymentLink: "https://buy.stripe.com/7sY00j87n5xcfWObDC1Nu3r", features: ["100 authentications/month", "Basic AI analysis", "QR code generation", "Certificate issuance", "Email support"] },
+  { name: "Professional", price: "$199", period: "/mo", paymentLink: "https://buy.stripe.com/28E4gzbjze3I7qi4ba1Nu3s", features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email campaigns"], highlighted: true },
+  { name: "Enterprise", price: "$799", period: "/mo", paymentLink: "https://buy.stripe.com/6oU5kDfzP7Fk6medLK1Nu3t", features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA guarantee"] },
 ];
 
 /* ─── Stat Item (with optional counter) ─── */
@@ -326,8 +326,8 @@ export default function AuthiChainHome() {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant={plan.highlighted ? "default" : "outline"} onClick={() => go("/subscriptions")}>
-                    {plan.highlighted ? "Get Started" : "Choose Plan"}
+                  <Button className="w-full" variant={plan.highlighted ? "default" : "outline"} onClick={() => window.open(plan.paymentLink, "_blank")}>
+                    {plan.highlighted ? "Get Started" : "Buy Now"}
                   </Button>
                 </GlowCard>
               </Reveal>

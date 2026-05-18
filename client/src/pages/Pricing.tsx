@@ -354,26 +354,19 @@ export default function Pricing() {
                       ))}
                     </ul>
                   </CardContent>
-                  <CardFooter>
-                    {isAuthenticated ? (
-                      <Button
-                        className="w-full"
-                        variant={plan.highlighted ? "default" : "outline"}
-                        asChild
-                      >
-                        <a href="/subscriptions">
-                          {key === "enterprise" ? "Contact Sales" : "Subscribe Now"}
-                        </a>
-                      </Button>
-                    ) : (
-                      <Button
-                        className="w-full"
-                        variant={plan.highlighted ? "default" : "outline"}
-                        asChild
-                      >
-                        <a href={getLoginUrl()}>
-                          Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
-                        </a>
+                  <CardFooter className="flex flex-col gap-2">
+                    <Button
+                      className="w-full"
+                      variant={plan.highlighted ? "default" : "outline"}
+                      asChild
+                    >
+                      <a href={plan.paymentLink} target="_blank" rel="noopener noreferrer">
+                        {key === "enterprise" ? "Buy Enterprise" : "Buy Now"} <ArrowRight className="ml-2 h-4 w-4" />
+                      </a>
+                    </Button>
+                    {isAuthenticated && (
+                      <Button className="w-full" variant="ghost" size="sm" asChild>
+                        <a href="/subscriptions">Manage Subscription</a>
                       </Button>
                     )}
                   </CardFooter>
