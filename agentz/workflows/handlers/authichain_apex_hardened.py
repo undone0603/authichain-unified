@@ -18,7 +18,7 @@ def run(ctx: ExecutionContext) -> str:
     supabase_key = get_or_placeholder("supabase_service_key", ctx)
     supabase: Client = create_client(supabase_url, supabase_key)
     
-    ctx.step("🏔️ --- EXECUTING APEX HARDENING OPS --- 🏔️")
+    ctx.step("[^] --- EXECUTING APEX HARDENING OPS --- [^]")
     
     # 2. Partnership Agent (Logistics Expansion)
     ctx.step("Scouting strategic B2B partners (Logistics/Insurance)...")
@@ -31,7 +31,7 @@ def run(ctx: ExecutionContext) -> str:
         )
     
     for p in partners[:1]:
-        ctx.step(f"   → Partner Lead: {p['name']} ({p['type']})")
+        ctx.step(f"   -> Partner Lead: {p['name']} ({p['type']})")
         proposal = ctx.step(
             f"Drafting alliance proposal for {p['name']}",
             action=lambda: asyncio.run(draft_partnership_proposal(p, {"scans": 1200}))
@@ -44,7 +44,7 @@ def run(ctx: ExecutionContext) -> str:
         "Generate and publish extension manifest",
         action=lambda: asyncio.run(publish_extension_config(supabase))
     )
-    ctx.step(f"   → Extension Config Live. Monitoring {len(config.get('verified_domains', []))} domains.")
+    ctx.step(f"   -> Extension Config Live. Monitoring {len(config.get('verified_domains', []))} domains.")
 
     # 4. Phygital NFC Integration (Luxury Hardening)
     brand_target = "Detroit Artisan Brews"
@@ -64,6 +64,6 @@ def run(ctx: ExecutionContext) -> str:
             f"Generate QR + NFC anchored identity for {brand_target}",
             action=lambda: asyncio.run(create_product_identity(supabase, product_data))
         )
-    ctx.step(f"   → Phygital Identity Locked. NFC ID: {res['nfc']['nfc_id']}")
+    ctx.step(f"   -> Phygital Identity Locked. NFC ID: {res['nfc']['nfc_id']}")
 
     return "Apex Hardening complete. Ecosystem is now globally integrated and phygital-hardened."

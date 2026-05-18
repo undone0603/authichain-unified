@@ -44,7 +44,7 @@ class MarketplaceAgent:
                 mode='payment',
                 success_url='https://qron.space/success',
                 cancel_url='https://qron.space/cancel',
-                # application_fee_amount=platform_fee, # Only works with Connect
+                application_fee_amount=platform_fee,  # 5% platform fee via Stripe Connect
             )
             
             # 4. Log Transaction in Supabase

@@ -1,7 +1,7 @@
 """
 agentz.workflows.handlers.vercel_fix_preset
 -------------------------------------------
-Browser-use task: change framework preset from Vite → Other on
+Browser-use task: change framework preset from Vite -> Other on
 authichain-unified-v2 in Vercel dashboard.
 """
 from __future__ import annotations
@@ -29,11 +29,11 @@ Wait for the build to start, capture the deployment URL, and exit.
 
 
 def run(ctx: ExecutionContext) -> str:
-    token = get_or_placeholder("vercel_session", ctx)  # noqa: F841 — used implicitly via cookie injection in real run
+    token = get_or_placeholder("vercel_session", ctx)  # noqa: F841 - used implicitly via cookie injection in real run
 
     if ctx.mode == Mode.DRY_RUN:
         ctx.step("open Vercel dashboard for authichain-unified-v2")
-        ctx.step("change Framework Preset → Vite")
+        ctx.step("change Framework Preset -> Vite")
         ctx.step("click Save")
         ctx.step("trigger new deployment from main")
         return "dry-run complete"
@@ -42,7 +42,7 @@ def run(ctx: ExecutionContext) -> str:
 
 
 async def _run_browser_task(ctx: ExecutionContext) -> str:
-    # Lazy import — keeps dry-run fast and avoids requiring browser-use
+    # Lazy import - keeps dry-run fast and avoids requiring browser-use
     # for handlers that never call it.
     try:
         from browser_use import Agent, Controller  # type: ignore

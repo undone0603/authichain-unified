@@ -1,4 +1,4 @@
-"""power_launch_all — launch every platform agent sequentially or in parallel."""
+"""power_launch_all - launch every platform agent sequentially or in parallel."""
 
 from __future__ import annotations
 
@@ -31,9 +31,9 @@ def power_launch_all(
 
     Parameters
     ----------
-    mode      : "auto"     — run every agent without human confirmation (default)
-                "confirm"  — prompt before each agent
-                "dry-run"  — list agents only; no LLM calls
+    mode      : "auto"     - run every agent without human confirmation (default)
+                "confirm"  - prompt before each agent
+                "dry-run"  - list agents only; no LLM calls
     parallel  : run agents concurrently when mode is "auto"
     lm_base_url: LM Studio OpenAI-compatible base URL
     verbose   : print progress to stdout
@@ -50,7 +50,7 @@ def power_launch_all(
     # ── health-check ────────────────────────────────────────────────────────
     if mode != "dry-run":
         if verbose:
-            print("Checking LM Studio connection … ", end="", flush=True)
+            print("Checking LM Studio connection ... ", end="", flush=True)
         alive = client.health_check()
         if not alive:
             _fail(
@@ -67,7 +67,7 @@ def power_launch_all(
     # ── dry-run ─────────────────────────────────────────────────────────────
     if mode == "dry-run":
         if verbose:
-            print("Registered agents (dry-run — no LLM calls):")
+            print("Registered agents (dry-run - no LLM calls):")
             for cls in ALL_AGENTS:
                 print(f"  • {cls.name}")
         return []
@@ -78,7 +78,7 @@ def power_launch_all(
 
     if mode == "auto" and parallel:
         if verbose:
-            print(f"Launching {len(ALL_AGENTS)} agents in parallel …\n")
+            print(f"Launching {len(ALL_AGENTS)} agents in parallel ...\n")
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
             futures = {pool.submit(_run_agent, cls, client): cls for cls in ALL_AGENTS}
             for future in concurrent.futures.as_completed(futures):
@@ -95,7 +95,7 @@ def power_launch_all(
                         print(f"  Skipped: {cls.name}")
                     continue
             if verbose:
-                print(f"  Running {cls.name} … ", end="", flush=True)
+                print(f"  Running {cls.name} ... ", end="", flush=True)
             result = _run_agent(cls, client)
             results.append(result)
             if verbose:
@@ -109,7 +109,7 @@ def power_launch_all(
         print()
         print("─" * 60)
         print(f"  Completed: {len(results)} agents in {wall_ms}ms")
-        print(f"  ✓ OK: {ok_count}   ✗ Failed: {fail_count}")
+        print(f"  ✓ OK: {ok_count}   [X] Failed: {fail_count}")
         print("─" * 60)
 
     return results
@@ -117,7 +117,7 @@ def power_launch_all(
 
 def _print_banner() -> None:
     print("=" * 60)
-    print("   AgentZ — AuthiChain Power Launch")
+    print("   AgentZ - AuthiChain Power Launch")
     print("=" * 60)
 
 
@@ -126,9 +126,9 @@ def _print_result(result: AgentResult) -> None:
         preview = result.output[:120].replace("\n", " ")
         print(f"  ✓ {result.name} ({result.duration_ms}ms)")
         if preview:
-            print(f"    {preview}…" if len(result.output) > 120 else f"    {preview}")
+            print(f"    {preview}..." if len(result.output) > 120 else f"    {preview}")
     else:
-        print(f"  ✗ {result.name} ({result.duration_ms}ms) — {result.error}")
+        print(f"  [X] {result.name} ({result.duration_ms}ms) - {result.error}")
 
 
 def _fail(msg: str) -> None:

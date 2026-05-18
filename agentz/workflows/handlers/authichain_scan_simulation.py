@@ -34,7 +34,7 @@ def run(ctx: ExecutionContext) -> str:
         "Run Trust Agent: Authenticity Check",
         action=lambda: asyncio.run(monitor_scans(supabase, product_id))
     )
-    ctx.step(f"   → Authenticity Score: {score}%")
+    ctx.step(f"   -> Authenticity Score: {score}%")
     
     # 4. Generate StoryMode & AI Narration
     ctx.step("Step 3: Generating StoryMode AI Narration...")
@@ -42,7 +42,7 @@ def run(ctx: ExecutionContext) -> str:
         "Run Media Agent: StoryMode Generation",
         action=lambda: asyncio.run(generate_story_mode(supabase, product_id))
     )
-    ctx.step(f"   → StoryMode Video Live at: {narration_url}")
+    ctx.step(f"   -> StoryMode Video Live at: {narration_url}")
     
     # 5. Issue QRON Rewards
     ctx.step("Step 4: Issuing QRON Engagement Rewards...")
@@ -50,13 +50,13 @@ def run(ctx: ExecutionContext) -> str:
         "Run Growth Agent: Reward Issuance",
         action=lambda: asyncio.run(reward_repeat_scans(supabase, wallet_address, product_id))
     )
-    ctx.step(f"   → Reward Issued: {reward_res.get('reward_amount')} QRON")
-    ctx.step(f"   → On-chain Tx: {reward_res.get('tx_hash')}")
+    ctx.step(f"   -> Reward Issued: {reward_res.get('reward_amount')} QRON")
+    ctx.step(f"   -> On-chain Tx: {reward_res.get('tx_hash')}")
     
     # 6. Update Merchant Analytics
     ctx.step("Step 5: Updating Merchant Analytics & Engagement Score...")
     # This happens automatically via monitor_scans and reward_repeat_scans updates in Supabase
-    ctx.step("   → Analytics Synced to Command Center.")
+    ctx.step("   -> Analytics Synced to Command Center.")
     
     ctx.step("🚀 --- ATOMIC ACTION COMPLETE --- 🚀")
     

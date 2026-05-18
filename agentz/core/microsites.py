@@ -21,7 +21,7 @@ def generate_microsite_html(lead_data: Dict[str, Any]) -> str:
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{name} — Digital Twin</title>
+<title>{name} - Digital Twin</title>
 <style>
   body {{ background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
   .card {{ border: 1px solid #00ff88; padding: 40px; border-radius: 20px; text-align: center; max-width: 500px; }}

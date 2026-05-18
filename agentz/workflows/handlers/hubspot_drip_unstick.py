@@ -47,7 +47,7 @@ def run(ctx: ExecutionContext) -> str:
         cid   = contact["id"]
         email = contact.get("properties", {}).get("email", "?")
         ok = ctx.step(
-            f"reset contact {cid} ({email}) hs_lead_status → OPEN",
+            f"reset contact {cid} ({email}) hs_lead_status -> OPEN",
             action=lambda c=cid: _reset_contact(headers, c),
         )
         if ok:

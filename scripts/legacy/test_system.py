@@ -17,27 +17,27 @@ def run_tests():
     res = subprocess.run([sys.executable, "-m", "pytest", "tests/test_agents.py", "tests/test_infrastructure.py"], capture_output=True, text=True)
     print(res.stdout)
     if res.returncode != 0:
-        print(f"❌ Core tests failed. Error: {res.stderr}")
+        print(f"[XX] Core tests failed. Error: {res.stderr}")
     else:
-        print("✅ Core logic and connectivity verified.")
+        print("[OK] Core logic and connectivity verified.")
 
     # 2. API Gateway Tests
     print("\n[2/3] Verifying FastAPI Gateway...")
     res_api = subprocess.run([sys.executable, "-m", "pytest", "tests/test_api.py"], capture_output=True, text=True)
     print(res_api.stdout)
     if res_api.returncode != 0:
-        print(f"❌ API tests failed. Error: {res_api.stderr}")
+        print(f"[XX] API tests failed. Error: {res_api.stderr}")
     else:
-        print("✅ API Gateway verified.")
+        print("[OK] API Gateway verified.")
 
     # 3. LLM Failover Resilience
     print("\n[3/3] Testing LLM Waterfall Failover...")
     res_llm = subprocess.run([sys.executable, "tests/test_failover.py"], capture_output=True, text=True)
     print(res_llm.stdout)
     if "failed" in res_llm.stderr:
-        print(f"❌ LLM Failover test crashed. Error: {res_llm.stderr}")
+        print(f"[XX] LLM Failover test crashed. Error: {res_llm.stderr}")
     else:
-        print("✅ LLM Resilience logic verified.")
+        print("[OK] LLM Resilience logic verified.")
 
     print("\n🚀 --- SYSTEM VALIDATION COMPLETE --- 🚀")
 

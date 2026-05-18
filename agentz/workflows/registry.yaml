@@ -459,6 +459,20 @@ workflows:
       3) Pings IndexNow API for rapid discovery of 1,001+ verified products.
       4) Ensures all project links are optimized for search visibility.
 
+  - id: authichain_content_multiplication
+    title: "Programmatic Content Multiplication: Blog + Social + Thread"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.content_multiplier
+    type: composite
+    estimated_minutes: 10
+    requires: []
+    prerequisites: [authichain_pilot_deploy]
+    description: |
+      Programmatically transforms a single verified product identity
+      into a suite of marketing assets: SEO-optimized blog posts,
+      X (Twitter) threads, and LinkedIn posts.
+
   - id: authichain_atomic_scan
     title: "Atomic Action Simulation: Scan → Verify → StoryMode → Reward"
     priority: critical

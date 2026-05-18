@@ -61,7 +61,7 @@ def run(ctx: ExecutionContext) -> str:
         if success:
             update_status(notice_id, "submitted", submission_proof=proof)
             ctx.step(f"  ✓ Notice {notice_id} successfully transitioned to 'submitted'.")
-            ctx.step(f"  → Proof: {proof[:100]}...")
+            ctx.step(f"  -> Proof: {proof[:100]}...")
             submitted += 1
         else:
             ctx.step(f"  ✖ Notice {notice_id} submission failed: {proof}")

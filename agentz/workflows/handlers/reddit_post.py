@@ -16,7 +16,7 @@ def run(ctx: ExecutionContext) -> str:
     
     Traditional QR codes are ugly. Standard AI QR codes are unreliable and break under varied lighting. 
     
-    We built **QRON** (qron.space) — a "Living Portal" generator that uses Hugging Face ControlNet combined with Quantitative Colorimetry to ensure 100% scannability without sacrificing the artistic aesthetic.
+    We built **QRON** (qron.space) - a "Living Portal" generator that uses Hugging Face ControlNet combined with Quantitative Colorimetry to ensure 100% scannability without sacrificing the artistic aesthetic.
     
     Plus, every QRON is cryptographically signed via Ed25519 and anchored to Polygon.
     

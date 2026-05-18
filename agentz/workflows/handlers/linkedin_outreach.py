@@ -30,14 +30,14 @@ SEARCH_URL = (
 FIRST_TOUCH = """\
 Hi {first_name},
 
-Saw you're running ops at {company} — quick context: I built StrainChain,
+Saw you're running ops at {company} - quick context: I built StrainChain,
 a compliance middleware that stamps each batch with a Bitcoin-inscribed
 certificate ($299/cert, no monthly). It plugs into Metrc and creates
 an immutable audit trail regulators can verify in seconds.
 
-Happy to send a 90-second demo video — no call needed. Worth a look?
+Happy to send a 90-second demo video - no call needed. Worth a look?
 
-— Zac
+- Zac
 """
 
 
@@ -78,7 +78,7 @@ already in my connections):
 
   1. Open the prospect's profile.
   2. Extract: first_name, last_name, company, profile_url.
-  3. Click "Connect" → "Add a note".
+  3. Click "Connect" -> "Add a note".
   4. Paste this message (substitute {{first_name}} and {{company}}):
 
 {FIRST_TOUCH}

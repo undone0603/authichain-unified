@@ -89,16 +89,16 @@ class ExecutionContext:
         try:
             result = action()
             if self.verbose and result is not None:
-                print(f"{prefix}  → {_truncate(repr(result))}")
+                print(f"{prefix}  -> {_truncate(repr(result))}")
             return result
         except Exception as e:
             if self.verbose:
-                print(f"{prefix}  ✗ ERROR: {e}")
+                print(f"{prefix}  [ERR] ERROR: {e}")
             raise
 
 
 def _truncate(s: str, limit: int = 200) -> str:
-    return s if len(s) <= limit else s[:limit] + "…"
+    return s if len(s) <= limit else s[:limit] + "..."
 
 
 def parse_mode(value: str) -> Mode:

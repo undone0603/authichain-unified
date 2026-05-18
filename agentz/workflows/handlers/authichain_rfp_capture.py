@@ -35,7 +35,7 @@ def run(ctx: ExecutionContext) -> str:
         ctx.step(f"Drafting Phase 1 response for: {opp['title']} ({opp['agency']})")
 
         if ctx.mode == Mode.DRY_RUN:
-            # No LLM call, no ledger write — describe only.
+            # No LLM call, no ledger write - describe only.
             continue
 
         content = ctx.step(

@@ -89,9 +89,9 @@ def run(ctx: ExecutionContext) -> str:
         r = httpx.get(f"https://api.stripe.com/v1/charges?created[gte]={thirty_days_ago}", headers=s_headers, timeout=10)
         charges = r.json().get('data', [])
         total_rev = sum(c['amount'] for c in charges if c['paid'] and not c['refunded']) / 100
-        report.append(f"💰 REVENUE (30d): ${total_rev:,.2f}")
+        report.append(f"$$ REVENUE (30d): ${total_rev:,.2f}")
     except Exception as e:
-        report.append(f"💰 REVENUE (30d): Failed to fetch Stripe stats")
+        report.append(f"$$ REVENUE (30d): Failed to fetch Stripe stats")
 
     report.append(f"\nGenerated at: {datetime.now(timezone.utc).isoformat()}")
     
