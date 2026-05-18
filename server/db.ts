@@ -839,13 +839,6 @@ export async function getWhiteLabelByApiKey(apiKey: string) {
   return result[0];
 }
 
-// ─── Activity Log Helpers ────────────────────────────────────────────────────
-export async function logActivity(data: any) {
-  const db = await getDb();
-  if (!db) return;
-  await db.insert(activityLog).values(data);
-}
-
 export async function getRecentActivity(limit: number = 50) {
   const db = await getDb();
   if (!db) return [];
