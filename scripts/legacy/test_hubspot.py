@@ -2,7 +2,7 @@ import httpx
 import os
 
 def test_hubspot():
-    token = "HUBSPOT_SERVICE_KEY_REDACTED"
+    token = os.environ.get("HUBSPOT_SERVICE_KEY", "")
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     print("1. Searching for contacts in 'IN_PROGRESS' prospecting agent status...")

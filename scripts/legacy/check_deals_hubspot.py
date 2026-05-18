@@ -2,7 +2,7 @@ import httpx
 import os
 
 def check_deals():
-    token = "HUBSPOT_SERVICE_KEY_REDACTED"
+    token = os.environ.get("HUBSPOT_SERVICE_KEY", "")
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     deals = ["Cloud Cannabis", "Oakley Signs", "PufCreativ", "Lettuce"]
