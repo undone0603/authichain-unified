@@ -1,4 +1,4 @@
-"""LM Studio client - wraps the OpenAI-compatible REST API at localhost:1234."""
+"""LM Studio client — wraps the OpenAI-compatible REST API at localhost:1234."""
 
 from __future__ import annotations
 

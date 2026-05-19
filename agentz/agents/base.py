@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..lm_studio import LMStudioClient
+from ..controllers.agentz_controller import AgentzController
+from ..models import AgentOutput
 
 
 @dataclass
@@ -20,7 +22,7 @@ class AgentResult:
 
     def __str__(self) -> str:
         status = "OK" if self.ok else "FAIL"
-        suffix = f" - {self.error}" if not self.ok else ""
+        suffix = f" — {self.error}" if not self.ok else ""
         return f"[{status}] {self.name} ({self.duration_ms}ms){suffix}"
 
 
@@ -32,6 +34,8 @@ class BaseAgent:
 
     def __init__(self, client: LMStudioClient) -> None:
         self.client = client
+        # controller accepts the LLM callable (here we use the LMStudioClient.chat method)
+        self.controller = AgentzController(self.client.chat)
 
     def build_prompt(self) -> list[dict[str, str]]:
         raise NotImplementedError
@@ -40,9 +44,19 @@ class BaseAgent:
         start = time.monotonic()
         try:
             messages = self.build_prompt()
-            output = self.client.chat(messages)
+            # Use the controller to call the LLM and normalize the output
+            parsed = self.controller.run_llm(messages)
             duration_ms = int((time.monotonic() - start) * 1000)
-            return AgentResult(name=self.name, ok=True, output=output, duration_ms=duration_ms)
+
+            if isinstance(parsed, AgentOutput):
+                out_text = parsed.output or ""
+                ok_val = bool(parsed.ok) if parsed.ok is not None else True
+                details = parsed.details or {}
+                return AgentResult(name=self.name, ok=ok_val, output=out_text, duration_ms=duration_ms, details=details)
+            else:
+                # If controller returned a raw string/dict, coerce to string
+                returned_text = str(parsed)
+                return AgentResult(name=self.name, ok=True, output=returned_text, duration_ms=duration_ms)
         except Exception as exc:
             duration_ms = int((time.monotonic() - start) * 1000)
             return AgentResult(name=self.name, ok=False, error=str(exc), duration_ms=duration_ms)
