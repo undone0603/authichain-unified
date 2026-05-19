@@ -11,8 +11,12 @@ class AgentzController:
     Small controller for AgentZ LLM interactions.
 
     This version imports AgentOutput directly from agentz.models (created in the
-    repository). run_llm will parse string LLM results via
-    AgentOutput.model_validate_json(...) with a fallback to json.loads +
+    repository). run_lpyproject.toml
+    lm will parse string LLM results via
+    AgentOutput.model_pyproject.toml
+    pyproject.toml
+    pyproject.toml
+    validate_json(...) with a fallback to json.loads +
     AgentOutput.model_validate(...).
     """
 
@@ -47,6 +51,8 @@ class AgentzController:
             # we'll fall through to other parsing attempts.
             pass
 
+        if isinstance(raw_result, str):
+            raw_result = AgentOutput.model_validate_json(raw_result)
         # If the LLM returned a JSON string, prefer model_validate_json
         if isinstance(raw_result, str):
             try:
