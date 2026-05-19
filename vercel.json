@@ -1,16 +1,21 @@
 {
   "version": 2,
-  "buildCommand": "npx vite build",
-  "outputDirectory": "dist/public",
-  "ignoreCommand": "bash -c '[ \"$VERCEL_GIT_COMMIT_AUTHOR_LOGIN\" = \"undone0603\" ] && exit 1 || exit 0'",
+  "framework": "nextjs",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/server.js"
-    },
+      "source": "/gov",
+      "destination": "https://govchain.us"
+    }
+  ],
+  "headers": [
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "headers": [
+        { "key": "X-Frame-Options",       "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" }
+      ]
     }
-  ]
+  ],
+  "ignoreCommand": "bash -c '[ \"$VERCEL_GIT_COMMIT_AUTHOR_LOGIN\" = \"undone0603\" ] && exit 1 || exit 0'"
 }

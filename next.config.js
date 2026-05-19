@@ -1,31 +1,20 @@
 // next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allow the Next.js dev server to be reached from any hostname
+  // (required so that multi-tenant preview URLs resolve properly).
+  experimental: {
+    // Propagate x-brand header set by middleware into RSC fetch cache keys
+    // so per-brand pages are independently cached.
+    serverComponentsExternalPackages: [],
+  },
+
   images: {
     remotePatterns: [
-      // Unsplash — high-quality stock images (free, no API key)
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        pathname: '/**',
-      },
-      // Plus.unsplash CDN
-      {
-        protocol: 'https',
-        hostname: 'plus.unsplash.com',
-        pathname: '/**',
-      },
-      // IPFS / web3.storage for NFT metadata images
-      {
-        protocol: 'https',
-        hostname: 'w3s.link',
-        pathname: '/ipfs/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.ipfs.dweb.link',
-        pathname: '/**',
-      },
+      { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'plus.unsplash.com',   pathname: '/**' },
+      { protocol: 'https', hostname: 'w3s.link',            pathname: '/ipfs/**' },
+      { protocol: 'https', hostname: '*.ipfs.dweb.link',    pathname: '/**' },
     ],
   },
 
@@ -45,13 +34,22 @@ const nextConfig = {
 
   async redirects() {
     return [
-      // Redirect bare /gov to govchain.us
       {
         source:      '/gov',
         destination: process.env.NEXT_PUBLIC_GOVCHAIN_URL ?? 'https://govchain.us',
         permanent:   false,
       },
     ];
+  },
+
+  // Expose the canonical hostname to RSC/SSR without a separate env var.
+  // Reads VERCEL_URL at build time; falls back to authichain.com for production.
+  // Usage in layouts: process.env.NEXT_PUBLIC_CANONICAL_HOSTNAME
+  env: {
+    NEXT_PUBLIC_CANONICAL_HOSTNAME:
+      process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'https://authichain.com',
   },
 };
 
