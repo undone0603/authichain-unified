@@ -60,9 +60,6 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-      - name: Install npx
-        run: npm install -g npx
-
       - name: Deploy Vercel App
         if: steps.detect.outputs.type == 'vercel'
         uses: amondnet/vercel-action@v25
