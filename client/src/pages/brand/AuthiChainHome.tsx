@@ -3,11 +3,9 @@ import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
 import { EcosystemNav } from "@/components/EcosystemNav";
 import { Reveal, GlowCard, ANIMATION_STYLES } from "@/lib/animations";
-import {
-  Shield, ArrowRight, CheckCircle2, Zap, Globe, Lock,
+import { Shield, ArrowRight, CheckCircle2, Zap, Globe, Lock,
   BarChart3, Bot, Gem, QrCode, Truck, Mail,
-  Cpu, Scan, Fingerprint, Layers, Eye, ChevronDown,
-} from "lucide-react";
+  Cpu, Scan, Fingerprint, Layers, Eye, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useEffect, useRef, useState, useCallback } from "react";
 
@@ -68,14 +66,14 @@ const features = [
 const ecosystem = [
   { name: "QRON Studio", href: "https://qron.space", desc: "AI-powered QR code art generator. Create cryptographically signed, brand-level scannable art in seconds.", live: true },
   { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance on the blockchain. Seed-to-sale verification with NFT certificates and $QRON rewards.", live: true },
-  { name: "GovChain", href: "https://govchain.us", desc: "Sovereign document verification for government and defense. Made in USA manufacturer tracking with military-grade QRON authentication.", live: true },
+  { name: "GovChain", href: "https://govchain.us", desc: "Sovereign document verification for government and defense. Made-in-USA manufacturer tracking with military-grade QRON authentication.", live: true },
   { name: "Enterprise API", href: "#", desc: "White-label authentication infrastructure for any industry vertical. Full REST API with Ed25519 signing and compliance tooling.", live: false },
 ];
 
 const pricing = [
   { name: "Starter", price: "$49", period: "/mo", features: ["100 authentications/month", "Basic AI analysis", "QR code generation", "Certificate issuance", "Email support"] },
-  { name: "Professional", price: "$149", period: "/mo", features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email campaigns"], highlighted: true },
-  { name: "Enterprise", price: "$499", period: "/mo", features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA guarantee"] },
+  { name: "Professional", price: "$149", period: "/mo", features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email automation"] },
+  { name: "Enterprise", price: "$499", period: "/mo", features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA & support"] },
 ];
 
 /* ─── Stat Item (with optional counter) ─── */
@@ -113,9 +111,9 @@ export default function AuthiChainHome() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
       <style>{ANIMATION_STYLES}{`
-        .orb-1{width:600px;height:600px;top:-200px;left:-100px;background:radial-gradient(circle,hsl(217 91% 50%/.35),transparent 70%);animation:orbDrift1 18s ease-in-out infinite,orbPulse 8s ease-in-out infinite}
-        .orb-2{width:500px;height:500px;bottom:-150px;right:-100px;background:radial-gradient(circle,hsl(40 60% 55%/.3),transparent 70%);animation:orbDrift2 22s ease-in-out infinite,orbPulse 10s ease-in-out infinite 2s}
-        .orb-3{width:350px;height:350px;top:40%;left:60%;background:radial-gradient(circle,hsl(271 81% 56%/.2),transparent 70%);animation:orbDrift3 25s ease-in-out infinite,orbPulse 12s ease-in-out infinite 4s}
+        .orb-1{width:600px;height:600px;top:-200px;left:-100px;background:radial-gradient(circle,hsl(217 91% 50%/.35),transparent 70%);animation:orbDrift1 18s ease-in-out infinite,orbPulse 8s ease-in-out infinite;}
+        .orb-2{width:500px;height:500px;bottom:-150px;right:-100px;background:radial-gradient(circle,hsl(40 60% 55%/.3),transparent 70%);animation:orbDrift2 22s ease-in-out infinite,orbPulse 10s ease-in-out infinite;}
+        .orb-3{width:350px;height:350px;top:40%;left:60%;background:radial-gradient(circle,hsl(271 81% 56%/.2),transparent 70%);animation:orbDrift3 25s ease-in-out infinite,orbPulse 12s ease-in-out infinite;}
       `}</style>
 
       <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" />
@@ -159,11 +157,11 @@ export default function AuthiChainHome() {
         <div className="container relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <div className="hero-enter inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-xs font-medium tracking-wide uppercase mb-8">
-              <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-primary" /></span>
+              <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-primary" /></span>
               Live on Polygon Mainnet
             </div>
             <h1 className="hero-enter hero-enter-delay-1 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6">
-              The Truth Layer for the{" "}
+              The Truth Layer for the{' '}
               <span className="gradient-text animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(217 91% 50%), hsl(40 60% 55%), hsl(271 81% 56%), hsl(217 91% 50%))" }}>Global Economy</span>
             </h1>
             <p className="hero-enter hero-enter-delay-2 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -213,7 +211,7 @@ export default function AuthiChainHome() {
               <Reveal key={s.num} delay={i * 100}>
                 <GlowCard className="glass-card rounded-xl p-6 hover:border-primary/30 transition-all group h-full tilt-card border-glow-hover">
                   <div className="flex items-start gap-4">
-                    <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors animate-float" style={{ animationDelay: `${i * 0.5}s` }}>
+                    <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors animate-float">
                       <s.icon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
@@ -341,7 +339,7 @@ export default function AuthiChainHome() {
         <div className="container">
           <Reveal direction="scale" className="text-center">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
-              Verify <span className="gradient-text animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(217 91% 50%), hsl(40 60% 55%), hsl(271 81% 56%), hsl(217 91% 50%))" }}>Everything.</span>
+              Verify <span className="gradient-text animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(217 91% 50%), hsl(40 60% 55%), hsl(271 81% 56%), hsl(217 91% 50%))" }}>Everything</span>
             </h2>
             <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">Join the protocols building the authentication layer for the physical world.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
