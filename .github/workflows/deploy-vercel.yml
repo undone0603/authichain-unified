@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         project:
-          - workers/authichain-dashboard
+          # Removed workers/authichain-dashboard so it doesn't conflict with Cloudflare workflow
           - workers/qron-automation
           - workers/qron-image-gen
           - workers/qron-outreach
