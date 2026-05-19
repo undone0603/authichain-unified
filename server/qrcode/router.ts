@@ -26,4 +26,50 @@ export const qrcodeRouter = router({
   listForProduct: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
     return await db.getProductQrCodes(input.productId);
   }),
+  generateStorymode: protectedProcedure.input(z.object({
+    productId: z.number(),
+  })).mutation(async ({ input }) => {
+    const product = await db.getProductById(input.productId);
+    if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+
+    const { invokeLLM } = await import("../_core/llm");
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: "You are a cinematic brand storyteller for AuthiChain. Create a 3-chapter 'Storymode' narrative for a product based on its metadata. Each chapter should have a title and a 2-3 sentence description. Tone: luxury, high-fidelity, futuristic, authoritative." },
+        { role: "user", content: `Product: ${product.name}. Brand: ${product.brand}. Category: ${product.category}. Description: ${product.description}.` }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "storymode_narrative",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              chapters: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    content: { type: "string" }
+                  },
+                  required: ["title", "content"],
+                  additionalProperties: false
+                }
+              }
+            },
+            required: ["chapters"],
+            additionalProperties: false
+          }
+        }
+      }
+    });
+
+    const storyData = JSON.parse(response.choices[0].message.content as string);
+    const metadata = { ...(product.metadata as any || {}), storymode: storyData };
+    await db.updateProduct(product.id, { metadata });
+
+    return { success: true, storymode: storyData };
+  }),
 });

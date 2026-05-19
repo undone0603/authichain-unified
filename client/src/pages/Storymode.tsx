@@ -22,6 +22,20 @@ export default function Storymode() {
   }
 
   const story = storyQuery.data;
+  const chapters = (story?.metadata as any)?.storymode?.chapters || [
+    {
+      title: "ROOTED IN AUTHENTICITY",
+      content: "This product was birthed from the volcanic soils and artisanal curation verified under the AuthiChain Truth Protocol. Every molecule of its existence was observed and logged."
+    },
+    {
+      title: "AI AUTOFLOW MAPPING",
+      content: "Upon reaching the truth threshold, our neural engines classified this asset as High-Fidelity. A unique workflow was generated to preserve its legacy on-chain."
+    },
+    {
+      title: "TRUEMARK FINALITY",
+      content: "The cryptographic seal has been applied. This item is now an immutable node in the Authentic Economy. Anchored to Bitcoin. Verified by the network."
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-[#050507] text-white selection:bg-yellow-500/30">
@@ -36,7 +50,7 @@ export default function Storymode() {
               AI STORYMODE ACTIVE
             </Badge>
             <h1 className="text-5xl font-bold tracking-tighter mb-2 italic">
-              THE JOURNEY OF {story?.productId || "TRUTH"}
+              THE JOURNEY OF {story?.name || "TRUTH"}
             </h1>
             <p className="text-gray-400 font-mono text-sm tracking-widest uppercase">
               Provenance Ledger: {truemarkId || "SECURED"}
@@ -48,41 +62,18 @@ export default function Storymode() {
         </div>
 
         <div className="space-y-32 mt-24">
-          {/* Chapter 1 */}
-          <div className="relative pl-12 border-l border-yellow-500/20">
-            <div className="absolute -left-3 top-0 w-6 h-6 rounded-full bg-yellow-500 shadow-[0_0_15px_rgba(212,175,55,0.5)]" />
-            <div className="flex items-center gap-3 text-yellow-500 font-mono text-xs mb-4 tracking-[0.3em] uppercase">
-               <MapPin className="w-4 h-4" /> 01 / Origin
+          {chapters.map((chapter: any, index: number) => (
+            <div key={index} className="relative pl-12 border-l border-yellow-500/20">
+              <div className={`absolute -left-3 top-0 w-6 h-6 rounded-full ${index === 0 ? "bg-yellow-500 shadow-[0_0_15px_rgba(212,175,55,0.5)]" : index === 1 ? "border-2 border-yellow-500 bg-black" : "bg-yellow-500 animate-pulse"}`} />
+              <div className="flex items-center gap-3 text-yellow-500 font-mono text-xs mb-4 tracking-[0.3em] uppercase">
+                 {index === 0 ? <MapPin className="w-4 h-4" /> : index === 1 ? <History className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />} 0{index + 1} / {index === 0 ? "Origin" : index === 1 ? "Classification" : "Sealing"}
+              </div>
+              <h2 className="text-3xl font-bold mb-6 italic uppercase">{chapter.title}</h2>
+              <p className="text-xl text-gray-300 leading-relaxed max-w-2xl font-light">
+                {chapter.content}
+              </p>
             </div>
-            <h2 className="text-3xl font-bold mb-6 italic">ROOTED IN AUTHENTICITY</h2>
-            <p className="text-xl text-gray-300 leading-relaxed max-w-2xl font-light">
-              This product was birthed from the volcanic soils and artisanal curation verified under the AuthiChain Truth Protocol. Every molecule of its existence was observed and logged.
-            </p>
-          </div>
-
-          {/* Chapter 2 */}
-          <div className="relative pl-12 border-l border-yellow-500/20">
-            <div className="absolute -left-3 top-0 w-6 h-6 rounded-full border-2 border-yellow-500 bg-black" />
-            <div className="flex items-center gap-3 text-yellow-500 font-mono text-xs mb-4 tracking-[0.3em] uppercase">
-               <History className="w-4 h-4" /> 02 / Classification
-            </div>
-            <h2 className="text-3xl font-bold mb-6 italic">AI AUTOFLOW MAPPING</h2>
-            <p className="text-xl text-gray-300 leading-relaxed max-w-2xl font-light">
-              Upon reaching the truth threshold, our neural engines classified this asset as High-Fidelity. A unique workflow was generated to preserve its legacy on-chain.
-            </p>
-          </div>
-
-          {/* Chapter 3 */}
-          <div className="relative pl-12 border-l border-yellow-500/20">
-            <div className="absolute -left-3 top-0 w-6 h-6 rounded-full bg-yellow-500 animate-pulse" />
-            <div className="flex items-center gap-3 text-yellow-500 font-mono text-xs mb-4 tracking-[0.3em] uppercase">
-               <ShieldCheck className="w-4 h-4" /> 03 / Sealing
-            </div>
-            <h2 className="text-3xl font-bold mb-6 italic">TRUEMARK FINALITY</h2>
-            <p className="text-xl text-gray-300 leading-relaxed max-w-2xl font-light">
-              The cryptographic seal has been applied. This item is now an immutable node in the Authentic Economy. Anchored to Bitcoin. Verified by the network.
-            </p>
-          </div>
+          ))}
         </div>
 
         <div className="mt-48 text-center pb-24">

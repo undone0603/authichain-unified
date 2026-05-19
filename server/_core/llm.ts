@@ -1,4 +1,8 @@
 import { ENV } from "./env";
+import { getDb } from "../db.js";
+import { promptCache } from "../../drizzle/schema.js";
+import { eq } from "drizzle-orm";
+import { createHash } from "node:crypto";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -312,13 +316,30 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
+  // ─── Prompt Caching ────────────────────────────────────────────────────────
+  const payloadStr = JSON.stringify(payload);
+  const promptHash = createHash("sha256").update(payloadStr).digest("hex");
+
+  try {
+    const db = await getDb();
+    if (db) {
+      const [cached] = await db.select().from(promptCache).where(eq(promptCache.promptHash, promptHash)).limit(1);
+      if (cached) {
+        console.log(`[LLM Cache] Hit for hash: ${promptHash.substring(0, 8)}`);
+        return JSON.parse(cached.response) as InvokeResult;
+      }
+    }
+  } catch (err: any) {
+    console.warn("[LLM Cache] Check failed:", err.message);
+  }
+
   const response = await fetch(resolveApiUrl(), {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${ENV.forgeApiKey}`,
     },
-    body: JSON.stringify(payload),
+    body: payloadStr,
   });
 
   if (!response.ok) {
@@ -328,5 +349,24 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     );
   }
 
-  return (await response.json()) as InvokeResult;
+  const result = (await response.json()) as InvokeResult;
+
+  // Store in cache
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.insert(promptCache).values({
+        promptHash,
+        response: JSON.stringify(result),
+        provider: "forge",
+        model: payload.model as string,
+        usage: result.usage,
+      });
+      console.log(`[LLM Cache] Stored for hash: ${promptHash.substring(0, 8)}`);
+    }
+  } catch (err: any) {
+    console.warn("[LLM Cache] Store failed:", err.message);
+  }
+
+  return result;
 }

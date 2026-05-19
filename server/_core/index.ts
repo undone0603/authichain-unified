@@ -3,6 +3,7 @@ import { createServer } from "http";
 import net from "net";
 import { createApp } from "./app";
 import { serveStatic, setupVite } from "./vite";
+import { initializeScheduler } from "../scheduled-jobs";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -40,8 +41,9 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
+    await initializeScheduler();
   });
 }
 

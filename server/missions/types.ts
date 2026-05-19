@@ -5,6 +5,11 @@ export type MissionType =
   | 'PARTNER_ONBOARDING'
   | 'TECH_OS_LOCK'
   | 'LAUNCH_AUTHICHAIN'
+  | 'LUXURY_OUTREACH'
+  | 'PHARMA_OUTREACH'
+  | 'MEDTECH_OUTREACH'
+  | 'TIMEPIECE_OUTREACH'
+  | 'NEWSJACKING_LAUNCH'
   | 'TECH_SPRINT';
 
 export type MissionStatus = 'PLANNED' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';
@@ -14,6 +19,11 @@ export type TaskStatus = 'PENDING' | 'RUNNING' | 'WAITING_HUMAN' | 'DONE' | 'FAI
 export type TaskKind =
   | 'FIND_GOV_LEADS'
   | 'FIND_RETAIL_LEADS'
+  | 'FIND_LUXURY_LEADS'
+  | 'FIND_PHARMA_LEADS'
+  | 'FIND_MEDTECH_LEADS'
+  | 'FIND_TIMEPIECE_LEADS'
+  | 'MONITOR_NEWS_FOR_PR'
   | 'DRAFT_OUTBOUND_EMAIL'
   | 'BUILD_PILOT_PACKET'
   | 'DRAFT_INTEL_DOSSIER'
@@ -34,6 +44,7 @@ export type TaskKind =
   | 'SEND_CONTRACT'
   | 'AUTO_REPLY'
   | 'GENERATE_OUTREACH_VIDEO'
+  | 'SECURITY_AUDIT'
   // ── Dev Team ──────────────────────────────────────────────
   | 'PLAN_SPRINT'
   | 'WRITE_CODE'

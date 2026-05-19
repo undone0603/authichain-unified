@@ -77,11 +77,20 @@ Return JSON array (same order, same indices):
 
 export async function runLeadFinder(task: Task): Promise<void> {
   const payload = task.payload as LeadFinderPayload;
-  const segment = payload.segment ?? (task.kind === 'FIND_GOV_LEADS' ? 'GOV' : 'RETAIL');
+  const segment = payload.segment ?? 
+    (task.kind === 'FIND_GOV_LEADS' ? 'GOV' : 
+     task.kind === 'FIND_LUXURY_LEADS' ? 'LUXURY' :
+     task.kind === 'FIND_PHARMA_LEADS' ? 'PHARMA' : 
+     task.kind === 'FIND_TIMEPIECE_LEADS' ? 'TIMEPIECE' : 'RETAIL');
+  
   const count = payload.count ?? 10;
-  const icp = payload.icp ?? (segment === 'GOV'
-    ? 'government agency procurement and supply chain officer'
-    : 'retail cannabis dispensary owner or manager');
+  const icp = payload.icp ?? (
+    segment === 'GOV' ? 'government agency procurement and supply chain officer' :
+    segment === 'LUXURY' ? 'Head of Brand Protection at luxury fashion house' :
+    segment === 'PHARMA' ? 'Chief Compliance Officer at pharmaceutical manufacturer' :
+    segment === 'TIMEPIECE' ? 'CEO or Founder of independent luxury watch brand' :
+    'retail cannabis dispensary owner or manager'
+  );
 
   // ── Bayesian context ───────────────────────────────────────────────────────
   const adaptivePriors = await getAdaptivePriors();

@@ -55,6 +55,30 @@ export function createApp() {
     }
   });
 
+  // ─── Instantly.ai Webhook ────────────────────────────────────────────────
+  app.post("/api/webhooks/instantly", async (req, res) => {
+    try {
+      const { handleInstantlyWebhook } = await import("../webhooks/instantly.js");
+      const result = await handleInstantlyWebhook(req.body);
+      res.json(result);
+    } catch (err: any) {
+      console.error(`[Instantly Webhook] Error: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ─── DocuSign Webhook ────────────────────────────────────────────────────
+  app.post("/api/webhooks/docusign", async (req, res) => {
+    try {
+      const { handleDocuSignWebhook } = await import("../webhooks/docusign.js");
+      const result = await handleDocuSignWebhook(req.body);
+      res.json(result);
+    } catch (err: any) {
+      console.error(`[DocuSign Webhook] Error: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ─── Paddle config guard (startup warning, not a hard error) ────────────
   if (!process.env.PADDLE_WEBHOOK_SECRET) {
     console.warn(

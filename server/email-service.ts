@@ -1,4 +1,5 @@
 import { ENV } from "./_core/env";
+import nodemailer from "nodemailer";
 
 // ─── Gmail token cache (auto-refresh) ────────────────────────────────────────
 
@@ -93,12 +94,37 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   }
 
   const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
+  const appPassword = ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
+  const fromName = input.fromName || "AuthiChain";
+
+  // ─── Method 1: SMTP via App Password (Reliable Fallback) ───────────────────
+  if (fromEmail && appPassword) {
+    try {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: fromEmail, pass: appPassword },
+      });
+
+      const info = await transporter.sendMail({
+        from: `${fromName} <${fromEmail}>`,
+        to,
+        subject: input.subject,
+        text: input.body,
+      });
+
+      return {
+        status: "sent",
+        provider: "gmail-smtp",
+        providerMessageId: info.messageId,
+      };
+    } catch (smtpErr: any) {
+      console.warn("[email-service] SMTP failed, attempting OAuth2...", smtpErr.message);
+    }
+  }
+
+  // ─── Method 2: OAuth2 (Primary/Legacy) ─────────────────────────────────────
   if (!fromEmail) {
-    return {
-      status: "skipped",
-      reason: "gmail_not_configured",
-      provider: "gmail",
-    };
+    return { status: "skipped", reason: "gmail_not_configured", provider: "gmail" };
   }
 
   const gmailAccessToken = await getGmailAccessToken();
@@ -106,7 +132,6 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { status: "skipped", reason: "gmail_token_unavailable", provider: "gmail" };
   }
 
-  const fromName = input.fromName || "AuthiChain";
   const mime = [
     `From: ${fromName} <${fromEmail}>`,
     `To: ${to}`,
@@ -139,7 +164,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const data = await response.json().catch(() => ({} as any));
   return {
     status: "sent",
-    provider: "gmail",
+    provider: "gmail-oauth",
     providerMessageId: data?.id,
     threadId: data?.threadId,
   };

@@ -302,6 +302,7 @@ export async function runAdvancedGovernmentLeadGen() {
   let processed = 0;
   for (const lead of allLeads) {
     const consensus = await runFiveAgentConsensus(lead);
+    console.log(`[gov-engine] Found: ${lead.title} (${lead.agency})`);
     if (!consensus.approved) {
       console.log(`[gov-engine] ⏭  skipped ${lead.agency} (score ${consensus.score})`);
       continue;
@@ -351,6 +352,7 @@ export async function runAdvancedGovernmentLeadGen() {
 }
 
 export async function startGovernmentEngine() {
-  await runAdvancedGovernmentLeadGen();
+  const result = await runAdvancedGovernmentLeadGen();
   console.log(`🔄 GovChain engine run complete (DRY_RUN=${DRY_RUN})`);
+  return result;
 }

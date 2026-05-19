@@ -256,7 +256,21 @@ export const leads = mysqlTable("leads", {
   phone: varchar("phone", { length: 32 }),
   source: varchar("source", { length: 128 }),
   score: int("score").default(0),
-  status: mysqlEnum("status", ["new", "contacted", "qualified", "proposal", "won", "lost"]).default("new"),
+  leadScore: int("leadScore").default(0),
+  emailOpened: boolean("emailOpened").default(false),
+  emailClicked: boolean("emailClicked").default(false),
+  emailReplied: boolean("emailReplied").default(false),
+  roiCalculated: boolean("roiCalculated").default(false),
+  demoStarted: boolean("demoStarted").default(false),
+  interactionsCount: int("interactionsCount").default(0),
+  isVip: boolean("isVip").default(false),
+  contractSent: boolean("contractSent").default(false),
+  contractOpened: boolean("contractOpened").default(false),
+  contractSigned: boolean("contractSigned").default(false),
+  roiSavings: int("roiSavings"),
+  numProducts: int("numProducts"),
+  dealStage: varchar("dealStage", { length: 64 }),
+  status: mysqlEnum("status", ["new", "contacted", "qualified", "proposal", "won", "lost", "HOT", "WARM", "COLD"]).default("new"),
   industry: varchar("industry", { length: 128 }),
   notes: text("notes"),
   lastContactedAt: timestamp("lastContactedAt"),
@@ -450,6 +464,15 @@ export const whiteLabelClients = mysqlTable("white_label_clients", {
 
 export type WhiteLabelClient = typeof whiteLabelClients.$inferSelect;
 
+// ─── API Usage (Daily) ───────────────────────────────────────────────────────
+export const apiUsageDaily = mysqlTable("api_usage_daily", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(),
+  date: timestamp("date").notNull(),
+  calls: int("calls").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 // ─── Activity Log ────────────────────────────────────────────────────────────
 export const activityLog = mysqlTable("activity_log", {
   id: int("id").autoincrement().primaryKey(),
@@ -591,3 +614,269 @@ export const modelReviews = mysqlTable("model_reviews", {
   review: text("review"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+// ─── Prompt Cache ────────────────────────────────────────────────────────────
+export const promptCache = mysqlTable("prompt_cache", {
+  id: int("id").autoincrement().primaryKey(),
+  promptHash: varchar("promptHash", { length: 128 }).notNull().unique(),
+  response: text("response").notNull(),
+  provider: varchar("provider", { length: 64 }),
+  model: varchar("model", { length: 64 }),
+  usage: json("usage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Scheduled Job Runs ──────────────────────────────────────────────────────
+export const scheduledJobRuns = mysqlTable("scheduled_job_runs", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  jobName: varchar("jobName", { length: 128 }).notNull(),
+  status: mysqlEnum("status", ["running", "completed", "failed"]).notNull(),
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  duration: int("duration"),
+  itemsProcessed: int("itemsProcessed").default(0),
+  result: json("result"),
+  error: text("error"),
+});
+
+// ─── Budget Config ───────────────────────────────────────────────────────────
+export const budgetConfig = mysqlTable("budget_config", {
+  id: int("id").autoincrement().primaryKey(),
+  monthlyLimit: decimal("monthlyLimit", { precision: 18, scale: 2 }).notNull(),
+  spent: decimal("spent", { precision: 18, scale: 2 }).default("0.00"),
+  currency: varchar("currency", { length: 16 }).default("USD"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Service Orders ──────────────────────────────────────────────────────────
+export const serviceOrders = mysqlTable("service_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  serviceType: varchar("serviceType", { length: 64 }).notNull(),
+  status: mysqlEnum("status", ["pending", "in_progress", "completed", "cancelled"]).default("pending").notNull(),
+  priority: int("priority").default(0),
+  details: json("details"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Character Generations ───────────────────────────────────────────────────
+export const characterGenerations = mysqlTable("character_generations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  archetype: varchar("archetype", { length: 32 }).notNull(),
+  style: varchar("style", { length: 128 }),
+  colorway: varchar("colorway", { length: 64 }),
+  mood: varchar("mood", { length: 64 }),
+  prompt: text("prompt").notNull(),
+  negativePrompt: text("negativePrompt"),
+  provider: varchar("provider", { length: 64 }),
+  providerModel: varchar("providerModel", { length: 64 }),
+  variantCount: int("variantCount").default(1),
+  status: mysqlEnum("status", ["pending", "generating", "completed", "failed", "selected", "mint_ready"]).default("pending"),
+  context: text("context"),
+  bestAssetId: int("bestAssetId"),
+  selectedAssetId: int("selectedAssetId"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Character Assets ────────────────────────────────────────────────────────
+export const characterAssets = mysqlTable("character_assets", {
+  id: int("id").autoincrement().primaryKey(),
+  generationId: int("generationId").notNull(),
+  userId: int("userId").notNull(),
+  imageUrl: text("imageUrl").notNull(),
+  prompt: text("prompt"),
+  isRecommended: int("isRecommended").default(0),
+  isSelected: int("isSelected").default(0),
+  mintStatus: mysqlEnum("mintStatus", ["not_minted", "preparing", "queued", "minting", "minted", "failed"]).default("not_minted"),
+  nftTokenId: varchar("nftTokenId", { length: 64 }),
+  metadataUri: text("metadataUri"),
+  metadataHash: varchar("metadataHash", { length: 128 }),
+  imageHash: varchar("imageHash", { length: 128 }),
+  protocolFitScore: varchar("protocolFitScore", { length: 8 }),
+  thumbnailClarityScore: varchar("thumbnailClarityScore", { length: 8 }),
+  premiumFeelScore: varchar("premiumFeelScore", { length: 8 }),
+  silhouetteScore: varchar("silhouetteScore", { length: 8 }),
+  trustSymbolismScore: varchar("trustSymbolismScore", { length: 8 }),
+  mintReadinessScore: varchar("mintReadinessScore", { length: 8 }),
+  uiCompatibilityScore: varchar("uiCompatibilityScore", { length: 8 }),
+  totalScore: varchar("totalScore", { length: 8 }),
+  scoreIconity: int("scoreIconity"),
+  scoreTrustClarity: int("scoreTrustClarity"),
+  scorePremiumFeel: int("scorePremiumFeel"),
+  scoreSilhouette: int("scoreSilhouette"),
+  scoreUiCompat: int("scoreUiCompat"),
+  scoreMintReady: int("scoreMintReady"),
+  scoreProtocolAlign: int("scoreProtocolAlign"),
+  selectedAt: timestamp("selectedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Protocol Agents ─────────────────────────────────────────────────────────
+export const protocolAgents = mysqlTable("protocol_agents", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  characterAssetId: int("characterAssetId").notNull(),
+  name: varchar("name", { length: 64 }).notNull(),
+  agentType: varchar("agentType", { length: 32 }).notNull(),
+  status: mysqlEnum("status", ["active", "inactive", "retired"]).default("active"),
+  level: int("level").default(1),
+  xp: int("xp").default(0),
+  reputationScore: int("reputationScore").default(0),
+  qronPending: decimal("qronPending", { precision: 20, scale: 9 }).default("0.000000000"),
+  totalVerifications: int("totalVerifications").default(0),
+  successfulVerifications: int("successfulVerifications").default(0),
+  totalClaims: int("totalClaims").default(0),
+  featureScopes: json("featureScopes"),
+  policyConfig: json("policyConfig"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Verification Claims ─────────────────────────────────────────────────────
+export const verificationClaims = mysqlTable("verification_claims", {
+  id: int("id").autoincrement().primaryKey(),
+  agentId: int("agentId").notNull(),
+  productId: int("productId").notNull(),
+  authenticationId: int("authenticationId"),
+  claimType: mysqlEnum("claimType", ["authentic", "counterfeit", "inconclusive", "needs_review"]).notNull(),
+  confidence: int("confidence").notNull(),
+  evidence: text("evidence"),
+  reasoning: text("reasoning"),
+  weight: varchar("weight", { length: 16 }),
+  status: mysqlEnum("status", ["pending", "verified", "rejected"]).default("pending"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Consensus Results ───────────────────────────────────────────────────────
+export const consensusResults = mysqlTable("consensus_results", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("productId").notNull(),
+  authenticationId: int("authenticationId").notNull(),
+  verdict: mysqlEnum("verdict", ["authentic", "counterfeit", "uncertain"]).notNull(),
+  confidence: int("confidence").notNull(),
+  participantCount: int("participantCount").default(0),
+  finalizedAt: timestamp("finalizedAt").defaultNow().notNull(),
+});
+
+// ─── QRON Reward Ledger ──────────────────────────────────────────────────────
+export const qronRewardLedger = mysqlTable("qron_reward_ledger", {
+  id: int("id").autoincrement().primaryKey(),
+  agentId: int("agentId").notNull(),
+  userId: int("userId").notNull(),
+  amount: decimal("amount", { precision: 20, scale: 9 }).notNull(),
+  reason: varchar("reason", { length: 64 }).notNull(),
+  referenceType: varchar("referenceType", { length: 32 }),
+  referenceId: int("referenceId"),
+  status: mysqlEnum("status", ["pending", "claimed", "void"]).default("pending"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Staking Positions ───────────────────────────────────────────────────────
+export const stakingPositions = mysqlTable("staking_positions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  agentId: int("agentId"),
+  amount: decimal("amount", { precision: 20, scale: 9 }).notNull(),
+  status: mysqlEnum("status", ["active", "unstaking", "released"]).default("active"),
+  multiplier: decimal("multiplier", { precision: 5, scale: 2 }).default("1.00"),
+  apy: decimal("apy", { precision: 5, scale: 2 }).default("5.00"),
+  stakedAt: timestamp("stakedAt").defaultNow().notNull(),
+  releaseAt: timestamp("releaseAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Checkpoint Batches ──────────────────────────────────────────────────────
+export const checkpointBatches = mysqlTable("checkpoint_batches", {
+  id: int("id").autoincrement().primaryKey(),
+  batchHash: varchar("batchHash", { length: 128 }).notNull(),
+  blockchainTxHash: varchar("blockchainTxHash", { length: 128 }),
+  claimCount: int("claimCount").default(0),
+  status: mysqlEnum("status", ["pending", "anchoring", "anchored", "failed"]).default("pending"),
+  finalizedAt: timestamp("finalizedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Missions ────────────────────────────────────────────────────────────────
+export const missions = mysqlTable("missions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  type: varchar("type", { length: 64 }).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  status: mysqlEnum("status", ["pending", "active", "completed", "failed", "cancelled"]).default("pending").notNull(),
+  priority: int("priority").default(0).notNull(),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Mission Tasks ───────────────────────────────────────────────────────────
+export const missionTasks = mysqlTable("mission_tasks", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  missionId: varchar("missionId", { length: 64 }).notNull(),
+  kind: varchar("kind", { length: 128 }).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  status: mysqlEnum("status", ["pending", "in_progress", "completed", "failed", "waiting_human"]).default("pending").notNull(),
+  priority: int("priority").default(0).notNull(),
+  order: int("order").default(0).notNull(),
+  payload: json("payload"),
+  result: json("result"),
+  error: text("error"),
+  scheduledAt: timestamp("scheduledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Platform Fees ───────────────────────────────────────────────────────────
+export const platformFees = mysqlTable("platform_fees", {
+  id: int("id").autoincrement().primaryKey(),
+  type: varchar("type", { length: 64 }).notNull(),
+  amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 16 }).default("USD"),
+  status: mysqlEnum("status", ["pending", "collected", "distributed"]).default("pending"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Transactions ────────────────────────────────────────────────────────────
+export const transactions = mysqlTable("transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: varchar("type", { length: 64 }).notNull(),
+  amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 16 }).default("USD"),
+  status: mysqlEnum("status", ["pending", "completed", "failed"]).default("pending"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Bayesian Priors ─────────────────────────────────────────────────────────
+export const bayesianPriors = mysqlTable("bayesian_priors", {
+  id: int("id").autoincrement().primaryKey(),
+  segment: varchar("segment", { length: 64 }).notNull().unique(),
+  priorAlpha: decimal("priorAlpha", { precision: 10, scale: 4 }).default("2.0000"), // Successes
+  priorBeta: decimal("priorBeta", { precision: 10, scale: 4 }).default("18.0000"), // Failures (Base 10% rate)
+  currentMean: decimal("currentMean", { precision: 5, scale: 4 }).default("0.1000"),
+  observationsCount: int("observationsCount").default(0),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BayesianPrior = typeof bayesianPriors.$inferSelect;
+export type InsertBayesianPrior = typeof bayesianPriors.$inferInsert;
+
+export type Mission = typeof missions.$inferSelect;
+export type MissionTask = typeof missionTasks.$inferSelect;
+export type CharacterGeneration = typeof characterGenerations.$inferSelect;
+export type InsertCharacterGeneration = typeof characterGenerations.$inferInsert;
+export type CharacterAsset = typeof characterAssets.$inferSelect;
+export type InsertCharacterAsset = typeof characterAssets.$inferInsert;
+export type ProtocolAgent = typeof protocolAgents.$inferSelect;
+export type InsertProtocolAgent = typeof protocolAgents.$inferInsert;
+export type StakingPosition = typeof stakingPositions.$inferSelect;
+export type InsertStakingPosition = typeof stakingPositions.$inferInsert;
+export type PlatformFee = typeof platformFees.$inferSelect;
+export type InsertPlatformFee = typeof platformFees.$inferInsert;
+export type Transaction = typeof transactions.$inferSelect;
+export type InsertTransaction = typeof transactions.$inferInsert;

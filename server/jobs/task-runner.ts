@@ -21,6 +21,8 @@ import {
   runAutoReply,
 } from '../agents/closer.js';
 import { runGenerateOutreachVideo } from '../agents/heygen-video.js';
+import { runSecurityAudit } from '../agents/security.js';
+import { runNewsjackingMonitor } from '../agents/news-pr.js';
 import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
 import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
 import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
@@ -32,6 +34,9 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
     switch (task.kind) {
       case 'FIND_GOV_LEADS':
       case 'FIND_RETAIL_LEADS':
+      case 'FIND_LUXURY_LEADS':
+      case 'FIND_PHARMA_LEADS':
+      case 'FIND_TIMEPIECE_LEADS':
         await runLeadFinder(task);
         break;
 
@@ -113,6 +118,14 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'GENERATE_OUTREACH_VIDEO':
         await runGenerateOutreachVideo(task);
+        break;
+
+      case 'SECURITY_AUDIT':
+        await runSecurityAudit(task);
+        break;
+
+      case 'MONITOR_NEWS_FOR_PR':
+        await runNewsjackingMonitor(task);
         break;
 
       // ── Dev Team ────────────────────────────────────────────────────────
