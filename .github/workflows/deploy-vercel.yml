@@ -66,6 +66,9 @@ jobs:
             echo "type=vercel" >> $GITHUB_OUTPUT
           fi
 
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
       - name: Deploy Cloudflare Worker
         if: steps.detect.outputs.type == 'worker'
         run: pnpm exec wrangler deploy --minify
