@@ -4,12 +4,30 @@ import { eq, desc, and, gte, lte, like, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   users,
-  sessions,
-  authenticatorDevices,
-  verificationTokens,
-  organizations,
-  memberships,
-  invitations,
+  products,
+  authentications,
+  certificates,
+  qrCodes,
+  nftCollections,
+  nfts,
+  auctions,
+  auctionBids,
+  subscriptions,
+  usageRecords,
+  invoices,
+  payments,
+  leads,
+  emailCampaigns,
+  emailDrafts,
+  supplyChainEvents,
+  referrals,
+  affiliates,
+  affiliateCommissions,
+  autopilotConfig,
+  autopilotDecisions,
+  abTests,
+  whiteLabelClients,
+  activityLog,
   fraudAlerts,
   customerHealthScores,
   revenueRecords,
@@ -22,12 +40,14 @@ import {
   serviceOrders,
   missions,
   missionTasks,
+  stakingPositions,
+  budgetConfig,
   type Product,
   type InsertProduct,
   type InsertNotification,
   type InsertUser,
 } from "../drizzle/schema";
-import { ENV } from './core/env';
+import { ENV } from './_core/env';
 
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;

@@ -37,7 +37,6 @@ import { supplyChainRouter } from '../supply-chain/router';
 import { certificatesRouter } from '../certificates/router';
 import { govchainRouter } from '../govchain/router';
 import { salesRouter } from '../sales/router';
-import { stakingRouter } from '../staking/router';
 
 /**
  * Root tRPC router — merges all 39 sub-routers.
