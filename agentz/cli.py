@@ -10,6 +10,7 @@ Usage:
     python -m agentz.cli run --all [--mode dry-run|auto]
     python -m agentz.cli setup {federal-pipeline}
     python -m agentz.cli health
+    python -m agentz.cli list-agents
 """
 
 from __future__ import annotations
@@ -162,6 +163,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 def cmd_health(args: argparse.Namespace) -> int:
     from .lm_studio import LMStudioClient
+
     client = LMStudioClient(base_url=args.lm_url)
     alive = client.health_check()
     if alive:
@@ -169,12 +171,14 @@ def cmd_health(args: argparse.Namespace) -> int:
         print(f"LM Studio is UP at {args.lm_url}")
         print(f"Loaded models: {', '.join(models) if models else 'none'}")
         return 0
-    print(f"LM Studio is NOT reachable at {args.lm_url}", file=sys.stderr)
-    return 1
+    else:
+        print(f"LM Studio is NOT reachable at {args.lm_url}", file=sys.stderr)
+        return 1
 
 
 def cmd_list_agents(_args: argparse.Namespace) -> int:
     from .agents.pipeline import ALL_AGENTS
+
     print(f"Registered agents ({len(ALL_AGENTS)}):")
     for cls in ALL_AGENTS:
         print(f"  • {cls.name:40s}  {cls.system_prompt[:60]}")
@@ -184,9 +188,14 @@ def cmd_list_agents(_args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="agentz",
-        description="AuthiChain AgentZ - autonomous agent orchestrator",
+        description="AuthiChain AgentZ — autonomous agent orchestrator",
     )
-    root.add_argument("--lm-url", default="http://localhost:1234/v1", metavar="URL")
+    root.add_argument(
+        "--lm-url",
+        default="http://localhost:1234/v1",
+        metavar="URL",
+        help="LM Studio OpenAI-compatible base URL",
+    )
 
     sub = root.add_subparsers(dest="command", required=True)
 
@@ -219,6 +228,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    # Propagate --lm-url to sub-commands that need it
     if not hasattr(args, "lm_url"):
         args.lm_url = "http://localhost:1234/v1"
 
@@ -235,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     fn = dispatch.get(args.command)
     if fn:
         return fn(args)
+
     parser.print_help()
     return 1
 
