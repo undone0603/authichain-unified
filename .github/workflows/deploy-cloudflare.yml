@@ -38,11 +38,13 @@ jobs:
 
       - name: Build frontend (+ dist/public for Wrangler [assets])
         run: pnpm run build
+        working-directory: workers/authichain-dashboard
         env:
           VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
 
       - name: Publish Worker + Assets
-        run: npx wrangler deploy --config wrangler.toml
+        run: pnpm exec wrangler deploy --config wrangler.toml
+        working-directory: workers/authichain-dashboard
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
