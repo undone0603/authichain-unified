@@ -116,7 +116,7 @@ function AppRouter() {
       <WRoute path="/certificate/:token">
         {({ token }: { token?: string }) => (
           <Suspense fallback={<PageLoader />}>
-            <CertificatePublic token={token} />
+            <CertificatePublic token={token ?? ""} />
           </Suspense>
         )}
       </WRoute>

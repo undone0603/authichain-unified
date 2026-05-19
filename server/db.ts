@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, desc, and, gte, lte, like, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, like, sql, SQL } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   users,
@@ -116,7 +116,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
     if (!values.lastSignedIn) values.lastSignedIn = new Date();
     if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
-    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+    await db.insert(users).values(values).onConflictDoUpdate({ target: users.openId, set: updateSet });
   } catch (error) { console.error("[Database] Failed to upsert user:", error); throw error; }
 }
 
@@ -860,8 +860,8 @@ export async function getAutopilotConfig() {
 export async function upsertAutopilotConfig(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(autopilotConfig).values(data).onDuplicateKeyUpdate({ set: data });
-  return result[0].insertId;
+  const [result] = await db.insert(autopilotConfig).values(data).onConflictDoUpdate({ target: autopilotConfig.tenantId, set: data }).returning();
+  return result?.id;
 }
 
 export async function createAutopilotDecision(data: any) {
@@ -932,7 +932,7 @@ export async function upsertHealthScore(userId: number, score: number, factors: 
   if (!db) return;
   await db.insert(customerHealthScores)
     .values({ userId, score, factors, trend: trend as any })
-    .onDuplicateKeyUpdate({ set: { score, factors, trend: trend as any, lastCalculatedAt: new Date() } });
+    .onConflictDoUpdate({ target: customerHealthScores.userId, set: { score, factors, trend: trend as any, lastCalculatedAt: new Date() } });
 }
 
 export async function getAllHealthScores() {

@@ -145,7 +145,7 @@ export default function NotificationBell() {
               </div>
             ) : (
               <div>
-                {notifications.map((notification, index) => (
+                {notifications.map((notification: any, index) => (
                   <div key={notification.id}>
                     <div
                       className={`flex gap-3 px-4 py-3 hover:bg-accent/50 transition-colors cursor-pointer ${

@@ -71,9 +71,9 @@ const ecosystem = [
 ];
 
 const pricing = [
-  { name: "Starter", price: "$49", period: "/mo", features: ["100 authentications/month", "Basic AI analysis", "QR code generation", "Certificate issuance", "Email support"] },
-  { name: "Professional", price: "$149", period: "/mo", features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email automation"] },
-  { name: "Enterprise", price: "$499", period: "/mo", features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA & support"] },
+  { name: "Starter", price: "$49", period: "/mo", highlighted: false, features: ["100 authentications/month", "Basic AI analysis", "QR code generation", "Certificate issuance", "Email support"] },
+  { name: "Professional", price: "$149", period: "/mo", highlighted: true, features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email automation"] },
+  { name: "Enterprise", price: "$499", period: "/mo", highlighted: false, features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA & support"] },
 ];
 
 /* ─── Stat Item (with optional counter) ─── */
