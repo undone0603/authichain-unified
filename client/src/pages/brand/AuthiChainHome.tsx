@@ -3,11 +3,9 @@ import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
 import { EcosystemNav } from "@/components/EcosystemNav";
 import { Reveal, GlowCard, ANIMATION_STYLES } from "@/lib/animations";
-import {
-  Shield, ArrowRight, CheckCircle2, Zap, Globe, Lock,
+import { Shield, ArrowRight, CheckCircle2, Zap, Globe, Lock,
   BarChart3, Bot, Gem, QrCode, Truck, Mail,
-  Cpu, Scan, Fingerprint, Layers, Eye, ChevronDown,
-} from "lucide-react";
+  Cpu, Scan, Fingerprint, Layers, Eye, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useEffect, useRef, useState, useCallback } from "react";
 
