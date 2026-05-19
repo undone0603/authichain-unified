@@ -51,6 +51,9 @@ jspm_packages/
 # TypeScript cache
 *.tsbuildinfo
 
+# npm lockfile — this project uses pnpm exclusively
+package-lock.json
+
 # Optional npm cache directory
 .npm
 
