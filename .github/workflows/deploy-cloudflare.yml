@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v5
@@ -28,7 +28,7 @@ jobs:
           run_install: false
 
       - name: Setup Node 22 (required for Wrangler + Miniflare)
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'pnpm'
