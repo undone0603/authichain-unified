@@ -7,7 +7,11 @@ name = "agentz"
 version = "0.1.0"
 description = "AuthiChain autonomous agent orchestrator backed by LM Studio"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "browser-use==0.12.7",
+  "pydantic>=2.0,<3.0",
+  "pytest>=7.0",
+]
 
 [project.scripts]
 agentz = "agentz.cli:main"
