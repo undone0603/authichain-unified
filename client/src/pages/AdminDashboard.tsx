@@ -34,6 +34,8 @@ export default function AdminDashboard() {
   const { data: activity } = trpc.admin.activity.useQuery({ limit: 30 });
   const { data: subscriptions } = trpc.admin.subscriptions.useQuery();
   const { data: stakingStats } = trpc.admin.platformStaking.useQuery();
+  const serviceOrders: any[] = [];
+  const updateOrderStatus = { mutate: (_: any) => {}, isPending: false };
 
   if (isLoading) return (
     <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>

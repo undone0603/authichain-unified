@@ -47,6 +47,7 @@ export async function createMission(type: MissionType) {
   const id = randomUUID();
   await d.insert(missions).values({
     id,
+    type,
     title: template.title,
     description: `Mission: ${template.title}`,
     status: "pending",
@@ -58,6 +59,7 @@ export async function createMission(type: MissionType) {
     const taskRows = templateTasks.map((t, index) => ({
       id: randomUUID(),
       missionId: id,
+      kind: t.kind,
       title: t.kind,
       description: JSON.stringify(t.payload),
       status: "pending" as const,
