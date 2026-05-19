@@ -1,10 +1,17 @@
-import { eq, desc, and, sql, gte, lte, inArray, like } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import { eq, desc, and, sql, gte, lte, inArray, like, type SQL } from "drizzle-orm";
 import type { OrderStatus } from "../shared/const";
+import { randomUUID } from "crypto";
 
 import {
-  InsertUser,
   users,
+  sessions,
+  authenticatorDevices,
+  verificationTokens,
+  organizations,
+  memberships,
+  invitations,
   products,
   authentications,
   certificates,
@@ -44,6 +51,7 @@ import {
   type Product,
   type InsertProduct,
   type InsertNotification,
+  type InsertUser,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -51,15 +59,22 @@ type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+  if (_db) return _db;
+
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL environment variable is not set");
   }
-  return _db;
+
+  try {
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
+    _db = drizzle(pool);
+    return _db;
+  } catch (error) {
+    console.error("[Database] Failed to connect:", error);
+    throw error;
+  }
 }
 
 // Synchronous proxy for feature modules — throws if DB not initialised
@@ -71,6 +86,7 @@ export const db: DrizzleInstance = new Proxy({} as DrizzleInstance, {
 });
 
 // ─── User Helpers ────────────────────────────────────────────────────────────
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
@@ -84,31 +100,49 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       const value = user[field];
       if (value === undefined) return;
       const normalized = value ?? null;
-      values[field] = normalized;
+      values[field] = normalized as any;
       updateSet[field] = normalized;
     };
     textFields.forEach(assignNullable);
-    if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; updateSet.lastSignedIn = user.lastSignedIn; }
-    if (user.role !== undefined) { values.role = user.role; updateSet.role = user.role; }
-    else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; updateSet.role = 'admin'; }
+
+    if (user.role) {
+      values.role = user.role;
+      updateSet.role = user.role;
+    }
+
+    if (user.points !== undefined) {
+      values.points = user.points;
+      updateSet.points = user.points;
+    }
+
+    if (user.lastSignedIn) {
+      values.lastSignedIn = user.lastSignedIn;
+      updateSet.lastSignedIn = user.lastSignedIn;
+    } else if (user.openId === ENV.ownerOpenId) values.role = 'admin';
+
     if (!values.lastSignedIn) values.lastSignedIn = new Date();
     if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
-    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+    
+    // Postgres specific upsert syntax via Drizzle
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
+      set: updateSet
+    });
   } catch (error) { console.error("[Database] Failed to upsert user:", error); throw error; }
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) return null;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  return result.length > 0 ? result[0] : null;
 }
 
 export async function getUserById(id: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) return null;
   const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-  return result[0];
+  return result[0] ?? null;
 }
 
 export async function getAllUsers() {
@@ -121,8 +155,8 @@ export async function getAllUsers() {
 export async function createProduct(data: Omit<InsertProduct, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(products).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(products).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getRecentActivity(limit = 20) {
@@ -194,8 +228,6 @@ export async function markTaskDone(id: string) {
   await d.update(missionTasks).set({ status: "completed" }).where(eq(missionTasks.id, id));
 }
 
-// markTaskFailed is defined below with error parameter support
-
 export async function markTaskWaitingHuman(id: string) {
   const d = await getDb();
   await d.update(missionTasks).set({ status: "pending" }).where(eq(missionTasks.id, id));
@@ -220,8 +252,7 @@ export async function getAdaptivePriors() {
 export async function createServiceOrder(data: any) {
   const d = await getDb();
   const [row] = await d.insert(serviceOrders).values(data).returning();
-  const id = row.id;
-  return { id, ...data };
+  return { id: row.id, ...data };
 }
 
 export async function getAllServiceOrders() {
@@ -252,6 +283,7 @@ export async function updateServiceOrderStatus(id: number, status: OrderStatus, 
 
 export async function createProposal(data: any) {
   const d = await getDb();
+  // Simplified for node-postgres/drizzle
   await d.execute(sql`INSERT INTO proposals (data) VALUES (${JSON.stringify(data)})`);
 }
 
@@ -397,18 +429,6 @@ export async function retryTask(id: string) {
   await d.update(missionTasks).set({ status: "pending" }).where(eq(missionTasks.id, id));
 }
 
-// ─────────────────────────────────────────────────────────────
-// USER LOOKUPS
-// ─────────────────────────────────────────────────────────────
-
-export async function getUserByOpenId(openId: string) {
-  const d = await getDb();
-  const rows = await d.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return rows[0] ?? null;
-}
-
-// Duplicate function implementation.
-
 export async function getAllAdminIds(): Promise<number[]> {
   const d = await getDb();
   const rows = await d.select({ id: users.id }).from(users).where(eq(users.role, "admin"));
@@ -436,8 +456,8 @@ export async function getProductById(id: number) {
 export async function createAuthentication(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(authentications).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(authentications).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getUserAuthentications(userId: number) {
@@ -469,8 +489,8 @@ export async function incrementShareCount(id: number) {
 export async function createCertificate(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(certificates).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(certificates).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getCertificateByNumber(certNumber: string) {
@@ -490,8 +510,8 @@ export async function getUserCertificates(userId: number) {
 export async function createQrCode(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(qrCodes).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(qrCodes).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getProductQrCodes(productId: number) {
@@ -513,7 +533,7 @@ export async function listNfts(filters?: { collectionId?: number; status?: strin
   let query = db.select().from(nfts);
   const conditions: SQL[] = [];
   if (filters?.collectionId) conditions.push(eq(nfts.collectionId, filters.collectionId));
-  if (filters?.status) conditions.push(eq(nfts.status, filters.status as typeof nfts.status._.data));
+  if (filters?.status) conditions.push(eq(nfts.status, filters.status as any));
   if (conditions.length) query = query.where(and(...conditions)) as typeof query;
   return await query.orderBy(desc(nfts.createdAt)).limit(filters?.limit || 50);
 }
@@ -528,8 +548,8 @@ export async function getNftById(id: number) {
 export async function createNft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(nfts).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(nfts).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function listCollections() {
@@ -548,16 +568,16 @@ export async function getCollectionBySlug(slug: string) {
 export async function createCollection(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(nftCollections).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(nftCollections).values(data).returning();
+  return { id: result[0].id };
 }
 
 // ─── Auction Helpers ─────────────────────────────────────────────────────────
 export async function createAuction(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(auctions).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(auctions).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getActiveAuctions() {
@@ -601,8 +621,8 @@ export async function getUserSubscription(userId: number) {
 export async function createSubscription(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(subscriptions).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(subscriptions).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function updateSubscriptionUsage(userId: number, usedQuota: number) {
@@ -621,8 +641,8 @@ export async function recordUsage(data: any) {
 export async function createInvoice(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(invoices).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(invoices).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getUserInvoices(userId: number) {
@@ -635,8 +655,8 @@ export async function getUserInvoices(userId: number) {
 export async function createPayment(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(payments).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(payments).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getUserPayments(userId: number) {
@@ -655,8 +675,8 @@ export async function updatePaymentStatus(id: number, status: string) {
 export async function createLead(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(leads).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(leads).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getAllLeads() {
@@ -681,8 +701,8 @@ export async function updateLeadStatus(id: number, status: string) {
 export async function createEmailCampaign(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(emailCampaigns).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(emailCampaigns).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getUserEmailCampaigns(userId: number) {
@@ -695,8 +715,8 @@ export async function getUserEmailCampaigns(userId: number) {
 export async function createEmailDraft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(emailDrafts).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(emailDrafts).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getPendingDrafts() {
@@ -718,8 +738,8 @@ export async function updateDraftStatus(id: number, status: string, approvedBy?:
 export async function createSupplyChainEvent(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(supplyChainEvents).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(supplyChainEvents).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getProductSupplyChain(productId: number) {
@@ -732,8 +752,8 @@ export async function getProductSupplyChain(productId: number) {
 export async function createReferral(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(referrals).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(referrals).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getReferralByCode(code: string) {
@@ -760,8 +780,8 @@ export async function getAffiliateByUserId(userId: number) {
 export async function createAffiliate(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(affiliates).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(affiliates).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getAffiliateCommissions(affiliateId: number) {
@@ -781,15 +801,18 @@ export async function getAutopilotConfig() {
 export async function upsertAutopilotConfig(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(autopilotConfig).values(data).onDuplicateKeyUpdate({ set: data });
-  return result[0].insertId;
+  const result = await db.insert(autopilotConfig).values(data).onConflictDoUpdate({
+    target: autopilotConfig.id,
+    set: data
+  }).returning();
+  return result[0].id;
 }
 
 export async function createAutopilotDecision(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(autopilotDecisions).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(autopilotDecisions).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getRecentDecisions(limit: number = 20) {
@@ -802,8 +825,8 @@ export async function getRecentDecisions(limit: number = 20) {
 export async function createAbTest(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(abTests).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(abTests).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getActiveAbTests() {
@@ -822,8 +845,8 @@ export async function getAllAbTests() {
 export async function createWhiteLabelClient(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(whiteLabelClients).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(whiteLabelClients).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getWhiteLabelClients() {
@@ -856,8 +879,8 @@ export async function getRecentActivity(limit: number = 50) {
 export async function createFraudAlert(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(fraudAlerts).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(fraudAlerts).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getOpenFraudAlerts() {
@@ -872,7 +895,10 @@ export async function upsertHealthScore(userId: number, score: number, factors: 
   if (!db) return;
   await db.insert(customerHealthScores)
     .values({ userId, score, factors, trend: trend as any })
-    .onDuplicateKeyUpdate({ set: { score, factors, trend: trend as any, lastCalculatedAt: new Date() } });
+    .onConflictDoUpdate({
+      target: customerHealthScores.userId,
+      set: { score, factors, trend: trend as any, lastCalculatedAt: new Date() }
+    });
 }
 
 export async function getAllHealthScores() {
@@ -947,8 +973,8 @@ export async function getSubscriptionAnalytics() {
 export async function createNotification(data: Omit<InsertNotification, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(notifications).values(data);
-  return { id: result[0].insertId };
+  const result = await db.insert(notifications).values(data).returning();
+  return { id: result[0].id };
 }
 
 export async function getUserNotifications(userId: number, limit = 50) {
@@ -1040,8 +1066,8 @@ export async function upsertLeadByEmail(input: {
     source: input.source || "website_form",
     industry: input.industry,
     metadata: input.metadata,
-  });
-  return { id: result[0].insertId, created: true };
+  }).returning();
+  return { id: result[0].id, created: true };
 }
 
 export function computeLeadScore(signals: {
@@ -1136,10 +1162,11 @@ export async function getSubscriptionByStripeSubscriptionId(stripeSubscriptionId
 export async function hasWebhookEventProcessed(eventId: string): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
+  // Note: pg doesn't have JSON_EXTRACT, use -> or ->>
   const [row] = await db
     .select({ count: sql<number>`count(*)` })
     .from(activityLog)
-    .where(sql`JSON_EXTRACT(${activityLog.details}, '$.eventId') = ${eventId}`);
+    .where(sql`${activityLog.details}->>'eventId' = ${eventId}`);
   return (row?.count ?? 0) > 0;
 }
 

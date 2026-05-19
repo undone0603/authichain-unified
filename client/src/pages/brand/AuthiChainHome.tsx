@@ -3,11 +3,9 @@ import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
 import { EcosystemNav } from "@/components/EcosystemNav";
 import { Reveal, GlowCard, ANIMATION_STYLES } from "@/lib/animations";
-import {
-  Shield, ArrowRight, CheckCircle2, Zap, Globe, Lock,
+import { Shield, ArrowRight, CheckCircle2, Zap, Globe, Lock,
   BarChart3, Bot, Gem, QrCode, Truck, Mail,
-  Cpu, Scan, Fingerprint, Layers, Eye, ChevronDown,
-} from "lucide-react";
+  Cpu, Scan, Fingerprint, Layers, Eye, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useEffect, useRef, useState, useCallback } from "react";
 
@@ -113,9 +111,9 @@ export default function AuthiChainHome() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
       <style>{ANIMATION_STYLES}{`
-        .orb-1{width:600px;height:600px;top:-200px;left:-100px;background:radial-gradient(circle,hsl(217 91% 50%/.35),transparent 70%);animation:orbDrift1 18s ease-in-out infinite,orbPulse 8s ease-in-out infinite}
-        .orb-2{width:500px;height:500px;bottom:-150px;right:-100px;background:radial-gradient(circle,hsl(40 60% 55%/.3),transparent 70%);animation:orbDrift2 22s ease-in-out infinite,orbPulse 10s ease-in-out infinite 2s}
-        .orb-3{width:350px;height:350px;top:40%;left:60%;background:radial-gradient(circle,hsl(271 81% 56%/.2),transparent 70%);animation:orbDrift3 25s ease-in-out infinite,orbPulse 12s ease-in-out infinite 4s}
+        .orb-1{width:600px;height:600px;top:-200px;left:-100px;background:radial-gradient(circle,hsl(217 91% 50%/.35),transparent 70%);animation:orbDrift1 18s ease-in-out infinite,orbPulse 8s ease-in-out infinite;}
+        .orb-2{width:500px;height:500px;bottom:-150px;right:-100px;background:radial-gradient(circle,hsl(40 60% 55%/.3),transparent 70%);animation:orbDrift2 22s ease-in-out infinite,orbPulse 10s ease-in-out infinite;}
+        .orb-3{width:350px;height:350px;top:40%;left:60%;background:radial-gradient(circle,hsl(271 81% 56%/.2),transparent 70%);animation:orbDrift3 25s ease-in-out infinite,orbPulse 12s ease-in-out infinite;}
       `}</style>
 
       <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" />
@@ -213,7 +211,7 @@ export default function AuthiChainHome() {
               <Reveal key={s.num} delay={i * 100}>
                 <GlowCard className="glass-card rounded-xl p-6 hover:border-primary/30 transition-all group h-full tilt-card border-glow-hover">
                   <div className="flex items-start gap-4">
-                    <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors animate-float" style={{ animationDelay: `${i * 0.5}s` }}>
+                    <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors animate-float">
                       <s.icon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
