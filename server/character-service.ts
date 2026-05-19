@@ -751,6 +751,8 @@ export async function submitVerificationClaim(
   return { claimId: result.id };
 }
 
+import { checkUserMilestones } from "./hubspot/automation";
+
 /**
  * Reward user's agent for completing a verification (called from authenticate.analyze)
  */
@@ -777,6 +779,10 @@ export async function rewardAgentForVerification(userId: number, wasSuccessful: 
 
   await awardQRON(agent.id, userId, qronReward, "verification_reward", "verification", 0);
   console.log(`[Agent XP] User ${userId} agent ${agent.id} earned ${xpReward} XP + ${qronReward} QRON`);
+
+  // Check for HubSpot automation milestones
+  await checkUserMilestones(userId);
 }
+
 
 export { ARCHETYPES };

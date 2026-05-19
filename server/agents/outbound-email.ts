@@ -26,8 +26,19 @@ interface OutboundEmailPayload {
 const segmentContext: Record<string, string> = {
   GOV:     'government agency procurement officer focused on supply chain integrity and anti-counterfeiting',
   RETAIL:  'retail business owner (dispensary or specialty retail) focused on product authenticity and brand trust',
+  LUXURY:  'Head of Brand Protection at a high-end luxury fashion house concerned with global counterfeiting and gray market diversion',
+  PHARMA:  'Compliance or Supply Chain Director at a pharmaceutical manufacturer preparing for FDA DSCSA 2027 mandates',
+  MEDTECH: 'Director of Quality or Regulatory Affairs at a medical device manufacturer focused on ISO 13485 compliance and preventing clinical trial fraud',
+  TIMEPIECE: 'CEO or Founder of an independent luxury watch brand concerned with gray-market diversion and secondary market trust',
   PRESS:   'technology journalist or crypto reporter interested in blockchain product authentication',
   PARTNER: 'technology partner or integration partner interested in embedded authentication APIs',
+};
+
+const segmentCTAs: Record<string, string> = {
+  LUXURY:  'Invite them to see a "Cinematic Storymode" demonstration for high-end product engagement.',
+  MEDTECH: 'Direct them to the AuthiChain ROI Calculator to quantify their Year 1 savings on compliance labor.',
+  PHARMA:  'Offer a 15-minute briefing on automated DSCSA 2027 technical readiness.',
+  DEFAULT: 'Schedule a 15-minute call or reply with interest.',
 };
 
 const toneGuidance: Record<EmailTone, string> = {
@@ -42,6 +53,7 @@ export async function runOutboundEmail(task: Task): Promise<void> {
   const segment = payload.segment ?? 'GOV';
   const sequence = payload.sequence ?? 1;
   const recipientContext = segmentContext[segment] ?? 'business professional';
+  const ctaDirective = segmentCTAs[segment] ?? segmentCTAs.DEFAULT;
 
   // ── Bayesian tone selection ────────────────────────────────────────────────
   const tone = selectTone(segment);
@@ -68,14 +80,16 @@ Recipient: ${payload.leadName ?? 'there'} at ${payload.leadOrg ?? 'your organiza
 Recipient profile: ${recipientContext}
 Sequence: Email ${sequence} of 3
 Tone directive: ${toneGuidance[tone]}
+CTA directive: ${ctaDirective}
 
 AuthiChain helps brands verify product authenticity via blockchain-backed QR codes and AI. Key value props:
 - Instant product authentication via QR scan
 - Tamper-evident certificate of authenticity
 - Counterfeit detection with AI confidence scoring
 - NFT-backed provenance trail
+- Compliance readiness for FDA DSCSA (Pharma) and ISO 13485 (MedTech)
 
-Write a ${sequence === 1 ? '3-4 sentence intro email' : '2-3 sentence follow-up'} that applies the tone directive above and ends with a clear CTA (schedule a 15-min call or reply with interest).
+Write a ${sequence === 1 ? '3-4 sentence intro email' : '2-3 sentence follow-up'} that applies the tone and CTA directives above. Ensure the email is concise, high-impact, and professional.
 
 Return JSON: { "subject": "...", "body": "..." }`;
 

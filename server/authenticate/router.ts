@@ -4,6 +4,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { invokeLLM } from "../_core/llm";
 import { nanoid } from "nanoid";
+import { triggerMacrohardEvent } from "../macrohard/service";
+import { rewardAgentForVerification } from "../character-service";
 
 export const authenticateRouter = router({
   analyze: protectedProcedure.input(z.object({
@@ -48,11 +50,32 @@ export const authenticateRouter = router({
       productId: input.productId, userId: ctx.user.id, aiAnalysis: aiResult,
       confidenceScore: aiResult.confidence, result: aiResult.result, imageUrl: input.imageUrl,
     });
+
+    // Reward protocol agent
+    await rewardAgentForVerification(ctx.user.id, aiResult.result === "authentic");
+
+    // Trigger MACROHARD Webhook: product_authenticated
+    await triggerMacrohardEvent("product_authenticated", {
+      authId: authResult.id,
+      productId: input.productId,
+      result: aiResult.result,
+      confidence: aiResult.confidence,
+      userId: ctx.user.id
+    });
+
     if (aiResult.result === "authentic" && aiResult.confidence >= 80) {
       const certNumber = `AC-${Date.now()}-${nanoid(8).toUpperCase()}`;
-      await db.createCertificate({
+      const cert = await db.createCertificate({
         productId: input.productId, authenticationId: authResult.id, userId: ctx.user.id,
         certificateNumber: certNumber, expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      });
+
+      // Trigger MACROHARD Webhook: certificate_issued
+      await triggerMacrohardEvent("certificate_issued", {
+        certificateId: cert.id,
+        certificateNumber: cert.certificateNumber,
+        productId: input.productId,
+        userId: ctx.user.id
       });
     }
     if (sub) await db.updateSubscriptionUsage(ctx.user.id, (sub.usedQuota || 0) + 1);
@@ -74,3 +97,4 @@ export const authenticateRouter = router({
     return await db.getUserAuthentications(ctx.user.id);
   }),
 });
+

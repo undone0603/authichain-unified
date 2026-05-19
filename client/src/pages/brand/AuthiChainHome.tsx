@@ -366,6 +366,14 @@ export default function AuthiChainHome() {
               The Truth Layer for the Global Economy. Authenticity infrastructure for the physical world.
             </p>
           </div>
+          <div className="flex justify-center gap-8 py-2">
+            <a href="/whitepapers" className="text-xs text-primary hover:underline transition-all uppercase tracking-[0.2em] font-bold">
+              Technical Resource Center &rarr;
+            </a>
+            <a href="/investor-portal" className="text-xs text-muted-foreground hover:text-foreground transition-all uppercase tracking-[0.2em]">
+              Investor Portal
+            </a>
+          </div>
           <div className="pt-4 border-t border-border/40"><EcosystemNav /></div>
           <p className="text-center text-xs text-muted-foreground/60">&copy; 2026 AuthiChain, Inc.</p>
         </div>

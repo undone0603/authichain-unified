@@ -2,6 +2,7 @@ import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { triggerMacrohardEvent } from "../macrohard/service";
 
 export const nftRouter = router({
   list: publicProcedure.input(z.object({
@@ -27,8 +28,18 @@ export const nftRouter = router({
   })).mutation(async ({ ctx, input }) => {
     const result = await db.createNft({ ...input, ownerId: ctx.user.id, creatorId: ctx.user.id, status: "listed" });
     await db.logActivity({ userId: ctx.user.id, action: "nft_created", entityType: "nft", entityId: result.id });
+
+    // Trigger MACROHARD Webhook: nft_minted
+    await triggerMacrohardEvent("nft_minted", {
+      nftId: result.id,
+      name: result.name,
+      productId: input.productId,
+      userId: ctx.user.id
+    });
+
     return result;
   }),
+
   collections: router({
     list: publicProcedure.query(async () => {
       return await db.listCollections();

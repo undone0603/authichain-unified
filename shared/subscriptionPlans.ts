@@ -64,6 +64,27 @@ export const SUBSCRIPTION_PLANS = {
     highlighted: false,
     badge: "Best Value",
   },
+  medtech: {
+    name: "MedTech Enterprise",
+    monthlyPrice: 12500, // $150K / 12
+    annualPrice: 150000,
+    monthlyQuota: 50000,
+    perAuthCost: "0.25",
+    features: [
+      "50,000 authentications/month",
+      "ISO 13485 Compliance Module",
+      "Clinical Trial Fraud Prevention AI",
+      "FIPS 140-2 HSM Crypto Module",
+      "W3C Verifiable Credentials",
+      "Blockchain-anchored Proof of Purity",
+      "Priority 24/7 Concierge Support",
+      "Dedicated Technical Account Lead",
+      "On-premise / Hybrid Cloud Deployment",
+      "Full API & Webhook Integration",
+    ],
+    highlighted: false,
+    badge: "High-Ticket",
+  },
 } as const;
 
 export const ADDON_PRICING = {
@@ -141,6 +162,12 @@ export const INDUSTRY_SOLUTIONS = {
     tagline: "Eliminate counterfeit components from your supply chain",
     startingPrice: 499,
     targetBuyers: ["Procurement Directors", "Quality Engineers", "Supply Chain VPs"],
+  },
+  medtech: {
+    name: "Medical Device (ISO)",
+    tagline: "High-stakes authentication for life-saving hardware",
+    startingPrice: 12500,
+    targetBuyers: ["Quality Directors", "Regulatory Affairs", "Chief Med Officers"],
   },
 } as const;
 

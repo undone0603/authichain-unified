@@ -5,6 +5,7 @@ import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
 import { ENV } from "./_core/env";
+import { runStrainChainSync } from "./jobs/strainchain-sync";
 
 // ─── Job Registry ───────────────────────────────────────────────────────────
 interface JobDefinition {
@@ -621,6 +622,67 @@ registerJob({
     await runVerticalCloning();
     return { itemsProcessed: 2, details: { status: "cloning_cycle_complete", verticals: ["EV_BATTERY", "ARTISAN_COFFEE"] } };
   }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 11: StrainChain METRC Sync (Runs every 1 hour)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "strainchain-metrc-sync",
+  description: "Sync METRC transfers and auto-anchor to the Truth Layer",
+  schedule: "0 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runStrainChainSync } = await import("./jobs/strainchain-sync");
+    return await runStrainChainSync();
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 12: Newsjacking Monitor (Runs every 30 minutes)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "newsjacking-monitor",
+  description: "Monitor global news for supply chain incidents and trigger PR missions",
+  schedule: "*/30 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runNewsjackingMonitor } = await import("./agents/news-pr");
+    // Simulate a task object for the agent
+    await runNewsjackingMonitor({ 
+      missionId: "SYSTEM_PR", 
+      payload: { topics: ['medical device recall', 'counterfeit pharma', 'luxury forgery'] } 
+    } as any);
+    return { itemsProcessed: 1, details: { status: "news_scan_complete" } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 13: Staking Rewards Distribution (Runs daily at 4 AM UTC)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "staking-rewards",
+  description: "Distribute validation rewards to active $QRON stakers",
+  schedule: "0 4 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
+    
+    // Simple logic: apply 12.5% APY / 365 to all active positions
+    const activePositions = await db.select().from((await import("../drizzle/schema")).stakingPositions).where(eq((await import("../drizzle/schema")).stakingPositions.status, "active"));
+    for (const pos of activePositions) {
+      const dailyReward = (Number(pos.amount) * 0.125) / 365;
+      await db.insert((await import("../drizzle/schema")).qronRewardLedger).values({
+        agentId: pos.agentId || 0,
+        userId: pos.userId,
+        amount: dailyReward.toFixed(9),
+        reason: "staking_reward",
+        status: "pending"
+      });
+    }
+    return { itemsProcessed: activePositions.length, details: { status: "rewards_distributed" } };
+  },
 });
 
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
