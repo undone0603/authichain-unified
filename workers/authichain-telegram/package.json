@@ -1,0 +1,17 @@
+{
+  "name": "authichain-telegram-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "setup-webhook": "wrangler dev & sleep 3 && curl -s -X POST http://localhost:8787/api/telegram/setup-webhook -H \"Authorization: Bearer $TELEGRAM_WEBHOOK_SECRET\"",
+    "migrate": "wrangler d1 migrations apply authichain-telegram-db",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.101.0"
+  }
+}

@@ -1,0 +1,7 @@
+name = "resend-relay"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# SECURITY: The RESEND_API_KEY must be set as a secret, NOT in this file.
+# Run: npx wrangler secret put RESEND_API_KEY
+# Then paste your Resend API key when prompted.

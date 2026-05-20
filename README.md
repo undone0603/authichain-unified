@@ -1,8 +1,21 @@
-# qron-platform
+# QRON Platform & AuthiChain Unified Core
+
+Welcome to the unified repository for the **QRON Platform** and the **AuthiChain Agentic Ecosystem**.
+
+## 🚀 Overview
+
+This repository is the central hub for the QRON ecosystem, integrating a high-performance frontend with a sophisticated autonomous agent orchestration layer.
+
+- **QRON Platform**: A Next.js 14 multi-domain architecture serving specialized brands (qron.space, authichain.com, govchain.us, strainchain.io) with Cloudflare Edge integration and Drizzle ORM.
+- **AuthiChain Unified Core (AgentZ)**: A Python-based workflow orchestrator that manages autonomous agents for infrastructure fixing, revenue operations, and high-entropy supply chain audits.
+
+---
+
+## 🌐 1. QRON Platform (Frontend & Edge)
 
 A Next.js application with a Cloudflare Edge Worker and Drizzle ORM.
 
-## Ecosystem & Multi-Domain Architecture
+### Ecosystem & Multi-Domain Architecture
 
 The QRON platform operates as a unified codebase serving four distinct branded experiences via Next.js Middleware.
 
@@ -14,55 +27,54 @@ The QRON platform operates as a unified codebase serving four distinct branded e
 ### Routing Logic
 Traffic is routed based on the `Host` header. Shared application routes (like `/dashboard`, `/login`, and `/api`) remain unified across all domains, while the root path (`/`) serves the brand-specific landing page.
 
-## Tech Stack
-
+### Tech Stack
 - **Framework**: [Next.js](https://nextjs.org) (App Router)
 - **Database**: [Drizzle ORM](https://orm.drizzle.team) with PostgreSQL
 - **Edge Runtime**: Cloudflare Workers
 - **Styling**: Tailwind CSS
 
-## Getting Started
+### Getting Started (Frontend)
+1. **Setup Environment**: `cp .env.example .env`
+2. **Install Dependencies**: `npm install`
+3. **Run Development Server**: `npm run dev`
 
-1.  **Setup Environment**:
-    ```bash
-    cp .env.example .env
-    ```
-    Fill in your database and Cloudflare credentials.
+---
 
-2.  **Install Dependencies**:
-    ```bash
-    npm install
-    ```
+## 🤖 2. AuthiChain Unified Core (AgentZ)
 
-3.  **Run Development Server**:
-    ```bash
-    npm run dev
-    ```
+The `agentz/` directory contains the control-plane layer for autonomous operational workflows, providing declarative, dependency-aware execution.
 
-4.  **Edge Worker**:
-    The edge worker is located at `src/edge.ts` and can be managed via `wrangler.toml`.
+### Key Features
+- **Workflow Registry**: Centralized declaration of operational tasks in YAML.
+- **Operational Modes**: `dry-run` (validation), `confirm` (interactive), and `auto` (autonomous).
+- **Dependency Resolution**: Automated ordering of prerequisite tasks.
+- **Audit Logging**: Comprehensive run history in `agentz/runs.jsonl`.
 
-## Database Management
+### Usage (Python Agents)
+```powershell
+# Inspect registered workflows
+python -m agentz.cli list
 
-- `npm run db:generate`: Generate migrations.
-- `npm run db:push`: Push schema changes to the database.
-- `npm run db:studio`: Open Drizzle Studio.
+# Run a specific workflow in dry-run mode
+python -m agentz.cli run vercel_fix_authichain_unified --mode dry-run
 
-## Code Quality
+# Run all revenue-blocking workflows in auto mode
+python -m agentz.cli run --all --revenue-only --mode auto
+```
 
-- `npm run lint`: Run ESLint.
-- `npm run format`: Format code with Prettier.
+---
 
-## Legal & Intellectual Property
+## 🛠️ Unified Database & Infrastructure
+
+- **ORM**: Drizzle is used for schema management.
+- **Migrations**: `npm run db:generate` and `npm run db:push`.
+- **Edge**: Managed via `wrangler.toml` in the root.
+- **Agents**: Python environment requires `pip install -r requirements-agentz.txt`.
+
+## ⚖️ Legal & Intellectual Property
 
 ### Licensing
 This project is licensed under the **AuthiChain Proprietary License**. See `LICENSE.md` for full terms. Unauthorized reproduction, distribution, or reverse engineering of the AuthiChain Protocol or its multi-domain routing architecture is strictly prohibited.
 
-### Privacy & Security
-- **Privacy Policy**: Accessible at `/privacy`.
-- **Terms of Service**: Accessible at `/terms`.
-- **Security Disclosure**: See `SECURITY.md` for our vulnerability reporting process.
-
 ### Copyright
 Copyright (c) 2026 AuthiChain Inc. All rights reserved. The QRON logo, AuthiChain Protocol branding, and "Living Portal" technology are trademarks of AuthiChain Inc.
-

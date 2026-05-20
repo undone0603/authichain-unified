@@ -1,20 +1,21 @@
 {
-  "crons": [
+  "version": 2,
+  "framework": "nextjs",
+  "rewrites": [
     {
-      "path": "/api/automation/cron",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/crm/sync",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/trial-reminder",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/digest",
-      "schedule": "0 8 * * 1"
+      "source": "/gov",
+      "destination": "https://govchain.us"
     }
-  ]
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options",       "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ],
+  "ignoreCommand": "bash -c '[ \"$VERCEL_GIT_COMMIT_AUTHOR_LOGIN\" = \"undone0603\" ] && exit 1 || exit 0'"
 }

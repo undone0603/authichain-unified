@@ -1,0 +1,38 @@
+name: Security Scan
+
+# Free alternative to GitHub native secret scanning, which requires GHAS
+# on private repos. Runs gitleaks on every push to main, every PR, and
+# weekly to catch newly published rules. Findings fail the job and show
+# up as workflow annotations.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    - cron: '0 12 * * 1'  # Mondays 12:00 UTC
+  workflow_dispatch:
+
+jobs:
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    # Skip Dependabot PRs — its GITHUB_TOKEN is read-only on PR events, so
+    # gitleaks-action's PR-comment write fails with "Resource not accessible
+    # by integration". Dependabot PRs are pure version bumps; main-branch
+    # push scans (full history, fetch-depth: 0) already cover their merge.
+    if: github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so gitleaks can scan every commit reachable from
+          # main, not just the tip.
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
