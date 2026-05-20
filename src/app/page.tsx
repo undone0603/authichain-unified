@@ -1509,6 +1509,67 @@ export default function Home() {
           </div>
         </section>
 
+        {/* YouTube Channel Section */}
+        <section className="mb-16 px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: '#c9a227' }}>@AuthiChain-Qronspace</p>
+            <h2 className="text-2xl font-bold mb-3"><span className="gold-text">See QRON in Action</span></h2>
+            <p className="text-sm mb-8" style={{ color: '#6b6b6b' }}>Watch how living QR codes power authentication across luxury, cannabis, food & pharma</p>
+
+            {/* Featured Video */}
+            <div className="mb-6 rounded-2xl overflow-hidden border border-zinc-800" style={{ background: '#0a0a0a' }}>
+              <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                <iframe
+                  src="https://www.youtube.com/embed/mfckohgDrNk?rel=0&color=white&modestbranding=1"
+                  title="QRON Main Overview"
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            </div>
+
+            {/* Video Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-left">
+              {[
+                { id: 'PdCibPadCxE', label: 'Food & Beverage', title: 'Validating Origin with QRON' },
+                { id: '70KG5d2fFUo', label: 'Token Economy', title: 'The $QRON Token Economy' },
+                { id: 'bAI14tPQFF4', label: 'Ecosystem', title: 'Use Cases for Trust' },
+              ].map(({ id, label, title }) => (
+                <a key={id} href={`https://www.youtube.com/watch?v=${id}`} target="_blank" rel="noopener noreferrer"
+                   className="rounded-xl overflow-hidden border border-zinc-800 hover:border-yellow-600 transition-colors block"
+                   style={{ background: '#0a0a0a', textDecoration: 'none' }}>
+                  <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#050505' }}>
+                    <img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt={title}
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 40, height: 40, background: 'rgba(220,38,38,0.9)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><polygon points="9.5,7.5 16.5,12 9.5,16.5"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#c9a227' }}>{label}</p>
+                    <p className="text-xs font-bold" style={{ color: '#c8c8c8' }}>{title}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {/* Channel CTA */}
+            <a href="https://www.youtube.com/@AuthiChain-Qronspace" target="_blank" rel="noopener noreferrer"
+               className="inline-flex items-center gap-3 font-black text-sm px-6 py-3 rounded-full transition-all"
+               style={{ background: '#dc2626', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(220,38,38,0.35)' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.5V8.5l6.25 3.5-6.25 3.5z"/>
+              </svg>
+              Subscribe on YouTube
+              <span className="text-[10px] opacity-75">26 Videos · @AuthiChain-Qronspace</span>
+            </a>
+          </div>
+        </section>
+
         {/* Footer Navigation */}
         <footer className="text-center py-12 border-t border-zinc-900 mt-12">
           <div className="flex justify-center gap-6 mb-6">
@@ -1517,6 +1578,21 @@ export default function Home() {
              <span className="text-zinc-800">|</span>
              <Link href="/terms" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Terms</Link>
              <Link href="/privacy" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Privacy</Link>
+          </div>
+          {/* Ecosystem Cross-Sell */}
+          <div className="flex flex-wrap justify-center gap-4 mb-6">
+            {[
+              { name: 'AuthiChain', url: 'https://authichain.com', color: '#34d399', desc: 'Product Auth Protocol' },
+              { name: 'StrainChain', url: 'https://strainchain.io', color: '#22c55e', desc: 'Cannabis Provenance' },
+              { name: 'GovChain', url: 'https://govchain.us', color: '#60a5fa', desc: 'Gov Authentication' },
+            ].map(({ name, url, color, desc }) => (
+              <a key={name} href={url} target="_blank" rel="noopener noreferrer"
+                 className="px-4 py-2 rounded-xl border border-zinc-800 hover:border-zinc-600 transition-colors"
+                 style={{ textDecoration: 'none', background: '#0a0a0a' }}>
+                <span className="text-xs font-black block" style={{ color }}>{name}</span>
+                <span className="text-[9px]" style={{ color: '#6b6b6b' }}>{desc}</span>
+              </a>
+            ))}
           </div>
           <div className="space-y-2">
             <p className="text-xs" style={{ color: '#6b6b6b' }}>
