@@ -1,35 +1,35 @@
 # Security Policy
 
-## Supported Versions
-
-Only the latest production deployment of the AuthiChain ecosystem (including qron.space, authichain.com, govchain.us, and strainchain.io) is supported for security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| v1.x    | :white_check_mark: |
-| < v1.0  | :x:                |
+We take the security of this project and its users seriously. This policy describes how to report security vulnerabilities and what to expect after submitting a report.
 
 ## Reporting a Vulnerability
 
-We take the security of the AuthiChain Protocol and our users' data seriously. If you believe you have found a security vulnerability, please report it to us as soon as possible.
+If you believe you have found a security vulnerability in this project, please do **not** open a public issue or discuss it in public forums. Instead, use **GitHub's private vulnerability reporting**:
 
-**Please do not report security vulnerabilities via public GitHub issues.**
+1. Go to the repository's [Security Advisories tab](https://github.com/undone0603/authichain-unified/security/advisories/new) and click **"Report a vulnerability"**.
+2. Include as much detail as possible: steps to reproduce, potential impact, affected versions, and any suggestions for remediation.
+3. We will acknowledge receipt within 72 hours. After triage, we will work with you to resolve the issue and release a fix.
+4. Please allow reasonable time to investigate and patch the vulnerability before any public disclosure.
 
-Instead, please send an encrypted email to **security@authichain.com**.
+We value the efforts of the security community and will credit researchers who responsibly disclose vulnerabilities (unless anonymity is requested).
 
-### What to include:
-- A detailed description of the vulnerability.
-- Steps to reproduce the issue (PoC).
-- Potential impact.
-- Your contact information for follow-up.
+## Scope
 
-### Our Commitment:
-- We will acknowledge receipt of your report within 48 hours.
-- We will provide a timeline for remediation.
-- We will notify you once the vulnerability is patched.
-- We will offer "Bug Bounty" credits for critical discoveries that help protect the protocol.
+This policy covers all code in this repository and the services it powers. Vulnerabilities in third-party dependencies should be reported upstream to those projects (we monitor them via Dependabot and patch on release).
 
-## Prohibited Actions
-- Denying service to users (DoS/DDoS).
-- Accessing or attempting to access data that does not belong to you.
-- Any form of social engineering against AuthiChain employees or partners.
+## Supported Versions
+
+Security fixes are provided only for the latest version of the project on `main`. Users running older versions are encouraged to upgrade.
+
+| Version | Supported |
+|---------|-----------|
+| `main` (latest) | ✅ |
+| older versions | ❌ |
+
+## Security Practices
+
+- **Dependency Updates**: Dependabot monitors and opens PRs for vulnerable packages; patch-level bumps auto-merge after CI.
+- **Secret Scanning**: A scheduled gitleaks workflow scans every push to `main` and all human PRs.
+- **Secret Management**: Secrets live in GitHub Actions secrets and Cloudflare Worker secret bindings — never in source.
+- **Least Privilege**: Workflows run with `permissions: contents: read` by default; broader scopes are opt-in per job.
+- **Static Type-Checking**: `tsc --noEmit` runs on every PR; type-unsafe patterns are caught before merge.

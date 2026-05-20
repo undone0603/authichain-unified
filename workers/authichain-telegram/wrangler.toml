@@ -1,0 +1,22 @@
+name = "authichain-telegram"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DATABASE"
+database_name = "authichain-telegram-db"
+database_id = "YOUR_D1_DATABASE_ID"  # replace after: wrangler d1 create authichain-telegram-db
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "YOUR_KV_NAMESPACE_ID"           # replace after: wrangler kv namespace create SESSIONS
+
+# Secrets — set via: wrangler secret put <NAME>
+# TELEGRAM_BOT_TOKEN
+# TELEGRAM_WEBHOOK_SECRET
+# TELEGRAM_ADMIN_CHAT_ID
+# SITE_URL
+
+[vars]
+ENVIRONMENT = "production"

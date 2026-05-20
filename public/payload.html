@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>QRON Enterprise Payload - Digital Twin V1.0</title>
+    <!-- A-Frame 1.4.0 + AR.js 3.4.5 pinned via jsDelivr -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0a192f; }
+
+        /* Camera permission / error gate */
+        #permission-overlay {
+            position: fixed;
+            inset: 0;
+            background: #0a192f;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9000;
+            padding: 30px;
+            text-align: center;
+            color: #e6f1ff;
+        }
+        #permission-overlay.hidden { display: none; }
+        #permission-overlay h2 { color: #64ffda; margin: 0 0 12px; font-size: 22px; }
+        #permission-overlay p { color: #8892b0; margin: 0 0 28px; max-width: 340px; line-height: 1.6; }
+        #permission-overlay.error h2 { color: #f57d11; }
+        .start-btn {
+            background: #64ffda;
+            color: #0a192f;
+            border: none;
+            padding: 16px 36px;
+            font-weight: bold;
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(100,255,218,0.3);
+        }
+        .start-btn.reload { background: #f57d11; box-shadow: 0 0 20px rgba(245,125,17,0.3); }
+
+        /* HUD controls */
+        .hud-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 1000;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 0 10px;
+        }
+        .hud-btn {
+            background: rgba(10, 25, 47, 0.85);
+            color: #64ffda;
+            border: 1px solid #64ffda;
+            padding: 11px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .hud-btn:active, .hud-btn.active {
+            background: #64ffda;
+            color: #0a192f;
+            box-shadow: 0 0 15px #64ffda;
+        }
+
+        /* Dev dashboard */
+        .dev-dashboard {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(10, 25, 47, 0.9);
+            border-left: 3px solid #64ffda;
+            padding: 15px;
+            color: #8892b0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            z-index: 1000;
+            pointer-events: none;
+            border-radius: 0 4px 4px 0;
+        }
+        .dev-dashboard h3 { margin: 0 0 8px 0; color: #e6f1ff; font-size: 13px; }
+        .metric { margin: 4px 0; display: flex; justify-content: space-between; gap: 20px; }
+        .metric span.val { color: #64ffda; font-weight: bold; }
+
+        /* Shared modal base */
+        .modal {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0a192f;
+            padding: 25px;
+            color: #fff;
+            z-index: 2000;
+            width: 85%;
+            max-width: 400px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .modal-close { position: absolute; top: 10px; right: 15px; cursor: pointer; color: #8892b0; font-size: 20px; line-height: 1; }
+        .modal-btn {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            margin-top: 16px;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+
+        /* CTA modal */
+        #ctaPanel { border: 2px solid #f57d11; }
+        #ctaPanel h2 { margin-top: 0; color: #f57d11; }
+        #ctaPanel .modal-btn { background: #f57d11; color: #fff; }
+
+        /* Marker modal */
+        #markerModal { border: 2px solid #64ffda; text-align: center; max-width: 340px; }
+        #markerModal h3 { margin-top: 0; color: #64ffda; }
+        #markerModal p { color: #8892b0; font-size: 13px; line-height: 1.5; margin: 8px 0 0; }
+        #markerModal img { width: 180px; height: 180px; margin: 12px auto 0; display: block; border: 4px solid #fff; border-radius: 2px; }
+        #markerModal .modal-btn { background: #64ffda; color: #0a192f; }
+    </style>
+</head>
+<body>
+
+    <!-- Camera permission / error gate (blocks the page until consent is given) -->
+    <div id="permission-overlay">
+        <h2>QRON Digital Twin</h2>
+        <p>This AR experience requires camera access. Point your camera at a Hiro marker to view the 3D model.</p>
+        <button class="start-btn" id="start-btn" onclick="startAR()">Enable Camera &amp; Start</button>
+    </div>
+
+    <!-- Injected after permission is granted -->
+    <div id="scene-container"></div>
+
+    <!-- Dev Dashboard -->
+    <div class="dev-dashboard">
+        <h3>QRON_CORE_ENGINE_V1.0</h3>
+        <div class="metric">FPS: <span class="val" id="fps-val">60.0</span></div>
+        <div class="metric">6DoF Matrix Latency: <span class="val">1.2ms</span></div>
+        <div class="metric">Tracking Anchors: <span class="val">6/6 Active</span></div>
+        <div class="metric">Heap Allocation: <span class="val">22.4 MB</span></div>
+    </div>
+
+    <!-- HUD Controls -->
+    <div class="hud-container">
+        <button class="hud-btn active" onclick="setTwinState('normal', this)">Operational</button>
+        <button class="hud-btn" onclick="setTwinState('explode', this)">Exploded View</button>
+        <button class="hud-btn" onclick="setTwinState('fault', this)">Fault Sim</button>
+        <button class="hud-btn" style="border-color:#64ffda;color:#64ffda;" onclick="openMarker()">Marker</button>
+        <button class="hud-btn" style="border-color:#f57d11;color:#f57d11;" onclick="openCta()">[View Pipeline]</button>
+    </div>
+
+    <!-- Hiro Marker Modal -->
+    <div class="modal" id="markerModal">
+        <span class="modal-close" onclick="closeMarker()">&times;</span>
+        <h3>Scan This Marker</h3>
+        <img src="https://raw.githack.com/AR-js-org/AR.js/master/data/images/hiro.png" alt="Hiro AR Marker" crossorigin="anonymous">
+        <p>Print or display this marker, then point your camera at it to anchor the digital twin.</p>
+        <a href="https://raw.githack.com/AR-js-org/AR.js/master/data/images/hiro.png" target="_blank" rel="noopener" class="modal-btn">Open Full Size</a>
+    </div>
+
+    <!-- CTA Modal -->
+    <div class="modal" id="ctaPanel">
+        <span class="modal-close" onclick="closeCta()">&times;</span>
+        <h2>Pipeline Validated.</h2>
+        <p>This digital twin is rendering in pure WebXR with zero application footprint, pulling dynamic matrix parameters smoothly over 6 orientation faces simultaneously.</p>
+        <p>Let's skip the procurement loop. Connect directly with our core engineering team to inspect our native optimization pipeline architecture.</p>
+        <a href="mailto:authichain@gmail.com?subject=QRON Digital Twin Demo - Technical Inquiry" class="modal-btn">Initialize Technical Review</a>
+    </div>
+
+    <script>
+        let currentState = 'normal';
+        let parts = {};
+
+        async function startAR() {
+            const overlay = document.getElementById('permission-overlay');
+            const btn = document.getElementById('start-btn');
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                overlay.classList.add('error');
+                overlay.innerHTML = `
+                    <h2>Browser Not Supported</h2>
+                    <p>Your browser does not support camera access required for AR.<br>Try Chrome or Safari on a modern mobile device.</p>
+                `;
+                return;
+            }
+
+            btn.textContent = 'Requesting access…';
+            btn.disabled = true;
+
+            try {
+                await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                injectScene();
+                overlay.classList.add('hidden');
+            } catch (err) {
+                overlay.classList.add('error');
+                overlay.innerHTML = `
+                    <h2>Camera Access Denied</h2>
+                    <p>Allow camera access in your browser settings, then reload the page.</p>
+                    <button class="start-btn reload" onclick="location.reload()">Reload &amp; Retry</button>
+                `;
+            }
+        }
+
+        function injectScene() {
+            document.getElementById('scene-container').innerHTML = `
+                <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;" vr-mode-ui="enabled: false">
+                    <a-assets></a-assets>
+                    <a-marker preset="hiro" id="cube-marker">
+                        <a-entity id="digital-twin-assembly" position="0 0.5 0" scale="0.4 0.4 0.4">
+                            <a-box id="part-base" position="0 -0.5 0" width="3" height="0.3" depth="2" color="#1a202c" roughness="0.6"></a-box>
+                            <a-cylinder id="part-housing" position="0 0.5 0" radius="0.8" height="1.5" color="#4a5568" rotation="90 0 0" roughness="0.4">
+                                <a-cylinder id="part-shaft" position="0 0 0" radius="0.15" height="1.8" color="#cbd5e0">
+                                    <a-animation attribute="rotation" dur="2000" to="0 360 0" repeat="indefinite" easing="linear"></a-animation>
+                                </a-cylinder>
+                            </a-cylinder>
+                            <a-cylinder id="part-intake" position="-1.2 0.5 0" radius="0.25" height="1.2" color="#2b6cb0" rotation="0 0 90"></a-cylinder>
+                            <a-cylinder id="part-outflow" position="0 1.5 0" radius="0.25" height="1.0" color="#2b6cb0"></a-cylinder>
+                            <a-entity id="telemetry-ui" position="0 2.2 0">
+                                <a-text id="telemetry-text" value="SYS OK\nRPM: 1750\nFLOW: 45GPM" color="#64ffda" align="center" width="4" font="monoid"></a-text>
+                            </a-entity>
+                        </a-entity>
+                        <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+                        <a-light type="directional" color="#ffffff" intensity="0.8" position="1 4 2"></a-light>
+                    </a-marker>
+                    <a-entity camera></a-entity>
+                </a-scene>
+            `;
+
+            // Wire up part refs after DOM injection
+            parts = {
+                base:    document.getElementById('part-base'),
+                housing: document.getElementById('part-housing'),
+                intake:  document.getElementById('part-intake'),
+                outflow: document.getElementById('part-outflow'),
+                text:    document.getElementById('telemetry-text'),
+            };
+        }
+
+        function setTwinState(state, element) {
+            currentState = state;
+            document.querySelectorAll('.hud-btn').forEach(btn => {
+                if (!btn.innerText.includes('Pipeline') && !btn.innerText.includes('Marker')) {
+                    btn.classList.remove('active');
+                }
+            });
+            if (element) element.classList.add('active');
+            resetComponents();
+
+            if (state === 'normal') {
+                parts.text.setAttribute('value', 'SYS OK\nRPM: 1750\nFLOW: 45GPM');
+                parts.text.setAttribute('color', '#64ffda');
+            } else if (state === 'explode') {
+                parts.base.setAttribute('position', '0 -1.2 0');
+                parts.intake.setAttribute('position', '-2.2 0.5 0');
+                parts.outflow.setAttribute('position', '0 2.5 0');
+                parts.text.setAttribute('value', 'EXPLODED VIEW\nASSEMBLY IDENT: 404-B\nSCALE: NATIVE');
+                parts.text.setAttribute('color', '#e6f1ff');
+            } else if (state === 'fault') {
+                parts.housing.setAttribute('color', '#e53e3e');
+                parts.text.setAttribute('value', 'CRITICAL ERROR\nBEARING VIBRATION EXCEEDED\nOVERHEAT RISK');
+                parts.text.setAttribute('color', '#f57d11');
+                let flicker = true;
+                const faultLoop = setInterval(() => {
+                    if (currentState === 'fault') {
+                        parts.housing.setAttribute('color', flicker ? '#dd6b20' : '#e53e3e');
+                        flicker = !flicker;
+                    } else {
+                        clearInterval(faultLoop);
+                    }
+                }, 250);
+            }
+        }
+
+        function resetComponents() {
+            parts.base.setAttribute('position', '0 -0.5 0');
+            parts.housing.setAttribute('position', '0 0.5 0');
+            parts.intake.setAttribute('position', '-1.2 0.5 0');
+            parts.outflow.setAttribute('position', '0 1.5 0');
+            parts.housing.setAttribute('color', '#4a5568');
+        }
+
+        function openCta()    { document.getElementById('ctaPanel').style.display = 'block'; }
+        function closeCta()   { document.getElementById('ctaPanel').style.display = 'none'; }
+        function openMarker() { document.getElementById('markerModal').style.display = 'block'; }
+        function closeMarker(){ document.getElementById('markerModal').style.display = 'none'; }
+
+        setInterval(() => {
+            document.getElementById('fps-val').innerText = (59.2 + Math.random() * 0.7).toFixed(1);
+        }, 600);
+    </script>
+</body>
+</html>

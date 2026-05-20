@@ -1,0 +1,25 @@
+name = "authichain-qron-provenance"
+main = "src/index.ts"
+compatibility_date = "2025-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://authichain.com"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-provenance"
+database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
+
+[[routes]]
+pattern = "authichain.com/api/qron-register*"
+custom_domain = true
+
+[build]
+command = "npm run build"
+
+[env.production]
+name = "authichain-qron-provenance"
+
+[env.staging]
+name = "authichain-qron-provenance-staging"

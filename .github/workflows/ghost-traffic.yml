@@ -1,0 +1,27 @@
+name: Ghost Traffic Engine
+
+on:
+  schedule:
+    - cron: '0 13 * * *' # Fires every day at 9:00 AM EST
+  workflow_dispatch: # Allows you to click "Run" manually to test it
+
+jobs:
+  run-strike:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Install Arsenal
+        run: |
+          pip install playwright
+          playwright install chromium
+          
+      - name: Execute Autonomous Strike
+        run: python artifacts/linkedin_strike.py
+        env:
+          # Securely injects your session cookie to bypass login screens
+          LINKEDIN_SESSION_COOKIE: ${{ secrets.LINKEDIN_SESSION_COOKIE }}

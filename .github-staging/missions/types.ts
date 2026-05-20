@@ -1,0 +1,57 @@
+export type MissionType =
+  | 'GOV_PILOT'
+  | 'RETAIL_PILOT'
+  | 'PRESS_LAUNCH'
+  | 'PARTNER_ONBOARDING'
+  | 'TECH_OS_LOCK'
+  | 'LAUNCH_AUTHICHAIN'
+  | 'TECH_SPRINT';
+
+export type MissionStatus = 'PLANNED' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';
+
+export type TaskStatus = 'PENDING' | 'RUNNING' | 'WAITING_HUMAN' | 'DONE' | 'FAILED';
+
+export type TaskKind =
+  | 'FIND_GOV_LEADS'
+  | 'FIND_RETAIL_LEADS'
+  | 'DRAFT_OUTBOUND_EMAIL'
+  | 'BUILD_PILOT_PACKET'
+  | 'DRAFT_INTEL_DOSSIER'
+  | 'FOLLOWUP_SEQUENCE'
+  | 'CRM_UPDATE'
+  | 'FINALIZE_RETAIL_SIGNAGE'
+  | 'PACKAGE_SKU_ONBOARDING'
+  | 'CHECK_DNS_CONFIG'
+  | 'VERIFY_SSL'
+  | 'RUN_LIGHTHOUSE_AUDIT'
+  | 'GENERATE_LAUNCH_CHECKLIST'
+  | 'DRAFT_LAUNCH_EMAIL'
+  | 'DRAFT_PRESS_RELEASE'
+  | 'SCHEDULE_SOCIAL_POSTS'
+  | 'CHECK_REPLIES'
+  | 'SEND_DEMO_PACKET'
+  | 'GENERATE_PROPOSAL'
+  | 'SEND_CONTRACT'
+  | 'AUTO_REPLY'
+  | 'GENERATE_OUTREACH_VIDEO'
+  // ── Dev Team ──────────────────────────────────────────────
+  | 'PLAN_SPRINT'
+  | 'WRITE_CODE'
+  | 'OPEN_PR'
+  | 'RUN_TESTS'
+  | 'CODE_REVIEW'
+  | 'MERGE_PR'
+  | 'MONITOR_DEPLOY'
+  | 'FILE_BUG'
+  | 'AUTO_FIX';
+
+export type LeadSegment = 'GOV' | 'RETAIL' | 'PRESS';
+
+export type LeadStatus =
+  | 'NEW'
+  | 'CONTACTED'
+  | 'REPLIED'
+  | 'MEETING_SCHEDULED'
+  | 'PILOT_PROPOSED'
+  | 'CLOSED_WON'
+  | 'CLOSED_LOST';

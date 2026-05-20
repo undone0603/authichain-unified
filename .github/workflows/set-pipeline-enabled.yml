@@ -1,0 +1,21 @@
+name: Enable Autonomous Pipeline
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  set-secret:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set AUTONOMOUS_PIPELINE_ENABLED=true on Cloudflare Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+          echo "true" | npx wrangler secret put AUTONOMOUS_PIPELINE_ENABLED
+          echo "✓ AUTONOMOUS_PIPELINE_ENABLED=true set"
