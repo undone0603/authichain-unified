@@ -3,6 +3,7 @@ import * as db from "../db";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import QRCode from "qrcode";
+import { invokeLLM } from "../_core/llm";
 
 export const qrcodeRouter = router({
   generate: protectedProcedure.input(z.object({
@@ -32,7 +33,6 @@ export const qrcodeRouter = router({
     const product = await db.getProductById(input.productId);
     if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
 
-    const { invokeLLM } = await import("../_core/llm");
     const response = await invokeLLM({
       messages: [
         { role: "system", content: "You are a cinematic brand storyteller for AuthiChain. Create a 3-chapter 'Storymode' narrative for a product based on its metadata. Each chapter should have a title and a 2-3 sentence description. Tone: luxury, high-fidelity, futuristic, authoritative." },

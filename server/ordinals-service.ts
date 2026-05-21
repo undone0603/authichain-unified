@@ -1,3 +1,7 @@
+import { eq } from "drizzle-orm";
+import { getDb } from "./db";
+import { products } from "../drizzle/schema";
+
 /**
  * BTC Ordinals Inscription Service
  * Prepares and tracks QRON Artistic QR codes on Bitcoin via Ordinals protocol.
@@ -43,14 +47,11 @@ export async function getInscriptionStatus(inscriptionId: string) {
  * Links a QronCode to its BTC Ordinal counterpart and existing Polygon NFT.
  */
 export async function linkOrdinalToProduct(productId: number, inscriptionId: string) {
-  const { getDb } = await import("./db");
-  const { products } = await import("../drizzle/schema");
-  const { eq } = await import("drizzle-orm");
   const d = await getDb();
-  
-  // Update product with ordinal reference
+  if (!d) return { success: false };
+
   await d.update(products)
-    .set({ blockchainTxHash: inscriptionId }) // Use existing field or add new one
+    .set({ blockchainTxHash: inscriptionId })
     .where(eq(products.id, productId));
 
   console.log(`[Ordinals] Linked Product ${productId} to BTC Inscription ${inscriptionId}`);
