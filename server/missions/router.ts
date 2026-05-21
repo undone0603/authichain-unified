@@ -8,6 +8,7 @@ import {
   getTasksByMission,
   retryTask,
 } from "./missions.db";
+import { MISSION_TYPES, MISSION_STATUSES } from "./types";
 import type { MissionType, MissionStatus } from "./types";
 
 export const missionsRouter = router({
@@ -18,7 +19,7 @@ export const missionsRouter = router({
     }),
 
   create: protectedProcedure
-    .input(z.object({ type: z.custom<MissionType>() }))
+    .input(z.object({ type: z.enum(MISSION_TYPES) }))
     .mutation(async ({ input }) => {
       const id = await createMission(input.type);
       return { id };
@@ -31,7 +32,7 @@ export const missionsRouter = router({
     }),
 
   updateStatus: protectedProcedure
-    .input(z.object({ id: z.string(), status: z.custom<MissionStatus>() }))
+    .input(z.object({ id: z.string(), status: z.enum(MISSION_STATUSES) }))
     .mutation(async ({ input }) => {
       await updateMissionStatus(input.id, input.status);
       return { ok: true };
