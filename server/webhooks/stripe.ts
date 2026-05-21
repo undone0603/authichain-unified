@@ -253,8 +253,8 @@ export async function handleStripeWebhook(
       const priceId = firstLine?.price?.id ?? null;
       const plan = detectPlan(priceId, amountCents);
 
-      if (amountUsd > 0) {
-        await recordRevenue({
+      await Promise.all([
+        amountUsd > 0 ? recordRevenue({
           source: "stripe",
           amount: amountUsd.toFixed(2),
           currency,
@@ -267,28 +267,23 @@ export async function handleStripeWebhook(
             stripeCustomerId: customerId ?? null,
             plan,
           },
-        });
-      }
-
-      // Mark subscription active on successful payment (handles recovery from past_due)
-      if (subscriptionId) {
-        await setSubscriptionStatusByStripeId(subscriptionId, "active");
-      }
-
-      await logAutomationAudit(
-        "billing_invoice_paid",
-        {
-          eventId: event.id,
-          invoiceId: inv.id,
-          stripeSubscriptionId: subscriptionId ?? null,
-          stripeCustomerId: customerId ?? null,
-          amountUsd,
-          currency,
-          plan,
-          userId: userId ?? null,
-        },
-        userId,
-      );
+        }) : Promise.resolve(),
+        subscriptionId ? setSubscriptionStatusByStripeId(subscriptionId, "active") : Promise.resolve(),
+        logAutomationAudit(
+          "billing_invoice_paid",
+          {
+            eventId: event.id,
+            invoiceId: inv.id,
+            stripeSubscriptionId: subscriptionId ?? null,
+            stripeCustomerId: customerId ?? null,
+            amountUsd,
+            currency,
+            plan,
+            userId: userId ?? null,
+          },
+          userId,
+        ),
+      ]);
 
       console.log(`[stripe-webhook] Invoice paid: ${inv.id} amount=${amountUsd} ${currency}`);
       break;
@@ -306,17 +301,16 @@ export async function handleStripeWebhook(
       if (subscriptionId) {
         const localSub = await getSubscriptionByStripeSubscriptionId(subscriptionId);
         userId = localSub?.userId ?? undefined;
-        await setSubscriptionStatusByStripeId(subscriptionId, "past_due");
-
-        if (userId) {
-          await createSystemNotification(
+        await Promise.all([
+          setSubscriptionStatusByStripeId(subscriptionId, "past_due"),
+          userId ? createSystemNotification(
             userId,
             "Payment Failed",
             "A payment for your AuthiChain subscription failed. Please update your billing details to avoid service interruption.",
             "alert",
             "/subscriptions",
-          );
-        }
+          ) : Promise.resolve(),
+        ]);
       }
 
       await logAutomationAudit(

@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { getCertificateByNumber, getWhiteLabelByApiKey, createProduct, getDb } from "./db";
 import { computeTrustScore, generateProductQRON } from "./qron-service";
 import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
-import { invokeLLM } from "./_core/llm";
+import { invokeLLM, parseLLMContent } from "./_core/llm";
 import { ENV } from "./_core/env";
 import { reportUsageToStripe } from "./tenant-billing";
 
@@ -42,7 +42,7 @@ export function createInternalRouter(): Router {
         });
       }
 
-      // Sanitize lookupId — strip any characters outside alphanumeric/hyphen/underscore/dot
+      // Prevent prompt injection — only the sanitized identifier reaches the LLM
       const safeLookupId = String(lookupId).replace(/[^a-zA-Z0-9\-_.]/g, "").slice(0, 128);
 
       // AI-based verification
@@ -62,7 +62,7 @@ export function createInternalRouter(): Router {
 
       let result: { verified: boolean; confidence: number; reasoning: string; riskFlags: string[] };
       try {
-        result = JSON.parse(analysis.choices[0].message.content as string);
+        result = parseLLMContent(analysis.choices[0].message.content);
       } catch {
         return res.status(500).json({ error: "Internal server error" });
       }

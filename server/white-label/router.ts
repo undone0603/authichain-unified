@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { adminProcedure, publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
+import { generateApiKey } from "../tenant-billing";
 
 export const whiteLabelRouter = router({
   list: adminProcedure.query(async () => {
@@ -15,7 +16,7 @@ export const whiteLabelRouter = router({
     secondaryColor: z.string().optional(),
     apiCallLimit: z.number().optional().default(10000),
   })).mutation(async ({ ctx, input }) => {
-    const apiKey = `wl_${randomBytes(24).toString("hex")}`;
+    const apiKey = generateApiKey("wl");
     const apiSecret = randomBytes(32).toString("hex");
     return await db.createWhiteLabelClient({ ...input, userId: ctx.user.id, apiKey, apiSecret });
   }),

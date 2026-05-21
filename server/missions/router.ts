@@ -9,7 +9,6 @@ import {
   retryTask,
 } from "./missions.db";
 import { MISSION_TYPES, MISSION_STATUSES } from "./types";
-import type { MissionType, MissionStatus } from "./types";
 
 export const missionsRouter = router({
   list: protectedProcedure

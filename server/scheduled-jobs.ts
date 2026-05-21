@@ -669,18 +669,19 @@ registerJob({
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
     
-    // Simple logic: apply 12.5% APY / 365 to all active positions
-    const activePositions = await db.select().from(stakingPositions).where(eq(stakingPositions.status, "active"));
-    for (const pos of activePositions) {
-      const dailyReward = (Number(pos.amount) * 0.125) / 365;
-      await db.insert(qronRewardLedger).values({
-        agentId: pos.agentId || 0,
-        userId: pos.userId,
-        amount: dailyReward.toFixed(9),
-        reason: "staking_reward",
-        status: "pending"
-      });
-    }
+    const activePositions = await db.select().from(stakingPositions)
+      .where(eq(stakingPositions.status, "active"))
+      .limit(10000);
+    if (activePositions.length === 0) return { itemsProcessed: 0, details: { status: "no_active_positions" } };
+
+    const rewards = activePositions.map(pos => ({
+      agentId: pos.agentId || 0,
+      userId: pos.userId,
+      amount: ((Number(pos.amount) * 0.125) / 365).toFixed(9),
+      reason: "staking_reward" as const,
+      status: "pending" as const,
+    }));
+    await db.insert(qronRewardLedger).values(rewards);
     return { itemsProcessed: activePositions.length, details: { status: "rewards_distributed" } };
   },
 });

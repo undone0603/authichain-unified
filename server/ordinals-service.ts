@@ -52,7 +52,7 @@ export async function getInscriptionStatus(inscriptionId: string) {
  */
 export async function linkOrdinalToProduct(productId: number, inscriptionId: string) {
   const d = await getDb();
-  if (!d) return { success: false };
+  if (!d) throw new Error("Database not available");
 
   await d.update(products)
     .set({ blockchainTxHash: inscriptionId })

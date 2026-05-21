@@ -370,3 +370,13 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   return result;
 }
+
+/**
+ * Parse JSON from an LLM response content field.
+ * Accepts the union type returned by LLMResponse.choices[0].message.content.
+ * Throws on empty content or invalid JSON.
+ */
+export function parseLLMContent<T>(raw: string | unknown[] | null | undefined): T {
+  if (!raw || typeof raw !== "string") throw new Error("LLM returned non-string content");
+  return JSON.parse(raw) as T;
+}

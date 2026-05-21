@@ -225,7 +225,11 @@ export async function getAdaptivePriors(): Promise<Record<string, { alpha: numbe
   try {
     const d = await getDb();
     if (!d) return { ...SEGMENT_PRIORS };
-    const rows = await d.select().from(bayesianPriors);
+    const rows = await d.select({
+      segment: bayesianPriors.segment,
+      priorAlpha: bayesianPriors.priorAlpha,
+      priorBeta: bayesianPriors.priorBeta,
+    }).from(bayesianPriors).limit(200);
     if (!rows.length) return { ...SEGMENT_PRIORS };
     const map: Record<string, { alpha: number; beta: number }> = { ...SEGMENT_PRIORS };
     for (const row of rows) {

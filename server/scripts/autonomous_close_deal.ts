@@ -74,7 +74,8 @@ async function autonomousClose() {
 
         // 6. Record Revenue
         const db = await getDb();
-        await (db as any).insert(revenueRecords).values({
+        if (!db) throw new Error("Database not available");
+        await db.insert(revenueRecords).values({
           source: "medtech_enterprise",
           amount: "150000.00",
           type: "subscription",

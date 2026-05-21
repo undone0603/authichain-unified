@@ -20,7 +20,8 @@ export const MISSION_STATUSES = ['PLANNED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED
 
 export type MissionStatus = typeof MISSION_STATUSES[number];
 
-export type TaskStatus = 'PENDING' | 'RUNNING' | 'WAITING_HUMAN' | 'DONE' | 'FAILED';
+export const TASK_STATUSES = ['PENDING', 'RUNNING', 'WAITING_HUMAN', 'DONE', 'FAILED'] as const;
+export type TaskStatus = typeof TASK_STATUSES[number];
 
 export type TaskKind =
   | 'FIND_GOV_LEADS'

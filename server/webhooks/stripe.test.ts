@@ -58,9 +58,15 @@ const SIG = "stripe-sig";
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe("handleStripeWebhook — prerequisites", () => {
-  beforeEach(() => vi.clearAllMocks());
+// Common setup: reset mocks and set required env vars before every test.
+// The "prerequisites" suite overrides env vars inside its own test body.
+beforeEach(() => {
+  vi.clearAllMocks();
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
+  process.env.STRIPE_SECRET_KEY = "sk_test";
+});
 
+describe("handleStripeWebhook — prerequisites", () => {
   it("throws when STRIPE_WEBHOOK_SECRET is not set", async () => {
     delete process.env.STRIPE_WEBHOOK_SECRET;
     delete process.env.STRIPE_SECRET_KEY;
@@ -72,11 +78,6 @@ describe("handleStripeWebhook — prerequisites", () => {
 });
 
 describe("handleStripeWebhook — test events", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
-    process.env.STRIPE_SECRET_KEY = "sk_test";
-  });
 
   it("returns received:true immediately for test verification events", async () => {
     mockConstructEvent.mockReturnValue(makeEvent("webhook_endpoint.created", "evt_test_verify", {}));
@@ -87,11 +88,6 @@ describe("handleStripeWebhook — test events", () => {
 });
 
 describe("handleStripeWebhook — idempotency", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
-    process.env.STRIPE_SECRET_KEY = "sk_test";
-  });
 
   it("marks duplicate events and skips processing", async () => {
     const { hasWebhookEventProcessed } = await import("../db.js");
@@ -106,9 +102,6 @@ describe("handleStripeWebhook — idempotency", () => {
 
 describe("handleStripeWebhook — subscription events", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
-    process.env.STRIPE_SECRET_KEY = "sk_test";
     mockCustomersRetrieve.mockResolvedValue({ deleted: false, metadata: { user_id: "42" } });
   });
 
@@ -150,9 +143,6 @@ describe("handleStripeWebhook — subscription events", () => {
 
 describe("handleStripeWebhook — invoice events", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
-    process.env.STRIPE_SECRET_KEY = "sk_test";
     mockCustomersRetrieve.mockResolvedValue({ deleted: false, metadata: { user_id: "5" } });
   });
 
@@ -204,11 +194,6 @@ describe("handleStripeWebhook — invoice events", () => {
 });
 
 describe("handleStripeWebhook — checkout.session.completed", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
-    process.env.STRIPE_SECRET_KEY = "sk_test";
-  });
 
   it("subscription mode logs audit without throwing", async () => {
     mockConstructEvent.mockReturnValue(
@@ -250,11 +235,6 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
 });
 
 describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
-    process.env.STRIPE_SECRET_KEY = "sk_test";
-  });
 
   it("sends recovery email when customer_email is present", async () => {
     const { sendEmail } = await import("../email-service.js");
@@ -292,9 +272,6 @@ describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", ()
 
 describe("plan detection (via subscription amounts)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
-    process.env.STRIPE_SECRET_KEY = "sk_test";
     mockCustomersRetrieve.mockResolvedValue({ deleted: false, metadata: { user_id: "1" } });
   });
 
