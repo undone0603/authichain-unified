@@ -6,11 +6,11 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DATABASE"
 database_name = "authichain-telegram-db"
-database_id = "YOUR_D1_DATABASE_ID"  # replace after: wrangler d1 create authichain-telegram-db
+database_id = "3a330910-b81a-43e9-b3fb-bd8e529cff07"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "YOUR_KV_NAMESPACE_ID"           # replace after: wrangler kv namespace create SESSIONS
+id = "ef040f1eb8ca4d6f9f7fe4e908cdfd69"
 
 # Secrets — set via: wrangler secret put <NAME>
 # TELEGRAM_BOT_TOKEN

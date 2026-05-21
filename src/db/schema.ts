@@ -70,6 +70,9 @@ export const products = pgTable('products', {
   manufacturer: text('manufacturer'),
   modelNumber: text('model_number'),
   metadata: jsonb('metadata').default({}),
+  audioUrl: text('audioUrl'),
+  visionMarkers: json('visionMarkers'),
+  rarityScore: integer('rarityScore'),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().notNull(),
 });
@@ -91,6 +94,8 @@ export const authentications = pgTable('authentications', {
   shareCount: integer('shareCount').default(0),
   verificationMethod: varchar('verificationMethod', { length: 64 }).default('ai_image'),
   blockchainVerified: integer('blockchainVerified').default(0),
+  metadata: json('metadata'),
+  name: text('name'),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
 });
 
@@ -343,6 +348,8 @@ export const leads = pgTable("leads", {
   status: varchar("status", { length: 50 }).default("new"),
   industry: varchar("industry", { length: 128 }),
   notes: text("notes"),
+  segment: varchar("segment", { length: 64 }),
+  nextActionAt: timestamp("nextActionAt"),
   lastContactedAt: timestamp("lastContactedAt"),
   assignedTo: integer("assignedTo"),
   metadata: json("metadata"),
@@ -387,6 +394,7 @@ export const emailDrafts = pgTable("email_drafts", {
   templateUsed: varchar("templateUsed", { length: 128 }),
   status: varchar("status", { length: 50 }).default("pending"),
   generatedBy: varchar("generatedBy", { length: 64 }).default("ai_manager"),
+  taskId: varchar("taskId", { length: 64 }),
   approvedBy: integer("approvedBy"),
   approvedAt: timestamp("approvedAt"),
   sentAt: timestamp("sentAt"),
@@ -450,6 +458,7 @@ export const affiliateCommissions = pgTable("affiliate_commissions", {
 // ─── Autopilot Config ────────────────────────────────────────────────────────
 export const autopilotConfig = pgTable("autopilot_config", {
   id: serial("id").primaryKey(),
+  tenantId: varchar("tenantId", { length: 64 }).notNull().unique().default("default"),
   enabled: integer("enabled").default(0),
   mode: varchar("mode", { length: 50 }).default("balanced"),
   guardrails: json("guardrails"),
@@ -702,6 +711,8 @@ export const serviceOrders = pgTable("service_orders", {
   serviceType: varchar("serviceType", { length: 64 }).notNull(),
   status: varchar("status", { length: 50 }).default("pending").notNull(),
   priority: integer("priority").default(0),
+  customerName: varchar("customerName", { length: 256 }),
+  deliveryUrl: text("deliveryUrl"),
   details: json("details"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -757,6 +768,7 @@ export const characterAssets = pgTable("character_assets", {
   scoreUiCompat: integer("scoreUiCompat"),
   scoreMintReady: integer("scoreMintReady"),
   scoreProtocolAlign: integer("scoreProtocolAlign"),
+  audioUrl: text("audioUrl"),
   selectedAt: timestamp("selectedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -912,6 +924,113 @@ export const bayesianPriors = pgTable("bayesian_priors", {
 
 export type BayesianPrior = typeof bayesianPriors.$inferSelect;
 export type InsertBayesianPrior = typeof bayesianPriors.$inferInsert;
+
+// ─── NFT Collections ─────────────────────────────────────────────────────────
+export const nftCollections = pgTable("nft_collections", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  slug: varchar("slug", { length: 128 }).notNull().unique(),
+  description: text("description"),
+  contractAddress: varchar("contractAddress", { length: 64 }),
+  chainId: integer("chainId").default(137),
+  imageUrl: text("imageUrl"),
+  totalSupply: integer("totalSupply").default(0),
+  floorPrice: numeric("floorPrice", { precision: 18, scale: 8 }),
+  status: varchar("status", { length: 50 }).default("active"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// ─── NFTs ─────────────────────────────────────────────────────────────────────
+export const nfts = pgTable("nfts", {
+  id: serial("id").primaryKey(),
+  collectionId: integer("collectionId"),
+  tokenId: varchar("tokenId", { length: 64 }),
+  name: varchar("name", { length: 256 }),
+  description: text("description"),
+  imageUrl: text("imageUrl"),
+  metadataUri: text("metadataUri"),
+  ownerAddress: varchar("ownerAddress", { length: 64 }),
+  ownerId: integer("ownerId"),
+  mintedBy: integer("mintedBy"),
+  chainId: integer("chainId").default(137),
+  contractAddress: varchar("contractAddress", { length: 64 }),
+  status: varchar("status", { length: 50 }).default("minted"),
+  attributes: json("attributes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// ─── Auctions ─────────────────────────────────────────────────────────────────
+export const auctions = pgTable("auctions", {
+  id: serial("id").primaryKey(),
+  nftId: integer("nftId"),
+  sellerId: integer("sellerId"),
+  startPrice: numeric("startPrice", { precision: 18, scale: 8 }).notNull(),
+  reservePrice: numeric("reservePrice", { precision: 18, scale: 8 }),
+  currentBid: numeric("currentBid", { precision: 18, scale: 8 }),
+  highestBidderId: integer("highestBidderId"),
+  winnerBidder: integer("winnerBidder"),
+  bidCount: integer("bidCount").default(0),
+  status: varchar("status", { length: 50 }).default("active"),
+  endsAt: timestamp("endsAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// ─── Auction Bids ─────────────────────────────────────────────────────────────
+export const auctionBids = pgTable("auction_bids", {
+  id: serial("id").primaryKey(),
+  auctionId: integer("auctionId").notNull(),
+  bidderId: integer("bidderId").notNull(),
+  amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Dead Letter Queue ────────────────────────────────────────────────────────
+export const deadLetterQueue = pgTable("dead_letter_queue", {
+  id: serial("id").primaryKey(),
+  jobType: varchar("jobType", { length: 128 }),
+  taskType: varchar("taskType", { length: 128 }),
+  payload: json("payload"),
+  error: text("error"),
+  attempts: integer("attempts").default(1),
+  retryCount: integer("retryCount").default(0),
+  status: varchar("status", { length: 50 }).default("pending"),
+  lastAttemptedAt: timestamp("lastAttemptedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// ─── Feedback ────────────────────────────────────────────────────────────────
+export const feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId"),
+  type: varchar("type", { length: 64 }).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).default("open"),
+  priority: varchar("priority", { length: 50 }).default("medium"),
+  votes: integer("votes").default(0),
+  upvotes: integer("upvotes").default(0),
+  adminResponse: text("adminResponse"),
+  tags: json("tags"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const feedbackVotes = pgTable("feedback_votes", {
+  id: serial("id").primaryKey(),
+  feedbackId: integer("feedbackId").notNull(),
+  userId: integer("userId").notNull(),
+  voteType: varchar("voteType", { length: 32 }).default("up"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type InsertFeedback = typeof feedback.$inferInsert;
+export type InsertFeedbackVote = typeof feedbackVotes.$inferInsert;
 
 export type Mission = typeof missions.$inferSelect;
 export type MissionTask = typeof missionTasks.$inferSelect;

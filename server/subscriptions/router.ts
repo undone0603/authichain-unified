@@ -19,7 +19,7 @@ export const subscriptionsRouter = router({
     return sub ?? null;
   }),
   create: protectedProcedure.input(z.object({
-    plan: z.enum(["starter", "professional", "enterprise"]),
+    plan: z.enum(["starter", "professional", "enterprise", "medtech"]),
     billingCycle: z.enum(["monthly", "annual"]).optional().default("monthly"),
   })).mutation(async ({ ctx, input }) => {
     const quotas = {
@@ -45,7 +45,7 @@ export const subscriptionsRouter = router({
     return { plan: sub.plan, used: sub.usedQuota || 0, limit: sub.monthlyQuota, percentage: Math.round(((sub.usedQuota || 0) / sub.monthlyQuota) * 100) };
   }),
   checkout: protectedProcedure.input(z.object({
-    plan: z.enum(["starter", "professional", "enterprise"]),
+    plan: z.enum(["starter", "professional", "enterprise", "medtech"]),
     billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
     origin: z.string(),
   })).mutation(async ({ ctx, input }) => {
@@ -61,7 +61,7 @@ export const subscriptionsRouter = router({
     return { checkoutUrl: url };
   }),
   createPaddleCheckout: protectedProcedure.input(z.object({
-    plan: z.enum(["starter", "professional", "enterprise"]),
+    plan: z.enum(["starter", "professional", "enterprise", "medtech"]),
     billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
     successUrl: z.string(),
   })).mutation(async ({ ctx, input }) => {

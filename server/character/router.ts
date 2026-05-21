@@ -47,6 +47,9 @@ export const characterRouter = router({
   myAgent: protectedProcedure.query(async ({ ctx }) => {
     return await service.getAgentByUser(ctx.user.id);
   }),
+  getAgent: protectedProcedure.query(async ({ ctx }) => {
+    return await service.getAgentByUser(ctx.user.id);
+  }),
   agentRewards: protectedProcedure.input(z.object({
     agentId: z.number(),
     limit: z.number().optional().default(50),

@@ -44,7 +44,7 @@ export default function SandboxPage() {
             </div>
             <AgenticCloser />
             <div className="text-center"><p className="text-xs text-zinc-600 font-mono">Powered by AuthiChain Autonomous Logic</p></div>
-          </div>^s
+          </div>
         </div>
       </main>
     </div>

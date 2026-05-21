@@ -27,6 +27,13 @@ import { bonusesRouter } from "./bonuses/router";
 import { marketplaceRouter } from "./marketplace/router";
 import { heygenRouter } from "./heygen/router";
 import { macrohardRouter } from "./macrohard/router";
+import { schedulerRouter } from "./routers/scheduler";
+import { characterRouter } from "./character/router";
+import { missionsRouter } from "./missions/router";
+import { govchainRouter } from "./govchain/router";
+import { salesRouter } from "./sales/router";
+import { servicesRouter } from "./services/router";
+import { stakingRouter } from "./staking/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -57,6 +64,13 @@ export const appRouter = router({
   marketplace: marketplaceRouter,
   heygen: heygenRouter,
   macrohard: macrohardRouter,
+  scheduler: schedulerRouter,
+  character: characterRouter,
+  missions: missionsRouter,
+  govchain: govchainRouter,
+  sales: salesRouter,
+  services: servicesRouter,
+  staking: stakingRouter,
 });
 
 export type AppRouter = typeof appRouter;
