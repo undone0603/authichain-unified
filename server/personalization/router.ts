@@ -61,7 +61,6 @@ export const personalizationRouter = router({
           ipAddress: input.ipAddress,
           country: geo.country,
           city: geo.city,
-          region: geo.region,
           trafficSource,
           referrer: input.referrer,
           utmSource: utmParams.utmSource,
@@ -83,7 +82,7 @@ export const personalizationRouter = router({
           .update(visitorProfiles)
           .set({
             pageViews: profile.pageViews + 1,
-            lastSeen: new Date(),
+            lastSeenAt: new Date(),
           })
           .where(eq(visitorProfiles.id, profile.id));
       }
@@ -113,9 +112,9 @@ export const personalizationRouter = router({
         },
         rules.map(r => ({
           id: r.id,
-          conditions: r.conditions,
-          content: r.content,
-          priority: r.priority,
+          conditions: JSON.stringify(r.conditions ?? {}),
+          content: JSON.stringify(r.content ?? {}),
+          priority: r.priority ?? 0,
         }))
       );
 
@@ -404,7 +403,7 @@ export const personalizationRouter = router({
       const analysis = await analyzePersonalizationPerformance(
         rules.map(r => ({
           name: r.name,
-          conditions: r.conditions,
+          conditions: JSON.stringify(r.conditions ?? {}),
           views: r.views,
           conversions: r.conversions,
           conversionRate: r.conversionRate,

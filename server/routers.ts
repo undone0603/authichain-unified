@@ -29,7 +29,7 @@ import { heygenRouter } from "./heygen/router";
 import { macrohardRouter } from "./macrohard/router";
 import { schedulerRouter } from "./routers/scheduler";
 import { characterRouter } from "./character/router";
-import { missionsRouter } from "./missions/router";
+import { missionsRouter, tasksRouter } from "./missions/router";
 import { govchainRouter } from "./govchain/router";
 import { salesRouter } from "./sales/router";
 import { servicesRouter } from "./services/router";
@@ -68,6 +68,7 @@ export const appRouter = router({
   scheduler: schedulerRouter,
   character: characterRouter,
   missions: missionsRouter,
+  tasks: tasksRouter,
   govchain: govchainRouter,
   sales: salesRouter,
   services: servicesRouter,

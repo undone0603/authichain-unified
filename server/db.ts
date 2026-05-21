@@ -254,7 +254,7 @@ export async function createLead(data: any) {
     metadata: data.metadata ?? null,
   };
   const [result] = await d.insert(leads).values(values).returning();
-  return { id: result.id, ...values };
+  return result;
 }
 
 export async function getLeadByEmail(email: string) {
@@ -320,6 +320,16 @@ export async function getServiceOrderBySessionId(sessionId: string) {
   const d = await getDb();
   const rows = await d.select().from(serviceOrders).where(eq(sql`json_extract(details, '$.sessionId')`, sessionId)).limit(1);
   return rows[0] ?? null;
+}
+
+export async function getServiceOrdersByUser(userId: number) {
+  const d = await getDb();
+  return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId)).orderBy(desc(serviceOrders.createdAt));
+}
+
+export async function getAllServiceOrders() {
+  const d = await getDb();
+  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -673,7 +683,7 @@ export async function createNft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(nfts).values(data).returning();
-  return { id: result.id };
+  return result;
 }
 
 export async function listCollections() {
