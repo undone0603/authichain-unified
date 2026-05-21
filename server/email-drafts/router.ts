@@ -41,7 +41,7 @@ export const emailDraftsRouter = router({
     return { success: true };
   }),
   bulkApprove: protectedProcedure.input(z.object({ ids: z.array(z.number()) })).mutation(async ({ ctx, input }) => {
-    for (const id of input.ids) await db.updateDraftStatus(id, "approved", ctx.user.id);
+    await Promise.all(input.ids.map(id => db.updateDraftStatus(id, "approved", ctx.user.id)));
     return { success: true, count: input.ids.length };
   }),
 });

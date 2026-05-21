@@ -42,6 +42,7 @@ import {
   missionTasks,
   stakingPositions,
   budgetConfig,
+  proposals,
   type Product,
   type InsertProduct,
   type InsertNotification,
@@ -394,9 +395,20 @@ export async function enqueueTask(missionId: string, kind: string, payload: any,
 // PROPOSALS
 // ─────────────────────────────────────────────────────────────
 
-export async function createProposal(data: any) {
+export async function createProposal(data: {
+  leadEmail: string;
+  missionId: string;
+  taskId?: string;
+  segment: string;
+  content: string;
+  paymentLink?: string;
+  checkoutSessionId?: string;
+  pilotPriceUsd?: number;
+}): Promise<string> {
   const d = await getDb();
-  await d.execute(sql`INSERT INTO proposals (data) VALUES (${JSON.stringify(data)})`);
+  const id = randomUUID();
+  await d.insert(proposals).values({ id, ...data });
+  return id;
 }
 
 // ─────────────────────────────────────────────────────────────

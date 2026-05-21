@@ -1116,3 +1116,19 @@ export const personalizationEvents = pgTable("personalization_events", {
   metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export const proposals = pgTable("proposals", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  leadEmail: varchar("leadEmail", { length: 320 }).notNull(),
+  missionId: varchar("missionId", { length: 36 }).notNull(),
+  taskId: varchar("taskId", { length: 36 }),
+  segment: varchar("segment", { length: 20 }).notNull().default("GOV"),
+  content: text("content").notNull(),
+  paymentLink: text("paymentLink"),
+  checkoutSessionId: varchar("checkoutSessionId", { length: 128 }),
+  status: varchar("status", { length: 20 }).notNull().default("SENT"),
+  pilotPriceUsd: integer("pilotPriceUsd").notNull().default(0),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
