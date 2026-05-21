@@ -125,7 +125,7 @@ export const SEGMENT_REVENUE: Record<string, number> = {
   RETAIL:   18_000,
   LUXURY:   45_000,
   PHARMA:   90_000,
-  MEDTECH: 150_000,
+  MEDTECH: 100_000,
   TIMEPIECE: 75_000,
   PRESS:     5_000, // brand value, not direct revenue
   PARTNER:  40_000,

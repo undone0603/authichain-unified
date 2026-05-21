@@ -38,7 +38,7 @@ export async function handleServiceOrderPayment(session: SessionWithId): Promise
     entityId: order.id,
     details: {
       sessionId: session.id,
-      amount: (order.details as any)?.price,
+      amount: order.amount,
       serviceType: order.serviceType,
     },
   });

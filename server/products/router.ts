@@ -1,6 +1,7 @@
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
+import { generateProductAssets, retryFailedAssets } from "../asset-service";
 
 export const productsRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -22,4 +23,17 @@ export const productsRouter = router({
     await db.logActivity({ userId: ctx.user.id, action: "product_created", entityType: "product", entityId: result.id });
     return result;
   }),
+
+  generateAssets: protectedProcedure
+    .input(z.object({ productId: z.number() }))
+    .mutation(async ({ input }) => {
+      await generateProductAssets(input.productId);
+      return { success: true };
+    }),
+
+  retryFailedTasks: adminProcedure
+    .mutation(async () => {
+      await retryFailedAssets();
+      return { success: true };
+    }),
 });

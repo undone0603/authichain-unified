@@ -31,9 +31,9 @@ const TITLES: Record<string, string> = {
   LAUNCH_AUTHICHAIN:  'AuthiChain.com – Full Launch Orchestration',
 };
 
-// ─── Mock db module ───────────────────────────────────────────────────────────
+// ─── Mock missions.db module (what the router actually imports) ───────────────
 
-vi.mock('./db', () => ({
+vi.mock('./missions/missions.db', () => ({
   getMissions: async (statusFilter?: string) => {
     const all = [...store.missions.values()];
     return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
@@ -80,10 +80,12 @@ vi.mock('./db', () => ({
     const t = store.tasks.get(id);
     if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
   },
+}));
 
-  // getDb returns null — tests using direct db access guard with if (db)
+// ─── Mock shared db module for helpers not in missions.db ────────────────────
+
+vi.mock('./db', () => ({
   getDb: async () => null,
-
   logActivity:               vi.fn().mockResolvedValue(undefined),
   createSystemNotification:  vi.fn().mockResolvedValue(undefined),
 }));
@@ -252,7 +254,8 @@ describe('tasks.retry', () => {
   let failedTaskId: string;
 
   beforeAll(async () => {
-    const { createMission, getTasksByMission, getDb } = await import('./db');
+    const { createMission, getTasksByMission } = await import('./missions/missions.db');
+    const { getDb } = await import('./db');
 
     const missionId = await createMission('TECH_OS_LOCK');
     const tasks = await getTasksByMission(missionId);

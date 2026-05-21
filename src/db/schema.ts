@@ -14,6 +14,7 @@ import {
   index,
   jsonb,
   primaryKey,
+  real,
 } from 'drizzle-orm/pg-core';
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
@@ -527,8 +528,12 @@ export type WhiteLabelClient = typeof whiteLabelClients.$inferSelect;
 export const apiUsageDaily = pgTable("api_usage_daily", {
   id: serial("id").primaryKey(),
   clientId: integer("clientId").notNull(),
+  tenantId: integer("tenantId"),
   date: timestamp("date").notNull(),
+  endpoint: varchar("endpoint", { length: 128 }),
   calls: integer("calls").default(0),
+  callCount: integer("callCount").default(0),
+  cost: numeric("cost", { precision: 12, scale: 6 }).default("0"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -684,7 +689,7 @@ export const promptCache = pgTable("prompt_cache", {
 
 // ─── Scheduled Job Runs ──────────────────────────────────────────────────────
 export const scheduledJobRuns = pgTable("scheduled_job_runs", {
-  id: bigint("id", { mode: "number" }).primaryKey(),
+  id: serial("id").primaryKey(),
   jobName: varchar("jobName", { length: 128 }).notNull(),
   status: varchar("status", { length: 50 }).notNull(),
   startedAt: timestamp("startedAt").defaultNow().notNull(),
@@ -711,6 +716,9 @@ export const serviceOrders = pgTable("service_orders", {
   serviceType: varchar("serviceType", { length: 64 }).notNull(),
   status: varchar("status", { length: 50 }).default("pending").notNull(),
   priority: integer("priority").default(0),
+  amount: integer("amount"),
+  stripeSessionId: varchar("stripeSessionId", { length: 256 }),
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 256 }),
   customerName: varchar("customerName", { length: 256 }),
   deliveryUrl: text("deliveryUrl"),
   details: json("details"),
@@ -842,9 +850,13 @@ export const stakingPositions = pgTable("staking_positions", {
   status: varchar("status", { length: 50 }).default("active"),
   multiplier: numeric("multiplier", { precision: 5, scale: 2 }).default("1.00"),
   apy: numeric("apy", { precision: 5, scale: 2 }).default("5.00"),
+  rewardsEarned: numeric("rewardsEarned", { precision: 20, scale: 9 }).default("0"),
+  lastRewardCalculation: timestamp("lastRewardCalculation"),
   stakedAt: timestamp("stakedAt").defaultNow().notNull(),
   releaseAt: timestamp("releaseAt"),
+  endDate: timestamp("endDate"),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 // ─── Checkpoint Batches ──────────────────────────────────────────────────────
@@ -1046,3 +1058,61 @@ export type PlatformFee = typeof platformFees.$inferSelect;
 export type InsertPlatformFee = typeof platformFees.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = typeof transactions.$inferInsert;
+
+// ─── Personalization ─────────────────────────────────────────────────────────
+export const visitorProfiles = pgTable("visitor_profiles", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("sessionId", { length: 128 }).notNull().unique(),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  userAgent: text("userAgent"),
+  country: varchar("country", { length: 8 }),
+  city: varchar("city", { length: 128 }),
+  referrer: text("referrer"),
+  trafficSource: varchar("trafficSource", { length: 64 }),
+  utmSource: varchar("utmSource", { length: 128 }),
+  utmMedium: varchar("utmMedium", { length: 128 }),
+  utmCampaign: varchar("utmCampaign", { length: 128 }),
+  segment: varchar("segment", { length: 64 }),
+  deviceType: varchar("deviceType", { length: 32 }),
+  pageViews: integer("pageViews").default(0).notNull(),
+  converted: integer("converted").default(0).notNull(),
+  timeOnSite: integer("timeOnSite").default(0).notNull(),
+  lastSeenAt: timestamp("lastSeenAt").defaultNow(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const personalizationRules = pgTable("personalization_rules", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  description: text("description"),
+  segment: varchar("segment", { length: 64 }),
+  country: varchar("country", { length: 8 }),
+  utmSource: varchar("utmSource", { length: 128 }),
+  deviceType: varchar("deviceType", { length: 32 }),
+  targetElement: varchar("targetElement", { length: 128 }),
+  headlineOverride: text("headlineOverride"),
+  ctaOverride: text("ctaOverride"),
+  heroImageOverride: text("heroImageOverride"),
+  content: json("content"),
+  conditions: json("conditions"),
+  views: integer("views").default(0).notNull(),
+  conversions: integer("conversions").default(0).notNull(),
+  conversionRate: real("conversionRate").default(0).notNull(),
+  priority: integer("priority").default(0),
+  status: varchar("status", { length: 32 }).default("active"),
+  active: integer("active").default(1),
+  aiGenerated: integer("aiGenerated").default(0),
+  createdBy: integer("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const personalizationEvents = pgTable("personalization_events", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("sessionId", { length: 128 }).notNull(),
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  element: varchar("element", { length: 128 }),
+  ruleId: integer("ruleId"),
+  variant: varchar("variant", { length: 64 }),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});

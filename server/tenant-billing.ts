@@ -147,6 +147,6 @@ export async function getTenantBillingStatus(tenantId: number) {
 }
 
 // ─── Generate API Key ────────────────────────────────────────────────────────
-export function generateApiKey(prefix: "ac_live" | "ac_test" | "ac_gpt" = "ac_live"): string {
+export function generateApiKey(prefix: string = "ac_live"): string {
   return `${prefix}_${randomBytes(24).toString("hex")}`;
 }

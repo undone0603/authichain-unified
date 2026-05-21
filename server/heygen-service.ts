@@ -1,4 +1,5 @@
 import { ENV } from "./_core/env";
+import { invokeLLM } from "./_core/llm";
 
 const BASE = "https://api.heygen.com";
 
@@ -123,7 +124,6 @@ export async function draftOutreachScript(params: {
   segment: string;
   useCase: string;
 }): Promise<string> {
-  const { invokeLLM } = await import("./_core/llm");
   const prompt = `Write a 30-second outreach video script (under 80 words) for an AI avatar to say.
 Target: ${params.firstName} at ${params.company} (${params.segment} sector).
 Use case hook: ${params.useCase}.

@@ -1,4 +1,4 @@
-import { invokeLLM } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { logActivity, enqueueTask, getAdaptivePriors, getDb } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 import { leads } from '../../drizzle/schema.js';
@@ -56,8 +56,7 @@ Return JSON array (same order, same indices):
       messages: [{ role: 'user', content: prompt }],
       responseFormat: { type: 'json_object' },
     });
-    const content = result.choices[0].message.content as string;
-    const parsed = JSON.parse(content ?? '[]');
+    const parsed = parseLLMContent<any>(result.choices[0].message.content);
     const scores: Array<{ index: number; fitProbability: number; fitNotes: string }> =
       Array.isArray(parsed) ? parsed : (parsed.leads ?? parsed.scores ?? []);
 

@@ -55,8 +55,8 @@ export async function createStakingPosition(data: {
     lastRewardCalculation: new Date(),
   };
 
-  await db.insert(stakingPositions).values(position);
-  return 0; // Return placeholder ID
+  const [row] = await db.insert(stakingPositions).values(position).returning({ id: stakingPositions.id });
+  return row.id;
 }
 
 /**
@@ -220,8 +220,8 @@ export async function createTransaction(data: {
     status: data.status as any,
   };
 
-  await db.insert(transactions).values(transaction);
-  return 0; // Return placeholder ID
+  const [row] = await db.insert(transactions).values(transaction).returning({ id: transactions.id });
+  return row.id;
 }
 
 /**
@@ -242,6 +242,6 @@ export async function createPlatformFee(data: {
     amount: data.amount.toString(),
   };
 
-  await db.insert(platformFees).values(fee);
-  return 0; // Return placeholder ID
+  const [row] = await db.insert(platformFees).values(fee).returning({ id: platformFees.id });
+  return row.id;
 }

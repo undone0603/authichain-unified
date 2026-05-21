@@ -29,11 +29,17 @@ import { heygenRouter } from "./heygen/router";
 import { macrohardRouter } from "./macrohard/router";
 import { schedulerRouter } from "./routers/scheduler";
 import { characterRouter } from "./character/router";
-import { missionsRouter } from "./missions/router";
+import { missionsRouter, tasksRouter } from "./missions/router";
 import { govchainRouter } from "./govchain/router";
 import { salesRouter } from "./sales/router";
 import { servicesRouter } from "./services/router";
 import { stakingRouter } from "./staking/router";
+import { devTeamRouter } from "./agents/dev-team/router";
+import { analyticsRouter } from "./analytics/router";
+import { feedbackRouter } from "./feedback/router";
+import { personalizationRouter } from "./personalization/router";
+import { stripeConnectRouter } from "./stripe-connect-router";
+import { metrcRouter } from "./routers/metrc";
 
 export const appRouter = router({
   system: systemRouter,
@@ -67,10 +73,17 @@ export const appRouter = router({
   scheduler: schedulerRouter,
   character: characterRouter,
   missions: missionsRouter,
+  tasks: tasksRouter,
   govchain: govchainRouter,
   sales: salesRouter,
   services: servicesRouter,
   staking: stakingRouter,
+  devTeam: devTeamRouter,
+  analytics: analyticsRouter,
+  feedback: feedbackRouter,
+  personalization: personalizationRouter,
+  stripeConnect: stripeConnectRouter,
+  metrc: metrcRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -24,7 +24,9 @@ import {
   createSystemNotification,
   hasWebhookEventProcessed,
 } from "../db";
-import { getPlanQuota } from "../stripe-products";
+import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
+import { handleServiceOrderPayment } from "../services/order-payment-handler";
+import { sendEmail } from "../email-service";
 
 // ─── Stripe client (lazy, uses env at call time) ─────────────────────────────
 
@@ -251,8 +253,8 @@ export async function handleStripeWebhook(
       const priceId = firstLine?.price?.id ?? null;
       const plan = detectPlan(priceId, amountCents);
 
-      if (amountUsd > 0) {
-        await recordRevenue({
+      await Promise.all([
+        amountUsd > 0 ? recordRevenue({
           source: "stripe",
           amount: amountUsd.toFixed(2),
           currency,
@@ -265,28 +267,23 @@ export async function handleStripeWebhook(
             stripeCustomerId: customerId ?? null,
             plan,
           },
-        });
-      }
-
-      // Mark subscription active on successful payment (handles recovery from past_due)
-      if (subscriptionId) {
-        await setSubscriptionStatusByStripeId(subscriptionId, "active");
-      }
-
-      await logAutomationAudit(
-        "billing_invoice_paid",
-        {
-          eventId: event.id,
-          invoiceId: inv.id,
-          stripeSubscriptionId: subscriptionId ?? null,
-          stripeCustomerId: customerId ?? null,
-          amountUsd,
-          currency,
-          plan,
-          userId: userId ?? null,
-        },
-        userId,
-      );
+        }) : Promise.resolve(),
+        subscriptionId ? setSubscriptionStatusByStripeId(subscriptionId, "active") : Promise.resolve(),
+        logAutomationAudit(
+          "billing_invoice_paid",
+          {
+            eventId: event.id,
+            invoiceId: inv.id,
+            stripeSubscriptionId: subscriptionId ?? null,
+            stripeCustomerId: customerId ?? null,
+            amountUsd,
+            currency,
+            plan,
+            userId: userId ?? null,
+          },
+          userId,
+        ),
+      ]);
 
       console.log(`[stripe-webhook] Invoice paid: ${inv.id} amount=${amountUsd} ${currency}`);
       break;
@@ -304,17 +301,16 @@ export async function handleStripeWebhook(
       if (subscriptionId) {
         const localSub = await getSubscriptionByStripeSubscriptionId(subscriptionId);
         userId = localSub?.userId ?? undefined;
-        await setSubscriptionStatusByStripeId(subscriptionId, "past_due");
-
-        if (userId) {
-          await createSystemNotification(
+        await Promise.all([
+          setSubscriptionStatusByStripeId(subscriptionId, "past_due"),
+          userId ? createSystemNotification(
             userId,
             "Payment Failed",
             "A payment for your AuthiChain subscription failed. Please update your billing details to avoid service interruption.",
             "alert",
             "/subscriptions",
-          );
-        }
+          ) : Promise.resolve(),
+        ]);
       }
 
       await logAutomationAudit(
@@ -362,6 +358,10 @@ export async function handleStripeWebhook(
         userId,
       );
 
+      if (session.metadata?.type === "one_time_service") {
+        await handleServiceOrderPayment({ id: session.id, payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : undefined });
+      }
+
       console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);
       break;
     }
@@ -388,8 +388,6 @@ export async function handleStripeWebhook(
       );
 
       if (email) {
-        const { sendEmail } = await import("../email-service");
-        const { STRIPE_PRODUCTS } = await import("../stripe-products");
         const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
         const monthlyPrice = (product.priceMonthly / 100).toFixed(0);
         await sendEmail({

@@ -10,10 +10,11 @@ vi.mock("../db.js", () => ({
   getServiceOrdersByUser: vi.fn().mockResolvedValue([]),
   getAllServiceOrders: vi.fn().mockResolvedValue([]),
   updateServiceOrderStatus: vi.fn().mockResolvedValue(undefined),
+  createServiceOrder: vi.fn().mockResolvedValue({ id: 1 }),
 }));
 
 vi.mock("../stripe-service.js", () => ({
-  createPaymentCheckout: vi.fn().mockResolvedValue("https://checkout.stripe.com/mock"),
+  createPaymentCheckout: vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/mock", sessionId: "cs_mock_123" }),
 }));
 
 vi.mock("../_core/trpc.js", () => {
@@ -56,7 +57,7 @@ describe("service catalog", () => {
 
 describe("servicesRouter — catalog", () => {
   it("returns SERVICE_LIST", async () => {
-    const { servicesRouter } = await import("./services.js");
+    const { servicesRouter } = await import("../services/router.js");
     const result = (servicesRouter as any).catalog._fn();
     expect(result).toBe(SERVICE_LIST);
   });
@@ -67,7 +68,7 @@ describe("servicesRouter — myOrders", () => {
 
   it("calls getServiceOrdersByUser with the ctx user id", async () => {
     const { getServiceOrdersByUser } = await import("../db.js");
-    const { servicesRouter } = await import("./services.js");
+    const { servicesRouter } = await import("../services/router.js");
     const ctx = { user: { id: 99 } };
     await (servicesRouter as any).myOrders._fn({ ctx });
     expect(vi.mocked(getServiceOrdersByUser)).toHaveBeenCalledWith(99);
@@ -78,7 +79,7 @@ describe("servicesRouter — checkout", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("throws when neither serviceKey nor serviceType is provided", async () => {
-    const { servicesRouter } = await import("./services.js");
+    const { servicesRouter } = await import("../services/router.js");
     const ctx = { user: { id: 1, email: "a@b.com", name: "Test" } };
     await expect(
       (servicesRouter as any).checkout._fn({ ctx, input: { origin: "https://example.com" } }),
@@ -87,7 +88,7 @@ describe("servicesRouter — checkout", () => {
 
   it("calls createPaymentCheckout and returns checkoutUrl", async () => {
     const { createPaymentCheckout } = await import("../stripe-service.js");
-    const { servicesRouter } = await import("./services.js");
+    const { servicesRouter } = await import("../services/router.js");
     const ctx = { user: { id: 1, email: "a@b.com", name: "Test" } };
     const result = await (servicesRouter as any).checkout._fn({
       ctx,
@@ -103,7 +104,7 @@ describe("servicesRouter — updateStatus", () => {
 
   it("delegates to updateServiceOrderStatus and returns success", async () => {
     const { updateServiceOrderStatus } = await import("../db.js");
-    const { servicesRouter } = await import("./services.js");
+    const { servicesRouter } = await import("../services/router.js");
     const result = await (servicesRouter as any).updateStatus._fn({
       input: { id: 7, status: "completed" },
     });

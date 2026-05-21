@@ -49,8 +49,12 @@ function makeSelectChain(rows: unknown[]) {
   return chain;
 }
 
-function makeInsertChain() {
-  const chain = { values: vi.fn().mockResolvedValue(undefined) };
+function makeInsertChain(returnedRow = { id: 1 }) {
+  const chain = {
+    values: vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([returnedRow]),
+    }),
+  };
   mockDb.insert.mockReturnValue(chain);
   return chain;
 }

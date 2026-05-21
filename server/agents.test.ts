@@ -40,6 +40,11 @@ vi.mock('./db.js', () => ({
 
 vi.mock('./_core/llm.js', () => ({
   invokeLLM: vi.fn(),
+  parseLLMContent: (raw: unknown) => {
+    if (!raw || typeof raw !== 'string') throw new Error('LLM returned non-string content');
+    try { return JSON.parse(raw as string); }
+    catch { throw new Error('LLM returned unparseable JSON'); }
+  },
 }));
 
 vi.mock('./_core/dataApi.js', () => ({

@@ -1,4 +1,4 @@
-import { invokeLLM } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { ENV } from '../_core/env.js';
 import { sendEmail } from '../email-service.js';
 import { logActivity, getDb, markTaskWaitingHuman, enqueueTask } from '../db.js';
@@ -98,15 +98,9 @@ Return JSON: { "subject": "...", "body": "..." }`;
     responseFormat: { type: 'json_object' },
   });
 
-  let subject: string;
-  let body: string;
-  try {
-    const parsed = JSON.parse(result.choices[0].message.content as string ?? '{}');
-    subject = parsed.subject ?? subjectFallback;
-    body = parsed.body ?? '';
-  } catch {
-    throw new Error('Outbound email LLM returned unparseable JSON');
-  }
+  const parsed_email = parseLLMContent<any>(result.choices[0].message.content);
+  const subject = parsed_email.subject ?? subjectFallback;
+  const body = parsed_email.body ?? '';
 
   if (!body) throw new Error('LLM returned empty email body');
 

@@ -1,4 +1,4 @@
-import { invokeLLM } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { logActivity } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
@@ -39,12 +39,7 @@ Return JSON: { "title": "...", "sections": [{ "heading": "...", "content": "..."
     responseFormat: { type: 'json_object' },
   });
 
-  let packet: { title: string; sections: { heading: string; content: string }[] };
-  try {
-    packet = JSON.parse(result.choices[0].message.content as string ?? '{}');
-  } catch {
-    throw new Error('Pilot packet LLM returned unparseable JSON');
-  }
+  const packet = parseLLMContent<{ title: string; sections: { heading: string; content: string }[] }>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'pilot_packet_built', entityType: 'task', entityId: 0, details: { taskId: task.id,
     segment,
@@ -78,12 +73,7 @@ Return JSON: { "title": "...", "sections": [{ "heading": "...", "content": "..."
     responseFormat: { type: 'json_object' },
   });
 
-  let dossier: unknown;
-  try {
-    dossier = JSON.parse(result.choices[0].message.content as string ?? '{}');
-  } catch {
-    throw new Error('Intel dossier LLM returned unparseable JSON');
-  }
+  const dossier = parseLLMContent<unknown>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'intel_dossier_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
     segment,

@@ -46,7 +46,7 @@ export function detectEnterpriseTheater(email: string) {
  * Fetch contact details from a professional data provider (e.g. Apollo.io).
  * This is a placeholder for a real API call.
  */
-export async function fetchProfessionalData(_email: string): Promise<Partial<EnrichedContact>> {
+export async function fetchProfessionalData(email: string): Promise<Partial<EnrichedContact>> {
   const apolloKey = process.env.APOLLO_API_KEY;
   if (!apolloKey) {
     console.warn('[enrichment] APOLLO_API_KEY missing - using heuristic fallback');
@@ -54,23 +54,20 @@ export async function fetchProfessionalData(_email: string): Promise<Partial<Enr
   }
 
   try {
-    // Simulated Apollo.io API call
-    /*
     const res = await fetch('https://api.apollo.io/v1/people/match', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
-      body: JSON.stringify({ api_key: apolloKey, email })
+      body: JSON.stringify({ api_key: apolloKey, email }),
     });
-    const data = await res.json();
+    if (!res.ok) return {};
+    const data = await res.json() as any;
     return {
       first_name: data.person?.first_name,
       last_name: data.person?.last_name,
       job_title: data.person?.title,
       company_name: data.person?.organization?.name,
-      linkedin_url: data.person?.linkedin_url
+      linkedin_url: data.person?.linkedin_url,
     };
-    */
-    return {};
   } catch (err) {
     console.error('[enrichment] Professional data fetch failed:', err);
     return {};

@@ -1,4 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("./db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./db")>();
+  return {
+    ...actual,
+    getServiceOrdersByUser: vi.fn(async () => []),
+    getAllServiceOrders: vi.fn(async () => []),
+    updateServiceOrderStatus: vi.fn(async () => undefined),
+    getDb: vi.fn(async () => null),
+  };
+});
+
 import { appRouter } from "./routers";
 
 const publicCaller = appRouter.createCaller({ user: null } as any);
