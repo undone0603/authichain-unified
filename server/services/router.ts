@@ -42,7 +42,7 @@ export const servicesRouter = router({
     if (!key) throw new Error("serviceKey or serviceType is required");
     const service = SERVICE_CATALOG[key];
 
-    const url = await createPaymentCheckout({
+    const { url, sessionId } = await createPaymentCheckout({
       userId: ctx.user.id,
       userEmail: ctx.user.email || "",
       userName: ctx.user.name || "",
@@ -57,6 +57,15 @@ export const servicesRouter = router({
         business_url: input.businessUrl || "",
         notes: input.notes || "",
       },
+    });
+
+    await db.createServiceOrder({
+      userId: ctx.user.id,
+      serviceType: service.key,
+      status: "pending",
+      amount: service.price,
+      stripeSessionId: sessionId,
+      customerName: ctx.user.name || null,
     });
 
     return { checkoutUrl: url };

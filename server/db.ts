@@ -318,7 +318,7 @@ export async function createServiceOrder(data: any) {
 
 export async function getServiceOrderBySessionId(sessionId: string) {
   const d = await getDb();
-  const rows = await d.select().from(serviceOrders).where(eq(sql`json_extract(details, '$.sessionId')`, sessionId)).limit(1);
+  const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.stripeSessionId, sessionId)).limit(1);
   return rows[0] ?? null;
 }
 

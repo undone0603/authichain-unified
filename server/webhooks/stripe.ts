@@ -25,6 +25,7 @@ import {
   hasWebhookEventProcessed,
 } from "../db";
 import { getPlanQuota } from "../stripe-products";
+import { handleServiceOrderPayment } from "../services/order-payment-handler";
 
 // ─── Stripe client (lazy, uses env at call time) ─────────────────────────────
 
@@ -361,6 +362,10 @@ export async function handleStripeWebhook(
         },
         userId,
       );
+
+      if (session.metadata?.type === "one_time_service") {
+        await handleServiceOrderPayment({ id: session.id, payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : undefined });
+      }
 
       console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);
       break;

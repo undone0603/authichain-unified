@@ -87,7 +87,7 @@ export interface CreatePaymentCheckoutParams {
   metadata?: Record<string, string>;
 }
 
-export async function createPaymentCheckout(params: CreatePaymentCheckoutParams): Promise<string> {
+export async function createPaymentCheckout(params: CreatePaymentCheckoutParams): Promise<{ url: string; sessionId: string }> {
   const stripe = getStripe();
 
   const session = await stripe.checkout.sessions.create({
@@ -119,7 +119,7 @@ export async function createPaymentCheckout(params: CreatePaymentCheckoutParams)
     cancel_url: `${params.origin}/payments?cancelled=true`,
   });
 
-  return session.url!;
+  return { url: session.url!, sessionId: session.id };
 }
 
 // ─── Customer Management ────────────────────────────────────────────────────

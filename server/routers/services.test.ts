@@ -10,10 +10,11 @@ vi.mock("../db.js", () => ({
   getServiceOrdersByUser: vi.fn().mockResolvedValue([]),
   getAllServiceOrders: vi.fn().mockResolvedValue([]),
   updateServiceOrderStatus: vi.fn().mockResolvedValue(undefined),
+  createServiceOrder: vi.fn().mockResolvedValue({ id: 1 }),
 }));
 
 vi.mock("../stripe-service.js", () => ({
-  createPaymentCheckout: vi.fn().mockResolvedValue("https://checkout.stripe.com/mock"),
+  createPaymentCheckout: vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/mock", sessionId: "cs_mock_123" }),
 }));
 
 vi.mock("../_core/trpc.js", () => {

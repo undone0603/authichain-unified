@@ -717,6 +717,8 @@ export const serviceOrders = pgTable("service_orders", {
   status: varchar("status", { length: 50 }).default("pending").notNull(),
   priority: integer("priority").default(0),
   amount: integer("amount"),
+  stripeSessionId: varchar("stripeSessionId", { length: 256 }),
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 256 }),
   customerName: varchar("customerName", { length: 256 }),
   deliveryUrl: text("deliveryUrl"),
   details: json("details"),
