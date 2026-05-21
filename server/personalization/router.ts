@@ -108,7 +108,7 @@ export const personalizationRouter = router({
           utmSource: profile.utmSource || undefined,
           utmMedium: profile.utmMedium || undefined,
           utmCampaign: profile.utmCampaign || undefined,
-          deviceType: profile.deviceType || undefined,
+          deviceType: profile.deviceType as "desktop" | "mobile" | "tablet" | undefined,
           segment: profile.segment || undefined,
         },
         rules.map(r => ({

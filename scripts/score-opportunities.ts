@@ -1,5 +1,6 @@
 // scripts/score-opportunities.ts
 import { createClient } from '@supabase/supabase-js';
+// @ts-ignore - package installed separately
 import { Pinecone } from '@pinecone-database/pinecone';
 import { chat } from './lib/llm.ts';
 

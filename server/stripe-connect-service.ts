@@ -116,9 +116,9 @@ export async function createPlatformSubscriptionPlan(currency = 'usd') {
 export async function attachBalancePaymentMethod(vendorAccountId: string) {
   const stripe = getStripe();
 
-  const intent = await stripe.setupIntents.create({
-    payment_method_types: ["stripe_balance" as any],
-    customer_account: vendorAccountId as any,
+  const intent = await (stripe.setupIntents.create as any)({
+    payment_method_types: ["stripe_balance"],
+    customer_account: vendorAccountId,
   });
 
   return intent.payment_method as string;
@@ -131,12 +131,12 @@ export async function subscribeVendorToPlatform(vendorAccountId: string, payment
   const stripe = getStripe();
   
   try {
-    const subscription = await stripe.subscriptions.create({
-      customer_account: vendorAccountId as any,
+    const subscription = await (stripe.subscriptions.create as any)({
+      customer_account: vendorAccountId,
       default_payment_method: paymentMethodId,
       items: [{ price: priceId, quantity: 1 }],
       payment_settings: {
-        payment_method_types: ["stripe_balance" as any]
+        payment_method_types: ["stripe_balance"]
       }
     }, {
       idempotencyKey: generateIdempotencyKey("vendor-sub", vendorAccountId)
