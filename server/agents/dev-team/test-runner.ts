@@ -20,8 +20,8 @@
  *   LLM diagnoses the error and enqueues a targeted WRITE_CODE to fix it.
  */
 
-import { invokeLLM } from '../../_core/llm.js';
-import { logActivity, createSystemNotification } from '../../db.js';
+import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
+import { logActivity, createSystemNotification, getDb, getAllAdminIds } from '../../db.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
   getPR,
@@ -29,6 +29,8 @@ import {
   waitForCIRun,
   createIssue,
   searchCode,
+  getBranchSha,
+  createBranch,
 } from './github-service.js';
 
 // ─── RUN_TESTS ────────────────────────────────────────────────────────────
@@ -43,7 +45,6 @@ export async function runTests(task: Task): Promise<void> {
     headSha = pr.head.sha;
   } else {
     // Get latest commit on branch via GitHub API
-    const { getBranchSha } = await import('./github-service.js');
     headSha = await getBranchSha(p.branch);
   }
 
@@ -73,7 +74,7 @@ export async function runTests(task: Task): Promise<void> {
 
   if (!passed) {
     // Enqueue AUTO_FIX
-    const { db } = await import('../../db.js');
+    const db = await getDb();
     await (db as any).execute(
       `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'AUTO_FIX',$3,'PENDING',NOW() + INTERVAL '2 minutes')`,
       [
@@ -134,7 +135,7 @@ export async function runMonitorDeploy(task: Task): Promise<void> {
     });
 
     // Enqueue AUTO_FIX
-    const { db } = await import('../../db.js');
+    const db = await getDb();
     await (db as any).execute(
       `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'AUTO_FIX',$3,'PENDING',NOW())`,
       [
@@ -148,7 +149,6 @@ export async function runMonitorDeploy(task: Task): Promise<void> {
     );
 
     // Notify admin
-    const { getAllAdminIds } = await import('../../db.js');
     const adminIds = await getAllAdminIds();
     for (const adminId of adminIds) {
       await createSystemNotification(
@@ -227,23 +227,18 @@ export async function runAutoFix(task: Task): Promise<void> {
     isHotfix: boolean;
   };
 
-  try {
-    diagnosis = JSON.parse(result.choices[0].message.content as string);
-  } catch {
-    throw new Error('AUTO_FIX: LLM returned unparseable JSON');
-  }
+  diagnosis = parseLLMContent<typeof diagnosis>(result.choices[0].message.content);
 
   const targetBranch = diagnosis.isHotfix
     ? `agentz/hotfix-${task.id.slice(0, 8)}`
     : p.branch;
 
   if (diagnosis.isHotfix) {
-    const { createBranch } = await import('./github-service.js');
     await createBranch(targetBranch);
   }
 
   // Enqueue WRITE_CODE targeting the identified files
-  const { db } = await import('../../db.js');
+  const db = await getDb();
   const fixTaskId = crypto.randomUUID();
   await (db as any).execute(
     `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'WRITE_CODE',$3,'PENDING',NOW() + INTERVAL '1 minute')`,

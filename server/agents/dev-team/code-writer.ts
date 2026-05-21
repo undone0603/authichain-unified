@@ -18,7 +18,7 @@
  *   Reads existing files, LLM proposes changes, writes them via GitHub API.
  */
 
-import { invokeLLM } from '../../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
 import { logActivity, getDb } from '../../db.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
@@ -147,11 +147,7 @@ Rules:
     followupTasks: Array<{ kind: string; payload: Record<string, unknown> }>;
   };
 
-  try {
-    plan = JSON.parse(result.choices[0].message.content as string);
-  } catch {
-    throw new Error('PLAN_SPRINT: LLM returned unparseable JSON');
-  }
+  plan = parseLLMContent<typeof plan>(result.choices[0].message.content);
 
   // Create the feature branch
   await createBranch(plan.branch);
@@ -261,11 +257,7 @@ Write the code changes. Return the full JSON response as specified in your syste
     nextSteps: string[];
   };
 
-  try {
-    codeResult = JSON.parse(result.choices[0].message.content as string);
-  } catch {
-    throw new Error('WRITE_CODE: LLM returned unparseable JSON');
-  }
+  codeResult = parseLLMContent<typeof codeResult>(result.choices[0].message.content);
 
   if (!codeResult.files?.length) {
     throw new Error('WRITE_CODE: LLM returned no files');

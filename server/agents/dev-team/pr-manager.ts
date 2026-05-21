@@ -16,7 +16,7 @@
  *   Merges the PR (squash). If REQUIRE_DEV_APPROVAL=true → sets task WAITING_HUMAN first.
  */
 
-import { invokeLLM } from '../../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
 import { logActivity, markTaskWaitingHuman, getDb } from '../../db.js';
 import { ENV } from '../../_core/env.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
@@ -123,11 +123,7 @@ export async function runCodeReview(task: Task): Promise<void> {
     suggestions: string[];
   };
 
-  try {
-    review = JSON.parse(result.choices[0].message.content as string);
-  } catch {
-    throw new Error('CODE_REVIEW: LLM returned unparseable JSON');
-  }
+  review = parseLLMContent<typeof review>(result.choices[0].message.content);
 
   // Post review to GitHub
   const ghEvent = review.verdict === 'APPROVE'
