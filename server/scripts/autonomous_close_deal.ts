@@ -2,6 +2,7 @@ import "dotenv/config";
 import { getDb, createLead, updateLead, logActivity } from "../db.js";
 import { calculateLeadScore } from "../sales/scoring-service.js";
 import { sendDocuSignContract } from "../sales/docusign-service.js";
+import { revenueRecords } from "../../drizzle/schema.js";
 
 async function autonomousClose() {
   console.log("🤖 AgentZ: Initiating End-to-End Autonomous Close for Medtronic...");
@@ -73,7 +74,8 @@ async function autonomousClose() {
 
         // 6. Record Revenue
         const db = await getDb();
-        await (db as any).insert((await import("../../drizzle/schema.js")).revenueRecords).values({
+        if (!db) throw new Error("Database not available");
+        await db.insert(revenueRecords).values({
           source: "medtech_enterprise",
           amount: "150000.00",
           type: "subscription",

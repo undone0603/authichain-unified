@@ -5,6 +5,7 @@ import { storagePut } from '../storage';
 import { notifyOwner } from '../_core/notification';
 import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../thirdweb';
 import { ENV } from '../_core/env';
+import { sendCertificateEmail as sendCrispCertificateEmail } from './crispService';
 
 /**
  * Automated Certificate Generation Service
@@ -315,12 +316,10 @@ async function sendCertificateEmail(
     return;
   }
 
-  const { users: usersTable } = await import('../../drizzle/schema');
-  const { eq: eqFn } = await import('drizzle-orm');
   const userResult = await db
     .select()
-    .from(usersTable)
-    .where(eqFn(usersTable.id, certificateData.userId))
+    .from(users)
+    .where(eq(users.id, certificateData.userId))
     .limit(1);
 
   if (!userResult || userResult.length === 0) {
@@ -336,10 +335,7 @@ async function sendCertificateEmail(
     return;
   }
 
-  // Send email using Crisp
-  const { sendCertificateEmail: sendEmail } = await import('./crispService');
-  
-  const emailSent = await sendEmail({
+  const emailSent = await sendCrispCertificateEmail({
     to: customerEmail,
     customerName: user.name || undefined,
     certificateNumber: certificateData.certificateNumber,

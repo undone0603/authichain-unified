@@ -1,4 +1,4 @@
-import { invokeLLM } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { ENV } from '../_core/env.js';
 import { sendEmail } from '../email-service.js';
 import { logActivity, getDb, markTaskWaitingHuman } from '../db.js';
@@ -53,7 +53,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
     let subject: string;
     let body: string;
     try {
-      const parsed = JSON.parse(result.choices[0].message.content as string ?? '{}');
+      const parsed = parseLLMContent<any>(result.choices[0].message.content);
       subject = parsed.subject ?? `Follow-up ${followupNum}: AuthiChain`;
       body = parsed.body ?? '';
     } catch {

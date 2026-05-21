@@ -1,4 +1,4 @@
-import { invokeLLM } from "../_core/llm.js";
+import { invokeLLM, parseLLMContent } from "../_core/llm.js";
 import { logActivity } from "../db.js";
 
 /**
@@ -32,7 +32,7 @@ Return JSON:
       responseFormat: { type: "json_object" },
     });
 
-    return JSON.parse(result.choices[0].message.content as string);
+    return parseLLMContent<any>(result.choices[0].message.content);
   } catch (err: any) {
     console.warn("⚠️ LLM Generation failed. Using vertical-aware traffic bundle.");
     

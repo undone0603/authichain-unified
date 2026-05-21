@@ -32,7 +32,7 @@ vi.mock("./db", async (importOriginal) => {
       values: (data: any) => {
         const id = store.nextId();
         store.bonuses.push({ ...data, id });
-        return [{ insertId: id }];
+        return { returning: () => [{ id }] };
       },
     }),
     update: () => ({ set: () => ({ where: () => undefined }) }),

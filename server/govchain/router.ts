@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
+import { adminProcedure, router, publicProcedure } from "../_core/trpc";
 import { issueSovereignPassport, verifySovereignPassport } from "./vc-service";
 import * as db from "../db";
 import { TRPCError } from "@trpc/server";
@@ -8,18 +8,13 @@ export const govchainRouter = router({
   /**
    * Government Issuer: Issue a Sovereign Document Passport
    */
-  issuePassport: protectedProcedure
+  issuePassport: adminProcedure
     .input(z.object({
       documentId: z.string(),
       claims: z.record(z.any()),
       recipientEmail: z.string().email(),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Check if user has 'admin' role or a specific 'gov_issuer' claim
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only authorized government issuers can perform this action." });
-      }
-
       const issuerDid = `did:authichain:gov:${ctx.user.id}`;
       const subjectDid = `did:authichain:user:${input.recipientEmail}`;
 

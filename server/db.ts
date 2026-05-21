@@ -48,6 +48,8 @@ import {
   type InsertUser,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { SEGMENT_PRIORS } from './_core/bayesian';
+import { bayesianPriors } from '../drizzle/schema';
 
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
@@ -220,11 +222,14 @@ export async function getActiveMissionTypes(): Promise<string[]> {
 }
 
 export async function getAdaptivePriors(): Promise<Record<string, { alpha: number; beta: number }>> {
-  const { SEGMENT_PRIORS } = await import('./_core/bayesian.js');
   try {
     const d = await getDb();
-    const { bayesianPriors } = await import('../drizzle/schema.js');
-    const rows = await d.select().from(bayesianPriors);
+    if (!d) return { ...SEGMENT_PRIORS };
+    const rows = await d.select({
+      segment: bayesianPriors.segment,
+      priorAlpha: bayesianPriors.priorAlpha,
+      priorBeta: bayesianPriors.priorBeta,
+    }).from(bayesianPriors).limit(200);
     if (!rows.length) return { ...SEGMENT_PRIORS };
     const map: Record<string, { alpha: number; beta: number }> = { ...SEGMENT_PRIORS };
     for (const row of rows) {
@@ -254,7 +259,7 @@ export async function createLead(data: any) {
     metadata: data.metadata ?? null,
   };
   const [result] = await d.insert(leads).values(values).returning();
-  return { id: result.id, ...values };
+  return result;
 }
 
 export async function getLeadByEmail(email: string) {
@@ -318,8 +323,18 @@ export async function createServiceOrder(data: any) {
 
 export async function getServiceOrderBySessionId(sessionId: string) {
   const d = await getDb();
-  const rows = await d.select().from(serviceOrders).where(eq(sql`json_extract(details, '$.sessionId')`, sessionId)).limit(1);
+  const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.stripeSessionId, sessionId)).limit(1);
   return rows[0] ?? null;
+}
+
+export async function getServiceOrdersByUser(userId: number) {
+  const d = await getDb();
+  return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId)).orderBy(desc(serviceOrders.createdAt));
+}
+
+export async function getAllServiceOrders() {
+  const d = await getDb();
+  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -463,7 +478,7 @@ export async function hasDunningStepLogged(subscriptionId: number, step: string)
   const rows = await d.select().from(activityLog)
     .where(and(
       like(activityLog.action, `dunning:${step}:%`),
-      sql`JSON_EXTRACT(${activityLog.details}, '$.text') LIKE ${'%sub:' + subscriptionId + '%'}`
+      sql`${activityLog.details}->>'text' LIKE ${'%sub:' + subscriptionId + '%'}`
     )).limit(1);
   return rows.length > 0;
 }
@@ -673,7 +688,7 @@ export async function createNft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(nfts).values(data).returning();
-  return { id: result.id };
+  return result;
 }
 
 export async function listCollections() {
@@ -1256,7 +1271,7 @@ export async function hasWebhookEventProcessed(eventId: string): Promise<boolean
   const [row] = await db
     .select({ count: sql<number>`count(*)` })
     .from(activityLog)
-    .where(sql`JSON_EXTRACT(${activityLog.details}, '$.eventId') = ${eventId}`);
+    .where(sql`${activityLog.details}->>'eventId' = ${eventId}`);
   return (row?.count ?? 0) > 0;
 }
 

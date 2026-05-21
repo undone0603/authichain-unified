@@ -2,7 +2,7 @@
  * Newsjacking PR Agent — AgentZ Global Authority Force
  * Monitors news and drafts automated technical PR responses.
  */
-import { invokeLLM } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { logActivity, enqueueTask, getDb } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
@@ -34,7 +34,7 @@ Return JSON:
       responseFormat: { type: 'json_object' }
     });
 
-    const story = JSON.parse(result.choices[0].message.content as string);
+    const story = parseLLMContent<any>(result.choices[0].message.content);
     console.log(`[Newsjacking] Target Story Found: ${story.storyTitle}`);
 
     // 2. Draft the Technical Press Release
@@ -59,7 +59,7 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
       responseFormat: { type: 'json_object' }
     });
 
-    const pr = JSON.parse(prResult.choices[0].message.content as string);
+    const pr = parseLLMContent<any>(prResult.choices[0].message.content);
 
     // 3. Log findings and enqueue the next steps
     await logActivity({

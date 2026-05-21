@@ -1,7 +1,7 @@
 /**
  * Security Audit Agent — Checks for vulnerabilities and compliance.
  */
-import { invokeLLM } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { logActivity, createSystemNotification } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
@@ -58,17 +58,11 @@ Return JSON:
     responseFormat: { type: 'json_object' },
   });
 
-  let auditResult: {
+  const auditResult = parseLLMContent<{
     findings: any[];
     complianceStatus: Record<string, string>;
     summary: string;
-  };
-
-  try {
-    auditResult = JSON.parse(result.choices[0].message.content as string);
-  } catch {
-    throw new Error('SECURITY_AUDIT: LLM returned unparseable JSON');
-  }
+  }>(result.choices[0].message.content);
 
   // 2. Log findings and notify admins
   await logActivity({
