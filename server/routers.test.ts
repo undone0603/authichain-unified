@@ -862,5 +862,70 @@ describe("AuthiChain Unified Platform Routers", () => {
       const result = await caller.govchain.stats();
       expect(result).toBeDefined();
     });
+    it("issuePassport requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.govchain.issuePassport({ documentId: "doc1", claims: {}, recipientEmail: "a@b.com" })).rejects.toThrow();
+    });
+  });
+
+  describe("supplyChain", () => {
+    it("getEvents requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.supplyChain.getEvents({ productId: 1 })).rejects.toThrow();
+    });
+    it("addEvent requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.supplyChain.addEvent({ productId: 1, eventType: "shipped", location: "NYC", notes: "" })).rejects.toThrow();
+    });
+  });
+
+  describe("devTeam", () => {
+    it("writeCode requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.devTeam.writeCode({ missionId: "m1", prompt: "add feature" })).rejects.toThrow();
+    });
+    it("tasks requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.devTeam.tasks({ missionId: "m1" })).rejects.toThrow();
+    });
+  });
+
+  describe("macrohard", () => {
+    it("status requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.macrohard.status()).rejects.toThrow();
+    });
+    it("sync requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.macrohard.sync({ entity: "products" })).rejects.toThrow();
+    });
+  });
+
+  describe("sales", () => {
+    it("calculateRoi is public", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.sales.calculateRoi({
+        numProducts: 100,
+        complianceHoursPerMonth: 10,
+        hourlyRate: 50,
+        existingTechCosts: 5000,
+        industry: "retail",
+      });
+      expect(result).toBeDefined();
+      expect(typeof result.year1Savings).toBe("number");
+    });
+  });
+
+  describe("metrc", () => {
+    it("stats is public", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.metrc.stats();
+      expect(result).toBeDefined();
+      expect(typeof result.activeLicenses).toBe("number");
+    });
+    it("sync requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.metrc.sync({ licenseNumber: "LIC-123" })).rejects.toThrow();
+    });
   });
 });
