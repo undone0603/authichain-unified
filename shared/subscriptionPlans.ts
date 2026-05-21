@@ -66,10 +66,11 @@ export const SUBSCRIPTION_PLANS = {
   },
   medtech: {
     name: "MedTech Enterprise",
-    monthlyPrice: 12500, // $150K / 12
+    monthlyPrice: 12500,
     annualPrice: 150000,
     monthlyQuota: 50000,
     perAuthCost: "0.25",
+    paymentLink: "https://buy.stripe.com/medtech-enterprise",
     features: [
       "50,000 authentications/month",
       "ISO 13485 Compliance Module",
