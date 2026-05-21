@@ -38,7 +38,7 @@ jobs:
 
       - name: Patch missing Shadcn dependencies
         # Workaround: Installs the missing Tailwind v4 package workspace-wide
-        run: pnpm add -w tw-animate-css
+        run: pnpm add tw-animate-css
 
       - name: Build frontend (+ dist/public for Wrangler [assets])
         run: pnpm run build
