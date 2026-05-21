@@ -54,16 +54,15 @@ async function testAssetLoop() {
       console.log(`- Vision Markers: ${JSON.stringify((updatedProduct as any).visionMarkers) || "❌ MISSING"}`);
       console.log(`- Rarity Score: ${(updatedProduct as any).rarityScore}`);
 
+      if ((updatedProduct as any)?.audioUrl && (updatedProduct as any)?.visionMarkers) {
+        console.log("\n✨ FINAL ASSET LOOP SUCCESSFUL.");
+        console.log("The Truth Layer is fully stateful and persistent.");
+      } else {
+        console.warn("\n⚠️ Asset Loop partially failed (Check service fallbacks).");
+      }
     } catch (updateErr: any) {
       console.warn("\n⚠️ Pipeline executed but DB Persistence failed (Schema Mismatch).");
       console.log("Details:", updateErr.message);
-    }
-
-    if (updatedProduct.audioUrl && updatedProduct.visionMarkers) {
-      console.log("\n✨ FINAL ASSET LOOP SUCCESSFUL.");
-      console.log("The Truth Layer is fully stateful and persistent.");
-    } else {
-      console.warn("\n⚠️ Asset Loop partially failed (Check service fallbacks).");
     }
 
   } catch (error: any) {

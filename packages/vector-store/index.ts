@@ -1,3 +1,4 @@
+// @ts-ignore - package installed separately
 import { LocalIndex, IndexItem } from "vectra";
 import OpenAI from "openai";
 import * as path from "path";
@@ -112,7 +113,7 @@ export async function getDocumentCount(): Promise<number> {
 }
 
 export interface GovernmentOpportunity extends VectorQueryResult {
-  score?: number;
+  // inherits score: number from VectorQueryResult
 }
 
 export const vectorStoreUtils = {
@@ -123,9 +124,34 @@ export const vectorStoreUtils = {
   deleteDocument,
   listDocuments,
   getDocumentCount,
-  findMatchingOpportunities: async (params: any): Promise<GovernmentOpportunity[]> => {
-    // Stub implementation to satisfy the agent
-    return [];
+  findMatchingOpportunities: async (params: {
+    query?: string;
+    topK?: number;
+    limit?: number;
+    filter?: Record<string, unknown>;
+    companyProfile?: {
+      entityName?: string;
+      description?: string;
+      capabilities?: string[];
+      naicsCodes?: string[];
+      [key: string]: unknown;
+    };
+  }): Promise<GovernmentOpportunity[]> => {
+    const queryText =
+      params.query ??
+      [
+        params.companyProfile?.entityName,
+        params.companyProfile?.description,
+        ...(params.companyProfile?.capabilities ?? []),
+        ...(params.companyProfile?.naicsCodes ?? []),
+      ]
+        .filter(Boolean)
+        .join(" ");
+    return queryDocuments(
+      queryText,
+      params.topK ?? params.limit ?? 10,
+      params.filter ? { type: "opportunity", ...params.filter } : { type: "opportunity" },
+    );
   }
 };
 

@@ -69,6 +69,6 @@ export const salesRouter = router({
   getLeadStatus: protectedProcedure
     .query(async ({ ctx }) => {
       // Assuming users can see their own lead status
-      return await db.getLeadByEmail(ctx.user.email);
+      return await db.getLeadByEmail(ctx.user.email ?? "");
     }),
 });

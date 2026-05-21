@@ -8,6 +8,7 @@ import { ENV } from "../_core/env";
 // Allows autonomous closing even if the native SDK fails to install.
 let docusign: any;
 try {
+  // @ts-ignore - package installed separately
   docusign = await import("docusign-esign");
 } catch (e) {
   console.warn("[DocuSign] Native SDK unavailable. Using high-fidelity headless simulation.");

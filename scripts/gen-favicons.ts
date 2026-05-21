@@ -1,3 +1,4 @@
+// @ts-ignore - package installed separately
 import { Resvg } from '@resvg/resvg-js';
 import fs from 'fs';
 import path from 'path';

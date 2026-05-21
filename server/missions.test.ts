@@ -103,7 +103,7 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),
-    },
+    } as any,
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
   };

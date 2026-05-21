@@ -2,6 +2,7 @@
 // FIXED: proper ESM .ts file — replaces broken `tsx -e "..."` inline pattern
 // Top-level await works correctly here when invoked via `pnpm exec tsx scripts/ingest-sam.ts`
 import { createClient } from '@supabase/supabase-js';
+// @ts-ignore - package installed separately
 import { Pinecone } from '@pinecone-database/pinecone';
 import { embed } from './lib/embed.ts';
 

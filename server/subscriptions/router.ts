@@ -22,13 +22,14 @@ export const subscriptionsRouter = router({
     plan: z.enum(["starter", "professional", "enterprise", "medtech"]),
     billingCycle: z.enum(["monthly", "annual"]).optional().default("monthly"),
   })).mutation(async ({ ctx, input }) => {
-    const quotas = {
+    const quotas: Record<string, number> = {
       starter: SUBSCRIPTION_PLANS.starter.monthlyQuota,
       professional: SUBSCRIPTION_PLANS.professional.monthlyQuota,
       enterprise: SUBSCRIPTION_PLANS.enterprise.monthlyQuota,
+      medtech: SUBSCRIPTION_PLANS.medtech.monthlyQuota,
     };
     const result = await db.createSubscription({
-      userId: ctx.user.id, plan: input.plan, monthlyQuota: quotas[input.plan],
+      userId: ctx.user.id, plan: input.plan as any, monthlyQuota: quotas[input.plan] ?? 0,
       usedQuota: 0, billingCycle: input.billingCycle, status: "active",
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + (input.billingCycle === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000),
@@ -53,7 +54,7 @@ export const subscriptionsRouter = router({
       userId: ctx.user.id,
       userEmail: ctx.user.email || "",
       userName: ctx.user.name || "",
-      plan: input.plan,
+      plan: input.plan as any,
       billing: input.billing,
       origin: input.origin,
       stripeCustomerId: (ctx.user as any).stripeCustomerId || undefined,
@@ -106,7 +107,7 @@ export const subscriptionsRouter = router({
       name: input.name || `AuthiChain ${input.percentOff}% Off`,
     });
     const promo = await stripe.promotionCodes.create({
-      promotion: { type: 'coupon', coupon: coupon.id },
+      coupon: coupon.id,
       code: input.code,
       active: true,
     });
