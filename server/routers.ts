@@ -35,6 +35,9 @@ import { salesRouter } from "./sales/router";
 import { servicesRouter } from "./services/router";
 import { stakingRouter } from "./staking/router";
 import { devTeamRouter } from "./agents/dev-team/router";
+import { analyticsRouter } from "./analytics/router";
+import { feedbackRouter } from "./feedback/router";
+import { personalizationRouter } from "./personalization/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -74,6 +77,9 @@ export const appRouter = router({
   services: servicesRouter,
   staking: stakingRouter,
   devTeam: devTeamRouter,
+  analytics: analyticsRouter,
+  feedback: feedbackRouter,
+  personalization: personalizationRouter,
 });
 
 export type AppRouter = typeof appRouter;
