@@ -928,4 +928,26 @@ describe("AuthiChain Unified Platform Routers", () => {
       await expect(caller.metrc.sync({ licenseNumber: "LIC-123" })).rejects.toThrow();
     });
   });
+
+  describe("authenticate", () => {
+    it("analyze requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.authenticate.analyze({ productId: 1, imageUrl: "https://example.com/img.jpg" })).rejects.toThrow();
+    });
+    it("history requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.authenticate.history()).rejects.toThrow();
+    });
+  });
+
+  describe("qrcode", () => {
+    it("generate requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.qrcode.generate({ productId: 1 })).rejects.toThrow();
+    });
+    it("generateStorymode requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.qrcode.generateStorymode({ productId: 1 })).rejects.toThrow();
+    });
+  });
 });
