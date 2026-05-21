@@ -950,4 +950,23 @@ describe("AuthiChain Unified Platform Routers", () => {
       await expect(caller.qrcode.generateStorymode({ productId: 1 })).rejects.toThrow();
     });
   });
+
+  describe("hubspot", () => {
+    it("status requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.hubspot.status()).rejects.toThrow();
+    });
+  });
+
+  describe("system", () => {
+    it("health is public and returns ok", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.system.health({ timestamp: Date.now() });
+      expect(result.ok).toBe(true);
+    });
+    it("notifyOwner requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.system.notifyOwner({ title: "t", content: "c" })).rejects.toThrow();
+    });
+  });
 });
