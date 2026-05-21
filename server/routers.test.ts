@@ -765,7 +765,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
     it("createStripe requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.payments.createStripe({ amount: 100, currency: "usd", description: "test" })).rejects.toThrow();
+      await expect(caller.payments.createStripe({ amount: "100", currency: "usd" })).rejects.toThrow();
     });
   });
 
@@ -802,14 +802,14 @@ describe("AuthiChain Unified Platform Routers", () => {
   describe("missions", () => {
     it("list requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.missions.list()).rejects.toThrow();
+      await expect(caller.missions.list({ status: "active" })).rejects.toThrow();
     });
   });
 
   describe("tasks", () => {
     it("list requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.tasks.list()).rejects.toThrow();
+      await expect(caller.tasks.list({ missionId: "test-id" })).rejects.toThrow();
     });
   });
 
@@ -824,6 +824,43 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("avatars requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
       await expect(caller.heygen.avatars()).rejects.toThrow();
+    });
+  });
+
+  describe("marketplace", () => {
+    it("purchaseModel requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.marketplace.purchaseModel({ modelId: 1 })).rejects.toThrow();
+    });
+    it("myPurchases requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.marketplace.myPurchases()).rejects.toThrow();
+    });
+  });
+
+  describe("ai", () => {
+    it("chat requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.ai.chat({ messages: [{ role: "user", content: "hello" }] })).rejects.toThrow();
+    });
+  });
+
+  describe("bonuses", () => {
+    it("getUserBonuses requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.bonuses.getUserBonuses()).rejects.toThrow();
+    });
+    it("claimBonus requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.bonuses.claimBonus({ bonusId: 1 })).rejects.toThrow();
+    });
+  });
+
+  describe("govchain", () => {
+    it("stats is public", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.govchain.stats();
+      expect(result).toBeDefined();
     });
   });
 });
