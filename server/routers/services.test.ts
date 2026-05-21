@@ -17,6 +17,10 @@ vi.mock("../stripe-service.js", () => ({
   createPaymentCheckout: vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/mock", sessionId: "cs_mock_123" }),
 }));
 
+vi.mock("../stripe-service.js", () => ({
+  createPaymentCheckout: vi.fn().mockResolvedValue("https://checkout.stripe.com/mock"),
+}));
+
 vi.mock("../_core/trpc.js", () => {
   const makeProc = () => ({
     query: (fn: any) => ({ _type: "query", _fn: fn }),
