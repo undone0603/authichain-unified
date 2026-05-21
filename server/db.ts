@@ -48,6 +48,8 @@ import {
   type InsertUser,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { SEGMENT_PRIORS } from './_core/bayesian';
+import { bayesianPriors } from '../drizzle/schema';
 
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
@@ -220,10 +222,9 @@ export async function getActiveMissionTypes(): Promise<string[]> {
 }
 
 export async function getAdaptivePriors(): Promise<Record<string, { alpha: number; beta: number }>> {
-  const { SEGMENT_PRIORS } = await import('./_core/bayesian.js');
   try {
     const d = await getDb();
-    const { bayesianPriors } = await import('../drizzle/schema.js');
+    if (!d) return { ...SEGMENT_PRIORS };
     const rows = await d.select().from(bayesianPriors);
     if (!rows.length) return { ...SEGMENT_PRIORS };
     const map: Record<string, { alpha: number; beta: number }> = { ...SEGMENT_PRIORS };

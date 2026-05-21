@@ -24,8 +24,9 @@ import {
   createSystemNotification,
   hasWebhookEventProcessed,
 } from "../db";
-import { getPlanQuota } from "../stripe-products";
+import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
 import { handleServiceOrderPayment } from "../services/order-payment-handler";
+import { sendEmail } from "../email-service";
 
 // ─── Stripe client (lazy, uses env at call time) ─────────────────────────────
 
@@ -393,8 +394,6 @@ export async function handleStripeWebhook(
       );
 
       if (email) {
-        const { sendEmail } = await import("../email-service");
-        const { STRIPE_PRODUCTS } = await import("../stripe-products");
         const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
         const monthlyPrice = (product.priceMonthly / 100).toFixed(0);
         await sendEmail({

@@ -5,6 +5,7 @@
  */
 import { ENV } from "./_core/env";
 import * as db from "./db";
+import { broadcastSocialProof } from "./social-service";
 
 interface MetrcAuth {
   vendorKey: string;
@@ -99,7 +100,6 @@ export async function anchorPackageToTruthLayer(packageTag: string, manifestId: 
   
   // 4. Trigger Social Proof Bridge
   try {
-    const { broadcastSocialProof } = await import("./social-service");
     await broadcastSocialProof({
       type: 'inscription',
       brandName: "Michigan Processor", // Dynamically resolve brand name from DB in real scenario

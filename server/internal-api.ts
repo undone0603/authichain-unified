@@ -4,6 +4,7 @@ import { computeTrustScore, generateProductQRON } from "./qron-service";
 import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
 import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
+import { reportUsageToStripe } from "./tenant-billing";
 
 /**
  * Internal API routes for the authichain-gateway Cloudflare Worker.
@@ -223,8 +224,6 @@ export function createInternalRouter(): Router {
       if (!Array.isArray(records) || records.length === 0) {
         return res.status(400).json({ error: "records array required" });
       }
-
-      const { reportUsageToStripe } = await import("./tenant-billing");
 
       // Process each usage record
       await Promise.all(
