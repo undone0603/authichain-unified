@@ -254,7 +254,7 @@ export async function createLead(data: any) {
     metadata: data.metadata ?? null,
   };
   const [result] = await d.insert(leads).values(values).returning();
-  return result;
+  return { id: result.id, ...values };
 }
 
 export async function getLeadByEmail(email: string) {
@@ -302,16 +302,6 @@ export async function getServiceOrderById(id: number) {
   const d = await getDb();
   const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
   return rows[0] ?? null;
-}
-
-export async function getServiceOrdersByUser(userId: number) {
-  const d = await getDb();
-  return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId)).orderBy(desc(serviceOrders.createdAt));
-}
-
-export async function getAllServiceOrders() {
-  const d = await getDb();
-  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
 }
 
 export async function updateServiceOrderStatus(id: number, status: string, extra?: Record<string, any>) {
@@ -683,7 +673,7 @@ export async function createNft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(nfts).values(data).returning();
-  return result;
+  return { id: result.id };
 }
 
 export async function listCollections() {

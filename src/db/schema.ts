@@ -8,7 +8,6 @@ import {
   boolean,
   json,
   numeric,
-  real,
   bigint,
   uuid,
   pgEnum,
@@ -528,12 +527,8 @@ export type WhiteLabelClient = typeof whiteLabelClients.$inferSelect;
 export const apiUsageDaily = pgTable("api_usage_daily", {
   id: serial("id").primaryKey(),
   clientId: integer("clientId").notNull(),
-  tenantId: integer("tenantId"),
   date: timestamp("date").notNull(),
-  endpoint: varchar("endpoint", { length: 256 }),
   calls: integer("calls").default(0),
-  callCount: integer("callCount").default(0),
-  cost: numeric("cost", { precision: 18, scale: 4 }).default("0.0000"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -689,7 +684,7 @@ export const promptCache = pgTable("prompt_cache", {
 
 // ─── Scheduled Job Runs ──────────────────────────────────────────────────────
 export const scheduledJobRuns = pgTable("scheduled_job_runs", {
-  id: serial("id").primaryKey(),
+  id: bigint("id", { mode: "number" }).primaryKey(),
   jobName: varchar("jobName", { length: 128 }).notNull(),
   status: varchar("status", { length: 50 }).notNull(),
   startedAt: timestamp("startedAt").defaultNow().notNull(),
@@ -847,12 +842,8 @@ export const stakingPositions = pgTable("staking_positions", {
   status: varchar("status", { length: 50 }).default("active"),
   multiplier: numeric("multiplier", { precision: 5, scale: 2 }).default("1.00"),
   apy: numeric("apy", { precision: 5, scale: 2 }).default("5.00"),
-  rewardsEarned: numeric("rewardsEarned", { precision: 20, scale: 9 }).default("0"),
-  lastRewardCalculation: timestamp("lastRewardCalculation").defaultNow(),
   stakedAt: timestamp("stakedAt").defaultNow().notNull(),
   releaseAt: timestamp("releaseAt"),
-  endDate: timestamp("endDate"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
@@ -1040,54 +1031,6 @@ export const feedbackVotes = pgTable("feedback_votes", {
 
 export type InsertFeedback = typeof feedback.$inferInsert;
 export type InsertFeedbackVote = typeof feedbackVotes.$inferInsert;
-
-// ─── Personalization ─────────────────────────────────────────────────────────
-export const visitorProfiles = pgTable("visitor_profiles", {
-  id: serial("id").primaryKey(),
-  sessionId: varchar("sessionId", { length: 128 }).notNull().unique(),
-  ipAddress: varchar("ipAddress", { length: 64 }),
-  country: varchar("country", { length: 64 }),
-  city: varchar("city", { length: 128 }),
-  region: varchar("region", { length: 128 }),
-  trafficSource: varchar("trafficSource", { length: 64 }),
-  referrer: text("referrer"),
-  utmSource: varchar("utmSource", { length: 128 }),
-  utmMedium: varchar("utmMedium", { length: 128 }),
-  utmCampaign: varchar("utmCampaign", { length: 256 }),
-  deviceType: varchar("deviceType", { length: 32 }),
-  segment: varchar("segment", { length: 64 }),
-  pageViews: integer("pageViews").default(0).notNull(),
-  timeOnSite: integer("timeOnSite").default(0).notNull(),
-  converted: integer("converted").default(0).notNull(),
-  lastSeen: timestamp("lastSeen").defaultNow(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export const personalizationRules = pgTable("personalization_rules", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 256 }).notNull(),
-  description: text("description"),
-  targetElement: varchar("targetElement", { length: 128 }).notNull(),
-  conditions: text("conditions").notNull(),
-  content: text("content").notNull(),
-  priority: integer("priority").default(0).notNull(),
-  status: varchar("status", { length: 32 }).default("draft").notNull(),
-  aiGenerated: integer("aiGenerated").default(0).notNull(),
-  views: integer("views").default(0).notNull(),
-  conversions: integer("conversions").default(0).notNull(),
-  conversionRate: real("conversionRate").default(0).notNull(),
-  createdBy: integer("createdBy"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-});
-
-export const personalizationEvents = pgTable("personalization_events", {
-  id: serial("id").primaryKey(),
-  ruleId: integer("ruleId").notNull(),
-  sessionId: varchar("sessionId", { length: 128 }).notNull(),
-  eventType: varchar("eventType", { length: 64 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
 
 export type Mission = typeof missions.$inferSelect;
 export type MissionTask = typeof missionTasks.$inferSelect;
