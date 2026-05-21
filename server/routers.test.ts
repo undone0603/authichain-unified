@@ -814,16 +814,16 @@ describe("AuthiChain Unified Platform Routers", () => {
   });
 
   describe("stripeConnect", () => {
-    it("getAccount requires auth", async () => {
+    it("provisionAccount requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.stripeConnect.getAccount()).rejects.toThrow();
+      await expect(caller.stripeConnect.provisionAccount({ country: "US" })).rejects.toThrow();
     });
   });
 
   describe("heygen", () => {
-    it("listAvatars requires auth", async () => {
+    it("avatars requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.heygen.listAvatars()).rejects.toThrow();
+      await expect(caller.heygen.avatars()).rejects.toThrow();
     });
   });
 });
