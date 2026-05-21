@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import { syncPaymentToHubSpot, createDeal, isHubSpotConfigured } from "../hubspot-service";
 import * as db from "../db";
+import { protocolAgents } from "../../drizzle/schema";
 
 const SCAN_THRESHOLD = 50;
 const XP_THRESHOLD = 500;
@@ -33,7 +35,9 @@ export async function checkUserMilestones(userId: number) {
     }
 
     // 2. Check Reputation/XP Threshold (from Protocol Agent)
-    const [agent] = await (await db.getDb()).select().from((await import("../../drizzle/schema")).protocolAgents).where((await import("drizzle-orm")).eq((await import("../../drizzle/schema")).protocolAgents.userId, userId)).limit(1);
+    const dbInstance = await db.getDb();
+    if (!dbInstance) return;
+    const [agent] = await dbInstance.select().from(protocolAgents).where(eq(protocolAgents.userId, userId)).limit(1);
     if (agent && (agent.xp || 0) >= XP_THRESHOLD) {
       const alreadyLogged = await db.hasUserActionLogged(userId, "hubspot_milestone_reputation");
       if (!alreadyLogged) {
