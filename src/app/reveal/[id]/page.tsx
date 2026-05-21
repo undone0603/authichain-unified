@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { Shield, Loader2, Sparkles, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
+import { startAuthentication } from '@simplewebauthn/browser';
 
 interface RevealPageProps {
   params: Promise<{ id: string }>;
@@ -14,6 +15,8 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
   const { dest } = use(searchParams);
   const [progress, setProgress] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
     // Cinematic countdown/loading
@@ -26,20 +29,43 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
         }
         return prev + 1.5;
       });
-    }, 50);
+    }, 30);
 
     return () => clearInterval(timer);
   }, []);
 
+  const handleVerify = async () => {
+    setIsVerifying(true);
+    try {
+      const challengeResp = await fetch('https://api.authichain.com/generate-challenge');
+      const options = await challengeResp.json();
+      
+      const authResp = await startAuthentication(options);
+      
+      const verifyResp = await fetch('https://api.authichain.com/verify-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authResp),
+      });
+
+      if (verifyResp.ok) {
+        setIsVerified(true);
+      }
+    } catch (err) {
+      console.error('Verification failed', err);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   useEffect(() => {
-    if (isReady && dest) {
-      // Small delay before final redirect to let the 'Ready' state breathe
+    if (isReady && dest && isVerified) {
       const redirectTimer = setTimeout(() => {
         window.location.assign(dest);
       }, 1500);
       return () => clearTimeout(redirectTimer);
     }
-  }, [isReady, dest]);
+  }, [isReady, dest, isVerified]);
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center relative overflow-hidden">
@@ -58,63 +84,82 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
           </div>
         </div>
 
-        {/* Narrative Text */}
-        <div className="space-y-4 mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-[0.3em]">
-            <Sparkles className="w-3 h-3" />
-            Decrypting Digital Narrative
-          </div>
-          <h1 className="text-3xl font-black uppercase tracking-tighter italic">
-            Authentic <span className="gold-text">Reveal</span>
-          </h1>
-          <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest max-w-[280px]">
-            Syncing on-chain metadata for artifact registry #{id.slice(0, 8)}
-          </p>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest mb-8">
+          <Sparkles className="w-3 h-3" />
+          <span>Authenticity Verification</span>
         </div>
 
-        {/* Cinematic Progress */}
-        <div className="w-full space-y-6">
-          <div className="relative h-1 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+        <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tighter">
+          SECURE <span className="text-gold italic">ACCESS</span>
+        </h1>
+        
+        <p className="text-zinc-500 mb-12 text-sm max-w-xs mx-auto leading-relaxed">
+          Verifying cryptographic anchor for asset <span className="text-zinc-300 font-mono">#{id.slice(0, 8)}</span>
+        </p>
+
+        {/* Progress Bar */}
+        <div className="w-full mb-12">
+          <div className="flex justify-between text-[10px] font-bold text-zinc-600 mb-2 uppercase tracking-widest">
+            <span>Synchronizing</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="h-1 w-full bg-zinc-900 rounded-full overflow-hidden p-[1px]">
             <div 
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-gold/50 to-gold transition-all duration-100 ease-linear shadow-gold"
+              className="h-full bg-gold rounded-full transition-all duration-300 ease-out shadow-[0_0_15px_rgba(212,175,55,0.5)]"
               style={{ width: `${progress}%` }}
             />
           </div>
-          
-          <div className="flex justify-between items-center px-2">
-            <div className="flex items-center gap-3">
-              {!isReady ? (
-                <Loader2 className="w-4 h-4 text-zinc-700 animate-spin" />
+        </div>
+
+        {/* Action Button */}
+        {isReady && !isVerified && (
+          <button 
+            onClick={handleVerify}
+            disabled={isVerifying}
+            className="group relative w-full py-4 bg-gold text-black font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 disabled:opacity-50"
+          >
+            <div className="flex items-center justify-center gap-3">
+              {isVerifying ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Scanning...</span>
+                </>
               ) : (
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <>
+                  <span>Verify Authenticity</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </>
               )}
-              <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">
-                {!isReady ? `Syncing ${Math.floor(progress)}%` : 'Ready for Navigation'}
-              </span>
             </div>
-            <span className="text-[10px] font-mono text-zinc-800">
-              PROTO-V{id.slice(0, 4).toUpperCase()}
-            </span>
-          </div>
-        </div>
-
-        {/* CTA (Appears when ready) */}
-        <div className={`mt-16 transition-all duration-700 ${isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-          <button className="btn-gold px-10 py-4 flex items-center gap-4 font-black uppercase tracking-widest text-[10px] shadow-gold group">
-            Proceed to Destination
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
-          <p className="mt-4 text-zinc-600 text-[9px] font-bold uppercase tracking-widest">
-            Automatic redirect in 1.5s
-          </p>
+        )}
+
+        {isVerified && (
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2 text-gold font-bold">
+              <Shield className="w-5 h-5" />
+              Authenticity Anchored
+            </div>
+            <p className="text-zinc-500 text-xs">Redirecting to verified destination...</p>
+          </div>
+        )}
+
+        <div className="mt-12 flex items-center gap-6 opacity-30 grayscale">
+          <Image src="/media/logo-white.svg" alt="Authichain" width={80} height={20} />
+          <div className="w-px h-4 bg-zinc-800" />
+          <span className="text-[10px] font-bold tracking-widest uppercase">Edge Verifier v2.4</span>
         </div>
       </div>
 
-      {/* Footer Branding */}
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 opacity-20 grayscale grayscale-100">
-        <Image src="/media/samples/01_flux_qron_space.png" alt="qron" width={24} height={24} />
-        <span className="text-[10px] font-black uppercase tracking-widest">AuthiChain Protocol</span>
-      </div>
+      <style jsx global>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+          animation: float 4s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }
