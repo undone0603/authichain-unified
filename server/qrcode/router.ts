@@ -12,6 +12,7 @@ export const qrcodeRouter = router({
   })).mutation(async ({ ctx, input }) => {
     const product = await db.getProductById(input.productId);
     if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    if (product.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
     const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL || "https://authichain.com"}/verify/${product.id}`;
     const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: input.size, margin: 2, color: { dark: "#000000", light: "#FFFFFF" } });
     await db.createQrCode({ productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl });
@@ -24,14 +25,18 @@ export const qrcodeRouter = router({
     if (qrCodes.length > 0) await db.incrementScanCount(qrCodes[0].id);
     return { product, scanCount: (qrCodes[0]?.scanCount || 0) + 1 };
   }),
-  listForProduct: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
+  listForProduct: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ ctx, input }) => {
+    const product = await db.getProductById(input.productId);
+    if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    if (product.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
     return await db.getProductQrCodes(input.productId);
   }),
   generateStorymode: protectedProcedure.input(z.object({
     productId: z.number(),
-  })).mutation(async ({ input }) => {
+  })).mutation(async ({ ctx, input }) => {
     const product = await db.getProductById(input.productId);
     if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    if (product.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
 
     const response = await invokeLLM({
       messages: [
@@ -66,7 +71,12 @@ export const qrcodeRouter = router({
       }
     });
 
-    const storyData = JSON.parse(response.choices[0].message.content as string);
+    let storyData: { chapters: Array<{ title: string; content: string }> };
+    try {
+      storyData = JSON.parse(response.choices[0].message.content as string);
+    } catch {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to parse story response" });
+    }
     const metadata = { ...(product.metadata as any || {}), storymode: storyData };
     await db.updateProduct(product.id, { metadata });
 

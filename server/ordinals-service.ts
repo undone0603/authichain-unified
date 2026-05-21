@@ -36,8 +36,12 @@ export async function prepareOrdinalEnvelope(imageUrl: string, metadata: any) {
 /**
  * Tracks the status of an inscription on-chain.
  */
+const INSCRIPTION_ID_RE = /^[0-9a-f]{64}i\d+$/i;
+
 export async function getInscriptionStatus(inscriptionId: string) {
-  // Integration with BTC indexers (Hiro, UniSat, etc.)
+  if (!INSCRIPTION_ID_RE.test(inscriptionId)) {
+    return { status: "invalid", error: "Invalid inscription ID format" };
+  }
   const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions/${inscriptionId}`);
   if (!res.ok) return { status: "pending" };
   return await res.json();

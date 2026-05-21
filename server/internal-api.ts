@@ -42,19 +42,30 @@ export function createInternalRouter(): Router {
         });
       }
 
+      // Sanitize lookupId — strip any characters outside alphanumeric/hyphen/underscore/dot
+      const safeLookupId = String(lookupId).replace(/[^a-zA-Z0-9\-_.]/g, "").slice(0, 128);
+
       // AI-based verification
       const analysis = await invokeLLM({
         messages: [
           {
             role: "system",
-            content: `You are AuthiChain's product verification engine. Analyze the product identifier "${lookupId}" and determine authenticity. Return JSON: { "verified": boolean, "confidence": number (0-1), "reasoning": string, "riskFlags": string[] }`,
+            content: `You are AuthiChain's product verification engine. Analyze the product identifier and determine authenticity. Return JSON: { "verified": boolean, "confidence": number (0-1), "reasoning": string, "riskFlags": string[] }`,
           },
-          ...(imageUrl ? [{ role: "user" as const, content: `Product image: ${imageUrl}` }] : []),
+          {
+            role: "user",
+            content: JSON.stringify({ identifier: safeLookupId, hasImage: !!imageUrl }),
+          },
         ],
         responseFormat: { type: "json_object" },
       });
 
-      const result = JSON.parse(analysis.choices[0].message.content as string);
+      let result: { verified: boolean; confidence: number; reasoning: string; riskFlags: string[] };
+      try {
+        result = JSON.parse(analysis.choices[0].message.content as string);
+      } catch {
+        return res.status(500).json({ error: "Internal server error" });
+      }
       res.json({
         verified: result.verified,
         type: "ai_analysis",
@@ -66,7 +77,7 @@ export function createInternalRouter(): Router {
       });
     } catch (err: any) {
       console.error("[Internal API] verify error:", err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -88,7 +99,7 @@ export function createInternalRouter(): Router {
       res.json(result);
     } catch (err: any) {
       console.error("[Internal API] qr/generate error:", err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -110,7 +121,7 @@ export function createInternalRouter(): Router {
       });
     } catch (err: any) {
       console.error("[Internal API] certificates/verify error:", err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -145,7 +156,7 @@ export function createInternalRouter(): Router {
       });
     } catch (err: any) {
       console.error("[Internal API] cannabis/verify error:", err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -168,7 +179,7 @@ export function createInternalRouter(): Router {
       });
     } catch (err: any) {
       console.error("[Internal API] trust-score error:", err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -190,7 +201,7 @@ export function createInternalRouter(): Router {
       });
     } catch (err: any) {
       console.error("[Internal API] analytics error:", err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -213,7 +224,7 @@ export function createInternalRouter(): Router {
       res.json({ success: true, product });
     } catch (err: any) {
       console.error("[Internal API] products/register error:", err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -235,15 +246,18 @@ export function createInternalRouter(): Router {
       res.json({ success: true, processed: records.length });
     } catch (err: any) {
       console.error("[Internal API] usage/report error:", err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
   // ─── GET /api/internal/tenant ──────────────────────────────────────────────
   router.get("/tenant", async (req: Request, res: Response) => {
     try {
-      const apiKey = req.query.apiKey as string;
-      if (!apiKey) return res.status(400).json({ error: "apiKey query param required" });
+      // Accept apiKey from Authorization header (preferred) or query param (legacy)
+      const authHeader = req.headers["authorization"];
+      const apiKey = (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null)
+        ?? req.query.apiKey as string;
+      if (!apiKey) return res.status(400).json({ error: "apiKey required" });
 
       const tenant = await getWhiteLabelByApiKey(apiKey);
       if (!tenant) return res.status(404).json({ error: "Tenant not found" });
@@ -258,7 +272,7 @@ export function createInternalRouter(): Router {
       });
     } catch (err: any) {
       console.error("[Internal API] tenant error:", err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
