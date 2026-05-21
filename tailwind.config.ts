@@ -53,7 +53,7 @@ const config: Config = {
         },
       },
       backgroundImage: {
-        'grid-pattern': "url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h30v1H0zM0 0v30h1V0z' fill='%231f2937' fill-opacity='0.4'/%3E%3C/svg%3E")",
+        'grid-pattern': "url(\"data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h30v1H0zM0 0v30h1V0z' fill='%231f2937' fill-opacity='0.4'/%3E%3C/svg%3E\")",
         'hero-glow':     'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,255,209,0.12) 0%, transparent 60%)',
         'govchain-glow': 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(27,79,216,0.18) 0%, transparent 60%)',
       },

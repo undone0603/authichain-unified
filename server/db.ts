@@ -150,8 +150,8 @@ export async function getUserStakingPositions(userId: number) {
 export async function createStakingPosition(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(stakingPositions).values(data);
-  return { id: result[0].insertId, ...data };
+  const [result] = await db.insert(stakingPositions).values(data).returning();
+  return { id: result.id, ...data };
 }
 
 export async function updateStakingPosition(id: number, data: any) {
@@ -164,8 +164,8 @@ export async function updateStakingPosition(id: number, data: any) {
 export async function createProduct(data: Omit<InsertProduct, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(products).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(products).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getRecentActivity(limit = 20) {
@@ -219,10 +219,24 @@ export async function getActiveMissionTypes(): Promise<string[]> {
   return rows.map(r => r.title);
 }
 
-export async function getAdaptivePriors() {
-  const d = await getDb();
-  const rows = await d.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(50);
-  return rows;
+export async function getAdaptivePriors(): Promise<Record<string, { alpha: number; beta: number }>> {
+  const { SEGMENT_PRIORS } = await import('./_core/bayesian.js');
+  try {
+    const d = await getDb();
+    const { bayesianPriors } = await import('../drizzle/schema.js');
+    const rows = await d.select().from(bayesianPriors);
+    if (!rows.length) return { ...SEGMENT_PRIORS };
+    const map: Record<string, { alpha: number; beta: number }> = { ...SEGMENT_PRIORS };
+    for (const row of rows) {
+      map[row.segment] = {
+        alpha: parseFloat(row.priorAlpha ?? '2'),
+        beta: parseFloat(row.priorBeta ?? '18'),
+      };
+    }
+    return map;
+  } catch {
+    return { ...SEGMENT_PRIORS };
+  }
 }
 
 export async function createLead(data: any) {
@@ -239,8 +253,8 @@ export async function createLead(data: any) {
     industry: data.industry ?? null,
     metadata: data.metadata ?? null,
   };
-  const result = await d.insert(leads).values(values);
-  return { id: result[0].insertId, ...values };
+  const [result] = await d.insert(leads).values(values).returning();
+  return { id: result.id, ...values };
 }
 
 export async function getLeadByEmail(email: string) {
@@ -279,10 +293,21 @@ export async function updateLeadStatus(id: number, status: string) {
 // SERVICE ORDERS (used by service-orders router)
 // ─────────────────────────────────────────────────────────────
 
+export async function getServiceOrderById(id: number) {
+  const d = await getDb();
+  const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function updateServiceOrderStatus(id: number, status: string, extra?: Record<string, any>) {
+  const d = await getDb();
+  await d.update(serviceOrders).set({ status, ...(extra ?? {}), updatedAt: new Date() }).where(eq(serviceOrders.id, id));
+}
+
 export async function createServiceOrder(data: any) {
   const d = await getDb();
-  const result = await d.insert(serviceOrders).values(data);
-  const id = result[0].insertId;
+  const [result] = await d.insert(serviceOrders).values(data).returning();
+  const id = result.id;
   return { id, ...data };
 }
 
@@ -317,7 +342,7 @@ export async function markTaskFailed(id: string, error: string) {
   await d.update(missionTasks).set({ status: "failed", error, updatedAt: new Date() }).where(eq(missionTasks.id, id));
 }
 
-export async function enqueueTask(missionId: string, kind: string, payload: any) {
+export async function enqueueTask(missionId: string, kind: string, payload: any, scheduledAt?: Date) {
   const d = await getDb();
   const id = randomUUID();
   await d.insert(missionTasks).values({
@@ -327,6 +352,7 @@ export async function enqueueTask(missionId: string, kind: string, payload: any)
     title: kind,
     status: "pending",
     payload,
+    ...(scheduledAt ? { scheduledAt } : {}),
   });
   return id;
 }
@@ -535,8 +561,8 @@ export async function updateProduct(id: number, data: any) {
 export async function createAuthentication(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(authentications).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(authentications).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getUserAuthentications(userId: number) {
@@ -568,8 +594,8 @@ export async function incrementShareCount(id: number) {
 export async function createCertificate(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(certificates).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(certificates).values(data).returning();
+  return result;
 }
 
 export async function getCertificateByNumber(certNumber: string) {
@@ -589,8 +615,8 @@ export async function getUserCertificates(userId: number) {
 export async function createQrCode(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(qrCodes).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(qrCodes).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getProductQrCodes(productId: number) {
@@ -627,8 +653,8 @@ export async function getNftById(id: number) {
 export async function createNft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(nfts).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(nfts).values(data).returning();
+  return { id: result.id };
 }
 
 export async function listCollections() {
@@ -647,16 +673,16 @@ export async function getCollectionBySlug(slug: string) {
 export async function createCollection(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(nftCollections).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(nftCollections).values(data).returning();
+  return { id: result.id };
 }
 
 // ─── Auction Helpers ─────────────────────────────────────────────────────────
 export async function createAuction(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(auctions).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(auctions).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getActiveAuctions() {
@@ -700,8 +726,8 @@ export async function getUserSubscription(userId: number) {
 export async function createSubscription(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(subscriptions).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(subscriptions).values(data).returning();
+  return { id: result.id };
 }
 
 export async function updateSubscriptionUsage(userId: number, usedQuota: number) {
@@ -720,8 +746,8 @@ export async function recordUsage(data: any) {
 export async function createInvoice(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(invoices).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(invoices).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getUserInvoices(userId: number) {
@@ -734,8 +760,8 @@ export async function getUserInvoices(userId: number) {
 export async function createPayment(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(payments).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(payments).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getUserPayments(userId: number) {
@@ -754,8 +780,8 @@ export async function updatePaymentStatus(id: number, status: string) {
 export async function createEmailCampaign(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(emailCampaigns).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(emailCampaigns).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getUserEmailCampaigns(userId: number) {
@@ -774,8 +800,8 @@ export async function updateEmailCampaign(id: number, data: any) {
 export async function createEmailDraft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(emailDrafts).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(emailDrafts).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getPendingDrafts() {
@@ -797,8 +823,8 @@ export async function updateDraftStatus(id: number, status: string, approvedBy?:
 export async function createSupplyChainEvent(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(supplyChainEvents).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(supplyChainEvents).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getProductSupplyChain(productId: number) {
@@ -811,8 +837,8 @@ export async function getProductSupplyChain(productId: number) {
 export async function createReferral(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(referrals).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(referrals).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getReferralByCode(code: string) {
@@ -839,8 +865,8 @@ export async function getAffiliateByUserId(userId: number) {
 export async function createAffiliate(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(affiliates).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(affiliates).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getAffiliateCommissions(affiliateId: number) {
@@ -867,16 +893,28 @@ export async function upsertAutopilotConfig(data: any) {
 export async function createAutopilotDecision(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(autopilotDecisions).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(autopilotDecisions).values(data).returning();
+  return { id: result.id };
+}
+
+export async function getAutopilotDecisionCountByMonth(_type?: string): Promise<{ data: number }> {
+  const db = await getDb();
+  if (!db) return { data: 0 };
+  const firstOfMonth = new Date();
+  firstOfMonth.setDate(1);
+  firstOfMonth.setHours(0, 0, 0, 0);
+  const rows = await db.select({ count: sql<number>`count(*)` })
+    .from(autopilotDecisions)
+    .where(gte(autopilotDecisions.createdAt, firstOfMonth));
+  return { data: rows[0]?.count ?? 0 };
 }
 
 // ─── A/B Test Helpers ────────────────────────────────────────────────────────
 export async function createAbTest(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(abTests).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(abTests).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getActiveAbTests() {
@@ -895,8 +933,8 @@ export async function getAllAbTests() {
 export async function createWhiteLabelClient(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(whiteLabelClients).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(whiteLabelClients).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getWhiteLabelClients() {
@@ -916,8 +954,8 @@ export async function getWhiteLabelByApiKey(apiKey: string) {
 export async function createFraudAlert(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(fraudAlerts).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(fraudAlerts).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getOpenFraudAlerts() {
@@ -1007,8 +1045,8 @@ export async function getSubscriptionAnalytics() {
 export async function createNotification(data: Omit<InsertNotification, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(notifications).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(notifications).values(data).returning();
+  return { id: result.id };
 }
 
 export async function getUserNotifications(userId: number, limit = 50) {
@@ -1091,7 +1129,7 @@ export async function upsertLeadByEmail(input: {
     }).where(eq(leads.id, existing[0].id));
     return { id: existing[0].id, created: false };
   }
-  const result = await db.insert(leads).values({
+  const [result] = await db.insert(leads).values({
     email: input.email,
     name: input.name,
     company: input.company,
@@ -1100,8 +1138,8 @@ export async function upsertLeadByEmail(input: {
     source: input.source || "website_form",
     industry: input.industry,
     metadata: input.metadata,
-  });
-  return { id: result[0].insertId, created: true };
+  }).returning();
+  return { id: result.id, created: true };
 }
 
 export function computeLeadScore(signals: {
@@ -1269,4 +1307,16 @@ export async function getSubscriptionByPaddleSubscriptionId(paddleSubscriptionId
     .where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId))
     .limit(1);
   return result[0];
+}
+
+export async function getAcceptanceCriteriaStatus() {
+  return { total: 0, passed: 0, failed: 0, pending: 0 };
+}
+
+export async function getFunnelBySegmentAndChannel() {
+  return [] as Array<{ segment: string; channel: string; leads: number; converted: number }>;
+}
+
+export async function getLeadCohorts() {
+  return [] as Array<{ cohort: string; count: number; conversionRate: number }>;
 }
