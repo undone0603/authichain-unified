@@ -92,18 +92,22 @@ export async function POST(req: Request) {
     const payloadString = JSON.stringify(data);
     const eventHash = crypto.createHash('sha256').update(payloadString).digest('hex');
 
+    const parsedPayload = {
+      metrcTag: data.metrcTag,
+      temperatureF: data.temperatureF,
+      humidityPct: data.humidityPct,
+      gpsLocation: data.gpsLocation ?? null,
+      recordedAt: data.recordedAt ?? new Date().toISOString(),
+    };
+
     const [insertedEvent] = await db
       .insert(telemetryEvents)
       .values({
+        theater: 'theater_1',
         source: 'strainchain-iot',
         metrcTag: data.metrcTag,
-        payload: {
-          metrcTag: data.metrcTag,
-          temperatureF: data.temperatureF,
-          humidityPct: data.humidityPct,
-          gpsLocation: data.gpsLocation ?? null,
-          recordedAt: data.recordedAt ?? new Date().toISOString(),
-        },
+        rawPayload: raw,
+        parsedState: parsedPayload,
         gpsLocation: data.gpsLocation ?? null,
         ledgerHash: `0x${eventHash}`,
         isCompliant,
