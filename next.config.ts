@@ -2,7 +2,8 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
+  // eslint config handled via .eslintrc.json
+
   serverExternalPackages: ['pino', 'pino-pretty', '@walletconnect/sign-client'],
   webpack: (config: { resolve: { fallback: Record<string, boolean> } }) => {
     config.resolve.fallback = { ...config.resolve.fallback, pino: false };

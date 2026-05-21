@@ -254,7 +254,7 @@ export async function createLead(data: any) {
     metadata: data.metadata ?? null,
   };
   const [result] = await d.insert(leads).values(values).returning();
-  return { id: result.id, ...values };
+  return result;
 }
 
 export async function getLeadByEmail(email: string) {
@@ -279,6 +279,11 @@ export async function getAllLeads() {
   return d.select().from(leads).orderBy(desc(leads.createdAt));
 }
 
+export async function incrementInteractionCount(id: number) {
+  const d = await getDb();
+  await d.update(leads).set({ interactionsCount: sql`coalesce(${leads.interactionsCount}, 0) + 1` }).where(eq(leads.id, id));
+}
+
 export async function updateLeadScore(id: number, score: number) {
   const d = await getDb();
   await d.update(leads).set({ score }).where(eq(leads.id, id));
@@ -297,6 +302,16 @@ export async function getServiceOrderById(id: number) {
   const d = await getDb();
   const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
   return rows[0] ?? null;
+}
+
+export async function getServiceOrdersByUser(userId: number) {
+  const d = await getDb();
+  return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId)).orderBy(desc(serviceOrders.createdAt));
+}
+
+export async function getAllServiceOrders() {
+  const d = await getDb();
+  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
 }
 
 export async function updateServiceOrderStatus(id: number, status: string, extra?: Record<string, any>) {
@@ -321,10 +336,23 @@ export async function getServiceOrderBySessionId(sessionId: string) {
 // BUDGET & TASKS
 // ─────────────────────────────────────────────────────────────
 
-export async function getBudgetStatus() {
+export async function getBudgetStatus(_asOf?: Date) {
   const d = await getDb();
   const rows = await d.select().from(budgetConfig).limit(1);
-  return rows[0] ?? { monthlyLimit: "1000.00", spent: "0.00" };
+  const row = rows[0] ?? { monthlyLimit: "1000.00", spent: "0.00", currency: "USD" };
+  const limit = parseFloat(row.monthlyLimit);
+  const spent = parseFloat(row.spent ?? "0");
+  const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+  const now = _asOf ?? new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const dayKey = now.toISOString().slice(0, 10);
+  return {
+    ...row,
+    llm:        { pct, spent, limit },
+    ads:        { pct: 0, spent: 0, limit: 0 },
+    enrichment: { pct: 0, spent: 0, limit: 0 },
+    period:     { month: monthKey, day: dayKey },
+  };
 }
 
 export async function markTaskRunning(id: string) {
@@ -486,6 +514,7 @@ export async function createMission(type: MissionType) {
   const id = randomUUID();
   await d.insert(missions).values({
     id,
+    type,
     title: type,
     description: `Mission: ${type}`,
     status: "pending",
@@ -654,7 +683,7 @@ export async function createNft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(nfts).values(data).returning();
-  return { id: result.id };
+  return result;
 }
 
 export async function listCollections() {

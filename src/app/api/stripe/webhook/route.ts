@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   const Stripe = (await import('stripe')).default;
-  const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' });
+  const stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' as const });
 
   const body = await req.text();
   const sig = req.headers.get('stripe-signature')!;
@@ -98,9 +98,9 @@ export async function POST(req: NextRequest) {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('id, email:auth.users!id(email)')
+          .select('id')
           .eq('stripe_customer_id', customerId)
-          .single();
+          .single() as any;
 
         if (profile) {
           await supabase.from('profiles').update({

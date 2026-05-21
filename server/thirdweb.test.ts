@@ -16,8 +16,9 @@ describe('Thirdweb Service', () => {
 
   it('should build auth certificate metadata correctly', () => {
     const data = {
+      productName: 'Test Product',
       certificateNumber: '123',
-      authenticatorId: 'auth1',
+      authenticatorId: 1,
       confidenceScore: 0.95,
       verificationDate: '2024-01-01'
     };

@@ -1,3 +1,4 @@
+// @ts-ignore - package installed separately
 import { LocalIndex, IndexItem } from "vectra";
 import OpenAI from "openai";
 import * as path from "path";
@@ -112,7 +113,7 @@ export async function getDocumentCount(): Promise<number> {
 }
 
 export interface GovernmentOpportunity extends VectorQueryResult {
-  score?: number;
+  // inherits score: number from VectorQueryResult
 }
 
 export const vectorStoreUtils = {
