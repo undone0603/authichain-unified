@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
@@ -16,8 +17,7 @@ export const certificatesRouter = router({
     return { valid: true, certificate: cert, product };
   }),
   makePublic: protectedProcedure.input(z.object({ authenticationId: z.number() })).mutation(async ({ input }) => {
-    const crypto = await import("crypto");
-    const shareToken = crypto.randomBytes(32).toString("hex");
+    const shareToken = randomBytes(32).toString("hex");
     await db.updateAuthenticationSharing(input.authenticationId, true, shareToken);
     return { shareToken, shareUrl: `/certificate/${shareToken}` };
   }),
