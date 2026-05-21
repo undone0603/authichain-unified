@@ -17,7 +17,7 @@
  */
 
 import { invokeLLM } from '../../_core/llm.js';
-import { logActivity, markTaskWaitingHuman } from '../../db.js';
+import { logActivity, markTaskWaitingHuman, getDb } from '../../db.js';
 import { ENV } from '../../_core/env.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
@@ -62,7 +62,7 @@ export async function runOpenPR(task: Task): Promise<void> {
   });
 
   // Enqueue CODE_REVIEW task immediately after PR is open
-  const { db } = await import('../../db.js');
+  const db = await getDb();
   const reviewTaskId = crypto.randomUUID();
   await (db as any).execute(
     `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'CODE_REVIEW',$3,'PENDING',NOW() + INTERVAL '2 minutes')`,
@@ -166,7 +166,7 @@ export async function runCodeReview(task: Task): Promise<void> {
     },
   });
 
-  const { db } = await import('../../db.js');
+  const db = await getDb();
 
   if (review.verdict === 'APPROVE') {
     // Enqueue MERGE_PR
@@ -226,7 +226,7 @@ export async function runMergePR(task: Task): Promise<void> {
   await mergePR(p.prNumber, 'squash');
 
   // Enqueue MONITOR_DEPLOY
-  const { db } = await import('../../db.js');
+  const db = await getDb();
   await (db as any).execute(
     `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'MONITOR_DEPLOY',$3,'PENDING',NOW() + INTERVAL '3 minutes')`,
     [crypto.randomUUID(), task.missionId, JSON.stringify({ prNumber: p.prNumber, branch: p.branch })]

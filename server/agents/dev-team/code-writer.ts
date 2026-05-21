@@ -19,7 +19,7 @@
  */
 
 import { invokeLLM } from '../../_core/llm.js';
-import { logActivity, markTaskWaitingHuman } from '../../db.js';
+import { logActivity, getDb } from '../../db.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
   createBranch,
@@ -157,7 +157,7 @@ Rules:
   await createBranch(plan.branch);
 
   // Enqueue all planned tasks (WRITE_CODE + OPEN_PR + RUN_TESTS + CODE_REVIEW)
-  const { db } = await import('../../../drizzle/schema.js').then(() => import('../../db.js'));
+  const db = await getDb();
   const allTasks = [...plan.tasks, ...plan.followupTasks];
 
   for (let i = 0; i < allTasks.length; i++) {

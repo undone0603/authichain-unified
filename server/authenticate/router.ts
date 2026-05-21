@@ -2,7 +2,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
 import { nanoid } from "nanoid";
 import { triggerMacrohardEvent } from "../macrohard/service";
 import { rewardAgentForVerification } from "../character-service";
@@ -45,7 +45,14 @@ export const authenticateRouter = router({
         }
       }
     });
-    const aiResult = JSON.parse(response.choices[0].message.content as string);
+    const aiResult = parseLLMContent<{
+      result: "authentic" | "counterfeit" | "uncertain";
+      confidence: number;
+      analysis: string;
+      redFlags: string[];
+      authenticMarkers: string[];
+      recommendation: string;
+    }>(response.choices[0].message.content);
     const authResult = await db.createAuthentication({
       productId: input.productId, userId: ctx.user.id, aiAnalysis: aiResult,
       confidenceScore: aiResult.confidence, result: aiResult.result, imageUrl: input.imageUrl,
