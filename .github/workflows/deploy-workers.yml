@@ -36,6 +36,7 @@ jobs:
           - qron-space
           - resend-relay
           - strainchain-io
+          - govchain-us
           - bitcoin-auth
           - outreach-queue
     steps:

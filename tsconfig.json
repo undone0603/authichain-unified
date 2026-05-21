@@ -35,5 +35,5 @@
     "shared/**/*",
     "server/**/*"
   ],
-  "exclude": ["node_modules", "build", "dist", "workers/**/*", "worker/**/*", "mobile/**/*", "packages/**/*"]
+  "exclude": ["node_modules", "build", "dist", "workers/**/*", "worker/**/*", "mobile/**/*", "packages/**/*", "scripts/**/*", "libs/**/*"]
 }
