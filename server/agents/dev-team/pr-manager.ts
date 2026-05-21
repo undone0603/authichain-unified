@@ -19,6 +19,7 @@
 import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
 import { logActivity, markTaskWaitingHuman, getDb } from '../../db.js';
 import { ENV } from '../../_core/env.js';
+import { missionTasks } from '../../../drizzle/schema.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
   createPR,
@@ -63,11 +64,15 @@ export async function runOpenPR(task: Task): Promise<void> {
 
   // Enqueue CODE_REVIEW task immediately after PR is open
   const db = await getDb();
-  const reviewTaskId = crypto.randomUUID();
-  await (db as any).execute(
-    `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'CODE_REVIEW',$3,'PENDING',NOW() + INTERVAL '2 minutes')`,
-    [reviewTaskId, task.missionId, JSON.stringify({ branch: p.branch, prNumber: pr.number })]
-  );
+  await db.insert(missionTasks).values({
+    id: crypto.randomUUID(),
+    missionId: task.missionId,
+    kind: 'CODE_REVIEW',
+    title: `Code review for PR #${pr.number}`,
+    payload: { branch: p.branch, prNumber: pr.number },
+    status: 'PENDING',
+    scheduledAt: new Date(Date.now() + 2 * 60 * 1000),
+  });
 }
 
 // ─── CODE_REVIEW ──────────────────────────────────────────────────────────
@@ -166,25 +171,31 @@ export async function runCodeReview(task: Task): Promise<void> {
 
   if (review.verdict === 'APPROVE') {
     // Enqueue MERGE_PR
-    await (db as any).execute(
-      `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'MERGE_PR',$3,'PENDING',NOW() + INTERVAL '1 minute')`,
-      [crypto.randomUUID(), task.missionId, JSON.stringify({ prNumber: p.prNumber, branch: p.branch })]
-    );
+    await db.insert(missionTasks).values({
+      id: crypto.randomUUID(),
+      missionId: task.missionId,
+      kind: 'MERGE_PR',
+      title: `Merge PR #${p.prNumber}`,
+      payload: { prNumber: p.prNumber, branch: p.branch },
+      status: 'PENDING',
+      scheduledAt: new Date(Date.now() + 60 * 1000),
+    });
   } else if (review.verdict === 'REQUEST_CHANGES') {
     // Re-enqueue WRITE_CODE with the fix list as context
-    await (db as any).execute(
-      `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'WRITE_CODE',$3,'PENDING',NOW() + INTERVAL '2 minutes')`,
-      [
-        crypto.randomUUID(),
-        task.missionId,
-        JSON.stringify({
-          branch:    p.branch,
-          feature:   `Fix review feedback on PR #${p.prNumber}`,
-          context:   `Required fixes:\n${review.requiredFixes.join('\n')}`,
-          prNumber:  p.prNumber,
-        }),
-      ]
-    );
+    await db.insert(missionTasks).values({
+      id: crypto.randomUUID(),
+      missionId: task.missionId,
+      kind: 'WRITE_CODE',
+      title: `Fix review feedback on PR #${p.prNumber}`,
+      payload: {
+        branch:   p.branch,
+        feature:  `Fix review feedback on PR #${p.prNumber}`,
+        context:  `Required fixes:\n${review.requiredFixes.join('\n')}`,
+        prNumber: p.prNumber,
+      },
+      status: 'PENDING',
+      scheduledAt: new Date(Date.now() + 2 * 60 * 1000),
+    });
   }
 }
 
@@ -223,10 +234,15 @@ export async function runMergePR(task: Task): Promise<void> {
 
   // Enqueue MONITOR_DEPLOY
   const db = await getDb();
-  await (db as any).execute(
-    `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'MONITOR_DEPLOY',$3,'PENDING',NOW() + INTERVAL '3 minutes')`,
-    [crypto.randomUUID(), task.missionId, JSON.stringify({ prNumber: p.prNumber, branch: p.branch })]
-  );
+  await db.insert(missionTasks).values({
+    id: crypto.randomUUID(),
+    missionId: task.missionId,
+    kind: 'MONITOR_DEPLOY',
+    title: `Monitor deploy for PR #${p.prNumber}`,
+    payload: { prNumber: p.prNumber, branch: p.branch },
+    status: 'PENDING',
+    scheduledAt: new Date(Date.now() + 3 * 60 * 1000),
+  });
 
   await logActivity({
     userId: null,

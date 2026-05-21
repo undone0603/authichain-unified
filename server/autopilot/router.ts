@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
 import { autopilotDecisions } from "../../drizzle/schema";
 
 export const autopilotRouter = router({
@@ -78,7 +78,7 @@ export const autopilotRouter = router({
         },
       },
     });
-    const evaluation = JSON.parse(response.choices[0].message.content as string);
+    const evaluation = parseLLMContent<any>(response.choices[0].message.content);
     const decision = await db.createAutopilotDecision({
       type: input.type, action: input.action, reasoning: input.reasoning,
       confidence: evaluation.confidence, status: evaluation.proceed ? "executed" : "pending",

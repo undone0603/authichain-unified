@@ -20,6 +20,7 @@
 
 import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
 import { logActivity, getDb } from '../../db.js';
+import { missionTasks } from '../../../drizzle/schema.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
   createBranch,
@@ -156,16 +157,17 @@ Rules:
   const db = await getDb();
   const allTasks = [...plan.tasks, ...plan.followupTasks];
 
-  for (let i = 0; i < allTasks.length; i++) {
-    const t = allTasks[i]!;
-    const taskId = crypto.randomUUID();
-    // Stagger run_at so they execute in order (5 min apart after each other)
-    const runAt = new Date(Date.now() + (i + 1) * 5 * 60 * 1000);
-    await (db as any).execute(
-      `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,$3,$4,'PENDING',$5)`,
-      [taskId, task.missionId, t.kind, JSON.stringify(t.payload), runAt]
-    );
-  }
+  await db.insert(missionTasks).values(
+    allTasks.map((t, i) => ({
+      id: crypto.randomUUID(),
+      missionId: task.missionId,
+      kind: t.kind,
+      title: `${t.kind.replace(/_/g, ' ')}: ${p.feature.slice(0, 60)}`,
+      payload: t.payload,
+      status: 'PENDING' as const,
+      scheduledAt: new Date(Date.now() + (i + 1) * 5 * 60 * 1000),
+    }))
+  );
 
   await logActivity({
     userId: null,

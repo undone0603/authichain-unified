@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { invokeLLM } from "../_core/llm.js";
+import { invokeLLM, parseLLMContent } from "../_core/llm.js";
 import { sendEmail } from "../email-service.js";
 import { bayesianPreamble, betaMean, betaCI, SEGMENT_PRIORS } from "../_core/bayesian.js";
 
@@ -48,7 +48,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
       messages: [{ role: "user", content: prompt }],
       responseFormat: { type: "json_object" },
     });
-    content = JSON.parse(result.choices[0].message.content as string);
+    content = parseLLMContent<any>(result.choices[0].message.content);
   } catch (err: any) {
     console.warn("⚠️ LLM Generation failed. Using high-fidelity hardcoded fallback sequence.");
     content = {

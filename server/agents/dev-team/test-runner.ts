@@ -22,10 +22,10 @@
 
 import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
 import { logActivity, createSystemNotification, getDb, getAllAdminIds } from '../../db.js';
+import { missionTasks } from '../../../drizzle/schema.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
   getPR,
-  getLatestRunForSha,
   waitForCIRun,
   createIssue,
   searchCode,
@@ -75,17 +75,18 @@ export async function runTests(task: Task): Promise<void> {
   if (!passed) {
     // Enqueue AUTO_FIX
     const db = await getDb();
-    await (db as any).execute(
-      `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'AUTO_FIX',$3,'PENDING',NOW() + INTERVAL '2 minutes')`,
-      [
-        crypto.randomUUID(),
-        task.missionId,
-        JSON.stringify({
-          branch:       p.branch,
-          errorSummary: `CI failed on branch ${p.branch}. Run: ${run.html_url}. Conclusion: ${run.conclusion}.`,
-        }),
-      ]
-    );
+    await db.insert(missionTasks).values({
+      id: crypto.randomUUID(),
+      missionId: task.missionId,
+      kind: 'AUTO_FIX',
+      title: `Auto-fix CI failure on ${p.branch}`,
+      payload: {
+        branch:       p.branch,
+        errorSummary: `CI failed on branch ${p.branch}. Run: ${run.html_url}. Conclusion: ${run.conclusion}.`,
+      },
+      status: 'PENDING',
+      scheduledAt: new Date(Date.now() + 2 * 60 * 1000),
+    });
     throw new Error(`Tests failed (${run.conclusion}). AUTO_FIX enqueued. See: ${run.html_url}`);
   }
 }
@@ -136,17 +137,18 @@ export async function runMonitorDeploy(task: Task): Promise<void> {
 
     // Enqueue AUTO_FIX
     const db = await getDb();
-    await (db as any).execute(
-      `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'AUTO_FIX',$3,'PENDING',NOW())`,
-      [
-        crypto.randomUUID(),
-        task.missionId,
-        JSON.stringify({
-          branch:       `agentz/hotfix-${task.id.slice(0, 8)}`,
-          errorSummary: `Production health check failing: ${lastError}. Issue: ${issue.html_url}`,
-        }),
-      ]
-    );
+    await db.insert(missionTasks).values({
+      id: crypto.randomUUID(),
+      missionId: task.missionId,
+      kind: 'AUTO_FIX',
+      title: `Auto-fix deploy failure after PR #${p.prNumber}`,
+      payload: {
+        branch:       `agentz/hotfix-${task.id.slice(0, 8)}`,
+        errorSummary: `Production health check failing: ${lastError}. Issue: ${issue.html_url}`,
+      },
+      status: 'PENDING',
+      scheduledAt: new Date(),
+    });
 
     // Notify admin
     const adminIds = await getAllAdminIds();
@@ -240,36 +242,36 @@ export async function runAutoFix(task: Task): Promise<void> {
   // Enqueue WRITE_CODE targeting the identified files
   const db = await getDb();
   const fixTaskId = crypto.randomUUID();
-  await (db as any).execute(
-    `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'WRITE_CODE',$3,'PENDING',NOW() + INTERVAL '1 minute')`,
-    [
-      fixTaskId,
-      task.missionId,
-      JSON.stringify({
-        branch:          targetBranch,
-        feature:         `Auto-fix: ${diagnosis.diagnosis}`,
-        filesToModify:   diagnosis.filesToFix,
-        context:         diagnosis.fixDescription,
-      }),
-    ]
-  );
+  await db.insert(missionTasks).values({
+    id: fixTaskId,
+    missionId: task.missionId,
+    kind: 'WRITE_CODE',
+    title: `Auto-fix: ${diagnosis.diagnosis.slice(0, 60)}`,
+    payload: {
+      branch:        targetBranch,
+      feature:       `Auto-fix: ${diagnosis.diagnosis}`,
+      filesToModify: diagnosis.filesToFix,
+      context:       diagnosis.fixDescription,
+    },
+    status: 'PENDING',
+    scheduledAt: new Date(Date.now() + 60 * 1000),
+  });
 
-  // If hotfix, also enqueue OPEN_PR + RUN_TESTS
+  // If hotfix, also enqueue OPEN_PR
   if (diagnosis.isHotfix) {
-    const runAt2 = new Date(Date.now() + 6 * 60 * 1000); // after WRITE_CODE
-    await (db as any).execute(
-      `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,'OPEN_PR',$3,'PENDING',$4)`,
-      [
-        crypto.randomUUID(),
-        task.missionId,
-        JSON.stringify({
-          branch: targetBranch,
-          title:  `fix: ${diagnosis.diagnosis.slice(0, 70)}`,
-          body:   `**Auto-fix by AgentZ**\n\n**Root cause:** ${diagnosis.diagnosis}\n\n**Original error:** ${p.errorSummary}`,
-        }),
-        runAt2,
-      ]
-    );
+    await db.insert(missionTasks).values({
+      id: crypto.randomUUID(),
+      missionId: task.missionId,
+      kind: 'OPEN_PR',
+      title: `Open PR: ${diagnosis.diagnosis.slice(0, 60)}`,
+      payload: {
+        branch: targetBranch,
+        title:  `fix: ${diagnosis.diagnosis.slice(0, 70)}`,
+        body:   `**Auto-fix by AgentZ**\n\n**Root cause:** ${diagnosis.diagnosis}\n\n**Original error:** ${p.errorSummary}`,
+      },
+      status: 'PENDING',
+      scheduledAt: new Date(Date.now() + 6 * 60 * 1000),
+    });
   }
 
   await logActivity({
