@@ -746,4 +746,84 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(result).toBeNull();
     });
   });
+
+  describe("products", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.products.list()).rejects.toThrow();
+    });
+    it("getById requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.products.getById({ id: 1 })).rejects.toThrow();
+    });
+  });
+
+  describe("payments", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.payments.list()).rejects.toThrow();
+    });
+    it("createStripe requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.payments.createStripe({ amount: 100, currency: "usd", description: "test" })).rejects.toThrow();
+    });
+  });
+
+  describe("services", () => {
+    it("catalog is public and returns array", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.services.catalog();
+      expect(Array.isArray(result)).toBe(true);
+    });
+    it("myOrders requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.services.myOrders()).rejects.toThrow();
+    });
+    it("allOrders requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.services.allOrders()).rejects.toThrow();
+    });
+  });
+
+  describe("staking", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.staking.list()).rejects.toThrow();
+    });
+  });
+
+  describe("feedback", () => {
+    it("myFeedback requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.feedback.myFeedback()).rejects.toThrow();
+    });
+  });
+
+  describe("missions", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.missions.list()).rejects.toThrow();
+    });
+  });
+
+  describe("tasks", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.tasks.list()).rejects.toThrow();
+    });
+  });
+
+  describe("stripeConnect", () => {
+    it("getAccount requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.stripeConnect.getAccount()).rejects.toThrow();
+    });
+  });
+
+  describe("heygen", () => {
+    it("listAvatars requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.heygen.listAvatars()).rejects.toThrow();
+    });
+  });
 });
