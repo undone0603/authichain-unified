@@ -2,7 +2,7 @@ import { router } from '../_core/trpc';
 import { metrcRouter } from './metrc';
 import { productsRouter } from './products';
 import { schedulerRouter } from './scheduler';
-import { servicesRouter } from './services';
+import { servicesRouter } from '../services/router';
 import { aiRouter } from '../ai/router';
 import { authRouter } from '../auth/router';
 import { autopilotRouter } from '../autopilot/router';
