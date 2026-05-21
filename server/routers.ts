@@ -38,6 +38,8 @@ import { devTeamRouter } from "./agents/dev-team/router";
 import { analyticsRouter } from "./analytics/router";
 import { feedbackRouter } from "./feedback/router";
 import { personalizationRouter } from "./personalization/router";
+import { stripeConnectRouter } from "./stripe-connect-router";
+import { metrcRouter } from "./routers/metrc";
 
 export const appRouter = router({
   system: systemRouter,
@@ -80,6 +82,8 @@ export const appRouter = router({
   analytics: analyticsRouter,
   feedback: feedbackRouter,
   personalization: personalizationRouter,
+  stripeConnect: stripeConnectRouter,
+  metrc: metrcRouter,
 });
 
 export type AppRouter = typeof appRouter;
