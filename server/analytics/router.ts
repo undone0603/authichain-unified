@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { authentications } from "../../drizzle/schema";
@@ -11,7 +11,9 @@ export const analyticsRouter = router({
     const rows = await db
       .select({ result: authentications.result, createdAt: authentications.createdAt })
       .from(authentications)
-      .where(eq(authentications.userId, ctx.user.id));
+      .where(eq(authentications.userId, ctx.user.id))
+      .orderBy(desc(authentications.createdAt))
+      .limit(10000);
     return aggregateAuthentications(rows);
   }),
 });
