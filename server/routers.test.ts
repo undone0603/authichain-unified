@@ -802,7 +802,7 @@ describe("AuthiChain Unified Platform Routers", () => {
   describe("missions", () => {
     it("list requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.missions.list({ status: "active" })).rejects.toThrow();
+      await expect(caller.missions.list({ status: "IN_PROGRESS" as any })).rejects.toThrow();
     });
   });
 

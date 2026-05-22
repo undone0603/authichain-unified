@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
 import { invokeLLM, parseLLMContent } from "../_core/llm";
@@ -21,7 +21,7 @@ export const autopilotRouter = router({
       recentDecisions: decisions,
     };
   }),
-  toggle: protectedProcedure.mutation(async ({ ctx }) => {
+  toggle: adminProcedure.mutation(async ({ ctx }) => {
     const config = await db.getAutopilotConfig();
     await db.upsertAutopilotConfig({
       enabled: config?.enabled === 1 ? 0 : 1,
@@ -31,7 +31,7 @@ export const autopilotRouter = router({
     });
     return { success: true, enabled: config?.enabled === 1 ? 0 : 1 };
   }),
-  updateMode: protectedProcedure.input(z.object({
+  updateMode: adminProcedure.input(z.object({
     mode: z.enum(["conservative", "balanced", "aggressive"]),
   })).mutation(async ({ ctx, input }) => {
     await db.upsertAutopilotConfig({ mode: input.mode, updatedBy: ctx.user.id });
@@ -40,19 +40,19 @@ export const autopilotRouter = router({
   getDecisions: protectedProcedure.input(z.object({ limit: z.number().optional().default(20) })).query(async ({ input }) => {
     return await db.getRecentDecisions(input.limit);
   }),
-  overrideDecision: protectedProcedure.input(z.object({
+  overrideDecision: adminProcedure.input(z.object({
     decisionId: z.number(),
-    reason: z.string(),
+    reason: z.string().max(500),
   })).mutation(async ({ ctx, input }) => {
     const dbInstance = await db.getDb();
     if (!dbInstance) throw new Error("Database not available");
     await dbInstance.update(autopilotDecisions).set({ status: "overridden", overriddenBy: ctx.user.id, overrideReason: input.reason }).where(eq(autopilotDecisions.id, input.decisionId));
     return { success: true };
   }),
-  executeAction: protectedProcedure.input(z.object({
-    type: z.string(),
-    action: z.string(),
-    reasoning: z.string().optional(),
+  executeAction: adminProcedure.input(z.object({
+    type: z.string().min(1).max(100),
+    action: z.string().min(1).max(1000),
+    reasoning: z.string().max(1000).optional(),
   })).mutation(async ({ ctx, input }) => {
     const response = await invokeLLM({
       messages: [
