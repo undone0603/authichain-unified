@@ -23,6 +23,12 @@ import {
 import { runGenerateOutreachVideo } from '../agents/heygen-video.js';
 import { runSecurityAudit } from '../agents/security.js';
 import { runNewsjackingMonitor } from '../agents/news-pr.js';
+import {
+  runBrowseResearchLead,
+  runBrowseCompetitorMonitor,
+  runBrowseScrapeIndustryNews,
+  runBrowseVerifyProductUrl,
+} from '../agents/browser.js';
 import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
 import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
 import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
@@ -164,6 +170,23 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'AUTO_FIX':
         await runAutoFix(task);
+        break;
+
+      // ── Browser Agent ────────────────────────────────────────────────────
+      case 'BROWSE_RESEARCH_LEAD':
+        await runBrowseResearchLead(task);
+        break;
+
+      case 'BROWSE_COMPETITOR_MONITOR':
+        await runBrowseCompetitorMonitor(task);
+        break;
+
+      case 'BROWSE_SCRAPE_INDUSTRY_NEWS':
+        await runBrowseScrapeIndustryNews(task);
+        break;
+
+      case 'BROWSE_VERIFY_PRODUCT_URL':
+        await runBrowseVerifyProductUrl(task);
         break;
 
       default:

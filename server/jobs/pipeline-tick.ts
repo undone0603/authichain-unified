@@ -8,6 +8,7 @@ import { runRetentionAutomation } from "./retention";
 import { runWeeklyDigestDispatch } from "./weekly-digest";
 import { runQuarterlyValueReportDispatch } from "./quarterly-value";
 import { runOrganicTrafficAutomation } from "./organic-traffic";
+import { runBrowserAgentJobs } from "./browser-jobs";
 import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
@@ -23,6 +24,7 @@ export async function runPipelineTick() {
   const weeklyDigest = await runWeeklyDigestDispatch();
   const quarterlyValue = await runQuarterlyValueReportDispatch();
   const organicTraffic = await runOrganicTrafficAutomation();
+  const browserJobs = await runBrowserAgentJobs();
 
   // Mission task orchestration — UCB1 prioritisation
   // Score each task's kind by: E[conversion] + exploration bonus.
@@ -91,6 +93,7 @@ export async function runPipelineTick() {
     weeklyDigest,
     quarterlyValue,
     organicTraffic,
+    browserJobs,
     missionTasks: taskResults,
     pmfCreated,
   };
