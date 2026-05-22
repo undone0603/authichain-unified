@@ -6,6 +6,24 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
+// Simple in-memory rate limiter for development
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const MAX_REQUESTS = 100;
+const rateLimits = new Map<string, { count: number; start: number }>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const limit = rateLimits.get(ip);
+
+  if (!limit || now - limit.start > RATE_LIMIT_WINDOW) {
+    rateLimits.set(ip, { count: 1, start: now });
+    return false;
+  }
+
+  limit.count++;
+  return limit.count > MAX_REQUESTS;
+}
+
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
@@ -23,12 +41,16 @@ export async function setupVite(app: Express, server: Server) {
   app.use(vite.middlewares);
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+    const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+
+    if (isRateLimited(clientIp)) {
+      return res.status(429).send("Too many requests, please try again later.");
+    }
 
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
-        "../..",
-        "client",
+        "../../",
         "index.html"
       );
 
@@ -38,6 +60,7 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
+
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
@@ -50,18 +73,11 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   const distPath =
     process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
+      ? path.resolve(import.meta.dirname, "../../", "dist", "public")
       : path.resolve(import.meta.dirname, "public");
   if (!fs.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
-
-  app.use(express.static(distPath));
-
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
-  });
 }
