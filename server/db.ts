@@ -1242,7 +1242,7 @@ export function computeLeadScore(signals: {
 
 export async function upsertStripeSubscription(data: {
   userId: number;
-  plan: "starter" | "professional" | "enterprise";
+  plan: "starter" | "professional" | "enterprise" | "medtech";
   status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
   monthlyQuota: number;
   billingCycle: "monthly" | "annual";
@@ -1323,7 +1323,7 @@ export async function hasWebhookEventProcessed(eventId: string): Promise<boolean
 
 export async function upsertPaddleSubscription(data: {
   userId: number;
-  plan: "starter" | "professional" | "enterprise";
+  plan: "starter" | "professional" | "enterprise" | "medtech";
   status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
   monthlyQuota: number;
   billingCycle: "monthly" | "annual";

@@ -48,6 +48,23 @@ export const STRIPE_PRODUCTS = {
       "Custom integrations",
     ],
   },
+  medtech: {
+    name: "AuthiChain MedTech Enterprise",
+    description: "High-compliance authentication for medical device and pharma supply chains. ISO 13485 Audit Integrity Shield, FIPS 140-2 HSM crypto, and unlimited SKU identification.",
+    priceMonthly: 1250000, // $12,500.00 in cents
+    priceAnnual: 15000000, // $150,000.00/year in cents
+    features: [
+      "50,000 AI authentications/month",
+      "ISO 13485 Compliance Module",
+      "FIPS 140-2 HSM Crypto Module",
+      "Clinical Trial Fraud Prevention AI",
+      "W3C Verifiable Credentials",
+      "Blockchain-anchored Proof of Purity",
+      "Priority 24/7 Concierge Support",
+      "Dedicated Technical Account Lead",
+      "Full API & Webhook Integration",
+    ],
+  },
 } as const;
 
 export type PlanKey = keyof typeof STRIPE_PRODUCTS;
@@ -62,5 +79,6 @@ export function getPlanQuota(plan: PlanKey): number {
     case "starter": return 500;
     case "professional": return 5000;
     case "enterprise": return 999999;
+    case "medtech": return 50000;
   }
 }

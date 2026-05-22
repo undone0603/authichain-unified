@@ -49,32 +49,43 @@ function getStripeClient(): Stripe {
 
 // ─── Plan detection from price ID or amount ───────────────────────────────────
 
-type Plan = "starter" | "professional" | "enterprise";
+type Plan = "starter" | "professional" | "enterprise" | "medtech";
 
 function detectPlanFromPriceId(priceId: string | null | undefined): Plan {
   if (!priceId) return "starter";
   const lower = priceId.toLowerCase();
+  if (lower.includes("medtech")) return "medtech";
   if (lower.includes("enterprise")) return "enterprise";
   if (lower.includes("professional") || lower.includes("pro")) return "professional";
   if (lower.includes("starter")) return "starter";
   return "starter";
 }
 
-function detectPlanFromAmount(amountCents: number): Plan {
-  // $799/mo = 79900, $199/mo = 19900, $49/mo = 4900
-  // Also handle annual pricing which is higher
-  if (amountCents >= 70000) return "enterprise";
-  if (amountCents >= 15000) return "professional";
+function detectPlanFromAmount(amountCents: number, billingCycle?: "monthly" | "annual"): Plan {
+  // Normalize to monthly equivalent before comparing against monthly thresholds.
+  // Annual amounts: starter=$470 (47000), pro=$1908 (190800), enterprise=$7668 (766800), medtech=$150000 (15000000)
+  const monthly = billingCycle === "annual" ? Math.round(amountCents / 12) : amountCents;
+  if (monthly >= 1000000) return "medtech"; // $10,000+/mo
+  if (monthly >= 70000) return "enterprise";
+  if (monthly >= 15000) return "professional";
   return "starter";
 }
 
-function detectPlan(priceId: string | null | undefined, amountCents: number): Plan {
+function detectPlan(
+  priceId: string | null | undefined,
+  amountCents: number,
+  metaPlan?: string | null,
+  billingCycle?: "monthly" | "annual",
+): Plan {
+  // Metadata plan is most reliable (set by checkout session subscription_data.metadata)
+  if (metaPlan === "enterprise" || metaPlan === "professional" || metaPlan === "starter" || metaPlan === "medtech") {
+    return metaPlan;
+  }
   if (priceId) {
     const fromId = detectPlanFromPriceId(priceId);
-    // If we got a non-default answer from the price ID, trust it
     if (fromId !== "starter" || priceId.toLowerCase().includes("starter")) return fromId;
   }
-  return detectPlanFromAmount(amountCents);
+  return detectPlanFromAmount(amountCents, billingCycle);
 }
 
 // ─── Stripe → internal status mapping ────────────────────────────────────────
@@ -173,9 +184,10 @@ export async function handleStripeWebhook(
       const firstItem = sub.items?.data?.[0];
       const priceId = firstItem?.price?.id ?? null;
       const amountCents = firstItem?.price?.unit_amount ?? 0;
-      const plan = detectPlan(priceId, amountCents);
-      const status = mapStripeStatus(sub.status);
       const billingCycle = firstItem?.price?.recurring?.interval === "year" ? "annual" : "monthly";
+      const metaPlan = sub.metadata?.plan ?? null;
+      const plan = detectPlan(priceId, amountCents, metaPlan, billingCycle);
+      const status = mapStripeStatus(sub.status);
       const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
       if (userId) {
@@ -195,6 +207,30 @@ export async function handleStripeWebhook(
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
         });
+
+        // Send welcome email on new subscription activation
+        if (
+          event.type === "customer.subscription.created" &&
+          (status === "active" || status === "trialing")
+        ) {
+          try {
+            const customer = await stripe.customers.retrieve(customerId!);
+            const email = !customer.deleted ? (customer as Stripe.Customer).email ?? null : null;
+            const name = !customer.deleted ? ((customer as Stripe.Customer).name ?? "there") : "there";
+            if (email) {
+              const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
+              await sendEmail({
+                to: email,
+                subject: `Welcome to AuthiChain ${product.name}`,
+                body: `Hi ${name},\n\nYour AuthiChain ${product.name} subscription is now active.\n\nHere's what you get:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nGet started at https://authichain.com/dashboard\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
+                fromName: "AuthiChain",
+              });
+              console.log(`[stripe-webhook] Welcome email sent to ${maskEmail(email)}`);
+            }
+          } catch (err) {
+            console.warn("[stripe-webhook] Welcome email failed (non-fatal):", err);
+          }
+        }
       }
 
       await logAutomationAudit(
@@ -266,7 +302,8 @@ export async function handleStripeWebhook(
       // Detect plan from invoice line items
       const firstLine = inv.lines?.data?.[0];
       const priceId = firstLine?.price?.id ?? null;
-      const plan = detectPlan(priceId, amountCents);
+      const invBillingCycle = firstLine?.price?.recurring?.interval === "year" ? "annual" : "monthly";
+      const plan = detectPlan(priceId, amountCents, null, invBillingCycle);
 
       await Promise.all([
         amountUsd > 0 ? recordRevenue({
@@ -375,6 +412,39 @@ export async function handleStripeWebhook(
 
       if (session.metadata?.type === "one_time_service") {
         await handleServiceOrderPayment({ id: session.id, payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : undefined });
+      }
+
+      // Failsafe: provision subscription immediately rather than waiting for
+      // customer.subscription.created — prevents missed provisioning under race conditions
+      if (session.mode === "subscription" && subscriptionId && userId) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          const firstItem = sub.items?.data?.[0];
+          const priceId = firstItem?.price?.id ?? null;
+          const amountCents = firstItem?.price?.unit_amount ?? 0;
+          const subBilling = billingCycle;
+          const subPlan = detectPlan(priceId, amountCents, plan, subBilling);
+          const subStatus = mapStripeStatus(sub.status);
+          await upsertStripeSubscription({
+            userId,
+            plan: subPlan,
+            status: subStatus,
+            monthlyQuota: getPlanQuota(subPlan),
+            billingCycle: subBilling,
+            stripeCustomerId: customerId ?? null,
+            stripeSubscriptionId: subscriptionId,
+            currentPeriodStart: sub.current_period_start
+              ? new Date(sub.current_period_start * 1000)
+              : new Date(),
+            currentPeriodEnd: sub.current_period_end
+              ? new Date(sub.current_period_end * 1000)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+          });
+          console.log(`[stripe-webhook] Subscription provisioned from checkout: ${subscriptionId} plan=${subPlan}`);
+        } catch (err) {
+          console.warn("[stripe-webhook] Checkout failsafe subscription upsert failed (non-fatal):", err);
+        }
       }
 
       console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);

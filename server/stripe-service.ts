@@ -51,6 +51,13 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
       plan: params.plan,
       billing: params.billing,
     },
+    subscription_data: {
+      metadata: {
+        user_id: params.userId.toString(),
+        plan: params.plan,
+        billing: params.billing,
+      },
+    },
     line_items: [
       {
         price_data: {

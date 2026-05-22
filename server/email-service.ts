@@ -97,6 +97,34 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const appPassword = ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
   const fromName = input.fromName || "AuthiChain";
 
+  // ─── Method 0: Resend (preferred transactional email SaaS) ─────────────────
+  const resendApiKey = ENV.resendApiKey || process.env.RESEND_API_KEY || "";
+  if (resendApiKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: `${fromName} <onboarding@resend.dev>`,
+          to,
+          subject: input.subject,
+          text: input.body,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({} as any));
+        return { status: "sent", provider: "resend", providerMessageId: data?.id };
+      }
+      const errText = await res.text().catch(() => "");
+      console.warn(`[email-service] Resend failed (${res.status}): ${errText.slice(0, 200)}`);
+    } catch (resendErr: any) {
+      console.warn("[email-service] Resend error, falling back:", resendErr.message);
+    }
+  }
+
   // ─── Method 1: SMTP via App Password (Reliable Fallback) ───────────────────
   if (fromEmail && appPassword) {
     try {
