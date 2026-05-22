@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
-import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
 import { invokeLLM, parseLLMContent } from "../_core/llm";
 import { autopilotDecisions } from "../../drizzle/schema";
 
 export const autopilotRouter = router({
-  getStatus: protectedProcedure.query(async () => {
+  getStatus: adminProcedure.query(async () => {
     const config = await db.getAutopilotConfig();
     const decisions = await db.getRecentDecisions(5);
     const executed = decisions.filter(d => d.status === "executed").length;
@@ -37,7 +37,7 @@ export const autopilotRouter = router({
     await db.upsertAutopilotConfig({ mode: input.mode, updatedBy: ctx.user.id });
     return { success: true };
   }),
-  getDecisions: protectedProcedure.input(z.object({ limit: z.number().optional().default(20) })).query(async ({ input }) => {
+  getDecisions: adminProcedure.input(z.object({ limit: z.number().min(1).max(200).optional().default(20) })).query(async ({ input }) => {
     return await db.getRecentDecisions(input.limit);
   }),
   overrideDecision: adminProcedure.input(z.object({

@@ -279,7 +279,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("autopilot.getStatus returns status object", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.autopilot.getStatus();
       expect(result).toBeDefined();
@@ -288,7 +288,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("autopilot.getDecisions returns array", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.autopilot.getDecisions({ limit: 5 });
       expect(Array.isArray(result)).toBe(true);
