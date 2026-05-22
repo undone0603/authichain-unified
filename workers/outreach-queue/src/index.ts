@@ -8,6 +8,7 @@ export interface Env {
   OUTREACH_KV: KVNamespace;
   RESEND_API_KEY: string;
   OUTREACH_FROM_EMAIL: string;
+  INTERNAL_SECRET: string;
 }
 
 interface OutreachJob {
@@ -26,6 +27,17 @@ interface QueueMessage<T> {
   timestamp: Date;
   ack(): void;
   retry(): void;
+}
+
+function isAuthorized(request: Request, env: Env): boolean {
+  const header = request.headers.get('X-Internal-Secret') ?? ''
+  if (!env.INTERNAL_SECRET || header.length !== env.INTERNAL_SECRET.length) return false
+  const enc = new TextEncoder()
+  const a = enc.encode(header)
+  const b = enc.encode(env.INTERNAL_SECRET)
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
+  return diff === 0
 }
 
 async function enqueueJob(request: Request, env: Env): Promise<Response> {
@@ -86,7 +98,7 @@ export default {
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Internal-Secret',
     };
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -94,9 +106,17 @@ export default {
     let response: Response;
 
     if (request.method === 'POST' && url.pathname === '/queue/enqueue') {
-      response = await enqueueJob(request, env);
+      if (!isAuthorized(request, env)) {
+        response = Response.json({ error: 'Unauthorized' }, { status: 401 });
+      } else {
+        response = await enqueueJob(request, env);
+      }
     } else if (request.method === 'GET' && url.pathname.startsWith('/queue/status/')) {
-      response = await getJobStatus(request, env);
+      if (!isAuthorized(request, env)) {
+        response = Response.json({ error: 'Unauthorized' }, { status: 401 });
+      } else {
+        response = await getJobStatus(request, env);
+      }
     } else {
       response = Response.json({ error: 'Not found' }, { status: 404 });
     }

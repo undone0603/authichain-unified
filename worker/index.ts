@@ -1,6 +1,19 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
+async function verifyGithubSignature(secret: string, body: string, signature: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const rawSig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
+  const expected = `sha256=${Array.from(new Uint8Array(rawSig)).map(b => b.toString(16).padStart(2, "0")).join("")}`;
+  if (expected.length !== signature.length) return false;
+  const a = enc.encode(expected);
+  const b = enc.encode(signature);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
 type Bindings = {
   APP_ENV: string;
   DB: D1Database;
@@ -197,11 +210,7 @@ app.post("/webhook/github", async (c) => {
   const signature = c.req.header("X-Hub-Signature-256");
   const body = await c.req.text();
 
-  const expected = `sha256=${createHmac("sha256", c.env.GITHUB_WEBHOOK_SECRET)
-    .update(body)
-    .digest("hex")}`;
-
-  if (signature !== expected) {
+  if (!signature || !(await verifyGithubSignature(c.env.GITHUB_WEBHOOK_SECRET, body, signature))) {
     return c.json({ error: "invalid signature" }, 401);
   }
 

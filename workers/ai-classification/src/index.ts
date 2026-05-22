@@ -2,6 +2,18 @@ export interface Env {
   OPENAI_API_KEY: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
+  INTERNAL_SECRET: string;
+}
+
+function isAuthorized(request: Request, env: Env): boolean {
+  const header = request.headers.get('X-Internal-Secret') ?? ''
+  if (!env.INTERNAL_SECRET || header.length !== env.INTERNAL_SECRET.length) return false
+  const enc = new TextEncoder()
+  const a = enc.encode(header)
+  const b = enc.encode(env.INTERNAL_SECRET)
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
+  return diff === 0
 }
 
 export default {
@@ -9,8 +21,15 @@ export default {
     const url = new URL(request.url);
 
     if (request.method !== "POST" || url.pathname !== "/api/classify") {
-      return new Response(JSON.stringify({ error: "Method not allowed or route not found" }), { 
+      return new Response(JSON.stringify({ error: "Method not allowed or route not found" }), {
         status: 405,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    if (!isAuthorized(request, env)) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
         headers: { "Content-Type": "application/json" }
       });
     }
@@ -22,7 +41,7 @@ export default {
         return new Response(JSON.stringify({ error: "Missing required fields: imageUrl, productId" }), { status: 400 });
       }
 
-      const systemPrompt = `You are the AuthiChain Anomaly Detection Engine. 
+      const systemPrompt = `You are the AuthiChain Anomaly Detection Engine.
       Analyze the provided product image within the context of the '${industryContext || 'General'}' industry.
       Check for micro-features, packaging defects, and counterfeit indicators.
       You MUST respond ONLY with a strict JSON object:
@@ -46,7 +65,7 @@ export default {
             { role: "user", content: [
                 { type: "text", text: "Analyze this physical product scan for authenticity." },
                 { type: "image_url", image_url: { url: imageUrl, detail: "high" } }
-              ] 
+              ]
             }
           ],
           max_tokens: 300,
@@ -85,13 +104,13 @@ export default {
         success: true,
         productId,
         classification: classificationResult
-      }), { 
-        status: 200, 
-        headers: { "Content-Type": "application/json" } 
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
       });
 
     } catch (error: any) {
-      return new Response(JSON.stringify({ error: "Classification pipeline failed", details: error.message }), { 
+      return new Response(JSON.stringify({ error: "Classification pipeline failed", details: error.message }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
