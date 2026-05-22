@@ -1,5 +1,17 @@
 import "dotenv/config";
+import { timingSafeEqual as cryptoTimingSafeEqual } from "crypto";
 import express from "express";
+
+function timingSafeEqual(a: string, b: string): boolean {
+  try {
+    const ba = Buffer.from(a);
+    const bb = Buffer.from(b);
+    if (ba.length !== bb.length) return false;
+    return cryptoTimingSafeEqual(ba, bb);
+  } catch {
+    return false;
+  }
+}
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
@@ -57,6 +69,13 @@ export function createApp() {
 
   // ─── Instantly.ai Webhook ────────────────────────────────────────────────
   app.post("/api/webhooks/instantly", async (req, res) => {
+    const secret = process.env.INSTANTLY_WEBHOOK_SECRET;
+    if (secret) {
+      const provided = req.headers["x-webhook-secret"] as string | undefined;
+      if (!provided || !timingSafeEqual(provided, secret)) {
+        return res.status(401).json({ error: "Invalid webhook secret" });
+      }
+    }
     try {
       const { handleInstantlyWebhook } = await import("../webhooks/instantly.js");
       const result = await handleInstantlyWebhook(req.body);
@@ -69,6 +88,13 @@ export function createApp() {
 
   // ─── DocuSign Webhook ────────────────────────────────────────────────────
   app.post("/api/webhooks/docusign", async (req, res) => {
+    const secret = process.env.DOCUSIGN_WEBHOOK_SECRET;
+    if (secret) {
+      const provided = req.headers["x-docusign-secret"] as string | undefined;
+      if (!provided || !timingSafeEqual(provided, secret)) {
+        return res.status(401).json({ error: "Invalid webhook secret" });
+      }
+    }
     try {
       const { handleDocuSignWebhook } = await import("../webhooks/docusign.js");
       const result = await handleDocuSignWebhook(req.body);

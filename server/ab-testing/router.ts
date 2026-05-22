@@ -1,12 +1,12 @@
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
 
 export const abTestingRouter = router({
-  list: protectedProcedure.query(async () => {
+  list: adminProcedure.query(async () => {
     return await db.getAllAbTests();
   }),
-  create: protectedProcedure.input(z.object({
+  create: adminProcedure.input(z.object({
     name: z.string().min(1),
     description: z.string().optional(),
     type: z.string(),
