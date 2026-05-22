@@ -157,10 +157,10 @@ export async function createStakingPosition(data: any) {
   return { id: result.id, ...data };
 }
 
-export async function updateStakingPosition(id: number, data: any) {
+export async function updateStakingPosition(id: number, userId: number, data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(stakingPositions).set(data).where(eq(stakingPositions.id, id));
+  await db.update(stakingPositions).set(data).where(and(eq(stakingPositions.id, id), eq(stakingPositions.userId, userId)));
 }
 
 // ─── Product Helpers ─────────────────────────────────────────────────────────
@@ -792,6 +792,25 @@ export async function updateSubscriptionUsage(userId: number, usedQuota: number)
   const db = await getDb();
   if (!db) return;
   await db.update(subscriptions).set({ usedQuota }).where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")));
+}
+
+export async function consumeSubscriptionQuota(userId: number): Promise<"ok" | "exceeded" | "no_subscription"> {
+  const db = await getDb();
+  if (!db) return "no_subscription";
+  const rows = await db.update(subscriptions)
+    .set({ usedQuota: sql`${subscriptions.usedQuota} + 1` })
+    .where(and(
+      eq(subscriptions.userId, userId),
+      eq(subscriptions.status, "active"),
+      sql`COALESCE(${subscriptions.usedQuota}, 0) < ${subscriptions.monthlyQuota}`,
+    ))
+    .returning({ id: subscriptions.id });
+  if (rows.length > 0) return "ok";
+  const [sub] = await db.select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")))
+    .limit(1);
+  return sub ? "exceeded" : "no_subscription";
 }
 
 export async function recordUsage(data: any) {

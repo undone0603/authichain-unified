@@ -147,16 +147,21 @@ export async function withdrawStaking(positionId: number, userId: number) {
 
   const updatedPosition = updatedPositions[0];
 
-  // Mark as withdrawn
+  // Mark as withdrawn — AND status='active' guard prevents double-payout on concurrent calls
   const now = new Date();
-  await db
+  const withdrawn = await db
     .update(stakingPositions)
     .set({
       status: "withdrawn",
       endDate: now,
       updatedAt: now,
     })
-    .where(eq(stakingPositions.id, positionId));
+    .where(and(eq(stakingPositions.id, positionId), eq(stakingPositions.status, "active")))
+    .returning({ id: stakingPositions.id });
+
+  if (withdrawn.length === 0) {
+    throw new Error("Staking position already withdrawn");
+  }
 
   // Return total amount (principal + rewards)
   return {

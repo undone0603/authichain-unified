@@ -34,7 +34,7 @@ export const stakingRouter = router({
   unstake: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      await db.updateStakingPosition(input.id, { status: "unstaking" });
+      await db.updateStakingPosition(input.id, ctx.user.id, { status: "unstaking" });
       return { success: true };
     }),
 });

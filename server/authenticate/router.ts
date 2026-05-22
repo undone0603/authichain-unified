@@ -12,10 +12,12 @@ export const authenticateRouter = router({
     productId: z.number(),
     imageUrl: z.string(),
   })).mutation(async ({ ctx, input }) => {
+    const quotaResult = await db.consumeSubscriptionQuota(ctx.user.id);
+    if (quotaResult === "exceeded") throw new TRPCError({ code: "FORBIDDEN", message: "Monthly quota exceeded. Please upgrade your plan." });
     const sub = await db.getUserSubscription(ctx.user.id);
-    if (sub && (sub.usedQuota ?? 0) >= sub.monthlyQuota) throw new TRPCError({ code: "FORBIDDEN", message: "Monthly quota exceeded. Please upgrade your plan." });
     const product = await db.getProductById(input.productId);
     if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    if (product.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
     const response = await invokeLLM({
       messages: [
         { role: "system", content: "You are an expert luxury product authenticator with blockchain verification capabilities. Analyze the provided product image and determine if it is authentic or counterfeit. Provide detailed reasoning, a confidence score (0-100), red flags, and authentic markers." },
@@ -85,7 +87,6 @@ export const authenticateRouter = router({
         userId: ctx.user.id
       });
     }
-    if (sub) await db.updateSubscriptionUsage(ctx.user.id, (sub.usedQuota || 0) + 1);
     await db.recordUsage({ userId: ctx.user.id, subscriptionId: sub?.id, type: "authentication", quantity: 1 });
     await db.logActivity({ userId: ctx.user.id, action: "product_authenticated", entityType: "authentication", entityId: authResult.id });
     try {
