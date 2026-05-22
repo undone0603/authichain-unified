@@ -480,7 +480,7 @@ export async function listHighScanUsers(minScans = 10) {
 export async function listInactiveUsersNoRecentScans(daysSinceLastScan = 30) {
   const d = await getDb();
   const cutoff = new Date(Date.now() - daysSinceLastScan * 86400000);
-  return d.select().from(users).where(lte(users.lastSignedIn, cutoff));
+  return d.select().from(users).where(lte(users.lastSignedIn, cutoff)).limit(500);
 }
 
 export async function listUsersForOnboardingStep(step: string | number) {
@@ -494,15 +494,15 @@ export async function listUsersForOnboardingStep(step: string | number) {
 
 export async function listPastDueSubscriptions() {
   const d = await getDb();
-  return d.select().from(subscriptions).where(eq(subscriptions.status, "past_due"));
+  return d.select().from(subscriptions).where(eq(subscriptions.status, "past_due")).limit(1000);
 }
 
 export async function hasDunningStepLogged(subscriptionId: number, step: string): Promise<boolean> {
   const d = await getDb();
   const rows = await d.select().from(activityLog)
     .where(and(
-      like(activityLog.action, `dunning:${step}:%`),
-      sql`${activityLog.details}->>'text' LIKE ${'%sub:' + subscriptionId + '%'}`
+      eq(activityLog.action, `billing_dunning_${step}`),
+      eq(activityLog.entityId, subscriptionId),
     )).limit(1);
   return rows.length > 0;
 }
@@ -512,6 +512,7 @@ export async function hasUserActionLogged(userId: number, action: string, sinceD
   const since = new Date(Date.now() - sinceDaysAgo * 86400000);
   const rows = await d.select().from(activityLog)
     .where(and(
+      eq(activityLog.userId, userId),
       eq(activityLog.action, action),
       gte(activityLog.createdAt, since)
     )).limit(1);
@@ -1115,7 +1116,7 @@ export async function getAdminDashboardMetrics() {
 export async function getSubscriptionAnalytics() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt));
+  return await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt)).limit(5000);
 }
 
 // ─── Notification Helpers ───────────────────────────────────────────────────
