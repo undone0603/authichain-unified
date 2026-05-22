@@ -73,7 +73,7 @@ export async function POST(req: Request) {
         brand: brand.name,
         endpoint_url: target_url,
         events: event_types || ['qron_scanned'],
-        secret_key: secret || `whsec_${Math.random().toString(36).substring(2, 11)}`,
+        secret_key: secret || `whsec_${crypto.randomUUID()}`,
         is_active: true
       })
       .select()
