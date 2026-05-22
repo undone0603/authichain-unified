@@ -39,14 +39,22 @@ export async function runPipelineTick() {
   const totalTasks = Math.max(runCount, 1);
 
   const kindToSegment: Record<string, string> = {
-    FIND_GOV_LEADS:       'GOV',
-    FIND_RETAIL_LEADS:    'RETAIL',
-    DRAFT_OUTBOUND_EMAIL: 'GOV',
-    FOLLOWUP_SEQUENCE:    'GOV',
-    BUILD_PILOT_PACKET:   'PARTNER',
-    DRAFT_INTEL_DOSSIER:  'PRESS',
-    CRM_UPDATE:           'PARTNER',
-    DRAFT_PRESS_RELEASE:  'PRESS',
+    FIND_GOV_LEADS:              'GOV',
+    FIND_RETAIL_LEADS:           'RETAIL',
+    FIND_LUXURY_LEADS:           'LUXURY',
+    FIND_PHARMA_LEADS:           'PHARMA',
+    FIND_TIMEPIECE_LEADS:        'TIMEPIECE',
+    DRAFT_OUTBOUND_EMAIL:        'GOV',
+    FOLLOWUP_SEQUENCE:           'GOV',
+    BUILD_PILOT_PACKET:          'PARTNER',
+    DRAFT_INTEL_DOSSIER:         'PRESS',
+    CRM_UPDATE:                  'PARTNER',
+    DRAFT_PRESS_RELEASE:         'PRESS',
+    // Browser agent tasks inherit segment from the lead they serve
+    BROWSE_RESEARCH_LEAD:        'DEFAULT',
+    BROWSE_COMPETITOR_MONITOR:   'DEFAULT',
+    BROWSE_SCRAPE_INDUSTRY_NEWS: 'DEFAULT',
+    BROWSE_VERIFY_PRODUCT_URL:   'DEFAULT',
   };
 
   const scored = dueTasks.map(task => {
