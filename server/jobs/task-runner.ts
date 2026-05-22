@@ -29,6 +29,7 @@ import {
   runBrowseScrapeIndustryNews,
   runBrowseVerifyProductUrl,
 } from '../agents/browser.js';
+import { runVisionResearchLead, runVisionFreeform } from '../agents/browser-vision.js';
 import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
 import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
 import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
@@ -187,6 +188,15 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'BROWSE_VERIFY_PRODUCT_URL':
         await runBrowseVerifyProductUrl(task);
+        break;
+
+      // ── Browser Vision Agent (Playwright + Gemini vision) ────────────────
+      case 'BROWSE_VISION_RESEARCH_LEAD':
+        await runVisionResearchLead(task);
+        break;
+
+      case 'BROWSE_VISION_FREEFORM':
+        await runVisionFreeform(task);
         break;
 
       default:

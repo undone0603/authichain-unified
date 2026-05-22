@@ -99,6 +99,7 @@
     "openai": "^6.38.0",
     "path-to-regexp": "^8.4.2",
     "pg": "^8.21.0",
+    "playwright-core": "^1.60.0",
     "postgres": "^3.4.9",
     "qrcode": "^1.5.4",
     "qs": "^6.15.2",

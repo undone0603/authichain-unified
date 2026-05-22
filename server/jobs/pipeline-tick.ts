@@ -54,7 +54,9 @@ export async function runPipelineTick() {
     BROWSE_RESEARCH_LEAD:        'DEFAULT',
     BROWSE_COMPETITOR_MONITOR:   'DEFAULT',
     BROWSE_SCRAPE_INDUSTRY_NEWS: 'DEFAULT',
-    BROWSE_VERIFY_PRODUCT_URL:   'DEFAULT',
+    BROWSE_VERIFY_PRODUCT_URL:     'DEFAULT',
+    BROWSE_VISION_RESEARCH_LEAD:   'DEFAULT',
+    BROWSE_VISION_FREEFORM:        'DEFAULT',
   };
 
   const scored = dueTasks.map(task => {
