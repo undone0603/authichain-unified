@@ -21,9 +21,7 @@ const CSP = [
 ].join('; ');
 
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
+  serverExternalPackages: [],
 
   images: {
     remotePatterns: [
@@ -64,7 +62,13 @@ const nextConfig = {
       process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
         : 'https://authichain.com',
+    // Build-time fallbacks: Turbopack inlines module-level instantiations,
+    // so these secrets need a non-empty value at build time to prevent
+    // constructor throws. At runtime, the real env vars take over.
+    STRIPE_SECRET_KEY:        process.env.STRIPE_SECRET_KEY        ?? 'sk_test_build_placeholder',
+    OPENAI_API_KEY:           process.env.OPENAI_API_KEY           ?? 'build_placeholder',
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'build_placeholder',
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

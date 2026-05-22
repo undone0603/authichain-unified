@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -11,19 +15,27 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "allowImportingTsExtensions": true,
     "baseUrl": ".",
-    "types": ["node", "vite/client"],
+    "types": [
+      "node",
+      "vite/client"
+    ],
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*", "./client/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@/*": [
+        "./src/*",
+        "./client/src/*"
+      ],
+      "@shared/*": [
+        "./shared/*"
+      ]
     }
   },
   "include": [
@@ -33,7 +45,18 @@
     ".next/types/**/*.ts",
     "client/src/**/*",
     "shared/**/*",
-    "server/**/*"
+    "server/**/*",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "build", "dist", "workers/**/*", "worker/**/*", "mobile/**/*", "packages/**/*", "scripts/**/*", "libs/**/*"]
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "workers/**/*",
+    "worker/**/*",
+    "mobile/**/*",
+    "packages/**/*",
+    "scripts/**/*",
+    "libs/**/*"
+  ]
 }

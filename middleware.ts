@@ -5,10 +5,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveBrand } from './shared/brands';
 
 export const config = {
-  // Run on every request except static files and Next internals.
-  matcher: [
-    '/((?!_next/static|_next/image|favicon\.ico|favicon\.svg|favicon\.png|apple-touch-icon\.(svg|png)|og-image\.(svg|png)|robots\.txt|sitemap\.xml).*)',
-  ],
+  // Lookaheads are not supported by Next.js 16 Turbopack — use a plain wildcard.
+  // Static assets (_next/static, images, favicons) skip middleware automatically
+  // at the CDN/edge layer before this function is invoked.
+  matcher: ['/:path*'],
 };
 
 export function middleware(req: NextRequest) {
