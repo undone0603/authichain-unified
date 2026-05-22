@@ -11,9 +11,14 @@ const COOKIE_NAME = 'ac_dash';
 const COOKIE_MAX_AGE = 60 * 60 * 8; // 8 hours
 
 function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  const encoder = new TextEncoder();
+  const ab = encoder.encode(a);
+  const bb = encoder.encode(b);
+  // Always iterate max(len) bytes; accumulate both length and content differences
+  // so the loop runtime does not depend on where strings first diverge.
+  const len = Math.max(ab.length, bb.length);
+  let diff = ab.length ^ bb.length;
+  for (let i = 0; i < len; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
   return diff === 0;
 }
 

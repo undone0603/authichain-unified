@@ -1,3 +1,4 @@
+import { timingSafeEqual as cryptoTimingSafeEqual } from "crypto";
 import { Router, type Request, type Response } from "express";
 import { getCertificateByNumber, getWhiteLabelByApiKey, createProduct, getDb } from "./db";
 import { computeTrustScore, generateProductQRON } from "./qron-service";
@@ -5,6 +6,17 @@ import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-serv
 import { invokeLLM, parseLLMContent } from "./_core/llm";
 import { ENV } from "./_core/env";
 import { reportUsageToStripe } from "./tenant-billing";
+
+function timingSafeStringEqual(a: string, b: string): boolean {
+  try {
+    const ba = Buffer.from(a);
+    const bb = Buffer.from(b);
+    if (ba.length !== bb.length) return false;
+    return cryptoTimingSafeEqual(ba, bb);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Internal API routes for the authichain-gateway Cloudflare Worker.
@@ -16,7 +28,7 @@ export function createInternalRouter(): Router {
   // Auth middleware
   router.use((req: Request, res: Response, next) => {
     const secret = req.headers["x-internal-secret"];
-    if (!secret || secret !== ENV.internalApiSecret) {
+    if (!secret || typeof secret !== "string" || !timingSafeStringEqual(secret, ENV.internalApiSecret)) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     next();
