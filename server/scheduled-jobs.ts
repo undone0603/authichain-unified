@@ -101,7 +101,8 @@ registerJob({
         eq(subscriptions.status, "active"),
         lte(subscriptions.currentPeriodEnd, threeDaysFromNow),
         gte(subscriptions.currentPeriodEnd, now),
-      ));
+      ))
+      .limit(1000);
 
     for (const sub of expiringSubs) {
       await db.insert(notifications).values({
@@ -121,7 +122,8 @@ registerJob({
       .where(and(
         eq(subscriptions.status, "active"),
         lt(subscriptions.currentPeriodEnd, now),
-      ));
+      ))
+      .limit(1000);
 
     for (const sub of pastDueSubs) {
       await db.update(subscriptions)
@@ -167,7 +169,8 @@ registerJob({
         eq(certificates.status, "active"),
         lte(certificates.expiresAt, thirtyDaysFromNow),
         gte(certificates.expiresAt, now),
-      ));
+      ))
+      .limit(1000);
 
     for (const cert of expiringCerts) {
       await db.insert(notifications).values({
@@ -218,7 +221,8 @@ registerJob({
       .where(and(
         eq(leads.status, "new"),
         lt(leads.createdAt, sevenDaysAgo),
-      ));
+      ))
+      .limit(500);
 
     details.staleLeadsFound = staleLeads.length;
 
@@ -425,7 +429,8 @@ registerJob({
     // Get all active subscribers
     const activeSubs = await db.select()
       .from(subscriptions)
-      .where(eq(subscriptions.status, "active"));
+      .where(eq(subscriptions.status, "active"))
+      .limit(5000);
 
     for (const sub of activeSubs) {
       // Calculate score factors
