@@ -76,6 +76,11 @@ vi.mock("./db", async (importOriginal) => {
     getAllHealthScores: vi.fn(async () => []),
     getRecentActivity: vi.fn(async () => []),
     getWhiteLabelClients: vi.fn(async () => []),
+    // qrcode
+    getProductById: vi.fn(async () => null),
+    getProductQrCodes: vi.fn(async () => []),
+    incrementScanCount: vi.fn(async () => {}),
+    createQrCode: vi.fn(async () => ({ id: 1 })),
     // make getDb return null so character/scheduler null-guards activate
     getDb: vi.fn(async () => null),
   };
@@ -948,6 +953,22 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("generateStorymode requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
       await expect(caller.qrcode.generateStorymode({ productId: 1 })).rejects.toThrow();
+    });
+    it("scan returns NOT_FOUND when product missing", async () => {
+      const db = await import("./db");
+      vi.mocked(db.getProductById).mockResolvedValueOnce(null as any);
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.qrcode.scan({ productId: 999 })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    });
+    it("scan returns hashVerification=null when no hash supplied", async () => {
+      const db = await import("./db");
+      const fakeProduct = { id: 1, name: "Test", userId: 1 } as any;
+      vi.mocked(db.getProductById).mockResolvedValueOnce(fakeProduct);
+      vi.mocked(db.getProductQrCodes).mockResolvedValueOnce([]);
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.qrcode.scan({ productId: 1 });
+      expect(result.product).toEqual(fakeProduct);
+      expect(result.hashVerification).toBeNull();
     });
   });
 
