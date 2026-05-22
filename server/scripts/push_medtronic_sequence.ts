@@ -1,7 +1,5 @@
 import "dotenv/config";
 import { invokeLLM, parseLLMContent } from "../_core/llm.js";
-
-const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?.[0] ?? ''}***@${d}` : '***'; };
 import { sendEmail } from "../email-service.js";
 import { bayesianPreamble, betaMean, betaCI, SEGMENT_PRIORS } from "../_core/bayesian.js";
 

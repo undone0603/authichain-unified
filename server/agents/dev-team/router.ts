@@ -90,7 +90,7 @@ export const devTeamRouter = router({
       return { taskId };
     }),
 
-  tasks: adminProcedure
+  tasks: protectedProcedure
     .input(z.object({ missionId: z.string() }))
     .query(async ({ input }) => {
       return db.getTasksByMission(input.missionId);

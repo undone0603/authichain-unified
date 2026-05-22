@@ -4,7 +4,6 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import QRCode from "qrcode";
 import { invokeLLM, parseLLMContent } from "../_core/llm";
-import { issueVerificationUrl, verifyHash, type QRVerificationRecord } from "../_core/verification";
 import type { Product } from "../../src/db/schema";
 
 async function getOwnedProduct(productId: number, userId: number): Promise<Product> {
@@ -21,30 +20,10 @@ export const qrcodeRouter = router({
     batchId: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
     const product = await getOwnedProduct(input.productId, ctx.user.id);
-    const baseUrl = process.env.VITE_APP_URL ?? process.env.VITE_FRONTEND_FORGE_API_URL ?? "https://authichain.com";
-
-    // Issue a hash-signed verification URL so the QR code is tamper-evident
-    const { url: verifyUrl, hash, record } = issueVerificationUrl(
-      baseUrl,
-      String(input.productId),
-      input.batchId,
-    );
-
-    const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
-      width: input.size, margin: 2,
-      color: { dark: "#000000", light: "#FFFFFF" },
-    });
-
-    await db.createQrCode({
-      productId: input.productId,
-      userId: ctx.user.id,
-      qrData: verifyUrl,
-      qrImageUrl: qrDataUrl,
-      // Store hash + expiry in metadata for later scan validation
-      metadata: { hash, verificationId: record.id, expiresAt: record.expiresAt?.toISOString() },
-    });
-
-    return { qrCodeDataUrl: qrDataUrl, verifyUrl, hash, verificationId: record.id };
+    const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL || "https://authichain.com"}/verify/${product.id}`;
+    const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: input.size, margin: 2, color: { dark: "#000000", light: "#FFFFFF" } });
+    await db.createQrCode({ productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl });
+    return { qrCodeDataUrl: qrDataUrl, verifyUrl };
   }),
 
   scan: publicProcedure.input(z.object({

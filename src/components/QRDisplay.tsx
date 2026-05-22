@@ -362,7 +362,7 @@ export function QRDisplay({ qron, isGenerating, mode }: QRDisplayProps) {
             rel="noopener noreferrer"
             className="gold-text hover:underline flex items-center gap-1"
           >
-            {qron.destinationUrl ? new URL(qron.destinationUrl).hostname : ''}
+            {qron.destinationUrl ? (() => { try { return new URL(qron.destinationUrl).hostname } catch { return 'invalid-url' } })() : ''}
             <ExternalLink className="w-3 h-3" />
           </a>
         </div>

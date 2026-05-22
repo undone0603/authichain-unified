@@ -17,7 +17,7 @@ export const missionsRouter = router({
       return getMissions(input.status);
     }),
 
-  create: adminProcedure
+  create: protectedProcedure
     .input(z.object({ type: z.enum(MISSION_TYPES) }))
     .mutation(async ({ input }) => {
       const id = await createMission(input.type);
@@ -30,7 +30,7 @@ export const missionsRouter = router({
       return getMissionById(input.id);
     }),
 
-  updateStatus: adminProcedure
+  updateStatus: protectedProcedure
     .input(z.object({ id: z.string(), status: z.enum(MISSION_STATUSES) }))
     .mutation(async ({ input }) => {
       await updateMissionStatus(input.id, input.status);

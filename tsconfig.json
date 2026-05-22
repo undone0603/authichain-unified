@@ -48,15 +48,5 @@
     "server/**/*",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "build",
-    "dist",
-    "workers/**/*",
-    "worker/**/*",
-    "mobile/**/*",
-    "packages/**/*",
-    "scripts/**/*",
-    "libs/**/*"
-  ]
+  "exclude": ["node_modules", "build", "dist", "workers/**/*", "worker/**/*", "mobile/**/*", "packages/**/*", "scripts/**/*", "libs/**/*"]
 }

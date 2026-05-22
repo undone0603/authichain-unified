@@ -34,21 +34,24 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Patch missing Shadcn dependencies
         # Workaround: Installs the missing Tailwind v4 package workspace-wide
-        run: pnpm add -w tw-animate-css
+        run: pnpm add tw-animate-css
 
       - name: Build frontend (+ dist/public for Wrangler [assets])
         run: pnpm run build
+        # If your root package.json build script handles the worker build, leave this as-is.
+        # Otherwise, uncomment the line below to build a specific worker:
+        # working-directory: workers/authichain-dashboard
         env:
           VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
           VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
           VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
 
-      - name: Deploy authichain-dashboard
-        run: pnpm exec wrangler deploy --config wrangler.toml
+      - name: Publish Worker + Assets
+        run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/authichain-dashboard
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

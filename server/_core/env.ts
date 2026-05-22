@@ -34,7 +34,6 @@ export const ENV = {
   paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
   heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
   internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",
-  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
   qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
   makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
   smsRecipient: process.env.SMS_RECIPIENT ?? "",

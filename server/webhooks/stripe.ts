@@ -414,39 +414,6 @@ export async function handleStripeWebhook(
         await handleServiceOrderPayment({ id: session.id, payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : undefined });
       }
 
-      // Failsafe: provision subscription immediately rather than waiting for
-      // customer.subscription.created — prevents missed provisioning under race conditions
-      if (session.mode === "subscription" && subscriptionId && userId) {
-        try {
-          const sub = await stripe.subscriptions.retrieve(subscriptionId);
-          const firstItem = sub.items?.data?.[0];
-          const priceId = firstItem?.price?.id ?? null;
-          const amountCents = firstItem?.price?.unit_amount ?? 0;
-          const subBilling = billingCycle;
-          const subPlan = detectPlan(priceId, amountCents, plan, subBilling);
-          const subStatus = mapStripeStatus(sub.status);
-          await upsertStripeSubscription({
-            userId,
-            plan: subPlan,
-            status: subStatus,
-            monthlyQuota: getPlanQuota(subPlan),
-            billingCycle: subBilling,
-            stripeCustomerId: customerId ?? null,
-            stripeSubscriptionId: subscriptionId,
-            currentPeriodStart: sub.current_period_start
-              ? new Date(sub.current_period_start * 1000)
-              : new Date(),
-            currentPeriodEnd: sub.current_period_end
-              ? new Date(sub.current_period_end * 1000)
-              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
-          });
-          console.log(`[stripe-webhook] Subscription provisioned from checkout: ${subscriptionId} plan=${subPlan}`);
-        } catch (err) {
-          console.warn("[stripe-webhook] Checkout failsafe subscription upsert failed (non-fatal):", err);
-        }
-      }
-
       console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);
       break;
     }

@@ -3,12 +3,6 @@ import { syncPaymentToHubSpot, createDeal, isHubSpotConfigured } from "../hubspo
 import * as db from "../db";
 import { protocolAgents } from "../../drizzle/schema";
 
-function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  if (!domain) return '***';
-  return `${local?.[0] ?? ''}***@${domain}`;
-}
-
 const SCAN_THRESHOLD = 50;
 const XP_THRESHOLD = 500;
 

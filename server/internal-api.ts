@@ -7,17 +7,6 @@ import { invokeLLM, parseLLMContent } from "./_core/llm";
 import { ENV } from "./_core/env";
 import { reportUsageToStripe } from "./tenant-billing";
 
-function timingSafeStringEqual(a: string, b: string): boolean {
-  try {
-    const ba = Buffer.from(a);
-    const bb = Buffer.from(b);
-    if (ba.length !== bb.length) return false;
-    return cryptoTimingSafeEqual(ba, bb);
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Internal API routes for the authichain-gateway Cloudflare Worker.
  * Protected by X-Internal-Secret header.

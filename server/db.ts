@@ -342,7 +342,7 @@ export async function getServiceOrdersByUser(userId: number) {
 
 export async function getAllServiceOrders() {
   const d = await getDb();
-  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt)).limit(500);
+  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -501,8 +501,8 @@ export async function hasDunningStepLogged(subscriptionId: number, step: string)
   const d = await getDb();
   const rows = await d.select().from(activityLog)
     .where(and(
-      eq(activityLog.action, `billing_dunning_${step}`),
-      eq(activityLog.entityId, subscriptionId),
+      like(activityLog.action, `dunning:${step}:%`),
+      sql`${activityLog.details}->>'text' LIKE ${'%sub:' + subscriptionId + '%'}`
     )).limit(1);
   return rows.length > 0;
 }
