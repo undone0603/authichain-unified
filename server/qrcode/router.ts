@@ -4,6 +4,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import QRCode from "qrcode";
 import { invokeLLM, parseLLMContent } from "../_core/llm";
+import { issueVerificationUrl, verifyHash, type QRVerificationRecord } from "../_core/verification";
 import type { Product } from "../../src/db/schema";
 
 async function getOwnedProduct(productId: number, userId: number): Promise<Product> {
@@ -17,19 +18,69 @@ export const qrcodeRouter = router({
   generate: protectedProcedure.input(z.object({
     productId: z.number(),
     size: z.number().optional().default(300),
+    batchId: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
     const product = await getOwnedProduct(input.productId, ctx.user.id);
-    const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL || "https://authichain.com"}/verify/${product.id}`;
-    const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: input.size, margin: 2, color: { dark: "#000000", light: "#FFFFFF" } });
-    await db.createQrCode({ productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl });
-    return { qrCodeDataUrl: qrDataUrl, verifyUrl };
+    const baseUrl = process.env.VITE_APP_URL ?? process.env.VITE_FRONTEND_FORGE_API_URL ?? "https://authichain.com";
+
+    // Issue a hash-signed verification URL so the QR code is tamper-evident
+    const { url: verifyUrl, hash, record } = issueVerificationUrl(
+      baseUrl,
+      String(input.productId),
+      input.batchId,
+    );
+
+    const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+      width: input.size, margin: 2,
+      color: { dark: "#000000", light: "#FFFFFF" },
+    });
+
+    await db.createQrCode({
+      productId: input.productId,
+      userId: ctx.user.id,
+      qrData: verifyUrl,
+      qrImageUrl: qrDataUrl,
+      // Store hash + expiry in metadata for later scan validation
+      metadata: { hash, verificationId: record.id, expiresAt: record.expiresAt?.toISOString() },
+    });
+
+    return { qrCodeDataUrl: qrDataUrl, verifyUrl, hash, verificationId: record.id };
   }),
-  scan: publicProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
+
+  scan: publicProcedure.input(z.object({
+    productId: z.number(),
+    hash: z.string().optional(),  // present when scanning a hash-signed QR code
+  })).query(async ({ input }) => {
     const product = await db.getProductById(input.productId);
     if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+
     const qrCodes = await db.getProductQrCodes(input.productId);
     if (qrCodes.length > 0) await db.incrementScanCount(qrCodes[0].id);
-    return { product, scanCount: (qrCodes[0]?.scanCount || 0) + 1 };
+
+    // Hash validation against the stored QR record (when hash is present)
+    let hashResult: { valid: boolean; message: string } | null = null;
+    if (input.hash && qrCodes.length > 0) {
+      const meta = qrCodes[0].metadata as Record<string, unknown> | null;
+      if (meta?.hash && meta?.expiresAt) {
+        const storedRecord: QRVerificationRecord = {
+          id:        (meta.verificationId as string) ?? '',
+          hash:      meta.hash as string,
+          productId: String(input.productId),
+          issuedAt:  new Date(),
+          expiresAt: new Date(meta.expiresAt as string),
+          scanCount: qrCodes[0].scanCount ?? 0,
+          revoked:   false,
+        };
+        const result = verifyHash(input.hash, storedRecord);
+        hashResult = { valid: result.valid, message: result.message };
+      }
+    }
+
+    return {
+      product,
+      scanCount: (qrCodes[0]?.scanCount || 0) + 1,
+      hashVerification: hashResult,
+    };
   }),
   listForProduct: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ ctx, input }) => {
     await getOwnedProduct(input.productId, ctx.user.id);

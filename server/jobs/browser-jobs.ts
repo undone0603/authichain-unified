@@ -31,25 +31,26 @@ export async function runBrowserAgentJobs(): Promise<{
   let skipped = 0;
 
   // ── Weekly competitor monitoring ──────────────────────────────────────────
-  // Gate: skip if this competitor was already checked in the last 7 days.
-  // Uses the activity log action written by runBrowseCompetitorMonitor.
-  for (const competitor of COMPETITORS) {
-    const actionKey = `browse_competitor_monitor_completed`;
-    const ranThisWeek = await hasActionLogged(actionKey, 7);
-    if (ranThisWeek) { skipped++; continue; }
-
-    try {
-      const fakeTask = { id: 0, missionId: 0, payload: competitor } as any;
-      await runBrowseCompetitorMonitor(fakeTask);
-      competitorsChecked++;
-    } catch (err) {
-      await logActivity({
-        userId: null,
-        action: 'browser_jobs_competitor_error',
-        entityType: 'automation',
-        entityId: 0,
-        details: { competitor: competitor.competitorName, error: String(err) },
-      });
+  // Gate the whole batch — if any competitor was checked this week, skip all.
+  // This prevents re-running the batch mid-week on subsequent ticks.
+  const batchRanThisWeek = await hasActionLogged('browse_competitor_monitor_completed', 7);
+  if (batchRanThisWeek) {
+    skipped += COMPETITORS.length;
+  } else {
+    for (const competitor of COMPETITORS) {
+      try {
+        const fakeTask = { id: 0, missionId: 0, payload: competitor } as any;
+        await runBrowseCompetitorMonitor(fakeTask);
+        competitorsChecked++;
+      } catch (err) {
+        await logActivity({
+          userId: null,
+          action: 'browser_jobs_competitor_error',
+          entityType: 'automation',
+          entityId: 0,
+          details: { competitor: competitor.competitorName, error: String(err) },
+        });
+      }
     }
   }
 
