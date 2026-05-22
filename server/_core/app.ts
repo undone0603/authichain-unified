@@ -124,8 +124,8 @@ export function createApp() {
     });
   });
 
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(express.json({ limit: "5mb" }));
+  app.use(express.urlencoded({ limit: "5mb", extended: true }));
   registerOAuthRoutes(app);
     app.use("/api/contact", contactRouter);
     app.use("/api/gpt", gptRouter);

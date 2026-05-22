@@ -10,7 +10,7 @@ import { rewardAgentForVerification } from "../character-service";
 export const authenticateRouter = router({
   analyze: protectedProcedure.input(z.object({
     productId: z.number(),
-    imageUrl: z.string(),
+    imageUrl: z.string().url().refine(u => u.startsWith("https://"), { message: "imageUrl must use HTTPS" }),
   })).mutation(async ({ ctx, input }) => {
     const quotaResult = await db.consumeSubscriptionQuota(ctx.user.id);
     if (quotaResult === "exceeded") throw new TRPCError({ code: "FORBIDDEN", message: "Monthly quota exceeded. Please upgrade your plan." });

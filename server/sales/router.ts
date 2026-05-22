@@ -49,7 +49,7 @@ export const salesRouter = router({
   trackDemoActivity: publicProcedure
     .input(z.object({
       email: z.string().email(),
-      event: z.string(),
+      event: z.enum(["demo_start", "demo_complete", "demo_interaction", "demo_feature_view"]),
     }))
     .mutation(async ({ input }) => {
       const lead = await db.getLeadByEmail(input.email);
