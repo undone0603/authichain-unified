@@ -72,10 +72,8 @@ jobs:
 
       - name: Patch missing Shadcn/Tailwind v4 dependencies
         if: steps.detect.outputs.type == 'vercel'
-        # Workaround: Installs the missing Tailwind v4 package workspace-wide
-        run: |
-          cd $GITHUB_WORKSPACE
-          pnpm add -w tw-animate-css@rc
+        # Fix: removed -w flag (--workspace-root) which fails when not in a workspace context
+        run: pnpm add tw-animate-css@rc
 
       - name: Pull Vercel Environment Information
         if: steps.detect.outputs.type == 'vercel'
