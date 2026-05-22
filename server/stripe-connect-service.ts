@@ -33,7 +33,9 @@ export async function provisionVendorAccount(userId: number, displayName: string
     idempotencyKey: generateIdempotencyKey("provision-vendor", userId)
   });
 
-  const body = JSON.parse((response as any).toJSON().body);
+  let body: any;
+  try { body = JSON.parse((response as any).toJSON().body); }
+  catch { throw new Error("Stripe V2 provisionVendorAccount: unparseable response body"); }
   const accountId = body.id;
 
   const d = await db.getDb();
@@ -57,7 +59,9 @@ export async function generateOnboardingLink(vendorAccountId: string) {
     },
   });
 
-  const body = JSON.parse((response as any).toJSON().body);
+  let body: any;
+  try { body = JSON.parse((response as any).toJSON().body); }
+  catch { throw new Error("Stripe V2 generateOnboardingLink: unparseable response body"); }
   return body.url;
 }
 

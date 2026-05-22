@@ -624,10 +624,10 @@ export async function getAuthenticationByShareToken(shareToken: string) {
   return result[0];
 }
 
-export async function updateAuthenticationSharing(id: number, isPublic: boolean, shareToken: string) {
+export async function updateAuthenticationSharing(id: number, userId: number, isPublic: boolean, shareToken: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(authentications).set({ isPublic: isPublic ? 1 : 0, shareToken }).where(eq(authentications.id, id));
+  await db.update(authentications).set({ isPublic: isPublic ? 1 : 0, shareToken }).where(and(eq(authentications.id, id), eq(authentications.userId, userId)));
 }
 
 export async function incrementShareCount(id: number) {
