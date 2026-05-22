@@ -210,6 +210,10 @@ export function createInternalRouter(): Router {
     try {
       const { name, brand, category, serialNumber, description, userId } = req.body;
       if (!name) return res.status(400).json({ error: "name required" });
+      const parsedUserId = parseInt(userId, 10);
+      if (!userId || !Number.isFinite(parsedUserId) || parsedUserId <= 0) {
+        return res.status(400).json({ error: "valid userId required" });
+      }
 
       const product = await createProduct({
         name,
@@ -217,7 +221,7 @@ export function createInternalRouter(): Router {
         category,
         serialNumber,
         description,
-        userId: userId || 1,
+        userId: parsedUserId,
         status: "active",
       });
 
