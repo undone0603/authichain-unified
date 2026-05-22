@@ -57,8 +57,7 @@ export default {
     }
 
     const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16',
-      httpClient: Stripe.createFetchHttpClient(),
+      apiVersion: '2025-02-24.acacia',
     });
 
     const signature = request.headers.get('stripe-signature');

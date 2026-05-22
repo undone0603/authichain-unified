@@ -165,7 +165,7 @@
     }
   },
   "overrides": {
-    "axios": "^1.16.0",
+    "axios": "^1.16.1",
     "postcss": "^8.5.10",
     "serialize-javascript": "^7.0.5",
     "esbuild": "^0.25.0"
