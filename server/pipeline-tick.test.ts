@@ -17,6 +17,7 @@ vi.mock('./jobs/retention.js',         () => ({ runRetentionAutomation:         
 vi.mock('./jobs/weekly-digest.js',     () => ({ runWeeklyDigestDispatch:        vi.fn().mockResolvedValue({ executed: true }) }));
 vi.mock('./jobs/quarterly-value.js',   () => ({ runQuarterlyValueReportDispatch: vi.fn().mockResolvedValue({ executed: true }) }));
 vi.mock('./jobs/organic-traffic.js',   () => ({ runOrganicTrafficAutomation:    vi.fn().mockResolvedValue({ executed: true }) }));
+vi.mock('./jobs/browser-jobs.js',      () => ({ runBrowserAgentJobs:            vi.fn().mockResolvedValue({ competitorsChecked: 0, newsKeywordsScanned: 0, skipped: 0 }) }));
 vi.mock('./jobs/task-runner.js',       () => ({ runTask:                        vi.fn().mockResolvedValue({ ok: true }) }));
 
 // Drizzle-style chainable stub: every chain method returns the same object;
