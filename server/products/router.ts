@@ -26,6 +26,8 @@ export const productsRouter = router({
     imageUrl: z.string().optional(),
     serialNumber: z.string().optional(),
     batchNumber: z.string().optional(),
+    manufacturer: z.string().optional(),
+    modelNumber: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
     const result = await db.createProduct({ ...input, userId: ctx.user.id });
     await db.logActivity({ userId: ctx.user.id, action: "product_created", entityType: "product", entityId: result.id });

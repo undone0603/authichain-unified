@@ -4,15 +4,19 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import {
   Package, QrCode, ScanLine, Plus, RefreshCw,
-  ShieldCheck, Download, Copy, ExternalLink,
+  ShieldCheck, Download, Copy, ExternalLink, X,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+
+const EMPTY_FORM = { name: '', brand: '', category: '', description: '', imageUrl: '', serialNumber: '', batchNumber: '' };
 
 export default function ProductsPage() {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [batchId, setBatchId] = useState('');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [showNewProduct, setShowNewProduct] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const productsQuery = trpc.products.list.useQuery(undefined, { staleTime: 30_000 });
   const qrCodesQuery = trpc.qrcode.listForProduct.useQuery(
@@ -24,6 +28,15 @@ export default function ProductsPage() {
     onSuccess: () => qrCodesQuery.refetch(),
   });
 
+  const createProduct = trpc.products.create.useMutation({
+    onSuccess: (product) => {
+      productsQuery.refetch();
+      setSelectedProductId(product.id);
+      setShowNewProduct(false);
+      setForm(EMPTY_FORM);
+    },
+  });
+
   async function handleGenerate() {
     if (!selectedProductId) return;
     await generateQR.mutateAsync({
@@ -32,6 +45,20 @@ export default function ProductsPage() {
       batchId: batchId.trim() || undefined,
     });
     setBatchId('');
+  }
+
+  async function handleCreateProduct(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    await createProduct.mutateAsync({
+      name: form.name.trim(),
+      brand: form.brand.trim() || undefined,
+      category: form.category.trim() || undefined,
+      description: form.description.trim() || undefined,
+      imageUrl: form.imageUrl.trim() || undefined,
+      serialNumber: form.serialNumber.trim() || undefined,
+      batchNumber: form.batchNumber.trim() || undefined,
+    });
   }
 
   async function copyUrl(url: string) {
@@ -63,7 +90,7 @@ export default function ProductsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Product List */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-4">
           <div className="protocol-card p-4">
             <div className="flex items-center gap-2 mb-4">
               <Package className="w-4 h-4 text-gold" />
@@ -88,7 +115,7 @@ export default function ProductsPage() {
               </p>
             )}
 
-            {productsQuery.data?.length === 0 && (
+            {productsQuery.data?.length === 0 && !showNewProduct && (
               <div className="text-center py-8">
                 <Package className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
                 <p className="text-zinc-600 text-xs uppercase tracking-widest">No products yet</p>
@@ -99,7 +126,7 @@ export default function ProductsPage() {
               {productsQuery.data?.map(product => (
                 <button
                   key={product.id}
-                  onClick={() => setSelectedProductId(product.id)}
+                  onClick={() => { setSelectedProductId(product.id); setShowNewProduct(false); }}
                   className={`w-full text-left p-3 rounded-lg border transition-colors ${
                     selectedProductId === product.id
                       ? 'border-gold/40 bg-gold/10'
@@ -120,19 +147,138 @@ export default function ProductsPage() {
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={() => { setShowNewProduct(v => !v); setSelectedProductId(null); }}
+              className="mt-3 w-full flex items-center justify-center gap-2 border border-dashed border-zinc-700 hover:border-gold/40 text-zinc-500 hover:text-gold rounded-lg py-2.5 text-[10px] font-black uppercase tracking-widest transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              New Product
+            </button>
           </div>
         </div>
 
-        {/* QR Code Panel */}
+        {/* Right Panel */}
         <div className="lg:col-span-2 space-y-4">
-          {!selectedProduct ? (
+          {/* New Product Form */}
+          {showNewProduct && (
+            <div className="protocol-card p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <Plus className="w-4 h-4 text-gold" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">New Product</h3>
+                <button
+                  onClick={() => { setShowNewProduct(false); setForm(EMPTY_FORM); createProduct.reset(); }}
+                  className="ml-auto text-zinc-600 hover:text-zinc-400"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateProduct} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Name *</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="e.g. Premium Leather Wallet"
+                      value={form.name}
+                      onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-gold/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Brand</label>
+                    <input
+                      type="text"
+                      placeholder="Brand name"
+                      value={form.brand}
+                      onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-gold/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Category</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Apparel"
+                      value={form.category}
+                      onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-gold/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Serial Number</label>
+                    <input
+                      type="text"
+                      placeholder="Optional serial"
+                      value={form.serialNumber}
+                      onChange={e => setForm(f => ({ ...f, serialNumber: e.target.value }))}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-gold/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Batch Number</label>
+                    <input
+                      type="text"
+                      placeholder="Optional batch"
+                      value={form.batchNumber}
+                      onChange={e => setForm(f => ({ ...f, batchNumber: e.target.value }))}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-gold/40"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Image URL</label>
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={form.imageUrl}
+                      onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-gold/40"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest block mb-1">Description</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Short product description"
+                      value={form.description}
+                      onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-gold/40 resize-none"
+                    />
+                  </div>
+                </div>
+
+                {createProduct.isError && (
+                  <p className="text-xs text-red-400">{createProduct.error.message}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={createProduct.isPending || !form.name.trim()}
+                  className="btn-gold w-full py-2.5 rounded-lg text-xs font-black uppercase tracking-widest shadow-gold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {createProduct.isPending ? (
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Plus className="w-3 h-3" />
+                  )}
+                  Create Product
+                </button>
+              </form>
+            </div>
+          )}
+
+          {!selectedProduct && !showNewProduct && (
             <div className="protocol-card p-12 flex flex-col items-center justify-center text-center">
               <QrCode className="w-12 h-12 text-zinc-700 mb-4" />
               <p className="text-zinc-500 text-sm uppercase tracking-widest font-bold">
                 Select a product to manage QR codes
               </p>
             </div>
-          ) : (
+          )}
+
+          {selectedProduct && (
             <>
               {/* Generate new QR */}
               <div className="protocol-card p-6">

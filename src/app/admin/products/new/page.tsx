@@ -3,16 +3,17 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Box, 
-  ArrowLeft, 
-  Plus, 
+import {
+  Box,
+  ArrowLeft,
+  Plus,
   Loader2,
   Package,
   FileText,
   Tag,
   Hash
 } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -20,30 +21,23 @@ export default function NewProductPage() {
     name: '',
     description: '',
     manufacturer: '',
-    model_number: '',
+    modelNumber: '',
     category: '',
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const createProduct = trpc.products.create.useMutation({
+    onSuccess: () => router.push('/admin/products'),
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/admin/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to create product');
-      router.push('/admin/products');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-    } finally {
-      setIsLoading(false);
-    }
+    await createProduct.mutateAsync({
+      name: formData.name,
+      description: formData.description || undefined,
+      manufacturer: formData.manufacturer || undefined,
+      modelNumber: formData.modelNumber || undefined,
+      category: formData.category || undefined,
+    });
   };
 
   return (
@@ -61,9 +55,9 @@ export default function NewProductPage() {
           </Link>
         </header>
 
-        {error && (
+        {createProduct.isError && (
           <div className="protocol-card p-4 bg-red-500/5 border-red-500/20 text-red-400 mb-8 font-bold text-xs uppercase tracking-widest text-center">
-            {error}
+            {createProduct.error.message}
           </div>
         )}
 
@@ -117,8 +111,8 @@ export default function NewProductPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.model_number}
-                  onChange={(e) => setFormData({ ...formData, model_number: e.target.value })}
+                  value={formData.modelNumber}
+                  onChange={(e) => setFormData({ ...formData, modelNumber: e.target.value })}
                   className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-gold outline-none transition-colors"
                   placeholder="ACM-H1-26"
                 />
@@ -141,10 +135,10 @@ export default function NewProductPage() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={createProduct.isPending}
             className="w-full btn-gold py-4 rounded-xl font-black uppercase tracking-widest text-xs shadow-gold disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Register Product'}
+            {createProduct.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Register Product'}
           </button>
         </form>
       </div>
