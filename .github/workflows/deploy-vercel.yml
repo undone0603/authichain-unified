@@ -72,8 +72,7 @@ jobs:
         if: steps.detect.outputs.type == 'vercel'
         run: |
           vercel build --prod --token=${{ secrets.VERCEL_TOKEN }} \
-            --build-env VITE_ANALYTICS_ENDPOINT="${{ secrets.VITE_ANALYTICS_ENDPOINT }}" \
-            --build-env VITE_ANALYTICS_WEBSITE_ID="${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}"
+            
 
       - name: Deploy Project Artifacts to Vercel
         if: steps.detect.outputs.type == 'vercel'
