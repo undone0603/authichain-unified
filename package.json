@@ -67,7 +67,6 @@
   },
   "pnpm": {
     "overrides": {
-      "axios": "^1.7.4",
       "serialize-javascript": "7.0.3"
     }
   }
