@@ -21,6 +21,7 @@ interface OutboundEmailPayload {
   leadName?: string;
   leadOrg?: string;
   leadTitle?: string;
+  researchHook?: string;  // personalised opener injected by BROWSE_RESEARCH_LEAD
 }
 
 const segmentContext: Record<string, string> = {
@@ -74,6 +75,10 @@ export async function runOutboundEmail(task: Task): Promise<void> {
     : `Follow-up ${sequence}: AuthiChain Product Authentication`;
 
   // ── Bayesian-structured prompt ─────────────────────────────────────────────
+  const hookLine = payload.researchHook
+    ? `Opening hook (use this as your first sentence, lightly adapted): "${payload.researchHook}"\n`
+    : '';
+
   const prompt = `${reasoning}You are writing a cold outreach email on behalf of AuthiChain (authichain.com).
 
 Recipient: ${payload.leadName ?? 'there'} at ${payload.leadOrg ?? 'your organization'}${payload.leadTitle ? `, ${payload.leadTitle}` : ''}
@@ -81,6 +86,7 @@ Recipient profile: ${recipientContext}
 Sequence: Email ${sequence} of 3
 Tone directive: ${toneGuidance[tone]}
 CTA directive: ${ctaDirective}
+${hookLine}
 
 AuthiChain helps brands verify product authenticity via blockchain-backed QR codes and AI. Key value props:
 - Instant product authentication via QR scan
