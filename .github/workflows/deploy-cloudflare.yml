@@ -42,7 +42,7 @@ jobs:
 
       - name: Build frontend (+ dist/public for Wrangler [assets])
         run: pnpm run build
-        # If your root package.json build script handles the worker build, leave this as-is. 
+        # If your root package.json build script handles the worker build, leave this as-is.
         # Otherwise, uncomment the line below to build a specific worker:
         # working-directory: workers/authichain-dashboard
         env:
@@ -52,8 +52,7 @@ jobs:
           VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
 
       - name: Publish Worker + Assets
-        run: pnpm exec wrangler deploy --config wrangler.toml
-        # Make sure this points to the worker you want to deploy
+        run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/authichain-dashboard
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
