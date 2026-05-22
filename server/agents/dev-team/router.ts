@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from "../../_core/trpc";
+import { router, protectedProcedure, adminProcedure } from "../../_core/trpc";
 import * as db from "../../db";
 import { z } from "zod";
 
@@ -90,7 +90,7 @@ export const devTeamRouter = router({
       return { taskId };
     }),
 
-  tasks: protectedProcedure
+  tasks: adminProcedure
     .input(z.object({ missionId: z.string() }))
     .query(async ({ input }) => {
       return db.getTasksByMission(input.missionId);

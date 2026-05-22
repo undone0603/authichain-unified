@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure, adminProcedure } from "../_core/trpc";
+import { router, adminProcedure } from "../_core/trpc";
 
 const BASE_URL = process.env.MACROHARD_API_URL ?? "";
 const API_KEY = process.env.MACROHARD_API_KEY ?? "";
@@ -20,7 +20,7 @@ async function mhFetch(path: string, options: RequestInit = {}) {
 
 export const macrohardRouter = router({
   /** Check connection status and API health */
-  status: protectedProcedure.query(async () => {
+  status: adminProcedure.query(async () => {
     const configured = !!(BASE_URL && API_KEY);
     if (!configured) return { configured, connected: false, version: null };
     try {
@@ -52,7 +52,7 @@ export const macrohardRouter = router({
     }),
 
   /** Generic query — fetch a resource from MACROHARD */
-  query: protectedProcedure
+  query: adminProcedure
     .input(
       z.object({
         // Only allow simple alphanumeric/hyphen/underscore resource names — no path traversal
@@ -69,7 +69,7 @@ export const macrohardRouter = router({
     }),
 
   /** Push an AuthiChain product/certificate event to MACROHARD */
-  pushEvent: protectedProcedure
+  pushEvent: adminProcedure
     .input(
       z.object({
         eventType: z.enum(["product_authenticated", "certificate_issued", "nft_minted"]),
