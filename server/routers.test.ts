@@ -323,7 +323,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("abTesting.list returns array", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.abTesting.list();
       expect(Array.isArray(result)).toBe(true);
