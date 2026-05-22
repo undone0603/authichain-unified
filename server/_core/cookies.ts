@@ -42,7 +42,10 @@ export function getSessionCookieOptions(
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
+    // "lax" blocks cross-site POSTs (CSRF protection) while still allowing
+    // navigation-driven GET flows (OAuth redirects, email link clicks).
+    // Use "none" only if third-party iframe embedding is required.
+    sameSite: "lax",
     secure: isSecureRequest(req),
   };
 }

@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { timingSafeEqual as cryptoTimingSafeEqual } from "crypto";
 import express from "express";
+import helmet from "helmet";
 
 function timingSafeEqual(a: string, b: string): boolean {
   try {
@@ -20,6 +21,12 @@ import { createInternalRouter } from "../internal-api";
 import { brandMiddleware } from "./brand-middleware";
 import contactRouter from "../contact";
 import gptRouter from "../gpt/router";
+import {
+  oauthRateLimit,
+  contactRateLimit,
+  gptRateLimit,
+  globalApiRateLimit,
+} from "./rate-limit";
 
 /**
  * Creates and configures the Express app without binding to a port.
@@ -27,6 +34,30 @@ import gptRouter from "../gpt/router";
  */
 export function createApp() {
   const app = express();
+
+  // Trust the first hop from Vercel / Railway reverse proxies so req.ip is the real client IP
+  app.set("trust proxy", 1);
+
+  // ─── Security headers ─────────────────────────────────────────────────────
+  app.use(helmet({
+    // Webhook endpoints use raw bodies so CSP is irrelevant there; apply globally
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "https:"],
+        frameSrc: ["https://js.stripe.com"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // allow embedding for QR/verification pages
+  }));
+
+  // ─── Global API rate limit (broad DoS protection) ────────────────────────
+  app.use("/api", globalApiRateLimit);
 
   // ─── Brand detection (Host → res.locals.brand + X-Brand header) ──────────
   app.use(brandMiddleware);
@@ -126,9 +157,16 @@ export function createApp() {
 
   app.use(express.json({ limit: "5mb" }));
   app.use(express.urlencoded({ limit: "5mb", extended: true }));
+
+  // ─── OAuth callback: stricter rate limit ─────────────────────────────────
+  app.use("/api/oauth", oauthRateLimit);
   registerOAuthRoutes(app);
-    app.use("/api/contact", contactRouter);
-    app.use("/api/gpt", gptRouter);
+
+  // ─── Contact form: 5/hr per IP ───────────────────────────────────────────
+  app.use("/api/contact", contactRateLimit, contactRouter);
+
+  // ─── GPT plugin: 60/min per IP ───────────────────────────────────────────
+  app.use("/api/gpt", gptRateLimit, gptRouter);
 
   // Internal API for gateway worker
   app.use("/api/internal", createInternalRouter());

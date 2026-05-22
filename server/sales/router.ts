@@ -1,23 +1,35 @@
 import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
+import { router, rateLimitedPublicProcedure, protectedProcedure } from "../_core/trpc";
 import { calculateROI } from "./roi-service";
 import { calculateLeadScore } from "./scoring-service";
 import * as db from "../db";
+
+const KNOWN_INDUSTRIES = [
+  // Values sent by the ROI calculator UI
+  "medtech", "timepieces", "pharma", "luxury", "cannabis", "electronics",
+  // Additional verticals used by other callers / tests
+  "retail", "food_beverage", "automotive", "cosmetics", "supply_chain", "other",
+] as const;
 
 export const salesRouter = router({
   /**
    * Public: Calculate ROI for a potential customer
    */
-  calculateRoi: publicProcedure
+  calculateRoi: rateLimitedPublicProcedure
     .input(z.object({
-      numProducts: z.number(),
-      complianceHoursPerMonth: z.number(),
-      hourlyRate: z.number(),
-      existingTechCosts: z.number(),
-      industry: z.string(),
+      numProducts: z.number().int().min(1).max(10_000_000),
+      complianceHoursPerMonth: z.number().min(0).max(10_000),
+      hourlyRate: z.number().min(0).max(100_000),
+      existingTechCosts: z.number().min(0).max(1_000_000_000),
+      industry: z.enum(KNOWN_INDUSTRIES),
       userEmail: z.string().email().optional(),
+      // Honeypot: real browsers leave this absent; bots often fill it
+      _hp: z.string().max(0).optional(),
     }))
     .mutation(async ({ input }) => {
+      // Reject if honeypot field was filled
+      if (input._hp) return { blocked: true } as any;
+
       const results = calculateROI(input);
 
       // Track lead if email provided
@@ -46,7 +58,7 @@ export const salesRouter = router({
   /**
    * Track interactive demo engagement
    */
-  trackDemoActivity: publicProcedure
+  trackDemoActivity: rateLimitedPublicProcedure
     .input(z.object({
       email: z.string().email(),
       event: z.enum(["demo_start", "demo_complete", "demo_interaction", "demo_feature_view"]),
@@ -68,7 +80,6 @@ export const salesRouter = router({
    */
   getLeadStatus: protectedProcedure
     .query(async ({ ctx }) => {
-      // Assuming users can see their own lead status
       return await db.getLeadByEmail(ctx.user.email ?? "");
     }),
 });
