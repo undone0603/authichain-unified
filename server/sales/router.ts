@@ -3,6 +3,29 @@ import { router, rateLimitedPublicProcedure, protectedProcedure } from "../_core
 import { calculateROI } from "./roi-service";
 import { calculateLeadScore } from "./scoring-service";
 import * as db from "../db";
+import { ENV } from "../_core/env";
+
+const INDUSTRY_TO_SEGMENT: Record<string, string> = {
+  medtech: "MEDTECH",
+  pharma: "PHARMA",
+  timepieces: "LUXURY",
+  luxury: "LUXURY",
+  cannabis: "RETAIL",
+  electronics: "RETAIL",
+  retail: "RETAIL",
+  food_beverage: "RETAIL",
+  automotive: "RETAIL",
+  cosmetics: "LUXURY",
+  supply_chain: "RETAIL",
+  other: "RETAIL",
+};
+
+const INDUSTRY_TO_MISSION: Record<string, string> = {
+  medtech: "MEDTECH_OUTREACH",
+  pharma: "PHARMA_OUTREACH",
+  timepieces: "TIMEPIECE_OUTREACH",
+  luxury: "LUXURY_OUTREACH",
+};
 
 const KNOWN_INDUSTRIES = [
   // Values sent by the ROI calculator UI
@@ -50,6 +73,26 @@ export const salesRouter = router({
         });
 
         await calculateLeadScore(lead.id);
+
+        // Immediately enqueue outreach when the pipeline is enabled.
+        // New leads from the ROI calculator are warm (self-identified intent) —
+        // don't wait for the daily job to pick them up.
+        if (ENV.autonomousPipelineEnabled) {
+          try {
+            const segment = INDUSTRY_TO_SEGMENT[input.industry] ?? "RETAIL";
+            const missionType = (INDUSTRY_TO_MISSION[input.industry] ?? "RETAIL_PILOT") as any;
+            const missionId = await db.createMission(missionType);
+            await db.enqueueTask(missionId, "DRAFT_OUTBOUND_EMAIL", {
+              leadEmail: input.userEmail,
+              segment,
+              sequence: 1,
+              roiSavings: results.year1Savings,
+              industry: input.industry,
+            });
+          } catch {
+            // Non-fatal — lead is still captured even if task enqueue fails
+          }
+        }
       }
 
       return results;

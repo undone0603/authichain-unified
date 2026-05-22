@@ -28,6 +28,7 @@ export interface CreateCheckoutParams {
   billing: "monthly" | "annual";
   origin: string;
   stripeCustomerId?: string;
+  trialDays?: number;
 }
 
 export async function createSubscriptionCheckout(params: CreateCheckoutParams): Promise<string> {
@@ -57,6 +58,7 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
         plan: params.plan,
         billing: params.billing,
       },
+      ...(params.trialDays ? { trial_period_days: params.trialDays } : {}),
     },
     line_items: [
       {

@@ -50,6 +50,8 @@ export const subscriptionsRouter = router({
     billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
     origin: z.string().url(),
   })).mutation(async ({ ctx, input }) => {
+    // 14-day trial for self-serve plans; enterprise/medtech go through custom sales
+    const trialDays = (input.plan === "starter" || input.plan === "professional") ? 14 : undefined;
     const url = await stripeService.createSubscriptionCheckout({
       userId: ctx.user.id,
       userEmail: ctx.user.email || "",
@@ -58,6 +60,7 @@ export const subscriptionsRouter = router({
       billing: input.billing,
       origin: input.origin,
       stripeCustomerId: (ctx.user as any).stripeCustomerId || undefined,
+      trialDays,
     });
     return { checkoutUrl: url };
   }),
