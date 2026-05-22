@@ -10,6 +10,13 @@ interface Env {
 const COOKIE_NAME = 'ac_dash';
 const COOKIE_MAX_AGE = 60 * 60 * 8; // 8 hours
 
+const HTML_SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+};
+
 function timingSafeEqual(a: string, b: string): boolean {
   const encoder = new TextEncoder();
   const ab = encoder.encode(a);
@@ -53,7 +60,7 @@ export default {
       if (!timingSafeEqual(submitted, env.ACCESS_TOKEN)) {
         return new Response(LOGIN_ERR, {
           status: 401,
-          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+          headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' }
         });
       }
       return new Response(null, {
@@ -70,6 +77,7 @@ export default {
       return new Response(LOGIN, {
         status: 200,
         headers: {
+          ...HTML_SECURITY_HEADERS,
           'Content-Type': 'text/html; charset=utf-8',
           'Set-Cookie': sessionCookie('', true)
         }
@@ -81,12 +89,13 @@ export default {
     if (!cookie || !timingSafeEqual(cookie, env.ACCESS_TOKEN)) {
       return new Response(LOGIN, {
         status: 401,
-        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' }
       });
     }
 
     return new Response(HTML, {
       headers: {
+        ...HTML_SECURITY_HEADERS,
         'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 'no-cache'
       }

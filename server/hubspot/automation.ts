@@ -3,6 +3,12 @@ import { syncPaymentToHubSpot, createDeal, isHubSpotConfigured } from "../hubspo
 import * as db from "../db";
 import { protocolAgents } from "../../drizzle/schema";
 
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local?.[0] ?? ''}***@${domain}`;
+}
+
 const SCAN_THRESHOLD = 50;
 const XP_THRESHOLD = 500;
 
@@ -30,7 +36,7 @@ export async function checkUserMilestones(userId: number) {
           dealstage: "appointmentscheduled",
         });
         await db.logActivity({ userId, action: "hubspot_milestone_scans", details: { count: metrics.totalAuthentications } });
-        console.log(`[HubSpot Automation] High-activity deal created for ${user.email}`);
+        console.log(`[HubSpot Automation] High-activity deal created for ${maskEmail(user.email || '')}`);
       }
     }
 
@@ -47,7 +53,7 @@ export async function checkUserMilestones(userId: number) {
           dealstage: "appointmentscheduled",
         });
         await db.logActivity({ userId, action: "hubspot_milestone_reputation", details: { xp: agent.xp } });
-        console.log(`[HubSpot Automation] Power agent deal created for ${user.email}`);
+        console.log(`[HubSpot Automation] Power agent deal created for ${maskEmail(user.email || '')}`);
       }
     }
   } catch (error) {

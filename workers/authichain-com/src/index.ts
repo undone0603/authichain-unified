@@ -1,4 +1,12 @@
 // Inlined Authichain Theme Module for Cloudflare Worker compatibility
+
+const HTML_SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+};
+
 const BRANDS = {
   authichain: {
     name: 'AuthiChain',
@@ -2400,6 +2408,6 @@ export default {
     if (p === '/demo' || p.startsWith('/demo/')) {
       return Response.redirect('https://authichain.com/subscriptions', 302);
     }
-    return new Response(HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
   }
 };

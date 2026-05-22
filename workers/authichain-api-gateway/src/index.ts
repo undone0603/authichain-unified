@@ -16,7 +16,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
 
     // Documentation page
-    if (path === '/' || path === '/docs') return new Response(DOCS_HTML, { headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8' } });
+    if (path === '/' || path === '/docs') return new Response(DOCS_HTML, { headers: { ...cors, ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
 
     // Health check
     if (path === '/health') return json({ status: 'ok', mode: 'demo', version: '1.0.0', timestamp: new Date().toISOString(), notice: 'Demo mode — returns simulated responses' }, cors);
@@ -213,12 +213,19 @@ function json(data: any, cors: any, status = 200) {
   });
 }
 
+const HTML_SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+};
+
 function timingSafeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder();
   const ab = enc.encode(a), bb = enc.encode(b);
-  if (ab.length !== bb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  const len = Math.max(ab.length, bb.length);
+  let diff = ab.length ^ bb.length;
+  for (let i = 0; i < len; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
   return diff === 0;
 }
 

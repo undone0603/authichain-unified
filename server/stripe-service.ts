@@ -5,33 +5,7 @@
 import Stripe from "stripe";
 import { STRIPE_PRODUCTS, type PlanKey, getPlanQuota } from "./stripe-products";
 import { ENV } from "./_core/env";
-
-const ALLOWED_ORIGIN_HOSTNAMES = new Set([
-  "authichain.com",
-  "www.authichain.com",
-  "qronspace.com",
-  "www.qronspace.com",
-]);
-
-function safeOrigin(raw: string): string {
-  try {
-    const { protocol, hostname, port } = new URL(raw);
-    // Always allow localhost in non-production environments
-    if (!ENV.isProduction && hostname === "localhost") {
-      return port ? `${protocol}//${hostname}:${port}` : `${protocol}//${hostname}`;
-    }
-    if (ALLOWED_ORIGIN_HOSTNAMES.has(hostname)) {
-      return `${protocol}//${hostname}`;
-    }
-    // Vercel preview deployments (*.vercel.app) are acceptable
-    if (hostname.endsWith(".vercel.app")) {
-      return `${protocol}//${hostname}`;
-    }
-  } catch {
-    // malformed URL — fall through to default
-  }
-  return "https://authichain.com";
-}
+import { safeOrigin } from "./_core/allowed-origins";
 
 let _stripe: Stripe | null = null;
 

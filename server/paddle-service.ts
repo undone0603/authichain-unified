@@ -1,29 +1,6 @@
 import { ENV } from "./_core/env";
 import type { Paddle as PaddleType } from "@paddle/paddle-node-sdk";
-
-const ALLOWED_ORIGIN_HOSTNAMES = new Set([
-  "authichain.com",
-  "www.authichain.com",
-  "qronspace.com",
-  "www.qronspace.com",
-]);
-
-function safeUrl(raw: string, fallback: string): string {
-  try {
-    const { protocol, hostname, port, pathname, search } = new URL(raw);
-    const allowedOrigin =
-      (!ENV.isProduction && hostname === "localhost") ||
-      ALLOWED_ORIGIN_HOSTNAMES.has(hostname) ||
-      hostname.endsWith(".vercel.app");
-    if (allowedOrigin) {
-      const portPart = port ? `:${port}` : "";
-      return `${protocol}//${hostname}${portPart}${pathname}${search}`;
-    }
-  } catch {
-    // fall through
-  }
-  return fallback;
-}
+import { safeUrl } from "./_core/allowed-origins";
 
 let _paddle: PaddleType | null = null;
 

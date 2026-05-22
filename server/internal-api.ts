@@ -120,6 +120,7 @@ export function createInternalRouter(): Router {
     try {
       const number = (req.query.certNumber || req.query.number) as string;
       if (!number) return res.status(400).json({ error: "certNumber query param required" });
+      if (number.length > 64) return res.status(400).json({ error: "certNumber too long" });
 
       const cert = await getCertificateByNumber(number);
       if (!cert) return res.status(404).json({ error: "Certificate not found", valid: false });
