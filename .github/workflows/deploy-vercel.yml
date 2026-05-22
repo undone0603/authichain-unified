@@ -20,17 +20,11 @@ jobs:
       fail-fast: false
       matrix:
         project:
-          # (Workers moved to your cloudflare workflow, leaving only the ones you need here)
           - workers/qron-automation
-          - workers/qron-image-gen
-          - workers/qron-outreach
-          - workers/qron-space
-          - workers/resend-relay
-          - workers/strainchain-io
-          # Vercel Apps
           - apps/authichain-com
           - apps/authichain-dashboard
           - apps/strainchain-io
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,7 +41,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Detect project type
         id: detect
@@ -70,22 +64,16 @@ jobs:
         if: steps.detect.outputs.type == 'vercel'
         run: npm install --global vercel@latest
 
-      - name: Patch missing Shadcn/Tailwind v4 dependencies
-        if: steps.detect.outputs.type == 'vercel'
-        # Fix: removed -w flag (--workspace-root) which fails when not in a workspace context
-        run: pnpm add tw-animate-css@rc
-
       - name: Pull Vercel Environment Information
         if: steps.detect.outputs.type == 'vercel'
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Project Artifacts
         if: steps.detect.outputs.type == 'vercel'
-        # Workaround: Injects the missing Vite HTML variables explicitly into the Vercel Build
         run: |
           vercel build --prod --token=${{ secrets.VERCEL_TOKEN }} \
-          --build-env VITE_ANALYTICS_ENDPOINT="${{ secrets.VITE_ANALYTICS_ENDPOINT }}" \
-          --build-env VITE_ANALYTICS_WEBSITE_ID="${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}"
+            --build-env VITE_ANALYTICS_ENDPOINT="${{ secrets.VITE_ANALYTICS_ENDPOINT }}" \
+            --build-env VITE_ANALYTICS_WEBSITE_ID="${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}"
 
       - name: Deploy Project Artifacts to Vercel
         if: steps.detect.outputs.type == 'vercel'
