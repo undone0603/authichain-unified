@@ -108,7 +108,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: `${fromName} <onboarding@resend.dev>`,
+          from: `${fromName} <${ENV.resendFromEmail}>`,
           to,
           subject: input.subject,
           text: input.body,
