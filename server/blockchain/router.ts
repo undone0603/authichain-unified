@@ -3,6 +3,7 @@ import * as db from "../db";
 import * as thirdweb from "../thirdweb";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { ENV } from "../_core/env";
 
 export const blockchainRouter = router({
   status: publicProcedure.query(async () => {
@@ -27,13 +28,15 @@ export const blockchainRouter = router({
     certificateNumber: z.string(),
     walletAddress: z.string(),
     contractAddress: z.string(),
-    privateKey: z.string(),
     chainId: z.number().optional(),
   })).mutation(async ({ ctx, input }) => {
     const product = await db.getProductById(input.productId);
     if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    if (product.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
     const cert = await db.getCertificateByNumber(input.certificateNumber);
     if (!cert) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
+    const privateKey = ENV.walletPrivateKey;
+    if (!privateKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Minting not configured" });
     const metadata = thirdweb.buildAuthCertificateMetadata({
       productName: product.name,
       productBrand: product.brand || undefined,
@@ -48,7 +51,7 @@ export const blockchainRouter = router({
       contractAddress: input.contractAddress,
       recipientAddress: input.walletAddress,
       metadata,
-      privateKey: input.privateKey,
+      privateKey,
       chainId: input.chainId,
     });
     await db.logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "certificate", entityId: cert.id });
@@ -60,10 +63,11 @@ export const blockchainRouter = router({
     imageUrl: z.string().optional(),
     walletAddress: z.string(),
     contractAddress: z.string(),
-    privateKey: z.string(),
     chainId: z.number().optional(),
     attributes: z.array(z.object({ trait_type: z.string(), value: z.union([z.string(), z.number()]) })).optional(),
   })).mutation(async ({ ctx, input }) => {
+    const privateKey = ENV.walletPrivateKey;
+    if (!privateKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Minting not configured" });
     const result = await thirdweb.mintAuthenticationNFT({
       contractAddress: input.contractAddress,
       recipientAddress: input.walletAddress,
@@ -73,7 +77,7 @@ export const blockchainRouter = router({
         image: input.imageUrl,
         attributes: input.attributes,
       },
-      privateKey: input.privateKey,
+      privateKey,
       chainId: input.chainId,
     });
     await db.logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "nft", entityId: 0 });

@@ -360,7 +360,7 @@ describe("AuthiChain Unified Platform Routers", () => {
       const ctx = createPublicContext();
       const caller = appRouter.createCaller(ctx);
       await expect(caller.blockchain.mintNFT({
-        name: "Test", walletAddress: "0x123", contractAddress: "0x456", privateKey: "0x789",
+        name: "Test", walletAddress: "0x123", contractAddress: "0x456",
       })).rejects.toThrow();
     });
 
@@ -369,7 +369,7 @@ describe("AuthiChain Unified Platform Routers", () => {
       const caller = appRouter.createCaller(ctx);
       await expect(caller.blockchain.mintCertificateNFT({
         productId: 1, certificateNumber: "CERT-001",
-        walletAddress: "0x123", contractAddress: "0x456", privateKey: "0x789",
+        walletAddress: "0x123", contractAddress: "0x456",
       })).rejects.toThrow();
     });
 

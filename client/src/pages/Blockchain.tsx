@@ -151,7 +151,6 @@ function NFTMinter() {
   const [nftImage, setNftImage] = useState("");
   const [walletAddr, setWalletAddr] = useState("");
   const [contractAddr, setContractAddr] = useState("");
-  const [privateKey, setPrivateKey] = useState("");
   const [lastTx, setLastTx] = useState<{ hash: string; chain: number; uri: string } | null>(null);
 
   const mintMutation = trpc.blockchain.mintNFT.useMutation({
@@ -196,17 +195,12 @@ function NFTMinter() {
             <Input placeholder="0x..." value={walletAddr} onChange={e => setWalletAddr(e.target.value)} />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label>Minter Private Key</Label>
-          <Input type="password" placeholder="0x..." value={privateKey} onChange={e => setPrivateKey(e.target.value)} />
-          <p className="text-xs text-muted-foreground">Used server-side only for signing the mint transaction. Never stored.</p>
-        </div>
         <Button
           onClick={() => mintMutation.mutate({
             name: nftName, description: nftDesc, imageUrl: nftImage || undefined,
-            walletAddress: walletAddr, contractAddress: contractAddr, privateKey,
+            walletAddress: walletAddr, contractAddress: contractAddr,
           })}
-          disabled={!nftName || !walletAddr || !contractAddr || !privateKey || mintMutation.isPending}
+          disabled={!nftName || !walletAddr || !contractAddr || mintMutation.isPending}
           className="w-full"
         >
           {mintMutation.isPending ? (
