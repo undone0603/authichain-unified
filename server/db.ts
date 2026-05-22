@@ -706,7 +706,7 @@ export async function createNft(data: any) {
 export async function listCollections() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(nftCollections).orderBy(desc(nftCollections.createdAt));
+  return await db.select().from(nftCollections).orderBy(desc(nftCollections.createdAt)).limit(200);
 }
 
 export async function getCollectionBySlug(slug: string) {
@@ -853,7 +853,7 @@ export async function createEmailDraft(data: any) {
 export async function getPendingDrafts() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(emailDrafts).where(eq(emailDrafts.status, "pending")).orderBy(desc(emailDrafts.createdAt));
+  return await db.select().from(emailDrafts).where(eq(emailDrafts.status, "pending")).orderBy(desc(emailDrafts.createdAt)).limit(200);
 }
 
 export async function updateDraftStatus(id: number, status: string, approvedBy?: number) {
@@ -972,7 +972,7 @@ export async function getActiveAbTests() {
 export async function getAllAbTests() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(abTests).orderBy(desc(abTests.createdAt));
+  return await db.select().from(abTests).orderBy(desc(abTests.createdAt)).limit(200);
 }
 
 // ─── White Label Helpers ─────────────────────────────────────────────────────
@@ -986,7 +986,7 @@ export async function createWhiteLabelClient(data: any) {
 export async function getWhiteLabelClients() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(whiteLabelClients).orderBy(desc(whiteLabelClients.createdAt));
+  return await db.select().from(whiteLabelClients).orderBy(desc(whiteLabelClients.createdAt)).limit(200);
 }
 
 export async function getWhiteLabelByApiKey(apiKey: string) {
@@ -1022,7 +1022,7 @@ export async function upsertHealthScore(userId: number, score: number, factors: 
 export async function getAllHealthScores() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(customerHealthScores).orderBy(desc(customerHealthScores.score));
+  return await db.select().from(customerHealthScores).orderBy(desc(customerHealthScores.score)).limit(500);
 }
 
 // ─── Revenue Helpers ─────────────────────────────────────────────────────────
@@ -1039,7 +1039,7 @@ export async function getRevenueAnalytics(startDate?: Date, endDate?: Date) {
   if (startDate && endDate) {
     query = query.where(and(gte(revenueRecords.createdAt, startDate), lte(revenueRecords.createdAt, endDate))) as typeof query;
   }
-  return await query.orderBy(desc(revenueRecords.createdAt));
+  return await query.orderBy(desc(revenueRecords.createdAt)).limit(2000);
 }
 
 // ─── Dashboard Metrics ───────────────────────────────────────────────────────

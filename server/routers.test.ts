@@ -302,7 +302,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("emailDrafts.listPending returns array", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.emailDrafts.listPending();
       expect(Array.isArray(result)).toBe(true);
