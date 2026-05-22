@@ -1,6 +1,15 @@
 // QRON Daily Automation Worker — Cloudflare Cron Triggers
 // Handles: Uptime monitoring, SEO pinging, lead notifications, daily digest
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a), bb = enc.encode(b);
+  const len = Math.max(ab.length, bb.length);
+  let diff = ab.length ^ bb.length;
+  for (let i = 0; i < len; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
+  return diff === 0;
+}
+
 export default {
   // Handle HTTP requests (dashboard + webhook endpoints)
   async fetch(request: Request, env: any) {
@@ -61,8 +70,8 @@ export default {
     // Auth check for sensitive routes
     const authToken = env.AUTH_TOKEN;
     const isAuthed = !!authToken && (
-      url.searchParams.get('key') === authToken
-      || request.headers.get('Authorization') === `Bearer ${authToken}`);
+      timingSafeEqual(url.searchParams.get('key') ?? '', authToken)
+      || timingSafeEqual(request.headers.get('Authorization') ?? '', `Bearer ${authToken}`));
 
     // Dashboard: show automation status
     if (url.pathname === '/' || url.pathname === '/dashboard') {
