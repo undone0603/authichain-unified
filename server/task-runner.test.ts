@@ -30,6 +30,16 @@ vi.mock('./agents/content.js',       () => ({
   runDraftPressRelease:       vi.fn().mockResolvedValue(undefined),
   runScheduleSocialPosts:     vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('./agents/browser.js',        () => ({
+  runBrowseResearchLead:        vi.fn().mockResolvedValue(undefined),
+  runBrowseCompetitorMonitor:   vi.fn().mockResolvedValue(undefined),
+  runBrowseScrapeIndustryNews:  vi.fn().mockResolvedValue(undefined),
+  runBrowseVerifyProductUrl:    vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('./agents/browser-vision.js', () => ({
+  runVisionResearchLead: vi.fn().mockResolvedValue(undefined),
+  runVisionFreeform:     vi.fn().mockResolvedValue(undefined),
+}));
 
 // ─── Mock db lifecycle functions ──────────────────────────────────────────────
 
@@ -82,7 +92,13 @@ describe('runTask — routing', () => {
     { kind: 'GENERATE_LAUNCH_CHECKLIST', module: './agents/content.js',        fn: 'runGenerateLaunchChecklist'},
     { kind: 'DRAFT_LAUNCH_EMAIL',        module: './agents/content.js',        fn: 'runDraftLaunchEmail'     },
     { kind: 'DRAFT_PRESS_RELEASE',       module: './agents/content.js',        fn: 'runDraftPressRelease'    },
-    { kind: 'SCHEDULE_SOCIAL_POSTS',     module: './agents/content.js',        fn: 'runScheduleSocialPosts'  },
+    { kind: 'SCHEDULE_SOCIAL_POSTS',          module: './agents/content.js',         fn: 'runScheduleSocialPosts'       },
+    { kind: 'BROWSE_RESEARCH_LEAD',           module: './agents/browser.js',         fn: 'runBrowseResearchLead'        },
+    { kind: 'BROWSE_COMPETITOR_MONITOR',      module: './agents/browser.js',         fn: 'runBrowseCompetitorMonitor'   },
+    { kind: 'BROWSE_SCRAPE_INDUSTRY_NEWS',    module: './agents/browser.js',         fn: 'runBrowseScrapeIndustryNews'  },
+    { kind: 'BROWSE_VERIFY_PRODUCT_URL',      module: './agents/browser.js',         fn: 'runBrowseVerifyProductUrl'    },
+    { kind: 'BROWSE_VISION_RESEARCH_LEAD',    module: './agents/browser-vision.js',  fn: 'runVisionResearchLead'        },
+    { kind: 'BROWSE_VISION_FREEFORM',         module: './agents/browser-vision.js',  fn: 'runVisionFreeform'            },
   ];
 
   for (const { kind, module: mod, fn } of routingCases) {
