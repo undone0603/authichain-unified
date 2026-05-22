@@ -32,7 +32,7 @@ export const servicesRouter = router({
   checkout: protectedProcedure.input(z.object({
     serviceKey: serviceKeyEnum.optional(),
     serviceType: serviceKeyEnum.optional(),
-    origin: z.string().optional(),
+    origin: z.string().url().optional(),
     businessName: z.string().optional(),
     businessType: z.string().optional(),
     businessUrl: z.string().optional(),

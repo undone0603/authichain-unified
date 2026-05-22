@@ -1,6 +1,30 @@
 import { ENV } from "./_core/env";
 import type { Paddle as PaddleType } from "@paddle/paddle-node-sdk";
 
+const ALLOWED_ORIGIN_HOSTNAMES = new Set([
+  "authichain.com",
+  "www.authichain.com",
+  "qronspace.com",
+  "www.qronspace.com",
+]);
+
+function safeUrl(raw: string, fallback: string): string {
+  try {
+    const { protocol, hostname, port, pathname, search } = new URL(raw);
+    const allowedOrigin =
+      (!ENV.isProduction && hostname === "localhost") ||
+      ALLOWED_ORIGIN_HOSTNAMES.has(hostname) ||
+      hostname.endsWith(".vercel.app");
+    if (allowedOrigin) {
+      const portPart = port ? `:${port}` : "";
+      return `${protocol}//${hostname}${portPart}${pathname}${search}`;
+    }
+  } catch {
+    // fall through
+  }
+  return fallback;
+}
+
 let _paddle: PaddleType | null = null;
 
 async function getPaddleSDK() {
@@ -50,7 +74,7 @@ export async function createPaddleTransaction(input: PaddleTransactionInput): Pr
   const transaction = await paddle.transactions.create({
     items: [{ priceId: input.priceId, quantity: 1 }],
     customerId: input.customerId,
-    checkout: { url: input.successUrl },
+    checkout: { url: safeUrl(input.successUrl, "https://authichain.com/subscriptions?success=true") },
   });
   return (transaction as any).checkout?.url || "";
 }

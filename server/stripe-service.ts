@@ -6,6 +6,33 @@ import Stripe from "stripe";
 import { STRIPE_PRODUCTS, type PlanKey, getPlanQuota } from "./stripe-products";
 import { ENV } from "./_core/env";
 
+const ALLOWED_ORIGIN_HOSTNAMES = new Set([
+  "authichain.com",
+  "www.authichain.com",
+  "qronspace.com",
+  "www.qronspace.com",
+]);
+
+function safeOrigin(raw: string): string {
+  try {
+    const { protocol, hostname, port } = new URL(raw);
+    // Always allow localhost in non-production environments
+    if (!ENV.isProduction && hostname === "localhost") {
+      return port ? `${protocol}//${hostname}:${port}` : `${protocol}//${hostname}`;
+    }
+    if (ALLOWED_ORIGIN_HOSTNAMES.has(hostname)) {
+      return `${protocol}//${hostname}`;
+    }
+    // Vercel preview deployments (*.vercel.app) are acceptable
+    if (hostname.endsWith(".vercel.app")) {
+      return `${protocol}//${hostname}`;
+    }
+  } catch {
+    // malformed URL — fall through to default
+  }
+  return "https://authichain.com";
+}
+
 let _stripe: Stripe | null = null;
 
 export function getStripe(): Stripe {
@@ -66,8 +93,8 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
         quantity: 1,
       },
     ],
-    success_url: `${params.origin}/subscriptions?session_id={CHECKOUT_SESSION_ID}&success=true`,
-    cancel_url: `${params.origin}/subscriptions?cancelled=true`,
+    success_url: `${safeOrigin(params.origin)}/subscriptions?session_id={CHECKOUT_SESSION_ID}&success=true`,
+    cancel_url: `${safeOrigin(params.origin)}/subscriptions?cancelled=true`,
   };
 
   const session = await stripe.checkout.sessions.create(sessionConfig);
@@ -115,8 +142,8 @@ export async function createPaymentCheckout(params: CreatePaymentCheckoutParams)
         quantity: 1,
       },
     ],
-    success_url: `${params.origin}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
-    cancel_url: `${params.origin}/payments?cancelled=true`,
+    success_url: `${safeOrigin(params.origin)}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
+    cancel_url: `${safeOrigin(params.origin)}/payments?cancelled=true`,
   });
 
   return { url: session.url!, sessionId: session.id };

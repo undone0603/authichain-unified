@@ -48,7 +48,7 @@ export const subscriptionsRouter = router({
   checkout: protectedProcedure.input(z.object({
     plan: z.enum(["starter", "professional", "enterprise", "medtech"]),
     billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
-    origin: z.string(),
+    origin: z.string().url(),
   })).mutation(async ({ ctx, input }) => {
     const url = await stripeService.createSubscriptionCheckout({
       userId: ctx.user.id,
@@ -64,7 +64,7 @@ export const subscriptionsRouter = router({
   createPaddleCheckout: protectedProcedure.input(z.object({
     plan: z.enum(["starter", "professional", "enterprise", "medtech"]),
     billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
-    successUrl: z.string(),
+    successUrl: z.string().url(),
   })).mutation(async ({ ctx, input }) => {
     const priceId = PADDLE_PRICES[input.plan]?.[input.billing];
     if (!priceId) throw new TRPCError({ code: "BAD_REQUEST", message: `Paddle price not configured for ${input.plan}/${input.billing}` });
