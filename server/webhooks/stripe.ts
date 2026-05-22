@@ -149,6 +149,15 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type, duplicate: true };
   }
 
+  // Mark in-flight immediately so a concurrent duplicate delivery sees it as processed.
+  await logActivity({
+    userId: null,
+    action: "webhook_received",
+    entityType: "webhook",
+    entityId: 0,
+    details: { eventId: event.id, type: event.type },
+  });
+
   switch (event.type) {
     // ── Subscription created / updated ──────────────────────────────────────
     case "customer.subscription.created":

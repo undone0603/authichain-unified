@@ -28,7 +28,8 @@ import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-mana
 import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
 
 export async function runTask(task: Task): Promise<{ ok: boolean }> {
-  await markTaskRunning(task.id);
+  const claimed = await markTaskRunning(task.id);
+  if (!claimed) return { ok: true }; // Another worker already claimed this task
 
   try {
     switch (task.kind) {

@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, desc, and, gte, lte, like, sql, SQL } from "drizzle-orm";
+import { eq, desc, and, or, gte, lte, isNull, like, sql, SQL } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   users,
@@ -202,7 +202,14 @@ export async function logActivity(actionOrData: string | { userId?: number | nul
 
 export async function getDueTasks(limit = 10) {
   const d = await getDb();
-  return d.select().from(missionTasks).where(eq(missionTasks.status, "pending")).orderBy(missionTasks.order).limit(limit);
+  const now = new Date();
+  return d.select().from(missionTasks)
+    .where(and(
+      eq(missionTasks.status, "pending"),
+      or(isNull(missionTasks.scheduledAt), lte(missionTasks.scheduledAt, now)),
+    ))
+    .orderBy(missionTasks.order)
+    .limit(limit);
 }
 
 export async function getRunTaskCount() {
@@ -213,7 +220,7 @@ export async function getRunTaskCount() {
 
 export async function markTaskWaitingHuman(id: string) {
   const d = await getDb();
-  await d.update(missionTasks).set({ status: "pending" }).where(eq(missionTasks.id, id));
+  await d.update(missionTasks).set({ status: "waiting_human", updatedAt: new Date() }).where(eq(missionTasks.id, id));
 }
 
 export async function getActiveMissionTypes(): Promise<string[]> {
@@ -361,14 +368,19 @@ export async function getBudgetStatus(_asOf?: Date) {
   };
 }
 
-export async function markTaskRunning(id: string) {
+export async function markTaskRunning(id: string): Promise<boolean> {
   const d = await getDb();
-  await d.update(missionTasks).set({ status: "in_progress", updatedAt: new Date() }).where(eq(missionTasks.id, id));
+  const rows = await d.update(missionTasks)
+    .set({ status: "in_progress", updatedAt: new Date() })
+    .where(and(eq(missionTasks.id, id), eq(missionTasks.status, "pending")))
+    .returning({ id: missionTasks.id });
+  return rows.length > 0;
 }
 
 export async function markTaskDone(id: string, result?: any) {
   const d = await getDb();
-  await d.update(missionTasks).set({ status: "completed", result, updatedAt: new Date() }).where(eq(missionTasks.id, id));
+  // WHERE status='in_progress' preserves 'waiting_human' if an agent set it during execution
+  await d.update(missionTasks).set({ status: "completed", result, updatedAt: new Date() }).where(and(eq(missionTasks.id, id), eq(missionTasks.status, "in_progress")));
 }
 
 export async function markTaskFailed(id: string, error: string) {

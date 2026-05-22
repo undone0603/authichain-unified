@@ -34,7 +34,7 @@ vi.mock('./agents/content.js',       () => ({
 // ─── Mock db lifecycle functions ──────────────────────────────────────────────
 
 vi.mock('./db.js', () => ({
-  markTaskRunning:  vi.fn().mockResolvedValue(undefined),
+  markTaskRunning:  vi.fn().mockResolvedValue(true),
   markTaskDone:     vi.fn().mockResolvedValue(undefined),
   markTaskFailed:   vi.fn().mockResolvedValue(undefined),
   logActivity:      vi.fn().mockResolvedValue(undefined),
@@ -105,7 +105,7 @@ describe('runTask — lifecycle', () => {
     const callOrder: string[] = [];
     const { markTaskRunning } = await import('./db.js');
     const { runLeadFinder } = await import('./agents/lead-finder.js');
-    vi.mocked(markTaskRunning).mockImplementation(async () => { callOrder.push('running'); });
+    vi.mocked(markTaskRunning).mockImplementation(async () => { callOrder.push('running'); return true; });
     vi.mocked(runLeadFinder).mockImplementation(async () => { callOrder.push('agent'); });
 
     const { runTask } = await import('./jobs/task-runner.js');
