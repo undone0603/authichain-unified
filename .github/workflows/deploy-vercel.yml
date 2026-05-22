@@ -41,7 +41,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-      run: pnpm install --no-frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Detect project type
         id: detect
@@ -72,7 +72,7 @@ jobs:
         if: steps.detect.outputs.type == 'vercel'
         run: |
           vercel build --prod --token=${{ secrets.VERCEL_TOKEN }} \
-            
+            --cwd ${{ matrix.project }}
 
       - name: Deploy Project Artifacts to Vercel
         if: steps.detect.outputs.type == 'vercel'
