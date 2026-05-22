@@ -1,6 +1,8 @@
 {
   "version": 2,
-  "framework": "nextjs",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist/public",
+  "installCommand": "pnpm install --no-frozen-lockfile",
   "rewrites": [
     {
       "source": "/gov",
