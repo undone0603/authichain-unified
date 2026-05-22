@@ -1,5 +1,6 @@
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import * as service from "../character-service";
 
 export const characterRouter = router({
@@ -16,8 +17,10 @@ export const characterRouter = router({
   }),
   generationStatus: protectedProcedure.input(z.object({
     generationId: z.number(),
-  })).query(async ({ input }) => {
-    return await service.getGenerationStatus(input.generationId);
+  })).query(async ({ ctx, input }) => {
+    const gen = await service.getGenerationStatus(input.generationId);
+    if (gen && gen.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+    return gen;
   }),
   myGenerations: protectedProcedure.query(async ({ ctx }) => {
     return await service.getUserGenerations(ctx.user.id);
@@ -72,7 +75,9 @@ export const characterRouter = router({
     confidence: z.number(),
     evidence: z.record(z.string(), z.any()).optional(),
     reasoning: z.string().optional(),
-  })).mutation(async ({ input }) => {
+  })).mutation(async ({ ctx, input }) => {
+    const myAgent = await service.getAgentByUser(ctx.user.id);
+    if (!myAgent || myAgent.id !== input.agentId) throw new TRPCError({ code: "FORBIDDEN", message: "Agent not owned by user" });
     return await service.submitVerificationClaim(
       input.agentId,
       input.productId,
