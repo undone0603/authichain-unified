@@ -152,15 +152,13 @@ export async function runMonitorDeploy(task: Task): Promise<void> {
 
     // Notify admin
     const adminIds = await getAllAdminIds();
-    for (const adminId of adminIds) {
-      await createSystemNotification(
-        adminId,
-        '🚨 Deploy Health Check Failed',
-        `Post-deploy health check failed after PR #${p.prNumber}: ${lastError}. AUTO_FIX queued.`,
-        'alert',
-        issue.html_url
-      );
-    }
+    await Promise.all(adminIds.map(adminId => createSystemNotification(
+      adminId,
+      'Deploy Health Check Failed',
+      `Post-deploy health check failed after PR #${p.prNumber}: ${lastError}. AUTO_FIX queued.`,
+      'alert',
+      issue.html_url
+    )));
   }
 }
 

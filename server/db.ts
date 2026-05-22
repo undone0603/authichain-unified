@@ -140,7 +140,7 @@ export async function getUserById(id: number) {
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(users).orderBy(desc(users.createdAt));
+  return await db.select().from(users).orderBy(desc(users.createdAt)).limit(1000);
 }
 
 // ─── Staking Helpers ────────────────────────────────────────────────────────
@@ -282,7 +282,7 @@ export async function getLeadById(id: number) {
 
 export async function getAllLeads() {
   const d = await getDb();
-  return d.select().from(leads).orderBy(desc(leads.createdAt));
+  return d.select().from(leads).orderBy(desc(leads.createdAt)).limit(1000);
 }
 
 export async function incrementInteractionCount(id: number) {
@@ -335,7 +335,7 @@ export async function getServiceOrdersByUser(userId: number) {
 
 export async function getAllServiceOrders() {
   const d = await getDb();
-  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
+  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt)).limit(500);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -517,7 +517,7 @@ export async function getMissions(statusFilter?: string) {
   if (statusFilter) {
     return d.select().from(missions).where(eq(missions.status, statusFilter as any));
   }
-  return d.select().from(missions).orderBy(desc(missions.createdAt));
+  return d.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
 }
 
 export async function getMissionById(id: string) {
