@@ -227,9 +227,10 @@ export default {
     }
 
     // Auth check for sensitive routes
-    const authToken = env.AUTH_TOKEN || 'qron-ops-2026';
-    const isAuthed = url.searchParams.get('key') === authToken
-      || request.headers.get('Authorization') === `Bearer ${authToken}`;
+    const authToken = env.AUTH_TOKEN;
+    const isAuthed = !!authToken && (
+      url.searchParams.get('key') === authToken
+      || request.headers.get('Authorization') === `Bearer ${authToken}`);
 
     if (url.pathname === '/status') {
       if (!isAuthed) return new Response('Unauthorized', { status: 401 });

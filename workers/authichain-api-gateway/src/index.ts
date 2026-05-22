@@ -42,6 +42,13 @@ export default {
       await env.RATE_LIMITS.put(limitKey, (parseInt(currentUsage) + 1).toString(), { expirationTtl: 3600 });
     }
 
+    // Derive tier info from the API key for demo responses
+    const keyData = {
+      name: apiKey.includes('demo') ? 'Free' : 'Pro',
+      plan: apiKey.includes('demo') ? 'free' : 'pro',
+      limit: apiKey.includes('demo') ? 10 : 5000,
+    };
+
     // Route handling
     try {
       if (path === '/api/v1/classify' && request.method === 'POST') {
@@ -206,11 +213,20 @@ function json(data: any, cors: any, status = 200) {
   });
 }
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a), bb = enc.encode(b);
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
+
 // ── Stripe Accounts v2 (admin-gated) ────────────────────
 
 async function handleV2(request: Request, path: string, url: URL, env: any, cors: any) {
-  const adminKey = request.headers.get('X-Admin-Key');
-  if (!env.ADMIN_SECRET || adminKey !== env.ADMIN_SECRET) {
+  const adminKey = request.headers.get('X-Admin-Key') ?? '';
+  if (!env.ADMIN_SECRET || !timingSafeEqual(adminKey, env.ADMIN_SECRET)) {
     return json({ error: 'Forbidden. Admin key required for v2 endpoints.' }, cors, 403);
   }
 

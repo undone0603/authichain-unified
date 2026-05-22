@@ -59,9 +59,10 @@ export default {
     }
 
     // Auth check for sensitive routes
-    const authToken = env.AUTH_TOKEN || 'qron-ops-2026';
-    const isAuthed = url.searchParams.get('key') === authToken
-      || request.headers.get('Authorization') === `Bearer ${authToken}`;
+    const authToken = env.AUTH_TOKEN;
+    const isAuthed = !!authToken && (
+      url.searchParams.get('key') === authToken
+      || request.headers.get('Authorization') === `Bearer ${authToken}`);
 
     // Dashboard: show automation status
     if (url.pathname === '/' || url.pathname === '/dashboard') {
@@ -122,7 +123,7 @@ export default {
 const MONITORED_URLS = [
   { name: 'QRON Portfolio', url: 'https://qron-portfolio.undone-k.workers.dev/' },
   { name: 'AuthiChain API', url: 'https://authichain-api.undone-k.workers.dev/' },
-  { name: 'AuthiChain Dashboard', url: 'https://authichain-dashboard.undone-k.workers.dev/?key=authichain2026' },
+  { name: 'AuthiChain Dashboard', url: 'https://authichain-dashboard.undone-k.workers.dev/' },
   { name: 'StrainChain', url: 'https://strainchain.undone-k.workers.dev/' },
   { name: 'QRON SEO Engine', url: 'https://qron-seo-engine.undone-k.workers.dev/' },
   { name: 'QRON Gallery', url: 'https://qron.space' },
@@ -401,7 +402,7 @@ h1{font-size:1.8rem;background:linear-gradient(135deg,#00d4ff,#7b2ff7);-webkit-b
     <a href="/run/seo-ping" class="btn">Run SEO Ping</a>
     <a href="/run/digest" class="btn">Send Daily Digest</a>
     <a href="/health" class="btn">Health Check</a>
-    <a href="https://authichain-dashboard.undone-k.workers.dev/?key=authichain2026" class="btn">Revenue Dashboard</a>
+    <a href="https://authichain-dashboard.undone-k.workers.dev/" class="btn">Revenue Dashboard</a>
     <a href="https://qron-portfolio.undone-k.workers.dev/" class="btn">QRON Portfolio</a>
   </div>
 </div>
