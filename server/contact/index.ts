@@ -15,8 +15,8 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Validate email format - Optimized to prevent ReDoS
+    const emailRegex = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
@@ -43,7 +43,7 @@ router.post('/', async (req: Request, res: Response) => {
         replyTo: email,
         to: toEmail,
         subject: subject || `Contact form: ${name}`,
-        text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || 'N/A'}\n\nMessage:\n${message}`,
+        text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || 'N/A'}\nMessage:\n${message}`,
         html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${company || 'N/A'}</p><p><strong>Message:</strong></p><p>${message}</p>`,
       });
     }
