@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ReferralTracker } from '@/components/ReferralTracker';
 import { ThemeManager } from '@/components/ThemeManager';
+import { TRPCProvider } from '@/components/TRPCProvider';
 import React, { Suspense } from 'react';
 import { ThirdwebProvider } from 'thirdweb/react';
 
@@ -66,12 +67,14 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ThemeManager />
-        <ThirdwebProvider>
-          <Suspense fallback={null}>
-            <ReferralTracker />
-          </Suspense>
-          {children}
-        </ThirdwebProvider>
+        <TRPCProvider>
+          <ThirdwebProvider>
+            <Suspense fallback={null}>
+              <ReferralTracker />
+            </Suspense>
+            {children}
+          </ThirdwebProvider>
+        </TRPCProvider>
       </body>
     </html>
   );
