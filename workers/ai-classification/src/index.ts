@@ -6,13 +6,14 @@ export interface Env {
 }
 
 function isAuthorized(request: Request, env: Env): boolean {
+  if (!env.INTERNAL_SECRET) return false
   const header = request.headers.get('X-Internal-Secret') ?? ''
-  if (!env.INTERNAL_SECRET || header.length !== env.INTERNAL_SECRET.length) return false
   const enc = new TextEncoder()
   const a = enc.encode(header)
   const b = enc.encode(env.INTERNAL_SECRET)
-  let diff = 0
-  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
+  const len = Math.max(a.length, b.length)
+  let diff = a.length ^ b.length
+  for (let i = 0; i < len; i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0)
   return diff === 0
 }
 

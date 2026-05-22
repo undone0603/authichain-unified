@@ -1,5 +1,7 @@
 import "dotenv/config";
 import { invokeLLM, parseLLMContent } from "../_core/llm.js";
+
+const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?.[0] ?? ''}***@${d}` : '***'; };
 import { sendEmail } from "../email-service.js";
 import { bayesianPreamble, betaMean, betaCI, SEGMENT_PRIORS } from "../_core/bayesian.js";
 
@@ -69,7 +71,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
   });
 
   if (sendResult.status === "sent") {
-    console.log(`\n✅ SUCCESS: First MedTech sequence sent to ${lead.email}.`);
+    console.log(`\n✅ SUCCESS: First MedTech sequence sent to ${maskEmail(lead.email)}.`);
     console.log(`Revenue Opportunity: $150,000 / Expected Value: $15,000`);
     console.log("AgentZ is now monitoring for replies.");
   } else {

@@ -14,6 +14,12 @@
  */
 
 import Stripe from "stripe";
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local?.[0] ?? ''}***@${domain}`;
+}
 import {
   logActivity,
   logAutomationAudit,
@@ -405,7 +411,7 @@ export async function handleStripeWebhook(
           body: `Hi ${name},\n\nWe noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.\n\nHere's what you're missing out on:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nReady to pick up where you left off? Visit https://authichain.com/subscriptions to continue.\n\nAs a thank-you for your interest, use code COMEBACK20 at checkout for 20% off your first month.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
           fromName: "AuthiChain",
         });
-        console.log(`[stripe-webhook] Checkout recovery email sent to ${email}`);
+        console.log(`[stripe-webhook] Checkout recovery email sent to ${maskEmail(email)}`);
       }
 
       console.log(`[stripe-webhook] Checkout expired/abandoned: user=${userId} plan=${plan}`);

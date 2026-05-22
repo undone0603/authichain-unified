@@ -1,5 +1,7 @@
 import "dotenv/config";
 import { checkThreadReplies } from "../email-service.js";
+
+const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?.[0] ?? ''}***@${d}` : '***'; };
 import { getDb } from "../db.js";
 import { activityLog, leads } from "../../drizzle/schema.js";
 import { desc, eq, and } from "drizzle-orm";
@@ -59,7 +61,7 @@ async function monitorActivity() {
 
   if (hotLeads.length > 0) {
     for (const lead of hotLeads) {
-      console.log(`!!! HOT LEAD: ${lead.email} (${lead.company}) - Score: ${lead.leadScore}`);
+      console.log(`!!! HOT LEAD: ${maskEmail(lead.email)} (${lead.company}) - Score: ${lead.leadScore}`);
     }
   } else {
     console.log(" [LOG] No leads have crossed the HOT threshold yet.");
