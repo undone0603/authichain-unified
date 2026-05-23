@@ -7,7 +7,7 @@ import { resolveBrand } from './shared/brands';
 export const config = {
   // Run on every request except static files and Next internals.
   matcher: [
-    '/((?!_next/static|_next/image|favicon\.ico|favicon\.svg|favicon\.png|apple-touch-icon\.(svg|png)|og-image\.(svg|png)|robots\.txt|sitemap\.xml).*)',
+    '/((?!_next/static|_next/image|favicon\.ico|favicon\.svg|favicon\.png|apple-touch-icon\.(?:svg|png)|og-image\.(?:svg|png)|robots\.txt|sitemap\.xml).*)',
   ],
 };
 
