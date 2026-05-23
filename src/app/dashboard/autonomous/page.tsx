@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Activity, Play, Square, RefreshCw, Clock, CheckCircle, XCircle, Loader2, Zap } from "lucide-react";
 
@@ -53,8 +52,6 @@ function RunRow({ run }: { run: { jobName: string; status: string; startedAt: Da
 }
 
 export default function AutonomousPage() {
-  const [runningJob, setRunningJob] = useState<string | null>(null);
-
   const statusQ = trpc.scheduler.getSystemStatus.useQuery(undefined, { refetchInterval: 10_000 });
   const jobsQ = trpc.scheduler.listJobs.useQuery();
   const historyQ = trpc.scheduler.getHistory.useQuery({ limit: 20 }, { refetchInterval: 15_000 });
@@ -64,15 +61,13 @@ export default function AutonomousPage() {
     onSuccess: () => { statusQ.refetch(); },
   });
   const runMutation = trpc.scheduler.runManually.useMutation({
-    onSuccess: () => { historyQ.refetch(); setRunningJob(null); },
-    onError: () => setRunningJob(null),
+    onSuccess: () => { historyQ.refetch(); },
   });
 
   const status = statusQ.data;
   const autopilot = autopilotQ.data;
 
   function handleRun(jobName: string) {
-    setRunningJob(jobName);
     runMutation.mutate({ jobName });
   }
 

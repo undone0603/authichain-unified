@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
 import { invokeLLM, parseLLMContent } from "../_core/llm";

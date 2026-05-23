@@ -12,12 +12,7 @@ const BOT_UA = 'AuthiChain-ResearchBot/1.0 (+https://authichain.com/bot)';
 // ── HTML scraper ────────────────────────────────────────────────────────────
 function htmlToText(html: string): string {
   return html
-    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
-    .replace(/<style\b[\s\S]*?<\/style\s*>/gi, '')
-    .replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<!--/g, '').replace(/-->/g, '')  // catch malformed/nested comment fragments
-    .replace(/<[^>]*>/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
     .replace(/&#?\w+;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
