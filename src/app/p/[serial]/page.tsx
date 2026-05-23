@@ -185,6 +185,33 @@ export default async function CertificationPage({ params }: PageProps) {
               )}
             </div>
 
+            {/* Storymode Narrative */}
+            {(() => {
+              const pm = cert.products.metadata as Record<string, unknown> | null;
+              const story = pm?.storymode as { chapters: Array<{ title: string; content: string }> } | undefined;
+              if (!story?.chapters?.length) return null;
+              return (
+                <div className="protocol-card p-8 border-gold/10 bg-gold/5">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Sparkles className="w-5 h-5 text-gold" />
+                    <h3 className="text-sm font-black uppercase tracking-widest text-white">
+                      Brand Story
+                    </h3>
+                  </div>
+                  <div className="space-y-6">
+                    {story.chapters.map((ch, i) => (
+                      <div key={i} className="border-l-2 border-gold/20 pl-4">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-2">
+                          {ch.title}
+                        </h4>
+                        <p className="text-zinc-400 text-sm leading-relaxed">{ch.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Digital Product Passport (DPP) Data */}
             {dpp && (
               <div className="protocol-card p-8 border-gold/20 bg-gold/5">
