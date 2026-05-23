@@ -8,6 +8,7 @@ import {
   authentications,
   certificates,
   qrCodes,
+  qrScanEvents,
   nftCollections,
   nfts,
   auctions,
@@ -688,6 +689,23 @@ export async function incrementScanCount(id: number) {
   const db = await getDb();
   if (!db) return;
   await db.update(qrCodes).set({ scanCount: sql`${qrCodes.scanCount} + 1`, lastScannedAt: new Date() }).where(eq(qrCodes.id, id));
+}
+
+export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(qrScanEvents).values(data);
+}
+
+export async function getRecentScanEvents(productId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(qrScanEvents)
+    .where(eq(qrScanEvents.productId, productId))
+    .orderBy(desc(qrScanEvents.scannedAt))
+    .limit(limit);
 }
 
 // ─── NFT Helpers ─────────────────────────────────────────────────────────────

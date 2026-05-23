@@ -34,7 +34,9 @@ export const qrcodeRouter = router({
     if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
 
     const qrCodes = await db.getProductQrCodes(input.productId);
-    if (qrCodes.length > 0) await db.incrementScanCount(qrCodes[0].id);
+    if (qrCodes.length > 0) {
+      await db.incrementScanCount(qrCodes[0].id);
+    }
 
     // Hash validation against the stored QR record (when hash is present)
     let hashResult: { valid: boolean; message: string } | null = null;
@@ -55,6 +57,15 @@ export const qrcodeRouter = router({
       }
     }
 
+    // Fire-and-forget scan event log
+    if (qrCodes.length > 0) {
+      db.logScanEvent({
+        qrCodeId: qrCodes[0].id,
+        productId: input.productId,
+        isAuthentic: hashResult?.valid ?? undefined,
+      }).catch(() => {});
+    }
+
     return {
       product,
       scanCount: (qrCodes[0]?.scanCount || 0) + 1,
@@ -64,6 +75,13 @@ export const qrcodeRouter = router({
   listForProduct: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ ctx, input }) => {
     await getOwnedProduct(input.productId, ctx.user.id);
     return await db.getProductQrCodes(input.productId);
+  }),
+  scanHistory: protectedProcedure.input(z.object({
+    productId: z.number(),
+    limit: z.number().min(1).max(100).default(20),
+  })).query(async ({ ctx, input }) => {
+    await getOwnedProduct(input.productId, ctx.user.id);
+    return await db.getRecentScanEvents(input.productId, input.limit);
   }),
   generateStorymode: protectedProcedure.input(z.object({
     productId: z.number(),

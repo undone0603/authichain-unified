@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import {
   Package, QrCode, ScanLine, Plus, RefreshCw,
-  ShieldCheck, Download, Copy, ExternalLink, X,
+  ShieldCheck, Download, Copy, ExternalLink, X, Activity,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -22,6 +22,11 @@ export default function ProductsPage() {
   const qrCodesQuery = trpc.qrcode.listForProduct.useQuery(
     { productId: selectedProductId! },
     { enabled: selectedProductId !== null, staleTime: 10_000 }
+  );
+
+  const scanHistoryQuery = trpc.qrcode.scanHistory.useQuery(
+    { productId: selectedProductId! },
+    { enabled: selectedProductId !== null, staleTime: 30_000 }
   );
 
   const generateQR = trpc.qrcode.generate.useMutation({
@@ -431,6 +436,62 @@ export default function ProductsPage() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Scan History */}
+              <div className="protocol-card p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity className="w-4 h-4 text-gold" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                    Scan History
+                  </h3>
+                  {scanHistoryQuery.data && (
+                    <span className="ml-auto text-[10px] text-zinc-600 font-bold">
+                      last {scanHistoryQuery.data.length}
+                    </span>
+                  )}
+                </div>
+
+                {scanHistoryQuery.isLoading && (
+                  <p className="text-zinc-600 text-xs text-center py-4">Loading…</p>
+                )}
+
+                {scanHistoryQuery.data?.length === 0 && (
+                  <p className="text-zinc-600 text-xs text-center py-4 uppercase tracking-widest">
+                    No scans recorded yet
+                  </p>
+                )}
+
+                <div className="space-y-2">
+                  {scanHistoryQuery.data?.map(event => (
+                    <div key={event.id} className="flex items-center justify-between text-xs py-1.5 border-b border-zinc-900 last:border-0">
+                      <div className="flex items-center gap-2">
+                        {event.isAuthentic === true && (
+                          <ShieldCheck className="w-3 h-3 text-green-400 shrink-0" />
+                        )}
+                        {event.isAuthentic === false && (
+                          <span className="w-3 h-3 text-red-400 shrink-0 font-black text-[10px]">✗</span>
+                        )}
+                        {event.isAuthentic === null && (
+                          <ScanLine className="w-3 h-3 text-zinc-600 shrink-0" />
+                        )}
+                        <span className="text-zinc-500 font-mono">
+                          {new Date(event.scannedAt).toLocaleString(undefined, {
+                            month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <span className={`text-[9px] font-black uppercase tracking-widest ${
+                        event.isAuthentic === true ? 'text-green-400' :
+                        event.isAuthentic === false ? 'text-red-400' :
+                        'text-zinc-600'
+                      }`}>
+                        {event.isAuthentic === true ? 'Authentic' : event.isAuthentic === false ? 'Invalid' : 'No hash'}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </>

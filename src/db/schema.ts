@@ -154,6 +154,17 @@ export const qrCodes = pgTable('qr_codes', {
 
 export type QrCode = typeof qrCodes.$inferSelect;
 
+// ─── QR Scan Events ──────────────────────────────────────────────────────────
+export const qrScanEvents = pgTable('qr_scan_events', {
+  id: serial('id').primaryKey(),
+  qrCodeId: integer('qrCodeId').notNull(),
+  productId: integer('productId').notNull(),
+  isAuthentic: boolean('isAuthentic'),
+  userAgent: text('userAgent'),
+  scannedAt: timestamp('scannedAt').defaultNow().notNull(),
+});
+export type QrScanEvent = typeof qrScanEvents.$inferSelect;
+
 // ─── Redirect Rules ──────────────────────────────────────────────────────────
 export const redirectRules = pgTable(
   'redirect_rules',

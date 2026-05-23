@@ -49,15 +49,6 @@ export default async function VerifyPage({ searchParams }: PageProps) {
   const qrCode = qrRows?.[0] ?? null;
   const meta = qrCode?.metadata as Record<string, unknown> | null;
 
-  // Increment scan count (fire-and-forget — don't block page render)
-  if (qrCode?.id) {
-    supabase
-      .from('qr_codes')
-      .update({ scanCount: (qrCode.scanCount ?? 0) + 1, lastScannedAt: new Date().toISOString() })
-      .eq('id', qrCode.id)
-      .then(() => {}, () => {});
-  }
-
   let hashVerification: { valid: boolean; message: string } | null = null;
 
   if (hash && meta?.hash && meta?.expiresAt) {
@@ -72,6 +63,20 @@ export default async function VerifyPage({ searchParams }: PageProps) {
     };
     const result = verifyHash(hash, record);
     hashVerification = { valid: result.valid, message: result.message };
+  }
+
+  // Increment scan count + log event (fire-and-forget — don't block page render)
+  if (qrCode?.id) {
+    const isAuthentic = hashVerification?.valid ?? null;
+    supabase
+      .from('qr_codes')
+      .update({ scanCount: (qrCode.scanCount ?? 0) + 1, lastScannedAt: new Date().toISOString() })
+      .eq('id', qrCode.id)
+      .then(() => {}, () => {});
+    supabase
+      .from('qr_scan_events')
+      .insert({ qrCodeId: qrCode.id, productId, isAuthentic })
+      .then(() => {}, () => {});
   }
 
   const isAuthentic = hashVerification?.valid === true;
