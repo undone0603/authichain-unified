@@ -5,6 +5,7 @@ import { ReferralTracker } from '@/components/ReferralTracker';
 import { ThemeManager } from '@/components/ThemeManager';
 import React, { Suspense } from 'react';
 import { ThirdwebProvider } from 'thirdweb/react';
+import { Analytics } from '@vercel/analytics/next';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -72,6 +73,7 @@ export default function RootLayout({
           </Suspense>
           {children}
         </ThirdwebProvider>
+        <Analytics />
       </body>
     </html>
   );
