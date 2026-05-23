@@ -13,8 +13,8 @@ import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActi
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
 
-export async function runPipelineTick() {
-  if (!ENV.autonomousPipelineEnabled) {
+export async function runPipelineTick(options?: { force?: boolean }) {
+  if (!ENV.autonomousPipelineEnabled && !options?.force) {
     return { enabled: false, skipped: true, reason: "AUTONOMOUS_PIPELINE_ENABLED=false" };
   }
 

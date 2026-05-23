@@ -61,7 +61,7 @@ export default async function Dashboard() {
           { href: '/studio', label: 'Create QRON', desc: 'Generate AI-powered QR art', color: 'from-blue-600 to-blue-800' },
           { href: '/dashboard/products', label: 'Products & QR Codes', desc: 'Manage products and tamper-evident QR codes', color: 'from-emerald-600 to-teal-800' },
           { href: '/gallery', label: 'Browse Gallery', desc: 'View all generated QRONs', color: 'from-purple-600 to-purple-800' },
-          { href: '/pricing', label: 'Upgrade Plan', desc: 'Get more credits & features', color: 'from-yellow-600 to-orange-700' },
+          { href: '/dashboard/autonomous', label: 'Autonomous Ops', desc: 'AgentZ pipeline, scheduled jobs, control panel', color: 'from-yellow-600 to-orange-700' },
         ].map(({ href, label, desc, color }) => (
           <Link key={href} href={href}
             className={`block p-6 rounded-xl bg-gradient-to-br ${color} text-white hover:opacity-90 transition-opacity`}
