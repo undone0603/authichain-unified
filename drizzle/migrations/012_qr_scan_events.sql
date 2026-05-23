@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS qr_scan_events (
   id          SERIAL PRIMARY KEY,
-  "qrCodeId"  INTEGER NOT NULL REFERENCES qr_codes(id) ON DELETE CASCADE,
-  "productId" INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  "qrCodeId"  UUID NOT NULL REFERENCES qr_codes(id) ON DELETE CASCADE,
+  "productId" UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   "isAuthentic" BOOLEAN,
   "userAgent" TEXT,
   "scannedAt" TIMESTAMP NOT NULL DEFAULT NOW()
