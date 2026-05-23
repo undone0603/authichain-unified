@@ -13,7 +13,7 @@ export function getStripe(): Stripe {
   if (!_stripe) {
     const secretKey = ENV.stripeSecretKey;
     if (!secretKey) throw new Error("STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(secretKey, { apiVersion: "2025-03-31.basil" as any });
+    _stripe = new Stripe(secretKey, { apiVersion: "2026-04-22.dahlia" as const });
   }
   return _stripe;
 }

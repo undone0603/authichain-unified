@@ -11,7 +11,7 @@ function getStripe(): Stripe {
     // Pinned to legacy API version because subscriptionItems.createUsageRecord
     // is only available on pre-meterEvents Stripe API versions.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    _stripe = new Stripe(key, { apiVersion: '2025-01-27' as any });
+    _stripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' as const });
   }
   return _stripe;
 }

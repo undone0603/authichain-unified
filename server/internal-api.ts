@@ -1,4 +1,11 @@
 import { timingSafeEqual as cryptoTimingSafeEqual } from "crypto";
+
+function timingSafeStringEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return cryptoTimingSafeEqual(bufA, bufB);
+}
 import { Router, type Request, type Response } from "express";
 import { getCertificateByNumber, getWhiteLabelByApiKey, createProduct, getDb } from "./db";
 import { computeTrustScore, generateProductQRON } from "./qron-service";

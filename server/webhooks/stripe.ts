@@ -42,7 +42,7 @@ function getStripeClient(): Stripe {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error("[stripe-webhook] STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(key, { apiVersion: "2025-03-31.basil" as any });
+    _stripe = new Stripe(key, { apiVersion: "2026-04-22.dahlia" as const });
   }
   return _stripe;
 }
@@ -179,7 +179,7 @@ export async function handleStripeWebhook(
     // ── Subscription created / updated ──────────────────────────────────────
     case "customer.subscription.created":
     case "customer.subscription.updated": {
-      const sub = event.data.object as Stripe.Subscription;
+      const sub = event.data.object as Stripe.Subscription & Record<string, any>;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
       const firstItem = sub.items?.data?.[0];
       const priceId = firstItem?.price?.id ?? null;
@@ -255,7 +255,7 @@ export async function handleStripeWebhook(
 
     // ── Subscription deleted (cancelled) ────────────────────────────────────
     case "customer.subscription.deleted": {
-      const sub = event.data.object as Stripe.Subscription;
+      const sub = event.data.object as Stripe.Subscription & Record<string, any>;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
       const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
@@ -279,7 +279,7 @@ export async function handleStripeWebhook(
     // ── Invoice payment succeeded ────────────────────────────────────────────
     case "invoice.payment_succeeded":
     case "invoice.paid": {
-      const inv = event.data.object as Stripe.Invoice;
+      const inv = event.data.object as Stripe.Invoice & Record<string, any>;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
       const subscriptionId = typeof inv.subscription === "string"
         ? inv.subscription
@@ -300,7 +300,7 @@ export async function handleStripeWebhook(
       const currency = (inv.currency ?? "usd").toUpperCase();
 
       // Detect plan from invoice line items
-      const firstLine = inv.lines?.data?.[0];
+      const firstLine = inv.lines?.data?.[0] as any;
       const priceId = firstLine?.price?.id ?? null;
       const invBillingCycle = firstLine?.price?.recurring?.interval === "year" ? "annual" : "monthly";
       const plan = detectPlan(priceId, amountCents, null, invBillingCycle);
@@ -343,7 +343,7 @@ export async function handleStripeWebhook(
 
     // ── Invoice payment failed ───────────────────────────────────────────────
     case "invoice.payment_failed": {
-      const inv = event.data.object as Stripe.Invoice;
+      const inv = event.data.object as Stripe.Invoice & Record<string, any>;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
       const subscriptionId = typeof inv.subscription === "string"
         ? inv.subscription

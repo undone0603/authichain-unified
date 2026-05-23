@@ -56,8 +56,7 @@ export async function POST(request: Request) {
     }
 
     const Stripe = (await import('stripe')).default;
-    // @ts-expect-error - version mismatch in types
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-06-20' }); // Use a stable version
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-04-22.dahlia' as const });
 
     const origin = request.headers.get('origin') || new URL(request.url).origin;
 

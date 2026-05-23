@@ -1,7 +1,16 @@
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { generateProductAssets, retryFailedAssets } from "../asset-service";
+import type { Product } from "../../src/db/schema";
+
+async function getOwnedProduct(productId: number, userId: number): Promise<Product> {
+  const product = await db.getProductById(productId);
+  if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+  if (product.userId !== userId) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+  return product;
+}
 
 export const productsRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {

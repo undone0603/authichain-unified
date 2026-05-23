@@ -48,5 +48,5 @@
     "server/**/*",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "build", "dist", "workers/**/*", "worker/**/*", "mobile/**/*", "packages/**/*", "scripts/**/*", "libs/**/*"]
+  "exclude": ["node_modules", "build", "dist", "workers/**/*", "worker/**/*", "mobile/**/*", "packages/**/*", "scripts/**/*", "libs/**/*", "client/**/*", "server/src/**/*", "server/scripts/**/*", "app/**/*", "src/db/qron_schema.ts"]
 }

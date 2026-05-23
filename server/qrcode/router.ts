@@ -4,6 +4,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import QRCode from "qrcode";
 import { invokeLLM, parseLLMContent } from "../_core/llm";
+import { verifyHash, type QRVerificationRecord } from "../_core/verification";
 import type { Product } from "../../src/db/schema";
 
 async function getOwnedProduct(productId: number, userId: number): Promise<Product> {

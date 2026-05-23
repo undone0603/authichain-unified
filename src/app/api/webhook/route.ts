@@ -535,8 +535,7 @@ export async function POST(request: Request) {
   }
 
   const Stripe = (await import('stripe')).default;
-  // @ts-expect-error - version mismatch
-  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-06-20' });
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-04-22.dahlia' as const });
 
   let event: Stripe.Event;
   try {
