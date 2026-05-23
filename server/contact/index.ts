@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 
 const router = Router();
 
-function escapeHtml(str: string): string {
+function esc(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
@@ -28,6 +28,13 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
+    // Escape inputs unconditionally before use in HTML
+    const safeName = esc(name);
+    const safeEmail = esc(email);
+    const safeCompany = esc(company || 'N/A');
+    const safeMessage = esc(message);
+    const safeSubject = subject ? esc(subject) : `Contact form: ${safeName}`;
+
     // Send email via nodemailer if SMTP is configured
     const smtpHost = process.env.SMTP_HOST;
     const smtpUser = process.env.SMTP_USER;
@@ -43,12 +50,12 @@ router.post('/', async (req: Request, res: Response) => {
       });
 
       await transporter.sendMail({
-        from: `"${name}" <${smtpUser}>`,
-        replyTo: email,
+        from: `"${safeName}" <${smtpUser}>`,
+        replyTo: safeEmail,
         to: toEmail,
-        subject: subject || `Contact form: ${name}`,
+        subject: safeSubject,
         text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || 'N/A'}\nMessage:\n${message}`,
-        html: `<p><strong>Name:</strong> ${escapeHtml(name)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p><p><strong>Company:</strong> ${escapeHtml(company || 'N/A')}</p><p><strong>Message:</strong></p><p>${escapeHtml(message)}</p>`,
+        html: `<p><strong>Name:</strong> ${safeName}</p><p><strong>Email:</strong> ${safeEmail}</p><p><strong>Company:</strong> ${safeCompany}</p><p><strong>Message:</strong></p><p>${safeMessage}</p>`,
       });
     }
 

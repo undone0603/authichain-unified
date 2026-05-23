@@ -16,6 +16,7 @@ function htmlToText(html: string): string {
     .replace(/<style\b[\s\S]*?<\/style\s*>/gi, '')
     .replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<!--/g, '').replace(/-->/g, '')  // catch malformed/nested comment fragments
     .replace(/<[^>]*>/g, ' ')
     .replace(/&#?\w+;/g, ' ')
     .replace(/\s+/g, ' ')
