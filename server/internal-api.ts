@@ -1,10 +1,10 @@
-import { timingSafeEqual as cryptoTimingSafeEqual } from "crypto";
+import { timingSafeEqual } from "crypto";
 
 function timingSafeStringEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
   if (bufA.length !== bufB.length) return false;
-  return cryptoTimingSafeEqual(bufA, bufB);
+  return timingSafeEqual(bufA, bufB);
 }
 import { Router, type Request, type Response } from "express";
 import { getCertificateByNumber, getWhiteLabelByApiKey, createProduct, getDb } from "./db";
@@ -114,7 +114,9 @@ export function createInternalRouter(): Router {
   // ─── GET /api/internal/certificates/verify ─────────────────────────────────
   router.get("/certificates/verify", async (req: Request, res: Response) => {
     try {
-      const number = (req.query.certNumber || req.query.number) as string;
+      const rawNumber = req.query.certNumber ?? req.query.number;
+      const rawStr = Array.isArray(rawNumber) ? rawNumber[0] : rawNumber;
+      const number = typeof rawStr === "string" ? rawStr : undefined;
       if (!number) return res.status(400).json({ error: "certNumber query param required" });
       if (number.length > 64) return res.status(400).json({ error: "certNumber too long" });
 
@@ -266,11 +268,9 @@ export function createInternalRouter(): Router {
   // ─── GET /api/internal/tenant ──────────────────────────────────────────────
   router.get("/tenant", async (req: Request, res: Response) => {
     try {
-      // Accept apiKey from Authorization header (preferred) or query param (legacy)
       const authHeader = req.headers["authorization"];
-      const apiKey = (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null)
-        ?? req.query.apiKey as string;
-      if (!apiKey) return res.status(400).json({ error: "apiKey required" });
+      const apiKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+      if (!apiKey) return res.status(400).json({ error: "Authorization: Bearer <apiKey> required" });
 
       const tenant = await getWhiteLabelByApiKey(apiKey);
       if (!tenant) return res.status(404).json({ error: "Tenant not found" });

@@ -48,7 +48,7 @@ router.post('/', async (req: Request, res: Response) => {
         to: toEmail,
         subject: subject || `Contact form: ${name}`,
         text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || 'N/A'}\nMessage:\n${message}`,
-        html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${company || 'N/A'}</p><p><strong>Message:</strong></p><p>${message}</p>`,
+        html: `<p><strong>Name:</strong> ${escapeHtml(name)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p><p><strong>Company:</strong> ${escapeHtml(company || 'N/A')}</p><p><strong>Message:</strong></p><p>${escapeHtml(message)}</p>`,
       });
     }
 

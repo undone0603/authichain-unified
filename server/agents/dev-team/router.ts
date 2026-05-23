@@ -1,4 +1,4 @@
-import { router, protectedProcedure, adminProcedure } from "../../_core/trpc";
+import { router, protectedProcedure } from "../../_core/trpc";
 import * as db from "../../db";
 import { z } from "zod";
 

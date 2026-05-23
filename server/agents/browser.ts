@@ -12,13 +12,12 @@ const BOT_UA = 'AuthiChain-ResearchBot/1.0 (+https://authichain.com/bot)';
 // ── HTML scraper ────────────────────────────────────────────────────────────
 function htmlToText(html: string): string {
   return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[\s\S]*?<\/style\s*>/gi, '')
+    .replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&nbsp;|&#160;/g, ' ').replace(/&#?\w+;/g, '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&#?\w+;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, MAX_PAGE_CHARS);
