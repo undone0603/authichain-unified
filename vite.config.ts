@@ -1,5 +1,5 @@
 
-import react from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react";import tailwindcss from "@tailwindcss/vite";
 import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
@@ -150,7 +150,7 @@ function vitePluginManusDebugCollector(): Plugin {
 
 
 export default defineConfig({
-      plugins: [react(), vitePluginManusDebugCollector()],
+      plugins: [tailwindcss(), react(), vitePluginManusDebugCollector()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
