@@ -37,14 +37,20 @@ export async function runPipelineTick() {
   const totalTasks = Math.max(runCount, 1);
 
   const kindToSegment: Record<string, string> = {
-    FIND_GOV_LEADS:       'GOV',
-    FIND_RETAIL_LEADS:    'RETAIL',
-    DRAFT_OUTBOUND_EMAIL: 'GOV',
-    FOLLOWUP_SEQUENCE:    'GOV',
-    BUILD_PILOT_PACKET:   'PARTNER',
-    DRAFT_INTEL_DOSSIER:  'PRESS',
-    CRM_UPDATE:           'PARTNER',
-    DRAFT_PRESS_RELEASE:  'PRESS',
+    FIND_GOV_LEADS:          'GOV',
+    FIND_RETAIL_LEADS:       'RETAIL',
+    FIND_CANNABIS_LEADS:     'CANNABIS',
+    DRAFT_OUTBOUND_EMAIL:    'GOV',
+    DRAFT_CANNABIS_OUTREACH: 'CANNABIS',
+    FOLLOWUP_SEQUENCE:       'GOV',
+    BUILD_PILOT_PACKET:      'PARTNER',
+    DRAFT_INTEL_DOSSIER:     'PRESS',
+    CRM_UPDATE:              'PARTNER',
+    DRAFT_PRESS_RELEASE:     'PRESS',
+    SEND_CONTRACT:           'HIGH_INTENT',
+    GENERATE_PROPOSAL:       'HIGH_INTENT',
+    CHECK_REPLIES:           'HIGH_INTENT',
+    ANCHOR_METRC_PACKAGE:    'CANNABIS',
   };
 
   const scored = dueTasks.map(task => {
@@ -68,8 +74,13 @@ export async function runPipelineTick() {
   // ── PMF auto-scale: if a segment's posterior mean exceeds threshold AND
   //    no active mission of that type exists, create one automatically. ──────
   const PMF_THRESHOLDS: Record<string, { missionType: string; threshold: number }> = {
-    GOV:    { missionType: 'GOV_PILOT',    threshold: 0.12 },
-    RETAIL: { missionType: 'RETAIL_PILOT', threshold: 0.10 },
+    GOV:      { missionType: 'GOV_PILOT',        threshold: 0.05 },
+    RETAIL:   { missionType: 'RETAIL_PILOT',      threshold: 0.04 },
+    LUXURY:   { missionType: 'LUXURY_BLITZ',      threshold: 0.03 },
+    PHARMA:   { missionType: 'PHARMA_AUDIT',      threshold: 0.03 },
+    // Cannabis is the warmest vertical — 9+ named chains in HubSpot pipeline.
+    // Low threshold so missions auto-spawn as soon as any prior data exists.
+    CANNABIS: { missionType: 'STRAINCHAIN_BLITZ', threshold: 0.02 },
   };
   const activeMissionTypes = await getActiveMissionTypes();
   const pmfCreated: string[] = [];

@@ -699,15 +699,15 @@ export function getSystemStatus() {
   };
 }
 
-export function toggleKillSwitch(active: boolean): boolean {
+export async function toggleKillSwitch(active: boolean): Promise<boolean> {
   if (_systemActive === active) return _systemActive;
-  
+
   _systemActive = active;
   console.log(`[System] Kill switch activated: ${!active}`);
 
   if (active) {
     console.log("[System] Resuming all automation routines...");
-    initializeScheduler();
+    await initializeScheduler();
   } else {
     console.log("[System] HALTING ALL AUTOMATION. Emergency stop triggered.");
     stopScheduler();

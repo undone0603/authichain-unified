@@ -31,12 +31,12 @@ export const schedulerRouter = router({
   }),
   toggleSystemState: adminProcedure.input(z.object({
     active: z.boolean(),
-  })).mutation(({ input }) => {
-    const isActive = toggleKillSwitch(input.active);
-    return { 
-      success: true, 
-      isActive, 
-      message: `System ${isActive ? "activated" : "deactivated"} successfully` 
+  })).mutation(async ({ input }) => {
+    const isActive = await toggleKillSwitch(input.active);
+    return {
+      success: true,
+      isActive,
+      message: `System ${isActive ? "activated" : "deactivated"} successfully`,
     };
   }),
 });

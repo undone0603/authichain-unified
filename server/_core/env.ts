@@ -13,24 +13,41 @@ export const ENV = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
   apolloApiKey: process.env.APOLLO_API_KEY ?? "",
-  gmailClientId: process.env.GMAIL_CLIENT_ID ?? "",
-  gmailClientSecret: process.env.GMAIL_CLIENT_SECRET ?? "",
-  gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN ?? "",
-  gmailFromEmail: process.env.GMAIL_FROM_EMAIL ?? "",
-  gmailAppPassword: process.env.GMAIL_APP_PASSWORD ?? "",
-  suppressionList: process.env.SUPPRESSION_LIST ?? "",
-  paddleApiKey: process.env.PADDLE_API_KEY ?? "",
-  paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
-  walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
-  samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
-  openaiApiKey: process.env.OPENAI_API_KEY ?? "",
-  autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
-  requireOutreachApproval: process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
-  requireDevApproval: process.env.REQUIRE_DEV_APPROVAL !== "false",
-  resendApiKey: process.env.RESEND_API_KEY ?? "",
-  paddleBasicPriceId: process.env.PADDLE_BASIC_PRICE_ID ?? "",
-  paddlePremiumPriceId: process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
+
+  // ── Email ─────────────────────────────────────────────────────────────────
+  resendApiKey:         process.env.RESEND_API_KEY ?? "",
+  gmailFromEmail:       process.env.GMAIL_FROM_EMAIL ?? "",
+  gmailClientId:        process.env.GMAIL_CLIENT_ID ?? "",
+  gmailClientSecret:    process.env.GMAIL_CLIENT_SECRET ?? "",
+  gmailRefreshToken:    process.env.GMAIL_REFRESH_TOKEN ?? "",
+  gmailAppPassword:     process.env.GMAIL_APP_PASSWORD ?? "",
+  suppressionList:      process.env.SUPPRESSION_LIST ?? "",
+
+  // ── AI / LLM ──────────────────────────────────────────────────────────────
+  openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
+  groqApiKey:       process.env.GROQ_API_KEY ?? "",
+  openaiApiKey:     process.env.OPENAI_API_KEY ?? "",
+  geminiApiKey:     process.env.GEMINI_API_KEY ?? "",
+
+  // ── Paddle ────────────────────────────────────────────────────────────────
+  paddleApiKey:           process.env.PADDLE_API_KEY ?? "",
+  paddleWebhookSecret:    process.env.PADDLE_WEBHOOK_SECRET ?? "",
+  paddleBasicPriceId:     process.env.PADDLE_BASIC_PRICE_ID ?? "",
+  paddlePremiumPriceId:   process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
   paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
+
+  // ── Blockchain / Wallet ───────────────────────────────────────────────────
+  walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
+
+  // ── Gov / External APIs ───────────────────────────────────────────────────
+  samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
+
+  // ── Pipeline Flags ────────────────────────────────────────────────────────
+  autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
+  requireOutreachApproval:   process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
+  requireDevApproval:        process.env.REQUIRE_DEV_APPROVAL !== "false",
+
+  // ── Video / Media ─────────────────────────────────────────────────────────
   heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
   internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",
   qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",

@@ -44,6 +44,7 @@ const CharacterCreate = lazy(() => import("./pages/CharacterCreate"));
 const GovOnboarding = lazy(() => import("./pages/GovOnboarding"));
 const NetworkStats = lazy(() => import("./pages/NetworkStats"));
 const QrArtGallery = lazy(() => import("./pages/QrArtGallery"));
+const Verify = lazy(() => import("./pages/Verify"));
 const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
 const ScheduledTasks = lazy(() => import("./pages/ScheduledTasks"));
 const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
@@ -117,6 +118,13 @@ function AppRouter() {
         {({ token }: { token?: string }) => (
           <Suspense fallback={<PageLoader />}>
             <CertificatePublic token={token ?? ""} />
+          </Suspense>
+        )}
+      </WRoute>
+      <WRoute path="/verify/:productId">
+        {({ productId }: { productId?: string }) => (
+          <Suspense fallback={<PageLoader />}>
+            <Verify productId={productId ?? ""} />
           </Suspense>
         )}
       </WRoute>
