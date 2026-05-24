@@ -34,17 +34,17 @@ const BRANDS = {
 function cssVars(brand: keyof typeof BRANDS) {
   const b = BRANDS[brand];
   return `:root {
-    --bg: \${b.bg};
-    --bg2: \${b.bg2};
-    --bg3: \${b.bg3};
-    --text: \${b.text};
-    --text-dim: \${b.textDim};
-    --primary: \${b.primary};
-    --primary-dim: \${b.primaryDim};
-    --secondary: \${b.secondary};
-    --border: \${b.border};
-    --border-dim: \${b.borderDim};
-    --primary-glow: \${b.glowRgba};
+    --bg: ${b.bg};
+    --bg2: ${b.bg2};
+    --bg3: ${b.bg3};
+    --text: ${b.text};
+    --text-dim: ${b.textDim};
+    --primary: ${b.primary};
+    --primary-dim: ${b.primaryDim};
+    --secondary: ${b.secondary};
+    --border: ${b.border};
+    --border-dim: ${b.borderDim};
+    --primary-glow: ${b.glowRgba};
     --mono: 'JetBrains Mono', monospace;
     --display: 'Bebas Neue', cursive;
     --body: 'Outfit', sans-serif;
@@ -52,12 +52,22 @@ function cssVars(brand: keyof typeof BRANDS) {
   }`;
 }
 
+const MARKETING_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AuthiChain — The Truth Layer for the Global Economy</title>
+  <meta http-equiv="refresh" content="0;url=https://authichain.com/">
+</head>
+<body>
+  <p>Redirecting…</p>
+  <script>window.location.replace("https://authichain.com/");</script>
+</body>
+</html>`;
+
 const app = new Hono<{ Bindings: Bindings }>();
 app.use("*", cors());
-
-app.get("/", (c) => {
-  return c.html("<h1>AuthiChain</h1>");
-});
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 
@@ -197,9 +207,14 @@ app.post("/webhook/github", async (c) => {
   const signature = c.req.header("X-Hub-Signature-256");
   const body = await c.req.text();
 
-  const expected = `sha256=${createHmac("sha256", c.env.GITHUB_WEBHOOK_SECRET)
-    .update(body)
-    .digest("hex")}`;
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", enc.encode(c.env.GITHUB_WEBHOOK_SECRET),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
+  const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
+  const expected = `sha256=${hex}`;
 
   if (signature !== expected) {
     return c.json({ error: "invalid signature" }, 401);
