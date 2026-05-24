@@ -111,14 +111,14 @@ export function createInternalRouter(): Router {
     }
   });
 
-  // ─── GET /api/internal/certificates/verify ─────────────────────────────────
-  router.get("/certificates/verify", async (req: Request, res: Response) => {
+  // ─── POST /api/internal/certificates/verify ────────────────────────────────
+  router.post("/certificates/verify", async (req: Request, res: Response) => {
     try {
-      const raw = req.query.certNumber ?? req.query.number;
+      const raw = req.body?.certNumber ?? req.body?.number;
       const number = typeof raw === 'string' ? raw
         : Array.isArray(raw) && typeof raw[0] === 'string' ? raw[0]
         : undefined;
-      if (!number) return res.status(400).json({ error: "certNumber query param required" });
+      if (!number) return res.status(400).json({ error: "certNumber required in request body" });
       if (number.length > 64) return res.status(400).json({ error: "certNumber too long" });
 
       const cert = await getCertificateByNumber(number);
