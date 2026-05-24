@@ -2,7 +2,6 @@
   "name": "authichain-unified",
   "version": "1.0.0",
   "type": "module",
-  "license": "MIT",
   "scripts": {
     "dev": "tsx watch server/_core/index.ts",
     "build": "next build && vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
@@ -74,7 +73,7 @@
     "lucide-react": "^0.428.0",
     "next": "15.5.18",
     "next-themes": "^0.3.0",
-    "nodemailer": "^6.9.15",
+    "nodemailer": "^8.0.8",
     "openai": "^4.57.0",
     "oslo": "^1.2.1",
     "postgres": "^3.4.4",
@@ -114,7 +113,7 @@
     "eslint-config-next": "15.5.18",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-drizzle": "^0.2.3",
-    "postcss": "^8.4.41",
+    "postcss": "^8.5.15",
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.6",
     "tailwindcss": "^4.0.0",
@@ -122,5 +121,16 @@
     "typescript": "^5.5.4",
     "vite": "^5.4.21",
     "vitest": "^2.0.5"
-  }
+  },
+  "overrides": {
+    "serialize-javascript": "7.0.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "undici": ">=6.21.2",
+      "ws": ">=8.17.1",
+      "js-cookie": ">=3.0.7"
+    }
+  },
+  "license": "MIT"
 }
