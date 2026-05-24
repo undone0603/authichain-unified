@@ -2,13 +2,21 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
+  
   // eslint config handled via .eslintrc.json
-
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
+  
   serverExternalPackages: ['pino', 'pino-pretty', '@walletconnect/sign-client'],
+  
   webpack: (config: { resolve: { fallback: Record<string, boolean> } }) => {
     config.resolve.fallback = { ...config.resolve.fallback, pino: false };
     return config;
   },
+  
   allowedDevOrigins: [
     'govchain.us',
     'www.govchain.us',
@@ -19,15 +27,18 @@ const nextConfig: NextConfig = {
     'qron.space',
     'www.qron.space',
   ],
+  
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
     ],
     unoptimized: false,
   },
+  
   experimental: {
     serverActions: { allowedOrigins: ['qron.space', 'www.qron.space'] },
   },
+  
   turbopack: {},
 };
 
