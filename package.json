@@ -48,7 +48,8 @@
     "sonner": "^1.5.0",
     "superjson": "^2.2.1",
     "tailwind-merge": "^2.5.2",
-    "wouter": "^3.3.5",     "zod": "^3.23.8"
+    "wouter": "^3.3.5",     "zod": "^3.23.8",
+    "thirdweb": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
