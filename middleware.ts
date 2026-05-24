@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|favicon\\.svg|favicon\\.png|apple-touch-icon\\.(?:svg|png)|og-image\\.(?:svg|png)|robots\\.txt|sitemap\\.xml).*)',
-  ],
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',\n  ],
 };
 
 export function middleware(req: NextRequest) {
