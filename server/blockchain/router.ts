@@ -35,12 +35,11 @@ export const blockchainRouter = router({
     walletAddress: z.string(),
     contractAddress: z.string(),
     chainId: z.number().optional(),
-    privateKey: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
     const product = await db.getProductById(input.productId);
-    if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    if (!product || product.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
     const cert = await db.getCertificateByNumber(input.certificateNumber);
-    if (!cert) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
+    if (!cert || cert.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
     const metadata = thirdweb.buildAuthCertificateMetadata({
       productName: product.name,
       productBrand: product.brand || undefined,
@@ -55,7 +54,7 @@ export const blockchainRouter = router({
       contractAddress: input.contractAddress,
       recipientAddress: input.walletAddress,
       metadata,
-      privateKey: input.privateKey || getServerPrivateKey(),
+      privateKey: getServerPrivateKey(),
       chainId: input.chainId,
     });
     await db.logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "certificate", entityId: cert.id });
@@ -65,10 +64,11 @@ export const blockchainRouter = router({
   anchorToBitcoin: protectedProcedure.input(z.object({
     productId: z.number(),
     truemarkId: z.string(),
-  })).mutation(async ({ input }) => {
+  })).mutation(async ({ ctx, input }) => {
     const { prepareOrdinalEnvelope, linkOrdinalToProduct } = await import("../ordinals-service");
     const { getProductById } = await import("../db");
     const product = await getProductById(input.productId);
+    if (!product || product.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
     
     // Prepare the forensic metadata for inscription
     const metadata = {
@@ -93,7 +93,6 @@ export const blockchainRouter = router({
     walletAddress: z.string(),
     contractAddress: z.string(),
     chainId: z.number().optional(),
-    privateKey: z.string().optional(),
     attributes: z.array(z.object({ trait_type: z.string(), value: z.union([z.string(), z.number()]) })).optional(),
   })).mutation(async ({ ctx, input }) => {
     const result = await thirdweb.mintAuthenticationNFT({
@@ -105,7 +104,7 @@ export const blockchainRouter = router({
         image: input.imageUrl,
         attributes: input.attributes,
       },
-      privateKey: input.privateKey || getServerPrivateKey(),
+      privateKey: getServerPrivateKey(),
       chainId: input.chainId,
     });
     await db.logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "nft", entityId: 0 });

@@ -151,7 +151,6 @@ function NFTMinter() {
   const [nftImage, setNftImage] = useState("");
   const [walletAddr, setWalletAddr] = useState("");
   const [contractAddr, setContractAddr] = useState("");
-  const [privKey, setPrivKey] = useState("");
   const [chainId, setChainId] = useState<number>(137); // Default to Polygon
   const [lastTx, setLastTx] = useState<{ hash: string; chain: number; uri: string } | null>(null);
 
@@ -197,23 +196,17 @@ function NFTMinter() {
             <Input placeholder="0x..." value={walletAddr} onChange={e => setWalletAddr(e.target.value)} />
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Private Key (Warning: Insecure for Production)</Label>
-            <Input type="password" placeholder="0x..." value={privKey} onChange={e => setPrivKey(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Chain ID</Label>
-            <Input type="number" value={chainId} onChange={e => setChainId(Number(e.target.value))} />
-          </div>
+        <div className="space-y-2">
+          <Label>Chain ID</Label>
+          <Input type="number" value={chainId} onChange={e => setChainId(Number(e.target.value))} />
         </div>
         <Button
           onClick={() => mintMutation.mutate({
             name: nftName, description: nftDesc, imageUrl: nftImage || undefined,
             walletAddress: walletAddr, contractAddress: contractAddr,
-            privateKey: privKey, chainId,
+            chainId,
           })}
-          disabled={!nftName || !walletAddr || !contractAddr || !privKey || mintMutation.isPending}
+          disabled={!nftName || !walletAddr || !contractAddr || mintMutation.isPending}
           className="w-full"
         >
           {mintMutation.isPending ? (

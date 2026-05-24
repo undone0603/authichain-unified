@@ -47,6 +47,18 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
     ? getAnnualAmountCents(params.plan)
     : getMonthlyAmountCents(params.plan);
 
+  const sharedMeta: Record<string, string> = {
+    user_id: params.userId.toString(),
+    customer_email: params.userEmail,
+    customer_name: params.userName,
+    plan: params.plan,
+    billing: params.billing,
+    ...(params.brand ? { brand: params.brand } : {}),
+    ...(params.contractSetupOrderId
+      ? { contract: "true", setup_order_id: params.contractSetupOrderId }
+      : {}),
+  };
+
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
     payment_method_types: ["card"],
@@ -54,17 +66,11 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
     client_reference_id: params.userId.toString(),
     customer_email: params.stripeCustomerId ? undefined : params.userEmail,
     customer: params.stripeCustomerId || undefined,
-    metadata: {
-      user_id: params.userId.toString(),
-      customer_email: params.userEmail,
-      customer_name: params.userName,
-      plan: params.plan,
-      billing: params.billing,
-      ...(params.brand ? { brand: params.brand } : {}),
-      ...(params.contractSetupOrderId
-        ? { contract: "true", setup_order_id: params.contractSetupOrderId }
-        : {}),
-    },
+    // user_id on the session so checkout.session.completed can resolve it
+    metadata: sharedMeta,
+    // user_id on the subscription so customer.subscription.* events can
+    // resolve it without a customer object lookup
+    subscription_data: { metadata: sharedMeta },
     line_items: [
       {
         price_data: {

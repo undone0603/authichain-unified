@@ -128,6 +128,8 @@ export async function handleStripeWebhook(
 
   const eventType = event.type as string;
 
+  let handled = false;
+  try {
   switch (eventType) {
     // ── V2 Core Account Events (Thin) ───────────────────────────────────────
     case "v2.core.account.capability_status_updated": {
@@ -200,6 +202,40 @@ export async function handleStripeWebhook(
         },
         userId,
       );
+
+      // Welcome email — only on first creation.
+      if (event.type === "customer.subscription.created") {
+        const welcomeTo = sub.metadata?.customer_email
+          || (typeof sub.customer !== "string" ? (sub.customer as Stripe.Customer | undefined)?.email : null)
+          || null;
+        if (welcomeTo) {
+          try {
+            const { sendEmail } = await import("../email-service");
+            const customerName = sub.metadata?.customer_name || "there";
+            const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+            await sendEmail({
+              to: welcomeTo,
+              subject: `Welcome to AuthiChain ${planLabel}`,
+              body: [
+                `Hi ${customerName},`,
+                ``,
+                `Your ${planLabel} subscription is now active — welcome to AuthiChain.`,
+                ``,
+                `Get started:`,
+                `  • Add your first product: https://authichain.com/products`,
+                `  • Generate a QR authentication code: https://authichain.com/qr`,
+                `  • Explore your dashboard: https://authichain.com/dashboard`,
+                ``,
+                `Reply to this email any time with questions.`,
+                ``,
+                `— The AuthiChain Team`,
+              ].join("\n"),
+            });
+          } catch (emailErr) {
+            console.warn("[stripe-webhook] Welcome email failed (non-fatal):", emailErr);
+          }
+        }
+      }
 
       // HubSpot deal sync — only on first creation, not updates. Non-fatal:
       // a HubSpot outage must not block billing-state writes.
@@ -513,14 +549,17 @@ export async function handleStripeWebhook(
 
     default:
       console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
-      // Mark processed — we've made a terminal decision (skip), so the row
-      // shouldn't show up in stuck-NULL alerts.
-      await markWebhookEventProcessed("stripe", event.id);
-      return { received: true, type: event.type, handled: false };
+      break;
+  }
+  handled = true;
+  } finally {
+    // Always stamp the claim — even if a handler branch throws. Rows left
+    // with processedAt = NULL after the idempotency claim is consumed can
+    // never be retried, creating silent data loss.
+    await markWebhookEventProcessed("stripe", event.id).catch((e) =>
+      console.error("[stripe-webhook] Failed to mark event processed:", e),
+    );
   }
 
-  // Side effects ran successfully — stamp the claim. Rows left with
-  // processedAt = NULL indicate handlers that crashed mid-processing.
-  await markWebhookEventProcessed("stripe", event.id);
-  return { received: true, type: event.type, handled: true };
+  return { received: true, type: event.type, handled };
 }

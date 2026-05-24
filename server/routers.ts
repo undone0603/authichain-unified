@@ -30,6 +30,11 @@ import { emailCampaignsRouter } from "./email-campaigns/router";
 import { dashboardRouter } from "./dashboard/router";
 import { characterRouter } from "./character/router";
 import { analyticsRouter } from "./analytics/router";
+import { feedbackRouter } from "./feedback/router";
+import { paymentsRouter } from "./payments/router";
+import { heygenRouter } from "./heygen/router";
+import { abTestingRouter } from "./ab-testing/router";
+import { macrohardRouter } from "./macrohard/router";
 
 // Import routers from routers/ folder
 import { metrcRouter } from "./routers/metrc";
@@ -56,9 +61,11 @@ export const appRouter = router({
       const { getUserProducts } = await import("./db");
       return await getUserProducts(ctx.user.id);
     }),
-    getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+    getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ ctx, input }) => {
       const { getProductById } = await import("./db");
-      return await getProductById(input.id);
+      const product = await getProductById(input.id);
+      if (!product || product.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+      return product;
     }),
     create: protectedProcedure.input(z.object({
       name: z.string().min(1),
@@ -182,6 +189,14 @@ export const appRouter = router({
       await createQrCode({ productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl });
       return { qrCodeDataUrl: qrDataUrl, verifyUrl };
     }),
+    scan: publicProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
+      const { getProductById, getProductQrCodes, incrementScanCount } = await import("./db");
+      const product = await getProductById(input.productId);
+      if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+      const qrCodes = await getProductQrCodes(input.productId);
+      if (qrCodes.length > 0) await incrementScanCount(qrCodes[0].id);
+      return { product, scanCount: (qrCodes[0]?.scanCount || 0) + 1 };
+    }),
   }),
 
   // ─── Direct Mapped Routers ───────────────────────────────────────────────
@@ -250,6 +265,11 @@ export const appRouter = router({
   character: characterRouter,
   services: servicesRouter,
   analytics: analyticsRouter,
+  feedback: feedbackRouter,
+  payments: paymentsRouter,
+  heygen: heygenRouter,
+  abTesting: abTestingRouter,
+  macrohard: macrohardRouter,
 });
 
 export type AppRouter = typeof appRouter;

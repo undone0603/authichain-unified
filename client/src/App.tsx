@@ -41,6 +41,7 @@ const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
 const Storymode = lazy(() => import("./pages/Storymode"));
 const GovOnboarding = lazy(() => import("./pages/GovOnboarding"));
 const QrArtGallery = lazy(() => import("./pages/QrArtGallery"));
+const Verify = lazy(() => import("./pages/Verify"));
 
 function PageLoader() {
   return (
@@ -108,6 +109,13 @@ function Router() {
         {() => (
           <Suspense fallback={<PageLoader />}>
             <QrArtGallery />
+          </Suspense>
+        )}
+      </Route>
+      <Route path="/verify/:productId">
+        {(params) => (
+          <Suspense fallback={<PageLoader />}>
+            <Verify productId={params.productId ?? ""} />
           </Suspense>
         )}
       </Route>

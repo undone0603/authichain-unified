@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import type { SQL } from "drizzle-orm";
 import {
   eq, desc, and, sql, gte, lte, inArray, like
@@ -66,7 +67,11 @@ export function createDb(connectionString: string): DrizzleInstance {
   if (!connectionString) {
     throw new Error("[Database] Missing connection string");
   }
-  return drizzle(connectionString);
+  // Cap pool size at 3 for serverless environments (Vercel/Railway). Each
+  // function instance opens its own pool; Supabase session-pooler mode caps
+  // total connections, so a default of 10 per instance causes exhaustion.
+  const client = postgres(connectionString, { max: 3, idle_timeout: 20 });
+  return drizzle(client);
 }
 
 export async function getDb(): Promise<DrizzleInstance> {

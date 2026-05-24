@@ -129,7 +129,11 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   }
 
   // ── Try Gmail next (if OAuth tokens are configured) ──────────────────────
-  if (fromEmail) {
+  const gmailConfigured = !!(
+    fromEmail &&
+    (process.env.GMAIL_ACCESS_TOKEN || ENV.gmailClientId)
+  );
+  if (gmailConfigured) {
     const gmailAccessToken = await getGmailAccessToken();
     if (gmailAccessToken) {
       const mime = [
@@ -192,7 +196,14 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { status: "skipped", provider: "sendgrid", reason: `sendgrid_failed:${sgRes.status}` };
   }
 
-  return { status: "skipped", reason: "no_email_provider_configured" };
+  const attempted = [
+    ENV.resendApiKey ? "resend" : null,
+    gmailConfigured ? "gmail" : null,
+    ENV.sendgridApiKey ? "sendgrid" : null,
+  ].filter(Boolean);
+  const reason = attempted.length ? `all_providers_failed:${attempted.join(",")}` : "no_email_provider_configured";
+  console.error("[email] All providers exhausted:", reason);
+  return { status: "skipped", reason };
 }
 
 /** Check whether a Gmail thread has received a reply (any message NOT in SENT labels). */

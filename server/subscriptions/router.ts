@@ -1,31 +1,42 @@
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
+// NOTE: subscriptions.create is admin-only — it writes an active sub without
+// payment. The normal user flow goes through subscriptions.checkout → Stripe.
 import * as db from "../db";
 import * as stripeService from "../stripe-service";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { B2B_PLANS, B2B_BRANDS, type B2BBrand } from "@shared/pricing";
 
+const ALLOWED_CHECKOUT_ORIGINS = [
+  "https://authichain.com",
+  "https://www.authichain.com",
+  "https://govchain.us",
+  "https://strainchain.io",
+  "https://qron.io",
+];
+
 export const subscriptionsRouter = router({
   current: protectedProcedure.query(async ({ ctx }) => {
     const sub = await db.getUserSubscription(ctx.user.id);
     return sub ?? null;
   }),
-  create: protectedProcedure.input(z.object({
+  create: adminProcedure.input(z.object({
+    userId: z.number(),
     plan: z.enum(["starter", "professional", "enterprise"]),
     billingCycle: z.enum(["monthly", "annual"]).optional().default("monthly"),
-  })).mutation(async ({ ctx, input }) => {
+  })).mutation(async ({ input }) => {
     const quotas = {
       starter: B2B_PLANS.starter.quota,
       professional: B2B_PLANS.professional.quota,
       enterprise: B2B_PLANS.enterprise.quota,
     };
     const result = await db.createSubscription({
-      userId: ctx.user.id, plan: input.plan, monthlyQuota: quotas[input.plan],
+      userId: input.userId, plan: input.plan, monthlyQuota: quotas[input.plan],
       usedQuota: 0, billingCycle: input.billingCycle, status: "active",
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + (input.billingCycle === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000),
     });
-    await db.logActivity({ userId: ctx.user.id, action: "subscription_created", entityType: "subscription", entityId: result.id });
+    await db.logActivity({ userId: input.userId, action: "subscription_created", entityType: "subscription", entityId: result.id });
     return result;
   }),
   invoices: protectedProcedure.query(async ({ ctx }) => {
@@ -43,6 +54,11 @@ export const subscriptionsRouter = router({
     brand: z.enum(B2B_BRANDS as unknown as [B2BBrand, ...B2BBrand[]]).optional(),
     contractSetupOrderId: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
+    const isLocalDev = process.env.NODE_ENV !== "production" &&
+      /^https?:\/\/localhost(:\d+)?$/.test(input.origin);
+    if (!ALLOWED_CHECKOUT_ORIGINS.includes(input.origin) && !isLocalDev) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid origin" });
+    }
     const url = await stripeService.createSubscriptionCheckout({
       userId: ctx.user.id,
       userEmail: ctx.user.email || "",
