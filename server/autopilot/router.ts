@@ -1,7 +1,9 @@
+import { eq } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
+import { autopilotDecisions } from "../../drizzle/schema";
 
 export const autopilotRouter = router({
   getStatus: protectedProcedure.query(async () => {
@@ -42,8 +44,6 @@ export const autopilotRouter = router({
     decisionId: z.number(),
     reason: z.string(),
   })).mutation(async ({ ctx, input }) => {
-    const { autopilotDecisions } = await import("../../drizzle/schema");
-    const { eq } = await import("drizzle-orm");
     const dbInstance = await db.getDb();
     if (!dbInstance) throw new Error("Database not available");
     await dbInstance.update(autopilotDecisions).set({ status: "overridden", overriddenBy: ctx.user.id, overrideReason: input.reason }).where(eq(autopilotDecisions.id, input.decisionId));
@@ -78,9 +78,7 @@ export const autopilotRouter = router({
         },
       },
     });
-    const rawContent = response.choices?.[0]?.message?.content as string | undefined;
-    if (!rawContent) throw new Error("Autopilot AI returned empty response");
-    const evaluation = JSON.parse(rawContent);
+    const evaluation = parseLLMContent<any>(response.choices[0].message.content);
     const decision = await db.createAutopilotDecision({
       type: input.type, action: input.action, reasoning: input.reasoning,
       confidence: evaluation.confidence, status: evaluation.proceed ? "executed" : "pending",

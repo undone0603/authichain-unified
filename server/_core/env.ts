@@ -9,20 +9,9 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   thirdwebClientId: process.env.VITE_THIRDWEB_CLIENT_ID ?? "",
   thirdwebSecretKey: process.env.thirdweb_api_key ?? "",
-  blockchainPrivateKey: process.env.BLOCKCHAIN_PRIVATE_KEY ?? "",
   hubspotServiceKey: process.env.HUBSPOT_SERVICE_KEY ?? "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
-  qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
-  defaultNftContract: process.env.DEFAULT_NFT_CONTRACT ?? "0xc3143254997d48fdc9983d618fb2e10067673eb5",
-
-  // ── Autonomous Revenue Pipeline ──────────────────────────────────────────
-  autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
-  requireOutreachApproval:   process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
-  requireDevApproval:        process.env.REQUIRE_SCHEMA_MIGRATION_APPROVAL !== "false",
-  suppressionList:           process.env.SUPPRESSION_LIST ?? "",
-
-  // ── Lead Discovery (Apollo.io) ────────────────────────────────────────────
   apolloApiKey: process.env.APOLLO_API_KEY ?? "",
 
   // ── Email ─────────────────────────────────────────────────────────────────
@@ -31,6 +20,8 @@ export const ENV = {
   gmailClientId:        process.env.GMAIL_CLIENT_ID ?? "",
   gmailClientSecret:    process.env.GMAIL_CLIENT_SECRET ?? "",
   gmailRefreshToken:    process.env.GMAIL_REFRESH_TOKEN ?? "",
+  gmailAppPassword:     process.env.GMAIL_APP_PASSWORD ?? "",
+  suppressionList:      process.env.SUPPRESSION_LIST ?? "",
 
   // ── AI / LLM ──────────────────────────────────────────────────────────────
   openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
@@ -38,24 +29,28 @@ export const ENV = {
   openaiApiKey:     process.env.OPENAI_API_KEY ?? "",
   geminiApiKey:     process.env.GEMINI_API_KEY ?? "",
 
+  // ── Paddle ────────────────────────────────────────────────────────────────
+  paddleApiKey:           process.env.PADDLE_API_KEY ?? "",
+  paddleWebhookSecret:    process.env.PADDLE_WEBHOOK_SECRET ?? "",
+  paddleBasicPriceId:     process.env.PADDLE_BASIC_PRICE_ID ?? "",
+  paddlePremiumPriceId:   process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
+  paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
+
+  // ── Blockchain / Wallet ───────────────────────────────────────────────────
+  walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
+
+  // ── Gov / External APIs ───────────────────────────────────────────────────
+  samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
+
+  // ── Pipeline Flags ────────────────────────────────────────────────────────
+  autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
+  requireOutreachApproval:   process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
+  requireDevApproval:        process.env.REQUIRE_DEV_APPROVAL !== "false",
+
   // ── Video / Media ─────────────────────────────────────────────────────────
   heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
-
-  // ── Budget guardrails ─────────────────────────────────────────────────────
-  llmMonthlyBudgetUsd:    Number(process.env.LLM_MONTHLY_BUDGET_USD    ?? 500),
-  llmPerRequestBudgetUsd: Number(process.env.LLM_PER_REQUEST_BUDGET_USD ?? 0.10),
-  adsDailyCapUsd:         Number(process.env.ADS_DAILY_CAP_USD          ?? 300),
-  enrichmentMonthlyCapUsd:Number(process.env.ENRICHMENT_MONTHLY_CAP_USD ?? 200),
-
-  // ── SMS / Owner alerts ──────────────────────────────────────────────────
+  internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",
+  qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
+  makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
   smsRecipient: process.env.SMS_RECIPIENT ?? "",
-
-  // ── Integrations ─────────────────────────────────────────────────────────
-  airtableBaseId:  process.env.AIRTABLE_BASE_ID  ?? "",
-  airtableApiKey:  process.env.AIRTABLE_API_KEY  ?? "",
-  makeWebhookUrl:  process.env.MAKE_WEBHOOK_URL  ?? "",
-  posthogApiKey:   process.env.POSTHOG_API_KEY   ?? "",
-
-  // ── Internal Gateway ────────────────────────────────────────────────────
-  internalApiSecret: process.env.INTERNAL_API_SECRET ?? "dev-internal-secret",
 };

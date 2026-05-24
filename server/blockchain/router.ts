@@ -6,7 +6,7 @@ import { TRPCError } from "@trpc/server";
 import { ENV } from "../_core/env";
 
 function getServerPrivateKey(): string {
-  const key = ENV.blockchainPrivateKey || process.env.BLOCKCHAIN_PRIVATE_KEY;
+  const key = (ENV as any).blockchainPrivateKey || process.env.BLOCKCHAIN_PRIVATE_KEY || ENV.walletPrivateKey;
   if (!key) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Blockchain signing key not configured on server" });
   return key;
 }
@@ -69,7 +69,7 @@ export const blockchainRouter = router({
     const { getProductById } = await import("../db");
     const product = await getProductById(input.productId);
     if (!product || product.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
-    
+
     // Prepare the forensic metadata for inscription
     const metadata = {
       p: "auth",
@@ -78,13 +78,14 @@ export const blockchainRouter = router({
       name: product?.name,
       ts: new Date().toISOString()
     };
-    
+
     const envelope = await prepareOrdinalEnvelope(product?.imageUrl || "", metadata);
     // In production, this would trigger the actual BTC inscription via a bridge/node
     const result = await linkOrdinalToProduct(input.productId, "btc_ins_pending_" + Date.now());
-    
+
     return { success: true, status: "ANCHORING_INITIATED", details: "BTC Inscription staged for witness." };
   }),
+
 
   mintNFT: protectedProcedure.input(z.object({
     name: z.string(),

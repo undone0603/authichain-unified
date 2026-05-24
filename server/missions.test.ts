@@ -31,10 +31,7 @@ const TITLES: Record<string, string> = {
   LAUNCH_AUTHICHAIN:  'AuthiChain.com – Full Launch Orchestration',
 };
 
-// ─── Mock missions.db module ──────────────────────────────────────────────────
-// The router imports missions CRUD from ./missions/missions.db (split out from
-// ./db in bb8e6ec). Tests need to mock that exact path so the in-memory store
-// substitutes for the real Drizzle queries.
+// ─── Mock missions.db module (what the router actually imports) ───────────────
 
 vi.mock('./missions/missions.db', () => ({
   getMissions: async (statusFilter?: string) => {
@@ -85,6 +82,14 @@ vi.mock('./missions/missions.db', () => ({
   },
 }));
 
+// ─── Mock shared db module for helpers not in missions.db ────────────────────
+
+vi.mock('./db', () => ({
+  getDb: async () => null,
+  logActivity:               vi.fn().mockResolvedValue(undefined),
+  createSystemNotification:  vi.fn().mockResolvedValue(undefined),
+}));
+
 // ─── Shared test context ──────────────────────────────────────────────────────
 
 function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
@@ -100,7 +105,7 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),
-    },
+    } as any,
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
   };
@@ -250,6 +255,7 @@ describe('tasks.retry', () => {
 
   beforeAll(async () => {
     const { createMission, getTasksByMission } = await import('./missions/missions.db');
+    const { getDb } = await import('./db');
 
     const missionId = await createMission('TECH_OS_LOCK');
     const tasks = await getTasksByMission(missionId);
@@ -258,6 +264,16 @@ describe('tasks.retry', () => {
     // Directly mark the task FAILED in the in-memory store
     const t = store.tasks.get(failedTaskId);
     if (t) store.tasks.set(failedTaskId, { ...t, status: 'FAILED', lastError: 'test failure', updatedAt: new Date() });
+
+    const db = await getDb();
+    if (db) {
+      // If a real DB were present, we'd update there too (won't run in mock env)
+      const { missionTasks } = await import('../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      await (db as any).update(missionTasks)
+        .set({ status: 'FAILED', lastError: 'test failure', updatedAt: new Date() })
+        .where(eq(missionTasks.id, failedTaskId));
+    }
   });
 
   it('retries a FAILED task — resets to PENDING', async () => {

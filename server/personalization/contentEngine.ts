@@ -1,4 +1,4 @@
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
 
 /**
  * AI Content Personalization Engine
@@ -106,7 +106,7 @@ Return personalized headline, subheadline, CTA, hero text, reasoning, and confid
   });
 
   const content = response.choices[0].message.content;
-  return JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
+  return parseLLMContent<PersonalizedContent>(content);
 }
 
 /**
@@ -197,7 +197,7 @@ Return array of personalization rules.`;
   });
 
   const content = response.choices[0].message.content;
-  const result = JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
+  const result = parseLLMContent<{ rules: any[] }>(content);
   return result.rules;
 }
 
@@ -429,5 +429,5 @@ Provide actionable insights for optimization.`;
   });
 
   const content = response.choices[0].message.content;
-  return JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
+  return parseLLMContent<{ insights: string[]; recommendations: string[]; topPerformers: string[] }>(content);
 }

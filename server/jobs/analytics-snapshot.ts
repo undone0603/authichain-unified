@@ -25,7 +25,7 @@ export async function runAnalyticsSnapshot() {
     await Promise.all([
       getAdminDashboardMetrics(),
       getWeeklyRevenueDigest(),
-      getBudgetStatus(now),
+      getBudgetStatus(),
       getAcceptanceCriteriaStatus(),
       getFunnelBySegmentAndChannel(),
       getLeadCohorts(),
@@ -59,8 +59,8 @@ export async function runAnalyticsSnapshot() {
       outputPath,
       generatedAt: payload.timestamp,
       totals: {
-        totalRevenue: (metrics as any).totalRevenue ?? 0,
-        totalLeads: (metrics as any).totalLeads ?? metrics.totalUsers ?? 0,
+        totalRevenue: metrics.totalRevenue,
+        totalLeads: metrics.totalLeads,
       },
     },
   });

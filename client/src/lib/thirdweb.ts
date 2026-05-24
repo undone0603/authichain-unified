@@ -24,8 +24,8 @@ export const chains = {
   baseSepolia: defineChain(84532),
 } as const;
 
-// Default chain (Base for production, Base Sepolia for dev)
-export const defaultChain = import.meta.env.PROD ? chains.base : chains.baseSepolia;
+// Default chain (Amoy testnet for dev, Polygon for production)
+export const defaultChain = import.meta.env.PROD ? chains.polygon : chains.polygonAmoy;
 
 export function getChainName(chainId: number): string {
   const names: Record<number, string> = {

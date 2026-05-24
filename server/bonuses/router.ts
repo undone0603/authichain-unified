@@ -27,7 +27,7 @@ export const bonusesRouter = router({
     tier: z.enum(["starter", "professional", "enterprise", "agency"]).optional(),
     deliveryMethod: z.string().optional().default("account_credit"),
   })).mutation(async ({ input }) => {
-    const [result] = await db.insert(bonuses).values({
+    const [row] = await db.insert(bonuses).values({
       userId: input.userId,
       bonusType: input.bonusType,
       bonusName: input.bonusName,
@@ -36,6 +36,6 @@ export const bonusesRouter = router({
       status: "pending",
       deliveryMethod: input.deliveryMethod,
     }).returning();
-    return { id: result.id };
+    return { id: row.id };
   }),
 });

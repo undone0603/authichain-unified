@@ -209,17 +209,14 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () => {
-  const base = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? ENV.forgeApiUrl.replace(/\/$/, "")
-    : "https://forge.manus.im";
-  
-  return `${base}/v1/chat/completions`;
-};
+const resolveApiUrl = () =>
+  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
+    : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey && !ENV.openaiApiKey) {
-    throw new Error("Neither BUILT_IN_FORGE_API_KEY nor OPENAI_API_KEY is configured");
+  if (!ENV.forgeApiKey) {
+    throw new Error("OPENAI_API_KEY is not configured");
   }
 };
 
@@ -269,6 +266,8 @@ const normalizeResponseFormat = ({
 };
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
+  assertApiKey();
+
   const {
     messages,
     tools,
@@ -292,11 +291,23 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     throw new Error("No LLM API keys configured (Neither Forge, OpenAI, Groq, nor Gemini)");
   }
 
+  const normalizedResponseFormat = normalizeResponseFormat({
+    responseFormat,
+    response_format,
+    outputSchema,
+    output_schema,
+  });
+
+  const normalizedToolChoice = normalizeToolChoice(
+    toolChoice || tool_choice,
+    tools
+  );
+
   let lastError: Error | null = null;
 
   for (const endpoint of endpoints) {
     console.log(`[LLM] Attempting invoke via ${endpoint.name} (${endpoint.model})...`);
-    
+
     // Throttle Groq to avoid 429s
     if (endpoint.name === "Groq") {
       await new Promise(r => setTimeout(r, 2000));
@@ -308,11 +319,21 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       max_tokens: endpoint.name === "Gemini" ? 8192 : 4096,
     };
 
+    if (tools && tools.length > 0) {
+      payload.tools = tools;
+    }
+    if (normalizedToolChoice) {
+      payload.tool_choice = normalizedToolChoice;
+    }
+    if (normalizedResponseFormat) {
+      payload.response_format = normalizedResponseFormat;
+    }
+
     const headers: Record<string, string> = {
       "content-type": "application/json",
       "authorization": `Bearer ${endpoint.key}`,
     };
-    
+
     // Retry up to 2 times for each endpoint
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
@@ -330,19 +351,19 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
         const errorText = await response.text();
         const status = response.status;
-        
+
         // If it's a client error (4xx) other than 429, don't retry this endpoint
         if (status >= 400 && status < 500 && status !== 429) {
           console.warn(`[LLM] ${endpoint.name} Client Error ${status}: ${errorText}`);
           throw new Error(`[${endpoint.name} Client Error] ${status}: ${errorText}`);
         }
-        
+
         console.warn(`[LLM] ${endpoint.name} attempt ${attempt} failed with ${status}.`);
         lastError = new Error(`${endpoint.name} ${status}: ${errorText}`);
-        
+
         // Exponential backoff before retry (500ms, 1000ms)
         await new Promise(r => setTimeout(r, attempt * 500));
-        
+
       } catch (err: any) {
         console.warn(`[LLM] ${endpoint.name} attempt ${attempt} exception: ${err.message}`);
         lastError = err;
@@ -352,5 +373,16 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     }
   }
 
-  throw new Error(`All LLM endpoints failed. Last error: ${lastError?.message}`);
+  throw lastError ?? new Error("All LLM endpoints failed");
+}
+
+/**
+ * Parse JSON from an LLM response content field.
+ * Accepts the union type returned by LLMResponse.choices[0].message.content.
+ * Throws on empty content or invalid JSON.
+ */
+export function parseLLMContent<T>(raw: string | unknown[] | null | undefined): T {
+  if (!raw || typeof raw !== "string") throw new Error("LLM returned non-string content");
+  try { return JSON.parse(raw) as T; }
+  catch { throw new Error("LLM returned unparseable JSON"); }
 }

@@ -2,132 +2,84 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
-// ─── In-memory store for DB-dependent tests ───────────────────────────────────
-const { notifStore } = vi.hoisted(() => ({
-  notifStore: {
-    notifications: new Map<number, any>(),
-    nextId: 1,
-    reset() { this.notifications.clear(); this.nextId = 1; },
-  },
-}));
+// In-memory store so db-writing tests work without a real database.
+const store = vi.hoisted(() => {
+  const notifications: any[] = [];
+  let notifId = 1;
+  let leadId = 1;
+  return {
+    notifications,
+    nextNotifId: () => notifId++,
+    nextLeadId: () => leadId++,
+    reset: () => { notifications.length = 0; notifId = 1; leadId = 1; },
+  };
+});
 
 vi.mock("./db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./db")>();
   return {
     ...actual,
-    // Notification stubs (stateful in-memory)
-    createNotification: async (data: any) => {
-      const id = notifStore.nextId++;
-      notifStore.notifications.set(id, { ...data, id, createdAt: new Date() });
+    createNotification: vi.fn(async (data: any) => {
+      const id = store.nextNotifId();
+      store.notifications.push({ ...data, id, createdAt: new Date() });
       return { id };
-    },
-    getUserNotifications: async (userId: number, limit: number = 50) => {
-      return [...notifStore.notifications.values()]
-        .filter(n => n.userId === userId)
-        .sort((a, b) => b.createdAt - a.createdAt)
-        .slice(0, limit);
-    },
-    getUnreadNotificationCount: async (userId: number) => {
-      return [...notifStore.notifications.values()].filter(n => n.userId === userId && n.isRead === 0).length;
-    },
-    markNotificationRead: async (id: number, _userId: number) => {
-      const n = notifStore.notifications.get(id);
-      if (n) notifStore.notifications.set(id, { ...n, isRead: 1 });
-    },
-    markAllNotificationsRead: async (userId: number) => {
-      for (const [id, n] of notifStore.notifications)
-        if (n.userId === userId) notifStore.notifications.set(id, { ...n, isRead: 1 });
-    },
-    deleteNotification: async (id: number, _userId: number) => {
-      notifStore.notifications.delete(id);
-    },
-    // Marketing stubs
-    createLead: async (_data: any) => ({ id: notifStore.nextId++ }),
-    // Additional stubs for routers.test.ts
-    getCertificateByNumber: async (_num: string) => null,
-    listNfts: async () => [],
-    listCollections: async () => [],
-    getActiveAuctions: async () => [],
-    getReferralByCode: async (_code: string) => null,
-    getWhiteLabelByApiKey: async (_key: string) => null,
-    getUserSubscription: async (_userId: number) => null,
-    getAutopilotConfig: async () => null,
-    getRecentDecisions: async () => [],
-    getUserEmailCampaigns: async (_userId: number) => [],
-    getPendingDrafts: async () => [],
-    getUserReferrals: async (_userId: number) => [],
-    getAffiliateByUserId: async (_userId: number) => null,
-    getAllAbTests: async () => [],
-    getDashboardMetrics: async (_userId: number) => ({
-      totalProducts: 0,
-      totalAuthentications: 0,
-      totalCertificates: 0,
-      subscription: null,
     }),
-    getAdminDashboardMetrics: async () => ({
-      totalUsers: 0,
-      totalProducts: 0,
-      totalAuthentications: 0,
-      totalCertificates: 0,
-      totalSubscriptions: 0,
-      totalRevenue: 0,
+    getUserNotifications: vi.fn(async (userId: number, limit = 50) => {
+      return store.notifications.filter((n: any) => n.userId === userId).slice(0, limit);
     }),
-    getAllUsers: async () => [],
-    getOpenFraudAlerts: async () => [],
-    getAllHealthScores: async () => [],
-    getRecentActivity: async () => [],
-    getSubscriptionAnalytics: async () => ({ total: 0, active: 0, cancelled: 0, pastDue: 0 }),
-    getRevenueAnalytics: async () => [],
-    getWhiteLabelClients: async () => [],
-    getUserProducts: async (_userId: number) => [],
-    getProductById: async (_id: number) => null,
-    logActivity: async (_data: any) => {},
-    getServiceOrderById: async (_id: number) => null,
-    getServiceOrderBySessionId: async (_id: string) => null,
-    getServiceOrdersByUser: async (_userId: number) => [],
-    getAllServiceOrders: async () => [],
-    updateServiceOrderStatus: async (_id: number, _status: string) => {},
-    createQrCode: async (_data: any) => ({ id: 1 }),
-    getProductQrCodes: async (_productId: number) => [],
-    incrementScanCount: async (_id: number) => {},
+    getUnreadNotificationCount: vi.fn(async (userId: number) => {
+      return store.notifications.filter((n: any) => n.userId === userId && n.isRead === 0).length;
+    }),
+    markNotificationRead: vi.fn(async (id: number, userId: number) => {
+      const n = store.notifications.find((n: any) => n.id === id && n.userId === userId);
+      if (n) n.isRead = 1;
+    }),
+    markAllNotificationsRead: vi.fn(async (userId: number) => {
+      store.notifications.filter((n: any) => n.userId === userId).forEach((n: any) => { n.isRead = 1; });
+    }),
+    deleteNotification: vi.fn(async (id: number, userId: number) => {
+      const idx = store.notifications.findIndex((n: any) => n.id === id && n.userId === userId);
+      if (idx >= 0) store.notifications.splice(idx, 1);
+    }),
+    createLead: vi.fn(async (_data: any) => ({ id: store.nextLeadId() })),
+    // certificates
+    getCertificateByNumber: vi.fn(async () => null),
+    // nft
+    listNfts: vi.fn(async () => []),
+    listCollections: vi.fn(async () => []),
+    getActiveAuctions: vi.fn(async () => []),
+    // referral
+    getReferralByCode: vi.fn(async () => undefined),
+    getUserReferrals: vi.fn(async () => []),
+    // white-label
+    getWhiteLabelByApiKey: vi.fn(async () => null),
+    // subscriptions
+    getUserSubscription: vi.fn(async () => null),
+    // autopilot
+    getAutopilotConfig: vi.fn(async () => null),
+    getRecentDecisions: vi.fn(async () => []),
+    // email campaigns/drafts
+    getUserEmailCampaigns: vi.fn(async () => []),
+    getPendingDrafts: vi.fn(async () => []),
+    // affiliate
+    getAffiliateByUserId: vi.fn(async () => null),
+    // ab testing
+    getAllAbTests: vi.fn(async () => []),
+    // dashboard
+    getDashboardMetrics: vi.fn(async () => ({ totalProducts: 0, totalAuthentications: 0, totalCertificates: 0, totalNfts: 0 })),
+    // admin
+    getAdminDashboardMetrics: vi.fn(async () => ({ totalUsers: 0, totalProducts: 0, totalAuthentications: 0, totalRevenue: 0, totalLeads: 0, totalNfts: 0 })),
+    getAllUsers: vi.fn(async () => []),
+    getRevenueAnalytics: vi.fn(async () => []),
+    getSubscriptionAnalytics: vi.fn(async () => []),
+    getOpenFraudAlerts: vi.fn(async () => []),
+    getAllHealthScores: vi.fn(async () => []),
+    getRecentActivity: vi.fn(async () => []),
+    getWhiteLabelClients: vi.fn(async () => []),
+    // make getDb return null so character/scheduler null-guards activate
+    getDb: vi.fn(async () => null),
   };
 });
-
-vi.mock("./character-service", () => ({
-  getNetworkStats: async () => ({ totalAgents: 0, totalVerifications: 0, totalQRONDistributed: 0 }),
-  getAgentLeaderboard: async () => [],
-  getUserGenerations: async (_userId: number) => [],
-  getUserCharacterAssets: async (_userId: number) => [],
-  getAgentByUser: async (_userId: number) => null,
-  rewardAgentForVerification: async (_userId: number, _success: boolean) => {},
-}));
-
-const MOCK_JOBS = vi.hoisted(() => [
-  "subscription-health-check",
-  "certificate-expiry-check",
-  "lead-nurturing",
-  "database-cleanup",
-  "weekly-analytics-digest",
-  "hubspot-crm-sync",
-  "customer-health-score",
-  "fraud-detection-sweep"
-].map(name => ({
-  name,
-  description: `Description for ${name}`,
-  schedule: "0 0 * * *",
-  enabled: true,
-})));
-
-vi.mock("./scheduled-jobs", () => ({
-  getJobHistory: async () => [],
-  runJobManually: async (jobName: string) => {
-    if (jobName === "nonexistent-job") throw new Error("Job not found");
-    return { success: true, message: `Job ${jobName} triggered successfully` };
-  },
-  executeJob: async (_job: any) => ({ success: true }),
-  getRegisteredJobs: () => MOCK_JOBS,
-  REGISTERED_JOBS: MOCK_JOBS,
-}));
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -143,7 +95,7 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
-  };
+  } as any;
 
   return {
     user,
@@ -171,6 +123,8 @@ function createPublicContext(): TrpcContext {
 }
 
 describe("AuthiChain Unified Platform Routers", () => {
+  beforeEach(() => store.reset());
+
   describe("auth.me", () => {
     it("returns null for unauthenticated users", async () => {
       const ctx = createPublicContext();
@@ -240,7 +194,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("returns invalid for non-existent referral code", async () => {
       const ctx = createPublicContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.referrals.validate({ code: "FAKE-CODE-123" });
+      const result = await caller.referral.validate({ code: "FAKE-CODE-123" });
       expect(result.valid).toBe(false);
     });
   });
@@ -291,7 +245,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("referrals.myReferrals throws UNAUTHORIZED for unauthenticated", async () => {
       const ctx = createPublicContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.referrals.myReferrals()).rejects.toThrow();
+      await expect(caller.referral.getHistory()).rejects.toThrow();
     });
   });
 
@@ -357,15 +311,22 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("referrals.myReferrals returns array", async () => {
       const ctx = createAuthContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.referrals.myReferrals();
+      const result = await caller.referral.getHistory();
       expect(Array.isArray(result)).toBe(true);
     });
 
     it("affiliates.myProfile returns null or profile", async () => {
       const ctx = createAuthContext();
       const caller = appRouter.createCaller(ctx);
-      const result = await caller.affiliates.myProfile();
+      const result = await caller.affiliate.getStatus();
       expect(result === null || result === undefined || typeof result === "object").toBe(true);
+    });
+
+    it("abTesting.list returns array", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.abTesting.list();
+      expect(Array.isArray(result)).toBe(true);
     });
 
     it("dashboard.metrics returns metrics object", async () => {
@@ -492,12 +453,11 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(Array.isArray(result)).toBe(true);
     });
 
-    it("admin.subscriptions returns analytics object", async () => {
+    it("admin.subscriptions returns array", async () => {
       const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.admin.subscriptions();
-      expect(typeof result).toBe("object");
-      expect(result).toHaveProperty("total");
+      expect(Array.isArray(result)).toBe(true);
     });
 
     it("admin.revenue returns array", async () => {
@@ -760,6 +720,253 @@ describe("AuthiChain Unified Platform Routers", () => {
       await expect(
         caller.character.generate({ archetype: "invalid_archetype" as any })
       ).rejects.toThrow();
+    });
+  });
+
+  describe("analytics", () => {
+    it("requires auth for myStats", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.analytics.myStats()).rejects.toThrow();
+    });
+
+    it("returns aggregated stats for authenticated user (empty when db unavailable)", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const stats = await caller.analytics.myStats();
+      expect(stats).toBeDefined();
+      expect(typeof stats).toBe("object");
+    });
+  });
+
+  describe("personalization", () => {
+    it("getPersonalizedContent returns null when db unavailable", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.personalization.getPersonalizedContent({
+        sessionId: "test-session-123",
+      });
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("products", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.products.list()).rejects.toThrow();
+    });
+    it("getById requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.products.getById({ id: 1 })).rejects.toThrow();
+    });
+  });
+
+  describe("payments", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.payments.list()).rejects.toThrow();
+    });
+    it("createStripe requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.payments.createStripe({ amount: "100", currency: "usd" })).rejects.toThrow();
+    });
+  });
+
+  describe("services", () => {
+    it("catalog is public and returns array", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.services.catalog();
+      expect(Array.isArray(result)).toBe(true);
+    });
+    it("myOrders requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.services.myOrders()).rejects.toThrow();
+    });
+    it("allOrders requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.services.allOrders()).rejects.toThrow();
+    });
+  });
+
+  describe("staking", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.staking.list()).rejects.toThrow();
+    });
+  });
+
+  describe("feedback", () => {
+    it("myFeedback requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.feedback.myFeedback()).rejects.toThrow();
+    });
+  });
+
+  describe("missions", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.missions.list({ status: "active" })).rejects.toThrow();
+    });
+  });
+
+  describe("tasks", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.tasks.list({ missionId: "test-id" })).rejects.toThrow();
+    });
+  });
+
+  describe("stripeConnect", () => {
+    it("provisionAccount requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.stripeConnect.provisionAccount({ country: "US" })).rejects.toThrow();
+    });
+  });
+
+  describe("heygen", () => {
+    it("avatars requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.heygen.avatars()).rejects.toThrow();
+    });
+  });
+
+  describe("marketplace", () => {
+    it("purchaseModel requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.marketplace.purchaseModel({ modelId: 1 })).rejects.toThrow();
+    });
+    it("myPurchases requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.marketplace.myPurchases()).rejects.toThrow();
+    });
+  });
+
+  describe("ai", () => {
+    it("chat requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.ai.chat({ messages: [{ role: "user", content: "hello" }] })).rejects.toThrow();
+    });
+  });
+
+  describe("bonuses", () => {
+    it("getUserBonuses requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.bonuses.getUserBonuses()).rejects.toThrow();
+    });
+    it("claimBonus requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.bonuses.claimBonus({ bonusId: 1 })).rejects.toThrow();
+    });
+  });
+
+  describe("govchain", () => {
+    it("stats is public", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.govchain.stats();
+      expect(result).toBeDefined();
+    });
+    it("issuePassport requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.govchain.issuePassport({ documentId: "doc1", claims: {}, recipientEmail: "a@b.com" })).rejects.toThrow();
+    });
+  });
+
+  describe("supplyChain", () => {
+    it("getEvents requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.supplyChain.getEvents({ productId: 1 })).rejects.toThrow();
+    });
+    it("addEvent requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.supplyChain.addEvent({ productId: 1, eventType: "shipped", location: "NYC", notes: "" })).rejects.toThrow();
+    });
+  });
+
+  describe("devTeam", () => {
+    it("writeCode requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.devTeam.writeCode({ missionId: "m1", prompt: "add feature" })).rejects.toThrow();
+    });
+    it("tasks requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.devTeam.tasks({ missionId: "m1" })).rejects.toThrow();
+    });
+  });
+
+  describe("macrohard", () => {
+    it("status requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.macrohard.status()).rejects.toThrow();
+    });
+    it("sync requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.macrohard.sync({ entity: "products" })).rejects.toThrow();
+    });
+  });
+
+  describe("sales", () => {
+    it("calculateRoi is public", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.sales.calculateRoi({
+        numProducts: 100,
+        complianceHoursPerMonth: 10,
+        hourlyRate: 50,
+        existingTechCosts: 5000,
+        industry: "retail",
+      });
+      expect(result).toBeDefined();
+      expect(typeof result.year1Savings).toBe("number");
+    });
+  });
+
+  describe("metrc", () => {
+    it("stats is public", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.metrc.stats();
+      expect(result).toBeDefined();
+      expect(typeof result.activeLicenses).toBe("number");
+    });
+    it("sync requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.metrc.sync({ licenseNumber: "LIC-123" })).rejects.toThrow();
+    });
+  });
+
+  describe("authenticate", () => {
+    it("analyze requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.authenticate.analyze({ productId: 1, imageUrl: "https://example.com/img.jpg" })).rejects.toThrow();
+    });
+    it("history requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.authenticate.history()).rejects.toThrow();
+    });
+  });
+
+  describe("qrcode", () => {
+    it("generate requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.qrcode.generate({ productId: 1 })).rejects.toThrow();
+    });
+    it("generateStorymode requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.qrcode.generateStorymode({ productId: 1 })).rejects.toThrow();
+    });
+  });
+
+  describe("hubspot", () => {
+    it("status requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.hubspot.status()).rejects.toThrow();
+    });
+  });
+
+  describe("system", () => {
+    it("health is public and returns ok", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.system.health({ timestamp: Date.now() });
+      expect(result.ok).toBe(true);
+    });
+    it("notifyOwner requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.system.notifyOwner({ title: "t", content: "c" })).rejects.toThrow();
     });
   });
 });

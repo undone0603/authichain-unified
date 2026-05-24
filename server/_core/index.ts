@@ -45,7 +45,6 @@ async function startServer() {
   const app = createApp();
   const server = createServer(app);
 
-  // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
@@ -61,7 +60,7 @@ async function startServer() {
 
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
-    await initializeScheduler().catch(console.error);
+    await initializeScheduler();
   });
 }
 

@@ -25,6 +25,15 @@ export function getThirdwebClient() {
   return _client;
 }
 
+export async function getConnectionStatus() {
+  try {
+    const client = getThirdwebClient();
+    return { connected: !!client, clientId: ENV.thirdwebClientId };
+  } catch {
+    return { connected: false, clientId: "" };
+  }
+}
+
 // ─── Chain Configuration ────────────────────────────────────────────────────
 
 // Using Polygon for low-cost NFT minting (production)
@@ -77,29 +86,25 @@ export interface NFTMetadata {
   authichain_blockchain_hash?: string;
 }
 
-export async function uploadToIPFS(data: File | string): Promise<string> {
+async function uploadFileToIPFS(file: File): Promise<string> {
   const client = getThirdwebClient();
-  const fileToUpload = typeof data === "string"
+  const uri = await upload({ client, files: [file] });
+  return typeof uri === "string" ? uri : uri[0];
+}
+
+export async function uploadToIPFS(data: File | string): Promise<string> {
+  const file = typeof data === "string"
     ? new File([data], "data.json", { type: "application/json" })
     : data;
-  const uri = await upload({ client, files: [fileToUpload] });
-  return typeof uri === "string" ? uri : uri[0];
+  return uploadFileToIPFS(file);
 }
 
 export async function uploadImageToIPFS(imageBuffer: Buffer | Uint8Array, filename: string): Promise<string> {
-  const client = getThirdwebClient();
-  const uint8 = new Uint8Array(imageBuffer);
-  const file = new File([uint8], filename, { type: "image/png" });
-  const uri = await upload({ client, files: [file] });
-  return typeof uri === "string" ? uri : uri[0];
+  return uploadFileToIPFS(new File([new Uint8Array(imageBuffer)], filename, { type: "image/png" }));
 }
 
 export async function uploadMetadataToIPFS(metadata: NFTMetadata): Promise<string> {
-  const client = getThirdwebClient();
-  const jsonStr = JSON.stringify(metadata);
-  const file = new File([jsonStr], "metadata.json", { type: "application/json" });
-  const uri = await upload({ client, files: [file] });
-  return typeof uri === "string" ? uri : uri[0];
+  return uploadFileToIPFS(new File([JSON.stringify(metadata)], "metadata.json", { type: "application/json" }));
 }
 
 // ─── NFT Minting ────────────────────────────────────────────────────────────
@@ -181,7 +186,6 @@ export interface AuthCertificateNFTData {
   certificateNumber: string;
   imageUrl?: string;
   authenticatorId: number;
-  result?: string;
 }
 
 export function buildAuthCertificateMetadata(data: AuthCertificateNFTData): NFTMetadata {

@@ -59,8 +59,7 @@ export async function processPhysicalFulfillment(request: FulfillmentRequest) {
       // (Implementation assumes we have a userId linked to the order)
       const order = await db.getServiceOrderById(request.orderId);
       if (order?.userId) {
-        const { createSystemNotification } = await import("./db");
-        await createSystemNotification(
+        await db.createSystemNotification(
           order.userId,
           "Security Seals Dispatched 📦",
           `Your 1,000 scannable security seals for Order #${request.orderId} are on the way. Tracking: ${mockResponse.trackingNumber}`,

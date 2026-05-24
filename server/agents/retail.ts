@@ -1,7 +1,6 @@
-import { invokeLLM } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { logActivity } from '../db.js';
-import type { MissionTask } from '../../drizzle/schema.js';
-type Task = MissionTask;
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 interface RetailPayload {
   vertical?: string;
@@ -27,12 +26,7 @@ Return JSON: { "posScan": "...", "shelfTalker": "...", "counterCard": { "headlin
     responseFormat: { type: 'json_object' },
   });
 
-  let signage: unknown;
-  try {
-    signage = JSON.parse(result.choices[0].message.content as string ?? '{}');
-  } catch {
-    throw new Error('Retail signage LLM returned unparseable JSON');
-  }
+  const signage = parseLLMContent<unknown>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'retail_signage_finalized', entityType: 'task', entityId: 0, details: { taskId: task.id,
     vertical,
@@ -61,12 +55,7 @@ Return JSON: { "sections": [{ "heading": "...", "steps": ["..."] }] }`;
     responseFormat: { type: 'json_object' },
   });
 
-  let onboarding: unknown;
-  try {
-    onboarding = JSON.parse(result.choices[0].message.content as string ?? '{}');
-  } catch {
-    throw new Error('SKU onboarding LLM returned unparseable JSON');
-  }
+  const onboarding = parseLLMContent<unknown>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'sku_onboarding_packaged', entityType: 'task', entityId: 0, details: { taskId: task.id,
     vertical,

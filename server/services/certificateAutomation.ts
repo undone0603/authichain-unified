@@ -1,10 +1,11 @@
 import { getDb } from '../db';
-import { certificates } from '../../drizzle/schema';
+import { certificates, products, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { storagePut } from '../storage';
 import { notifyOwner } from '../_core/notification';
-import { buildAuthCertificateMetadata, mintAuthenticationNFT } from '../thirdweb';
+import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../thirdweb';
 import { ENV } from '../_core/env';
+import { sendCertificateEmail as sendCrispCertificateEmail } from './crispService';
 
 /**
  * Automated Certificate Generation Service
@@ -23,10 +24,8 @@ interface CertificateData {
 }
 
 /**
- * Generate certificate automatically after payment.
- * Currently no live caller — was previously invoked by the (now-removed)
- * Paddle webhook handler. Retained for the equivalent Stripe path or any
- * future rewire.
+ * Generate certificate automatically after payment
+ * This is called by the Paddle webhook handler
  */
 export async function generateCertificateAfterPayment(certificateId: number): Promise<void> {
   const db = await getDb();
@@ -92,56 +91,58 @@ export async function generateCertificateAfterPayment(certificateId: number): Pr
   }
 }
 
-/**
- * Generate NFT token on blockchain via Thirdweb SDK (Polygon ERC-721).
- * Falls back to a local placeholder when Thirdweb credentials are missing
- * so that certificate generation still works in dev/test environments.
- */
 async function generateNFT(certificateData: any): Promise<{
   tokenId: string;
   contractAddress: string;
   txHash: string;
   blockchainNetwork: string;
 }> {
-  const contractAddress = ENV.defaultNftContract;
-  const privateKey = ENV.blockchainPrivateKey;
+  console.log(`[NFT] Generating NFT for certificate ${certificateData.id}`);
 
-  // If blockchain keys are not configured, return a local-only placeholder
-  if (!contractAddress || !privateKey || !ENV.thirdwebSecretKey) {
-    console.log(`[NFT] Thirdweb not configured — generating local placeholder for certificate ${certificateData.id}`);
+  const contractAddress = process.env.VITE_AUTHICHAIN_CONTRACT_ADDRESS;
+  const privateKey = ENV.walletPrivateKey;
+
+  if (!contractAddress || !privateKey) {
+    console.warn('[NFT] Blockchain env vars not set — using placeholder values');
     return {
-      tokenId: `LOCAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      contractAddress: contractAddress || '0x' + '0'.repeat(40),
+      tokenId: `NFT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      contractAddress: '0x' + '0'.repeat(40),
       txHash: '0x' + '0'.repeat(64),
-      blockchainNetwork: ENV.isProduction ? 'polygon' : 'polygon-amoy',
+      blockchainNetwork: 'polygon',
     };
   }
 
-  console.log(`[NFT] Minting on-chain NFT for certificate ${certificateData.id}`);
+  const db = await getDb();
+  const [product, userRecord] = await Promise.all([
+    db ? db.select().from(products).where(eq(products.id, certificateData.productId)).limit(1).then(r => r[0]) : null,
+    db ? db.select({ walletAddress: users.walletAddress }).from(users).where(eq(users.id, certificateData.userId)).limit(1).then(r => r[0]) : null,
+  ]);
 
   const metadata = buildAuthCertificateMetadata({
-    productName: certificateData.productName || 'Authenticated Product',
-    confidenceScore: certificateData.confidenceScore ?? 0,
+    productName: product?.name ?? `Product #${certificateData.productId}`,
+    productBrand: product?.brand ?? undefined,
+    productSerial: product?.serialNumber ?? undefined,
+    confidenceScore: certificateData.confidenceScore ?? 95,
     verificationDate: new Date().toISOString(),
     certificateNumber: certificateData.certificateNumber,
-    imageUrl: certificateData.productImageUrl || undefined,
     authenticatorId: certificateData.userId,
-    result: certificateData.isAuthentic ? 'authentic' : 'counterfeit',
   });
 
-  const mintResult = await mintAuthenticationNFT({
+  const recipientAddress = userRecord?.walletAddress ?? contractAddress;
+
+  const result = await mintAuthenticationNFT({
     contractAddress,
-    recipientAddress: contractAddress, // platform-owned; transfer to customer later
+    recipientAddress,
     metadata,
     privateKey,
   });
 
-  console.log(`[NFT] Minted on-chain: tx ${mintResult.transactionHash}`);
+  console.log(`[NFT] Minted on-chain: txHash=${result.transactionHash}`);
 
   return {
-    tokenId: mintResult.transactionHash, // use tx hash as token reference until indexed
+    tokenId: result.transactionHash,
     contractAddress,
-    txHash: mintResult.transactionHash,
+    txHash: result.transactionHash,
     blockchainNetwork: ENV.isProduction ? 'polygon' : 'polygon-amoy',
   };
 }
@@ -315,7 +316,6 @@ async function sendCertificateEmail(
     return;
   }
 
-  const { users } = await import('../../drizzle/schema');
   const userResult = await db
     .select()
     .from(users)
@@ -328,14 +328,14 @@ async function sendCertificateEmail(
   }
 
   const user = userResult[0];
-  const customerEmail = (user as any).email;
+  const customerEmail = user.email;
 
   if (!customerEmail) {
     console.error('[Email] User email not available');
     return;
   }
 
-  // Send email via the unified provider chain (Resend → Gmail → SendGrid).
+  // Send email via the unified provider chain (Resend → SMTP → Gmail OAuth2).
   const { sendEmail } = await import('../email-service');
   const customerName = (user as any).name || 'there';
   const isAuthentic = certificateData.isAuthentic === 1;

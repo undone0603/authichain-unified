@@ -28,15 +28,14 @@ export default function AdminDashboard() {
   const { data: metrics, isLoading } = trpc.admin.metrics.useQuery();
   const { data: users } = trpc.admin.users.useQuery();
   const { data: revenue } = trpc.admin.revenue.useQuery();
+  const { data: revenueStats } = trpc.admin.revenueStats.useQuery();
   const { data: fraudAlerts } = trpc.admin.fraudAlerts.useQuery();
   const { data: healthScores } = trpc.admin.healthScores.useQuery();
   const { data: activity } = trpc.admin.activity.useQuery({ limit: 30 });
   const { data: subscriptions } = trpc.admin.subscriptions.useQuery();
-  const { data: serviceOrders } = trpc.services.allOrders.useQuery();
-  const utils = trpc.useUtils();
-  const updateOrderStatus = trpc.services.updateStatus.useMutation({
-    onSuccess: () => utils.services.allOrders.invalidate(),
-  });
+  const { data: stakingStats } = trpc.admin.platformStaking.useQuery();
+  const serviceOrders: any[] = [];
+  const updateOrderStatus = { mutate: (_: any) => {}, isPending: false };
 
   if (isLoading) return (
     <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -49,26 +48,95 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground text-sm mt-1">Platform overview and management (admin only)</p>
       </div>
 
-      <SystemControlPanel />
-
       {/* Metrics Overview */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon={Users} label="Total Users" value={metrics?.totalUsers ?? 0} />
         <MetricCard icon={Shield} label="Authentications" value={metrics?.totalAuthentications ?? 0} />
-        <MetricCard icon={DollarSign} label="Revenue" value={`$${(metrics as any)?.totalRevenue ?? "0"}`} />
+        <MetricCard icon={DollarSign} label="Revenue" value={`$${metrics?.totalRevenue ?? "0"}`} />
         <MetricCard icon={AlertTriangle} label="Fraud Alerts" value={fraudAlerts?.length ?? 0} color="text-red-400" />
       </div>
 
-      <Tabs defaultValue="users">
-        <TabsList>
+      <Tabs defaultValue="analytics">
+        <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="users">Users ({users?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="fraud">Fraud Alerts ({fraudAlerts?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="health">Health Scores</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="subs">Subscriptions</TabsTrigger>
-          <TabsTrigger value="orders">Orders ({serviceOrders?.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="staking">Staking</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="analytics" className="mt-4 space-y-4">
+          {revenueStats ? (
+            <>
+              {/* MRR / ARR / Revenue KPIs */}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard label="MRR" value={`$${revenueStats.mrr.toLocaleString()}`} sub="monthly recurring" color="text-green-400" />
+                <StatCard label="ARR" value={`$${revenueStats.arr.toLocaleString()}`} sub="annualised" color="text-blue-400" />
+                <StatCard label="Revenue (30d)" value={`$${revenueStats.revenue30d.toLocaleString()}`} sub="last 30 days" />
+                <StatCard label="Total Revenue" value={`$${revenueStats.totalRevenue.toLocaleString()}`} sub="all time" />
+              </div>
+
+              {/* Subscription health */}
+              <div className="grid sm:grid-cols-3 gap-4">
+                <StatCard label="Active Subs" value={revenueStats.activeSubs} sub={`of ${revenueStats.totalSubs} total`} color="text-green-400" />
+                <StatCard label="Past Due" value={revenueStats.pastDueSubs} sub="need recovery" color={revenueStats.pastDueSubs > 0 ? "text-red-400" : undefined} />
+                <StatCard label="Total Subs" value={revenueStats.totalSubs} sub="all time" />
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                {/* Subscriptions by plan */}
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Subs by Plan</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {Object.entries(revenueStats.subsByPlan).map(([plan, count]) => (
+                      <div key={plan} className="flex items-center justify-between">
+                        <span className="text-sm capitalize">{plan}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 h-2 bg-secondary rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${Math.round(((count as number) / revenueStats.totalSubs) * 100)}%` }} />
+                          </div>
+                          <span className="text-sm font-bold w-8 text-right">{count as number}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {Object.keys(revenueStats.subsByPlan).length === 0 && <p className="text-xs text-muted-foreground">No subscriptions yet</p>}
+                  </CardContent>
+                </Card>
+
+                {/* Revenue by source */}
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Revenue by Source</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {Object.entries(revenueStats.bySource).map(([src, amt]) => (
+                      <div key={src} className="flex items-center justify-between">
+                        <span className="text-sm capitalize">{src}</span>
+                        <span className="text-sm font-bold">${(amt as number).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    {Object.keys(revenueStats.bySource).length === 0 && <p className="text-xs text-muted-foreground">No revenue recorded yet</p>}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Subscription status breakdown */}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Subscription Status Breakdown</CardTitle></CardHeader>
+                <CardContent className="flex flex-wrap gap-3">
+                  {Object.entries(revenueStats.subsByStatus).map(([status, count]) => (
+                    <div key={status} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/30">
+                      <Badge variant="outline" className="text-xs capitalize">{status}</Badge>
+                      <span className="text-sm font-bold">{count as number}</span>
+                    </div>
+                  ))}
+                  {Object.keys(revenueStats.subsByStatus).length === 0 && <p className="text-xs text-muted-foreground">No subscription data</p>}
+                </CardContent>
+              </Card>
+            </>
+          ) : <EmptyState text="Loading analytics…" />}
+        </TabsContent>
 
         <TabsContent value="users" className="mt-4">
           <Card>
@@ -212,19 +280,17 @@ export default function AdminDashboard() {
         <TabsContent value="subs" className="mt-4">
           <Card>
             <CardContent className="p-4">
-              {subscriptions && subscriptions.total > 0 ? (
+              {subscriptions && subscriptions.length > 0 ? (
                 <div className="space-y-2">
-                  {[
-                    { label: "Active", count: subscriptions.active },
-                    { label: "Cancelled", count: subscriptions.cancelled },
-                    { label: "Past Due", count: subscriptions.pastDue },
-                  ].map((s) => (
-                    <div key={s.label} className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
-                      <span className="text-sm font-medium">{s.label}</span>
-                      <Badge variant="outline" className="text-xs">{s.count}</Badge>
+                  {subscriptions.map((s: any) => (
+                    <div key={s.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                      <div>
+                        <span className="text-sm font-medium capitalize">{s.plan}</span>
+                        <Badge variant="outline" className="ml-2 text-xs capitalize">{s.status}</Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground">User #{s.userId}</span>
                     </div>
                   ))}
-                  <div className="text-xs text-muted-foreground pt-2">Total: {subscriptions.total}</div>
                 </div>
               ) : <EmptyState text="No subscription data" />}
             </CardContent>
@@ -301,6 +367,16 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="staking" className="mt-4 space-y-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Total QRON Staked" value={stakingStats?.totalStaked?.toLocaleString() ?? 0} sub="active positions" color="text-purple-400" />
+            <StatCard label="Active Stakers" value={stakingStats?.activeStakers ?? 0} sub="unique wallets" color="text-blue-400" />
+            <StatCard label="Rewards Distributed" value={stakingStats?.totalRewardsDistributed?.toLocaleString() ?? 0} sub="QRON earned" />
+            <StatCard label="Avg APY" value={stakingStats ? `${(stakingStats.avgApy / 100).toFixed(1)}%` : "—"} sub="basis points / 100" color="text-green-400" />
+          </div>
+          {(!stakingStats || stakingStats.activeStakers === 0) && <EmptyState text="No active staking positions yet" />}
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -322,4 +398,16 @@ function MetricCard({ icon: Icon, label, value, color }: { icon: any; label: str
 
 function EmptyState({ text }: { text: string }) {
   return <div className="text-center py-8"><p className="text-sm text-muted-foreground">{text}</p></div>;
+}
+
+function StatCard({ label, value, sub, color }: { label: string; value: any; sub?: string; color?: string }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <p className="text-xs text-muted-foreground mb-1">{label}</p>
+        <p className={`text-2xl font-bold ${color || ""}`}>{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      </CardContent>
+    </Card>
+  );
 }

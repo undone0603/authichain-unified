@@ -9,8 +9,7 @@
  *   pnpm tsx server/missions/seed.ts        (env loaded from .env automatically by tsx)
  */
 
-import { createMission, getMissions } from './missions.db.js';
-import { getDb } from '../db.js';
+import { createMission, getMissions, getDb } from '../db.js';
 import { leads, missionTasks } from '../../drizzle/schema.js';
 import { eq, and } from 'drizzle-orm';
 import type { MissionType } from './types.js';
@@ -92,7 +91,7 @@ async function seedLeads(db: NonNullable<Awaited<ReturnType<typeof getDb>>>) {
       await db.insert(leads).values({
         ...lead,
         nextActionAt: (lead as any).nextActionAt ?? null,
-      } as any);
+      });
       inserted++;
     }
   }
@@ -126,13 +125,13 @@ async function seedFailedTask(
   const tasks = await db
     .select()
     .from(missionTasks)
-    .where(and(eq(missionTasks.missionId, missionId), eq(missionTasks.status, 'pending')))
+    .where(and(eq(missionTasks.missionId, missionId), eq(missionTasks.status, 'PENDING')))
     .limit(1);
 
   if (tasks[0]) {
     await db
       .update(missionTasks)
-      .set({ status: 'failed', lastError: 'seeded failure for test', updatedAt: new Date() })
+      .set({ status: 'FAILED', error: 'seeded failure for test', updatedAt: new Date() })
       .where(eq(missionTasks.id, tasks[0].id));
     return tasks[0].id;
   }
@@ -164,7 +163,7 @@ async function main() {
 
   console.log('\n✅ Seed complete.');
   console.log('\nSummary:');
-  for (const [type, id] of Array.from(missions)) {
+  for (const [type, id] of missions) {
     console.log(`  ${type.padEnd(22)} ${id}`);
   }
   process.exit(0);

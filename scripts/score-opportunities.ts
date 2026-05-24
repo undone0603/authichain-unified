@@ -19,6 +19,7 @@ if (fs.existsSync(qronEnvPath)) {
 }
 
 import { createClient } from '@supabase/supabase-js';
+// @ts-ignore - package installed separately
 import { Pinecone } from '@pinecone-database/pinecone';
 
 const isDryRun  = process.env.DRY_RUN === 'true';

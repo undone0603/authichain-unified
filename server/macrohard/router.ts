@@ -55,7 +55,8 @@ export const macrohardRouter = router({
   query: protectedProcedure
     .input(
       z.object({
-        resource: z.string().min(1).max(100),
+        // Only allow simple alphanumeric/hyphen/underscore resource names — no path traversal
+        resource: z.string().min(1).max(100).regex(/^[\w\-]+$/, "Invalid resource name"),
         params: z.record(z.string(), z.string()).optional(),
       })
     )

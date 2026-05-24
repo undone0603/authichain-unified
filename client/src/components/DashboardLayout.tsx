@@ -25,8 +25,9 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
-  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Clock, Sparkles, Globe, Trophy, ShoppingBag, Package, CloudLightning,
-  Leaf, Flag, Landmark
+  Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Video, Cpu,
+  Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins,
+  Leaf, Flag,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -47,25 +48,27 @@ const menuItems = [
   { icon: CreditCard, label: "Subscriptions", path: "/subscriptions" },
   { icon: Link2, label: "Referrals", path: "/referrals" },
   { icon: Blocks, label: "Blockchain Hub", path: "/blockchain" },
-  { icon: Sparkles, label: "My Agent", path: "/character" },
-  { icon: Globe, label: "Network & Leaderboard", path: "/network" },
-  { icon: ShoppingBag, label: "Services", path: "/services" },
-  { icon: Package, label: "My Orders", path: "/orders" },
   { icon: Bell, label: "Notifications", path: "/notifications" },
-];
-
-const govChainMenuItems = [
-  { icon: Rocket, label: "Gov Grants & RFPs", path: "/grants" },
-  { icon: CloudLightning, label: "SBA Disaster Loan", path: "/sba-loan" },
+  { icon: Sparkles, label: "AI Characters", path: "/character" },
+  { icon: Image, label: "QR Art Gallery", path: "/qr-gallery" },
+  { icon: BookOpen, label: "Story Mode", path: "/storymode" },
+  { icon: Briefcase, label: "Services", path: "/services" },
+  { icon: ShoppingCart, label: "Service Orders", path: "/service-orders" },
 ];
 
 const adminMenuItems = [
   { icon: BarChart3, label: "Admin Dashboard", path: "/admin" },
   { icon: Building2, label: "White Label", path: "/white-label" },
+  { icon: Rocket, label: "Grants & Partners", path: "/grants" },
   { icon: TrendingUp, label: "Growth Engine", path: "/growth" },
   { icon: Users, label: "Manage Users", path: "/admin/users" },
   { icon: DollarSign, label: "CRM (HubSpot)", path: "/crm" },
-  { icon: Clock, label: "Scheduled Tasks", path: "/scheduled-tasks" },
+  { icon: Video, label: "AI Avatar Videos", path: "/heygen" },
+  { icon: Cpu, label: "MACROHARD", path: "/macrohard" },
+  { icon: Activity, label: "Network Stats", path: "/network-stats" },
+  { icon: Calendar, label: "Scheduled Tasks", path: "/scheduled-tasks" },
+  { icon: Landmark, label: "Gov Onboarding", path: "/gov-onboarding" },
+  { icon: HandCoins, label: "SBA Loan Hub", path: "/sba-loan" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -153,7 +156,7 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const allItems = [...menuItems, ...govChainMenuItems, ...(user?.role === "admin" ? adminMenuItems : [])];
+  const allItems = [...menuItems, ...(user?.role === "admin" ? adminMenuItems : [])];
   const activeMenuItem = allItems.find(item => location.startsWith(item.path));
   const isMobile = useIsMobile();
   const BrandIcon = BRAND_ICONS[brandId] || Shield;
@@ -225,33 +228,6 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
                 );
               })}
             </SidebarMenu>
-
-            {/* GovChain Vertical */}
-            {!isCollapsed && brandId === 'govchain' && (
-              <div className="px-4 py-2 mt-2">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">GovChain Vertical</span>
-              </div>
-            )}
-            {brandId === 'govchain' && (
-              <SidebarMenu className="px-2 py-1">
-                {govChainMenuItems.map(item => {
-                  const isActive = location === item.path;
-                  return (
-                    <SidebarMenuItem key={item.path}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        onClick={() => setLocation(item.path)}
-                        tooltip={item.label}
-                        className="h-9 transition-all font-normal text-[13px]"
-                      >
-                        <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            )}
 
             {user?.role === "admin" && (
               <>
@@ -338,3 +314,4 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
     </>
   );
 }
+

@@ -1,10 +1,11 @@
 // server/scheduled-jobs.ts
 import { getDb } from "./db";
-import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts } from "../drizzle/schema";
+import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger } from "../drizzle/schema";
 import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
 import { ENV } from "./_core/env";
+import { runStrainChainSync } from "./jobs/strainchain-sync";
 
 // ─── Job Registry ───────────────────────────────────────────────────────────
 interface JobDefinition {
@@ -133,7 +134,7 @@ registerJob({
     // Reset monthly quotas for subscriptions at period start
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     if (now.getDate() === 1) {
-      const [resetResult] = await db.update(subscriptions)
+      await db.update(subscriptions)
         .set({ usedQuota: 0 })
         .where(eq(subscriptions.status, "active"));
       details.quotasReset = true;
@@ -180,7 +181,7 @@ registerJob({
     }
 
     // Auto-expire certificates that have passed their expiry date
-    const [expiredResult] = await db.update(certificates)
+    await db.update(certificates)
       .set({ status: "expired" })
       .where(and(
         eq(certificates.status, "active"),
@@ -266,7 +267,7 @@ registerJob({
     const details: Record<string, any> = {};
 
     // Delete read notifications older than 30 days
-    const [notifResult] = await db.delete(notifications)
+    await db.delete(notifications)
       .where(and(
         eq(notifications.isRead, 1),
         lt(notifications.createdAt, thirtyDaysAgo),
@@ -275,7 +276,7 @@ registerJob({
     processed++;
 
     // Delete completed job runs older than 90 days
-    const [jobRunResult] = await db.delete(scheduledJobRuns)
+    await db.delete(scheduledJobRuns)
       .where(and(
         eq(scheduledJobRuns.status, "completed"),
         lt(scheduledJobRuns.startedAt, ninetyDaysAgo),
@@ -621,6 +622,68 @@ registerJob({
     await runVerticalCloning();
     return { itemsProcessed: 2, details: { status: "cloning_cycle_complete", verticals: ["EV_BATTERY", "ARTISAN_COFFEE"] } };
   }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 11: StrainChain METRC Sync (Runs every 1 hour)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "strainchain-metrc-sync",
+  description: "Sync METRC transfers and auto-anchor to the Truth Layer",
+  schedule: "0 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runStrainChainSync } = await import("./jobs/strainchain-sync");
+    return await runStrainChainSync();
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 12: Newsjacking Monitor (Runs every 30 minutes)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "newsjacking-monitor",
+  description: "Monitor global news for supply chain incidents and trigger PR missions",
+  schedule: "*/30 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runNewsjackingMonitor } = await import("./agents/news-pr");
+    // Simulate a task object for the agent
+    await runNewsjackingMonitor({ 
+      missionId: "SYSTEM_PR", 
+      payload: { topics: ['medical device recall', 'counterfeit pharma', 'luxury forgery'] } 
+    } as any);
+    return { itemsProcessed: 1, details: { status: "news_scan_complete" } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 13: Staking Rewards Distribution (Runs daily at 4 AM UTC)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "staking-rewards",
+  description: "Distribute validation rewards to active $QRON stakers",
+  schedule: "0 4 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
+    
+    const activePositions = await db.select().from(stakingPositions)
+      .where(eq(stakingPositions.status, "active"))
+      .limit(10000);
+    if (activePositions.length === 0) return { itemsProcessed: 0, details: { status: "no_active_positions" } };
+
+    const rewards = activePositions.map(pos => ({
+      agentId: pos.agentId || 0,
+      userId: pos.userId,
+      amount: ((Number(pos.amount) * 0.125) / 365).toFixed(9),
+      reason: "staking_reward" as const,
+      status: "pending" as const,
+    }));
+    await db.insert(qronRewardLedger).values(rewards);
+    return { itemsProcessed: activePositions.length, details: { status: "rewards_distributed" } };
+  },
 });
 
 // ─── Global Kill Switch ─────────────────────────────────────────────────────

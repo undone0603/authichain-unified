@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#12080a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1208"/>
+      <stop offset="100%" stop-color="#0d0a05"/>
+    </linearGradient>
+    <linearGradient id="goldShine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c9a22700"/>
+      <stop offset="30%" stop-color="#c9a227"/>
+      <stop offset="50%" stop-color="#f0d060"/>
+      <stop offset="70%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#c9a22700"/>
+    </linearGradient>
+    <radialGradient id="productGlow" cx="50%" cy="40%" r="40%">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="20" flood-color="#c9a227" flood-opacity="0.15"/>
+    </filter>
+    <filter id="glow4">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow8">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <rect width="1080" height="1080" fill="url(#productGlow)"/>
+  <rect x="100" y="80" width="880" height="760" rx="20" fill="url(#cardGrad)" stroke="#c9a227" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="100" y="80" width="880" height="2" rx="1" fill="url(#goldShine)" opacity="0.6"/>
+  <rect x="140" y="120" width="460" height="460" rx="12" fill="#0a0805"/>
+  <rect x="140" y="120" width="460" height="460" rx="12" fill="none" stroke="#c9a22733" stroke-width="1"/>
+  <g transform="translate(370, 150)">
+    <rect x="-25" y="0" width="50" height="30" rx="6" fill="#c9a227" opacity="0.8"/>
+    <rect x="-18" y="30" width="36" height="8" rx="2" fill="#e8c547" opacity="0.7"/>
+    <rect x="-15" y="38" width="30" height="45" rx="4" fill="#1a1408" stroke="#c9a22766" stroke-width="1"/>
+    <rect x="-50" y="83" width="100" height="200" rx="10" fill="#1a1408" stroke="#c9a227" stroke-width="1.5"/>
+    <rect x="-38" y="108" width="76" height="120" rx="4" fill="#0d0a04" stroke="#c9a22744" stroke-width="1"/>
+    <text x="0" y="145" text-anchor="middle" font-family="serif" font-size="16" fill="#c9a227" font-style="italic">LUXE</text>
+    <text x="0" y="168" text-anchor="middle" font-family="serif" font-size="26" fill="#e8c547" font-weight="bold">No.7</text>
+    <text x="0" y="190" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#c9a22788" letter-spacing="3">PARFUM</text>
+    <rect x="-42" y="93" width="12" height="180" rx="6" fill="white" opacity="0.04"/>
+    <rect x="-55" y="283" width="110" height="14" rx="3" fill="#c9a227" opacity="0.6"/>
+  </g>
+  <ellipse cx="370" cy="520" rx="120" ry="20" fill="#c9a227" opacity="0.08" filter="url(#glow8)"/>
+  <g transform="translate(160, 470)">
+    <rect width="180" height="42" rx="6" fill="#0d0a00" stroke="#c9a227" stroke-width="1.5"/>
+    <text x="90" y="18" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#c9a227" font-weight="700">AUTHENTICITY</text>
+    <text x="90" y="32" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#888">BLOCKCHAIN VERIFIED</text>
+  </g>
+  <g transform="translate(640, 128)">
+    <rect width="120" height="28" rx="14" fill="#1a1008" stroke="#c9a22766" stroke-width="1"/>
+    <text x="60" y="19" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#c9a227">Luxury | Parfum</text>
+    <text x="0" y="80" font-family="serif" font-size="42" font-weight="900" fill="white" font-style="italic">LUXE No.7</text>
+    <text x="0" y="110" font-family="system-ui,sans-serif" font-size="16" fill="#888" letter-spacing="4">Eau de Parfum | 50ml</text>
+    <line x1="0" y1="130" x2="320" y2="130" stroke="url(#goldShine)" stroke-width="1"/>
+    <text x="0" y="180" font-family="system-ui,sans-serif" font-size="52" font-weight="900" fill="#c9a227">$285</text>
+    <rect x="160" y="155" width="110" height="32" rx="6" fill="#0d0a00" stroke="#c9a22766" stroke-width="1"/>
+    <text x="215" y="175" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#888">+Free Shipping</text>
+    <g font-family="system-ui,sans-serif" font-size="14" fill="#9a9a9a">
+      <text x="0" y="230">&#9670;  Limited Edition Collection</text>
+      <text x="0" y="256">&#9670;  Hand-crafted in Grasse, France</text>
+      <text x="0" y="282">&#9670;  IFRA Certified Ingredients</text>
+      <text x="0" y="308">&#9670;  AuthiChain Blockchain Certificate</text>
+    </g>
+    <line x1="0" y1="330" x2="320" y2="330" stroke="#c9a22733" stroke-width="1"/>
+    <text x="0" y="360" font-family="system-ui,sans-serif" font-size="12" fill="#666" letter-spacing="2">AUTHENTICITY QR</text>
+    <g transform="translate(0, 370)">
+      <rect width="90" height="90" rx="4" fill="#080808" stroke="#c9a227" stroke-width="1.5"/>
+      <rect x="6" y="6" width="22" height="22" rx="1" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+      <rect x="9" y="9" width="16" height="16" rx="0.5" fill="#c9a227"/>
+      <rect x="12" y="12" width="10" height="10" fill="#080808"/>
+      <rect x="14" y="14" width="6" height="6" fill="#c9a227"/>
+      <rect x="62" y="6" width="22" height="22" rx="1" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+      <rect x="65" y="9" width="16" height="16" rx="0.5" fill="#c9a227"/>
+      <rect x="68" y="12" width="10" height="10" fill="#080808"/>
+      <rect x="70" y="14" width="6" height="6" fill="#c9a227"/>
+      <rect x="6" y="62" width="22" height="22" rx="1" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+      <rect x="9" y="65" width="16" height="16" rx="0.5" fill="#c9a227"/>
+      <rect x="12" y="68" width="10" height="10" fill="#080808"/>
+      <rect x="14" y="70" width="6" height="6" fill="#c9a227"/>
+      <g fill="#c9a227" opacity="0.7">
+        <rect x="34" y="6" width="5" height="5"/><rect x="44" y="6" width="5" height="5"/>
+        <rect x="54" y="6" width="5" height="5"/><rect x="34" y="16" width="5" height="5"/>
+        <rect x="54" y="16" width="5" height="5"/><rect x="34" y="26" width="5" height="5"/>
+        <rect x="44" y="26" width="5" height="5"/><rect x="6" y="34" width="5" height="5"/>
+        <rect x="44" y="44" width="5" height="5"/><rect x="74" y="44" width="5" height="5"/>
+        <rect x="74" y="64" width="5" height="5"/><rect x="74" y="74" width="5" height="5"/>
+        <rect x="44" y="64" width="5" height="5"/><rect x="54" y="74" width="5" height="5"/>
+      </g>
+    </g>
+    <text x="96" y="398" font-family="monospace" font-size="10" fill="#666">QRON Verified</text>
+    <text x="96" y="414" font-family="monospace" font-size="10" fill="#555">qron.space/v/lx7</text>
+    <text x="96" y="430" font-family="monospace" font-size="10" fill="#444">Ed25519 Signed</text>
+  </g>
+  <rect x="140" y="610" width="440" height="56" rx="12" fill="#c9a227" filter="url(#glow4)"/>
+  <text x="360" y="645" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#0a0a0a">Add to Cart - $285</text>
+  <rect x="0" y="880" width="1080" height="200" fill="#080808"/>
+  <rect x="0" y="880" width="1080" height="1" fill="#c9a22744"/>
+  <text x="540" y="928" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#c9a227">Authenticated by QRON</text>
+  <text x="540" y="960" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#555">Every product verified on the AuthiChain blockchain</text>
+  <text x="540" y="1000" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#444" letter-spacing="2">qron.space | AuthiChain Protocol | Ed25519 Cryptographic Signing</text>
+  <text x="540" y="1048" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#c9a227">QRON | AI Living QR Art</text>
+</svg>

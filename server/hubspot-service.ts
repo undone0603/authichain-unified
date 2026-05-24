@@ -133,40 +133,26 @@ export async function listDeals(limit = 50) {
 export async function getCRMStats() {
   try {
     const client = getClient();
-    let contactCount = 0, companyCount = 0, dealCount = 0;
-    let isConnected = false;
     const missingScopes: string[] = [];
 
-    try {
-      const contactSearch = await client.crm.contacts.searchApi.doSearch({
-        filterGroups: [], sorts: [], properties: ["email"], limit: 1, after: "0",
-      });
-      contactCount = contactSearch.total;
-      isConnected = true;
-    } catch (err: any) {
-      if (err.code === 403 || err.body?.category === "MISSING_SCOPES") missingScopes.push("contacts");
-      else throw err;
-    }
+    const [contactResult, companyResult, dealResult] = await Promise.allSettled([
+      client.crm.contacts.searchApi.doSearch({ filterGroups: [], sorts: [], properties: ["email"], limit: 1, after: "0" }),
+      client.crm.companies.searchApi.doSearch({ filterGroups: [], sorts: [], properties: ["name"], limit: 1, after: "0" }),
+      client.crm.deals.searchApi.doSearch({ filterGroups: [], sorts: [], properties: ["dealname"], limit: 1, after: "0" }),
+    ]);
 
-    try {
-      const companySearch = await client.crm.companies.searchApi.doSearch({
-        filterGroups: [], sorts: [], properties: ["name"], limit: 1, after: "0",
-      });
-      companyCount = companySearch.total;
-      isConnected = true;
-    } catch (err: any) {
-      if (err.code === 403 || err.body?.category === "MISSING_SCOPES") missingScopes.push("companies");
-    }
+    let contactCount = 0, companyCount = 0, dealCount = 0;
+    let isConnected = false;
 
-    try {
-      const dealSearch = await client.crm.deals.searchApi.doSearch({
-        filterGroups: [], sorts: [], properties: ["dealname"], limit: 1, after: "0",
-      });
-      dealCount = dealSearch.total;
-      isConnected = true;
-    } catch (err: any) {
-      if (err.code === 403 || err.body?.category === "MISSING_SCOPES") missingScopes.push("deals");
-    }
+    if (contactResult.status === "fulfilled") { contactCount = contactResult.value.total; isConnected = true; }
+    else if (contactResult.reason?.code === 403 || contactResult.reason?.body?.category === "MISSING_SCOPES") missingScopes.push("contacts");
+    else throw contactResult.reason;
+
+    if (companyResult.status === "fulfilled") { companyCount = companyResult.value.total; isConnected = true; }
+    else if (companyResult.reason?.code === 403 || companyResult.reason?.body?.category === "MISSING_SCOPES") missingScopes.push("companies");
+
+    if (dealResult.status === "fulfilled") { dealCount = dealResult.value.total; isConnected = true; }
+    else if (dealResult.reason?.code === 403 || dealResult.reason?.body?.category === "MISSING_SCOPES") missingScopes.push("deals");
 
     return {
       contacts: contactCount, companies: companyCount, deals: dealCount,

@@ -4,7 +4,7 @@ info:
   description: Blockchain-powered product authentication. Verify products, generate artistic QRON codes, and check certificates.
   version: 2.0.0
 servers:
-  - url: https://api.authichain.com/gpt
+    - url: https://authichain.com/api/gpt
     description: AuthiChain Gateway (Production)
 
 paths:

@@ -1,9 +1,7 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { ENV } from "../_core/env";
-import { logActivity, getDb } from "../db";
-import { missions, missionTasks } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { logActivity } from "../db";
 import { runBudgetMonitor } from "./budget-monitor";
 import { runDunningEscalation } from "./dunning";
 import { runRetentionAutomation } from "./retention";
@@ -13,7 +11,6 @@ import { runOrganicTrafficAutomation } from "./organic-traffic";
 import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
-import { triggerHumanHandshake } from "../sms-handshake";
 
 export async function runPipelineTick() {
   if (!ENV.autonomousPipelineEnabled) {
@@ -57,71 +54,20 @@ export async function runPipelineTick() {
   };
 
   const scored = dueTasks.map(task => {
-    const kind = (task as any).kind ?? '';
-    const seg = kindToSegment[kind] ?? 'DEFAULT';
-    const prior = (adaptivePriors as any)[seg] ?? (adaptivePriors as any).DEFAULT ?? { alpha: 1, beta: 1 };
-    
-    let score = ucb1Score(prior, totalTasks);
-    
-    // Revenue Acceleration Hack: Multiplier for closing tasks
-    if (seg === 'HIGH_INTENT') score *= 2.5;
-    
-    return { task, score };
+    const seg = kindToSegment[task.kind] ?? 'DEFAULT';
+    const prior = adaptivePriors[seg] ?? adaptivePriors.DEFAULT;
+    return { task, score: ucb1Score(prior, totalTasks) };
   });
 
   scored.sort((a, b) => b.score - a.score);
 
   const taskResults = { total: dueTasks.length, ran: 0, errors: 0 };
-  for (const { task, score } of scored) {
+  for (const { task } of scored) {
     const result = await runTask(task);
     if (result.ok) {
       taskResults.ran++;
-      
-      // Executive Action: Human Handshake SMS Bypass
-      if ((task as any).kind === 'SEND_CONTRACT' || (task as any).kind === 'GENERATE_PROPOSAL') {
-        const payload = (task as any).payload || {};
-        await triggerHumanHandshake({
-          name: payload.prospectName || "High-Intent Lead",
-          company: payload.prospectCompany || "Enterprise Prospect",
-          email: payload.prospectEmail || "N/A",
-          phone: payload.prospectPhone || "",
-          context: `Autonomous agent successfully executed ${task.kind}. Outreach dispatched automatically. Immediate handshake recommended.`
-        });
-      }
     } else {
       taskResults.errors++;
-    }
-  }
-
-  // ── Executive Action: High-Value Blitz ────────────────────────────────────
-  // If conversion mean is high, force create new tasks immediately to keep momentum
-  const blitzCreated: string[] = [];
-  for (const [seg, prior] of Object.entries(adaptivePriors as any)) {
-    if (seg === 'DEFAULT') continue;
-    const mean = betaMean(prior as any);
-    if (mean > 0.15) {
-      console.log(`[Pipeline] Blitz triggered for ${seg} (Mean: ${mean.toFixed(2)})`);
-
-      try {
-        // Spawn high-velocity tasks for the winning segment
-        const blitzDb = await getDb();
-        const blitzMissions = await blitzDb.select().from(missions).where(eq(missions.status, "ACTIVE")).limit(5);
-        for (const m of blitzMissions) {
-          await blitzDb.insert(missionTasks).values({
-            id: crypto.randomUUID(),
-            missionId: m.id,
-            title: `Blitz: ${seg} Lead Generation`,
-            description: `Auto-generated blitz task for ${seg} segment`,
-            kind: seg === 'GOV' ? 'FIND_GOV_LEADS' : 'FIND_RETAIL_LEADS',
-            status: 'pending',
-            order: 0,
-            payload: { blitz: true, timestamp: new Date().toISOString() }
-          });
-          blitzCreated.push(`${seg}:${m.id}`);
-        }
-      } catch (err) {
-        console.error(`[Pipeline] Blitz DB operation failed for ${seg}:`, err);
-      }
     }
   }
 
@@ -139,7 +85,7 @@ export async function runPipelineTick() {
   const activeMissionTypes = await getActiveMissionTypes();
   const pmfCreated: string[] = [];
   for (const [seg, { missionType, threshold }] of Object.entries(PMF_THRESHOLDS)) {
-    const prior = (adaptivePriors as any)[seg];
+    const prior = adaptivePriors[seg];
     if (!prior) continue;
     const mean = betaMean(prior);
     if (mean >= threshold && !activeMissionTypes.includes(missionType)) {

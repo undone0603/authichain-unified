@@ -1,11 +1,10 @@
-import { invokeLLM } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { ENV } from '../_core/env.js';
 import { sendEmail } from '../email-service.js';
 import { logActivity, getDb, markTaskWaitingHuman, enqueueTask } from '../db.js';
 import { emailDrafts, leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
-import type { MissionTask } from '../../drizzle/schema.js';
-type Task = MissionTask;
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 import {
   selectTone,
   SEGMENT_PRIORS,
@@ -27,8 +26,19 @@ interface OutboundEmailPayload {
 const segmentContext: Record<string, string> = {
   GOV:     'government agency procurement officer focused on supply chain integrity and anti-counterfeiting',
   RETAIL:  'retail business owner (dispensary or specialty retail) focused on product authenticity and brand trust',
+  LUXURY:  'Head of Brand Protection at a high-end luxury fashion house concerned with global counterfeiting and gray market diversion',
+  PHARMA:  'Compliance or Supply Chain Director at a pharmaceutical manufacturer preparing for FDA DSCSA 2027 mandates',
+  MEDTECH: 'Director of Quality or Regulatory Affairs at a medical device manufacturer focused on ISO 13485 compliance and preventing clinical trial fraud',
+  TIMEPIECE: 'CEO or Founder of an independent luxury watch brand concerned with gray-market diversion and secondary market trust',
   PRESS:   'technology journalist or crypto reporter interested in blockchain product authentication',
   PARTNER: 'technology partner or integration partner interested in embedded authentication APIs',
+};
+
+const segmentCTAs: Record<string, string> = {
+  LUXURY:  'Invite them to see a "Cinematic Storymode" demonstration for high-end product engagement.',
+  MEDTECH: 'Direct them to the AuthiChain ROI Calculator to quantify their Year 1 savings on compliance labor.',
+  PHARMA:  'Offer a 15-minute briefing on automated DSCSA 2027 technical readiness.',
+  DEFAULT: 'Schedule a 15-minute call or reply with interest.',
 };
 
 const toneGuidance: Record<EmailTone, string> = {
@@ -43,6 +53,7 @@ export async function runOutboundEmail(task: Task): Promise<void> {
   const segment = payload.segment ?? 'GOV';
   const sequence = payload.sequence ?? 1;
   const recipientContext = segmentContext[segment] ?? 'business professional';
+  const ctaDirective = segmentCTAs[segment] ?? segmentCTAs.DEFAULT;
 
   // ── Bayesian tone selection ────────────────────────────────────────────────
   const tone = selectTone(segment);
@@ -69,14 +80,16 @@ Recipient: ${payload.leadName ?? 'there'} at ${payload.leadOrg ?? 'your organiza
 Recipient profile: ${recipientContext}
 Sequence: Email ${sequence} of 3
 Tone directive: ${toneGuidance[tone]}
+CTA directive: ${ctaDirective}
 
 AuthiChain helps brands verify product authenticity via blockchain-backed QR codes and AI. Key value props:
 - Instant product authentication via QR scan
 - Tamper-evident certificate of authenticity
 - Counterfeit detection with AI confidence scoring
 - NFT-backed provenance trail
+- Compliance readiness for FDA DSCSA (Pharma) and ISO 13485 (MedTech)
 
-Write a ${sequence === 1 ? '3-4 sentence intro email' : '2-3 sentence follow-up'} that applies the tone directive above and ends with a clear CTA (schedule a 15-min call or reply with interest).
+Write a ${sequence === 1 ? '3-4 sentence intro email' : '2-3 sentence follow-up'} that applies the tone and CTA directives above. Ensure the email is concise, high-impact, and professional.
 
 Return JSON: { "subject": "...", "body": "..." }`;
 
@@ -85,15 +98,9 @@ Return JSON: { "subject": "...", "body": "..." }`;
     responseFormat: { type: 'json_object' },
   });
 
-  let subject: string;
-  let body: string;
-  try {
-    const parsed = JSON.parse(result.choices[0].message.content as string ?? '{}');
-    subject = parsed.subject ?? subjectFallback;
-    body = parsed.body ?? '';
-  } catch {
-    throw new Error('Outbound email LLM returned unparseable JSON');
-  }
+  const parsed_email = parseLLMContent<any>(result.choices[0].message.content);
+  const subject = parsed_email.subject ?? subjectFallback;
+  const body = parsed_email.body ?? '';
 
   if (!body) throw new Error('LLM returned empty email body');
 
@@ -128,7 +135,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
   const db = await getDb();
   if (db) {
     await db.update(leads)
-      .set({ status: 'contacted', lastContactedAt: new Date(), updatedAt: new Date() })
+      .set({ status: 'CONTACTED', lastContactedAt: new Date(), updatedAt: new Date() })
       .where(eq(leads.email, payload.leadEmail.toLowerCase()));
   }
 

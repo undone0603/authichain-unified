@@ -40,7 +40,10 @@ import { macrohardRouter } from "./macrohard/router";
 import { metrcRouter } from "./routers/metrc";
 import { productsRouter as industrialProductsRouter } from "./routers/products";
 import { schedulerRouter } from "./routers/scheduler";
-import { servicesRouter } from "./routers/services";
+import { govchainRouter } from "./govchain/router";
+import { salesRouter } from "./sales/router";
+import { servicesRouter } from "./services/router";
+import { devTeamRouter } from "./agents/dev-team/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -235,22 +238,7 @@ export const appRouter = router({
   scheduler: schedulerRouter,
   metrc: metrcRouter,
   referral: referralRouter,
-  referrals: router({
-    ...referralRouter._def.procedures,
-    myReferrals: referralRouter.getHistory,
-  }),
   affiliate: affiliateRouter,
-  affiliates: router({
-    ...affiliateRouter._def.procedures,
-    myProfile: affiliateRouter.getStatus,
-    commissions: protectedProcedure.query(async ({ ctx }) => {
-      const { getAffiliateByUserId, getAffiliateCommissions } = await import("./db");
-      const aff = await getAffiliateByUserId(ctx.user.id);
-      if (!aff) return [];
-      return await getAffiliateCommissions(aff.id);
-    }),
-    join: affiliateRouter.submitApplication,
-  }),
   bonuses: bonusesRouter,
   marketplace: marketplaceRouter,
   missions: missionsRouter,
@@ -263,7 +251,10 @@ export const appRouter = router({
   hubspot: hubspotRouter,
   dashboard: dashboardRouter,
   character: characterRouter,
+  govchain: govchainRouter,
+  sales: salesRouter,
   services: servicesRouter,
+  devTeam: devTeamRouter,
   analytics: analyticsRouter,
   feedback: feedbackRouter,
   payments: paymentsRouter,

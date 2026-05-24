@@ -1,4 +1,4 @@
-name = "authichain-unified"
+name = 'authichain'
 main = "worker/index.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
@@ -15,19 +15,21 @@ APP_ENV = "production"
 # KV namespaces
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "your-kv-id-here"
+id = "7c8e9466e57843199f6f768615e42a5c"
+
+# KV for microsite HTML/CSS/JS (referenced in worker/index.ts as MICROSITES_KV)
+# Create with: wrangler kv:namespace create MICROSITES_KV
+[[kv_namespaces]]
+binding = "MICROSITES_KV"
+id = "REPLACE_WITH_YOUR_MICROSITES_KV_ID"
 
 # D1 database
 [[d1_databases]]
 binding = "DB"
 database_name = "authichain-db"
-database_id = "your-d1-id-here"
+database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 
-# R2 bucket for QRON images
+# R2 bucket for subdomain microsites (kept as fallback / future use)
 [[r2_buckets]]
-binding = "QRON_IMAGES"
-bucket_name = "qron-images"
-
-# Cron triggers (monetization engine)
-[[triggers]]
-crons = ["0 * * * *"] # hourly
+binding = "MICROSITES_BUCKET"
+bucket_name = "authichain-microsites"

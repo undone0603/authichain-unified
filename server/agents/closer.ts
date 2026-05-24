@@ -6,34 +6,29 @@
  *   SEND_CONTRACT    → LLM contract terms + payment link (formal acceptance)
  *   AUTO_REPLY       → objection / pricing question handled autonomously
  */
-import { invokeLLM } from '../_core/llm.js';
-import { ENV } from '../_core/env.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { sendEmail, checkThreadReplies } from '../email-service.js';
-import { logActivity, enqueueTask, getDb, createProposal, markTaskWaitingHuman } from '../db.js';
-import { emailDrafts, leads } from '../../drizzle/schema.js';
+import { logActivity, enqueueTask, getDb, createProposal } from '../db.js';
+import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import { getStripe } from '../stripe-service.js';
-import type { MissionTask } from '../../drizzle/schema.js';
-type Task = MissionTask;
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
 const PILOT_PRICE_USD: Record<string, number> = {
-  GOV:        25_000,
-  LUXURY:      9_999, // Signature Sotheby's
-  RETAIL:      5_000,
-  ENTERPRISE:    999, // QRON Enterprise
-  API_STARTER:   299, // AuthiChain API Starter
-  PARTNER:    10_000,
-  PRESS:           0, // press is comp
-  DEFAULT:    10_000,
+  GOV:     25_000,
+  RETAIL:   5_000,
+  PARTNER: 10_000,
+  PRESS:        0, // press is comp
+  DEFAULT: 10_000,
 };
 
 async function updateLeadStatus(email: string, status: string) {
   const db = await getDb();
   if (!db) return;
   await db.update(leads)
-    .set({ status: status.toLowerCase() as any, updatedAt: new Date() })
+    .set({ status, updatedAt: new Date() })
     .where(eq(leads.email, email.toLowerCase()));
 }
 
@@ -71,7 +66,7 @@ Return JSON: { "intent": "<one of: interested | wants_proposal | objection | pri
       messages: [{ role: 'user', content: prompt }],
       responseFormat: { type: 'json_object' },
     });
-    const parsed = JSON.parse(result.choices[0].message.content as string ?? '{}');
+    const parsed = parseLLMContent<any>(result.choices[0].message.content);
     return (parsed.intent as ReplyIntent) ?? 'unknown';
   } catch {
     return 'unknown';
@@ -204,40 +199,11 @@ Return JSON: { "subject": "...", "body": "..." }`;
     responseFormat: { type: 'json_object' },
   });
 
-  let subject: string;
-  let body: string;
-  try {
-    const parsed = JSON.parse(result.choices[0].message.content as string ?? '{}');
-    subject = parsed.subject ?? `AuthiChain for ${leadOrg ?? segment}: How It Works`;
-    body = parsed.body ?? '';
-  } catch {
-    throw new Error('SEND_DEMO_PACKET LLM returned unparseable JSON');
-  }
+  const parsed_demo = parseLLMContent<any>(result.choices[0].message.content);
+  const subject = parsed_demo.subject ?? `AuthiChain for ${leadOrg ?? segment}: How It Works`;
+  const body = parsed_demo.body ?? '';
 
   if (!body) throw new Error('Demo packet LLM returned empty body');
-
-  if (ENV.requireOutreachApproval) {
-    const db = await getDb();
-    if (db) {
-      await db.insert(emailDrafts).values({
-        prospectEmail:   leadEmail,
-        prospectName:    leadName ?? undefined,
-        prospectCompany: leadOrg ?? undefined,
-        prospectTitle:   leadTitle ?? undefined,
-        subject,
-        body,
-        status:      'pending',
-        generatedBy: 'agentz_closer_demo',
-        taskId:      task.id,
-      });
-    }
-    await markTaskWaitingHuman(task.id);
-    await logActivity({
-      userId: null, action: 'demo_packet_draft_pending_approval', entityType: 'task', entityId: 0,
-      details: { taskId: task.id, leadEmail, segment, subject },
-    });
-    return;
-  }
 
   const sendResult = await sendEmail({ to: leadEmail, subject, body });
 
@@ -299,15 +265,9 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
     responseFormat: { type: 'json_object' },
   });
 
-  let subject: string;
-  let proposalContent: string;
-  try {
-    const parsed = JSON.parse(result.choices[0].message.content as string ?? '{}');
-    subject = parsed.subject ?? `AuthiChain Pilot Proposal — ${leadOrg ?? segment}`;
-    proposalContent = parsed.body ?? '';
-  } catch {
-    throw new Error('GENERATE_PROPOSAL LLM returned unparseable JSON');
-  }
+  const parsed_proposal = parseLLMContent<any>(result.choices[0].message.content);
+  const subject = parsed_proposal.subject ?? `AuthiChain Pilot Proposal — ${leadOrg ?? segment}`;
+  const proposalContent = parsed_proposal.body ?? '';
 
   if (!proposalContent) throw new Error('Proposal LLM returned empty content');
 
@@ -362,35 +322,10 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
     ? `\n\n---\n🔒 Ready to proceed? Secure your pilot today:\n${paymentLink}\n(This link is valid for 30 days)`
     : '';
 
-  const fullBody = `${proposalContent}${paymentSection}`;
-
-  if (ENV.requireOutreachApproval) {
-    const db = await getDb();
-    if (db) {
-      await db.insert(emailDrafts).values({
-        prospectEmail:   leadEmail,
-        prospectName:    leadName ?? undefined,
-        prospectCompany: leadOrg ?? undefined,
-        prospectTitle:   leadTitle ?? undefined,
-        subject,
-        body: fullBody,
-        status:      'pending',
-        generatedBy: 'agentz_closer_proposal',
-        taskId:      task.id,
-      });
-    }
-    await markTaskWaitingHuman(task.id);
-    await logActivity({
-      userId: null, action: 'proposal_draft_pending_approval', entityType: 'task', entityId: 0,
-      details: { taskId: task.id, leadEmail, segment, proposalId, hasPaymentLink: !!paymentLink, priceUsd, subject },
-    });
-    return;
-  }
-
   const sendResult = await sendEmail({
     to: leadEmail,
     subject,
-    body: fullBody,
+    body: `${proposalContent}${paymentSection}`,
   });
 
   await updateLeadStatus(leadEmail, 'PILOT_PROPOSED');
@@ -441,15 +376,9 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
     responseFormat: { type: 'json_object' },
   });
 
-  let subject: string;
-  let contractBody: string;
-  try {
-    const parsed = JSON.parse(result.choices[0].message.content as string ?? '{}');
-    subject = parsed.subject ?? `AuthiChain Service Agreement — ${leadOrg ?? segment}`;
-    contractBody = parsed.body ?? '';
-  } catch {
-    throw new Error('SEND_CONTRACT LLM returned unparseable JSON');
-  }
+  const parsed_contract = parseLLMContent<any>(result.choices[0].message.content);
+  const subject = parsed_contract.subject ?? `AuthiChain Service Agreement — ${leadOrg ?? segment}`;
+  const contractBody = parsed_contract.body ?? '';
 
   // Re-use existing payment link from payload or create a new checkout session
   let paymentLink = payload.paymentLink;
@@ -474,34 +403,10 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
     ? `\n\n---\nTo execute this agreement, complete payment here:\n${paymentLink}\n(Link expires in 14 days. Payment constitutes acceptance of the above terms.)`
     : '';
 
-  const contractFullBody = `${contractBody}${paymentSection}`;
-
-  if (ENV.requireOutreachApproval) {
-    const db = await getDb();
-    if (db) {
-      await db.insert(emailDrafts).values({
-        prospectEmail:   leadEmail,
-        prospectName:    leadName ?? undefined,
-        prospectCompany: leadOrg ?? undefined,
-        subject,
-        body: contractFullBody,
-        status:      'pending',
-        generatedBy: 'agentz_closer_contract',
-        taskId:      task.id,
-      });
-    }
-    await markTaskWaitingHuman(task.id);
-    await logActivity({
-      userId: null, action: 'contract_draft_pending_approval', entityType: 'task', entityId: 0,
-      details: { taskId: task.id, leadEmail, segment, hasPaymentLink: !!paymentLink, subject },
-    });
-    return;
-  }
-
   const sendResult = await sendEmail({
     to: leadEmail,
     subject,
-    body: contractFullBody,
+    body: `${contractBody}${paymentSection}`,
   });
 
   await logActivity({
@@ -556,37 +461,9 @@ Return JSON: { "subject": "Re: [keep thread subject]", "body": "..." }`;
     responseFormat: { type: 'json_object' },
   });
 
-  let subject: string;
-  let body: string;
-  try {
-    const parsed = JSON.parse(result.choices[0].message.content as string ?? '{}');
-    subject = parsed.subject ?? `Re: AuthiChain`;
-    body = parsed.body ?? '';
-  } catch {
-    throw new Error('AUTO_REPLY LLM returned unparseable JSON');
-  }
-
-  if (ENV.requireOutreachApproval) {
-    const db = await getDb();
-    if (db) {
-      await db.insert(emailDrafts).values({
-        prospectEmail:   leadEmail,
-        prospectName:    leadName ?? undefined,
-        prospectCompany: leadOrg ?? undefined,
-        subject,
-        body,
-        status:      'pending',
-        generatedBy: 'agentz_closer_autoreply',
-        taskId:      task.id,
-      });
-    }
-    await markTaskWaitingHuman(task.id);
-    await logActivity({
-      userId: null, action: 'auto_reply_draft_pending_approval', entityType: 'task', entityId: 0,
-      details: { taskId: task.id, leadEmail, segment, intent, subject },
-    });
-    return;
-  }
+  const parsed_reply = parseLLMContent<any>(result.choices[0].message.content);
+  const subject = parsed_reply.subject ?? `Re: AuthiChain`;
+  const body = parsed_reply.body ?? '';
 
   const sendResult = await sendEmail({ to: leadEmail, subject, body });
 

@@ -3,21 +3,14 @@
  * Handles checkout sessions, subscription management, and webhook processing
  */
 import Stripe from "stripe";
-import {
-  B2B_PLANS,
-  getMonthlyAmountCents,
-  getAnnualAmountCents,
-  type B2BPlanKey,
-  type B2BBrand,
-} from "../shared/pricing";
-
-type PlanKey = B2BPlanKey;
+import { STRIPE_PRODUCTS, type PlanKey, getPlanQuota } from "./stripe-products";
+import { ENV } from "./_core/env";
 
 let _stripe: Stripe | null = null;
 
 export function getStripe(): Stripe {
   if (!_stripe) {
-    const secretKey = process.env.STRIPE_SECRET_KEY;
+    const secretKey = ENV.stripeSecretKey;
     if (!secretKey) throw new Error("STRIPE_SECRET_KEY not configured");
     _stripe = new Stripe(secretKey, { apiVersion: "2025-03-31.basil" as any });
   }
@@ -34,18 +27,16 @@ export interface CreateCheckoutParams {
   billing: "monthly" | "annual";
   origin: string;
   stripeCustomerId?: string;
-  /** B2B brand attribution. Omit for non-branded checkouts (e.g. QRON). */
-  brand?: B2BBrand;
-  /** When set, the recurring subscription was preceded by a contract setup service order. */
+  brand?: string;
   contractSetupOrderId?: string;
 }
 
 export async function createSubscriptionCheckout(params: CreateCheckoutParams): Promise<string> {
   const stripe = getStripe();
-  const product = B2B_PLANS[params.plan];
+  const product = STRIPE_PRODUCTS[params.plan];
   const priceAmount = params.billing === "annual"
-    ? getAnnualAmountCents(params.plan)
-    : getMonthlyAmountCents(params.plan);
+    ? product.priceAnnual
+    : product.priceMonthly;
 
   const sharedMeta: Record<string, string> = {
     user_id: params.userId.toString(),
@@ -77,6 +68,7 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
           currency: "usd",
           product_data: {
             name: product.name,
+            description: product.description,
           },
           unit_amount: priceAmount,
           recurring: {
@@ -107,7 +99,7 @@ export interface CreatePaymentCheckoutParams {
   metadata?: Record<string, string>;
 }
 
-export async function createPaymentCheckout(params: CreatePaymentCheckoutParams): Promise<string> {
+export async function createPaymentCheckout(params: CreatePaymentCheckoutParams): Promise<{ url: string; sessionId: string }> {
   const stripe = getStripe();
 
   const session = await stripe.checkout.sessions.create({
@@ -139,7 +131,7 @@ export async function createPaymentCheckout(params: CreatePaymentCheckoutParams)
     cancel_url: `${params.origin}/payments?cancelled=true`,
   });
 
-  return session.url!;
+  return { url: session.url!, sessionId: session.id };
 }
 
 // ─── Customer Management ────────────────────────────────────────────────────

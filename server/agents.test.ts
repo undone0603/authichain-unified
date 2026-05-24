@@ -40,6 +40,11 @@ vi.mock('./db.js', () => ({
 
 vi.mock('./_core/llm.js', () => ({
   invokeLLM: vi.fn(),
+  parseLLMContent: (raw: unknown) => {
+    if (!raw || typeof raw !== 'string') throw new Error('LLM returned non-string content');
+    try { return JSON.parse(raw as string); }
+    catch { throw new Error('LLM returned unparseable JSON'); }
+  },
 }));
 
 vi.mock('./_core/dataApi.js', () => ({
@@ -75,7 +80,10 @@ function makeTask(kind: string, payload: Record<string, unknown> = {}): MissionT
     kind,
     payload,
     status: 'RUNNING',
-    lastError: null,
+    error: null,
+    result: null,
+    priority: 0,
+    scheduledAt: null,
     order: 0,
     createdAt: new Date(),
     updatedAt: new Date(),

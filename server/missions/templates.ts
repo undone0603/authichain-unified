@@ -47,10 +47,40 @@ export const missionTemplates: Record<MissionType, MissionTemplate> = {
     title: 'AuthiChain.com – Full Launch Orchestration',
     priority: 10,
   },
-  GOVCHAIN_LAUNCH: {
-    type: 'GOVCHAIN_LAUNCH',
-    title: 'GovChain.us – Government Protocol Launch',
-    priority: 10,
+  LUXURY_OUTREACH: {
+    type: 'LUXURY_OUTREACH',
+    title: 'Luxury Outreach – High-End Brands',
+    priority: 9,
+  },
+  PHARMA_OUTREACH: {
+    type: 'PHARMA_OUTREACH',
+    title: 'Pharma Outreach – Generic Drug Mfrs',
+    priority: 9,
+  },
+  MEDTECH_OUTREACH: {
+    type: 'MEDTECH_OUTREACH',
+    title: 'MedTech Outreach – Device Manufacturers',
+    priority: 9,
+  },
+  TIMEPIECE_OUTREACH: {
+    type: 'TIMEPIECE_OUTREACH',
+    title: 'Timepiece Outreach – Independent Brands',
+    priority: 8,
+  },
+  NEWSJACKING_LAUNCH: {
+    type: 'NEWSJACKING_LAUNCH',
+    title: 'Newsjacking Launch – Viral PR Response',
+    priority: 7,
+  },
+  MEDTECH_VIDEO_BRIEFING: {
+    type: 'MEDTECH_VIDEO_BRIEFING',
+    title: 'MedTech Video Briefing – Personalized Outreach',
+    priority: 8,
+  },
+  MI_CRA_PARTNERSHIP: {
+    type: 'MI_CRA_PARTNERSHIP',
+    title: 'Michigan CRA Partnership Outreach',
+    priority: 7,
   },
 };
 
@@ -63,6 +93,7 @@ export const taskTemplates: Record<MissionType, TaskTemplate[]> = {
         context: 'authichain-unified full-stack TypeScript Cloudflare Worker',
       },
     },
+    // PLAN_SPRINT dynamically enqueues: WRITE_CODE → OPEN_PR → RUN_TESTS → CODE_REVIEW → MERGE_PR → MONITOR_DEPLOY
   ],
   GOV_PILOT: [
     { kind: 'BUILD_PILOT_PACKET',      payload: { segment: 'GOV' } },
@@ -102,17 +133,48 @@ export const taskTemplates: Record<MissionType, TaskTemplate[]> = {
     { kind: 'CHECK_DNS_CONFIG',          payload: { domain: 'authichain.com' } },
     { kind: 'VERIFY_SSL',               payload: { domain: 'authichain.com' } },
     { kind: 'RUN_LIGHTHOUSE_AUDIT',     payload: { url: 'https://authichain.com' } },
+    { kind: 'SECURITY_AUDIT',           payload: { scope: 'full_platform', compliance: ['EU_DPP', 'FIPS_140_2'] } },
     { kind: 'GENERATE_LAUNCH_CHECKLIST', payload: { scope: 'full_launch' } },
     { kind: 'DRAFT_LAUNCH_EMAIL',       payload: { audience: 'founders' } },
     { kind: 'DRAFT_PRESS_RELEASE',      payload: {} },
     { kind: 'SCHEDULE_SOCIAL_POSTS',    payload: { platforms: ['twitter', 'linkedin'] } },
   ],
-  GOVCHAIN_LAUNCH: [
-    { kind: 'CHECK_DNS_CONFIG',          payload: { domain: 'govchain.us' } },
-    { kind: 'VERIFY_SSL',               payload: { domain: 'govchain.us' } },
-    { kind: 'DRAFT_INTEL_DOSSIER',      payload: { segment: 'GOV', focus: 'sovereign_trust' } },
-    { kind: 'GENERATE_LAUNCH_CHECKLIST', payload: { scope: 'govchain_launch' } },
-    { kind: 'DRAFT_PRESS_RELEASE',      payload: { focus: 'government_blockchain' } },
-    { kind: 'SCHEDULE_SOCIAL_POSTS',    payload: { platforms: ['twitter', 'linkedin'] } },
+  LUXURY_OUTREACH: [
+    { kind: 'FIND_LUXURY_LEADS', payload: { count: 20, icp: 'Head of Brand Protection at luxury fashion houses' } },
+    { kind: 'DRAFT_OUTBOUND_EMAIL', payload: { segment: 'LUXURY', sequence: 1 } },
+    { kind: 'FOLLOWUP_SEQUENCE', payload: { segment: 'LUXURY', maxFollowups: 3 } },
+    { kind: 'CRM_UPDATE', payload: { segment: 'LUXURY', dealStage: 'contacted' } },
+  ],
+  PHARMA_OUTREACH: [
+    { kind: 'FIND_PHARMA_LEADS', payload: { count: 15, icp: 'Chief Compliance Officer at generic pharmaceutical manufacturers' } },
+    { kind: 'DRAFT_OUTBOUND_EMAIL', payload: { segment: 'PHARMA', sequence: 1 } },
+    { kind: 'FOLLOWUP_SEQUENCE', payload: { segment: 'PHARMA', maxFollowups: 4 } },
+    { kind: 'CRM_UPDATE', payload: { segment: 'PHARMA', dealStage: 'contacted' } },
+  ],
+  MEDTECH_OUTREACH: [
+    { kind: 'FIND_MEDTECH_LEADS', payload: { count: 10, icp: 'Compliance Director at medical device manufacturer' } },
+    { kind: 'DRAFT_OUTBOUND_EMAIL', payload: { segment: 'MEDTECH', sequence: 1 } },
+    { kind: 'FOLLOWUP_SEQUENCE', payload: { segment: 'MEDTECH', maxFollowups: 3 } },
+    { kind: 'CRM_UPDATE', payload: { segment: 'MEDTECH', dealStage: 'contacted' } },
+  ],
+  TIMEPIECE_OUTREACH: [
+    { kind: 'FIND_TIMEPIECE_LEADS', payload: { count: 15, icp: 'CEO or Founder of independent luxury watch brand' } },
+    { kind: 'DRAFT_OUTBOUND_EMAIL', payload: { segment: 'TIMEPIECE', sequence: 1 } },
+    { kind: 'FOLLOWUP_SEQUENCE', payload: { segment: 'TIMEPIECE', maxFollowups: 2 } },
+    { kind: 'CRM_UPDATE', payload: { segment: 'TIMEPIECE', dealStage: 'contacted' } },
+  ],
+  MEDTECH_VIDEO_BRIEFING: [
+    { kind: 'GENERATE_OUTREACH_VIDEO', payload: { segment: 'MEDTECH', useCase: 'ISO 13485 audit automation and recall risk mitigation' } },
+    { kind: 'DRAFT_OUTBOUND_EMAIL',    payload: { segment: 'MEDTECH', sequence: 2, includeVideo: true } },
+  ],
+  MI_CRA_PARTNERSHIP: [
+    { kind: 'DRAFT_LAUNCH_EMAIL',       payload: { audience: 'GOV', topic: 'Michigan CRA Audit Integrity Shield Proposal' } },
+    { kind: 'DRAFT_OUTBOUND_EMAIL',     payload: { segment: 'GOV', sequence: 1, recipient: 'directors@cra.michigan.gov' } },
+  ],
+  NEWSJACKING_LAUNCH: [
+    { kind: 'MONITOR_NEWS_FOR_PR', payload: { topics: ['medical device recall', 'counterfeit pharma', 'luxury forgery'] } },
+    { kind: 'DRAFT_PRESS_RELEASE', payload: { newsjacking: true } },
+    { kind: 'DRAFT_OUTBOUND_EMAIL', payload: { segment: 'PRESS', sequence: 1 } },
+    { kind: 'SCHEDULE_SOCIAL_POSTS', payload: { platforms: ['twitter', 'linkedin'] } },
   ],
 };

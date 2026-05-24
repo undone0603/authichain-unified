@@ -1,6 +1,5 @@
 import { markTaskRunning, markTaskDone, markTaskFailed, logActivity } from '../db.js';
-import type { MissionTask } from '../../drizzle/schema.js';
-type Task = MissionTask;
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 import { runLeadFinder } from '../agents/lead-finder.js';
 import { runOutboundEmail } from '../agents/outbound-email.js';
 import { runFollowupSequence } from '../agents/followup.js';
@@ -22,6 +21,8 @@ import {
   runAutoReply,
 } from '../agents/closer.js';
 import { runGenerateOutreachVideo } from '../agents/heygen-video.js';
+import { runSecurityAudit } from '../agents/security.js';
+import { runNewsjackingMonitor } from '../agents/news-pr.js';
 import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
 import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
 import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
@@ -33,6 +34,9 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
     switch (task.kind) {
       case 'FIND_GOV_LEADS':
       case 'FIND_RETAIL_LEADS':
+      case 'FIND_LUXURY_LEADS':
+      case 'FIND_PHARMA_LEADS':
+      case 'FIND_TIMEPIECE_LEADS':
         await runLeadFinder(task);
         break;
 
@@ -46,18 +50,6 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'BUILD_PILOT_PACKET':
         await runBuildPilotPacket(task);
-        break;
-
-      case 'CHECK_DNS_CONFIG':
-        await runCheckDnsConfig(task);
-        break;
-
-      case 'VERIFY_SSL':
-        await runVerifySsl(task);
-        break;
-
-      case 'RUN_LIGHTHOUSE_AUDIT':
-        await runLighthouseAudit(task);
         break;
 
       case 'DRAFT_INTEL_DOSSIER':
@@ -74,6 +66,18 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'PACKAGE_SKU_ONBOARDING':
         await runPackageSkuOnboarding(task);
+        break;
+
+      case 'CHECK_DNS_CONFIG':
+        await runCheckDnsConfig(task);
+        break;
+
+      case 'VERIFY_SSL':
+        await runVerifySsl(task);
+        break;
+
+      case 'RUN_LIGHTHOUSE_AUDIT':
+        await runLighthouseAudit(task);
         break;
 
       case 'GENERATE_LAUNCH_CHECKLIST':
@@ -114,6 +118,14 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'GENERATE_OUTREACH_VIDEO':
         await runGenerateOutreachVideo(task);
+        break;
+
+      case 'SECURITY_AUDIT':
+        await runSecurityAudit(task);
+        break;
+
+      case 'MONITOR_NEWS_FOR_PR':
+        await runNewsjackingMonitor(task);
         break;
 
       // ── Dev Team ────────────────────────────────────────────────────────

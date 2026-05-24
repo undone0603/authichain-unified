@@ -5,6 +5,7 @@
  */
 import { ENV } from "./_core/env";
 import * as db from "./db";
+import { broadcastSocialProof } from "./social-service";
 
 interface MetrcAuth {
   vendorKey: string;
@@ -113,7 +114,6 @@ export async function anchorPackageToTruthLayer(packageTag: string, manifestId: 
   const txId: string = data.txId ?? data.inscriptionId ?? "";
 
   try {
-    const { broadcastSocialProof } = await import("./social-service");
     await broadcastSocialProof({
       type: "inscription",
       brandName: "Michigan Processor",

@@ -1,7 +1,9 @@
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
+import { sendEmail } from "../email-service";
+import { TRPCError } from "@trpc/server";
 
 export const emailCampaignsRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -13,11 +15,41 @@ export const emailCampaignsRouter = router({
     body: z.string().min(1),
     type: z.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
     scheduledAt: z.string().optional(),
+    targetEmail: z.string().email().optional(),
   })).mutation(async ({ ctx, input }) => {
     return await db.createEmailCampaign({
       ...input, userId: ctx.user.id, status: input.scheduledAt ? "scheduled" : "draft",
       scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
     });
+  }),
+  send: protectedProcedure.input(z.object({
+    campaignId: z.number(),
+    targetEmail: z.string().email(),
+  })).mutation(async ({ ctx, input }) => {
+    const campaigns = await db.getUserEmailCampaigns(ctx.user.id);
+    const campaign = campaigns.find(c => c.id === input.campaignId);
+    if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
+
+    const result = await sendEmail({
+      to: input.targetEmail,
+      subject: campaign.subject,
+      body: campaign.body,
+    });
+
+    if (result.status === "sent") {
+      await db.updateEmailCampaign(input.campaignId, {
+        status: "sent",
+        sentAt: new Date(),
+        targetEmail: input.targetEmail,
+        providerMessageId: result.providerMessageId,
+      });
+      return { success: true, messageId: result.providerMessageId };
+    } else {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to send email: ${result.reason || "unknown error"}`,
+      });
+    }
   }),
   generateContent: protectedProcedure.input(z.object({
     type: z.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
@@ -43,8 +75,7 @@ export const emailCampaignsRouter = router({
         },
       },
     });
-    const rawContent = response.choices?.[0]?.message?.content as string | undefined;
-    if (!rawContent) throw new Error("Email content generation returned empty response");
-    return JSON.parse(rawContent);
+    return parseLLMContent<any>(response.choices[0].message.content);
   }),
 });
+

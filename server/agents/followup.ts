@@ -1,11 +1,10 @@
-import { invokeLLM } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { ENV } from '../_core/env.js';
 import { sendEmail } from '../email-service.js';
 import { logActivity, getDb, markTaskWaitingHuman } from '../db.js';
 import { emailDrafts, leads } from '../../drizzle/schema.js';
 import { eq, and, lte, inArray } from 'drizzle-orm';
-import type { MissionTask } from '../../drizzle/schema.js';
-type Task = MissionTask;
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 interface FollowupPayload {
   segment?: string;
@@ -27,7 +26,7 @@ export async function runFollowupSequence(task: Task): Promise<void> {
   const dueLeads = await db.select().from(leads).where(
     and(
       eq(leads.segment, segment),
-      inArray(leads.status, ['contacted'] as any),
+      inArray(leads.status, ['CONTACTED']),
       lte(leads.nextActionAt, now),
     )
   );
@@ -54,7 +53,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
     let subject: string;
     let body: string;
     try {
-      const parsed = JSON.parse(result.choices[0].message.content as string ?? '{}');
+      const parsed = parseLLMContent<any>(result.choices[0].message.content);
       subject = parsed.subject ?? `Follow-up ${followupNum}: AuthiChain`;
       body = parsed.body ?? '';
     } catch {
@@ -84,7 +83,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
       const sendResult = await sendEmail({ to: lead.email, subject, body });
       await db.update(leads)
         .set({
-          status: 'contacted',
+          status: 'CONTACTED',
           lastContactedAt: now,
           nextActionAt,
           metadata: { ...meta, followupCount: followupNum },
