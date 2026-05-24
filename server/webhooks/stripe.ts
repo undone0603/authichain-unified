@@ -150,6 +150,31 @@ export async function handleStripeWebhook(
   }
 
   switch (event.type) {
+    // ── V2 Core Account Events (Thin) ───────────────────────────────────────
+    case "v2.core.account.capability_status_updated" as any: {
+      const accountEvent = (event as unknown as { data: { object: { account: string } } }).data.object;
+      const accountId = accountEvent.account;
+      console.log(`[stripe-webhook] Capability updated for account: ${accountId}`);
+
+      try {
+        const dbModule = await import("../db") as any;
+        if (typeof dbModule.setVendorKycStatus === "function") {
+          await dbModule.setVendorKycStatus(accountId, "completed");
+        }
+      } catch {
+        // setVendorKycStatus may not exist in all environments — non-fatal
+      }
+
+      await logAutomationAudit(
+        "vendor_kyc_completed",
+        {
+          eventId: event.id,
+          stripeAccountId: accountId,
+        }
+      );
+      break;
+    }
+
     // ── Subscription created / updated ──────────────────────────────────────
     case "customer.subscription.created":
     case "customer.subscription.updated": {
@@ -172,11 +197,11 @@ export async function handleStripeWebhook(
           billingCycle,
           stripeCustomerId: customerId ?? null,
           stripeSubscriptionId: sub.id,
-          currentPeriodStart: sub.current_period_start
-            ? new Date(sub.current_period_start * 1000)
+          currentPeriodStart: (sub as any).current_period_start
+            ? new Date((sub as any).current_period_start * 1000)
             : new Date(),
-          currentPeriodEnd: sub.current_period_end
-            ? new Date(sub.current_period_end * 1000)
+          currentPeriodEnd: (sub as any).current_period_end
+            ? new Date((sub as any).current_period_end * 1000)
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
         });
@@ -197,6 +222,63 @@ export async function handleStripeWebhook(
         },
         userId,
       );
+
+      // Welcome email — only on first creation.
+      if (event.type === "customer.subscription.created") {
+        const welcomeTo = sub.metadata?.customer_email
+          || (typeof sub.customer !== "string" ? (sub.customer as Stripe.Customer | undefined)?.email : null)
+          || null;
+        if (welcomeTo) {
+          try {
+            const { sendEmail } = await import("../email-service");
+            const customerName = sub.metadata?.customer_name || "there";
+            const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+            await sendEmail({
+              to: welcomeTo,
+              subject: `Welcome to AuthiChain ${planLabel}`,
+              body: [
+                `Hi ${customerName},`,
+                ``,
+                `Your ${planLabel} subscription is now active — welcome to AuthiChain.`,
+                ``,
+                `Get started:`,
+                `  • Add your first product: https://authichain.com/products`,
+                `  • Generate a QR authentication code: https://authichain.com/qr`,
+                `  • Explore your dashboard: https://authichain.com/dashboard`,
+                ``,
+                `Reply to this email any time with questions.`,
+                ``,
+                `— The AuthiChain Team`,
+              ].join("\n"),
+            });
+          } catch (emailErr) {
+            console.warn("[stripe-webhook] Welcome email failed (non-fatal):", emailErr);
+          }
+        }
+      }
+
+      // HubSpot deal sync — only on first creation, not updates. Non-fatal:
+      // a HubSpot outage must not block billing-state writes.
+      if (event.type === "customer.subscription.created") {
+        try {
+          const customerEmail = sub.metadata?.customer_email
+            || (typeof sub.customer === "string" ? null : (sub.customer as Stripe.Customer | undefined)?.email)
+            || null;
+          if (customerEmail) {
+            const { syncPaymentToHubSpot } = await import("../hubspot-service");
+            const customerName = sub.metadata?.customer_name || undefined;
+            const subscriptionAmount = (firstItem?.price?.unit_amount ?? 0) / 100;
+            await syncPaymentToHubSpot({
+              email: customerEmail,
+              name: customerName,
+              amount: subscriptionAmount,
+              plan,
+            });
+          }
+        } catch (hsErr) {
+          console.warn("[HubSpot] Subscription sync failed (non-fatal):", hsErr);
+        }
+      }
 
       console.log(`[stripe-webhook] Subscription ${event.type === "customer.subscription.created" ? "created" : "updated"}: ${sub.id} → plan=${plan} status=${status}`);
       break;
@@ -228,11 +310,11 @@ export async function handleStripeWebhook(
     // ── Invoice payment succeeded ────────────────────────────────────────────
     case "invoice.payment_succeeded":
     case "invoice.paid": {
-      const inv = event.data.object as Stripe.Invoice;
-      const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
+      const inv = event.data.object as any;
+      const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
       const subscriptionId = typeof inv.subscription === "string"
         ? inv.subscription
-        : (inv.subscription as any)?.id;
+        : inv.subscription?.id;
 
       // Resolve userId — try subscription metadata first, then customer
       let userId: number | undefined;
@@ -291,11 +373,11 @@ export async function handleStripeWebhook(
 
     // ── Invoice payment failed ───────────────────────────────────────────────
     case "invoice.payment_failed": {
-      const inv = event.data.object as Stripe.Invoice;
-      const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
+      const inv = event.data.object as any;
+      const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
       const subscriptionId = typeof inv.subscription === "string"
         ? inv.subscription
-        : (inv.subscription as any)?.id;
+        : inv.subscription?.id;
 
       let userId: number | undefined;
       if (subscriptionId) {
@@ -343,6 +425,72 @@ export async function handleStripeWebhook(
       const amountUsd = amountCents / 100;
       const customerId = typeof session.customer === "string" ? session.customer : undefined;
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : undefined;
+
+      // Record Revenue
+      if (amountUsd > 0) {
+        await recordRevenue({
+          source: "stripe",
+          amount: amountUsd.toFixed(2),
+          currency: (session.currency ?? "usd").toUpperCase(),
+          type: "subscription",
+          userId: userId ?? null,
+          metadata: {
+            eventId: event.id,
+            sessionId: session.id,
+            stripeSubscriptionId: subscriptionId ?? null,
+            stripeCustomerId: customerId ?? null,
+            brand: session.metadata?.brand ?? null,
+            contract: session.metadata?.contract === "true",
+            setupOrderId: session.metadata?.setup_order_id ?? null,
+          },
+        });
+
+        // 1. Mark service order as paid + notify customer
+        try {
+          await handleServiceOrderPayment(session);
+        } catch (orderErr) {
+          console.warn("[ServiceOrder] Mark-paid failed:", orderErr);
+        }
+
+        // 2. Trigger Physical Fulfillment Bridge (Security Seals)
+        try {
+          const { triggerFulfillmentFromPayment } = await import("../fulfillment-service");
+          await triggerFulfillmentFromPayment(session.id);
+        } catch (fillErr) {
+          console.warn("[Fulfillment] Trigger failed:", fillErr);
+        }
+
+        // 3. Send a payment-confirmation email
+        const confirmTo = session.customer_email
+          || session.metadata?.customer_email
+          || null;
+        if (confirmTo) {
+          try {
+            const customerName = session.metadata?.customer_name || "there";
+            const serviceKey = session.metadata?.service_key || session.metadata?.plan || "your purchase";
+            const amountStr = `$${amountUsd.toFixed(2)} ${(session.currency ?? "usd").toUpperCase()}`;
+            const body = [
+              `Hi ${customerName},`,
+              ``,
+              `Thanks — your payment of ${amountStr} for ${serviceKey} is confirmed.`,
+              ``,
+              `You can track this order anytime at https://authichain.com/orders.`,
+              ``,
+              `If you have any questions, just reply to this email.`,
+              ``,
+              `— The AuthiChain Team`,
+            ].join("\n");
+            await sendEmail({
+              to: confirmTo,
+              subject: `Payment confirmed — ${serviceKey}`,
+              body,
+            });
+          } catch (emailErr) {
+            console.warn("[Email] Payment confirmation send failed:", emailErr);
+          }
+        }
+      }
+
 
       await logAutomationAudit(
         "billing_checkout_completed",
