@@ -36,7 +36,14 @@ const nextConfig: NextConfig = {
   },
   
   experimental: {
-    serverActions: { allowedOrigins: ['qron.space', 'www.qron.space'] },
+    serverActions: {
+      allowedOrigins: [
+        'qron.space', 'www.qron.space',
+        'authichain.com', 'www.authichain.com',
+        'strainchain.io', 'www.strainchain.io',
+        'govchain.us', 'www.govchain.us',
+      ],
+    },
   },
   
   turbopack: {},
