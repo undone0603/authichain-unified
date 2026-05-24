@@ -34,7 +34,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Patch missing Shadcn dependencies
         # Workaround: Installs the missing Tailwind v4 package workspace-wide
@@ -51,9 +51,16 @@ jobs:
           VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
           VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
 
-      - name: Publish Worker + Assets
+      - name: Publish Worker + Assets (dashboard.authichain.com)
         run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/authichain-dashboard
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Publish authichain.com landing page worker
+        run: npx wrangler deploy --config wrangler.toml
+        working-directory: workers/authichain-com
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
