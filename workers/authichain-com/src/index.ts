@@ -2499,15 +2499,26 @@ export default {
       return Response.redirect('https://authichain-unified.vercel.app/dashboard', 302);
     }
     if (p === '/demo' || p.startsWith('/demo/')) {
-      return Response.redirect('https://authichain-unified.vercel.app', 302);
+      return Response.redirect('https://authichain-unified.vercel.app/subscriptions', 302);
     }
-    // Proxy app routes to the Vercel deployment instead of serving marketing HTML
-    const APP_PREFIXES = ['/dashboard', '/api/', '/verify/', '/auth', '/login', '/logout',
+    // Proxy app routes to the Vercel deployment instead of serving marketing HTML.
+    // Prefixes must NOT have a trailing slash so the startsWith check works correctly
+    // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).
+    const APP_PREFIXES = ['/dashboard', '/api', '/verify', '/auth', '/login', '/logout',
       '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin'];
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       const target = new URL(request.url);
       target.hostname = 'authichain-unified.vercel.app';
-      return fetch(new Request(target.toString(), request));
+      target.protocol = 'https:';
+      // Replace the Host header so Vercel routes to the correct project
+      const headers = new Headers(request.headers);
+      headers.set('Host', 'authichain-unified.vercel.app');
+      return fetch(new Request(target.toString(), {
+        method: request.method,
+        headers,
+        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+        redirect: 'follow',
+      }));
     }
     return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
   }
