@@ -2404,7 +2404,7 @@ function pricing() {
     <div class="pricing-grid">
       <div class="card glass pricing-card">
         <div class="pricing-label">Starter</div>
-        <div class="pricing-price">$49<span>/mo</span></div>
+        <div class="pricing-price">$199<span>/mo</span></div>
         <ul class="pricing-features">
           <li>500 product seals / mo</li>
           <li>ERC-721 NFT certificates</li>
@@ -2412,11 +2412,11 @@ function pricing() {
           <li>Public verify page</li>
           <li>Email support</li>
         </ul>
-        <a href="/dashboard" class="btn btn-secondary" style="text-align:center">Get Started</a>
+        <a href="https://buy.stripe.com/fZu00jevL2l08umcHG1Nx0U" class="btn btn-secondary" style="text-align:center">Get Started</a>
       </div>
       <div class="card glass pricing-card featured">
-        <div class="pricing-label">Growth ✦ Most Popular</div>
-        <div class="pricing-price">$299<span>/mo</span></div>
+        <div class="pricing-label">Professional ✦ Most Popular</div>
+        <div class="pricing-price">$499<span>/mo</span></div>
         <ul class="pricing-features">
           <li>5,000 product seals / mo</li>
           <li>All Starter features</li>
@@ -2425,20 +2425,20 @@ function pricing() {
           <li>BTC Ordinals anchoring</li>
           <li>Priority support</li>
         </ul>
-        <a href="/dashboard" class="btn btn-primary" style="text-align:center">Start Free Trial</a>
+        <a href="https://buy.stripe.com/9B6aEXgDTf7MfWO2321Nx0V" class="btn btn-primary" style="text-align:center">Subscribe Now</a>
       </div>
       <div class="card glass pricing-card">
         <div class="pricing-label">Enterprise</div>
-        <div class="pricing-price">$1,999<span>/mo</span></div>
+        <div class="pricing-price">$999<span>/mo</span></div>
         <ul class="pricing-features">
           <li>Unlimited seals</li>
-          <li>All Growth features</li>
+          <li>All Professional features</li>
           <li>CSRD / DSCSA / EUDR exports</li>
           <li>Dedicated Cloudflare edge</li>
           <li>Custom subdomain microsites</li>
           <li>SLA + dedicated support</li>
         </ul>
-        <a href="/dashboard" class="btn btn-secondary" style="text-align:center">Contact Sales</a>
+        <a href="https://buy.stripe.com/3cI00j3R7bVA9yq8rq1Nx0W" class="btn btn-secondary" style="text-align:center">Subscribe Now</a>
       </div>
     </div>
   </div>
