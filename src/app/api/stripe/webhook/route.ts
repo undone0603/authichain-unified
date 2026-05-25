@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-export const runtime = 'nodejs';
+// 1. UPDATED: Must be edge for Cloudflare Pages
+export const runtime = 'edge';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,7 +25,8 @@ export async function POST(req: NextRequest) {
 
   let event: any;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    // 2. UPDATED: Must use constructEventAsync for Edge compatibility
+    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
   } catch (err: any) {
     console.error('Stripe webhook signature verification failed:', err.message);
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
