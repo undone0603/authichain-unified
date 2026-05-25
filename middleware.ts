@@ -9,13 +9,14 @@ export const config = {
 export function middleware(req: NextRequest) {
   const host = req.headers.get('host') ?? req.nextUrl.hostname;
 
-  // Inline brand resolution — no external imports that could break edge bundling
+  // Inline brand resolution - no external imports that could break edge bundling
   const brandMap: Record<string, string> = {
     'qron.space': 'qron', 'www.qron.space': 'qron', 'qron.io': 'qron',
     'strainchain.io': 'strainchain', 'www.strainchain.io': 'strainchain',
     'govchain.us': 'govchain', 'www.govchain.us': 'govchain',
     'authichain.com': 'authichain', 'www.authichain.com': 'authichain',
   };
+
   const h = host.toLowerCase().split(':')[0];
   let brand = brandMap[h] ?? 'authichain';
   if (brand === 'authichain') {
@@ -26,5 +27,6 @@ export function middleware(req: NextRequest) {
 
   const reqHeaders = new Headers(req.headers);
   reqHeaders.set('x-brand', brand);
+
   return NextResponse.next({ request: { headers: reqHeaders } });
 }
