@@ -25,6 +25,9 @@ importers:
       '@clerk/themes':
         specifier: ^2.1.20
         version: 2.4.57(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@hubspot/api-client':
+        specifier: ^13.5.0
+        version: 13.5.0
       '@lucia-auth/adapter-drizzle':
         specifier: ^1.1.0
         version: 1.1.0(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.21.0)(postgres@3.4.9))(lucia@3.2.2)
@@ -1391,6 +1394,10 @@ packages:
 
   '@hey-api/types@0.1.4':
     resolution: {integrity: sha512-thWfawrDIP7wSI9ioT13I5soaaqB5vAPIiZmgD8PbeEVKNrkonc0N/Sjj97ezl7oQgusZmaNphGdMKipPO6IBg==}
+
+  '@hubspot/api-client@13.5.0':
+    resolution: {integrity: sha512-zZ9ybOqudSgAZSow5dgYWRkslDPfqA2fWnERMqWQm6ASlM/XCFS6zoec0zD3d6OxeoLOfiovVo39gVpK+KWQ9Q==}
+    engines: {node: '>=18.0.0'}
 
   '@humanwhocodes/config-array@0.13.0':
     resolution: {integrity: sha512-DZLEEqFWQFiyK6h5YIeynKx7JlvCYWL0cImfSRXZ9l4Sg2efkFGTuFf6vzXjK1cq6IYkU+Eg/JizXw+TD2vRNw==}
@@ -4634,6 +4641,9 @@ packages:
   bn.js@5.2.3:
     resolution: {integrity: sha512-EAcmnPkxpntVL+DS7bO1zhcZNvCkxqtkd0ZY53h06GNQ3DEkkGZ/gKgmDv6DdZQGj9BgfSPKtJJ7Dp1GPP8f7w==}
 
+  bottleneck@2.19.5:
+    resolution: {integrity: sha512-VHiNCbI1lKdl44tGrhNfU3lup0Tj/ZBMJB5/2ZbNXRCPuRCO7ed2mgcK4r17y+KB2EfuYuRaVlwNbAeaWGSpbw==}
+
   bowser@2.14.1:
     resolution: {integrity: sha512-tzPjzCxygAKWFOJP011oxFHs57HzIhOEracIgAePE4pqB3LikALKnSzUyU4MGs9/iCEUuHlAJTjTc5M+u7YEGg==}
 
@@ -5261,6 +5271,9 @@ packages:
 
   es-toolkit@1.39.3:
     resolution: {integrity: sha512-Qb/TCFCldgOy8lZ5uC7nLGdqJwSabkQiYQShmw4jyiPk1pZzaYWTwaYKYP7EgLccWYgZocMrtItrwh683voaww==}
+
+  es6-promise@4.2.8:
+    resolution: {integrity: sha512-HJDGx5daxeIvxdBxvG2cb9g4tEvwIk3i8+nhX0yGrYmZUzbkdg8QbDevheDB8gd0//uPj4c1EQua8Q+MViT0/w==}
 
   esbuild-register@3.6.0:
     resolution: {integrity: sha512-H2/S7Pm8a9CL1uhp9OvjwrBh5Pvx0H8qVOxNu8Wed9Y7qv56MPtq+GGM8RJpq6glYJn9Wspr8uw7l55uyinNeg==}
@@ -8918,6 +8931,18 @@ snapshots:
       '@hey-api/types': 0.1.4
 
   '@hey-api/types@0.1.4': {}
+
+  '@hubspot/api-client@13.5.0':
+    dependencies:
+      '@types/node': 22.19.19
+      '@types/node-fetch': 2.6.13
+      bottleneck: 2.19.5
+      es6-promise: 4.2.8
+      form-data: 4.0.5
+      lodash.merge: 4.6.2
+      node-fetch: 2.7.0
+    transitivePeerDependencies:
+      - encoding
 
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
@@ -13158,6 +13183,8 @@ snapshots:
 
   bn.js@5.2.3: {}
 
+  bottleneck@2.19.5: {}
+
   bowser@2.14.1: {}
 
   brace-expansion@1.1.14:
@@ -13757,6 +13784,8 @@ snapshots:
   es-toolkit@1.33.0: {}
 
   es-toolkit@1.39.3: {}
+
+  es6-promise@4.2.8: {}
 
   esbuild-register@3.6.0(esbuild@0.19.12):
     dependencies:
