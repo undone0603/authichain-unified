@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "outputDirectory": "dist/public",
+
   "rewrites": [
     { "source": "/gov", "destination": "https://govchain.us" },
     { "source": "/api/(.*)", "destination": "/api/server.js" },
