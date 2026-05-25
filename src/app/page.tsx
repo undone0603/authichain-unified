@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   ScanLine,
   Coins,
+  Terminal,
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -36,6 +37,88 @@ const StaticImageGallery = dynamic(
     import('@/components/StaticImageGallery').then((m) => m.StaticImageGallery),
   { ssr: false }
 );
+
+// --- NEW COMPONENT: Interactive 3D Hero & 5-Agent Visualizer ---
+function InteractiveHero() {
+  const [logIndex, setLogIndex] = useState(0);
+  const logs = [
+    "Agent 1 (Vision): Extracting physical traits...",
+    "Agent 2 (Provenance): Cross-referencing origin data...",
+    "Agent 3 (Material): Validating surface textures...",
+    "Agent 4 (Security): Hashing local entropy...",
+    "Agent 5 (Consensus): 99.8% match. Direct fetch initiated."
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLogIndex((prev) => (prev < logs.length - 1 ? prev + 1 : prev));
+    }, 1500);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <section className="py-12 relative" id="scannable-identity">
+      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+        {/* Copy & Value Prop */}
+        <div className="text-left">
+          <span className="text-gold font-mono text-sm tracking-widest uppercase mb-4 block">
+            03 / Scannable Identity
+          </span>
+          <h2 className="text-4xl md:text-5xl font-black text-white mb-6 leading-tight tracking-tight">
+            Interactive Art meets <br /> <span className="text-zinc-500">Immutable State.</span>
+          </h2>
+          <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
+            Beyond verification. Turn your products into interactive art. Our AI generates thematic, 3D-textured QR codes that blend seamlessly with your brand packaging while anchoring an immutable ERC-721 certificate.
+          </p>
+          
+          <div className="flex flex-wrap gap-4 mt-8">
+             <div className="px-6 py-2 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+               <Shield className="w-4 h-4 text-gold" /> Protocol Live
+             </div>
+             <div className="px-6 py-2 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+               <Zap className="w-4 h-4 text-gold" /> Edge Optimized
+             </div>
+          </div>
+        </div>
+
+        {/* WebGL Placeholder & 5-Agent Visualizer */}
+        <div className="protocol-card bg-zinc-950/50 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl relative">
+          {/* 3D Canvas Placeholder */}
+          <div className="h-72 w-full bg-[#050505] relative flex items-center justify-center overflow-hidden">
+             <div className="absolute inset-0 bg-gold/5 blur-3xl animate-pulse" />
+             <div className="relative z-10 w-40 h-40 border border-gold/20 bg-zinc-800/50 rounded-2xl flex items-center justify-center backdrop-blur-sm transform rotate-3 hover:rotate-0 transition-transform duration-700 shadow-[0_0_40px_rgba(201,162,39,0.15)]">
+                <Sparkles className="w-16 h-16 text-gold opacity-80 animate-pulse" />
+                <span className="absolute -bottom-8 text-xs text-gold font-mono uppercase tracking-widest text-center w-full">Interactive<br/>WebGL</span>
+             </div>
+          </div>
+          
+          {/* Simulated Terminal Feed */}
+          <div className="bg-black/90 p-5 border-t border-zinc-800 font-mono text-xs">
+            <div className="flex items-center gap-2 mb-4 text-zinc-500 font-bold uppercase tracking-widest">
+              <Terminal className="w-4 h-4 text-gold" />
+              <span>5-Agent Consensus Network</span>
+            </div>
+            <div className="space-y-2 h-32 flex flex-col justify-end">
+              {logs.slice(0, logIndex + 1).map((log, i) => (
+                <div key={i} className={`flex items-start gap-2 ${i === logs.length - 1 ? 'text-green-400' : 'text-zinc-400'}`}>
+                  <span className="text-zinc-600">{'>'}</span>
+                  <span>{log}</span>
+                </div>
+              ))}
+              {logIndex < logs.length - 1 && (
+                 <div className="flex items-start gap-2 text-zinc-600 animate-pulse">
+                   <span>{'>'}</span>
+                   <span className="w-2 h-3 bg-zinc-600 block mt-0.5" />
+                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+// --- END NEW COMPONENT ---
 
 export default function Home() {
   const hasSupabaseEnv =
@@ -320,126 +403,9 @@ export default function Home() {
   return (
     <div className="min-h-screen protocol-bg text-white">
       <div className="container mx-auto px-4 py-12 max-w-6xl">
-        {/* Hero */}
-        <div className="text-center mb-14">
-          {/* Protocol badge */}
-          <div className="flex justify-center mb-6">
-            <span className="protocol-badge">
-              <Shield className="w-3 h-3" />
-              Creative Layer of the AuthiChain Protocol
-            </span>
-          </div>
-
-          {/* Hero QR Art */}
-          <div className="flex justify-center mb-6 animate-float">
-            <Image
-              src="/media/samples/01_flux_qron_space.png"
-              alt="QRON Space Artistic AI"
-              width={220}
-              height={220}
-              priority
-              style={{ filter: 'drop-shadow(0 0 32px rgba(255,215,0,0.35))' }}
-            />
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-extrabold mb-4 leading-tight tracking-tight">
-            <span className="gold-text">QRON</span>
-          </h1>
-          <p
-            className="text-xl md:text-2xl font-light mb-3"
-            style={{ color: '#c8c8c8' }}
-          >
-            Cryptographically verified QR art.
-          </p>
-          <p
-            className="text-base max-w-xl mx-auto"
-            style={{ color: '#6b6b6b' }}
-          >
-            Where authentication meets artistry — every QRON is signed by the{' '}
-            <a
-              href="https://authichain.com"
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                color: '#c9a227',
-                textDecoration: 'none',
-                fontWeight: 600,
-              }}
-            >
-              AuthiChain Protocol
-            </a>{' '}
-            and verifiable by anyone, anywhere.
-          </p>
-
-          {/* Magic Try Buttons */}
-          <div className="flex flex-wrap justify-center gap-4 mt-8">
-             <span className="w-full text-[10px] font-black uppercase tracking-[0.2em] text-zinc-700 mb-2">Instant Demo:</span>
-             {['Tesla', 'Nike', 'Rolex', 'Hermes', 'Chanel', 'Moderna', 'Gilmore', 'Metrc'].map(brand => (
-               <button
-                 key={brand}
-                 onClick={() => handleMagicTry(brand)}
-                 disabled={isMagicGenerating || loading}
-                 className="px-6 py-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-gold/50 transition-all text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-white"
-               >
-                 Try for {brand}
-               </button>
-             ))}
-          </div>
-
-          {/* Stat strip */}
-          <div className="flex flex-wrap justify-center gap-8 mt-12">
-            {[
-              {
-                icon: <Zap className="w-4 h-4" />,
-                stat: '~25%',
-                label: 'scan lift vs plain QR',
-              },
-              {
-                icon: <Lock className="w-4 h-4" />,
-                stat: 'Ed25519',
-                label: 'cryptographic signature',
-              },
-              {
-                icon: <Shield className="w-4 h-4" />,
-                stat: '99.7%',
-                label: 'verification accuracy',
-              },
-            ].map(({ icon, stat, label }) => (
-              <div
-                key={label}
-                className="flex items-center gap-2"
-                style={{ color: '#9e9e9e', fontSize: '13px' }}
-              >
-                <span style={{ color: '#c9a227' }}>{icon}</span>
-                <span style={{ color: '#e8c547', fontWeight: 700 }}>
-                  {stat}
-                </span>
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* New Trust Row */}
-          <div className="mt-16 flex flex-col items-center">
-             <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6">
-                <span>Polygon POS</span>
-                <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>NIST Compliant</span>
-                <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>ISO 27001 Ready</span>
-             </div>
-             <div className="px-8 py-4 rounded-2xl bg-gold/5 border border-gold/10 inline-flex items-center gap-6">
-                <div className="text-left border-r border-gold/10 pr-6">
-                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">Live Trust Feed</p>
-                    <p className="text-xl font-black text-white tracking-tighter">1,247 <span className="text-zinc-500 font-medium text-xs tracking-normal uppercase ml-1">Verifications this week</span></p>
-                </div>
-                <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                   <CheckCircle className="w-4 h-4 text-green-500" />
-                   Verified by 5 AI Agents
-                </div>
-             </div>
-          </div>
-        </div>
+        
+        {/* NEW SCANNABLE IDENTITY HERO REPLACES STATIC HERO */}
+        <InteractiveHero />
 
         <div className="gold-divider mb-12" />
 
@@ -456,7 +422,7 @@ export default function Home() {
                  {isMagicGenerating ? 'Synchronizing Brand Assets...' : 'Creating Cinematic QRON...'}
                </h3>
                <p className="text-zinc-500 text-xs font-bold uppercase tracking-[0.2em] max-w-xs leading-loose">
-                 Anchoring to AuthiChain Truth Network â€¢ AI Inference in progress â€¢ ~15s
+                 Anchoring to AuthiChain Truth Network • AI Inference in progress • ~15s
                </p>
             </div>
           )}
@@ -885,7 +851,7 @@ export default function Home() {
                                         <Sparkles className="w-3 h-3 text-gold" /> StoryMode Narrative
                                     </h5>
                                     <p className="text-sm font-medium text-white leading-relaxed italic">
-                                        &quot;This artifact represents a fusion of peak industrial engineering and creative autonomous AI. Every module is a signature of truth, anchored forever on the Polygon network...&quot;
+                                        "This artifact represents a fusion of peak industrial engineering and creative autonomous AI. Every module is a signature of truth, anchored forever on the Polygon network..."
                                     </p>
                                     <div className="mt-6 flex gap-3">
                                         <div className="flex-1 h-10 rounded-xl bg-gold flex items-center justify-center text-black text-xs font-black uppercase tracking-widest">Buy Now</div>
