@@ -54,5 +54,6 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  return NextResponse.json({ message: "HubSpot Edge API route active" });
+  return NextResponse.json({ message: "HubSpot API route is active" });
+}Edge API route active" });
 }
