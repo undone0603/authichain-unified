@@ -44,19 +44,24 @@ export async function runPipelineTick(options?: { force?: boolean }) {
     FIND_LUXURY_LEADS:           'LUXURY',
     FIND_PHARMA_LEADS:           'PHARMA',
     FIND_TIMEPIECE_LEADS:        'TIMEPIECE',
+    FIND_CANNABIS_LEADS:         'CANNABIS',
     DRAFT_OUTBOUND_EMAIL:        'GOV',
+    DRAFT_CANNABIS_OUTREACH:     'CANNABIS',
     FOLLOWUP_SEQUENCE:           'GOV',
     BUILD_PILOT_PACKET:          'PARTNER',
     DRAFT_INTEL_DOSSIER:         'PRESS',
     CRM_UPDATE:                  'PARTNER',
     DRAFT_PRESS_RELEASE:         'PRESS',
-    // Browser agent tasks inherit segment from the lead they serve
+    SEND_CONTRACT:               'HIGH_INTENT',
+    GENERATE_PROPOSAL:           'HIGH_INTENT',
+    CHECK_REPLIES:               'HIGH_INTENT',
+    ANCHOR_METRC_PACKAGE:        'CANNABIS',
     BROWSE_RESEARCH_LEAD:        'DEFAULT',
     BROWSE_COMPETITOR_MONITOR:   'DEFAULT',
     BROWSE_SCRAPE_INDUSTRY_NEWS: 'DEFAULT',
-    BROWSE_VERIFY_PRODUCT_URL:     'DEFAULT',
-    BROWSE_VISION_RESEARCH_LEAD:   'DEFAULT',
-    BROWSE_VISION_FREEFORM:        'DEFAULT',
+    BROWSE_VERIFY_PRODUCT_URL:   'DEFAULT',
+    BROWSE_VISION_RESEARCH_LEAD: 'DEFAULT',
+    BROWSE_VISION_FREEFORM:      'DEFAULT',
   };
 
   const scored = dueTasks.map(task => {
@@ -80,8 +85,13 @@ export async function runPipelineTick(options?: { force?: boolean }) {
   // ── PMF auto-scale: if a segment's posterior mean exceeds threshold AND
   //    no active mission of that type exists, create one automatically. ──────
   const PMF_THRESHOLDS: Record<string, { missionType: string; threshold: number }> = {
-    GOV:    { missionType: 'GOV_PILOT',    threshold: 0.12 },
-    RETAIL: { missionType: 'RETAIL_PILOT', threshold: 0.10 },
+    GOV:      { missionType: 'GOV_PILOT',        threshold: 0.05 },
+    RETAIL:   { missionType: 'RETAIL_PILOT',      threshold: 0.04 },
+    LUXURY:   { missionType: 'LUXURY_BLITZ',      threshold: 0.03 },
+    PHARMA:   { missionType: 'PHARMA_AUDIT',      threshold: 0.03 },
+    // Cannabis is the warmest vertical — 9+ named chains in HubSpot pipeline.
+    // Low threshold so missions auto-spawn as soon as any prior data exists.
+    CANNABIS: { missionType: 'STRAINCHAIN_BLITZ', threshold: 0.02 },
   };
   const activeMissionTypes = await getActiveMissionTypes();
   const pmfCreated: string[] = [];

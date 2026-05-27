@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { timingSafeEqual as cryptoTimingSafeEqual } from "crypto";
-import express from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -14,11 +14,21 @@ function timingSafeEqual(a: string, b: string): boolean {
   }
 }
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import cors from "cors";
+import { rateLimit } from "express-rate-limit";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { createInternalRouter } from "../internal-api";
-import { brandMiddleware } from "./brand-middleware";
+import { resolveBrand } from "../../shared/brands";
+
+function brandMiddleware(req: Request, res: Response, next: NextFunction) {
+  const host = req.headers.host ?? req.hostname ?? "";
+  const brand = resolveBrand(host);
+  res.locals.brand = brand;
+  res.setHeader("X-Brand", brand);
+  next();
+}
 import contactRouter from "../contact";
 import gptRouter from "../gpt/router";
 import {
@@ -27,6 +37,44 @@ import {
   gptRateLimit,
   globalApiRateLimit,
 } from "./rate-limit";
+
+const ALLOWED_ORIGINS = [
+  "https://authichain.com",
+  "https://www.authichain.com",
+  "https://govchain.us",
+  "https://strainchain.io",
+  "https://qron.io",
+  ...(process.env.NODE_ENV !== "production"
+    ? ["http://localhost:3000", "http://localhost:5173"]
+    : []),
+];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, cb) => {
+    // Allow server-to-server (no Origin header) and known origins
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error(`CORS: origin not allowed — ${origin}`));
+  },
+  credentials: true,
+};
+
+// 100 req/min per IP for the tRPC API
+const trpcLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please slow down." },
+});
+
+// Tighter limit for auth-adjacent OAuth callbacks
+const authLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many auth requests." },
+});
 
 /**
  * Creates and configures the Express app without binding to a port.
@@ -40,7 +88,6 @@ export function createApp() {
 
   // ─── Security headers ─────────────────────────────────────────────────────
   app.use(helmet({
-    // Webhook endpoints use raw bodies so CSP is irrelevant there; apply globally
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
@@ -55,6 +102,10 @@ export function createApp() {
     },
     crossOriginEmbedderPolicy: false, // allow embedding for QR/verification pages
   }));
+
+  // ─── CORS (before all routes) ─────────────────────────────────────────────
+  app.use(cors(corsOptions));
+  app.options("*", cors(corsOptions));
 
   // ─── Global API rate limit (broad DoS protection) ────────────────────────
   app.use("/api", globalApiRateLimit);
@@ -155,8 +206,26 @@ export function createApp() {
     });
   });
 
-  app.use(express.json({ limit: "5mb" }));
-  app.use(express.urlencoded({ limit: "5mb", extended: true }));
+  // ─── Vercel Cron endpoint ────────────────────────────────────────────────
+  app.get("/api/cron/:jobName", async (req, res) => {
+    const secret = process.env.CRON_SECRET;
+    const auth = req.headers.authorization;
+    const isLocalDev = !secret && (req.ip === "127.0.0.1" || req.ip === "::1" || req.ip?.startsWith("::ffff:127."));
+    if (secret && auth !== `Bearer ${secret}`) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    if (!secret && !isLocalDev) {
+      return res.status(401).json({ error: "CRON_SECRET not configured" });
+    }
+    const { runJobManually } = await import("../scheduled-jobs");
+    const jobName = req.params.jobName;
+    const success = await runJobManually(jobName);
+    if (!success) return res.status(404).json({ error: `Unknown job: ${jobName}` });
+    res.json({ ok: true, jobName });
+  });
+
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // ─── OAuth callback: stricter rate limit ─────────────────────────────────
   app.use("/api/oauth", oauthRateLimit);
@@ -173,8 +242,22 @@ export function createApp() {
 
   app.use(
     "/api/trpc",
+    trpcLimiter,
     createExpressMiddleware({ router: appRouter, createContext }),
   );
+
+  // Apply tighter rate limit to OAuth callback paths
+  app.use("/api/auth", authLimiter);
+
+  // ─── Global error handler ─────────────────────────────────────────────────
+  // Must be registered AFTER all routes. Catches errors passed via next(err)
+  // and unhandled throws from synchronous route handlers.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    console.error("[Express error]", err);
+    if (res.headersSent) return;
+    res.status(500).json({ error: "Internal server error" });
+  });
 
   return app;
 }

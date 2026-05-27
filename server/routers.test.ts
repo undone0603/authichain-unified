@@ -945,9 +945,9 @@ describe("AuthiChain Unified Platform Routers", () => {
       const caller = appRouter.createCaller(createPublicContext());
       await expect(caller.qrcode.generate({ productId: 1 })).rejects.toThrow();
     });
-    it("generateStorymode requires auth", async () => {
+    it("listForProduct requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.qrcode.generateStorymode({ productId: 1 })).rejects.toThrow();
+      await expect(caller.qrcode.listForProduct({ productId: 1 })).rejects.toThrow();
     });
   });
 

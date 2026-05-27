@@ -3,27 +3,30 @@
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist/public",
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "crons": [
-    { "path": "/api/cron/pipeline",                           "schedule": "0 0 * * *" },
-    { "path": "/api/automation/cron",                         "schedule": "0 6 * * *" },
-    { "path": "/api/cron/jobs?job=subscription-health-check", "schedule": "0 3 * * *" },
-    { "path": "/api/cron/jobs?job=customer-health-score",     "schedule": "0 5 * * *" }
-  ],
   "rewrites": [
-    {
-      "source": "/gov",
-      "destination": "https://govchain.us"
-    }
+    { "source": "/gov", "destination": "https://govchain.us" },
+    { "source": "/api/(.*)", "destination": "/api/server.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Frame-Options",       "value": "DENY" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" }
+        { "key": "X-Frame-Options",        "value": "DENY" },
+        { "key": "X-Content-Type-Options",  "value": "nosniff" },
+        { "key": "Referrer-Policy",         "value": "strict-origin-when-cross-origin" }
       ]
     }
   ],
-  "ignoreCommand": "bash -c '[ \"$VERCEL_GIT_COMMIT_AUTHOR_LOGIN\" = \"undone0603\" ] && exit 1 || exit 0'"
+  "crons": [
+    { "path": "/api/cron/autonomous-pipeline-tick", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/subscription-health-check", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/certificate-expiry-check",  "schedule": "0 7 * * *" },
+    { "path": "/api/cron/lead-nurturing",            "schedule": "0 9 * * *" },
+    { "path": "/api/cron/database-cleanup",          "schedule": "0 3 * * *" },
+    { "path": "/api/cron/weekly-analytics-digest",   "schedule": "0 8 * * 1" },
+    { "path": "/api/cron/hubspot-crm-sync",          "schedule": "0 10 * * *" },
+    { "path": "/api/cron/customer-health-score",     "schedule": "0 5 * * *" },
+    { "path": "/api/cron/fraud-detection-sweep",     "schedule": "0 14 * * *" }
+  ]
 }

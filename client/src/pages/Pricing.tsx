@@ -14,8 +14,8 @@ import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import {
   Shield, Check, ArrowRight, Calculator, Zap, Building2,
-  Pill, Leaf, Palette, Cannabis, Cpu, ChevronDown, Star,
-  TrendingUp, DollarSign, Lock, Globe, Users
+  Pill, Leaf, Palette, Cannabis, Cpu,
+  TrendingUp, DollarSign, Globe,
 } from "lucide-react";
 
 const industryIcons: Record<string, React.ReactNode> = {

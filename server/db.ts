@@ -1,6 +1,7 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-import { eq, desc, and, or, gte, lte, isNull, like, sql, SQL } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { eq, desc, and, or, gte, lte, isNull, like, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   users,
@@ -56,7 +57,22 @@ import { bayesianPriors } from '../drizzle/schema';
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
 
-export async function getDb() {
+// ─────────────────────────────────────────────────────────────
+// DB FACTORY
+// ─────────────────────────────────────────────────────────────
+
+export function createDb(connectionString: string): DrizzleInstance {
+  if (!connectionString) {
+    throw new Error("[Database] Missing connection string");
+  }
+  // Cap pool size at 3 for serverless environments (Vercel/Railway). Each
+  // function instance opens its own pool; Supabase session-pooler mode caps
+  // total connections, so a default of 10 per instance causes exhaustion.
+  const client = postgres(connectionString, { max: 3, idle_timeout: 20 });
+  return drizzle(client);
+}
+
+export async function getDb(): Promise<DrizzleInstance> {
   if (_db) return _db;
 
   if (!process.env.DATABASE_URL) {
@@ -64,10 +80,9 @@ export async function getDb() {
   }
 
   try {
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
-    _db = drizzle(pool);
+    // Cap pool size at 3 for serverless environments (see createDb above).
+    const client = postgres(process.env.DATABASE_URL, { max: 3, idle_timeout: 20 });
+    _db = drizzle(client);
     return _db;
   } catch (error) {
     console.error("[Database] Failed to connect:", error);

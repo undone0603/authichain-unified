@@ -29,6 +29,8 @@ export interface CreateCheckoutParams {
   origin: string;
   stripeCustomerId?: string;
   trialDays?: number;
+  brand?: string;
+  contractSetupOrderId?: string;
 }
 
 export async function createSubscriptionCheckout(params: CreateCheckoutParams): Promise<string> {
@@ -38,6 +40,18 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
     ? product.priceAnnual
     : product.priceMonthly;
 
+  const sharedMeta: Record<string, string> = {
+    user_id: params.userId.toString(),
+    customer_email: params.userEmail,
+    customer_name: params.userName,
+    plan: params.plan,
+    billing: params.billing,
+    ...(params.brand ? { brand: params.brand } : {}),
+    ...(params.contractSetupOrderId
+      ? { contract: "true", setup_order_id: params.contractSetupOrderId }
+      : {}),
+  };
+
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
     payment_method_types: ["card"],
@@ -45,19 +59,9 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
     client_reference_id: params.userId.toString(),
     customer_email: params.stripeCustomerId ? undefined : params.userEmail,
     customer: params.stripeCustomerId || undefined,
-    metadata: {
-      user_id: params.userId.toString(),
-      customer_email: params.userEmail,
-      customer_name: params.userName,
-      plan: params.plan,
-      billing: params.billing,
-    },
+    metadata: sharedMeta,
     subscription_data: {
-      metadata: {
-        user_id: params.userId.toString(),
-        plan: params.plan,
-        billing: params.billing,
-      },
+      metadata: sharedMeta,
       ...(params.trialDays ? { trial_period_days: params.trialDays } : {}),
     },
     line_items: [

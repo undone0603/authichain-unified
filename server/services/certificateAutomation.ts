@@ -341,21 +341,41 @@ async function sendCertificateEmail(
     return;
   }
 
-  const emailSent = await sendCrispCertificateEmail({
+  // Send email via the unified provider chain (Resend → SMTP → Gmail OAuth2).
+  const { sendEmail } = await import('../email-service');
+  const customerName = (user as any).name || 'there';
+  const isAuthentic = certificateData.isAuthentic === 1;
+  const verdict = isAuthentic
+    ? 'AUTHENTIC ✅'
+    : 'COUNTERFEIT ❌';
+
+  const body = [
+    `Hi ${customerName},`,
+    ``,
+    `Your AuthiChain ${certificateData.tier?.toUpperCase?.() || 'authentication'} certificate is ready.`,
+    ``,
+    `Product:        ${certificateData.productName}`,
+    `Certificate #:  ${certificateData.certificateNumber}`,
+    `Result:         ${verdict}`,
+    `Confidence:     ${certificateData.confidenceScore}%`,
+    `NFT Token:      ${nftData.tokenId}`,
+    ``,
+    `View certificate: ${certificateUrl}`,
+    ``,
+    `Your certificate is permanently stored on the blockchain and can be verified anytime.`,
+    ``,
+    `— The AuthiChain Team`,
+  ].join('\n');
+
+  const result = await sendEmail({
     to: customerEmail,
-    customerName: user.name || undefined,
-    certificateNumber: certificateData.certificateNumber,
-    productName: certificateData.productName,
-    tier: certificateData.tier,
-    isAuthentic: certificateData.isAuthentic === 1,
-    confidenceScore: certificateData.confidenceScore,
-    certificateUrl,
-    nftTokenId: nftData.tokenId,
+    subject: `Your AuthiChain Certificate — ${certificateData.productName}`,
+    body,
   });
 
-  if (emailSent) {
-    console.log(`[Email] Certificate email sent successfully to ${maskEmail(customerEmail)}`);
+  if (result.status === 'sent') {
+    console.log(`[Email] Certificate email sent to ${maskEmail(customerEmail)} via ${result.provider}`);
   } else {
-    console.error(`[Email] Failed to send certificate email to ${maskEmail(customerEmail)}`);
+    console.error(`[Email] Certificate email ${result.status}: ${result.reason ?? 'unknown'}`);
   }
 }

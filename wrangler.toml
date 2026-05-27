@@ -21,7 +21,7 @@ id = "7c8e9466e57843199f6f768615e42a5c"
 # Create with: wrangler kv:namespace create MICROSITES_KV
 [[kv_namespaces]]
 binding = "MICROSITES_KV"
-id = "REPLACE_WITH_YOUR_MICROSITES_KV_ID"
+id = "a992900da1db4b998af1cdf4eccf550a"
 
 # D1 database
 [[d1_databases]]
