@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     template: '%s | AuthiChain Protocol',
   },
   description: 'The global standard for cryptographically-verified product identity, industrial provenance, and AI-generated QR art.',
-  metadataBase: new URL('https://qron.space'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://authichain.com'),
   alternates: {
     canonical: '/',
   },
