@@ -73,6 +73,8 @@ export const appRouter = router({
     create: protectedProcedure.input(z.object({
       name: z.string().min(1),
       brand: z.string().optional(),
+      manufacturer: z.string().optional(),
+      modelNumber: z.string().optional(),
       category: z.string().optional(),
       description: z.string().optional(),
       imageUrl: z.string().optional(),

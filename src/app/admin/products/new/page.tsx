@@ -11,6 +11,7 @@ import {
   Package,
   FileText,
   Tag,
+  Hash,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
@@ -19,7 +20,8 @@ export default function NewProductPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    brand: '',
+    manufacturer: '',
+    modelNumber: '',
     category: '',
   });
 
@@ -32,7 +34,8 @@ export default function NewProductPage() {
     await createProduct.mutateAsync({
       name: formData.name,
       description: formData.description || undefined,
-      brand: formData.brand || undefined,
+      manufacturer: formData.manufacturer || undefined,
+      modelNumber: formData.modelNumber || undefined,
       category: formData.category || undefined,
     });
   };
@@ -87,17 +90,32 @@ export default function NewProductPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] ml-1">
-                <Box className="w-3 h-3" /> Manufacturer / Brand
-              </label>
-              <input
-                type="text"
-                value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-gold outline-none transition-colors"
-                placeholder="Acme Corp"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] ml-1">
+                  <Box className="w-3 h-3" /> Manufacturer
+                </label>
+                <input
+                  type="text"
+                  value={formData.manufacturer}
+                  onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+                  className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-gold outline-none transition-colors"
+                  placeholder="Acme Corp"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] ml-1">
+                  <Hash className="w-3 h-3" /> Model Identifier
+                </label>
+                <input
+                  type="text"
+                  value={formData.modelNumber}
+                  onChange={(e) => setFormData({ ...formData, modelNumber: e.target.value })}
+                  className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-gold outline-none transition-colors"
+                  placeholder="ACM-H1-26"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

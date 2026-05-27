@@ -2454,10 +2454,10 @@ function ecosystemFooter() {
     <div>
       <div class="footer-heading">Platform</div>
       <ul class="footer-links">
-        <li><a href="https://authichain-unified.vercel.app/auth">Get Started</a></li>
-        <li><a href="https://authichain-unified.vercel.app/subscriptions">Pricing</a></li>
-        <li><a href="https://authichain-unified.vercel.app/dashboard">Dashboard</a></li>
-        <li><a href="https://authichain-unified.vercel.app/onboard">Brand Onboarding</a></li>
+        <li><a href="/auth">Get Started</a></li>
+        <li><a href="/subscriptions">Pricing</a></li>
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/onboard">Brand Onboarding</a></li>
       </ul>
     </div>
     <div>
@@ -2473,7 +2473,7 @@ function ecosystemFooter() {
       <div class="footer-heading">Company</div>
       <ul class="footer-links">
         <li><a href="mailto:hello@authichain.com">Contact</a></li>
-        <li><a href="https://authichain-unified.vercel.app/auth">Sign In</a></li>
+        <li><a href="/auth">Sign In</a></li>
       </ul>
     </div>
   </div>
@@ -2509,8 +2509,8 @@ const HTML = `<!DOCTYPE html>
     <div class="nav-links">
       <a class="nav-link" href="#community">$QRON</a>
       <a class="nav-link" href="#technology">Technology</a>
-      <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
-      <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/auth">Get Started</a>
+      <a class="nav-link" href="/subscriptions">Pricing</a>
+      <a class="btn btn-primary btn-sm" href="/auth">Get Started</a>
     </div>
   </nav>
 
@@ -2519,7 +2519,7 @@ const HTML = `<!DOCTYPE html>
       <h1 class="hero-title"><span>VERIFY</span><span class="accent">EVERYTHING.</span></h1>
       <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets. ERC-721 NFTs · AI QR · 2.1-second verification.</p>
       <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:40px">
-        <a class="btn btn-primary" style="width:auto; min-width:200px" href="https://authichain-unified.vercel.app/auth">Start Free Trial</a>
+        <a class="btn btn-primary" style="width:auto; min-width:200px" href="/auth">Start Free Trial</a>
         <a class="btn" style="width:auto; min-width:200px; background:transparent; border:1px solid var(--border); color:var(--text)" href="#community">Learn More</a>
       </div>
     </div>
@@ -2550,10 +2550,10 @@ export default {
       return assetResponse(FAVICON_SVG);
     }
     if (p === '/dapp' || p.startsWith('/dapp/')) {
-      return Response.redirect('https://authichain-unified.vercel.app/dashboard', 302);
+      return Response.redirect('https://authichain.com/dashboard', 302);
     }
     if (p === '/demo' || p.startsWith('/demo/')) {
-      return Response.redirect('https://authichain-unified.vercel.app/subscriptions', 302);
+      return Response.redirect('https://authichain.com/subscriptions', 302);
     }
     // Proxy app routes to the Vercel deployment instead of serving marketing HTML.
     // Prefixes must NOT have a trailing slash so the startsWith check works correctly
