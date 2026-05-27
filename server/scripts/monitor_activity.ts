@@ -1,9 +1,9 @@
 import "dotenv/config";
-import { checkThreadReplies } from "../email-service.js";
+import { checkThreadReplies } from "../email-service";
 
 const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?.[0] ?? ''}***@${d}` : '***'; };
-import { getDb } from "../db.js";
-import { activityLog, leads } from "../../drizzle/schema.js";
+import { getDb } from "../db";
+import { activityLog, leads } from "../../drizzle/schema";
 import { desc, eq, and } from "drizzle-orm";
 
 async function monitorActivity() {

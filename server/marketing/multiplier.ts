@@ -1,5 +1,5 @@
-import { invokeLLM, parseLLMContent } from "../_core/llm.js";
-import { logActivity } from "../db.js";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
+import { logActivity } from "../db";
 
 /**
  * Social Multiplier Service — Ported from legacy traffic strategies.

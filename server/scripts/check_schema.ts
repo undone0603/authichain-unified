@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getDb } from "../db.js";
+import { getDb } from "../db";
 
 async function checkLeadsSchema() {
   console.log("🔍 Checking MySQL Schema for 'leads' table...");

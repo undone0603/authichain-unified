@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { runSocialMultiplier } from "./multiplier.js";
+import { runSocialMultiplier } from "./multiplier";
 
 async function generateTrafficBundle() {
   const announcement = "AuthiChain launches the high-ticket MedTech Compliance vertical. Manufacturers can now automate ISO 13485 audit trails on-chain and quantify their Trust Advantage via our interactive ROI Calculator.";

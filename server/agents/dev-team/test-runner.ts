@@ -31,7 +31,7 @@ import {
   searchCode,
   getBranchSha,
   createBranch,
-} from './github-service.js';
+} from './github-service';
 
 // ─── RUN_TESTS ────────────────────────────────────────────────────────────
 

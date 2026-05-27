@@ -1,4 +1,4 @@
-import type { MissionType, TaskKind } from './types.js';
+import type { MissionType, TaskKind } from './types';
 
 interface MissionTemplate {
   type: MissionType;

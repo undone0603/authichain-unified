@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { sendEmail } from "../email-service.js";
+import { sendEmail } from "../email-service";
 
 const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?.[0] ?? ''}***@${d}` : '***'; };
 
