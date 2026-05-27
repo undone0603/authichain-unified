@@ -1,6 +1,4 @@
-export const runtime = 'edge';
-<<<<<<< HEAD
-=======
+export const runtime = "nodejs";
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
@@ -91,4 +89,3 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch keys' }, { status: 500 });
   }
 }
->>>>>>> 50c67b9 (zk)

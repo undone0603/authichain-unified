@@ -1,5 +1,5 @@
 import { type TrpcContext } from "./context";
-import { resolveBrand } from "../shared/brands";
+import { resolveBrand } from "../../shared/brands";
 
 /**
  * BrandContext provides brand-specific information extracted from the request.
