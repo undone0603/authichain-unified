@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyApiKey } from '@/lib/auth-api';
 import { createClient } from '@supabase/supabase-js';

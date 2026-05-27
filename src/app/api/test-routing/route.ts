@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 /**
  * @file route.ts
  * @project qron-platform
