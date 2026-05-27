@@ -1,9 +1,9 @@
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { telemetryEvents } from '@/db/schema';
-import crypto from 'crypto';
+import { createHash } from 'node:crypto';
 import { anchorToPolygon } from '@/actions/anchor';
 
 // Michigan CRA Transport Compliance Bounds (Adjustable for Enterprise)
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
       data.temperatureF <= MAX_TEMP_F && data.humidityPct <= MAX_HUMIDITY;
 
     const payloadString = JSON.stringify(data);
-    const eventHash = crypto.createHash('sha256').update(payloadString).digest('hex');
+    const eventHash = createHash('sha256').update(payloadString).digest('hex');
 
     const parsedPayload = {
       metrcTag: data.metrcTag,
