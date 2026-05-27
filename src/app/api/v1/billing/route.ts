@@ -1,6 +1,4 @@
-export const runtime = 'edge';
-<<<<<<< HEAD
-=======
+export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -51,4 +49,3 @@ export async function GET(request: NextRequest) {
     generated_at: new Date().toISOString()
   });
 }
->>>>>>> 50c67b9 (zk)

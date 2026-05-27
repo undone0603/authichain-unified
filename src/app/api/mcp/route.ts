@@ -1,6 +1,4 @@
-export const runtime = 'edge';
-<<<<<<< HEAD
-=======
+export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyApiKey } from '@/lib/auth-api';
@@ -165,4 +163,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
->>>>>>> 50c67b9 (zk)

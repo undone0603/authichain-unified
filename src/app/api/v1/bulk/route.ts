@@ -1,6 +1,4 @@
-export const runtime = 'edge';
-<<<<<<< HEAD
-=======
+export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -88,4 +86,3 @@ export async function OPTIONS() {
     },
   });
 }
->>>>>>> 50c67b9 (zk)
