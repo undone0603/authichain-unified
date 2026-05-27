@@ -1,4 +1,8 @@
 export const runtime = 'edge';
+<<<<<<< HEAD
+=======
+
+>>>>>>> 50c67b9 (zk)
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
