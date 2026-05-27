@@ -1,7 +1,7 @@
 import "dotenv/config";
-import { invokeLLM, parseLLMContent } from "../_core/llm.js";
-import { sendEmail } from "../email-service.js";
-import { bayesianPreamble, betaMean, betaCI, SEGMENT_PRIORS } from "../_core/bayesian.js";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
+import { sendEmail } from "../email-service";
+import { bayesianPreamble, betaMean, betaCI, SEGMENT_PRIORS } from "../_core/bayesian";
 
 async function pushMedtronicSequence() {
   console.log("🚀 Executing Medtronic High-Ticket Outreach...");

@@ -9,10 +9,10 @@
  *   pnpm tsx server/missions/seed.ts        (env loaded from .env automatically by tsx)
  */
 
-import { createMission, getMissions, getDb } from '../db.js';
-import { leads, missionTasks } from '../../drizzle/schema.js';
+import { createMission, getMissions, getDb } from '../db';
+import { leads, missionTasks } from '../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
-import type { MissionType } from './types.js';
+import type { MissionType } from './types';
 
 const ALL_TYPES: MissionType[] = [
   'GOV_PILOT',

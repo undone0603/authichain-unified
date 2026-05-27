@@ -29,7 +29,7 @@ import {
   addPRComment,
   mergePR,
   getFile,
-} from './github-service.js';
+} from './github-service';
 
 // ─── OPEN_PR ─────────────────────────────────────────────────────────────
 

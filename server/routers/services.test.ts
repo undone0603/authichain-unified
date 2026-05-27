@@ -2,7 +2,7 @@
  * Services router unit tests — db and stripe-service are mocked.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SERVICE_LIST, SERVICE_CATALOG } from "../service-catalog.js";
+import { SERVICE_LIST, SERVICE_CATALOG } from "../service-catalog";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
