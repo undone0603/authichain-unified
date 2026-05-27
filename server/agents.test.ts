@@ -123,7 +123,7 @@ describe('runLeadFinder', () => {
     logActivity = vi.mocked(dbMod.logActivity);
   });
 
-  it('enqueues a DRAFT_OUTBOUND_EMAIL task for each valid lead', async () => {
+  it('enqueues a BROWSE_RESEARCH_LEAD task for each valid lead', async () => {
     // Apollo returns 2 leads; LLM scoring assigns fit probabilities
     invokeLLM.mockResolvedValueOnce(llmJsonResponse([
       { index: 0, fitProbability: 0.8, fitNotes: 'strong procurement fit' },
@@ -136,7 +136,7 @@ describe('runLeadFinder', () => {
     expect(enqueueTask).toHaveBeenCalledTimes(2);
     expect(enqueueTask).toHaveBeenCalledWith(
       'mission-test-001',
-      'DRAFT_OUTBOUND_EMAIL',
+      'BROWSE_RESEARCH_LEAD',
       expect.objectContaining({ leadEmail: 'alice@gov.com', segment: 'GOV' }),
     );
   });

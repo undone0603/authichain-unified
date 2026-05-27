@@ -127,14 +127,15 @@ export async function runLeadFinder(task: Task): Promise<void> {
       }).onConflictDoNothing();
     }
 
-    await enqueueTask(task.missionId, 'DRAFT_OUTBOUND_EMAIL', {
+    // Research the lead's website before drafting the email so the browser
+    // agent can inject a personalised hook into the outbound copy.
+    await enqueueTask(task.missionId, 'BROWSE_RESEARCH_LEAD', {
       segment,
-      sequence: 1,
-      leadEmail:  lead.email,
-      leadName:   lead.name,
-      leadOrg:    lead.org,
-      leadTitle:  lead.title,
-      linkedinUrl: lead.linkedinUrl,
+      leadEmail: lead.email,
+      leadName:  lead.name,
+      leadOrg:   lead.org,
+      leadTitle: lead.title,
+      domain:    lead.linkedinUrl ? undefined : undefined, // browser agent infers from org name
     });
 
     inserted++;

@@ -1,25 +1,40 @@
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-// 1. UPDATED: Must be edge for Cloudflare Pages
-export const runtime = 'edge';
+// Lazy singletons — avoid build-time throw when env vars are absent.
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) throw new Error('STRIPE_SECRET_KEY not configured');
+    _stripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' as const });
+  }
+  return _stripe;
+}
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _supabase: ReturnType<typeof createClient> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getSupabase(): any {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+  }
+  return _supabase;
+}
 
 export async function POST(req: NextRequest) {
-  const stripeKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (!stripeKey || !webhookSecret) {
+  if (!process.env.STRIPE_SECRET_KEY || !webhookSecret) {
     return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
   }
 
-  const Stripe = (await import('stripe')).default;
-  const stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' as const });
+  const stripe = getStripe();
 
   const body = await req.text();
   const sig = req.headers.get('stripe-signature')!;
@@ -43,7 +58,7 @@ export async function POST(req: NextRequest) {
         const subscriptionId = session.subscription;
 
         if (userId) {
-          await supabase.from('profiles').update({
+          await getSupabase().from('profiles').update({
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             subscription_plan: plan,
@@ -51,7 +66,7 @@ export async function POST(req: NextRequest) {
             subscribed_at: new Date().toISOString(),
           }).eq('id', userId);
 
-          await supabase.from('checkout_sessions').update({ status: 'completed' })
+          await getSupabase().from('checkout_sessions').update({ status: 'completed' })
             .eq('session_id', session.id);
 
           // Trigger welcome/confirmation email
@@ -70,19 +85,19 @@ export async function POST(req: NextRequest) {
         const subscriptionId = invoice.subscription;
         const amountPaid = invoice.amount_paid / 100;
 
-        const { data: profile } = await supabase
+        const { data: profile } = await getSupabase()
           .from('profiles')
           .select('id, subscription_plan')
           .eq('stripe_customer_id', customerId)
           .single();
 
         if (profile) {
-          await supabase.from('profiles').update({
+          await getSupabase().from('profiles').update({
             subscription_status: 'active',
             last_payment_at: new Date().toISOString(),
           }).eq('id', profile.id);
 
-          await supabase.from('payment_history').insert({
+          await getSupabase().from('payment_history').insert({
             user_id: profile.id,
             stripe_invoice_id: invoice.id,
             stripe_subscription_id: subscriptionId,
@@ -99,14 +114,14 @@ export async function POST(req: NextRequest) {
         const invoice = event.data.object;
         const customerId = invoice.customer;
 
-        const { data: profile } = await supabase
+        const { data: profile } = await getSupabase()
           .from('profiles')
           .select('id')
           .eq('stripe_customer_id', customerId)
           .single() as any;
 
         if (profile) {
-          await supabase.from('profiles').update({
+          await getSupabase().from('profiles').update({
             subscription_status: 'past_due',
           }).eq('id', profile.id);
 
@@ -123,7 +138,7 @@ export async function POST(req: NextRequest) {
         const subscription = event.data.object;
         const customerId = subscription.customer;
 
-        await supabase.from('profiles').update({
+        await getSupabase().from('profiles').update({
           subscription_status: 'cancelled',
           subscription_plan: 'free',
           cancelled_at: new Date().toISOString(),
@@ -136,7 +151,7 @@ export async function POST(req: NextRequest) {
         const customerId = subscription.customer;
         const status = subscription.status;
 
-        await supabase.from('profiles').update({
+        await getSupabase().from('profiles').update({
           subscription_status: status,
           stripe_subscription_id: subscription.id,
         }).eq('stripe_customer_id', customerId);
@@ -147,7 +162,7 @@ export async function POST(req: NextRequest) {
         const subscription = event.data.object;
         const customerId = subscription.customer;
 
-        const { data: profile } = await supabase
+        const { data: profile } = await getSupabase()
           .from('profiles')
           .select('id')
           .eq('stripe_customer_id', customerId)
@@ -168,7 +183,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Log all events
-    await supabase.from('stripe_events').insert({
+    await getSupabase().from('stripe_events').insert({
       event_id: event.id,
       event_type: event.type,
       processed_at: new Date().toISOString(),

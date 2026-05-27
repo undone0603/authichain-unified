@@ -1,6 +1,15 @@
 // QRON Daily Automation Worker — Cloudflare Cron Triggers
 // Handles: Uptime monitoring, SEO pinging, lead notifications, daily digest
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a), bb = enc.encode(b);
+  const len = Math.max(ab.length, bb.length);
+  let diff = ab.length ^ bb.length;
+  for (let i = 0; i < len; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
+  return diff === 0;
+}
+
 export default {
   // Handle HTTP requests (dashboard + webhook endpoints)
   async fetch(request: Request, env: any) {
@@ -59,9 +68,10 @@ export default {
     }
 
     // Auth check for sensitive routes
-    const authToken = env.AUTH_TOKEN || 'qron-ops-2026';
-    const isAuthed = url.searchParams.get('key') === authToken
-      || request.headers.get('Authorization') === `Bearer ${authToken}`;
+    const authToken = env.AUTH_TOKEN;
+    const isAuthed = !!authToken && (
+      timingSafeEqual(url.searchParams.get('key') ?? '', authToken)
+      || timingSafeEqual(request.headers.get('Authorization') ?? '', `Bearer ${authToken}`));
 
     // Dashboard: show automation status
     if (url.pathname === '/' || url.pathname === '/dashboard') {
@@ -122,7 +132,7 @@ export default {
 const MONITORED_URLS = [
   { name: 'QRON Portfolio', url: 'https://qron-portfolio.undone-k.workers.dev/' },
   { name: 'AuthiChain API', url: 'https://authichain-api.undone-k.workers.dev/' },
-  { name: 'AuthiChain Dashboard', url: 'https://authichain-dashboard.undone-k.workers.dev/?key=***REMOVED***' },
+  { name: 'AuthiChain Dashboard', url: 'https://authichain-dashboard.undone-k.workers.dev/' },
   { name: 'StrainChain', url: 'https://strainchain.undone-k.workers.dev/' },
   { name: 'QRON SEO Engine', url: 'https://qron-seo-engine.undone-k.workers.dev/' },
   { name: 'QRON Gallery', url: 'https://qron.space' },
@@ -401,7 +411,7 @@ h1{font-size:1.8rem;background:linear-gradient(135deg,#00d4ff,#7b2ff7);-webkit-b
     <a href="/run/seo-ping" class="btn">Run SEO Ping</a>
     <a href="/run/digest" class="btn">Send Daily Digest</a>
     <a href="/health" class="btn">Health Check</a>
-    <a href="https://authichain-dashboard.undone-k.workers.dev/?key=***REMOVED***" class="btn">Revenue Dashboard</a>
+    <a href="https://authichain-dashboard.undone-k.workers.dev/" class="btn">Revenue Dashboard</a>
     <a href="https://qron-portfolio.undone-k.workers.dev/" class="btn">QRON Portfolio</a>
   </div>
 </div>

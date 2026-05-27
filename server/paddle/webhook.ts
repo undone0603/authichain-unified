@@ -2,7 +2,9 @@ import { Request, Response } from 'express';
 import { getPaddle } from '../paddle-service';
 import { ENV } from '../_core/env';
 import {
+  logActivity,
   logAutomationAudit,
+  hasWebhookEventProcessed,
   recordRevenue,
   upsertPaddleSubscription,
   setSubscriptionStatusByPaddleId,
@@ -59,6 +61,20 @@ export async function handlePaddleWebhook(req: Request, res: Response) {
   }
 
   console.log(`[Paddle Webhook] Received event: ${eventData.eventType}`);
+
+  // Idempotency — skip if already processed
+  const paddleEventId = `${eventData.eventType}:${eventData.data?.id ?? 'unknown'}`;
+  if (await hasWebhookEventProcessed(paddleEventId)) {
+    console.log(`[Paddle Webhook] Duplicate event ignored: ${paddleEventId}`);
+    return res.json({ received: true, duplicate: true });
+  }
+  await logActivity({
+    userId: null,
+    action: 'webhook_received',
+    entityType: 'webhook',
+    entityId: 0,
+    details: { eventId: paddleEventId, type: eventData.eventType },
+  });
 
   try {
     switch (eventData.eventType) {

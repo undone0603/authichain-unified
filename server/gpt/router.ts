@@ -66,6 +66,7 @@ router.get("/certificates/verify", async (req, res) => {
   try {
     const { certNumber } = req.query;
     if (!certNumber) return res.status(400).json({ error: "certNumber required" });
+    if (String(certNumber).length > 64) return res.status(400).json({ error: "certNumber too long" });
     const [cert] = await db.select().from(certificates).where(eq(certificates.certificateNumber, String(certNumber))).limit(1);
     if (!cert) return res.json({ valid: false, message: "Certificate not found" });
     return res.json({

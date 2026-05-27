@@ -16,6 +16,7 @@ export const ENV = {
 
   // ── Email ─────────────────────────────────────────────────────────────────
   resendApiKey:         process.env.RESEND_API_KEY ?? "",
+  resendFromEmail:      process.env.RESEND_FROM_EMAIL ?? "noreply@authichain.com",
   gmailFromEmail:       process.env.GMAIL_FROM_EMAIL ?? "",
   gmailClientId:        process.env.GMAIL_CLIENT_ID ?? "",
   gmailClientSecret:    process.env.GMAIL_CLIENT_SECRET ?? "",

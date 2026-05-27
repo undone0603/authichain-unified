@@ -1,4 +1,4 @@
-import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
+import { router, publicProcedure, adminProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
 import { visitorProfiles, personalizationRules, personalizationEvents } from "../../drizzle/schema";
@@ -212,7 +212,7 @@ export const personalizationRouter = router({
     }),
 
   // Create personalization rule
-  createRule: protectedProcedure
+  createRule: adminProcedure
     .input(z.object({
       name: z.string(),
       description: z.string().optional(),
@@ -241,7 +241,7 @@ export const personalizationRouter = router({
     }),
 
   // Generate personalization rules using AI
-  generateRules: protectedProcedure
+  generateRules: adminProcedure
     .input(z.object({
       targetElement: z.string(),
       baseContent: z.string(),
@@ -274,7 +274,7 @@ export const personalizationRouter = router({
     }),
 
   // List all rules
-  listRules: protectedProcedure
+  listRules: adminProcedure
     .input(z.object({
       status: z.enum(["active", "paused", "draft"]).optional(),
     }).optional())
@@ -292,7 +292,7 @@ export const personalizationRouter = router({
     }),
 
   // Get rule details
-  getRule: protectedProcedure
+  getRule: adminProcedure
     .input(z.object({
       ruleId: z.number(),
     }))
@@ -310,7 +310,7 @@ export const personalizationRouter = router({
     }),
 
   // Activate rule
-  activateRule: protectedProcedure
+  activateRule: adminProcedure
     .input(z.object({
       ruleId: z.number(),
     }))
@@ -329,7 +329,7 @@ export const personalizationRouter = router({
     }),
 
   // Pause rule
-  pauseRule: protectedProcedure
+  pauseRule: adminProcedure
     .input(z.object({
       ruleId: z.number(),
     }))
@@ -348,7 +348,7 @@ export const personalizationRouter = router({
     }),
 
   // Get visitor segments analytics
-  getSegmentAnalytics: protectedProcedure
+  getSegmentAnalytics: adminProcedure
     .query(async () => {
       const db = await getDb();
       if (!db) return [];
@@ -388,7 +388,7 @@ export const personalizationRouter = router({
     }),
 
   // Get personalization performance analytics
-  getPerformanceAnalytics: protectedProcedure
+  getPerformanceAnalytics: adminProcedure
     .query(async () => {
       const db = await getDb();
       if (!db) return null;

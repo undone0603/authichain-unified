@@ -28,6 +28,7 @@ export async function runStrainChainSync() {
         licenseNumber: metrcConfig.licenseNumber,
         vendorKey: metrcConfig.vendorKey || process.env.METRC_VENDOR_KEY || "",
         userKey: metrcConfig.userKey || process.env.METRC_USER_KEY || "",
+        userId: client.userId,
       });
 
       for (const transfer of transfers) {

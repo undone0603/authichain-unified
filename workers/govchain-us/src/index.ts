@@ -232,7 +232,7 @@ const HTML = `<!DOCTYPE html>
       <h1 class="hero-title"><span>PUBLIC</span><span class="accent">TRUST.</span></h1>
       <p class="hero-sub">GovChain is the government associated blockchain authentication vertical, providing a truth layer for official manufacturers and state records.</p>
       <div class="hero-actions">
-        <a href="https://authichain-unified.vercel.app/onboard" class="btn btn-primary">Manufacturer Onboarding</a>
+        <a href="https://authichain.com/onboard" class="btn btn-primary">Manufacturer Onboarding</a>
         <a href="#sectors" class="btn btn-secondary">Explore Sectors</a>
       </div>
     </div>
@@ -291,8 +291,15 @@ const HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const HTML_SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+};
+
 export default {
   async fetch(request: Request) {
-    return new Response(HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
   }
 };

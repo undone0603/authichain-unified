@@ -92,7 +92,7 @@ describe("servicesRouter — checkout", () => {
     const ctx = { user: { id: 1, email: "a@b.com", name: "Test" } };
     const result = await (servicesRouter as any).checkout._fn({
       ctx,
-      input: { serviceKey: "authenticity_audit", origin: "https://example.com" },
+      input: { serviceKey: "authenticity_audit", origin: "http://localhost:3000" },
     });
     expect(vi.mocked(createPaymentCheckout)).toHaveBeenCalledOnce();
     expect(result.checkoutUrl).toBe("https://checkout.stripe.com/mock");

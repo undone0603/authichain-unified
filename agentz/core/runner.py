@@ -153,12 +153,12 @@ def execute(
 
     # 3. Context Fetcher
     if wf.context_fetcher and mode != Mode.DRY_RUN:
+        import shlex
         import subprocess
         ctx.step(f"Context: Running fetcher - {wf.context_fetcher}")
         try:
-            # We use save_state/load_state mechanism or just pass it in ctx
-            output = subprocess.check_output(wf.context_fetcher, shell=True, text=True)
-            # Store it in an ephemeral state for the handler to use
+            cmd = shlex.split(wf.context_fetcher)
+            output = subprocess.check_output(cmd, text=True)
             setattr(ctx, "fetched_context", output)
         except Exception as e:
             print(f"   [!] Context fetcher failed: {e}")

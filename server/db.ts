@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { eq, desc, and, gte, lte, like, sql } from "drizzle-orm";
+import { eq, desc, and, or, gte, lte, isNull, like, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
@@ -9,6 +9,7 @@ import {
   authentications,
   certificates,
   qrCodes,
+  qrScanEvents,
   nftCollections,
   nfts,
   auctions,
@@ -43,6 +44,7 @@ import {
   missionTasks,
   stakingPositions,
   budgetConfig,
+  proposals,
   type Product,
   type InsertProduct,
   type InsertNotification,
@@ -154,7 +156,7 @@ export async function getUserById(id: number) {
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(users).orderBy(desc(users.createdAt));
+  return await db.select().from(users).orderBy(desc(users.createdAt)).limit(1000);
 }
 
 // ─── Staking Helpers ────────────────────────────────────────────────────────
@@ -171,10 +173,10 @@ export async function createStakingPosition(data: any) {
   return { id: result.id, ...data };
 }
 
-export async function updateStakingPosition(id: number, data: any) {
+export async function updateStakingPosition(id: number, userId: number, data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(stakingPositions).set(data).where(eq(stakingPositions.id, id));
+  await db.update(stakingPositions).set(data).where(and(eq(stakingPositions.id, id), eq(stakingPositions.userId, userId)));
 }
 
 // ─── Product Helpers ─────────────────────────────────────────────────────────
@@ -216,7 +218,14 @@ export async function logActivity(actionOrData: string | { userId?: number | nul
 
 export async function getDueTasks(limit = 10) {
   const d = await getDb();
-  return d.select().from(missionTasks).where(eq(missionTasks.status, "pending")).orderBy(missionTasks.order).limit(limit);
+  const now = new Date();
+  return d.select().from(missionTasks)
+    .where(and(
+      eq(missionTasks.status, "pending"),
+      or(isNull(missionTasks.scheduledAt), lte(missionTasks.scheduledAt, now)),
+    ))
+    .orderBy(missionTasks.order)
+    .limit(limit);
 }
 
 export async function getRunTaskCount() {
@@ -227,7 +236,7 @@ export async function getRunTaskCount() {
 
 export async function markTaskWaitingHuman(id: string) {
   const d = await getDb();
-  await d.update(missionTasks).set({ status: "pending" }).where(eq(missionTasks.id, id));
+  await d.update(missionTasks).set({ status: "waiting_human", updatedAt: new Date() }).where(eq(missionTasks.id, id));
 }
 
 export async function getActiveMissionTypes(): Promise<string[]> {
@@ -296,7 +305,7 @@ export async function getLeadById(id: number) {
 
 export async function getAllLeads() {
   const d = await getDb();
-  return d.select().from(leads).orderBy(desc(leads.createdAt));
+  return d.select().from(leads).orderBy(desc(leads.createdAt)).limit(1000);
 }
 
 export async function incrementInteractionCount(id: number) {
@@ -375,14 +384,19 @@ export async function getBudgetStatus(_asOf?: Date) {
   };
 }
 
-export async function markTaskRunning(id: string) {
+export async function markTaskRunning(id: string): Promise<boolean> {
   const d = await getDb();
-  await d.update(missionTasks).set({ status: "in_progress", updatedAt: new Date() }).where(eq(missionTasks.id, id));
+  const rows = await d.update(missionTasks)
+    .set({ status: "in_progress", updatedAt: new Date() })
+    .where(and(eq(missionTasks.id, id), eq(missionTasks.status, "pending")))
+    .returning({ id: missionTasks.id });
+  return rows.length > 0;
 }
 
 export async function markTaskDone(id: string, result?: any) {
   const d = await getDb();
-  await d.update(missionTasks).set({ status: "completed", result, updatedAt: new Date() }).where(eq(missionTasks.id, id));
+  // WHERE status='in_progress' preserves 'waiting_human' if an agent set it during execution
+  await d.update(missionTasks).set({ status: "completed", result, updatedAt: new Date() }).where(and(eq(missionTasks.id, id), eq(missionTasks.status, "in_progress")));
 }
 
 export async function markTaskFailed(id: string, error: string) {
@@ -409,9 +423,20 @@ export async function enqueueTask(missionId: string, kind: string, payload: any,
 // PROPOSALS
 // ─────────────────────────────────────────────────────────────
 
-export async function createProposal(data: any) {
+export async function createProposal(data: {
+  leadEmail: string;
+  missionId: string;
+  taskId?: string;
+  segment: string;
+  content: string;
+  paymentLink?: string;
+  checkoutSessionId?: string;
+  pilotPriceUsd?: number;
+}): Promise<string> {
   const d = await getDb();
-  await d.execute(sql`INSERT INTO proposals (data) VALUES (${JSON.stringify(data)})`);
+  const id = randomUUID();
+  await d.insert(proposals).values({ id, ...data });
+  return id;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -471,7 +496,7 @@ export async function listHighScanUsers(minScans = 10) {
 export async function listInactiveUsersNoRecentScans(daysSinceLastScan = 30) {
   const d = await getDb();
   const cutoff = new Date(Date.now() - daysSinceLastScan * 86400000);
-  return d.select().from(users).where(lte(users.lastSignedIn, cutoff));
+  return d.select().from(users).where(lte(users.lastSignedIn, cutoff)).limit(500);
 }
 
 export async function listUsersForOnboardingStep(step: string | number) {
@@ -485,7 +510,7 @@ export async function listUsersForOnboardingStep(step: string | number) {
 
 export async function listPastDueSubscriptions() {
   const d = await getDb();
-  return d.select().from(subscriptions).where(eq(subscriptions.status, "past_due"));
+  return d.select().from(subscriptions).where(eq(subscriptions.status, "past_due")).limit(1000);
 }
 
 export async function hasDunningStepLogged(subscriptionId: number, step: string): Promise<boolean> {
@@ -503,6 +528,7 @@ export async function hasUserActionLogged(userId: number, action: string, sinceD
   const since = new Date(Date.now() - sinceDaysAgo * 86400000);
   const rows = await d.select().from(activityLog)
     .where(and(
+      eq(activityLog.userId, userId),
       eq(activityLog.action, action),
       gte(activityLog.createdAt, since)
     )).limit(1);
@@ -520,7 +546,7 @@ export async function getMissions(statusFilter?: string) {
   if (statusFilter) {
     return d.select().from(missions).where(eq(missions.status, statusFilter as any));
   }
-  return d.select().from(missions).orderBy(desc(missions.createdAt));
+  return d.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
 }
 
 export async function getMissionById(id: string) {
@@ -627,10 +653,10 @@ export async function getAuthenticationByShareToken(shareToken: string) {
   return result[0];
 }
 
-export async function updateAuthenticationSharing(id: number, isPublic: boolean, shareToken: string) {
+export async function updateAuthenticationSharing(id: number, userId: number, isPublic: boolean, shareToken: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(authentications).set({ isPublic: isPublic ? 1 : 0, shareToken }).where(eq(authentications.id, id));
+  await db.update(authentications).set({ isPublic: isPublic ? 1 : 0, shareToken }).where(and(eq(authentications.id, id), eq(authentications.userId, userId)));
 }
 
 export async function incrementShareCount(id: number) {
@@ -680,6 +706,23 @@ export async function incrementScanCount(id: number) {
   await db.update(qrCodes).set({ scanCount: sql`${qrCodes.scanCount} + 1`, lastScannedAt: new Date() }).where(eq(qrCodes.id, id));
 }
 
+export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(qrScanEvents).values(data);
+}
+
+export async function getRecentScanEvents(productId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(qrScanEvents)
+    .where(eq(qrScanEvents.productId, productId))
+    .orderBy(desc(qrScanEvents.scannedAt))
+    .limit(limit);
+}
+
 // ─── NFT Helpers ─────────────────────────────────────────────────────────────
 export async function listNfts(filters?: { collectionId?: number; status?: string; limit?: number; offset?: number }) {
   const db = await getDb();
@@ -709,7 +752,7 @@ export async function createNft(data: any) {
 export async function listCollections() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(nftCollections).orderBy(desc(nftCollections.createdAt));
+  return await db.select().from(nftCollections).orderBy(desc(nftCollections.createdAt)).limit(200);
 }
 
 export async function getCollectionBySlug(slug: string) {
@@ -785,6 +828,25 @@ export async function updateSubscriptionUsage(userId: number, usedQuota: number)
   await db.update(subscriptions).set({ usedQuota }).where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")));
 }
 
+export async function consumeSubscriptionQuota(userId: number): Promise<"ok" | "exceeded" | "no_subscription"> {
+  const db = await getDb();
+  if (!db) return "no_subscription";
+  const rows = await db.update(subscriptions)
+    .set({ usedQuota: sql`${subscriptions.usedQuota} + 1` })
+    .where(and(
+      eq(subscriptions.userId, userId),
+      eq(subscriptions.status, "active"),
+      sql`COALESCE(${subscriptions.usedQuota}, 0) < ${subscriptions.monthlyQuota}`,
+    ))
+    .returning({ id: subscriptions.id });
+  if (rows.length > 0) return "ok";
+  const [sub] = await db.select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")))
+    .limit(1);
+  return sub ? "exceeded" : "no_subscription";
+}
+
 export async function recordUsage(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -856,7 +918,7 @@ export async function createEmailDraft(data: any) {
 export async function getPendingDrafts() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(emailDrafts).where(eq(emailDrafts.status, "pending")).orderBy(desc(emailDrafts.createdAt));
+  return await db.select().from(emailDrafts).where(eq(emailDrafts.status, "pending")).orderBy(desc(emailDrafts.createdAt)).limit(200);
 }
 
 export async function updateDraftStatus(id: number, status: string, approvedBy?: number) {
@@ -975,7 +1037,7 @@ export async function getActiveAbTests() {
 export async function getAllAbTests() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(abTests).orderBy(desc(abTests.createdAt));
+  return await db.select().from(abTests).orderBy(desc(abTests.createdAt)).limit(200);
 }
 
 // ─── White Label Helpers ─────────────────────────────────────────────────────
@@ -989,7 +1051,7 @@ export async function createWhiteLabelClient(data: any) {
 export async function getWhiteLabelClients() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(whiteLabelClients).orderBy(desc(whiteLabelClients.createdAt));
+  return await db.select().from(whiteLabelClients).orderBy(desc(whiteLabelClients.createdAt)).limit(200);
 }
 
 export async function getWhiteLabelByApiKey(apiKey: string) {
@@ -1025,7 +1087,7 @@ export async function upsertHealthScore(userId: number, score: number, factors: 
 export async function getAllHealthScores() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(customerHealthScores).orderBy(desc(customerHealthScores.score));
+  return await db.select().from(customerHealthScores).orderBy(desc(customerHealthScores.score)).limit(500);
 }
 
 // ─── Revenue Helpers ─────────────────────────────────────────────────────────
@@ -1042,7 +1104,7 @@ export async function getRevenueAnalytics(startDate?: Date, endDate?: Date) {
   if (startDate && endDate) {
     query = query.where(and(gte(revenueRecords.createdAt, startDate), lte(revenueRecords.createdAt, endDate))) as typeof query;
   }
-  return await query.orderBy(desc(revenueRecords.createdAt));
+  return await query.orderBy(desc(revenueRecords.createdAt)).limit(2000);
 }
 
 // ─── Dashboard Metrics ───────────────────────────────────────────────────────
@@ -1087,7 +1149,7 @@ export async function getAdminDashboardMetrics() {
 export async function getSubscriptionAnalytics() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt));
+  return await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt)).limit(5000);
 }
 
 // ─── Notification Helpers ───────────────────────────────────────────────────
@@ -1213,7 +1275,7 @@ export function computeLeadScore(signals: {
 
 export async function upsertStripeSubscription(data: {
   userId: number;
-  plan: "starter" | "professional" | "enterprise";
+  plan: "starter" | "professional" | "enterprise" | "medtech";
   status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
   monthlyQuota: number;
   billingCycle: "monthly" | "annual";
@@ -1294,7 +1356,7 @@ export async function hasWebhookEventProcessed(eventId: string): Promise<boolean
 
 export async function upsertPaddleSubscription(data: {
   userId: number;
-  plan: "starter" | "professional" | "enterprise";
+  plan: "starter" | "professional" | "enterprise" | "medtech";
   status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
   monthlyQuota: number;
   billingCycle: "monthly" | "annual";

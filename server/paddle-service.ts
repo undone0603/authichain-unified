@@ -1,5 +1,6 @@
 import { ENV } from "./_core/env";
 import type { Paddle as PaddleType } from "@paddle/paddle-node-sdk";
+import { safeUrl } from "./_core/allowed-origins";
 
 let _paddle: PaddleType | null = null;
 
@@ -50,7 +51,7 @@ export async function createPaddleTransaction(input: PaddleTransactionInput): Pr
   const transaction = await paddle.transactions.create({
     items: [{ priceId: input.priceId, quantity: 1 }],
     customerId: input.customerId,
-    checkout: { url: input.successUrl },
+    checkout: { url: safeUrl(input.successUrl, "https://authichain.com/subscriptions?success=true") },
   });
   return (transaction as any).checkout?.url || "";
 }

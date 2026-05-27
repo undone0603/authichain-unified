@@ -1,3 +1,11 @@
+import { timingSafeEqual } from "crypto";
+
+function timingSafeStringEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
 import { Router, type Request, type Response } from "express";
 import { getCertificateByNumber, getWhiteLabelByApiKey, createProduct, getDb } from "./db";
 import { computeTrustScore, generateProductQRON } from "./qron-service";
@@ -16,7 +24,7 @@ export function createInternalRouter(): Router {
   // Auth middleware
   router.use((req: Request, res: Response, next) => {
     const secret = req.headers["x-internal-secret"];
-    if (!secret || secret !== ENV.internalApiSecret) {
+    if (!secret || typeof secret !== "string" || !timingSafeStringEqual(secret, ENV.internalApiSecret)) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     next();
@@ -103,11 +111,15 @@ export function createInternalRouter(): Router {
     }
   });
 
-  // ─── GET /api/internal/certificates/verify ─────────────────────────────────
-  router.get("/certificates/verify", async (req: Request, res: Response) => {
+  // ─── POST /api/internal/certificates/verify ────────────────────────────────
+  router.post("/certificates/verify", async (req: Request, res: Response) => {
     try {
-      const number = (req.query.certNumber || req.query.number) as string;
-      if (!number) return res.status(400).json({ error: "certNumber query param required" });
+      const raw = req.body?.certNumber ?? req.body?.number;
+      const number = typeof raw === 'string' ? raw
+        : Array.isArray(raw) && typeof raw[0] === 'string' ? raw[0]
+        : undefined;
+      if (!number) return res.status(400).json({ error: "certNumber required in request body" });
+      if (number.length > 64) return res.status(400).json({ error: "certNumber too long" });
 
       const cert = await getCertificateByNumber(number);
       if (!cert) return res.status(404).json({ error: "Certificate not found", valid: false });
@@ -210,6 +222,10 @@ export function createInternalRouter(): Router {
     try {
       const { name, brand, category, serialNumber, description, userId } = req.body;
       if (!name) return res.status(400).json({ error: "name required" });
+      const parsedUserId = parseInt(userId, 10);
+      if (!userId || !Number.isFinite(parsedUserId) || parsedUserId <= 0) {
+        return res.status(400).json({ error: "valid userId required" });
+      }
 
       const product = await createProduct({
         name,
@@ -217,7 +233,7 @@ export function createInternalRouter(): Router {
         category,
         serialNumber,
         description,
-        userId: userId || 1,
+        userId: parsedUserId,
         status: "active",
       });
 
@@ -253,11 +269,9 @@ export function createInternalRouter(): Router {
   // ─── GET /api/internal/tenant ──────────────────────────────────────────────
   router.get("/tenant", async (req: Request, res: Response) => {
     try {
-      // Accept apiKey from Authorization header (preferred) or query param (legacy)
       const authHeader = req.headers["authorization"];
-      const apiKey = (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null)
-        ?? req.query.apiKey as string;
-      if (!apiKey) return res.status(400).json({ error: "apiKey required" });
+      const apiKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+      if (!apiKey) return res.status(400).json({ error: "Authorization: Bearer <apiKey> required" });
 
       const tenant = await getWhiteLabelByApiKey(apiKey);
       if (!tenant) return res.status(404).json({ error: "Tenant not found" });

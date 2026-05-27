@@ -2,18 +2,14 @@ import "dotenv/config";
 import postgres from "postgres";
 
 async function triggerLuxuryMission() {
-  // Try the production URL found in workspace memories first
-  const prodUrl = "postgresql://postgres.dbwoikpflfruikspdnfc:Fuckit06031991!11@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require";
-  const envUrl = process.env.DATABASE_URL;
-  
-  const targetUrl = prodUrl || envUrl;
-  
+  const targetUrl = process.env.DATABASE_URL;
+
   if (!targetUrl) {
-    console.error("No database URL found.");
+    console.error("DATABASE_URL env var is required.");
     return;
   }
 
-  console.log(`🚀 Connecting to: ${targetUrl.split('@')[1]}...`);
+  console.log(`Connecting to: ${targetUrl.split('@')[1]}...`);
   const sql = postgres(targetUrl);
 
   try {

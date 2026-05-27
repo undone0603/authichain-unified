@@ -2,7 +2,7 @@
 const postgres = require('postgres');
 require('dotenv').config();
 
-const sql = postgres('postgresql://postgres.nhdnkzhtadfkkluiulhs:QronOps2026!@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require');
+const sql = postgres(process.env.DATABASE_URL || '');
 
 async function createAuthUser() {
   const DEMO_USER_ID = '00000000-0000-0000-0000-000000000000';

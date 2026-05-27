@@ -99,32 +99,32 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
   // ── Method 1: Try Resend first (if API key is configured) ─────────────────
   if (ENV.resendApiKey) {
-    const resendFrom = process.env.RESEND_FROM_EMAIL || fromEmail || "outreach@authichain.com";
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${ENV.resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: `${fromName} <${resendFrom}>`,
-        to: [to],
-        subject: input.subject,
-        text: input.body,
-      }),
-    });
+    const resendFrom = ENV.resendFromEmail || process.env.RESEND_FROM_EMAIL || fromEmail || "outreach@authichain.com";
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${ENV.resendApiKey}`,
+        },
+        body: JSON.stringify({
+          from: `${fromName} <${resendFrom}>`,
+          to: [to],
+          subject: input.subject,
+          text: input.body,
+        }),
+      });
 
-    if (res.ok) {
-      const data = await res.json().catch(() => ({} as any));
-      return {
-        status: "sent",
-        provider: "resend",
-        providerMessageId: data?.id,
-      };
+      if (res.ok) {
+        const data = await res.json().catch(() => ({} as any));
+        return { status: "sent", provider: "resend", providerMessageId: data?.id };
+      }
+
+      const errTxt = await res.text().catch(() => "");
+      console.warn("[email] Resend failed, falling back:", res.status, errTxt.slice(0, 200));
+    } catch (resendErr: any) {
+      console.warn("[email] Resend error, falling back:", resendErr.message);
     }
-
-    const errTxt = await res.text().catch(() => "");
-    console.warn("[email] Resend failed, falling back:", res.status, errTxt.slice(0, 200));
   }
 
   // ── Method 2: SMTP via App Password ─────────────────────────────────────

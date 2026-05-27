@@ -1,4 +1,4 @@
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import {
   getMissions,
@@ -11,8 +11,8 @@ import {
 import { MISSION_TYPES, MISSION_STATUSES } from "./types";
 
 export const missionsRouter = router({
-  list: protectedProcedure
-    .input(z.object({ status: z.string().optional() }))
+  list: adminProcedure
+    .input(z.object({ status: z.enum(MISSION_STATUSES).optional() }))
     .query(async ({ input }) => {
       return getMissions(input.status);
     }),
@@ -24,7 +24,7 @@ export const missionsRouter = router({
       return { id };
     }),
 
-  get: protectedProcedure
+  get: adminProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
       return getMissionById(input.id);
@@ -39,13 +39,13 @@ export const missionsRouter = router({
 });
 
 export const tasksRouter = router({
-  list: protectedProcedure
+  list: adminProcedure
     .input(z.object({ missionId: z.string() }))
     .query(async ({ input }) => {
       return getTasksByMission(input.missionId);
     }),
 
-  retry: protectedProcedure
+  retry: adminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       await retryTask(input.id);
