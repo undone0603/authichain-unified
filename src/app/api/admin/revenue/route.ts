@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const key = searchParams.get('key');
 
-  if (key !== process.env.ADMIN_DASHBOARD_KEY && key !== '***REMOVED***') {
+  if (!process.env.ADMIN_DASHBOARD_KEY || key !== process.env.ADMIN_DASHBOARD_KEY) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
