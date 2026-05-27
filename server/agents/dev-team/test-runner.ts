@@ -20,10 +20,10 @@
  *   LLM diagnoses the error and enqueues a targeted WRITE_CODE to fix it.
  */
 
-import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
-import { logActivity, createSystemNotification, getDb, getAllAdminIds } from '../../db.js';
-import { missionTasks } from '../../../drizzle/schema.js';
-import type { MissionTask as Task } from '../../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from '../../_core/llm';
+import { logActivity, createSystemNotification, getDb, getAllAdminIds } from '../../db';
+import { missionTasks } from '../../../drizzle/schema';
+import type { MissionTask as Task } from '../../../drizzle/schema';
 import {
   getPR,
   waitForCIRun,

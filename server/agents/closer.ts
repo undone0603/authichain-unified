@@ -6,13 +6,13 @@
  *   SEND_CONTRACT    → LLM contract terms + payment link (formal acceptance)
  *   AUTO_REPLY       → objection / pricing question handled autonomously
  */
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { sendEmail, checkThreadReplies } from '../email-service.js';
-import { logActivity, enqueueTask, getDb, createProposal } from '../db.js';
-import { leads } from '../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm';
+import { sendEmail, checkThreadReplies } from '../email-service';
+import { logActivity, enqueueTask, getDb, createProposal } from '../db';
+import { leads } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
-import { getStripe } from '../stripe-service.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { getStripe } from '../stripe-service';
+import type { MissionTask as Task } from '../../drizzle/schema';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 

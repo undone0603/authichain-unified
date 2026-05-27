@@ -18,10 +18,10 @@
  *   Reads existing files, LLM proposes changes, writes them via GitHub API.
  */
 
-import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
-import { logActivity, getDb } from '../../db.js';
-import { missionTasks } from '../../../drizzle/schema.js';
-import type { MissionTask as Task } from '../../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from '../../_core/llm';
+import { logActivity, getDb } from '../../db';
+import { missionTasks } from '../../../drizzle/schema';
+import type { MissionTask as Task } from '../../../drizzle/schema';
 import {
   createBranch,
   getFile,

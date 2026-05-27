@@ -11,11 +11,11 @@
  */
 
 import { chromium, type Browser, type Page } from 'playwright-core';
-import { invokeLLM, parseLLMContent, type Message, type Tool } from '../_core/llm.js';
-import { logActivity, getDb, enqueueTask } from '../db.js';
-import { leads } from '../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent, type Message, type Tool } from '../_core/llm';
+import { logActivity, getDb, enqueueTask } from '../db';
+import { leads } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import type { MissionTask as Task } from '../../drizzle/schema';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 const VIEWPORT   = { width: 1280, height: 800 };
