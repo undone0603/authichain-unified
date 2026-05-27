@@ -9,7 +9,6 @@ export const config = {
 export function middleware(req: NextRequest) {
   const host = req.headers.get('host') ?? req.nextUrl.hostname;
 
-  // Inline brand resolution - no external imports that could break edge bundling
   const brandMap: Record<string, string> = {
     'qron.space': 'qron', 'www.qron.space': 'qron', 'qron.io': 'qron',
     'strainchain.io': 'strainchain', 'www.strainchain.io': 'strainchain',

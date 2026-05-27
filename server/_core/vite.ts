@@ -6,7 +6,17 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 import { resolveBrand } from "../../shared/brands";
-import { brandInjectionScript, injectBrandMetadata } from "./brand-middleware";
+
+function injectBrandMetadata(template: string, brand: string): string {
+  return template.replace(
+    "<head>",
+    `<head>\n    <meta name="x-brand" content="${brand}" />`
+  );
+}
+
+function brandInjectionScript(brand: string): string {
+  return `<script>window.__BRAND__ = ${JSON.stringify(brand)};</script>`;
+}
 
 // Simple in-memory rate limiter for development
 const RATE_LIMIT_WINDOW = 60000; // 1 minute

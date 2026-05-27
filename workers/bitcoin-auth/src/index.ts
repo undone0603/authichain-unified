@@ -46,13 +46,10 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
     return Response.json({ error: 'Invalid or expired nonce' }, { status: 401 });
   }
 
-  // TODO: integrate bitcoinjs-message or equivalent WASM for sig verification
-  // Placeholder: always pass in scaffold — replace before production
-  const valid = signature.length > 0;
-
-  if (!valid) {
-    return Response.json({ error: 'Signature verification failed' }, { status: 401 });
-  }
+  // Bitcoin message signature verification requires bitcoinjs-message or WASM secp256k1.
+  // Until that dependency is wired in, reject all verification attempts so this
+  // endpoint cannot be exploited to claim arbitrary Bitcoin addresses.
+  return Response.json({ error: 'Bitcoin signature verification not yet implemented' }, { status: 501 });
 
   await env.AUTH_KV.delete(`nonce:${nonce}`);
 

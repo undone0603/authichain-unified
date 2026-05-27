@@ -73,6 +73,8 @@ export const appRouter = router({
     create: protectedProcedure.input(z.object({
       name: z.string().min(1),
       brand: z.string().optional(),
+      manufacturer: z.string().optional(),
+      modelNumber: z.string().optional(),
       category: z.string().optional(),
       description: z.string().optional(),
       imageUrl: z.string().optional(),
@@ -182,6 +184,7 @@ export const appRouter = router({
     generate: protectedProcedure.input(z.object({
       productId: z.number(),
       size: z.number().optional().default(300),
+      batchId: z.string().optional(),
     })).mutation(async ({ ctx, input }) => {
       const QRCode = (await import("qrcode")).default;
       const { getProductById, createQrCode } = await import("./db");
@@ -189,8 +192,20 @@ export const appRouter = router({
       if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
       const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL || "https://authichain.com"}/verify/${product.id}`;
       const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: input.size, margin: 2, color: { dark: "#000000", light: "#FFFFFF" } });
-      await createQrCode({ productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl });
+      await createQrCode({ productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl, metadata: input.batchId ? { batchId: input.batchId } : undefined });
       return { qrCodeDataUrl: qrDataUrl, verifyUrl };
+    }),
+    listForProduct: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ ctx, input }) => {
+      const { getProductById, getProductQrCodes } = await import("./db");
+      const product = await getProductById(input.productId);
+      if (!product || product.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+      return await getProductQrCodes(input.productId);
+    }),
+    scanHistory: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ ctx, input }) => {
+      const { getProductById, getRecentScanEvents } = await import("./db");
+      const product = await getProductById(input.productId);
+      if (!product || product.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+      return await getRecentScanEvents(input.productId);
     }),
     scan: publicProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
       const { getProductById, getProductQrCodes, incrementScanCount } = await import("./db");

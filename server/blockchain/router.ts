@@ -37,7 +37,8 @@ export const blockchainRouter = router({
     chainId: z.number().optional(),
   })).mutation(async ({ ctx, input }) => {
     const product = await db.getProductById(input.productId);
-    if (!product || product.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    if (product.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
     const cert = await db.getCertificateByNumber(input.certificateNumber);
     if (!cert || cert.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
     const metadata = thirdweb.buildAuthCertificateMetadata({
@@ -96,6 +97,8 @@ export const blockchainRouter = router({
     chainId: z.number().optional(),
     attributes: z.array(z.object({ trait_type: z.string(), value: z.union([z.string(), z.number()]) })).optional(),
   })).mutation(async ({ ctx, input }) => {
+    const privateKey = ENV.walletPrivateKey;
+    if (!privateKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Minting not configured" });
     const result = await thirdweb.mintAuthenticationNFT({
       contractAddress: input.contractAddress,
       recipientAddress: input.walletAddress,

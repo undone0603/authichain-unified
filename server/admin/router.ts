@@ -83,7 +83,7 @@ export const adminRouter = router({
   healthScores: adminProcedure.query(async () => {
     return await db.getAllHealthScores();
   }),
-  activity: adminProcedure.input(z.object({ limit: z.number().optional().default(50) })).query(async ({ input }) => {
+  activity: adminProcedure.input(z.object({ limit: z.number().min(1).max(500).optional().default(50) })).query(async ({ input }) => {
     return await db.getRecentActivity(input.limit);
   }),
   subscriptions: adminProcedure.query(async () => {

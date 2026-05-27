@@ -14,9 +14,11 @@ export async function getMissions(statusFilter?: string) {
     return d
       .select()
       .from(missions)
-      .where(eq(missions.status, statusFilter as any));
+      .where(eq(missions.status, statusFilter as any))
+      .orderBy(desc(missions.createdAt))
+      .limit(200);
   }
-  return d.select().from(missions).orderBy(desc(missions.createdAt));
+  return d.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
 }
 
 export async function getMissionById(id: string) {

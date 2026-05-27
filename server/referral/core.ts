@@ -50,8 +50,16 @@ export async function completeReferral(params: {
   referredEmail: string;
   tier: string;
 }): Promise<void> {
-  const rate = COMMISSION_RATES[params.tier] || COMMISSION_RATES.starter;
-  await db.update(referrals)
+  const [existing] = await db.select()
+    .from(referrals)
+    .where(eq(referrals.referralCode, params.referralCode))
+    .limit(1);
+
+  if (!existing) throw new Error("Referral code not found");
+  if (existing.status !== "pending") throw new Error("Referral code already used");
+  if (existing.referrerId === params.referredId) throw new Error("Cannot use your own referral code");
+
+  const updated = await db.update(referrals)
     .set({
       referredId: params.referredId,
       referredEmail: params.referredEmail,
@@ -59,7 +67,10 @@ export async function completeReferral(params: {
       tier: params.tier as any,
       convertedAt: new Date(),
     })
-    .where(eq(referrals.referralCode, params.referralCode));
+    .where(and(eq(referrals.referralCode, params.referralCode), eq(referrals.status, "pending")))
+    .returning({ id: referrals.id });
+
+  if (updated.length === 0) throw new Error("Referral code already used");
 }
 
 export async function getReferralStats(referrerId: number) {

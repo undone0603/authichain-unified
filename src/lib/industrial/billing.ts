@@ -1,16 +1,31 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-// Pinned to legacy API version because subscriptionItems.createUsageRecord
-// is only available on pre-meterEvents Stripe API versions.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  apiVersion: '2025-01-27' as any,
-});
+// Lazy singletons — avoid build-time throw when env vars are absent.
+let _stripe: Stripe | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) throw new Error('STRIPE_SECRET_KEY not set');
+    // Pinned to legacy API version because subscriptionItems.createUsageRecord
+    // is only available on pre-meterEvents Stripe API versions.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    _stripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' as const });
+  }
+  return _stripe;
+}
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const admin = createClient(supabaseUrl, serviceKey);
+let _admin: ReturnType<typeof createClient> | null = null;
+function getAdmin(): ReturnType<typeof createClient> {
+  if (!_admin) {
+    _admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+  }
+  return _admin;
+}
 
 /**
  * BILLING CONFIGURATION
@@ -35,11 +50,12 @@ export async function reportAgentUsage(userId: string, toolName: keyof typeof ME
     console.log(`[Billing] Reporting usage for ${userId}: ${toolName}`);
 
     // 1. Get the user's active metered subscription item
-    const { data: profile } = await admin
+    const { data: profileRow } = await getAdmin()
       .from('profiles')
       .select('stripe_subscription_id, tier')
       .eq('user_id', userId)
       .single();
+    const profile = profileRow as { stripe_subscription_id: string | null; tier: string } | null;
 
     if (!profile || !profile.stripe_subscription_id) {
       console.warn(`[Billing] No active subscription for ${userId} - skipping reporting`);
@@ -50,7 +66,7 @@ export async function reportAgentUsage(userId: string, toolName: keyof typeof ME
     if (profile.tier === 'free') return;
 
     // 2. Find the metered subscription item
-    const subscription = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
+    const subscription = await getStripe().subscriptions.retrieve(profile.stripe_subscription_id);
     const meteredItem = subscription.items.data.find(item => 
       item.price.recurring?.usage_type === 'metered'
     );
@@ -63,7 +79,7 @@ export async function reportAgentUsage(userId: string, toolName: keyof typeof ME
     // 3. Report usage units based on tool value
     const quantity = METERED_PRICING[toolName] || 1;
 
-    const legacyStripe = stripe as unknown as {
+    const legacyStripe = getStripe() as unknown as {
       subscriptionItems: {
         createUsageRecord: (
           id: string,
@@ -79,7 +95,7 @@ export async function reportAgentUsage(userId: string, toolName: keyof typeof ME
     });
 
     // 4. Log to DB for internal analytics
-    await admin.from('automation_logs').insert({
+    await (getAdmin().from('automation_logs') as any).insert({
       workflow_name: 'metered_usage_reported',
       trigger_type: 'event',
       status: 'success',
@@ -91,12 +107,12 @@ export async function reportAgentUsage(userId: string, toolName: keyof typeof ME
   } catch (err) {
     console.error('[Billing] Reporting failed:', err);
     // Non-blocking log
-    admin.from('automation_logs').insert({
+    (getAdmin().from('automation_logs') as any).insert({
       workflow_name: 'metered_usage_reported',
       trigger_type: 'event',
       status: 'failure',
       error_message: err instanceof Error ? err.message : String(err)
-    }).then(undefined, (logErr) => {
+    }).then(undefined, (logErr: unknown) => {
       console.error('[Billing] Failed to write failure log:', logErr);
     });
   }

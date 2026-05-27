@@ -279,7 +279,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("autopilot.getStatus returns status object", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.autopilot.getStatus();
       expect(result).toBeDefined();
@@ -288,7 +288,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("autopilot.getDecisions returns array", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.autopilot.getDecisions({ limit: 5 });
       expect(Array.isArray(result)).toBe(true);
@@ -302,7 +302,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("emailDrafts.listPending returns array", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.emailDrafts.listPending();
       expect(Array.isArray(result)).toBe(true);
@@ -323,7 +323,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("abTesting.list returns array", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.abTesting.list();
       expect(Array.isArray(result)).toBe(true);
@@ -802,7 +802,7 @@ describe("AuthiChain Unified Platform Routers", () => {
   describe("missions", () => {
     it("list requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.missions.list({ status: "active" })).rejects.toThrow();
+      await expect(caller.missions.list({ status: "PLANNED" })).rejects.toThrow();
     });
   });
 
@@ -945,9 +945,9 @@ describe("AuthiChain Unified Platform Routers", () => {
       const caller = appRouter.createCaller(createPublicContext());
       await expect(caller.qrcode.generate({ productId: 1 })).rejects.toThrow();
     });
-    it("generateStorymode requires auth", async () => {
+    it("listForProduct requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.qrcode.generateStorymode({ productId: 1 })).rejects.toThrow();
+      await expect(caller.qrcode.listForProduct({ productId: 1 })).rejects.toThrow();
     });
   });
 

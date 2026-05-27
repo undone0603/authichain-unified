@@ -5,6 +5,7 @@
 import Stripe from "stripe";
 import { STRIPE_PRODUCTS, type PlanKey, getPlanQuota } from "./stripe-products";
 import { ENV } from "./_core/env";
+import { safeOrigin } from "./_core/allowed-origins";
 
 let _stripe: Stripe | null = null;
 
@@ -12,7 +13,7 @@ export function getStripe(): Stripe {
   if (!_stripe) {
     const secretKey = ENV.stripeSecretKey;
     if (!secretKey) throw new Error("STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(secretKey, { apiVersion: "2025-03-31.basil" as any });
+    _stripe = new Stripe(secretKey, { apiVersion: "2026-04-22.dahlia" as const });
   }
   return _stripe;
 }
@@ -27,6 +28,7 @@ export interface CreateCheckoutParams {
   billing: "monthly" | "annual";
   origin: string;
   stripeCustomerId?: string;
+  trialDays?: number;
   brand?: string;
   contractSetupOrderId?: string;
 }
@@ -57,11 +59,11 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
     client_reference_id: params.userId.toString(),
     customer_email: params.stripeCustomerId ? undefined : params.userEmail,
     customer: params.stripeCustomerId || undefined,
-    // user_id on the session so checkout.session.completed can resolve it
     metadata: sharedMeta,
-    // user_id on the subscription so customer.subscription.* events can
-    // resolve it without a customer object lookup
-    subscription_data: { metadata: sharedMeta },
+    subscription_data: {
+      metadata: sharedMeta,
+      ...(params.trialDays ? { trial_period_days: params.trialDays } : {}),
+    },
     line_items: [
       {
         price_data: {
@@ -78,8 +80,8 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
         quantity: 1,
       },
     ],
-    success_url: `${params.origin}/subscriptions?session_id={CHECKOUT_SESSION_ID}&success=true`,
-    cancel_url: `${params.origin}/subscriptions?cancelled=true`,
+    success_url: `${safeOrigin(params.origin)}/subscriptions?session_id={CHECKOUT_SESSION_ID}&success=true`,
+    cancel_url: `${safeOrigin(params.origin)}/subscriptions?cancelled=true`,
   };
 
   const session = await stripe.checkout.sessions.create(sessionConfig);
@@ -127,8 +129,8 @@ export async function createPaymentCheckout(params: CreatePaymentCheckoutParams)
         quantity: 1,
       },
     ],
-    success_url: `${params.origin}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
-    cancel_url: `${params.origin}/payments?cancelled=true`,
+    success_url: `${safeOrigin(params.origin)}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
+    cancel_url: `${safeOrigin(params.origin)}/payments?cancelled=true`,
   });
 
   return { url: session.url!, sessionId: session.id };

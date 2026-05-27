@@ -72,6 +72,9 @@ export const nftRouter = router({
       reservePrice: z.string().optional(),
       endsAt: z.string(),
     })).mutation(async ({ ctx, input }) => {
+      const nft = await db.getNftById(input.nftId);
+      if (!nft) throw new TRPCError({ code: "NOT_FOUND", message: "NFT not found" });
+      if (nft.ownerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You do not own this NFT" });
       return await db.createAuction({ ...input, sellerId: ctx.user.id, endsAt: new Date(input.endsAt) });
     }),
     bid: protectedProcedure.input(z.object({

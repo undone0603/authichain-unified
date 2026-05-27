@@ -9,6 +9,9 @@ on:
       - '.github/workflows/deploy-edge-worker.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

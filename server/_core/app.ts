@@ -1,6 +1,19 @@
 import { getBrandContext } from "./brand-context";
 import "dotenv/config";
+import { timingSafeEqual as cryptoTimingSafeEqual } from "crypto";
 import express, { type NextFunction, type Request, type Response } from "express";
+import helmet from "helmet";
+
+function timingSafeEqual(a: string, b: string): boolean {
+  try {
+    const ba = Buffer.from(a);
+    const bb = Buffer.from(b);
+    if (ba.length !== bb.length) return false;
+    return cryptoTimingSafeEqual(ba, bb);
+  } catch {
+    return false;
+  }
+}
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import { rateLimit } from "express-rate-limit";
@@ -8,9 +21,23 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { createInternalRouter } from "../internal-api";
-import { brandMiddleware } from "./brand-middleware";
+import { resolveBrand } from "../../shared/brands";
+
+function brandMiddleware(req: Request, res: Response, next: NextFunction) {
+  const host = req.headers.host ?? req.hostname ?? "";
+  const brand = resolveBrand(host);
+  res.locals.brand = brand;
+  res.setHeader("X-Brand", brand);
+  next();
+}
 import contactRouter from "../contact";
 import gptRouter from "../gpt/router";
+import {
+  oauthRateLimit,
+  contactRateLimit,
+  gptRateLimit,
+  globalApiRateLimit,
+} from "./rate-limit";
 
 const ALLOWED_ORIGINS = [
   "https://authichain.com",
@@ -57,9 +84,44 @@ const authLimiter = rateLimit({
 export function createApp() {
   const app = express();
 
+  // Trust the first hop from Vercel / Railway reverse proxies so req.ip is the real client IP
+  app.set("trust proxy", 1);
+
+  // ─── Security headers ─────────────────────────────────────────────────────
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: [
+          "'self'",
+          "https://api.stripe.com",
+          "https://*.supabase.co",
+          "wss://*.supabase.co",
+          "https://*.thirdweb.com",
+          "wss://*.thirdweb.com",
+          "https://polygon-rpc.com",
+          "https://*.polygon.technology",
+          ...(process.env.NODE_ENV !== "production" ? ["ws://localhost:*", "http://localhost:*"] : []),
+        ],
+        frameSrc: ["https://js.stripe.com"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }));
+
+
   // ─── CORS (before all routes) ─────────────────────────────────────────────
   app.use(cors(corsOptions));
   app.options("*", cors(corsOptions));
+
+  // ─── Global API rate limit (broad DoS protection) ────────────────────────
+  app.use("/api", globalApiRateLimit);
+
 
   // ─── Brand detection (Host → res.locals.brand + X-Brand header) ──────────
   app.use(brandMiddleware);
@@ -102,6 +164,13 @@ export function createApp() {
 
   // ─── Instantly.ai Webhook ────────────────────────────────────────────────
   app.post("/api/webhooks/instantly", async (req, res) => {
+    const secret = process.env.INSTANTLY_WEBHOOK_SECRET;
+    if (secret) {
+      const provided = req.headers["x-webhook-secret"] as string | undefined;
+      if (!provided || !timingSafeEqual(provided, secret)) {
+        return res.status(401).json({ error: "Invalid webhook secret" });
+      }
+    }
     try {
       const { handleInstantlyWebhook } = await import("../webhooks/instantly.js");
       const result = await handleInstantlyWebhook(req.body);
@@ -114,6 +183,13 @@ export function createApp() {
 
   // ─── DocuSign Webhook ────────────────────────────────────────────────────
   app.post("/api/webhooks/docusign", async (req, res) => {
+    const secret = process.env.DOCUSIGN_WEBHOOK_SECRET;
+    if (secret) {
+      const provided = req.headers["x-docusign-secret"] as string | undefined;
+      if (!provided || !timingSafeEqual(provided, secret)) {
+        return res.status(401).json({ error: "Invalid webhook secret" });
+      }
+    }
     try {
       const { handleDocuSignWebhook } = await import("../webhooks/docusign.js");
       const result = await handleDocuSignWebhook(req.body);
@@ -144,10 +220,6 @@ export function createApp() {
   });
 
   // ─── Vercel Cron endpoint ────────────────────────────────────────────────
-  // Vercel calls GET /api/cron/:jobName on the configured schedule and injects
-  // Authorization: Bearer <CRON_SECRET>. We validate that header so the routes
-  // are not publicly triggerable. When CRON_SECRET is not set (dev) we allow
-  // requests only from localhost.
   app.get("/api/cron/:jobName", async (req, res) => {
     const secret = process.env.CRON_SECRET;
     const auth = req.headers.authorization;
@@ -167,9 +239,16 @@ export function createApp() {
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // ─── OAuth callback: stricter rate limit ─────────────────────────────────
+  app.use("/api/oauth", oauthRateLimit);
   registerOAuthRoutes(app);
-    app.use("/api/contact", contactRouter);
-    app.use("/api/gpt", gptRouter);
+
+  // ─── Contact form: 5/hr per IP ───────────────────────────────────────────
+  app.use("/api/contact", contactRateLimit, contactRouter);
+
+  // ─── GPT plugin: 60/min per IP ───────────────────────────────────────────
+  app.use("/api/gpt", gptRateLimit, gptRouter);
 
   // Internal API for gateway worker
   app.use("/api/internal", createInternalRouter());

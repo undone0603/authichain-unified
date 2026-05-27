@@ -24,7 +24,11 @@ async function verifyJWT(token: string, secret: string) {
     const isValid = await crypto.subtle.verify('HMAC', key, signature, data);
     if (!isValid) return null;
 
-    return JSON.parse(atob(parts[1]));
+    const payload = JSON.parse(atob(parts[1]));
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) return null;
+    if (payload.nbf && payload.nbf > now) return null;
+    return payload;
   } catch (e) {
     return null;
   }

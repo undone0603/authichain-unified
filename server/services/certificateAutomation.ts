@@ -3,6 +3,12 @@ import { certificates, products, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { storagePut } from '../storage';
 import { notifyOwner } from '../_core/notification';
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local?.[0] ?? ''}***@${domain}`;
+}
 import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../thirdweb';
 import { ENV } from '../_core/env';
 import { sendCertificateEmail as sendCrispCertificateEmail } from './crispService';
@@ -368,7 +374,7 @@ async function sendCertificateEmail(
   });
 
   if (result.status === 'sent') {
-    console.log(`[Email] Certificate email sent to ${customerEmail} via ${result.provider}`);
+    console.log(`[Email] Certificate email sent to ${maskEmail(customerEmail)} via ${result.provider}`);
   } else {
     console.error(`[Email] Certificate email ${result.status}: ${result.reason ?? 'unknown'}`);
   }

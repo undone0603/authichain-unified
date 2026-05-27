@@ -1,24 +1,4 @@
-import React from 'react';
-
-interface VerifyResult {
-  status: 'authentic';
-  name: string;
-  sku: string;
-  tenant_id: string;
-  verified_at: string;
-}
-
-async function fetchVerification(productId: string): Promise<VerifyResult | null> {
-  try {
-    const res = await fetch(`https://authichain.com/verify/${productId}`, {
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
+import { getProductById, getProductQrCodes } from '../../../../server/db';
 
 export default async function VerifyProductPage({
   params,
@@ -26,7 +6,11 @@ export default async function VerifyProductPage({
   params: { productId: string };
 }) {
   const { productId } = params;
-  const result = await fetchVerification(productId);
+  const numId = parseInt(productId, 10);
+
+  const product = isNaN(numId) ? null : await getProductById(numId);
+  const qrCodes = product ? await getProductQrCodes(numId) : [];
+  const latestQr = qrCodes[0] ?? null;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-gray-50 dark:bg-gray-900">
@@ -50,7 +34,7 @@ export default async function VerifyProductPage({
           </span>
         </div>
 
-        {result ? (
+        {product ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50">
               <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
@@ -67,20 +51,26 @@ export default async function VerifyProductPage({
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
                 <dt className="text-gray-500 dark:text-gray-400">Product</dt>
-                <dd className="font-medium text-gray-900 dark:text-white">{result.name}</dd>
+                <dd className="font-medium text-gray-900 dark:text-white">{product.name}</dd>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <dt className="text-gray-500 dark:text-gray-400">SKU</dt>
-                <dd className="font-mono text-gray-900 dark:text-white">{result.sku}</dd>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <dt className="text-gray-500 dark:text-gray-400">Brand</dt>
-                <dd className="font-mono text-gray-900 dark:text-white">{result.tenant_id}</dd>
-              </div>
+              {product.serialNumber && (
+                <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                  <dt className="text-gray-500 dark:text-gray-400">Serial</dt>
+                  <dd className="font-mono text-gray-900 dark:text-white">{product.serialNumber}</dd>
+                </div>
+              )}
+              {product.brand && (
+                <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                  <dt className="text-gray-500 dark:text-gray-400">Brand</dt>
+                  <dd className="font-mono text-gray-900 dark:text-white">{product.brand}</dd>
+                </div>
+              )}
               <div className="flex justify-between py-2">
-                <dt className="text-gray-500 dark:text-gray-400">Verified at</dt>
+                <dt className="text-gray-500 dark:text-gray-400">Registered</dt>
                 <dd className="text-gray-900 dark:text-white">
-                  {new Date(result.verified_at).toLocaleString()}
+                  {latestQr
+                    ? new Date(latestQr.createdAt).toLocaleString()
+                    : new Date(product.createdAt).toLocaleString()}
                 </dd>
               </div>
             </dl>

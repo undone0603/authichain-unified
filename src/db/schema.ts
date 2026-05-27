@@ -147,12 +147,23 @@ export const qrCodes = pgTable('qr_codes', {
   metadata: jsonb('metadata').default({}),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().notNull(),
-}, (table) => [
-  index('idx_qrcodes_user_id').on(table.userId),
-  index('idx_qrcodes_short_code').on(table.shortCode),
-]);
+}, (table) => ({
+  qrcodesUserIdx: index('idx_qrcodes_user_id').on(table.userId),
+  qrcodesShortCodeIdx: index('idx_qrcodes_short_code').on(table.shortCode),
+}));
 
 export type QrCode = typeof qrCodes.$inferSelect;
+
+// ─── QR Scan Events ──────────────────────────────────────────────────────────
+export const qrScanEvents = pgTable('qr_scan_events', {
+  id: serial('id').primaryKey(),
+  qrCodeId: integer('qrCodeId').notNull(),
+  productId: integer('productId').notNull(),
+  isAuthentic: boolean('isAuthentic'),
+  userAgent: text('userAgent'),
+  scannedAt: timestamp('scannedAt').defaultNow().notNull(),
+});
+export type QrScanEvent = typeof qrScanEvents.$inferSelect;
 
 // ─── Redirect Rules ──────────────────────────────────────────────────────────
 export const redirectRules = pgTable(
@@ -176,9 +187,9 @@ export const redirectRules = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
-  (table) => [
-    index('idx_redirect_qron').on(table.qronId),
-  ]
+  (table) => ({
+    redirectQronIdx: index('idx_redirect_qron').on(table.qronId),
+  })
 );
 
 // ─── Brands ──────────────────────────────────────────────────────────────────
@@ -201,9 +212,9 @@ export const brands = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
-  (table) => [
-    index('idx_brands_domain').on(table.domain),
-  ]
+  (table) => ({
+    brandsDomainIdx: index('idx_brands_domain').on(table.domain),
+  })
 );
 
 // ─── Telemetry Events (Phase 2 & Theater 1) ──────────────────────────────────
@@ -227,10 +238,10 @@ export const telemetryEvents = pgTable(
     timestamp: timestamp('timestamp').defaultNow().notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
-  (table) => [
-    index('idx_telemetry_theater').on(table.theater),
-    index('idx_telemetry_hash').on(table.stateHash),
-  ]
+  (table) => ({
+    telemetryTheaterIdx: index('idx_telemetry_theater').on(table.theater),
+    telemetryHashIdx: index('idx_telemetry_hash').on(table.stateHash),
+  })
 );
 
 // ─── Supply Chain Events ─────────────────────────────────────────────────────
@@ -1114,5 +1125,19 @@ export const personalizationEvents = pgTable("personalization_events", {
   ruleId: integer("ruleId"),
   variant: varchar("variant", { length: 64 }),
   metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Proposals ───────────────────────────────────────────────────────────────
+export const proposals = pgTable("proposals", {
+  id: uuid("id").primaryKey(),
+  leadEmail: varchar("leadEmail", { length: 320 }).notNull(),
+  missionId: varchar("missionId", { length: 128 }).notNull(),
+  taskId: varchar("taskId", { length: 128 }),
+  segment: varchar("segment", { length: 64 }).notNull(),
+  content: text("content").notNull(),
+  paymentLink: text("paymentLink"),
+  checkoutSessionId: varchar("checkoutSessionId", { length: 128 }),
+  pilotPriceUsd: integer("pilotPriceUsd"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

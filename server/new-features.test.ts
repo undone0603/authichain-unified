@@ -406,7 +406,7 @@ describe("New Features", () => {
 
     describe("authenticated operations", () => {
       it("emailDrafts.listPending returns array", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).emailDrafts.listPending();
+        const result = await appRouter.createCaller(createAuthContext("admin")).emailDrafts.listPending();
         expect(Array.isArray(result)).toBe(true);
       });
 
@@ -422,19 +422,19 @@ describe("New Features", () => {
       });
 
       it("emailDrafts.reject returns success", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).emailDrafts.reject({ id: 1, notes: "Off-topic" });
+        const result = await appRouter.createCaller(createAuthContext("admin")).emailDrafts.reject({ id: 1, notes: "Off-topic" });
         expect(result).toEqual({ success: true });
       });
 
       it("emailDrafts.bulkApprove returns count matching input ids", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).emailDrafts.bulkApprove({ ids: [10, 11, 12] });
+        const result = await appRouter.createCaller(createAuthContext("admin")).emailDrafts.bulkApprove({ ids: [10, 11, 12] });
         expect(result.success).toBe(true);
         expect(result.count).toBe(3);
       });
 
       it("emailDrafts.approve does NOT send email when draft is not in pending list", async () => {
         // getPendingDrafts returns [] by default — draft 999 not found, no email sent
-        await appRouter.createCaller(createAuthContext()).emailDrafts.approve({ id: 999 });
+        await appRouter.createCaller(createAuthContext("admin")).emailDrafts.approve({ id: 999 });
         const { sendEmail } = await import("./email/smtp");
         expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
       });
@@ -448,7 +448,7 @@ describe("New Features", () => {
           status: "pending", templateUsed: null, generatedBy: "ai_manager",
           approvedBy: null, approvedAt: null, sentAt: null, notes: null, taskId: null, createdAt: new Date(),
         }]);
-        await appRouter.createCaller(createAuthContext()).emailDrafts.approve({ id: 42 });
+        await appRouter.createCaller(createAuthContext("admin")).emailDrafts.approve({ id: 42 });
         const { sendEmail } = await import("./email/smtp");
         expect(vi.mocked(sendEmail)).toHaveBeenCalledOnce();
         expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(expect.objectContaining({

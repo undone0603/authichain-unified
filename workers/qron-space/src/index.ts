@@ -1,3 +1,10 @@
+const HTML_SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+};
+
 export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -185,6 +192,6 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
   <p>© 2026 QRON / AuthiChain Protocol · <a href="https://authichain.com">authichain.com</a> · Contract: 0xAebfA6b08fb25b59748c93273aB8880e20FfE437</p>
 </footer>
 </body></html>`;
-    return new Response(html, { headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public,max-age=300" } });
+    return new Response(html, { headers: { ...HTML_SECURITY_HEADERS, "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public,max-age=300" } });
   },
 };

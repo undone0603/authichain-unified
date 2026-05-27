@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ReferralTracker } from '@/components/ReferralTracker';
 import { ThemeManager } from '@/components/ThemeManager';
+import { TRPCProvider } from '@/components/TRPCProvider';
 import React, { Suspense } from 'react';
 import { ThirdwebProvider } from 'thirdweb/react';
 import { Analytics } from '@vercel/analytics/next';
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
     template: '%s | AuthiChain Protocol',
   },
   description: 'The global standard for cryptographically-verified product identity, industrial provenance, and AI-generated QR art.',
-  metadataBase: new URL('https://qron.space'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://authichain.com'),
   alternates: {
     canonical: '/',
   },
@@ -68,12 +69,14 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ThemeManager />
-        <ThirdwebProvider>
-          <Suspense fallback={null}>
-            <ReferralTracker />
-          </Suspense>
-          {children}
-        </ThirdwebProvider>
+        <TRPCProvider>
+          <ThirdwebProvider>
+            <Suspense fallback={null}>
+              <ReferralTracker />
+            </Suspense>
+            {children}
+          </ThirdwebProvider>
+        </TRPCProvider>
         <Analytics />
         <SpeedInsights />
       </body>
