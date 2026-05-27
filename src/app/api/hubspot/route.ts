@@ -19,7 +19,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // HubSpot CRM API - Create or Update Contact
     const response = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', {
       method: 'POST',
       headers: {
@@ -27,18 +26,13 @@ export async function POST(request: Request) {
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        properties: {
-          email,
-          firstname,
-          lastname
-        }
+        properties: { email, firstname, lastname }
       })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      // If contact already exists, it returns 409
       if (response.status === 409) {
         return NextResponse.json({ message: "Contact already exists", data });
       }
