@@ -1,7 +1,5 @@
 export const runtime = 'edge';
 
-export const runtime = 'edge';
-
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -25,36 +23,31 @@ export async function POST(request: Request) {
     const response = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         properties: {
           email,
           firstname,
-          lastname,
-        },
-      }),
+          lastname
+        }
+      })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      return NextResponse.json(
-        { error: data.message || "Failed to interact with HubSpot" },
-        { status: response.status }
-      );
+      // If contact already exists, it returns 409
+      if (response.status === 409) {
+        return NextResponse.json({ message: "Contact already exists", data });
+      }
+      return NextResponse.json({ error: data.message || "HubSpot API error" }, { status: response.status });
     }
 
-    return NextResponse.json({ success: true, data });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Contact created successfully", data });
+  } catch (error) {
+    console.error('HubSpot Route Error:', error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
-}
-
-export async function GET() {
-  return NextResponse.json({ message: "HubSpot API route is active" });
 }
