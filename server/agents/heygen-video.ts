@@ -15,17 +15,17 @@
  * and enqueues DRAFT_OUTBOUND_EMAIL with video_url in payload.
  */
 
-import type { MissionTask as Task } from '../../drizzle/schema.js';
-import { logActivity } from '../db.js';
+import type { MissionTask as Task } from '../../drizzle/schema';
+import { logActivity } from '../db';
 import {
   listAvatars,
   listVoices,
   generateVideo,
   draftOutreachScript,
   getVideoStatus,
-} from '../heygen-service.js';
-import { uploadVideo } from '../youtube-service.js';
-import { postTweet } from '../twitter-service.js';
+} from '../heygen-service';
+import { uploadVideo } from '../youtube-service';
+import { postTweet } from '../twitter-service';
 
 const POLL_INTERVAL_MS = 8_000;
 const MAX_POLLS = 30; // 4 minutes max wait

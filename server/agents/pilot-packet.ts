@@ -1,6 +1,6 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity } from '../db.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm';
+import { logActivity } from '../db';
+import type { MissionTask as Task } from '../../drizzle/schema';
 
 interface PilotPacketPayload {
   segment?: string;

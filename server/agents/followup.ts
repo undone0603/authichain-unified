@@ -1,10 +1,10 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { ENV } from '../_core/env.js';
-import { sendEmail } from '../email-service.js';
-import { logActivity, getDb, markTaskWaitingHuman } from '../db.js';
-import { emailDrafts, leads } from '../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm';
+import { ENV } from '../_core/env';
+import { sendEmail } from '../email-service';
+import { logActivity, getDb, markTaskWaitingHuman } from '../db';
+import { emailDrafts, leads } from '../../drizzle/schema';
 import { eq, and, lte, inArray } from 'drizzle-orm';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import type { MissionTask as Task } from '../../drizzle/schema';
 
 interface FollowupPayload {
   segment?: string;

@@ -1,8 +1,8 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity } from '../db.js';
-import { postThread } from '../twitter-service.js';
-import { postLinkedInThread } from '../linkedin-service.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm';
+import { logActivity } from '../db';
+import { postThread } from '../twitter-service';
+import { postLinkedInThread } from '../linkedin-service';
+import type { MissionTask as Task } from '../../drizzle/schema';
 
 interface ContentPayload {
   audience?: string;

@@ -1,10 +1,10 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity, enqueueTask, getAdaptivePriors, getDb } from '../db.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
-import { leads } from '../../drizzle/schema.js';
-import { SEGMENT_REVENUE, betaMean, betaCI } from '../_core/bayesian.js';
-import { apolloSearchLeads, type ApolloLead } from '../apollo-service.js';
-import { invokeLLM as _llm } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm';
+import { logActivity, enqueueTask, getAdaptivePriors, getDb } from '../db';
+import type { MissionTask as Task } from '../../drizzle/schema';
+import { leads } from '../../drizzle/schema';
+import { SEGMENT_REVENUE, betaMean, betaCI } from '../_core/bayesian';
+import { apolloSearchLeads, type ApolloLead } from '../apollo-service';
+import { invokeLLM as _llm } from '../_core/llm';
 
 interface LeadFinderPayload {
   count?: number;
