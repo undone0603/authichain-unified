@@ -1,9 +1,8 @@
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 // Lazy singletons — avoid build-time throw when env vars are absent.
 let _stripe: Stripe | null = null;
@@ -42,7 +41,8 @@ export async function POST(req: NextRequest) {
 
   let event: any;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    // 2. UPDATED: Must use constructEventAsync for Edge compatibility
+    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
   } catch (err: any) {
     console.error('Stripe webhook signature verification failed:', err.message);
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });

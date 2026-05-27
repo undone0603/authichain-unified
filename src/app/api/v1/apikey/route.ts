@@ -1,3 +1,7 @@
+export const runtime = 'edge';
+<<<<<<< HEAD
+=======
+
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 
@@ -111,3 +115,4 @@ export async function POST(request: NextRequest) {
     created_at: new Date().toISOString()
   }, { status: 201 });
 }
+>>>>>>> 50c67b9 (zk)

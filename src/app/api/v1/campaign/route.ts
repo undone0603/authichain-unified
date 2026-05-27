@@ -1,3 +1,7 @@
+export const runtime = 'edge';
+<<<<<<< HEAD
+=======
+
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET /api/v1/campaign - List QR code campaigns with analytics
@@ -137,3 +141,4 @@ export async function OPTIONS() {
     },
   });
 }
+>>>>>>> 50c67b9 (zk)

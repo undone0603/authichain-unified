@@ -1,14 +1,31 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { middleware as supabaseMiddleware } from './utils/supabase/middleware';
-import { middleware as brandMiddleware } from './server/_core/brand-middleware';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const config = {
-  matcher: ['/:path*'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+  ],
 };
 
-export async function middleware(req: NextRequest) {
-  const res = await supabaseMiddleware(req);
-  const brandRes = brandMiddleware(req);
-  brandRes.headers.forEach((v, k) => res.headers.set(k, v));
-  return res;
+export function middleware(req: NextRequest) {
+  const host = req.headers.get('host') ?? req.nextUrl.hostname;
+
+  const brandMap: Record<string, string> = {
+    'qron.space': 'qron', 'www.qron.space': 'qron', 'qron.io': 'qron',
+    'strainchain.io': 'strainchain', 'www.strainchain.io': 'strainchain',
+    'govchain.us': 'govchain', 'www.govchain.us': 'govchain',
+    'authichain.com': 'authichain', 'www.authichain.com': 'authichain',
+  };
+
+  const h = host.toLowerCase().split(':')[0];
+  let brand = brandMap[h] ?? 'authichain';
+  if (brand === 'authichain') {
+    for (const [k, v] of Object.entries(brandMap)) {
+      if (h.endsWith('.' + k) || h.includes(v)) { brand = v; break; }
+    }
+  }
+
+  const reqHeaders = new Headers(req.headers);
+  reqHeaders.set('x-brand', brand);
+
+  return NextResponse.next({ request: { headers: reqHeaders } });
 }

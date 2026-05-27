@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
@@ -20,18 +22,19 @@ export async function POST(req: Request) {
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err: any) {
-    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
 
   // Handle the event
   switch (event.type) {
     case "checkout.session.completed":
       const session = event.data.object as Stripe.Checkout.Session;
-      // Fullfill the purchase...
+      // You can add your business logic here (e.g., updating database)
+      console.log("Payment successful for session:", session.id);
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
 
-  return new NextResponse(null, { status: 200 });
+  return NextResponse.json({ received: true });
 }

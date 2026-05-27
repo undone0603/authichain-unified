@@ -1,3 +1,7 @@
+export const runtime = 'edge';
+<<<<<<< HEAD
+=======
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
@@ -95,3 +99,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+>>>>>>> 50c67b9 (zk)

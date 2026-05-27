@@ -1,3 +1,7 @@
+export const runtime = 'edge';
+<<<<<<< HEAD
+=======
+
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET /api/users - Get current user profile
@@ -54,3 +58,4 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
+>>>>>>> 50c67b9 (zk)

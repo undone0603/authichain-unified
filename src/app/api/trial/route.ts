@@ -1,3 +1,7 @@
+export const runtime = 'edge';
+<<<<<<< HEAD
+=======
+
 import { NextRequest, NextResponse } from 'next/server';
 
 const TRIAL_PLANS = [
@@ -124,3 +128,4 @@ export async function POST(req: NextRequest) {
     { status: 201 }
   );
 }
+>>>>>>> 50c67b9 (zk)

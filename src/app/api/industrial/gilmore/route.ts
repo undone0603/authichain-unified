@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextResponse } from 'next/server';
 import { generateGilmoreArt, GilmoreArtRequest } from '@/lib/industrial/gilmore-pipeline';
 import { createClient } from '@/utils/supabase/server';

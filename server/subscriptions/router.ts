@@ -65,7 +65,6 @@ export const subscriptionsRouter = router({
     if (!ALLOWED_CHECKOUT_ORIGINS.includes(input.origin) && !isLocalDev) {
       throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid origin" });
     }
-    // 14-day trial for self-serve plans; enterprise/medtech go through custom sales
     const trialDays = (input.plan === "starter" || input.plan === "professional") ? 14 : undefined;
     const url = await stripeService.createSubscriptionCheckout({
       userId: ctx.user.id,

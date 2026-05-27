@@ -1,3 +1,4 @@
+import { getBrandContext } from "./brand-context";
 import "dotenv/config";
 import { timingSafeEqual as cryptoTimingSafeEqual } from "crypto";
 import express, { type NextFunction, type Request, type Response } from "express";
@@ -110,8 +111,9 @@ export function createApp() {
         upgradeInsecureRequests: [],
       },
     },
-    crossOriginEmbedderPolicy: false, // allow embedding for QR/verification pages
+    crossOriginEmbedderPolicy: false,
   }));
+
 
   // ─── CORS (before all routes) ─────────────────────────────────────────────
   app.use(cors(corsOptions));
@@ -119,6 +121,7 @@ export function createApp() {
 
   // ─── Global API rate limit (broad DoS protection) ────────────────────────
   app.use("/api", globalApiRateLimit);
+
 
   // ─── Brand detection (Host → res.locals.brand + X-Brand header) ──────────
   app.use(brandMiddleware);

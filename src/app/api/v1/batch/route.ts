@@ -1,3 +1,7 @@
+export const runtime = 'edge';
+<<<<<<< HEAD
+=======
+
 import { NextResponse } from 'next/server';
 
 // POST /api/v1/batch - Bulk create QR codes
@@ -55,3 +59,4 @@ export async function GET() {
     protocol: 'QRON',
   });
 }
+>>>>>>> 50c67b9 (zk)

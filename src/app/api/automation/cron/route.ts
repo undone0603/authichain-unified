@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { runDailyMaintenance } from '@/lib/automation';

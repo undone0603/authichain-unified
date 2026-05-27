@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { PLAN_CREDITS, PLAN_TIER, type PlanId } from '@/lib/plans';

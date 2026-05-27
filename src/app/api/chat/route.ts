@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+export const runtime = 'edge'; 
+=======
+export const runtime = 'edge';
+
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 
@@ -14,3 +19,4 @@ export async function POST(req: Request) {
 
   return result.toTextStreamResponse();
 }
+>>>>>>> 50c67b9 (zk)
