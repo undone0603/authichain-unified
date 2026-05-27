@@ -1,7 +1,5 @@
 export const runtime = 'edge';
 
-export const runtime = 'edge';
-
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
@@ -30,7 +28,9 @@ export async function POST(req: Request) {
   // Handle the event
   switch (event.type) {
     case "checkout.session.completed":
-      // Add logic here
+      const session = event.data.object as Stripe.Checkout.Session;
+      // You can add your business logic here (e.g., updating database)
+      console.log("Payment successful for session:", session.id);
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);
