@@ -45,7 +45,12 @@ jobs:
           NODE_ENV: production
 
       - name: Run Database Migrations
-        run: npx tsx scripts/migrate-pg.ts
+        run: |
+          if [ -n "$DATABASE_URL" ]; then
+            npx tsx scripts/migrate-pg.ts
+          else
+            echo "DATABASE_URL not set — skipping migrations"
+          fi
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
