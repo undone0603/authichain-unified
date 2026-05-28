@@ -18,7 +18,7 @@ function brandInjectionScript(brand: string): string {
   return `<script>window.__BRAND__ = ${JSON.stringify(brand)};</script>`;
 }
 
-// Simple in-memory rate limiter for development
+// Simple in-memory rate limiter for development and production
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const MAX_REQUESTS = 100;
 const rateLimits = new Map<string, { count: number; start: number }>();
@@ -62,7 +62,7 @@ export async function setupVite(app: Express, server: Server) {
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
-        "../../",
+        "../..",
         "index.html"
       );
 
@@ -79,7 +79,7 @@ export async function setupVite(app: Express, server: Server) {
       template = injectBrandMetadata(template, brand);
       template = template.replace(
         '<div id="root"></div>',
-        `<div id="root"></div>\n    ${brandInjectionScript(brand)}`
+        `<div id="root"></div>\n        ${brandInjectionScript(brand)}`
       );
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
@@ -93,7 +93,7 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   const distPath =
     process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../../", "dist", "public")
+      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
       : path.resolve(import.meta.dirname, "public");
   if (!fs.existsSync(distPath)) {
     console.error(
@@ -103,11 +103,14 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // Cache the index.html template once; inject brand per-request.
   let cachedTemplate: string | null = null;
   const indexPath = path.resolve(distPath, "index.html");
 
   app.use("*", (req, res) => {
+    const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+    if (isRateLimited(clientIp)) {
+      return res.status(429).send("Too many requests, please try again later.");
+    }
     try {
       if (cachedTemplate === null) {
         cachedTemplate = fs.readFileSync(indexPath, "utf-8");
@@ -118,7 +121,7 @@ export function serveStatic(app: Express) {
       let html = injectBrandMetadata(cachedTemplate, brand);
       html = html.replace(
         '<div id="root"></div>',
-        `<div id="root"></div>\n    ${brandInjectionScript(brand)}`
+        `<div id="root"></div>\n        ${brandInjectionScript(brand)}`
       );
       res.status(200).set({ "Content-Type": "text/html" }).end(html);
     } catch {
