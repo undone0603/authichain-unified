@@ -12,15 +12,21 @@ const nextConfig: NextConfig = {
   
   serverExternalPackages: [
     'pino', 'pino-pretty', '@walletconnect/sign-client', 'jsqr', 'jimp', 'postgres', 'thirdweb', 'viem',
-    // CF Workers bundle: packages not installed or incompatible with workerd esbuild
-    '@emotion/styled', '@emotion/react', 'isows',
-    'playwright-core', 'chromium-bidi',
-    'ioredis', 'redis',
+    // CF Workers bundle: packages whose edge-light builds have missing sub-deps
+    '@emotion/styled', '@emotion/react', '@emotion/cache', '@emotion/utils',
+    '@emotion/use-insertion-effect-with-fallbacks', '@emotion/serialize', '@emotion/hash',
+    'isows', 'playwright-core', 'chromium-bidi',
     '@coinbase/cdp-sdk', 'uncrypto',
   ],
 
-  webpack: (config: { resolve: { fallback: Record<string, boolean> } }) => {
+  webpack: (config: { resolve: { fallback: Record<string, boolean>; alias: Record<string, unknown> } }) => {
     config.resolve.fallback = { ...config.resolve.fallback, pino: false, 'pino-pretty': false, jimp: false, net: false, tls: false, crypto: false };
+    // Stub out optional Redis adapters — not available in CF Workers, used only if explicitly configured
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      ioredis: false,
+      redis: false,
+    };
     return config;
   },
   
