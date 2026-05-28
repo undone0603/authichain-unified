@@ -6,9 +6,11 @@ const HF_TOKEN = process.env.HUGGINGFACE_TOKEN || process.env.HF_TOKEN;
 const HF_MODEL = 'DionTimmer/controlnet_qrcode-control_v1p_sd15';
 const HF_API_URL = `https://router.huggingface.co/hf-inference/models/${HF_MODEL}`;
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabaseAdmin = createClient(supabaseUrl, serviceKey);
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+function getSupabaseAdmin() {
+  if (!_supabaseAdmin) _supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return _supabaseAdmin;
+}
 
 /**
  * Generates a "Living QR" using Hugging Face Inference APIs.
@@ -109,7 +111,7 @@ export async function generateLivingQR({
 
   // 4. Upload to Supabase Storage (Permanent Hosting)
   const fileName = `generated/${crypto.randomUUID()}.png`;
-  const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+  const { data: uploadData, error: uploadError } = await getSupabaseAdmin().storage
     .from('qrons')
     .upload(fileName, finalBuffer, {
       contentType: 'image/png',
@@ -122,7 +124,7 @@ export async function generateLivingQR({
 
   const {
     data: { publicUrl },
-  } = supabaseAdmin.storage.from('qrons').getPublicUrl(fileName);
+  } = getSupabaseAdmin().storage.from('qrons').getPublicUrl(fileName);
 
   return {
     imageUrl: publicUrl,
