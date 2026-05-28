@@ -134,12 +134,12 @@ export async function runDailyMaintenance() {
     const _reportEmail = process.env.ADMIN_EMAIL || 'undone.k@gmail.com';
     
     // Fetch stats for the last 24h
-    const { count: generations } = await admin
+    const { count: generations } = await getAdmin()
       .from('qron_generations')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', new Date(Date.now() - 86400000).toISOString());
 
-    const { count: leads } = await admin
+    const { count: leads } = await getAdmin()
       .from('lead_captures')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', new Date(Date.now() - 86400000).toISOString());
