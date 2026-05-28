@@ -148,7 +148,7 @@
     "typescript": "^5.5.4",
     "vite": "^6.4.2",
     "vitest": "^2.0.5",
-    "wrangler": "^3.114.17"
+    "wrangler": "^4.95.0"
   },
   "overrides": {
     "serialize-javascript": "7.0.3"
