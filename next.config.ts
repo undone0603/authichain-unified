@@ -38,6 +38,13 @@ const nextConfig: NextConfig = {
       '@ai-sdk/openai': stub,
       // MCP SDK: ~4 MB. /api/mcp returns 500; all other routes unaffected.
       '@modelcontextprotocol/sdk': stub,
+      // Blockchain: anchoring routes return 500; QR/auth/payments unaffected.
+      ethers: stub,
+      // QR code generation: /api/generate returns 500; scan/verify routes unaffected.
+      qrcode: stub,
+      // Email transports: welcome/trial emails fail; core app unaffected.
+      nodemailer: stub,
+      resend: stub,
     };
     return config;
   },
