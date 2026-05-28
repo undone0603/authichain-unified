@@ -5,9 +5,10 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { generateLivingQR } from '@/lib/hf-generation';
 import { logAutomation } from '@/lib/automation';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const admin = createClient(supabaseUrl, serviceKey);
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
+);
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
