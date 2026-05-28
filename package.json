@@ -71,7 +71,6 @@
     "@types/express": "^5.0.6",
     "@types/google.maps": "^3.64.1",
     "@types/pg": "^8.20.0",
-
     "ai": "^6.0.191",
     "axios": "^1.7.4",
     "class-variance-authority": "^0.7.1",
@@ -161,6 +160,9 @@
       "minimatch": ">=9.0.7",
       "uuid": ">=11.1.1",
       "cookie": ">=0.7.0"
+    },
+    "patchedDependencies": {
+      "@opennextjs/cloudflare@1.19.11": "patches/@opennextjs__cloudflare@1.19.11.patch"
     }
   },
   "license": "MIT"
