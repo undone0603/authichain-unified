@@ -1,3 +1,14 @@
+diff --git a/dist/cli/build/build.js b/dist/cli/build/build.js
+index 0000000000000000000000000000000000000000..0000000000000000000000000000000000000001 100644
+--- a/dist/cli/build/build.js
++++ b/dist/cli/build/build.js
+@@ -29,6 +29,4 @@ export async function build(options, config, projectOpts, wranglerConfig, allowU
+ export async function build(options, config, projectOpts, wranglerConfig, allowUnsupportedNextVersions) {
+-    // Do not minify the code so that we can apply string replacement patch.
+-    options.minify = false;
+     // Pre-build validation
+     buildHelper.checkRunningInsideNextjsApp(options);
+     logger.info(`App directory: ${options.appPath}`);
 diff --git a/dist/cli/build/bundle-server.js b/dist/cli/build/bundle-server.js
 index be3f893561dab6ad635e71a9cbb49603bfa44534..3edacd006493ba6c62053bba6cc6d430f11f2129 100644
 --- a/dist/cli/build/bundle-server.js
