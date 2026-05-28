@@ -10,10 +10,10 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  serverExternalPackages: ['pino', 'pino-pretty', '@walletconnect/sign-client', 'jsqr', 'postgres'],
+  serverExternalPackages: ['pino', 'pino-pretty', '@walletconnect/sign-client', 'jsqr', 'jimp', 'postgres'],
 
   webpack: (config: { resolve: { fallback: Record<string, boolean> } }) => {
-    config.resolve.fallback = { ...config.resolve.fallback, pino: false, net: false, tls: false, crypto: false };
+    config.resolve.fallback = { ...config.resolve.fallback, pino: false, 'pino-pretty': false, jimp: false, net: false, tls: false, crypto: false };
     return config;
   },
   
