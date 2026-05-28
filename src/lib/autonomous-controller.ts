@@ -4,10 +4,17 @@ import { dispatchWebhook } from './webhooks';
 import { HubSpotDeliverableAgent } from './industrial/hubspot';
 import { sendEmail } from './email';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const admin = createClient(supabaseUrl, serviceKey);
-
+let _adminClient: ReturnType<typeof createClient> | null = null;
+function getAdmin() {
+  if (!_adminClient) {
+    _adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _adminClient;
+}
+const admin = new Proxy({} as ReturnType<typeof createClient>, { get: (_t, prop) => (getAdmin() as Record<string, unknown>)[prop as string] });
 /**
  * Autonomous Controller for Platform Business Operations.
  * Handles high-level logic for outreach, social, and reporting.
