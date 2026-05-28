@@ -4,10 +4,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateLivingQR } from '@/lib/hf-generation';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const admin = createClient(supabaseUrl, serviceKey);
-
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 /**
@@ -15,6 +11,10 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
  * Reintegrating the legacy revenue channel for direct-to-consumer generation.
  */
 export async function POST(req: NextRequest) {
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   try {
     if (!TELEGRAM_BOT_TOKEN) {
       console.warn('[Telegram] TELEGRAM_BOT_TOKEN missing. Bot is inactive.');

@@ -3,16 +3,15 @@ export const runtime = 'edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 // Cache for 1 hour to avoid repeated DB calls on landing page
 let cache: { data: any; ts: number } | null = null;
 const CACHE_TTL = 3600000;
 
 export async function GET(req: NextRequest) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   try {
     if (cache && Date.now() - cache.ts < CACHE_TTL) {
       return NextResponse.json(cache.data);
