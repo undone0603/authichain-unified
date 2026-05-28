@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const admin = createClient(supabaseUrl, serviceKey);
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
+);
 
 export type StakingTier = 'none' | 'bronze' | 'silver' | 'gold' | 'platinum';
 
