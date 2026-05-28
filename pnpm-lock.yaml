@@ -278,8 +278,8 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
       react-hook-form:
-        specifier: ^7.52.2
-        version: 7.64.0(react@18.3.1)
+        specifier: ^7.76.1
+        version: 7.76.1(react@18.3.1)
       react-resizable-panels:
         specifier: ^2.1.1
         version: 2.1.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -7966,8 +7966,8 @@ packages:
     peerDependencies:
       react: ^18.3.1
 
-  react-hook-form@7.64.0:
-    resolution: {integrity: sha512-fnN+vvTiMLnRqKNTVhDysdrUay0kUUAymQnFIznmgDvapjveUWOOPqMNzPg+A+0yf9DuE2h6xzBjN1s+Qx8wcg==}
+  react-hook-form@7.76.1:
+    resolution: {integrity: sha512-rYM7tPiWlu3nZchkR/ex7piyzui2vFPyaLnXnI/RnblB/L4qfMmyses8llJVtF1NpE9WBBsJlGtcSZzPCXW1qQ==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -17905,7 +17905,7 @@ snapshots:
       react: 18.3.1
       scheduler: 0.23.2
 
-  react-hook-form@7.64.0(react@18.3.1):
+  react-hook-form@7.76.1(react@18.3.1):
     dependencies:
       react: 18.3.1
 
