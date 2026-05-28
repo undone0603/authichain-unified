@@ -139,7 +139,7 @@ export const appRouter = router({
       });
       // Auto-generate certificate for authentic products
       if (aiResult.result === "authentic" && aiResult.confidence >= 80) {
-        const certNumber = `AC-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        const certNumber = `AC-${Date.now()}-${require('crypto').randomBytes(4).toString('hex').toUpperCase()().toString(36).substring(2, 8).toUpperCase()}`;
         await createCertificate({
           productId: input.productId, authenticationId: authResult.id, userId: ctx.user.id,
           certificateNumber: certNumber, expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
