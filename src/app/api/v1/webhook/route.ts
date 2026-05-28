@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       url,
       event_types,
       status: 'active',
-      secret: `whsec_${Math.random().toString(36).substring(2, 18)}`,
+      secret: `whsec_${Array.from(crypto.getRandomValues(new Uint8Array(9))).map(b => b.toString(16).padStart(2,'0')).join('')}`,
       created_at: new Date().toISOString(),
       last_triggered: null,
       success_count: 0,
