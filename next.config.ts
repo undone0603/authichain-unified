@@ -10,7 +10,14 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  serverExternalPackages: ['pino', 'pino-pretty', '@walletconnect/sign-client', 'jsqr', 'jimp', 'postgres', 'thirdweb', 'viem'],
+  serverExternalPackages: [
+    'pino', 'pino-pretty', '@walletconnect/sign-client', 'jsqr', 'jimp', 'postgres', 'thirdweb', 'viem',
+    // CF Workers bundle: packages not installed or incompatible with workerd esbuild
+    '@emotion/styled', '@emotion/react', 'isows',
+    'playwright-core', 'chromium-bidi',
+    'ioredis', 'redis',
+    '@coinbase/cdp-sdk', 'uncrypto',
+  ],
 
   webpack: (config: { resolve: { fallback: Record<string, boolean> } }) => {
     config.resolve.fallback = { ...config.resolve.fallback, pino: false, 'pino-pretty': false, jimp: false, net: false, tls: false, crypto: false };
