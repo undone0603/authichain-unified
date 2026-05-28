@@ -56,23 +56,32 @@ export class HubSpotDeliverableAgent {
   }
 
   private async fetchPendingDeals(): Promise<HubSpotDeal[]> {
-    // In a real environment, this would call:
-    // https://api.hubapi.com/crm/v3/objects/deals?properties=dealname,dealstage,metadata
-    // For this operational sprint, we simulate the pending deals, prioritizing the V2 Supplement FTC deal.
-    return [
-      { 
-        id: 'deal_ftc_001', 
-        dealname: 'AuthiChain Pilot (Enforcement / Brand)', 
-        dealstage: 'deliverable_pending', 
-        amount: '10000',
-        metadata: { type: 'qron_design', style: 'Made in USA / American Products' } 
-      },
-      { id: 'deal_001', dealname: 'BMW Battery Provenance Pilot', dealstage: 'deliverable_pending', metadata: { type: 'anchor_proof', identity: 'BMW-BAT-992' } },
-      { id: 'deal_002', dealname: 'Gilmore Museum Donald Dust-Off', dealstage: 'deliverable_pending', metadata: { type: 'qron_design', style: 'brushed_aluminum' } },
-      { id: 'deal_003', dealname: 'Trulieve StrainChain Shadow Audit', dealstage: 'deliverable_pending', metadata: { type: 'state_hash_report', batch: 'TRU-420-X' } },
-      { id: 'deal_004', dealname: 'Tesla Energy Sync Integration', dealstage: 'deliverable_pending', metadata: { type: 'living_qron', style: 'minimalist_circuit' } },
-      { id: 'deal_005', dealname: 'Metrc RFID Compliance Test', dealstage: 'deliverable_pending', metadata: { type: 'industrial_cert', rfid: 'RFID-MET-101' } },
-    ];
+    const res = await fetch(
+      'https://api.hubapi.com/crm/v3/objects/deals?properties=dealname,dealstage,amount,hs_custom_metadata&filterGroups=' +
+        encodeURIComponent(JSON.stringify([{
+          filters: [{ propertyName: 'dealstage', operator: 'EQ', value: 'deliverable_pending' }]
+        }])) +
+        '&limit=50',
+      {
+        headers: { Authorization: `Bearer ${this.hubspotToken}` },
+      }
+    );
+
+    if (!res.ok) {
+      console.error(`[HubSpot-Agent] Failed to fetch deals: ${res.status} ${await res.text()}`);
+      return [];
+    }
+
+    const data = await res.json() as { results?: Array<{ id: string; properties: Record<string, string> }> };
+    return (data.results ?? []).map(r => ({
+      id: r.id,
+      dealname: r.properties.dealname ?? '',
+      dealstage: r.properties.dealstage ?? '',
+      amount: r.properties.amount,
+      metadata: (() => {
+        try { return JSON.parse(r.properties.hs_custom_metadata ?? '{}'); } catch { return {}; }
+      })(),
+    }));
   }
 
   private async processDeal(deal: HubSpotDeal) {
@@ -126,19 +135,25 @@ export class HubSpotDeliverableAgent {
   }
 
   private async updateHubSpotDeal(dealId: string, artifactUrl: string) {
-    // In a real environment:
-    /*
-    await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}`, {
+    if (!this.hubspotToken) {
+      console.warn(`[HubSpot-Agent] No token — skipping deal update for ${dealId}`);
+      return;
+    }
+    const res = await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${this.hubspotToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         properties: {
           deliverable_link: artifactUrl,
-          dealstage: 'deliverable_provided' // Move deal forward in sequence
-        }
-      })
+          dealstage: 'deliverable_provided',
+        },
+      }),
     });
-    */
-    console.log(`[HubSpot-Agent] Deal ${dealId} updated with deliverable: ${artifactUrl}`);
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(`[HubSpot-Agent] Failed to update deal ${dealId}: ${res.status} ${err}`);
+    } else {
+      console.log(`[HubSpot-Agent] Deal ${dealId} advanced → deliverable_provided: ${artifactUrl}`);
+    }
   }
 }
