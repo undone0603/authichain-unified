@@ -2,7 +2,7 @@ diff --git a/dist/cli/build/bundle-server.js b/dist/cli/build/bundle-server.js
 index be3f893561dab6ad635e71a9cbb49603bfa44534..3edacd006493ba6c62053bba6cc6d430f11f2129 100644
 --- a/dist/cli/build/bundle-server.js
 +++ b/dist/cli/build/bundle-server.js
-@@ -124,6 +124,10 @@ export async function bundleServer(buildOpts, projectOpts) {
+@@ -124,6 +124,14 @@ export async function bundleServer(buildOpts, projectOpts) {
              // `@next/env` is used by Next to load environment variables from files.
              // OpenNext inlines the values at build time so this is not needed.
              "@next/env": path.join(buildOpts.outputDir, "cloudflare-templates/shims/env.js"),
@@ -10,6 +10,10 @@ index be3f893561dab6ad635e71a9cbb49603bfa44534..3edacd006493ba6c62053bba6cc6d430
 +            "ioredis": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
 +            "redis": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
 +            "playwright-core": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
++            // Stub large Node.js-only packages to reduce Worker bundle size
++            "ethers": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
++            "thirdweb": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
++            "nodemailer": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
          },
          define: {
              // config file used by Next.js, see: https://github.com/vercel/next.js/blob/68a7128/packages/next/src/build/utils.ts#L2137-L2139
