@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
@@ -15,17 +16,21 @@ const nextConfig: NextConfig = {
     // CF Workers bundle: packages whose edge-light builds have missing sub-deps
     '@emotion/styled', '@emotion/react', '@emotion/cache', '@emotion/utils',
     '@emotion/use-insertion-effect-with-fallbacks', '@emotion/serialize', '@emotion/hash',
-    'isows', 'playwright-core', 'chromium-bidi',
+    'isows',
     '@coinbase/cdp-sdk', 'uncrypto',
   ],
 
   webpack: (config: { resolve: { fallback: Record<string, boolean>; alias: Record<string, unknown> } }) => {
+    const stub = path.resolve(__dirname, 'src/stubs/empty.js');
     config.resolve.fallback = { ...config.resolve.fallback, pino: false, 'pino-pretty': false, jimp: false, net: false, tls: false, crypto: false };
-    // Stub out optional Redis adapters — not available in CF Workers, used only if explicitly configured
+    // Stub packages that cannot run on CF Workers so esbuild never sees require() calls for them.
+    // resolve.alias: false is ineffective for server-side webpack; pointing to a real stub file works.
     config.resolve.alias = {
       ...config.resolve.alias,
-      ioredis: false,
-      redis: false,
+      ioredis: stub,
+      redis: stub,
+      'playwright-core': stub,
+      'chromium-bidi': stub,
     };
     return config;
   },
