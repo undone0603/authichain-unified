@@ -5,13 +5,8 @@ import { ReferralTracker } from '@/components/ReferralTracker';
 import { ThemeManager } from '@/components/ThemeManager';
 import { TRPCProvider } from '@/components/TRPCProvider';
 import React, { Suspense } from 'react';
-import dynamic from 'next/dynamic';
+import { ThirdwebClientProvider } from '@/components/ThirdwebClientProvider';
 import { Analytics } from '@vercel/analytics/next';
-
-const ThirdwebProvider = dynamic(
-  () => import('thirdweb/react').then(m => ({ default: m.ThirdwebProvider })),
-  { ssr: false }
-);
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const geistSans = Geist({
@@ -75,12 +70,12 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ThemeManager />
         <TRPCProvider>
-          <ThirdwebProvider>
+          <ThirdwebClientProvider>
             <Suspense fallback={null}>
               <ReferralTracker />
             </Suspense>
             {children}
-          </ThirdwebProvider>
+          </ThirdwebClientProvider>
         </TRPCProvider>
         <Analytics />
         <SpeedInsights />
