@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { enrichLead } from './industrial/enrichment';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const admin = createClient(supabaseUrl, serviceKey);
+let _admin: ReturnType<typeof createClient> | null = null;
+function getAdmin() {
+  if (!_admin) _admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return _admin;
+}
 
 /**
  * Capture an arbitrary thrown value as a useful string. Handles JS Errors,
@@ -35,7 +36,7 @@ export async function logAutomation(
   errorMessage?: string
 ) {
   try {
-    await admin.from('automation_logs').insert({
+    await getAdmin().from('automation_logs').insert({
       workflow_name: workflowName,
       trigger_type: triggerType,
       status,
