@@ -64,3 +64,34 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Sync secrets to CF Worker
+        run: |
+          set +e
+          push_secret() {
+            local name=$1
+            local value=$2
+            if [ -n "$value" ]; then
+              echo "$value" | pnpm exec wrangler secret put "$name" --name authichain-unified
+              echo "✓ $name"
+            else
+              echo "⚠ $name not set in GitHub secrets — skipping"
+            fi
+          }
+          push_secret SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+          push_secret DATABASE_URL             "$DATABASE_URL"
+          push_secret STRIPE_SECRET_KEY        "$STRIPE_SECRET_KEY"
+          push_secret STRIPE_WEBHOOK_SECRET    "$STRIPE_WEBHOOK_SECRET"
+          push_secret RESEND_API_KEY           "$RESEND_API_KEY"
+          push_secret INTERNAL_API_SECRET      "$INTERNAL_API_SECRET"
+          push_secret HUBSPOT_ACCESS_TOKEN     "$HUBSPOT_ACCESS_TOKEN"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
