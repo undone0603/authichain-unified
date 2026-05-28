@@ -1,4 +1,4 @@
-export const runtime = 'edge';
+﻿export const runtime = 'nodejs';
 
 // v3 - blockchain status: static operational (Polygon Mainnet active)
 import { NextResponse } from 'next/server';

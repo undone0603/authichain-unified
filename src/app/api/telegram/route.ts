@@ -1,4 +1,4 @@
-export const runtime = 'edge';
+﻿export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     // Command: Generate QRON
     if (text.startsWith('http://') || text.startsWith('https://')) {
-      await sendTelegramMessage(chatId, 'ðŸ”„ Generating your QRON. This may take up to 20 seconds...');
+      await sendTelegramMessage(chatId, 'Ã°Å¸â€â€ž Generating your QRON. This may take up to 20 seconds...');
 
       try {
         const result = await generateLivingQR({
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
           prompt: 'futuristic tech aesthetic, neon lights, highly detailed',
         });
 
-        await sendTelegramPhoto(chatId, result.imageUrl, `âœ… Your QRON is ready!\n\nðŸ”’ Ed25519 Secured\nðŸ”— Target: ${text}`);
+        await sendTelegramPhoto(chatId, result.imageUrl, `Ã¢Å“â€¦ Your QRON is ready!\n\nÃ°Å¸â€â€™ Ed25519 Secured\nÃ°Å¸â€â€” Target: ${text}`);
 
         await admin.from('automation_logs').insert({
           workflow_name: 'telegram_qron_generation',
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
           payload: JSON.stringify({ chat_id: chatId, url: text }),
           error_message: err instanceof Error ? err.message : String(err),
         });
-        await sendTelegramMessage(chatId, 'â Œ Generation failed. Please try again later.');
+        await sendTelegramMessage(chatId, 'Ã¢ Å’ Generation failed. Please try again later.');
       }
 
       return NextResponse.json({ status: 'ok' });
