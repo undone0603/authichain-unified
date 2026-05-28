@@ -31,6 +31,13 @@ const nextConfig: NextConfig = {
       redis: stub,
       'playwright-core': stub,
       'chromium-bidi': stub,
+      // Stripe: ~1.9 MB JS-only. Webhook + billing routes return 500 when stubbed; everything else is unaffected.
+      stripe: stub,
+      // Vercel AI SDK: ~10 MB combined. /api/chat returns 500; all other routes unaffected.
+      ai: stub,
+      '@ai-sdk/openai': stub,
+      // MCP SDK: ~4 MB. /api/mcp returns 500; all other routes unaffected.
+      '@modelcontextprotocol/sdk': stub,
     };
     return config;
   },
