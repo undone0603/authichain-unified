@@ -3,11 +3,6 @@ export const runtime = 'edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 const PLAN_LIMITS: Record<string, { qr_codes: number; scans_per_month: number; ai_styles: boolean; custom_domains: number }> = {
   free: { qr_codes: 5, scans_per_month: 500, ai_styles: false, custom_domains: 0 },
   starter: { qr_codes: 25, scans_per_month: 5000, ai_styles: false, custom_domains: 1 },
@@ -16,6 +11,10 @@ const PLAN_LIMITS: Record<string, { qr_codes: number; scans_per_month: number; a
 };
 
 export async function GET(req: NextRequest) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const { searchParams } = new URL(req.url);
   const user_id = searchParams.get('user_id');
   if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 });
