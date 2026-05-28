@@ -1,60 +1,16 @@
-name: Deploy Vercel App
+name: Deploy Vercel App (DISABLED — migrated to deploy-cf-pages.yml)
 
+# Trigger manually only; push-to-main now handled by deploy-cf-pages.yml
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
-  schedule:
-    - cron: '5 0 * * *'  # 00:05 UTC — fires after daily deployment limit resets
 
 permissions:
   contents: read
-  id-token: write
-  deployments: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  deploy-vercel-root:
-    runs-on: ubuntu-latest
-    name: deploy (root - authichain.com)
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          version: '10.28.2'
-
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy Project Artifacts to Vercel
-        run: |
-          for attempt in 1 2 3; do
-            vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} && break
-            echo "Deploy attempt $attempt failed. Waiting 60s before retry..."
-            sleep 60
-          done
-
   deploy-worker:
     runs-on: ubuntu-latest
     strategy:
