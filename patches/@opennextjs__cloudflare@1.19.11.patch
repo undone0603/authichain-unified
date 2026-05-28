@@ -13,7 +13,7 @@ diff --git a/dist/cli/build/bundle-server.js b/dist/cli/build/bundle-server.js
 index be3f893561dab6ad635e71a9cbb49603bfa44534..3edacd006493ba6c62053bba6cc6d430f11f2129 100644
 --- a/dist/cli/build/bundle-server.js
 +++ b/dist/cli/build/bundle-server.js
-@@ -124,6 +124,19 @@ export async function bundleServer(buildOpts, projectOpts) {
+@@ -124,6 +124,25 @@ export async function bundleServer(buildOpts, projectOpts) {
              // `@next/env` is used by Next to load environment variables from files.
              // OpenNext inlines the values at build time so this is not needed.
              "@next/env": path.join(buildOpts.outputDir, "cloudflare-templates/shims/env.js"),
@@ -30,6 +30,12 @@ index be3f893561dab6ad635e71a9cbb49603bfa44534..3edacd006493ba6c62053bba6cc6d430
 +            "thirdweb": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
 +            "ethers": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
 +            "nodemailer": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
++            // Vision guardrail — degrades gracefully (catch block returns isScannable:false)
++            "jimp": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
++            "jsqr": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
++            // AI chat endpoint — /api/chat returns 500 when stubbed; all other routes unaffected
++            "ai": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
++            "@ai-sdk/openai": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
          },
          define: {
              // config file used by Next.js, see: https://github.com/vercel/next.js/blob/68a7128/packages/next/src/build/utils.ts#L2137-L2139
