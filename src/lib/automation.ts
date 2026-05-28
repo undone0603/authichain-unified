@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { enrichLead } from './industrial/enrichment';
+import { sendEmail } from './email';
 
 let _admin: ReturnType<typeof createClient> | null = null;
 function getAdmin() {
@@ -86,9 +87,24 @@ export async function handleLeadAutomation(lead: {
       }
     }
 
-    // 4. Trigger Welcome Email via SendGrid (simulated or direct)
-    // For now, we'll log it. In a real scenario, call SendGrid.
-    
+    // 4. Send welcome email
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
+    sendEmail({
+      to: lead.email,
+      from: 'AuthiChain <noreply@authichain.com>',
+      subject: 'Welcome — your first QRON is ready',
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+        <h2 style="color:#6366f1">Welcome${finalLead.name ? `, ${finalLead.name}` : ''}!</h2>
+        <p>Your account is ready — generate your first AI-styled QRON code now.</p>
+        <p style="margin-top:24px">
+          <a href="${appUrl}/dashboard" style="background:#6366f1;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block">
+            Generate Your First QRON
+          </a>
+        </p>
+        <p style="color:#888;font-size:12px;margin-top:32px">Questions? Reply to this email — we read every one.</p>
+      </div>`,
+    }).catch(e => console.warn('[automation] welcome email failed:', e));
+
     await logAutomation(workflowName, 'event', 'success', finalLead);
   } catch (err: unknown) {
     await logAutomation(workflowName, 'event', 'failure', lead, formatErr(err));
