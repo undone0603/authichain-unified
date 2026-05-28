@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
     ],
-    unoptimized: false,
+    unoptimized: true,
   },
   
   experimental: {

@@ -6,8 +6,7 @@ import { ThemeManager } from '@/components/ThemeManager';
 import { TRPCProvider } from '@/components/TRPCProvider';
 import React, { Suspense } from 'react';
 import { ThirdwebClientProvider } from '@/components/ThirdwebClientProvider';
-import { Analytics } from '@vercel/analytics/next';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -77,8 +76,7 @@ export default function RootLayout({
             {children}
           </ThirdwebClientProvider>
         </TRPCProvider>
-        <Analytics />
-        <SpeedInsights />
+
       </body>
     </html>
   );

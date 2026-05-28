@@ -1,23 +1,20 @@
-name = 'authichain-unified'
-main = "worker/index.ts"
-compatibility_date = "2024-12-01"
-compatibility_flags = [ "nodejs_compat" ]
+name = "authichain-unified"
+main = ".open-next/worker.js"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
 
-# Static assets built by Vite -> dist/public
 [assets]
-directory = "dist/public"
+directory = ".open-next/assets"
 binding = "ASSETS"
 
-# Environment variables (injected via Cloudflare dashboard)
 [vars]
 APP_ENV = "production"
 
-# KV namespaces
+# KV namespaces (available as bindings in CF Workers)
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "7c8e9466e57843199f6f768615e42a5c"
 
-# KV for microsite HTML/CSS/JS (referenced in worker/index.ts as MICROSITES_KV)
 [[kv_namespaces]]
 binding = "MICROSITES_KV"
 id = "a992900da1db4b998af1cdf4eccf550a"
