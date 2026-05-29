@@ -121,7 +121,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "^1.13.16",
     "@opennextjs/cloudflare": "1.19.11",
     "@tailwindcss/postcss": "^4.0.0",
     "@tailwindcss/vite": "^4.0.0",
@@ -133,7 +132,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
-    "drizzle-kit": "^0.24.2",
+    "drizzle-kit": "^0.31.0",
     "esbuild": "^0.25.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "15.5.18",
@@ -146,7 +145,7 @@
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",
     "vite": "^6.4.2",
-    "vitest": "^2.0.5",
+    "vitest": "^3.0.0",
     "wrangler": "^4.86.0"
   },
   "overrides": {
@@ -159,7 +158,9 @@
       "js-cookie": ">=3.0.7",
       "minimatch": ">=9.0.7",
       "uuid": ">=11.1.1",
-      "cookie": ">=0.7.0"
+      "cookie": ">=0.7.0",
+      "postcss": ">=8.5.10",
+      "esbuild": ">=0.25.0"
     },
     "patchedDependencies": {
       "@opennextjs/cloudflare@1.19.11": "patches/@opennextjs__cloudflare@1.19.11.patch"
