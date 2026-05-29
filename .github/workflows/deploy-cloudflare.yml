@@ -38,10 +38,10 @@ jobs:
 
       - name: Patch missing Shadcn dependencies
         # Workaround: Installs the missing Tailwind v4 package workspace-wide
-        run: pnpm add tw-animate-css
-
+        run: npm install tw-animate-css
+        
       - name: Build frontend (+ dist/public for Wrangler [assets])
-        run: pnpm run build
+        run: npm run build
         # If your root package.json build script handles the worker build, leave this as-is.
         # Otherwise, uncomment the line below to build a specific worker:
         # working-directory: workers/authichain-dashboard
