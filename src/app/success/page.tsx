@@ -11,9 +11,17 @@ import {
   Sparkles,
   RefreshCcw,
 } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
+
+interface CreditBalance {
+  remaining: number;
+  limit: number;
+  tier: string;
+}
 
 function SuccessContent() {
   const [step, setStep] = useState(0);
+  const [balance, setBalance] = useState<CreditBalance | null>(null);
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id') || '';
 
@@ -21,10 +29,33 @@ function SuccessContent() {
     const t1 = setTimeout(() => setStep(1), 1000);
     const t2 = setTimeout(() => setStep(2), 2500);
     const t3 = setTimeout(() => setStep(3), 4000);
+    // Wait for webhook to fulfill credits before fetching balance
+    const t4 = setTimeout(async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('generations_used, generations_limit, tier')
+          .eq('id', user.id)
+          .single();
+        if (profile) {
+          setBalance({
+            remaining: Math.max(0, profile.generations_limit - profile.generations_used),
+            limit: profile.generations_limit,
+            tier: profile.tier || 'pro',
+          });
+        }
+      } catch {
+        // balance display is optional — never block the success page
+      }
+    }, 6000);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
+      clearTimeout(t4);
     };
   }, []);
 
@@ -33,6 +64,8 @@ function SuccessContent() {
     { icon: <RefreshCcw className="w-5 h-5" />, label: 'Initializing Living Portal' },
     { icon: <Mail className="w-5 h-5" />, label: 'Finalizing Delivery Sequence' },
   ];
+
+  const isUnlimited = balance && balance.limit >= 999999;
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-6 selection:bg-gold selection:text-black">
@@ -43,13 +76,33 @@ function SuccessContent() {
                 <ShieldCheck className="w-16 h-16 text-gold" />
             </div>
         </div>
-        
+
         <h1 className="text-4xl font-black gold-text mb-4 uppercase tracking-tighter">
           ORDER ACTIVATED
         </h1>
         <p className="text-zinc-500 text-sm font-medium mb-12 uppercase tracking-[0.3em]">
           Protocol Handshake Successful
         </p>
+
+        {/* Credit balance — shown once webhook fulfillment lands */}
+        {balance && (
+          <div className="protocol-card p-6 mb-8 bg-gold/5 border-gold/20 flex items-center justify-center gap-4">
+            <Zap className="w-6 h-6 text-gold shrink-0" />
+            <div className="text-left">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">
+                Available Credits
+              </p>
+              <p className="text-2xl font-black gold-text">
+                {isUnlimited ? 'Unlimited' : balance.remaining.toLocaleString()}
+              </p>
+              {!isUnlimited && (
+                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mt-0.5">
+                  Tier: {balance.tier}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Process Visualizer */}
         <div className="protocol-card p-10 mb-8 text-left space-y-6">
