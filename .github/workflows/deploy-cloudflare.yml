@@ -58,14 +58,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy authichain-verify-worker
-        run: pnpm exec wrangler deploy --config wrangler.toml
+        run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/authichain-verify-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy authichain-scan-validate
-        run: pnpm exec wrangler deploy --config wrangler.toml
+        run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/authichain-scan-validate
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -74,19 +74,19 @@ jobs:
       - name: Publish authichain.com landing page worker
         run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/authichain-com
-        env:
+        env:#
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy govchain-us worker
-        run: pnpm exec wrangler deploy --config wrangler.toml
+        run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/govchain-us
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy strainchain-io worker
-        run: pnpm exec wrangler deploy --config wrangler.toml
+        run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/strainchain-io
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
