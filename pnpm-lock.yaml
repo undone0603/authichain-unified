@@ -326,7 +326,7 @@ importers:
         specifier: ^1.13.16
         version: 1.13.16(bufferutil@4.1.0)(next@15.5.18(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(utf-8-validate@5.0.10)(wrangler@4.95.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@opennextjs/cloudflare':
-        specifier: ^1.19.11
+        specifier: 1.19.11
         version: 1.19.11(patch_hash=2ec1a2c4254c7e4ee22301eb4606f28bb2d9401665d2db1eee2e0dbf23b406a6)(next@15.5.18(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(wrangler@4.95.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@tailwindcss/postcss':
         specifier: ^4.0.0

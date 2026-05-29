@@ -26,6 +26,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
+      url: `${BASE}/eu-dpp`,
+      lastModified: new Date('2026-05-29'),
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
       url: `${BASE}/digital-product-passport`,
       lastModified: now,
       changeFrequency: 'weekly',

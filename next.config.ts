@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  serverExternalPackages: [],
+  serverExternalPackages: ['drizzle-orm', 'postgres'],
 
   webpack: (config: { resolve: { fallback: Record<string, boolean>; alias: Record<string, unknown> } }, { isServer }: { isServer: boolean }) => {
     const stub = path.resolve(__dirname, 'src/stubs/empty.js');
@@ -97,7 +97,6 @@ const nextConfig: NextConfig = {
     },
   },
   
-  turbopack: {},
 };
 
 // Optionally wrap with PWA if available

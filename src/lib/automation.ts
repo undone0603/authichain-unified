@@ -2,9 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import { enrichLead } from './industrial/enrichment';
 import { sendEmail } from './email';
 
-let _admin: ReturnType<typeof createClient> | null = null;
-function getAdmin() {
-  if (!_admin) _admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _admin: ReturnType<typeof createClient<any>> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getAdmin(): ReturnType<typeof createClient<any>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (!_admin) _admin = createClient<any>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   return _admin;
 }
 
