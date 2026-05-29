@@ -1,28 +1,16 @@
 {
   "version": 2,
-  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "npx vite build",
+  "installCommand": "npm install --legacy-peer-deps",
+  "outputDirectory": "dist/public",
   "rewrites": [
-    { "source": "/gov", "destination": "https://govchain.us" }
-  ],
-  "headers": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/server.js"
+    },
     {
       "source": "/(.*)",
-      "headers": [
-        { "key": "X-Frame-Options",        "value": "DENY" },
-        { "key": "X-Content-Type-Options",  "value": "nosniff" },
-        { "key": "Referrer-Policy",         "value": "strict-origin-when-cross-origin" }
-      ]
+      "destination": "/index.html"
     }
-  ],
-  "crons": [
-    { "path": "/api/cron/autonomous-pipeline-tick", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/subscription-health-check", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/certificate-expiry-check",  "schedule": "0 7 * * *" },
-    { "path": "/api/cron/lead-nurturing",            "schedule": "0 9 * * *" },
-    { "path": "/api/cron/database-cleanup",          "schedule": "0 3 * * *" },
-    { "path": "/api/cron/weekly-analytics-digest",   "schedule": "0 8 * * 1" },
-    { "path": "/api/cron/hubspot-crm-sync",          "schedule": "0 10 * * *" },
-    { "path": "/api/cron/customer-health-score",     "schedule": "0 5 * * *" },
-    { "path": "/api/cron/fraud-detection-sweep",     "schedule": "0 14 * * *" }
   ]
 }

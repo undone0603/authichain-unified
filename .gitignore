@@ -70,8 +70,17 @@ yarn.lock
 *.sqlite3
 /drizzle/migrations
 
+# Webdev artifacts (checkpoint zips, migrations, etc.)
+.webdev/
+
+# Vercel CLI link
+.vercel
+.env*.local
+
+__pycache__/
+*.py[cod]
+
 # Authichain specifics
 AUTHENTICITY_INDEX.md
 SIGNATURE_MANIFEST.md
 SYSTEM_STATE.md
-.env*.local
