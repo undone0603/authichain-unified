@@ -33,15 +33,15 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Patch missing Shadcn dependencies
         # Workaround: Installs the missing Tailwind v4 package workspace-wide
-        run: npm install tw-animate-css
+        run: pnpm install tw-animate-css
         
       - name: Build frontend (+ dist/public for Wrangler [assets])
-        run: npm run build
+        run: pnpm run build
         # If your root package.json build script handles the worker build, leave this as-is.
         # Otherwise, uncomment the line below to build a specific worker:
         # working-directory: workers/authichain-dashboard
