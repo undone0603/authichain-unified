@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   
   serverExternalPackages: [],
 
-  webpack: (config: { resolve: { fallback: Record<string, boolean>; alias: Record<string, unknown> } }) => {
+  webpack: (config: { resolve: { fallback: Record<string, boolean>; alias: Record<string, unknown> } }, { isServer }: { isServer: boolean }) => {
     const stub = path.resolve(__dirname, 'src/stubs/empty.js');
     const cfCompatStub = path.resolve(__dirname, 'src/stubs/cf-compat.mjs');
     config.resolve.fallback = { ...config.resolve.fallback, net: false, tls: false, crypto: false };
@@ -35,19 +35,6 @@ const nextConfig: NextConfig = {
       qrcode:                    cfCompatStub,
       nodemailer:                cfCompatStub,
       resend:                    cfCompatStub,
-      // thirdweb: runs module-scope init code that crashes CF Workers at startup
-      // Use $ suffix for exact match so subpath imports aren't eaten by the parent alias
-      'thirdweb$':               cfCompatStub,
-      'thirdweb/chains':         cfCompatStub,
-      'thirdweb/react':          cfCompatStub,
-      'thirdweb/wallets':        cfCompatStub,
-      'thirdweb/extensions/erc721': cfCompatStub,
-      // transitive deps of thirdweb/wagmi that use dns.resolve() or browser-only APIs
-      viem:                      cfCompatStub,
-      '@walletconnect/sign-client': stub,
-      isows:                     stub,
-      '@coinbase/cdp-sdk':       cfCompatStub,
-      uncrypto:                  stub,
       // image/QR packages: not needed at CF Workers runtime
       jsqr:                      cfCompatStub,
       jimp:                      stub,
@@ -67,6 +54,22 @@ const nextConfig: NextConfig = {
       // drizzle postgres-js adapter accesses client internals at init time; stub the whole adapter
       'drizzle-orm/postgres-js': cfCompatStub,
     };
+    if (isServer) {
+      // Thirdweb and viem run module-scope init that crashes CF Workers — stub server only.
+      // Client bundle gets the real packages so ConnectButton/useActiveAccount work in browser.
+      Object.assign(config.resolve.alias, {
+        'thirdweb$':               cfCompatStub,
+        'thirdweb/chains':         cfCompatStub,
+        'thirdweb/react':          cfCompatStub,
+        'thirdweb/wallets':        cfCompatStub,
+        'thirdweb/extensions/erc721': cfCompatStub,
+        viem:                      cfCompatStub,
+        '@walletconnect/sign-client': stub,
+        isows:                     stub,
+        '@coinbase/cdp-sdk':       cfCompatStub,
+        uncrypto:                  stub,
+      });
+    }
     return config;
   },
   
