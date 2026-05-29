@@ -66,14 +66,14 @@ const features = [
 const ecosystem = [
   { name: "QRON Studio", href: "https://qron.space", desc: "AI-powered QR code art generator. Create cryptographically signed, brand-level scannable art in seconds.", live: true },
   { name: "StrainChain", href: "https://strainchain.io", desc: "Cannabis provenance on the blockchain. Seed-to-sale verification with NFT certificates and $QRON rewards.", live: true },
-  { name: "GovChain", href: "https://govchain.us", desc: "Sovereign document verification for government and defense. Made in USA manufacturer tracking with military-grade QRON authentication.", live: true },
+  { name: "GovChain", href: "https://govchain.us", desc: "Sovereign document verification for government and defense. Made-in-USA manufacturer tracking with military-grade QRON authentication.", live: true },
   { name: "Enterprise API", href: "#", desc: "White-label authentication infrastructure for any industry vertical. Full REST API with Ed25519 signing and compliance tooling.", live: false },
 ];
 
 const pricing = [
-  { name: "Starter", price: "$49", period: "/mo", paymentLink: "https://buy.stripe.com/7sY00j87n5xcfWObDC1Nu3r", features: ["100 authentications/month", "Basic AI analysis", "QR code generation", "Certificate issuance", "Email support"] },
-  { name: "Professional", price: "$199", period: "/mo", paymentLink: "https://buy.stripe.com/28E4gzbjze3I7qi4ba1Nu3s", features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email campaigns"], highlighted: true },
-  { name: "Enterprise", price: "$799", period: "/mo", paymentLink: "https://buy.stripe.com/6oU5kDfzP7Fk6medLK1Nu3t", features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA guarantee"] },
+  { name: "Starter", price: "$49", period: "/mo", features: ["100 authentications/month", "Basic AI analysis", "QR code generation", "Certificate issuance", "Email support"] },
+  { name: "Professional", price: "$149", period: "/mo", features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email automation"] },
+  { name: "Enterprise", price: "$499", period: "/mo", features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA & support"] },
 ];
 
 /* ─── Stat Item (with optional counter) ─── */
@@ -157,11 +157,11 @@ export default function AuthiChainHome() {
         <div className="container relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <div className="hero-enter inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-xs font-medium tracking-wide uppercase mb-8">
-              <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-primary" /></span>
+              <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-primary" /></span>
               Live on Polygon Mainnet
             </div>
             <h1 className="hero-enter hero-enter-delay-1 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6">
-              The Truth Layer for the{" "}
+              The Truth Layer for the{' '}
               <span className="gradient-text animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(217 91% 50%), hsl(40 60% 55%), hsl(271 81% 56%), hsl(217 91% 50%))" }}>Global Economy</span>
             </h1>
             <p className="hero-enter hero-enter-delay-2 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -324,8 +324,8 @@ export default function AuthiChainHome() {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant={plan.highlighted ? "default" : "outline"} onClick={() => window.open(plan.paymentLink, "_blank")}>
-                    {plan.highlighted ? "Get Started" : "Buy Now"}
+                  <Button className="w-full" variant={plan.highlighted ? "default" : "outline"} onClick={() => go("/subscriptions")}>
+                    {plan.highlighted ? "Get Started" : "Choose Plan"}
                   </Button>
                 </GlowCard>
               </Reveal>
@@ -339,7 +339,7 @@ export default function AuthiChainHome() {
         <div className="container">
           <Reveal direction="scale" className="text-center">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
-              Verify <span className="gradient-text animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(217 91% 50%), hsl(40 60% 55%), hsl(271 81% 56%), hsl(217 91% 50%))" }}>Everything.</span>
+              Verify <span className="gradient-text animated-gradient" style={{ backgroundImage: "linear-gradient(135deg, hsl(217 91% 50%), hsl(40 60% 55%), hsl(271 81% 56%), hsl(217 91% 50%))" }}>Everything</span>
             </h2>
             <p className="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">Join the protocols building the authentication layer for the physical world.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

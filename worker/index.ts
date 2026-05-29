@@ -37,7 +37,7 @@ const BRANDS = {
   },
 } as const;
 
-const FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">`;
+const FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">`;
 
 function svgLogo(brand: keyof typeof BRANDS, size = 36) {
   const b = BRANDS[brand];
@@ -70,6 +70,199 @@ function cssVars(brand: keyof typeof BRANDS) {
   --radius: 12px;
 }`;
 }
+.btn-primary { background: var(--primary); color: #000; box-shadow: 0 4px 0 var(--primary-dim); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px var(--primary-glow); }
+.section-pad { padding: 100px 0; }
+.section-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4em;
+  color: var(--primary);
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+h2 {
+  font-family: var(--display);
+  font-size: clamp(38px, 6vw, 64px);
+  line-height: 0.9;
+  font-style: italic;
+  margin-bottom: 32px;
+  text-transform: uppercase;
+}
+h2 .accent { color: var(--primary); }
+.grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 768px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+.card { padding: 40px; transition: all 0.4s ease; position: relative; overflow: hidden; }
+.card:hover { border-color: var(--primary); transform: translateY(-5px); }
+.stat-val { font-family: var(--display); font-size: 48px; line-height: 1; color: var(--primary); font-style: italic; }
+.stat-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--text-dim); margin-top: 8px; }
+footer { padding: 80px 0; border-top: 1px solid var(--border-dim); background: var(--bg2); }
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; }
+@media (max-width: 1024px) { .footer-grid { grid-template-columns: 1fr; } }
+`;
+
+const BRAND = "authichain" as const;
+const brand = BRANDS[BRAND];
+
+const MARKETING_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${brand.name} — ${brand.tagline}</title>
+  ${FONTS_LINK}
+  <style>
+    ${cssVars(BRAND)}
+    ${BASE_CSS}
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="/">
+      ${svgLogo(BRAND)}
+      <span class="nav-logo-text">AUTHI<span>CHAIN</span></span>
+    </a>
+    <a href="/demo" class="btn btn-primary" style="padding: 10px 24px; font-size: 14px">Launch Demo</a>
+  </nav>
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="section-tag" style="background: rgba(212,175,55,0.1); padding: 6px 16px; border-radius: 100px; border: 1px solid var(--border)">
+          LIVE ON POLYGON MAINNET
+        </div>
+        <h1 class="hero-title"><span>VERIFY</span><br/><span class="accent">EVERYTHING.</span></h1>
+        <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets. From luxury provenance to sovereign logistics.</p>
+        <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+          <a href="/demo" class="btn btn-primary">Try StoryMode Demo</a>
+          <a href="/dashboard" class="btn glass" style="border-color: var(--primary); color: var(--primary);">Protocol Hub &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="blueprints" class="section-pad" style="background: rgba(212,175,55,0.02)">
+    <div class="container text-center">
+      <div class="section-tag">Core Verticals</div>
+      <h2>INDUSTRY <span class="accent">BLUEPRINTS</span></h2>
+      <p class="hero-sub" style="margin-bottom: 64px">Proven blockchain infrastructure for high-stakes industries.</p>
+      <div class="grid" style="text-align: left">
+        <div class="card glass">
+          <div style="font-size: 32px; margin-bottom: 24px">💎</div>
+          <h3 style="font-family: var(--display); font-size: 28px; font-style: italic; margin-bottom: 16px">LUXURY &amp; RETAIL</h3>
+          <p style="font-size: 14px; color: var(--text-dim); margin-bottom: 24px">Defeating the $1.8T counterfeit economy with Ed25519-signed digital twins and blockchain provenance.</p>
+          <div style="font-family: var(--mono); font-size: 10px; color: var(--primary); letter-spacing: 0.2em">STATUS: DEPLOYED</div>
+        </div>
+        <div class="card glass" style="border-color: rgba(139,92,246,0.2)">
+          <div style="font-size: 32px; margin-bottom: 24px">💊</div>
+          <h3 style="font-family: var(--display); font-size: 28px; font-style: italic; margin-bottom: 16px">PHARMA &amp; BIO</h3>
+          <p style="font-size: 14px; color: var(--text-dim); margin-bottom: 24px">Real-time DSCSA compliance. Tracking cold-chain integrity from production to patient at edge speed.</p>
+          <div style="font-family: var(--mono); font-size: 10px; color: #8b5cf6; letter-spacing: 0.2em">STATUS: SCALING</div>
+        </div>
+        <div class="card glass" style="border-color: rgba(148,163,184,0.2)">
+          <div style="font-size: 32px; margin-bottom: 24px">🛡️</div>
+          <h3 style="font-family: var(--display); font-size: 28px; font-style: italic; margin-bottom: 16px">DEFENSE &amp; GOV</h3>
+          <p style="font-size: 14px; color: var(--text-dim); margin-bottom: 24px">Sovereign supply chain security. "Made in USA" verification with ITAR-ready cryptographic ledgers.</p>
+          <div style="font-family: var(--mono); font-size: 10px; color: #94a3b8; letter-spacing: 0.2em">STATUS: PILOT</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-pad" style="border-top: 1px solid var(--border-dim)">
+    <div class="container">
+      <div class="hero-content" style="max-width: 1000px">
+        <div class="section-tag">$QRON Protocol</div>
+        <h2>COMMUNITY <span class="accent">HUB</span></h2>
+        <p class="hero-sub">Participate in the Truth Layer economy through $QRON utility and BTC Ordinals anchoring.</p>
+        <div class="grid" style="margin-top: 64px; text-align: left">
+          <div class="card glass">
+            <div style="font-size: 32px; margin-bottom: 24px">💎</div>
+            <h3 style="font-family: var(--display); font-size: 24px; font-style: italic; margin-bottom: 12px">$QRON UTILITY</h3>
+            <p style="font-size: 14px; color: var(--text-dim)">Native protocol incentive. Earn $QRON for verifications and use it for TrueMark minting.</p>
+          </div>
+          <div class="card glass">
+            <div style="font-size: 32px; margin-bottom: 24px">🟠</div>
+            <h3 style="font-family: var(--display); font-size: 24px; font-style: italic; margin-bottom: 12px">BTC ANCHOR</h3>
+            <p style="font-size: 14px; color: var(--text-dim)">Sovereign truth. High-value certificates are inscribed to Bitcoin L1 via Ordinals.</p>
+          </div>
+          <div class="card glass">
+            <div style="font-size: 32px; margin-bottom: 24px">🏦</div>
+            <h3 style="font-family: var(--display); font-size: 24px; font-style: italic; margin-bottom: 12px">GOVERNANCE</h3>
+            <p style="font-size: 14px; color: var(--text-dim)">Stake $QRON to vote on vertical expansion and protocol-wide security updates.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="nav-logo" style="margin-bottom: 24px">
+            ${svgLogo(BRAND, 32)}
+            <span class="nav-logo-text">AUTHI<span>CHAIN</span></span>
+          </div>
+          <p style="font-size: 14px; color: var(--text-dim); line-height: 1.8; max-width: 300px">The Truth Layer for the Global Economy. Cryptographic infrastructure for the physical world.</p>
+        </div>
+        <div>
+          <div style="font-family: var(--display); font-size: 20px; font-style: italic; margin-bottom: 24px">PROTOCOLS</div>
+          <div style="display: flex; flex-direction: column; gap: 14px">
+            <a href="https://qron.space" style="color: var(--text-dim); text-decoration: none; font-size: 15px">QRON Studio</a>
+            <a href="https://strainchain.io" style="color: var(--text-dim); text-decoration: none; font-size: 15px">StrainChain</a>
+            <a href="https://govchain.us" style="color: var(--text-dim); text-decoration: none; font-size: 15px">GovChain</a>
+          </div>
+        </div>
+        <div>
+          <div style="font-family: var(--display); font-size: 20px; font-style: italic; margin-bottom: 24px">PLATFORM</div>
+          <div style="display: flex; flex-direction: column; gap: 14px">
+            <a href="/dashboard" style="color: var(--text-dim); text-decoration: none; font-size: 15px">Dashboard</a>
+            <a href="/demo" style="color: var(--text-dim); text-decoration: none; font-size: 15px">Live Demo</a>
+            <a href="/health" style="color: var(--text-dim); text-decoration: none; font-size: 15px">API Status</a>
+          </div>
+        </div>
+        <div>
+          <div style="font-family: var(--display); font-size: 20px; font-style: italic; margin-bottom: 24px">CONTACT</div>
+          <a href="mailto:authichain@gmail.com" style="color: var(--primary); text-decoration: none; font-size: 15px; font-weight: 700">authichain@gmail.com</a>
+        </div>
+      </div>
+      <div style="margin-top: 80px; padding-top: 32px; border-top: 1px solid var(--border-dim); text-align: center; color: var(--text-dim); font-size: 12px; font-family: var(--mono); letter-spacing: 0.1em">
+        &copy; 2026 AUTHICHAIN, INC. | ANCHORED TO POLYGON &amp; BITCOIN
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`;
+
+// ---------------------------------------------------------------------------
+// App
+// ---------------------------------------------------------------------------
+const app = new Hono<{ Bindings: Bindings }>();
+
+app.use("*", cors());
+
+// ---------------------------------------------------------------------------
+// System health
+// ---------------------------------------------------------------------------
+app.get("/health", (c) =>
+  c.json({ ok: true, env: c.env.APP_ENV, timestamp: new Date().toISOString() })
+);
+
+// ---------------------------------------------------------------------------
+// API key authentication — guards all /api/v1/* routes
+// Incoming Bearer token is SHA-256 hashed before comparing to the stored hash.
+// ---------------------------------------------------------------------------
+app.use("/api/v1/*", async (c, next) => {
+  const authHeader = c.req.header("Authorization");
+  const rawKey = authHeader?.replace("Bearer ", "").trim();
+
+  if (!rawKey) {
+    return c.text("Unauthorized: Missing API Key", 401);
+  }
 
 const BASE_CSS = `
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
