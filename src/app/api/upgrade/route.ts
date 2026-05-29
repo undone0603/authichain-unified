@@ -3,13 +3,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const PLAN_HIERARCHY = ['free', 'starter', 'pro', 'business', 'enterprise'];
+// Ordered from lowest to highest value — used for upgrade/downgrade detection
+const PLAN_HIERARCHY = ['free', 'starter', 'creator', 'studio', 'business', 'theater_1', 'theater_3'];
 
 const PLAN_PRICES: Record<string, { monthly: number | null; annual: number | null; stripe_monthly?: string; stripe_annual?: string; contact?: boolean }> = {
-  starter: { monthly: 19, annual: 15, stripe_monthly: 'price_qron_starter_mo', stripe_annual: 'price_qron_starter_yr' },
-  pro: { monthly: 49, annual: 39, stripe_monthly: 'price_qron_pro_mo', stripe_annual: 'price_qron_pro_yr' },
-  business: { monthly: 149, annual: 119, stripe_monthly: 'price_qron_biz_mo', stripe_annual: 'price_qron_biz_yr' },
-  enterprise: { monthly: null, annual: null, contact: true }
+  starter:   { monthly: 29,   annual: null, stripe_monthly: 'price_1TcTzD1jrqwZgdkcXuguOLl5' },
+  creator:   { monthly: 99,   annual: null, stripe_monthly: 'price_1TcTzD1jrqwZgdkc6OTQ5BIM' },
+  studio:    { monthly: 249,  annual: null, stripe_monthly: 'price_1TcTzE1jrqwZgdkcDK4TF1dz' },
+  theater_1: { monthly: 499,  annual: null, stripe_monthly: 'price_1TcTzE1jrqwZgdkcuYmg6xz0' },
+  theater_3: { monthly: 1499, annual: null, stripe_monthly: 'price_1TcTzF1jrqwZgdkcc9aeD595' },
+  business:  { monthly: null, annual: null, contact: true },
 };
 
 export async function POST(req: NextRequest) {
