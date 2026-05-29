@@ -25,7 +25,7 @@ jobs:
         uses: pnpm/action-setup@v5
         with:
           version: 10.28.2
-          run_install: false
+          run_install: true
 
       - name: Setup Node 22 (required for Wrangler + Miniflare)
         uses: actions/setup-node@v4
