@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 import path from 'path';
 
 const nextConfig: NextConfig = {
-  typescript: { ignoreBuildErrors: true },
+  typescript: { ignoreBuildErrors: false },
   
   // eslint config handled via .eslintrc.json
   eslint: {
@@ -83,7 +83,6 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
     ],
-    unoptimized: true,
   },
   
   experimental: {
