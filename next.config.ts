@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   },
   
   serverExternalPackages: [
-    'pino', 'pino-pretty', '@walletconnect/sign-client', 'jsqr', 'jimp', 'postgres', 'thirdweb', 'viem',
+    'pino', 'pino-pretty', '@walletconnect/sign-client', 'jsqr', 'jimp', 'thirdweb', 'viem',
     // CF Workers bundle: packages whose edge-light builds have missing sub-deps
     '@emotion/styled', '@emotion/react', '@emotion/cache', '@emotion/utils',
     '@emotion/use-insertion-effect-with-fallbacks', '@emotion/serialize', '@emotion/hash',
@@ -45,6 +45,8 @@ const nextConfig: NextConfig = {
       // Email transports: welcome/trial emails fail; core app unaffected.
       nodemailer: stub,
       resend: stub,
+      // postgres-js uses dns.resolve() which is not available in CF Workers. /api/telemetry returns 500.
+      postgres: stub,
     };
     return config;
   },
