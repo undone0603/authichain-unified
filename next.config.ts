@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
       nodemailer: stub,
       resend: stub,
       // postgres-js uses dns.resolve() which is not available in CF Workers. /api/telemetry returns 500.
-      postgres: stub,
+      postgres: path.resolve(__dirname, 'src/stubs/postgres-stub.js'),
     };
     return config;
   },
