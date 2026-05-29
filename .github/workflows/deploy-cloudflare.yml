@@ -39,9 +39,6 @@ jobs:
         
       - name: Build frontend (+ dist/public for Wrangler [assets])
         run: pnpm run build
-        # If your root package.json build script handles the worker build, leave this as-is.
-        # Otherwise, uncomment the line below to build a specific worker:
-        # working-directory: workers/authichain-dashboard
         env:
           VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
           VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
