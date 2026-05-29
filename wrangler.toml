@@ -3,6 +3,11 @@ main = ".open-next/worker.js"
 compatibility_date = "2025-05-01"
 compatibility_flags = ["nodejs_compat"]
 
+routes = [
+  { pattern = "authichain.com", custom_domain = true },
+  { pattern = "www.authichain.com", custom_domain = true }
+]
+
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"
