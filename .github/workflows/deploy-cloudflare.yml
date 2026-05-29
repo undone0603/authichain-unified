@@ -66,6 +66,7 @@ jobs:
       - name: Deploy govchain-us worker
         run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/govchain-us
+        continue-on-error: true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -73,6 +74,7 @@ jobs:
       - name: Deploy strainchain-io worker
         run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/strainchain-io
+        continue-on-error: true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
