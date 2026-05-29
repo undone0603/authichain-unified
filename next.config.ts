@@ -44,6 +44,8 @@ const nextConfig: NextConfig = {
       resend:                    cfCompatStub,
       // postgres-js uses dns.resolve() — needs callable stub so drizzle can init
       postgres: path.resolve(__dirname, 'src/stubs/postgres-stub.mjs'),
+      // drizzle postgres-js adapter accesses client internals at init time; stub the whole adapter
+      'drizzle-orm/postgres-js': cfCompatStub,
     };
     return config;
   },
