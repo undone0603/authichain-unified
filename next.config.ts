@@ -12,18 +12,15 @@ const nextConfig: NextConfig = {
   },
   
   serverExternalPackages: [
-    'pino', 'pino-pretty', '@walletconnect/sign-client', 'jsqr', 'jimp', 'thirdweb', 'viem',
-    // CF Workers bundle: packages whose edge-light builds have missing sub-deps
+    // @emotion packages: CSS-in-JS, safe on CF Workers; kept external to avoid webpack ESM issues
     '@emotion/styled', '@emotion/react', '@emotion/cache', '@emotion/utils',
     '@emotion/use-insertion-effect-with-fallbacks', '@emotion/serialize', '@emotion/hash',
-    'isows',
-    '@coinbase/cdp-sdk', 'uncrypto',
   ],
 
   webpack: (config: { resolve: { fallback: Record<string, boolean>; alias: Record<string, unknown> } }) => {
     const stub = path.resolve(__dirname, 'src/stubs/empty.js');
     const cfCompatStub = path.resolve(__dirname, 'src/stubs/cf-compat.mjs');
-    config.resolve.fallback = { ...config.resolve.fallback, pino: false, 'pino-pretty': false, jimp: false, net: false, tls: false, crypto: false };
+    config.resolve.fallback = { ...config.resolve.fallback, net: false, tls: false, crypto: false };
     // Stub packages that cannot run on CF Workers so esbuild never sees require() calls for them.
     // Packages with ESM named/default imports need cf-compat.mjs (proper export declarations);
     // plain CJS-only packages can use empty.js.
@@ -42,6 +39,21 @@ const nextConfig: NextConfig = {
       qrcode:                    cfCompatStub,
       nodemailer:                cfCompatStub,
       resend:                    cfCompatStub,
+      // thirdweb: runs module-scope init code that crashes CF Workers at startup
+      thirdweb:                  cfCompatStub,
+      'thirdweb/chains':         cfCompatStub,
+      // transitive deps of thirdweb/wagmi that use dns.resolve() or browser-only APIs
+      viem:                      cfCompatStub,
+      '@walletconnect/sign-client': stub,
+      isows:                     stub,
+      '@coinbase/cdp-sdk':       cfCompatStub,
+      uncrypto:                  stub,
+      // image/QR packages: not needed at CF Workers runtime
+      jsqr:                      cfCompatStub,
+      jimp:                      stub,
+      // logging: no-op on CF Workers (use console.log instead)
+      pino:                      stub,
+      'pino-pretty':             stub,
       // postgres-js uses dns.resolve() — needs callable stub so drizzle can init
       postgres: path.resolve(__dirname, 'src/stubs/postgres-stub.mjs'),
       // drizzle postgres-js adapter accesses client internals at init time; stub the whole adapter
