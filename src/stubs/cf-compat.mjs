@@ -37,6 +37,15 @@ export const ethereum = {};
 export const mainnet = {};
 export const sepolia = {};
 
+// thirdweb/react: import { ConnectButton, useActiveAccount } from 'thirdweb/react'
+export const ConnectButton = NoopClass;
+export const useActiveAccount = noop;
+export const ThirdwebProvider = NoopClass;
+
+// thirdweb/wallets: import { createWallet, inAppWallet } from 'thirdweb/wallets'
+export const createWallet = noop;
+export const inAppWallet = noop;
+
 // viem: import { createPublicClient } from 'viem'
 export const createPublicClient = noop;
 export const createWalletClient = noop;
