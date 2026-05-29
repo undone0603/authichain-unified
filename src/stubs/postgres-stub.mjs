@@ -11,5 +11,6 @@ export default function stubbedPostgres() {
   sql.unsafe = () => stubbedSql();
   sql.begin = (fn) => fn(sql);
   sql.resolve = () => {};
+  sql.options = { parsers: {} };  // drizzle-orm accesses client.options.parsers at init
   return sql;
 }
