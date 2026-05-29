@@ -3,9 +3,9 @@ import { getProductById, getProductQrCodes } from '../../../../server/db';
 export default async function VerifyProductPage({
   params,
 }: {
-  params: { productId: string };
+  params: Promise<{ productId: string }>;
 }) {
-  const { productId } = params;
+  const { productId } = await params;
   const numId = parseInt(productId, 10);
 
   const product = isNaN(numId) ? null : await getProductById(numId);
