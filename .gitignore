@@ -104,3 +104,6 @@ temp/
 # Vercel CLI link
 .vercel
 .env*.local
+
+__pycache__/
+*.py[cod]

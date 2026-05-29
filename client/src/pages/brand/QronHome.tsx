@@ -68,9 +68,9 @@ const ecosystem = [
 ];
 
 const pricing = [
-  { name: "Single QRON", price: "$5", period: "/code", paymentLink: "https://buy.stripe.com/dRmcN5drH5xc5ia6ji1Nu3x", features: ["One AI-generated QR code", "Ed25519 cryptographic signing", "High-res PNG download", "Unlimited scans", "Basic style presets"] },
-  { name: "Creator Pack", price: "$49", period: "/mo", paymentLink: "https://buy.stripe.com/8x2cN53R77Fk9yq0YY1Nu3u", features: ["25 QRONs per month", "All visual modes", "Custom prompt engine", "Brand color matching", "Priority generation queue", "Gallery listing"], highlighted: true },
-  { name: "Enterprise", price: "$199", period: "/mo", paymentLink: "https://buy.stripe.com/28E4gzbjze3I7qi4ba1Nu3s", features: ["Unlimited QRONs", "Batch generation API", "White-label output", "Brand template system", "Analytics dashboard", "Dedicated support"] },
+  { name: "Single QRON", price: "$5", period: "/code", features: ["One AI-generated QR code", "Ed25519 cryptographic signing", "High-res PNG download", "Unlimited scans", "Basic style presets"] },
+  { name: "Creator Pack", price: "$29", period: "/mo", features: ["25 QRONs per month", "All visual modes", "Custom prompt engine", "Brand color matching", "Priority generation queue", "Gallery listing"], highlighted: true },
+  { name: "Enterprise", price: "$199", period: "/mo", features: ["Unlimited QRONs", "Batch generation API", "White-label output", "Brand template system", "Analytics dashboard", "Dedicated support"] },
 ];
 
 /* ─── Stat Item ─── */
@@ -317,8 +317,8 @@ export default function QronHome() {
                       </li>
                     ))}
                   </ul>
-                  <Button className={`w-full ${plan.highlighted ? "bg-[hsl(271,81%,56%)] hover:bg-[hsl(271,81%,46%)]" : ""}`} variant={plan.highlighted ? "default" : "outline"} onClick={() => window.open(plan.paymentLink, "_blank")}>
-                    {plan.highlighted ? "Buy Now" : "Get Started"}
+                  <Button className={`w-full ${plan.highlighted ? "bg-[hsl(271,81%,56%)] hover:bg-[hsl(271,81%,46%)]" : ""}`} variant={plan.highlighted ? "default" : "outline"} onClick={() => go("/qr-codes")}>
+                    {plan.highlighted ? "Start Creating" : "Choose Plan"}
                   </Button>
                 </GlowCard>
               </Reveal>
