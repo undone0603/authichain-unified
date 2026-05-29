@@ -23,4 +23,23 @@ export const Resend = NoopClass;
 // drizzle-orm/postgres-js: import { drizzle } from 'drizzle-orm/postgres-js'
 export const drizzle = () => ({});
 
-// stripe, nodemailer, qrcode: default imports — covered by export default NoopClass
+// stripe, nodemailer, qrcode, jsqr: default imports — covered by export default NoopClass
+
+// thirdweb: import { createThirdwebClient, defineChain } from 'thirdweb'
+export const createThirdwebClient = noop;
+export const defineChain = noop;
+
+// thirdweb/chains: import { baseSepolia, base, polygon, ethereum } from 'thirdweb/chains'
+export const baseSepolia = {};
+export const base = {};
+export const polygon = {};
+export const ethereum = {};
+export const mainnet = {};
+export const sepolia = {};
+
+// viem: import { createPublicClient } from 'viem'
+export const createPublicClient = noop;
+export const createWalletClient = noop;
+export const http = noop;
+export const parseEther = noop;
+export const formatEther = noop;
