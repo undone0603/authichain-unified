@@ -221,7 +221,29 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--quiet",  action="store_true")
     run_p.add_argument("--json-out", metavar="FILE", default=None)
 
+    task_p = sub.add_parser("task", help="Run an ad-hoc browser task")
+    task_p.add_argument("instruction", help="The browser instruction to carry out")
+    task_p.add_argument("--mode", choices=["auto", "confirm", "dry-run"], default="auto")
+
     return root
+
+
+def cmd_task(args: argparse.Namespace) -> int:
+    import asyncio
+    from .core.browser import run_browser_task
+    from .core.modes import ExecutionContext, parse_mode
+    
+    mode = parse_mode(args.mode)
+    ctx = ExecutionContext(workflow_id="adhoc_task", mode=mode)
+    
+    print(f"\nAgentZ Ad-hoc Task -> {args.instruction}\n")
+    try:
+        res = asyncio.run(run_browser_task(args.instruction, ctx))
+        print(f"\nFinal Result:\n{res}")
+        return 0
+    except Exception as e:
+        print(f"\nTask failed: {e}", file=sys.stderr)
+        return 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -239,6 +261,7 @@ def main(argv: list[str] | None = None) -> int:
         "probe":       cmd_probe,
         "setup":       cmd_setup,
         "run":         cmd_run,
+        "task":        cmd_task,
         "health":      cmd_health,
         "list-agents": cmd_list_agents,
     }

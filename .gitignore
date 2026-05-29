@@ -103,3 +103,4 @@ temp/
 
 # Vercel CLI link
 .vercel
+.env*.local
