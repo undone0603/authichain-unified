@@ -59,38 +59,36 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      - name: Debug — bundle and inspect final worker for .resolve calls
+      - name: Debug — bundle, inspect, and upload worker artifact
         run: |
-          echo "=== .open-next/worker.js line count ==="
-          wc -l .open-next/worker.js 2>/dev/null || echo "not found"
-          echo "=== .open-next/server-functions/ structure ==="
-          find .open-next/server-functions -name "*.mjs" -o -name "*.js" 2>/dev/null | head -10
-          echo ""
-          # Bundle the worker without deploying (--dry-run outputs the bundle path)
-          # Use wrangler to generate the bundle so we can inspect the final artifact
           echo "=== Generating bundle with wrangler --dry-run ==="
           pnpm exec wrangler deploy --dry-run --outdir .wrangler/bundle-debug 2>&1 || true
           echo ""
-          echo "=== files in .wrangler/bundle-debug ==="
-          ls -la .wrangler/bundle-debug/ 2>/dev/null || echo "not found"
+          BUNDLE=".wrangler/bundle-debug/worker.js"
+          if [ ! -f "$BUNDLE" ]; then echo "bundle not found"; exit 0; fi
+          echo "=== bundle: $(wc -l < "$BUNDLE") lines ==="
           echo ""
-          # Find the largest JS file (the actual bundle)
-          BUNDLE=$(find .wrangler/bundle-debug -name "*.js" -o -name "*.mjs" 2>/dev/null | xargs wc -l 2>/dev/null | sort -rn | head -1 | awk '{print $2}')
-          if [ -n "$BUNDLE" ] && [ -f "$BUNDLE" ]; then
-            echo "=== bundle: $BUNDLE ($(wc -l < "$BUNDLE") lines) ==="
-            echo "=== .resolve( calls (non-Promise/path/require) ==="
-            grep -n "\.resolve(" "$BUNDLE" | grep -v "Promise\.resolve\|path\.resolve\|URL\.resolve\|require\.resolve\|_resolve\b" | head -30 || echo "(none)"
-            echo "=== __require.resolve / __require2.resolve ==="
-            grep -n "__require[0-9]*\.resolve" "$BUNDLE" | head -20 || echo "(none — patch applied)"
-            echo "=== cacheHandlerPath ==="
-            grep -n "cacheHandlerPath\|composableCacheHandlerPath" "$BUNDLE" | head -10 || echo "(none)"
-          else
-            echo "bundle file not found; searching /tmp for large JS files..."
-            find /tmp -name "*.js" -size +1M 2>/dev/null | head -5
-          fi
+          echo "=== .resolve( calls (non-Promise/path/require) with 3-line context ==="
+          grep -n "\.resolve(" "$BUNDLE" \
+            | grep -v "Promise\.resolve\|path\.resolve\|URL\.resolve\|require\.resolve\|_resolve\b" \
+            | head -30 \
+            | while IFS=: read -r LINENO REST; do
+                echo "--- line $LINENO ---"
+                sed -n "$((LINENO-1)),$((LINENO+1))p" "$BUNDLE" | cut -c1-200
+              done || echo "(none)"
+          echo ""
+          echo "=== __require.resolve occurrences ==="
+          grep -n "__require[0-9]*\.resolve" "$BUNDLE" | head -10 || echo "(none — cacheHandlerPath patch applied)"
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Upload worker bundle as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-bundle
+          path: .wrangler/bundle-debug/worker.js
+          retention-days: 1
 
       - name: Deploy to Cloudflare Workers
         run: pnpm exec wrangler deploy
