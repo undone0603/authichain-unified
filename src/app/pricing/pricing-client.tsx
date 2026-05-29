@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 export function CheckoutModal({
   planId,
@@ -19,10 +20,20 @@ export function CheckoutModal({
   const handleCheckout = async () => {
     setLoading(true);
     setError(null);
+
     if (paymentLink) {
       window.location.assign(paymentLink);
       return;
     }
+
+    // Require auth so webhook can fulfill credits after payment
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      window.location.assign(`/login?redirect=/pricing`);
+      return;
+    }
+
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',

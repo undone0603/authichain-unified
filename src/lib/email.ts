@@ -94,10 +94,10 @@ async function viaSendGrid(args: SendArgs, key: string): Promise<SendResult> {
  */
 export async function sendEmail(args: SendArgs): Promise<SendResult> {
   const providers: Array<[string | undefined, (a: SendArgs, k: string) => Promise<SendResult>]> = [
-    [process.env.GMAIL_APP_PASSWORD, viaGmail],
     [process.env.RESEND_API_KEY, viaResend],
     [process.env.BREVO_API_KEY, viaBrevo],
     [process.env.SENDGRID_API_KEY, viaSendGrid],
+    [process.env.GMAIL_APP_PASSWORD, viaGmail],
   ];
 
   let last: SendResult = { ok: false, provider: 'none', error: 'no provider configured' };
