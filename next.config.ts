@@ -11,11 +11,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  serverExternalPackages: [
-    // @emotion packages: CSS-in-JS, safe on CF Workers; kept external to avoid webpack ESM issues
-    '@emotion/styled', '@emotion/react', '@emotion/cache', '@emotion/utils',
-    '@emotion/use-insertion-effect-with-fallbacks', '@emotion/serialize', '@emotion/hash',
-  ],
+  serverExternalPackages: [],
 
   webpack: (config: { resolve: { fallback: Record<string, boolean>; alias: Record<string, unknown> } }) => {
     const stub = path.resolve(__dirname, 'src/stubs/empty.js');
@@ -58,6 +54,14 @@ const nextConfig: NextConfig = {
       // logging: no-op on CF Workers (use console.log instead)
       pino:                      stub,
       'pino-pretty':             stub,
+      // @emotion: CSS-in-JS; stub so esbuild never bundles module-scope init code
+      '@emotion/styled':         stub,
+      '@emotion/react':          stub,
+      '@emotion/cache':          stub,
+      '@emotion/utils':          stub,
+      '@emotion/use-insertion-effect-with-fallbacks': stub,
+      '@emotion/serialize':      stub,
+      '@emotion/hash':           stub,
       // postgres-js uses dns.resolve() — needs callable stub so drizzle can init
       postgres: path.resolve(__dirname, 'src/stubs/postgres-stub.mjs'),
       // drizzle postgres-js adapter accesses client internals at init time; stub the whole adapter
