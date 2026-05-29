@@ -33,9 +33,6 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Patch missing Shadcn dependencies
         # Workaround: Installs the missing Tailwind v4 package workspace-wide
         run: pnpm install tw-animate-css
@@ -72,7 +69,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Publish authichain.com landing page worker
-        run: pnpm exec wrangler deploy --config wrangler.toml
+        run: npx wrangler deploy --config wrangler.toml
         working-directory: workers/authichain-com
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
