@@ -160,7 +160,7 @@ def _ensure_loaded() -> None:
     ]
     for candidate in candidates:
         if candidate.exists():
-            load_dotenv(candidate)
+            load_dotenv(candidate, override=True)
             _env_path = candidate
             logger.info(f"Loaded credentials from {candidate}")
             break

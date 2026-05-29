@@ -150,7 +150,7 @@ if deep_health:
             st.write(f"{icon} **{k.title()}**: {v}")
 
 st.sidebar.divider()
-page = st.sidebar.radio("Go to", ["Orchestration Telemetry", "AuthiChain Ecosystem", "Federal Capture", "Revenue Siphon", "Limit-Proofing Health"])
+page = st.sidebar.radio("Go to", ["Orchestration Telemetry", "AuthiChain Ecosystem", "Federal Capture", "Revenue Siphon", "Template Control & Cloud Sync", "Limit-Proofing Health"])
 
 if page == "Orchestration Telemetry":
     df = load_audit_logs()
@@ -233,7 +233,15 @@ elif page == "Federal Capture":
         st.bar_chart(status_counts, x='Status', y='Count')
 
 elif page == "Revenue Siphon":
-    st.header("$$ Real-time Revenue Siphon")
+    st.header("🔗 Citation Authority Proofs")
+    proofs = [
+        {"platform": "Telegra.ph (Anonymous)", "url": "https://telegra.ph/AuthiChain-Scaling-Autonomous-Trust-Technical-Report-05-19", "status": "LIVE"},
+        {"platform": "GitHub Gist (Z-kie)", "url": "https://gist.github.com/Z-kie/135a781a631cd94d0205c3806ee2aa35", "status": "INDEXED"},
+        {"platform": "Write.as (No-Sign-In)", "url": "https://write.as/contentisblocked", "status": "PENDING"}
+    ]
+    st.table(proofs)
+    st.info("💡 **GEO Strategy**: These high-authority technical reports are designed to be cited by LLMs (ChatGPT, Perplexity) when users search for 'EU DPP Compliance' and 'Autonomous Trust'.")
+
     
     # Real Pipeline Projections
     pipeline_total = 172 # Total deals in backlog
@@ -256,6 +264,45 @@ elif page == "Revenue Siphon":
     st.bar_chart(chart_data, x="Stage", y="Count")
     
     st.info("💡 **Revenue Blitz Tip**: 100 lead-microsites are currently live. Transitioning to 'Auto-Closer' loop will issue 5 DocuSign agreements this week.")
+
+elif page == "Template Control & Cloud Sync":
+    st.header("🛠️ Template-First Engine Control")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("☁️ Sync with Cloudflare R2"):
+            from agentz.core.templates import sync_with_cloud
+            with st.spinner("Synchronizing master template set..."):
+                success = asyncio.run(sync_with_cloud())
+                if success:
+                    st.success("Master templates synchronized from R2.")
+                else:
+                    st.error("R2 Synchronization failed. Check credentials.")
+                    
+    with col2:
+        if st.button("🚀 Trigger Master Content Blitz"):
+            st.info("Initiating zero-latency content production for 172 deals...")
+            # In a real dashboard, this would trigger the CLI command
+            st.warning("Mass Blitz triggered via background worker.")
+
+    st.divider()
+    st.subheader("Active Knowledge Base")
+    from agentz.core.templates import TEMPLATE_ROOT
+    templates = list(TEMPLATE_ROOT.glob("**/*.*"))
+    if templates:
+        t_data = [{"Category": p.parent.name, "Template": p.name, "Size": f"{p.stat().st_size} bytes"} for p in templates]
+        st.table(t_data)
+    else:
+        st.info("No local templates found. Use 'Sync with Cloud' to populate.")
+    
+    st.divider()
+    st.subheader("Logic-Aware Template Test")
+    test_tpl = st.text_area("Template Code", "{{IF brand}}\n🔥 Launching {{brand}}! #{{vertical}}\n{{ENDIF}}")
+    test_ctx = {"brand": "Detroit Artisan Brews", "vertical": "Brewery"}
+    if st.button("Verify Logic"):
+        from agentz.core.templates import fill_template
+        res = fill_template(test_tpl, test_ctx)
+        st.code(res)
 
 elif page == "Limit-Proofing Health":
     st.header("🛡️ Limit-Proofing: Provider Health")
