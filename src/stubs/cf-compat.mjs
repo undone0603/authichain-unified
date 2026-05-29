@@ -20,4 +20,7 @@ export const createOpenAI = noop;
 // resend: import { Resend } from 'resend'
 export const Resend = NoopClass;
 
+// drizzle-orm/postgres-js: import { drizzle } from 'drizzle-orm/postgres-js'
+export const drizzle = () => ({});
+
 // stripe, nodemailer, qrcode: default imports — covered by export default NoopClass
