@@ -377,7 +377,7 @@ export default function Home() {
       return;
     }
     if (!plan.stripe_price_id) {
-      window.location.assign('mailto:Z@authichain.com');
+      setError('This plan requires manual onboarding. Email Z@authichain.com to get started.');
       return;
     }
     try {

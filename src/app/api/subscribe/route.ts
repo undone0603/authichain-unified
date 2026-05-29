@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { PLANS } from '@/lib/plans';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
@@ -7,14 +8,6 @@ const supabase = createClient(
 );
 
 export const runtime = 'nodejs';
-
-// QRON Stripe Price IDs — set in env or map here
-const PLAN_PRICE_MAP: Record<string, string> = {
-  starter: process.env.STRIPE_PRICE_STARTER || '',
-  pro: process.env.STRIPE_PRICE_PRO || '',
-  business: process.env.STRIPE_PRICE_BUSINESS || '',
-  enterprise: process.env.STRIPE_PRICE_ENTERPRISE || '',
-};
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,14 +24,13 @@ export async function POST(req: NextRequest) {
     if (authErr || !user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
 
     const body = await req.json();
-    const { plan, success_url, cancel_url, trial_days } = body;
+    const { plan: planId, success_url, cancel_url, trial_days } = body;
 
-    if (!plan || !PLAN_PRICE_MAP[plan]) {
-      return NextResponse.json({ error: `Invalid plan. Available: ${Object.keys(PLAN_PRICE_MAP).join(', ')}` }, { status: 400 });
+    const plan = PLANS.find((p) => p.id === planId);
+    if (!plan || !plan.stripe_price_id || !plan.stripe_mode) {
+      const available = PLANS.filter((p) => p.stripe_price_id).map((p) => p.id);
+      return NextResponse.json({ error: `Invalid plan. Available: ${available.join(', ')}` }, { status: 400 });
     }
-
-    const priceId = PLAN_PRICE_MAP[plan];
-    if (!priceId) return NextResponse.json({ error: `Price not configured for plan: ${plan}` }, { status: 500 });
 
     // Get or create Stripe customer
     let stripeCustomerId: string | undefined;
@@ -60,34 +52,31 @@ export async function POST(req: NextRequest) {
       await supabase.from('profiles').update({ stripe_customer_id: customer.id }).eq('id', user.id);
     }
 
-    // Build checkout session
-    const sessionParams: any = {
+    const origin = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
+    const sessionParams: Record<string, unknown> = {
       customer: stripeCustomerId,
-      mode: 'subscription',
+      mode: plan.stripe_mode,
       payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: success_url || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?subscribed=true&plan=${plan}`,
-      cancel_url: cancel_url || `${process.env.NEXT_PUBLIC_APP_URL}/pricing?cancelled=true`,
-      allow_promotion_codes: true,
-      billing_address_collection: 'auto',
-      metadata: { user_id: user.id, plan, platform: 'qron' },
-      subscription_data: {
-        metadata: { user_id: user.id, plan },
-      },
+      line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
+      success_url: success_url || `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancel_url || `${origin}/pricing`,
+      metadata: { planId: plan.id, userId: user.id },
     };
 
-    // Add trial if requested
-    if (trial_days && parseInt(trial_days) > 0) {
-      sessionParams.subscription_data.trial_period_days = parseInt(trial_days);
+    if (plan.stripe_mode === 'subscription') {
+      sessionParams.allow_promotion_codes = true;
+      sessionParams.subscription_data = { metadata: { planId: plan.id, userId: user.id } };
+      if (trial_days && parseInt(trial_days) > 0) {
+        (sessionParams.subscription_data as Record<string, unknown>).trial_period_days = parseInt(trial_days);
+      }
     }
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    const session = await stripe.checkout.sessions.create(sessionParams as Parameters<typeof stripe.checkout.sessions.create>[0]);
 
-    // Log the checkout attempt
     await supabase.from('checkout_sessions').insert({
       user_id: user.id,
       session_id: session.id,
-      plan,
+      plan: plan.id,
       status: 'pending',
       created_at: new Date().toISOString(),
     }).select();
@@ -96,20 +85,25 @@ export async function POST(req: NextRequest) {
       success: true,
       checkout_url: session.url,
       session_id: session.id,
-      plan,
+      plan: plan.id,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function GET(req: NextRequest) {
-  // Return available plans with prices for self-serve pricing page
-  const plans = [
-    { id: 'starter', name: 'Starter', price_monthly: 29, price_yearly: 290, qr_codes: 100, scans: 10000, features: ['Custom QR styles', 'Analytics', 'API access'] },
-    { id: 'pro', name: 'Pro', price_monthly: 79, price_yearly: 790, qr_codes: 1000, scans: 100000, features: ['Everything in Starter', 'AI art styles', 'Priority support', 'Bulk generation'] },
-    { id: 'business', name: 'Business', price_monthly: 199, price_yearly: 1990, qr_codes: 10000, scans: 1000000, features: ['Everything in Pro', 'White label', 'Team seats', 'Custom domains', 'SLA'] },
-    { id: 'enterprise', name: 'Enterprise', price_monthly: null, price_yearly: null, qr_codes: null, scans: null, features: ['Unlimited everything', 'Dedicated support', 'Custom contracts', 'On-premise option'] },
-  ];
+export async function GET() {
+  const plans = PLANS.filter((p) => p.stripe_price_id).map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    price_suffix: p.price_suffix,
+    description: p.description,
+    generations: p.generations,
+    tier: p.tier,
+    mode: p.stripe_mode,
+    features: p.features,
+  }));
   return NextResponse.json({ success: true, plans, currency: 'usd' });
 }
