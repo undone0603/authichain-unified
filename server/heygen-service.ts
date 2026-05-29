@@ -1,4 +1,5 @@
 import { ENV } from "./_core/env";
+import { invokeLLM } from "./_core/llm";
 
 const BASE = "https://api.heygen.com";
 
@@ -123,7 +124,6 @@ export async function draftOutreachScript(params: {
   segment: string;
   useCase: string;
 }): Promise<string> {
-  const { invokeLLM } = await import("./_core/llm");
   const prompt = `Write a 30-second outreach video script (under 80 words) for an AI avatar to say.
 Target: ${params.firstName} at ${params.company} (${params.segment} sector).
 Use case hook: ${params.useCase}.
@@ -131,5 +131,6 @@ Product: AuthiChain — product authentication & anti-counterfeiting platform.
 Tone: professional, warm, direct. End with a soft CTA to book a 15-min call.
 Return ONLY the script text, no labels or quotes.`;
   const res = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
-  return res.choices?.[0]?.message?.content?.trim() ?? "";
+  const raw = res.choices?.[0]?.message?.content;
+  return (typeof raw === "string" ? raw.trim() : "") ?? "";
 }

@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { adminProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { 
@@ -22,22 +23,20 @@ export const schedulerRouter = router({
     jobName: z.string(),
   })).mutation(async ({ input }) => {
     const success = await runJobManually(input.jobName);
-    return { 
-      success, 
-      message: success ? `Job "${input.jobName}" started successfully` : `Failed to start job "${input.jobName}"` 
-    };
+    if (!success) throw new TRPCError({ code: "NOT_FOUND", message: `Job "${input.jobName}" not found` });
+    return { success, message: `Job "${input.jobName}" started successfully` };
   }),
   getSystemStatus: adminProcedure.query(() => {
     return getSystemStatus();
   }),
   toggleSystemState: adminProcedure.input(z.object({
     active: z.boolean(),
-  })).mutation(({ input }) => {
-    const isActive = toggleKillSwitch(input.active);
-    return { 
-      success: true, 
-      isActive, 
-      message: `System ${isActive ? "activated" : "deactivated"} successfully` 
+  })).mutation(async ({ input }) => {
+    const isActive = await toggleKillSwitch(input.active);
+    return {
+      success: true,
+      isActive,
+      message: `System ${isActive ? "activated" : "deactivated"} successfully`,
     };
   }),
 });

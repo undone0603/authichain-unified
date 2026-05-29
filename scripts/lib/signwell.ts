@@ -179,4 +179,4 @@ export function createSignWellClientFromEnv(): SignWellClient {
   return new SignWellClient({ apiKey, testMode });
 }
 
-export type { SignWellDocument, SignWellRecipient, SignWellField, SignWellTemplate, CreateDocumentParams, OutreachRecipient };
+export type { SignWellDocument, SignWellRecipient, SignWellField, SignWellTemplate };

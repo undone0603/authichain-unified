@@ -1,0 +1,119 @@
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+
+// Lazy singletons — avoid build-time throw when env vars are absent.
+let _stripe: Stripe | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) throw new Error('STRIPE_SECRET_KEY not set');
+    // Pinned to legacy API version because subscriptionItems.createUsageRecord
+    // is only available on pre-meterEvents Stripe API versions.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    _stripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' as const });
+  }
+  return _stripe;
+}
+
+let _admin: ReturnType<typeof createClient> | null = null;
+function getAdmin(): ReturnType<typeof createClient> {
+  if (!_admin) {
+    _admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+  }
+  return _admin;
+}
+
+/**
+ * BILLING CONFIGURATION
+ * Defines the metered pricing for AI agent tool calls.
+ */
+export const METERED_PRICING = {
+  verify_product: 1,      // 1 unit = $0.05
+  register_product: 10,   // 10 units = $0.50
+  check_eu_dpp: 100,      // 100 units = $5.00
+  mint_certificate: 20,   // 20 units = $1.00
+};
+
+/**
+ * Reports usage to Stripe Metered Billing.
+ * Part of the "Stripe for AI Agents" autonomous revenue stream.
+ * 
+ * @param userId The ID of the user/agency owning the agent
+ * @param toolName The tool that was called
+ */
+export async function reportAgentUsage(userId: string, toolName: keyof typeof METERED_PRICING) {
+  try {
+    console.log(`[Billing] Reporting usage for ${userId}: ${toolName}`);
+
+    // 1. Get the user's active metered subscription item
+    const { data: profileRow } = await getAdmin()
+      .from('profiles')
+      .select('stripe_subscription_id, tier')
+      .eq('user_id', userId)
+      .single();
+    const profile = profileRow as { stripe_subscription_id: string | null; tier: string } | null;
+
+    if (!profile || !profile.stripe_subscription_id) {
+      console.warn(`[Billing] No active subscription for ${userId} - skipping reporting`);
+      return;
+    }
+
+    // Skip reporting for free tier or if not enterprise (unless we want to bill everyone)
+    if (profile.tier === 'free') return;
+
+    // 2. Find the metered subscription item
+    const subscription = await getStripe().subscriptions.retrieve(profile.stripe_subscription_id);
+    const meteredItem = subscription.items.data.find(item => 
+      item.price.recurring?.usage_type === 'metered'
+    );
+
+    if (!meteredItem) {
+      console.error(`[Billing] No metered item found in subscription ${profile.stripe_subscription_id}`);
+      return;
+    }
+
+    // 3. Report usage units based on tool value
+    const quantity = METERED_PRICING[toolName] || 1;
+
+    const legacyStripe = getStripe() as unknown as {
+      subscriptionItems: {
+        createUsageRecord: (
+          id: string,
+          params: { quantity: number; timestamp: number; action: 'increment' | 'set' }
+        ) => Promise<unknown>;
+      };
+    };
+
+    await legacyStripe.subscriptionItems.createUsageRecord(meteredItem.id, {
+      quantity,
+      timestamp: Math.floor(Date.now() / 1000),
+      action: 'increment',
+    });
+
+    // 4. Log to DB for internal analytics
+    await (getAdmin().from('automation_logs') as any).insert({
+      workflow_name: 'metered_usage_reported',
+      trigger_type: 'event',
+      status: 'success',
+      payload: JSON.stringify({ userId, toolName, quantity, subscriptionId: subscription.id })
+    });
+
+    console.log(`[Billing] Successfully reported ${quantity} units for ${toolName}`);
+
+  } catch (err) {
+    console.error('[Billing] Reporting failed:', err);
+    // Non-blocking log
+    (getAdmin().from('automation_logs') as any).insert({
+      workflow_name: 'metered_usage_reported',
+      trigger_type: 'event',
+      status: 'failure',
+      error_message: err instanceof Error ? err.message : String(err)
+    }).then(undefined, (logErr: unknown) => {
+      console.error('[Billing] Failed to write failure log:', logErr);
+    });
+  }
+}

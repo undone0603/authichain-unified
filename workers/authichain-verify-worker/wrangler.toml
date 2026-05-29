@@ -13,10 +13,7 @@ NEXT_PUBLIC_SITE_URL = "https://authichain.com"
 
 [[routes]]
 pattern = "authichain.com/api/verify*"
-custom_domain = true
-
-[build]
-command = "npm run build"
+zone_name = "authichain.com"
 
 [env.production]
 name = "authichain-verify-worker"

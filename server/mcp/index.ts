@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { getCertificateByNumber, getProductById } from "../db";
+import { classifyIndustry } from "../../shared/industries";
 
 /**
  * AuthiChain MCP Server
@@ -54,7 +55,6 @@ server.tool(
     description: z.string().optional().describe("Description or physical attributes")
   },
   async ({ name, description }) => {
-    const { classifyIndustry } = await import("../../shared/industries");
     const industry = classifyIndustry(name, description || "");
     return {
       content: [{ type: "text", text: `CLASSIFIED: Product mapped to industry vertical: ${industry.name}. Confidence: HIGH. Suggested workflow: ${industry.workflow.map((w: { name: string }) => w.name).join(" -> ")}` }]
@@ -69,7 +69,6 @@ server.tool(
     truemarkId: z.string().describe("The TrueMark ID of the deal to verify")
   },
   async ({ truemarkId }) => {
-    const { getCertificateByNumber, getProductById } = await import("../db.js");
     const cert = await getCertificateByNumber(truemarkId);
     if (!cert) return { content: [{ type: "text", text: "NOT FOUND: This TrueMark ID does not exist in the sovereign ledger." }] };
     const product = await getProductById(cert.productId);

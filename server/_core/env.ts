@@ -12,7 +12,46 @@ export const ENV = {
   hubspotServiceKey: process.env.HUBSPOT_SERVICE_KEY ?? "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
-  paddleApiKey: process.env.PADDLE_API_KEY ?? "",
-  paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
+  apolloApiKey: process.env.APOLLO_API_KEY ?? "",
+
+  // ── Email ─────────────────────────────────────────────────────────────────
+  resendApiKey:         process.env.RESEND_API_KEY ?? "",
+  resendFromEmail:      process.env.RESEND_FROM_EMAIL ?? "noreply@authichain.com",
+  gmailFromEmail:       process.env.GMAIL_FROM_EMAIL ?? "",
+  gmailClientId:        process.env.GMAIL_CLIENT_ID ?? "",
+  gmailClientSecret:    process.env.GMAIL_CLIENT_SECRET ?? "",
+  gmailRefreshToken:    process.env.GMAIL_REFRESH_TOKEN ?? "",
+  gmailAppPassword:     process.env.GMAIL_APP_PASSWORD ?? "",
+  suppressionList:      process.env.SUPPRESSION_LIST ?? "",
+
+  // ── AI / LLM ──────────────────────────────────────────────────────────────
+  openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
+  groqApiKey:       process.env.GROQ_API_KEY ?? "",
+  openaiApiKey:     process.env.OPENAI_API_KEY ?? "",
+  geminiApiKey:     process.env.GEMINI_API_KEY ?? "",
+
+  // ── Paddle ────────────────────────────────────────────────────────────────
+  paddleApiKey:           process.env.PADDLE_API_KEY ?? "",
+  paddleWebhookSecret:    process.env.PADDLE_WEBHOOK_SECRET ?? "",
+  paddleBasicPriceId:     process.env.PADDLE_BASIC_PRICE_ID ?? "",
+  paddlePremiumPriceId:   process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
+  paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
+
+  // ── Blockchain / Wallet ───────────────────────────────────────────────────
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
+
+  // ── Gov / External APIs ───────────────────────────────────────────────────
+  samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
+
+  // ── Pipeline Flags ────────────────────────────────────────────────────────
+  autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
+  requireOutreachApproval:   process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
+  requireDevApproval:        process.env.REQUIRE_DEV_APPROVAL !== "false",
+
+  // ── Video / Media ─────────────────────────────────────────────────────────
+  heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
+  internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",
+  qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
+  makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
+  smsRecipient: process.env.SMS_RECIPIENT ?? "",
 };

@@ -1,4 +1,5 @@
 import { ENV } from "./_core/env";
+import nodemailer from "nodemailer";
 
 // ─── Gmail token cache (auto-refresh) ────────────────────────────────────────
 
@@ -93,56 +94,115 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   }
 
   const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
-  if (!fromEmail) {
-    return {
-      status: "skipped",
-      reason: "gmail_not_configured",
-      provider: "gmail",
-    };
-  }
-
-  const gmailAccessToken = await getGmailAccessToken();
-  if (!gmailAccessToken) {
-    return { status: "skipped", reason: "gmail_token_unavailable", provider: "gmail" };
-  }
-
+  const appPassword = ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
   const fromName = input.fromName || "AuthiChain";
-  const mime = [
-    `From: ${fromName} <${fromEmail}>`,
-    `To: ${to}`,
-    `Subject: ${input.subject}`,
-    "MIME-Version: 1.0",
-    "Content-Type: text/plain; charset=UTF-8",
-    "",
-    input.body,
-  ].join("\r\n");
 
-  const raw = toBase64Url(mime);
-  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${gmailAccessToken}`,
-    },
-    body: JSON.stringify({ raw }),
-  });
+  // ── Method 1: Try Resend first (if API key is configured) ─────────────────
+  if (ENV.resendApiKey) {
+    const resendFrom = ENV.resendFromEmail || process.env.RESEND_FROM_EMAIL || fromEmail || "outreach@authichain.com";
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${ENV.resendApiKey}`,
+        },
+        body: JSON.stringify({
+          from: `${fromName} <${resendFrom}>`,
+          to: [to],
+          subject: input.subject,
+          text: input.body,
+        }),
+      });
 
-  if (!response.ok) {
-    const txt = await response.text().catch(() => "");
-    return {
-      status: "skipped",
-      provider: "gmail",
-      reason: `gmail_send_failed:${response.status}:${txt.slice(0, 200)}`,
-    };
+      if (res.ok) {
+        const data = await res.json().catch(() => ({} as any));
+        return { status: "sent", provider: "resend", providerMessageId: data?.id };
+      }
+
+      const errTxt = await res.text().catch(() => "");
+      console.warn("[email] Resend failed, falling back:", res.status, errTxt.slice(0, 200));
+    } catch (resendErr: any) {
+      console.warn("[email] Resend error, falling back:", resendErr.message);
+    }
   }
 
-  const data = await response.json().catch(() => ({} as any));
-  return {
-    status: "sent",
-    provider: "gmail",
-    providerMessageId: data?.id,
-    threadId: data?.threadId,
-  };
+  // ── Method 2: SMTP via App Password ─────────────────────────────────────
+  if (fromEmail && appPassword) {
+    try {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: fromEmail, pass: appPassword },
+      });
+
+      const info = await transporter.sendMail({
+        from: `${fromName} <${fromEmail}>`,
+        to,
+        subject: input.subject,
+        text: input.body,
+      });
+
+      return {
+        status: "sent",
+        provider: "gmail-smtp",
+        providerMessageId: info.messageId,
+      };
+    } catch (smtpErr: any) {
+      console.warn("[email-service] SMTP failed, attempting OAuth2...", smtpErr.message);
+    }
+  }
+
+  // ── Method 3: Gmail OAuth2 ───────────────────────────────────────────────
+  const gmailConfigured = !!(
+    fromEmail &&
+    (process.env.GMAIL_ACCESS_TOKEN || ENV.gmailClientId)
+  );
+  if (gmailConfigured) {
+    const gmailAccessToken = await getGmailAccessToken();
+    if (gmailAccessToken) {
+      const mime = [
+        `From: ${fromName} <${fromEmail}>`,
+        `To: ${to}`,
+        `Subject: ${input.subject}`,
+        "MIME-Version: 1.0",
+        "Content-Type: text/plain; charset=UTF-8",
+        "",
+        input.body,
+      ].join("\r\n");
+
+      const raw = toBase64Url(mime);
+      const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${gmailAccessToken}`,
+        },
+        body: JSON.stringify({ raw }),
+      });
+
+      if (response.ok) {
+        const data = await response.json().catch(() => ({} as any));
+        return {
+          status: "sent",
+          provider: "gmail-oauth",
+          providerMessageId: data?.id,
+          threadId: data?.threadId,
+        };
+      }
+
+      const txt = await response.text().catch(() => "");
+      console.warn("[email] Gmail OAuth2 failed:", response.status, txt.slice(0, 200));
+    }
+  }
+
+  const attempted = [
+    ENV.resendApiKey ? "resend" : null,
+    appPassword ? "gmail-smtp" : null,
+    gmailConfigured ? "gmail-oauth" : null,
+  ].filter(Boolean);
+  const reason = attempted.length ? `all_providers_failed:${attempted.join(",")}` : "no_email_provider_configured";
+  console.error("[email] All providers exhausted:", reason);
+  return { status: "skipped", reason };
 }
 
 /** Check whether a Gmail thread has received a reply (any message NOT in SENT labels). */

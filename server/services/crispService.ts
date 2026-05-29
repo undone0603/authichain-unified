@@ -1,5 +1,11 @@
 import Crisp from 'crisp-api';
 
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local?.[0] ?? ''}***@${domain}`;
+}
+
 /**
  * Crisp Communication Service
  * Handles all customer communications: emails, chat, and automated messages
@@ -68,7 +74,7 @@ export async function sendCertificateEmail(params: {
   // If Crisp is not configured, log to console
   if (!config || !crispClient) {
     console.log('[Crisp] Would send certificate email:');
-    console.log(`To: ${to}`);
+    console.log(`To: ${maskEmail(to)}`);
     console.log(`Certificate: ${certificateNumber}`);
     console.log(`Product: ${productName}`);
     console.log(`URL: ${certificateUrl}`);
@@ -98,7 +104,7 @@ export async function sendCertificateEmail(params: {
       }
     );
 
-    console.log(`[Crisp] Certificate message sent successfully to ${to}`);
+    console.log(`[Crisp] Certificate message sent successfully to ${maskEmail(to)}`);
     return true;
 
   } catch (error: any) {
@@ -180,7 +186,7 @@ export async function sendCrispMessage(params: {
       }
     );
 
-    console.log(`[Crisp] Message sent to ${params.email}`);
+    console.log(`[Crisp] Message sent to ${maskEmail(params.email)}`);
     return true;
 
   } catch (error) {
@@ -200,7 +206,7 @@ export async function updateCrispProfile(params: {
   const config = initializeCrisp();
 
   if (!config || !crispClient) {
-    console.log('[Crisp] Would update profile for:', params.email);
+    console.log('[Crisp] Would update profile for:', maskEmail(params.email));
     return true;
   }
 
@@ -227,7 +233,7 @@ export async function updateCrispProfile(params: {
       );
     }
 
-    console.log(`[Crisp] Profile updated for ${params.email}`);
+    console.log(`[Crisp] Profile updated for ${maskEmail(params.email)}`);
     return true;
 
   } catch (error) {

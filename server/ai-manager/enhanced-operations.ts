@@ -3,7 +3,7 @@
  * Autonomous execution of complete customer acquisition strategy
  */
 
-import { invokeLLM } from '../_core/llm';
+import { invokeLLM, parseLLMContent } from '../_core/llm';
 import { sendEmail } from '../email/smtp';
 import { notifyOwner } from '../_core/notification';
 
@@ -310,7 +310,7 @@ Format as JSON with keys: actions (array), timeRequired (string), metrics (array
     });
     
     const content = response.choices[0].message.content;
-    const plan = JSON.parse(typeof content === 'string' ? content : '{}');
+    const plan = parseLLMContent<any>(content);
     
     return {
       status: 'planned',

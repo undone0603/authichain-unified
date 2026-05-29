@@ -1,7 +1,9 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { telemetryEvents } from '@/db/schema';
-import crypto from 'crypto';
+import { createHash } from 'node:crypto';
 import { anchorToPolygon } from '@/actions/anchor';
 
 // Michigan CRA Transport Compliance Bounds (Adjustable for Enterprise)
@@ -90,20 +92,24 @@ export async function POST(req: Request) {
       data.temperatureF <= MAX_TEMP_F && data.humidityPct <= MAX_HUMIDITY;
 
     const payloadString = JSON.stringify(data);
-    const eventHash = crypto.createHash('sha256').update(payloadString).digest('hex');
+    const eventHash = createHash('sha256').update(payloadString).digest('hex');
+
+    const parsedPayload = {
+      metrcTag: data.metrcTag,
+      temperatureF: data.temperatureF,
+      humidityPct: data.humidityPct,
+      gpsLocation: data.gpsLocation ?? null,
+      recordedAt: data.recordedAt ?? new Date().toISOString(),
+    };
 
     const [insertedEvent] = await db
       .insert(telemetryEvents)
       .values({
+        theater: 'theater_1',
         source: 'strainchain-iot',
         metrcTag: data.metrcTag,
-        payload: {
-          metrcTag: data.metrcTag,
-          temperatureF: data.temperatureF,
-          humidityPct: data.humidityPct,
-          gpsLocation: data.gpsLocation ?? null,
-          recordedAt: data.recordedAt ?? new Date().toISOString(),
-        },
+        rawPayload: raw,
+        parsedState: parsedPayload,
         gpsLocation: data.gpsLocation ?? null,
         ledgerHash: `0x${eventHash}`,
         isCompliant,

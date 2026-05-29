@@ -14,9 +14,11 @@ export async function getMissions(statusFilter?: string) {
     return d
       .select()
       .from(missions)
-      .where(eq(missions.status, statusFilter as any));
+      .where(eq(missions.status, statusFilter as any))
+      .orderBy(desc(missions.createdAt))
+      .limit(200);
   }
-  return d.select().from(missions).orderBy(desc(missions.createdAt));
+  return d.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
 }
 
 export async function getMissionById(id: string) {
@@ -47,6 +49,7 @@ export async function createMission(type: MissionType) {
   const id = randomUUID();
   await d.insert(missions).values({
     id,
+    type,
     title: template.title,
     description: `Mission: ${template.title}`,
     status: "pending",
@@ -58,6 +61,7 @@ export async function createMission(type: MissionType) {
     const taskRows = templateTasks.map((t, index) => ({
       id: randomUUID(),
       missionId: id,
+      kind: t.kind,
       title: t.kind,
       description: JSON.stringify(t.payload),
       status: "pending" as const,

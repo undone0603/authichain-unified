@@ -35,6 +35,7 @@ async function getPineconeIndex() {
     console.warn('[gov-engine] PINECONE_API_KEY not set — Pinecone disabled');
     return null;
   }
+  // @ts-ignore - package installed separately
   const { Pinecone } = await import('@pinecone-database/pinecone');
   const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
   _pineconeIndex = pinecone.index(process.env.PINECONE_INDEX || 'authichain-gov-leads');
@@ -302,6 +303,7 @@ export async function runAdvancedGovernmentLeadGen() {
   let processed = 0;
   for (const lead of allLeads) {
     const consensus = await runFiveAgentConsensus(lead);
+    console.log(`[gov-engine] Found: ${lead.title} (${lead.agency})`);
     if (!consensus.approved) {
       console.log(`[gov-engine] ⏭  skipped ${lead.agency} (score ${consensus.score})`);
       continue;
@@ -351,6 +353,7 @@ export async function runAdvancedGovernmentLeadGen() {
 }
 
 export async function startGovernmentEngine() {
-  await runAdvancedGovernmentLeadGen();
+  const result = await runAdvancedGovernmentLeadGen();
   console.log(`🔄 GovChain engine run complete (DRY_RUN=${DRY_RUN})`);
+  return result;
 }

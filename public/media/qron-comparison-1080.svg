@@ -1,0 +1,171 @@
+<svg viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg-g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d0d0d"/>
+      <stop offset="100%" stop-color="#070700"/>
+    </linearGradient>
+    <radialGradient id="qron-halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(201,162,39,0.22)"/>
+      <stop offset="100%" stop-color="rgba(201,162,39,0)"/>
+    </radialGradient>
+    <filter id="gg" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="sg" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="1080" fill="url(#bg-g)"/>
+
+  <!-- Title -->
+  <text x="540" y="72" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="42" font-weight="900" fill="white">Standard QR vs QRON Art</text>
+  <text x="540" y="110" text-anchor="middle" font-family="Arial" font-size="19" fill="#3a3a3a">Why cryptographic art outperforms plain codes</text>
+
+  <!-- ====== LEFT PANEL: STANDARD QR ====== -->
+  <rect x="50" y="140" width="430" height="600" rx="20" fill="#141414" stroke="#242424" stroke-width="1"/>
+  <rect x="140" y="163" width="250" height="28" rx="14" fill="#1e1e1e" stroke="#303030" stroke-width="1"/>
+  <text x="265" y="182" text-anchor="middle" font-family="Arial" font-size="12" font-weight="700" fill="#484848" letter-spacing="2">STANDARD QR CODE</text>
+
+  <!-- Finder squares (grey) -->
+  <rect x="108" y="213" width="105" height="105" rx="5" fill="#2d2d2d"/>
+  <rect x="120" y="225" width="81" height="81" rx="3" fill="#141414"/>
+  <rect x="132" y="237" width="57" height="57" rx="2" fill="#2d2d2d"/>
+  <rect x="357" y="213" width="105" height="105" rx="5" fill="#2d2d2d"/>
+  <rect x="369" y="225" width="81" height="81" rx="3" fill="#141414"/>
+  <rect x="381" y="237" width="57" height="57" rx="2" fill="#2d2d2d"/>
+  <rect x="108" y="448" width="105" height="105" rx="5" fill="#2d2d2d"/>
+  <rect x="120" y="460" width="81" height="81" rx="3" fill="#141414"/>
+  <rect x="132" y="472" width="57" height="57" rx="2" fill="#2d2d2d"/>
+
+  <!-- Data modules grey -->
+  <g fill="#2d2d2d">
+    <rect x="236" y="213" width="13" height="13"/> <rect x="255" y="213" width="13" height="13"/>
+    <rect x="274" y="213" width="13" height="13"/> <rect x="312" y="213" width="13" height="13"/>
+    <rect x="331" y="213" width="13" height="13"/> <rect x="236" y="232" width="13" height="13"/>
+    <rect x="293" y="232" width="13" height="13"/> <rect x="331" y="232" width="13" height="13"/>
+    <rect x="255" y="251" width="13" height="13"/> <rect x="274" y="251" width="13" height="13"/>
+    <rect x="312" y="251" width="13" height="13"/> <rect x="236" y="270" width="13" height="13"/>
+    <rect x="274" y="270" width="13" height="13"/> <rect x="293" y="270" width="13" height="13"/>
+    <rect x="236" y="335" width="13" height="13"/> <rect x="255" y="335" width="13" height="13"/>
+    <rect x="293" y="335" width="13" height="13"/> <rect x="312" y="335" width="13" height="13"/>
+    <rect x="331" y="335" width="13" height="13"/> <rect x="255" y="354" width="13" height="13"/>
+    <rect x="293" y="354" width="13" height="13"/> <rect x="331" y="354" width="13" height="13"/>
+    <rect x="236" y="373" width="13" height="13"/> <rect x="274" y="373" width="13" height="13"/>
+    <rect x="312" y="373" width="13" height="13"/> <rect x="236" y="392" width="13" height="13"/>
+    <rect x="255" y="392" width="13" height="13"/> <rect x="312" y="392" width="13" height="13"/>
+    <rect x="331" y="392" width="13" height="13"/>
+    <rect x="357" y="335" width="13" height="13"/> <rect x="376" y="335" width="13" height="13"/>
+    <rect x="414" y="335" width="13" height="13"/> <rect x="433" y="335" width="13" height="13"/>
+    <rect x="357" y="354" width="13" height="13"/> <rect x="395" y="354" width="13" height="13"/>
+    <rect x="433" y="354" width="13" height="13"/> <rect x="376" y="373" width="13" height="13"/>
+    <rect x="414" y="373" width="13" height="13"/> <rect x="357" y="392" width="13" height="13"/>
+    <rect x="395" y="392" width="13" height="13"/> <rect x="433" y="392" width="13" height="13"/>
+    <rect x="236" y="448" width="13" height="13"/> <rect x="255" y="448" width="13" height="13"/>
+    <rect x="312" y="448" width="13" height="13"/> <rect x="236" y="467" width="13" height="13"/>
+    <rect x="293" y="467" width="13" height="13"/> <rect x="331" y="467" width="13" height="13"/>
+    <rect x="255" y="486" width="13" height="13"/> <rect x="274" y="486" width="13" height="13"/>
+    <rect x="312" y="486" width="13" height="13"/> <rect x="236" y="505" width="13" height="13"/>
+    <rect x="274" y="505" width="13" height="13"/> <rect x="293" y="505" width="13" height="13"/>
+    <rect x="357" y="467" width="13" height="13"/> <rect x="395" y="467" width="13" height="13"/>
+    <rect x="433" y="467" width="13" height="13"/> <rect x="376" y="486" width="13" height="13"/>
+    <rect x="414" y="486" width="13" height="13"/> <rect x="357" y="505" width="13" height="13"/>
+    <rect x="395" y="505" width="13" height="13"/>
+  </g>
+
+  <!-- Scan rate bar (grey) -->
+  <text x="265" y="582" text-anchor="middle" font-family="Arial" font-size="13" fill="#444" letter-spacing="1">AVERAGE SCAN RATE</text>
+  <rect x="108" y="596" width="314" height="13" rx="6" fill="#1e1e1e"/>
+  <rect x="108" y="596" width="192" height="13" rx="6" fill="#3a3a3a"/>
+  <text x="265" y="632" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="34" font-weight="900" fill="#505050">61%</text>
+
+  <!-- Negatives -->
+  <text x="265" y="672" text-anchor="middle" font-family="Arial" font-size="13" fill="#353535">&#10007;  No visual appeal</text>
+  <text x="265" y="694" text-anchor="middle" font-family="Arial" font-size="13" fill="#353535">&#10007;  No brand trust</text>
+  <text x="265" y="716" text-anchor="middle" font-family="Arial" font-size="13" fill="#353535">&#10007;  No verification layer</text>
+
+  <!-- ====== RIGHT PANEL: QRON ====== -->
+  <rect x="600" y="140" width="430" height="600" rx="20" fill="#0f0e00" stroke="rgba(201,162,39,0.25)" stroke-width="1"/>
+  <rect x="600" y="140" width="430" height="600" rx="20" fill="url(#qron-halo)"/>
+  <rect x="618" y="163" width="294" height="28" rx="14" fill="rgba(201,162,39,0.07)" stroke="rgba(201,162,39,0.28)" stroke-width="1"/>
+  <text x="815" y="182" text-anchor="middle" font-family="Arial" font-size="11" font-weight="700" fill="#c9a227" letter-spacing="1.5">QRON &#8212; AUTHENTICATED QR ART</text>
+
+  <!-- Glow rings -->
+  <circle cx="815" cy="390" r="158" fill="none" stroke="rgba(201,162,39,0.06)" stroke-width="24"/>
+  <circle cx="815" cy="390" r="146" fill="none" stroke="rgba(201,162,39,0.18)" stroke-width="2" filter="url(#gg)"/>
+  <circle cx="815" cy="390" r="140" fill="none" stroke="rgba(201,162,39,0.3)" stroke-width="1.5"/>
+  <circle cx="815" cy="390" r="118" fill="rgba(10,9,0,0.85)"/>
+
+  <!-- Gold finder squares -->
+  <rect x="648" y="218" width="90" height="90" rx="8" fill="none" stroke="#c9a227" stroke-width="2.5"/>
+  <rect x="660" y="230" width="66" height="66" rx="5" fill="rgba(201,162,39,0.07)"/>
+  <rect x="672" y="242" width="42" height="42" rx="3" fill="rgba(201,162,39,0.65)" filter="url(#sg)"/>
+  <rect x="892" y="218" width="90" height="90" rx="8" fill="none" stroke="#c9a227" stroke-width="2.5"/>
+  <rect x="904" y="230" width="66" height="66" rx="5" fill="rgba(201,162,39,0.07)"/>
+  <rect x="916" y="242" width="42" height="42" rx="3" fill="rgba(201,162,39,0.65)" filter="url(#sg)"/>
+  <rect x="648" y="458" width="90" height="90" rx="8" fill="none" stroke="#c9a227" stroke-width="2.5"/>
+  <rect x="660" y="470" width="66" height="66" rx="5" fill="rgba(201,162,39,0.07)"/>
+  <rect x="672" y="482" width="42" height="42" rx="3" fill="rgba(201,162,39,0.65)" filter="url(#sg)"/>
+
+  <!-- Gold data modules -->
+  <g fill="#c9a227" opacity="0.72">
+    <rect x="762" y="218" width="12" height="12" rx="2"/> <rect x="780" y="218" width="12" height="12" rx="2"/>
+    <rect x="798" y="218" width="12" height="12" rx="2"/> <rect x="834" y="218" width="12" height="12" rx="2"/>
+    <rect x="852" y="218" width="12" height="12" rx="2"/> <rect x="870" y="218" width="12" height="12" rx="2"/>
+    <rect x="762" y="236" width="12" height="12" rx="2"/> <rect x="798" y="236" width="12" height="12" rx="2"/>
+    <rect x="834" y="236" width="12" height="12" rx="2"/> <rect x="870" y="236" width="12" height="12" rx="2"/>
+    <rect x="780" y="254" width="12" height="12" rx="2"/> <rect x="816" y="254" width="12" height="12" rx="2"/>
+    <rect x="852" y="254" width="12" height="12" rx="2"/>
+    <rect x="762" y="323" width="12" height="12" rx="2"/> <rect x="798" y="323" width="12" height="12" rx="2"/>
+    <rect x="834" y="323" width="12" height="12" rx="2"/> <rect x="870" y="323" width="12" height="12" rx="2"/>
+    <rect x="780" y="341" width="12" height="12" rx="2"/> <rect x="852" y="341" width="12" height="12" rx="2"/>
+    <rect x="762" y="359" width="12" height="12" rx="2"/> <rect x="816" y="359" width="12" height="12" rx="2"/>
+    <rect x="870" y="359" width="12" height="12" rx="2"/>
+    <rect x="892" y="333" width="12" height="12" rx="2"/> <rect x="910" y="333" width="12" height="12" rx="2"/>
+    <rect x="946" y="333" width="12" height="12" rx="2"/> <rect x="964" y="333" width="12" height="12" rx="2"/>
+    <rect x="892" y="351" width="12" height="12" rx="2"/> <rect x="928" y="351" width="12" height="12" rx="2"/>
+    <rect x="964" y="351" width="12" height="12" rx="2"/>
+    <rect x="762" y="458" width="12" height="12" rx="2"/> <rect x="780" y="458" width="12" height="12" rx="2"/>
+    <rect x="834" y="458" width="12" height="12" rx="2"/> <rect x="870" y="458" width="12" height="12" rx="2"/>
+    <rect x="762" y="476" width="12" height="12" rx="2"/> <rect x="816" y="476" width="12" height="12" rx="2"/>
+    <rect x="852" y="476" width="12" height="12" rx="2"/> <rect x="780" y="494" width="12" height="12" rx="2"/>
+    <rect x="798" y="494" width="12" height="12" rx="2"/> <rect x="870" y="494" width="12" height="12" rx="2"/>
+    <rect x="892" y="476" width="12" height="12" rx="2"/> <rect x="928" y="476" width="12" height="12" rx="2"/>
+    <rect x="964" y="476" width="12" height="12" rx="2"/> <rect x="892" y="494" width="12" height="12" rx="2"/>
+    <rect x="946" y="494" width="12" height="12" rx="2"/>
+  </g>
+
+  <!-- Center Q -->
+  <text x="815" y="418" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="84" font-weight="900" fill="#c9a227" filter="url(#gg)">Q</text>
+
+  <!-- Scan rate (gold) -->
+  <text x="815" y="582" text-anchor="middle" font-family="Arial" font-size="13" fill="#c9a227" opacity="0.7" letter-spacing="1">AVERAGE SCAN RATE</text>
+  <rect x="648" y="596" width="314" height="13" rx="6" fill="#1a1300"/>
+  <rect x="648" y="596" width="270" height="13" rx="6" fill="#c9a227" filter="url(#sg)"/>
+  <text x="815" y="632" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="34" font-weight="900" fill="#e8c547">86%</text>
+
+  <!-- Positives -->
+  <text x="815" y="672" text-anchor="middle" font-family="Arial" font-size="13" fill="#c9a227">&#10003;  Memorable brand art</text>
+  <text x="815" y="694" text-anchor="middle" font-family="Arial" font-size="13" fill="#c9a227">&#10003;  Ed25519 cryptographic signature</text>
+  <text x="815" y="716" text-anchor="middle" font-family="Arial" font-size="13" fill="#c9a227">&#10003;  AuthiChain blockchain verified</text>
+
+  <!-- Center +25% callout -->
+  <circle cx="540" cy="392" r="66" fill="#0d0d0d" stroke="rgba(201,162,39,0.45)" stroke-width="2"/>
+  <circle cx="540" cy="392" r="66" fill="none" stroke="rgba(201,162,39,0.1)" stroke-width="14" filter="url(#gg)"/>
+  <text x="540" y="380" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="20" font-weight="900" fill="#e8c547">+25%</text>
+  <text x="540" y="399" text-anchor="middle" font-family="Arial" font-size="12" fill="#c9a227">more</text>
+  <text x="540" y="415" text-anchor="middle" font-family="Arial" font-size="12" fill="#c9a227">scans</text>
+  <line x1="430" y1="392" x2="470" y2="392" stroke="rgba(201,162,39,0.3)" stroke-width="1.5"/>
+  <polygon points="470,387 480,392 470,397" fill="rgba(201,162,39,0.4)"/>
+  <line x1="610" y1="392" x2="650" y2="392" stroke="rgba(201,162,39,0.3)" stroke-width="1.5"/>
+  <polygon points="610,387 600,392 610,397" fill="rgba(201,162,39,0.4)"/>
+
+  <!-- Footer -->
+  <line x1="80" y1="788" x2="1000" y2="788" stroke="rgba(201,162,39,0.07)" stroke-width="1"/>
+  <text x="540" y="830" text-anchor="middle" font-family="Arial" font-size="18" fill="#3a3a3a">Every QRON is Ed25519 signed and anchored on the AuthiChain blockchain.</text>
+  <text x="540" y="856" text-anchor="middle" font-family="Arial" font-size="18" fill="#3a3a3a">Scanned by any phone. Verified by anyone, anywhere.</text>
+  <text x="540" y="920" text-anchor="middle" font-family="Arial" font-size="13" fill="#242424">Powered by Fal.ai illusion-diffusion &#183; Supabase &#183; AuthiChain Protocol</text>
+  <text x="540" y="968" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="28" font-weight="900" fill="rgba(201,162,39,0.15)" letter-spacing="8">QRON &#215; AUTHICHAIN</text>
+</svg>

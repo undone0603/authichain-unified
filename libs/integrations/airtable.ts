@@ -1,5 +1,6 @@
 // Airtable client for AuthiChain Operations base.
 // Defaults target the Operations base / Startup Ops Checklist table.
+// @ts-ignore - package installed separately
 import Airtable from 'airtable';
 
 const API_KEY = process.env.AIRTABLE_API_KEY || '';

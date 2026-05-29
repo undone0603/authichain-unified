@@ -25,7 +25,7 @@ export async function runAnalyticsSnapshot() {
     await Promise.all([
       getAdminDashboardMetrics(),
       getWeeklyRevenueDigest(),
-      getBudgetStatus(now),
+      getBudgetStatus(),
       getAcceptanceCriteriaStatus(),
       getFunnelBySegmentAndChannel(),
       getLeadCohorts(),

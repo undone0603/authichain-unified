@@ -1,37 +1,50 @@
-import { markTaskRunning, markTaskDone, markTaskFailed, logActivity } from '../db.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
-import { runLeadFinder } from '../agents/lead-finder.js';
-import { runOutboundEmail } from '../agents/outbound-email.js';
-import { runFollowupSequence } from '../agents/followup.js';
-import { runBuildPilotPacket, runDraftIntelDossier } from '../agents/pilot-packet.js';
-import { runCrmUpdate } from '../agents/crm-update.js';
-import { runFinalizeRetailSignage, runPackageSkuOnboarding } from '../agents/retail.js';
-import { runCheckDnsConfig, runVerifySsl, runLighthouseAudit } from '../agents/infra.js';
+import { markTaskRunning, markTaskDone, markTaskFailed, logActivity } from '../db';
+import type { MissionTask as Task } from '../../drizzle/schema';
+import { runLeadFinder } from '../agents/lead-finder';
+import { runOutboundEmail } from '../agents/outbound-email';
+import { runFollowupSequence } from '../agents/followup';
+import { runBuildPilotPacket, runDraftIntelDossier } from '../agents/pilot-packet';
+import { runCrmUpdate } from '../agents/crm-update';
+import { runFinalizeRetailSignage, runPackageSkuOnboarding } from '../agents/retail';
+import { runCheckDnsConfig, runVerifySsl, runLighthouseAudit } from '../agents/infra';
 import {
   runGenerateLaunchChecklist,
   runDraftLaunchEmail,
   runDraftPressRelease,
   runScheduleSocialPosts,
-} from '../agents/content.js';
+} from '../agents/content';
 import {
   runCheckReplies,
   runSendDemoPacket,
   runGenerateProposal,
   runSendContract,
   runAutoReply,
-} from '../agents/closer.js';
-import { runGenerateOutreachVideo } from '../agents/heygen-video.js';
-import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
-import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
-import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
+} from '../agents/closer';
+import { runGenerateOutreachVideo } from '../agents/heygen-video';
+import { runSecurityAudit } from '../agents/security';
+import { runNewsjackingMonitor } from '../agents/news-pr';
+import {
+  runBrowseResearchLead,
+  runBrowseCompetitorMonitor,
+  runBrowseScrapeIndustryNews,
+  runBrowseVerifyProductUrl,
+} from '../agents/browser';
+import { runVisionResearchLead, runVisionFreeform } from '../agents/browser-vision';
+import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer';
+import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager';
+import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner';
 
 export async function runTask(task: Task): Promise<{ ok: boolean }> {
-  await markTaskRunning(task.id);
+  const claimed = await markTaskRunning(task.id);
+  if (!claimed) return { ok: true }; // Another worker already claimed this task
 
   try {
     switch (task.kind) {
       case 'FIND_GOV_LEADS':
       case 'FIND_RETAIL_LEADS':
+      case 'FIND_LUXURY_LEADS':
+      case 'FIND_PHARMA_LEADS':
+      case 'FIND_TIMEPIECE_LEADS':
         await runLeadFinder(task);
         break;
 
@@ -115,6 +128,14 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
         await runGenerateOutreachVideo(task);
         break;
 
+      case 'SECURITY_AUDIT':
+        await runSecurityAudit(task);
+        break;
+
+      case 'MONITOR_NEWS_FOR_PR':
+        await runNewsjackingMonitor(task);
+        break;
+
       // ── Dev Team ────────────────────────────────────────────────────────
       case 'PLAN_SPRINT':
         await runPlanSprint(task);
@@ -150,6 +171,32 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'AUTO_FIX':
         await runAutoFix(task);
+        break;
+
+      // ── Browser Agent ────────────────────────────────────────────────────
+      case 'BROWSE_RESEARCH_LEAD':
+        await runBrowseResearchLead(task);
+        break;
+
+      case 'BROWSE_COMPETITOR_MONITOR':
+        await runBrowseCompetitorMonitor(task);
+        break;
+
+      case 'BROWSE_SCRAPE_INDUSTRY_NEWS':
+        await runBrowseScrapeIndustryNews(task);
+        break;
+
+      case 'BROWSE_VERIFY_PRODUCT_URL':
+        await runBrowseVerifyProductUrl(task);
+        break;
+
+      // ── Browser Vision Agent (Playwright + Gemini vision) ────────────────
+      case 'BROWSE_VISION_RESEARCH_LEAD':
+        await runVisionResearchLead(task);
+        break;
+
+      case 'BROWSE_VISION_FREEFORM':
+        await runVisionFreeform(task);
         break;
 
       default:

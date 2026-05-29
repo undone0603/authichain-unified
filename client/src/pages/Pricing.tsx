@@ -14,8 +14,8 @@ import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import {
   Shield, Check, ArrowRight, Calculator, Zap, Building2,
-  Pill, Leaf, Palette, Cannabis, Cpu, ChevronDown, Star,
-  TrendingUp, DollarSign, Lock, Globe, Users
+  Pill, Leaf, Palette, Cannabis, Cpu,
+  TrendingUp, DollarSign, Globe,
 } from "lucide-react";
 
 const industryIcons: Record<string, React.ReactNode> = {
@@ -361,9 +361,16 @@ export default function Pricing() {
                       asChild
                     >
                       <a href={plan.paymentLink} target="_blank" rel="noopener noreferrer">
-                        {key === "enterprise" ? "Buy Enterprise" : "Buy Now"} <ArrowRight className="ml-2 h-4 w-4" />
+                        {key === "enterprise" || key === "medtech"
+                          ? "Contact Sales"
+                          : "Start Free Trial"} <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
+                    {(key === "starter" || key === "professional") && (
+                      <p className="text-xs text-center text-muted-foreground">
+                        14-day free trial · No charge until day 15
+                      </p>
+                    )}
                     {isAuthenticated && (
                       <Button className="w-full" variant="ghost" size="sm" asChild>
                         <a href="/subscriptions">Manage Subscription</a>

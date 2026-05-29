@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+<defs>
+  <radialGradient id="base-glow" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#1a0533"/><stop offset="100%" stop-color="#04020a"/></radialGradient>
+  <radialGradient id="nebula1" cx="35%" cy="40%" r="40%"><stop offset="0%" stop-color="#7c3aed" stop-opacity="0.9"/><stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/></radialGradient>
+  <radialGradient id="nebula2" cx="70%" cy="55%" r="35%"><stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.8"/><stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/></radialGradient>
+  <radialGradient id="nebula3" cx="50%" cy="22%" r="30%"><stop offset="0%" stop-color="#c9a227" stop-opacity="0.7"/><stop offset="100%" stop-color="#c9a227" stop-opacity="0"/></radialGradient>
+  <radialGradient id="nebula4" cx="18%" cy="72%" r="30%"><stop offset="0%" stop-color="#ec4899" stop-opacity="0.7"/><stop offset="100%" stop-color="#ec4899" stop-opacity="0"/></radialGradient>
+  <radialGradient id="nebula5" cx="82%" cy="18%" r="28%"><stop offset="0%" stop-color="#10b981" stop-opacity="0.65"/><stop offset="100%" stop-color="#10b981" stop-opacity="0"/></radialGradient>
+  <radialGradient id="nebula6" cx="62%" cy="82%" r="32%"><stop offset="0%" stop-color="#f97316" stop-opacity="0.7"/><stop offset="100%" stop-color="#f97316" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="1080" height="1080" fill="url(#base-glow)"/>
+<rect width="1080" height="1080" fill="url(#nebula1)"/>
+<rect width="1080" height="1080" fill="url(#nebula2)"/>
+<rect width="1080" height="1080" fill="url(#nebula3)"/>
+<rect width="1080" height="1080" fill="url(#nebula4)"/>
+<rect width="1080" height="1080" fill="url(#nebula5)"/>
+<rect width="1080" height="1080" fill="url(#nebula6)"/>
+<g fill="white" opacity="0.4">
+  <circle cx="100" cy="80" r="1.5"/><circle cx="340" cy="50" r="1"/><circle cx="600" cy="120" r="2"/><circle cx="840" cy="65" r="1.5"/>
+  <circle cx="970" cy="150" r="1"/><circle cx="60" cy="300" r="2"/><circle cx="990" cy="400" r="1.5"/>
+  <circle cx="40" cy="560" r="1"/><circle cx="1030" cy="630" r="2"/><circle cx="80" cy="800" r="1.5"/>
+  <circle cx="430" cy="35" r="1"/><circle cx="720" cy="18" r="2"/>
+</g>
+<!-- Gold QR modules on cosmic background -->
+<g fill="#e8c547" opacity="0.93">
+  <rect x="162" y="162" width="33" height="33" rx="2"/><rect x="198" y="162" width="33" height="33" rx="2"/><rect x="234" y="162" width="33" height="33" rx="2"/><rect x="270" y="162" width="33" height="33" rx="2"/><rect x="306" y="162" width="33" height="33" rx="2"/><rect x="342" y="162" width="33" height="33" rx="2"/><rect x="378" y="162" width="33" height="33" rx="2"/>
+  <rect x="162" y="198" width="33" height="33" rx="2"/><rect x="378" y="198" width="33" height="33" rx="2"/>
+  <rect x="162" y="234" width="33" height="33" rx="2"/><rect x="234" y="234" width="33" height="33" rx="2"/><rect x="270" y="234" width="33" height="33" rx="2"/><rect x="306" y="234" width="33" height="33" rx="2"/><rect x="378" y="234" width="33" height="33" rx="2"/>
+  <rect x="162" y="270" width="33" height="33" rx="2"/><rect x="234" y="270" width="33" height="33" rx="2"/><rect x="270" y="270" width="33" height="33" rx="2"/><rect x="306" y="270" width="33" height="33" rx="2"/><rect x="378" y="270" width="33" height="33" rx="2"/>
+  <rect x="162" y="306" width="33" height="33" rx="2"/><rect x="234" y="306" width="33" height="33" rx="2"/><rect x="270" y="306" width="33" height="33" rx="2"/><rect x="306" y="306" width="33" height="33" rx="2"/><rect x="378" y="306" width="33" height="33" rx="2"/>
+  <rect x="162" y="342" width="33" height="33" rx="2"/><rect x="378" y="342" width="33" height="33" rx="2"/>
+  <rect x="162" y="378" width="33" height="33" rx="2"/><rect x="198" y="378" width="33" height="33" rx="2"/><rect x="234" y="378" width="33" height="33" rx="2"/><rect x="270" y="378" width="33" height="33" rx="2"/><rect x="306" y="378" width="33" height="33" rx="2"/><rect x="342" y="378" width="33" height="33" rx="2"/><rect x="378" y="378" width="33" height="33" rx="2"/>
+  <rect x="666" y="162" width="33" height="33" rx="2"/><rect x="702" y="162" width="33" height="33" rx="2"/><rect x="738" y="162" width="33" height="33" rx="2"/><rect x="774" y="162" width="33" height="33" rx="2"/><rect x="810" y="162" width="33" height="33" rx="2"/><rect x="846" y="162" width="33" height="33" rx="2"/><rect x="882" y="162" width="33" height="33" rx="2"/>
+  <rect x="666" y="198" width="33" height="33" rx="2"/><rect x="882" y="198" width="33" height="33" rx="2"/>
+  <rect x="666" y="234" width="33" height="33" rx="2"/><rect x="738" y="234" width="33" height="33" rx="2"/><rect x="774" y="234" width="33" height="33" rx="2"/><rect x="810" y="234" width="33" height="33" rx="2"/><rect x="882" y="234" width="33" height="33" rx="2"/>
+  <rect x="666" y="270" width="33" height="33" rx="2"/><rect x="738" y="270" width="33" height="33" rx="2"/><rect x="774" y="270" width="33" height="33" rx="2"/><rect x="810" y="270" width="33" height="33" rx="2"/><rect x="882" y="270" width="33" height="33" rx="2"/>
+  <rect x="666" y="306" width="33" height="33" rx="2"/><rect x="738" y="306" width="33" height="33" rx="2"/><rect x="774" y="306" width="33" height="33" rx="2"/><rect x="810" y="306" width="33" height="33" rx="2"/><rect x="882" y="306" width="33" height="33" rx="2"/>
+  <rect x="666" y="342" width="33" height="33" rx="2"/><rect x="882" y="342" width="33" height="33" rx="2"/>
+  <rect x="666" y="378" width="33" height="33" rx="2"/><rect x="702" y="378" width="33" height="33" rx="2"/><rect x="738" y="378" width="33" height="33" rx="2"/><rect x="774" y="378" width="33" height="33" rx="2"/><rect x="810" y="378" width="33" height="33" rx="2"/><rect x="846" y="378" width="33" height="33" rx="2"/><rect x="882" y="378" width="33" height="33" rx="2"/>
+  <rect x="162" y="666" width="33" height="33" rx="2"/><rect x="198" y="666" width="33" height="33" rx="2"/><rect x="234" y="666" width="33" height="33" rx="2"/><rect x="270" y="666" width="33" height="33" rx="2"/><rect x="306" y="666" width="33" height="33" rx="2"/><rect x="342" y="666" width="33" height="33" rx="2"/><rect x="378" y="666" width="33" height="33" rx="2"/>
+  <rect x="162" y="702" width="33" height="33" rx="2"/><rect x="378" y="702" width="33" height="33" rx="2"/>
+  <rect x="162" y="738" width="33" height="33" rx="2"/><rect x="234" y="738" width="33" height="33" rx="2"/><rect x="270" y="738" width="33" height="33" rx="2"/><rect x="306" y="738" width="33" height="33" rx="2"/><rect x="378" y="738" width="33" height="33" rx="2"/>
+  <rect x="162" y="774" width="33" height="33" rx="2"/><rect x="234" y="774" width="33" height="33" rx="2"/><rect x="270" y="774" width="33" height="33" rx="2"/><rect x="306" y="774" width="33" height="33" rx="2"/><rect x="378" y="774" width="33" height="33" rx="2"/>
+  <rect x="162" y="810" width="33" height="33" rx="2"/><rect x="234" y="810" width="33" height="33" rx="2"/><rect x="270" y="810" width="33" height="33" rx="2"/><rect x="306" y="810" width="33" height="33" rx="2"/><rect x="378" y="810" width="33" height="33" rx="2"/>
+  <rect x="162" y="846" width="33" height="33" rx="2"/><rect x="378" y="846" width="33" height="33" rx="2"/>
+  <rect x="162" y="882" width="33" height="33" rx="2"/><rect x="198" y="882" width="33" height="33" rx="2"/><rect x="234" y="882" width="33" height="33" rx="2"/><rect x="270" y="882" width="33" height="33" rx="2"/><rect x="306" y="882" width="33" height="33" rx="2"/><rect x="342" y="882" width="33" height="33" rx="2"/><rect x="378" y="882" width="33" height="33" rx="2"/>
+  <rect x="450" y="378" width="33" height="33" rx="2"/><rect x="522" y="378" width="33" height="33" rx="2"/><rect x="594" y="378" width="33" height="33" rx="2"/>
+  <rect x="378" y="450" width="33" height="33" rx="2"/><rect x="378" y="522" width="33" height="33" rx="2"/><rect x="378" y="594" width="33" height="33" rx="2"/>
+</g>
+<g fill="#c9a227" opacity="0.75">
+  <rect x="450" y="414" width="33" height="33"/><rect x="414" y="450" width="33" height="33"/><rect x="486" y="450" width="33" height="33"/><rect x="558" y="450" width="33" height="33"/><rect x="630" y="450" width="33" height="33"/><rect x="738" y="450" width="33" height="33"/><rect x="810" y="450" width="33" height="33"/><rect x="882" y="450" width="33" height="33"/>
+  <rect x="450" y="486" width="33" height="33"/><rect x="522" y="486" width="33" height="33"/><rect x="594" y="486" width="33" height="33"/><rect x="702" y="486" width="33" height="33"/><rect x="774" y="486" width="33" height="33"/><rect x="846" y="486" width="33" height="33"/>
+  <rect x="414" y="522" width="33" height="33"/><rect x="486" y="522" width="33" height="33"/><rect x="558" y="522" width="33" height="33"/><rect x="666" y="522" width="33" height="33"/><rect x="738" y="522" width="33" height="33"/><rect x="810" y="522" width="33" height="33"/>
+  <rect x="450" y="558" width="33" height="33"/><rect x="522" y="558" width="33" height="33"/><rect x="630" y="558" width="33" height="33"/><rect x="702" y="558" width="33" height="33"/><rect x="774" y="558" width="33" height="33"/><rect x="882" y="558" width="33" height="33"/>
+  <rect x="414" y="594" width="33" height="33"/><rect x="486" y="594" width="33" height="33"/><rect x="558" y="594" width="33" height="33"/><rect x="666" y="594" width="33" height="33"/><rect x="738" y="594" width="33" height="33"/><rect x="810" y="594" width="33" height="33"/>
+  <rect x="450" y="630" width="33" height="33"/><rect x="522" y="630" width="33" height="33"/><rect x="594" y="630" width="33" height="33"/><rect x="702" y="630" width="33" height="33"/><rect x="774" y="630" width="33" height="33"/><rect x="846" y="630" width="33" height="33"/>
+  <rect x="450" y="666" width="33" height="33"/><rect x="522" y="666" width="33" height="33"/><rect x="594" y="666" width="33" height="33"/><rect x="702" y="666" width="33" height="33"/><rect x="774" y="666" width="33" height="33"/>
+  <rect x="414" y="702" width="33" height="33"/><rect x="486" y="702" width="33" height="33"/><rect x="558" y="702" width="33" height="33"/><rect x="630" y="702" width="33" height="33"/><rect x="738" y="702" width="33" height="33"/><rect x="810" y="702" width="33" height="33"/><rect x="882" y="702" width="33" height="33"/>
+  <rect x="450" y="738" width="33" height="33"/><rect x="522" y="738" width="33" height="33"/><rect x="630" y="738" width="33" height="33"/><rect x="738" y="738" width="33" height="33"/><rect x="810" y="738" width="33" height="33"/>
+  <rect x="414" y="774" width="33" height="33"/><rect x="486" y="774" width="33" height="33"/><rect x="594" y="774" width="33" height="33"/><rect x="702" y="774" width="33" height="33"/><rect x="774" y="774" width="33" height="33"/><rect x="846" y="774" width="33" height="33"/>
+  <rect x="450" y="810" width="33" height="33"/><rect x="522" y="810" width="33" height="33"/><rect x="630" y="810" width="33" height="33"/><rect x="738" y="810" width="33" height="33"/><rect x="846" y="810" width="33" height="33"/>
+  <rect x="414" y="846" width="33" height="33"/><rect x="486" y="846" width="33" height="33"/><rect x="558" y="846" width="33" height="33"/><rect x="666" y="846" width="33" height="33"/><rect x="774" y="846" width="33" height="33"/><rect x="882" y="846" width="33" height="33"/>
+  <rect x="450" y="882" width="33" height="33"/><rect x="522" y="882" width="33" height="33"/><rect x="630" y="882" width="33" height="33"/><rect x="738" y="882" width="33" height="33"/><rect x="846" y="882" width="33" height="33"/>
+</g>
+<text x="540" y="60" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" letter-spacing="6" fill="#c9a227">QRON GENESIS</text>
+<text x="540" y="95" text-anchor="middle" font-family="system-ui,sans-serif" font-size="30" font-weight="900" fill="#ffffff">Cosmic Edition</text>
+<text x="540" y="128" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#9e9e9e">AI Art · AuthiChain Minted · One of a Kind · Blockchain Anchored</text>
+<text x="540" y="1000" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#c9a227">◆ AuthiChain Protocol — Scan to Verify Authenticity</text>
+<text x="540" y="1028" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#6b6b6b">Trackable · Traceable · Interactive · Authentic</text>
+<text x="540" y="1056" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#3a3a3a">Fal.ai illusion-diffusion · qron.space</text>
+</svg>
