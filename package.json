@@ -112,7 +112,7 @@
     "sonner": "^1.5.0",
     "stripe": "^22.1.1",
     "superjson": "^2.2.6",
-    "tailwind-merge": "^2.5.2",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
     "thirdweb": "^5.120.0",
     "tw-animate-css": "^1.2.9",
