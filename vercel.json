@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "next build",
   "installCommand": "pnpm install --no-frozen-lockfile",
   "rewrites": [
     { "source": "/gov", "destination": "https://govchain.us" }
