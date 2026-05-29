@@ -39,7 +39,7 @@ async function fulfillPlan(
         ...(credits >= 999999 ? { generations_limit: 999999 } : {}),
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId);
+      .eq('user_id', userId);
 
     // Add credits incrementally (so existing balance isn't wiped)
     if (credits > 0 && credits < 999999) {
@@ -130,7 +130,7 @@ async function saveCustomerId(
         stripe_customer_id: customerId,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId);
+      .eq('user_id', userId);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[webhook] saveCustomerId error (non-fatal):', err);
@@ -177,7 +177,7 @@ async function sendQrEmail(
 ) {
   const result = await sendEmail({
     to,
-    from: process.env.SENDGRID_FROM_EMAIL || 'QRON <hello@qron.space>',
+    from: process.env.SENDGRID_FROM_EMAIL || 'QRON <noreply@authichain.com>',
     subject: 'Your QRON QR Code is Ready',
     html: `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#ededed;padding:32px;border-radius:12px;">
@@ -379,7 +379,7 @@ async function sendTargetedQronEmail(
 
   const result = await sendEmail({
     to,
-    from: process.env.SENDGRID_FROM_EMAIL || 'QRON <hello@qron.space>',
+    from: process.env.SENDGRID_FROM_EMAIL || 'QRON <noreply@authichain.com>',
     subject: `Your Custom QRON is Ready — ${subject.slice(0, 40)}`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#ededed;padding:40px 32px;border-radius:16px;border:1px solid rgba(201,162,39,0.2);">
@@ -459,7 +459,7 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
         story_mode_enabled: true,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId);
+      .eq('user_id', userId);
   }
 
   // Backup: Also try updating qron_generations if qronId is a UUID
@@ -479,7 +479,7 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
     const dashUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space'}/dashboard`;
     const result = await sendEmail({
       to: customerEmail,
-      from: process.env.SENDGRID_FROM_EMAIL || 'QRON <hello@qron.space>',
+      from: process.env.SENDGRID_FROM_EMAIL || 'QRON <noreply@authichain.com>',
       subject: 'AI Story Mode Unlocked',
       html: `
           <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#ededed;padding:40px 32px;border-radius:16px;border:1px solid rgba(201,162,39,0.2);">
@@ -601,6 +601,54 @@ export async function POST(request: Request) {
         const customerId =
           typeof sub.customer === 'string' ? sub.customer : null;
         if (customerId) await downgradeUser(customerId);
+        break;
+      }
+
+      case 'invoice.paid': {
+        const inv = event.data.object as Stripe.Invoice;
+        const customerId = typeof inv.customer === 'string' ? inv.customer : null;
+        if (customerId) {
+          const supabase = await getServiceClient();
+          await supabase
+            .from('profiles')
+            .update({ subscription_status: 'active', last_payment_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+            .eq('stripe_customer_id', customerId);
+        }
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const inv = event.data.object as Stripe.Invoice;
+        const customerId = typeof inv.customer === 'string' ? inv.customer : null;
+        if (customerId) {
+          const supabase = await getServiceClient();
+          await supabase
+            .from('profiles')
+            .update({ subscription_status: 'past_due', updated_at: new Date().toISOString() })
+            .eq('stripe_customer_id', customerId);
+        }
+        break;
+      }
+
+      case 'customer.subscription.trial_will_end': {
+        const sub = event.data.object as Stripe.Subscription;
+        const customerId = typeof sub.customer === 'string' ? sub.customer : null;
+        if (customerId) {
+          const supabase = await getServiceClient();
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, user_id')
+            .eq('stripe_customer_id', customerId)
+            .single();
+          if (profile) {
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
+            await fetch(`${appUrl}/api/email`, {
+              method: 'POST',
+              headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET || '', 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: 'trial_expiring', user_id: profile.user_id }),
+            }).catch(() => {});
+          }
+        }
         break;
       }
 

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const BASE = 'https://authichain.com';
+const BASE = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
