@@ -42,9 +42,17 @@ export const ConnectButton = NoopClass;
 export const useActiveAccount = noop;
 export const ThirdwebProvider = NoopClass;
 
-// thirdweb/wallets: import { createWallet, inAppWallet } from 'thirdweb/wallets'
+// thirdweb/wallets: import { createWallet, inAppWallet, privateKeyAccount } from 'thirdweb/wallets'
 export const createWallet = noop;
 export const inAppWallet = noop;
+export const privateKeyAccount = noop;
+
+// thirdweb core (dynamic): getContract, sendTransaction
+export const getContract = noop;
+export const sendTransaction = noop;
+
+// thirdweb/extensions/erc721 (dynamic): mintTo
+export const mintTo = noop;
 
 // viem: import { createPublicClient } from 'viem'
 export const createPublicClient = noop;
