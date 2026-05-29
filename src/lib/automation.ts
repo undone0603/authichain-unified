@@ -79,7 +79,7 @@ export async function handleLeadAutomation(lead: {
     // 3. Sync to HubSpot (if enterprise potential detected)
     if (enriched.is_enterprise || enriched.lead_score > 60) {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://authichain.com';
         await fetch(`${baseUrl}/api/crm/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -91,7 +91,7 @@ export async function handleLeadAutomation(lead: {
     }
 
     // 4. Send welcome email
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://authichain.com';
     sendEmail({
       to: lead.email,
       from: 'AuthiChain <noreply@authichain.com>',

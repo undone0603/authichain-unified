@@ -33,10 +33,10 @@ export function APIKeyManager({ userId }: { userId: string }) {
   const supabase = createClient();
 
   const snippets = {
-    curl: `curl -X POST https://qron.space/api/v1/generate \\
+    curl: `curl -X POST https://authichain.com/api/v1/generate \\
   -H "X-API-Key: ${newKey || 'YOUR_API_KEY'}" \\
   -d '{"url": "https://example.com", "prompt": "Liquid Gold"}'`,
-    node: `const res = await fetch('https://qron.space/api/v1/generate', {
+    node: `const res = await fetch('https://authichain.com/api/v1/generate', {
   method: 'POST',
   headers: {
     'X-API-Key': '${newKey || 'YOUR_API_KEY'}',

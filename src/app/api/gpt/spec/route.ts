@@ -27,7 +27,7 @@ export async function GET() {
     },
     servers: [
       {
-        url: "https://qron.space",
+        url: "https://authichain.com",
         description: "Production Environment"
       }
     ],
