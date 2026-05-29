@@ -1,9 +1,10 @@
 // CF Workers build stub — covers all import styles for incompatible packages.
 // Routes using these packages return 500 at runtime; core app routes unaffected.
 function noop() {}
-class NoopClass {}
+// NoopComponent must be a plain function (not a class) so React can call it without `new`
+function NoopComponent() { return null; }
 
-export default NoopClass;
+export default NoopComponent;
 
 // ethers: import { ethers } from 'ethers'
 export const ethers = {};
@@ -18,12 +19,12 @@ export const openai = noop;
 export const createOpenAI = noop;
 
 // resend: import { Resend } from 'resend'
-export const Resend = NoopClass;
+export const Resend = noop;
 
 // drizzle-orm/postgres-js: import { drizzle } from 'drizzle-orm/postgres-js'
 export const drizzle = () => ({});
 
-// stripe, nodemailer, qrcode, jsqr: default imports — covered by export default NoopClass
+// stripe, nodemailer, qrcode, jsqr: default imports — covered by export default NoopComponent
 
 // thirdweb: import { createThirdwebClient, defineChain } from 'thirdweb'
 export const createThirdwebClient = noop;
@@ -37,10 +38,10 @@ export const ethereum = {};
 export const mainnet = {};
 export const sepolia = {};
 
-// thirdweb/react: import { ConnectButton, useActiveAccount } from 'thirdweb/react'
-export const ConnectButton = NoopClass;
+// thirdweb/react: React components must be plain functions, not classes
+export const ConnectButton = NoopComponent;
 export const useActiveAccount = noop;
-export const ThirdwebProvider = NoopClass;
+export const ThirdwebProvider = NoopComponent;
 
 // thirdweb/wallets: import { createWallet, inAppWallet, privateKeyAccount } from 'thirdweb/wallets'
 export const createWallet = noop;
