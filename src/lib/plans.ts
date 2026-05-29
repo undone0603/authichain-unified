@@ -44,8 +44,8 @@ export const PLANS: Plan[] = [
     price: 29,
     description: '100 AI QR generations, never expire',
     generations: 100,
-    stripe_price_id: 'price_1TGOM9GqTruSqV8TdV7j3DuL',
-    stripe_payment_link: 'https://buy.stripe.com/6oUeVfflp9lPgzY76AaIM0c',
+    stripe_price_id: 'price_1TcTzD1jrqwZgdkcXuguOLl5',
+    stripe_payment_link: undefined,
     stripe_mode: 'payment',
     tier: 'pro',
     features: [
@@ -62,8 +62,8 @@ export const PLANS: Plan[] = [
     price: 99,
     description: '500 AI QR generations — best value',
     generations: 500,
-    stripe_price_id: 'price_1TGAiZGqTruSqV8Tb4ZdCVKr',
-    stripe_payment_link: 'https://buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d',
+    stripe_price_id: 'price_1TcTzD1jrqwZgdkc6OTQ5BIM',
+    stripe_payment_link: undefined,
     stripe_mode: 'payment',
     tier: 'pro',
     features: [
@@ -82,7 +82,7 @@ export const PLANS: Plan[] = [
     price: 249,
     description: '2,000 AI QR generations — power creator',
     generations: 2000,
-    stripe_price_id: null,
+    stripe_price_id: 'price_1TcTzE1jrqwZgdkcDK4TF1dz',
     stripe_mode: 'payment',
     tier: 'pro',
     features: [
@@ -101,8 +101,8 @@ export const PLANS: Plan[] = [
     price_suffix: '/month',
     description: 'Industrial AgTech & StrainChain Provenance',
     generations: 5000,
-    stripe_price_id: 'price_theater_1',
-    stripe_payment_link: 'https://qron.space/contact',
+    stripe_price_id: 'price_1TcTzE1jrqwZgdkcuYmg6xz0',
+    stripe_payment_link: undefined,
     stripe_mode: 'subscription',
     tier: 'enterprise',
     features: [
@@ -121,8 +121,8 @@ export const PLANS: Plan[] = [
     price_suffix: '/month',
     description: 'The Ultimate Industrial & Luxury Security',
     generations: 0,
-    stripe_price_id: 'price_theater_3',
-    stripe_payment_link: 'https://qron.space/contact',
+    stripe_price_id: 'price_1TcTzF1jrqwZgdkcc9aeD595',
+    stripe_payment_link: undefined,
     stripe_mode: 'subscription',
     tier: 'enterprise',
     features: [
