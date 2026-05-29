@@ -4,7 +4,7 @@ import { PLANS } from '@/lib/plans';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export const runtime = 'nodejs';
