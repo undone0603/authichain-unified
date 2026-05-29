@@ -24,21 +24,21 @@ export const metadata: Metadata = {
     template: '%s | AuthiChain Protocol',
   },
   description: 'The global standard for cryptographically-verified product identity, industrial provenance, and AI-generated QR art.',
-  metadataBase: new URL((process.env.NEXT_PUBLIC_APP_URL || 'https://authichain.com').replace(/^﻿/, '')),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL?.replace(/^﻿/, '') || 'https://authichain.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: 'QRON | Verified AI QR Art',
-    description: 'Transform your brand with cryptographically-signed AI QR codes. Ed25519 secure, Polygon anchored.',
-    url: 'https://qron.space',
-    siteName: 'QRON Space',
+    title: 'AuthiChain | Cryptographically Verified Product Identity',
+    description: 'The global standard for cryptographically-verified product identity, industrial provenance, and AI-generated QR art.',
+    url: 'https://authichain.com',
+    siteName: 'AuthiChain',
     images: [
       {
         url: '/media/samples/01_flux_qron_space.png',
         width: 1200,
         height: 1200,
-        alt: 'AuthiChain QRON Artistic AI',
+        alt: 'AuthiChain — Verified Product Identity',
       },
     ],
     locale: 'en_US',
@@ -46,8 +46,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'QRON | Verified AI QR Art',
-    description: 'Transform your brand with cryptographically-signed AI QR codes.',
+    title: 'AuthiChain | Verified Product Identity',
+    description: 'Cryptographically-signed AI QR codes. Ed25519 secure, Polygon anchored.',
     images: ['/media/samples/01_flux_qron_space.png'],
     creator: '@AuthiChain',
   },
