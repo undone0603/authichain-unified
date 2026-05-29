@@ -110,6 +110,46 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
+      - name: Clear conflicting zone routes for authichain.com
+        run: |
+          set +e
+          echo "=== Getting zone ID for authichain.com ==="
+          ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=authichain.com" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | \
+            python3 -c "import sys,json;d=json.load(sys.stdin);r=d.get('result',[]);print(r[0]['id'] if r else '')" 2>/dev/null)
+          if [ -z "$ZONE_ID" ]; then
+            echo "Cannot resolve zone ID (token may lack Zone:Read) — skipping route cleanup"
+            exit 0
+          fi
+          echo "Zone ID: $ZONE_ID"
+          echo "=== Current zone routes ==="
+          ROUTES=$(curl -s "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/workers/routes" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$ROUTES" | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          for r in d.get('result',[]):
+              print(f'  {r[\"id\"]}  {r.get(\"pattern\",\"\")}  →  {r.get(\"script\",\"(none)\")}')
+          " 2>/dev/null || echo "$ROUTES"
+          echo "=== Deleting routes that conflict with authichain-unified custom domain ==="
+          for ROUTE_ID in $(echo "$ROUTES" | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          for r in d.get('result',[]):
+              p=r.get('pattern',''); s=r.get('script','')
+              if 'authichain.com' in p and s != 'authichain-unified':
+                  print(r['id'])
+          " 2>/dev/null); do
+            echo "  Deleting route $ROUTE_ID"
+            curl -s -X DELETE \
+              "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/workers/routes/$ROUTE_ID" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | \
+              python3 -c "import sys,json;d=json.load(sys.stdin);print('  ✓ deleted' if d.get('success') else f'  ✗ {d}')" 2>/dev/null
+          done
+          echo "=== Route cleanup complete ==="
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
       - name: Sync secrets to CF Worker
         run: |
           set +e
