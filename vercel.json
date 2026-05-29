@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_AUTHOR_LOGIN\" == \"dependabot[bot]\" ]]; then exit 0; fi; exit 1",
+  "ignoreCommand": "exit 0",
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist/public",
   "installCommand": "pnpm install --no-frozen-lockfile",
