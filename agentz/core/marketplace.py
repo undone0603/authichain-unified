@@ -31,9 +31,9 @@ class MarketplaceAgent:
         # 3. Create Stripe Checkout Session (Direct to Merchant + Platform Fee)
         # Note: In production, this requires Stripe Connect Account IDs
         try:
-            session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                line_items=[{
+            checkout_kwargs = {
+                'payment_method_types': ['card'],
+                'line_items': [{
                     'price_data': {
                         'currency': 'usd',
                         'product_data': {'name': f"Authentic {brand} Product"},
@@ -41,11 +41,17 @@ class MarketplaceAgent:
                     },
                     'quantity': 1,
                 }],
-                mode='payment',
-                success_url='https://qron.space/success',
-                cancel_url='https://qron.space/cancel',
-                application_fee_amount=platform_fee,  # 5% platform fee via Stripe Connect
-            )
+                'mode': 'payment',
+                'success_url': 'https://qron.space/success',
+                'cancel_url': 'https://qron.space/cancel',
+            }
+            
+            # Only add application_fee_amount if we have a destination (Connect)
+            # For now, we'll comment it out to unblock standard checkout revenue
+            # if platform_fee > 0:
+            #     checkout_kwargs['application_fee_amount'] = platform_fee
+                
+            session = stripe.checkout.Session.create(**checkout_kwargs)
             
             # 4. Log Transaction in Supabase
             # await supabase.table("transactions").insert({...}).execute()

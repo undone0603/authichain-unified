@@ -459,19 +459,19 @@ workflows:
       3) Pings IndexNow API for rapid discovery of 1,001+ verified products.
       4) Ensures all project links are optimized for search visibility.
 
-  - id: authichain_content_multiplication
-    title: "Programmatic Content Multiplication: Blog + Social + Thread"
-    priority: medium
-    blocks_revenue: false
-    handler: handlers.content_multiplier
+  - id: authichain_mass_content_blitz
+    title: "Master Content Blitz: Massive Scale Marketing Pack (172+ Deals)"
+    priority: critical
+    blocks_revenue: true
+    handler: handlers.mass_content_blitz
     type: composite
-    estimated_minutes: 10
-    requires: []
-    prerequisites: [authichain_pilot_deploy]
+    estimated_minutes: 20
+    requires: [hubspot_token]
+    prerequisites: [hot_lead_outreach_blitz]
     description: |
-      Programmatically transforms a single verified product identity
-      into a suite of marketing assets: SEO-optimized blog posts,
-      X (Twitter) threads, and LinkedIn posts.
+      Synchronizes the latest marketing templates from Cloudflare R2
+      and programmatically generates a full suite (Blog, X Thread,
+      LinkedIn) for every active lead in the HubSpot backlog.
 
   - id: authichain_atomic_scan
     title: "Atomic Action Simulation: Scan → Verify → StoryMode → Reward"
@@ -700,18 +700,19 @@ workflows:
       Vercel deploy success rates. Output to Notion Session Codex
       page (340460fea35581ae8955fabaa556d6db).
 
-  - id: authichain_review_outreach
-    title: "Review & Post Outreach DMs"
+  - id: authichain_partner_outreach
+    title: "Partnership & Referral Blitz: Target Web3 Leaders"
     priority: critical
     blocks_revenue: true
-    handler: handlers.outreach_reviewer
+    handler: handlers.authichain_partner_outreach
     type: composite
     estimated_minutes: 10
     requires: []
-    prerequisites: [hot_lead_outreach_blitz]
+    prerequisites: []
     description: |
-      Iterates through drafted outreach DMs, presents them for approval,
-      and uses browser-use to post approved messages to social profiles.
+      Autonomous outreach to high-leverage technical and referral partners
+      (VeChain, Polygon, Privado, etc.). Generates unique referral codes
+      and drafts 'Founding Partner' proposals with high-ROI incentives.
 
 
   - id: power_launch_all
@@ -787,3 +788,17 @@ workflows:
     estimated_minutes: 15
     requires: [reddit_session] # twitter for simulation
     prerequisites: [gsc_setup_govchain, pinecone_trial_decision]
+
+  - id: authichain_email_redirect
+    title: "Redirect Z@authichain.com -> authichain@gmail.com"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.cloudflare_email_routing
+    type: browser
+    estimated_minutes: 5
+    requires: [cloudflare_api_token]
+    prerequisites: []
+    description: |
+      Autonomous browser task to configure Cloudflare Email Routing
+      for the authichain.com zone. Ensures all business mail to 'Z'
+      is forwarded to the primary Gmail recovery account.

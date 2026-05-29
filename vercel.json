@@ -1,6 +1,7 @@
 {
   "version": 2,
   "buildCommand": "npx vite build",
+  "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": "dist/public",
   "rewrites": [
     {
