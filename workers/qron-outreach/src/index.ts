@@ -1,6 +1,15 @@
 // QRON Outreach Engine — Sends cold emails via Resend relay (authichain.com domain)
 // Cron: sends 3 emails per trigger, cycles through the queue
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a), bb = enc.encode(b);
+  const len = Math.max(ab.length, bb.length);
+  let diff = ab.length ^ bb.length;
+  for (let i = 0; i < len; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
+  return diff === 0;
+}
+
 interface Email {
   to: string;
   name: string;
@@ -227,9 +236,10 @@ export default {
     }
 
     // Auth check for sensitive routes
-    const authToken = env.AUTH_TOKEN || 'qron-ops-2026';
-    const isAuthed = url.searchParams.get('key') === authToken
-      || request.headers.get('Authorization') === `Bearer ${authToken}`;
+    const authToken = env.AUTH_TOKEN;
+    const isAuthed = !!authToken && (
+      timingSafeEqual(url.searchParams.get('key') ?? '', authToken)
+      || timingSafeEqual(request.headers.get('Authorization') ?? '', `Bearer ${authToken}`));
 
     if (url.pathname === '/status') {
       if (!isAuthed) return new Response('Unauthorized', { status: 401 });

@@ -1,74 +1,45 @@
-name: Deploy Vercel App
+name: Deploy Vercel App (DISABLED — migrated to deploy-cf-pages.yml)
 
+# Trigger manually only; push-to-main now handled by deploy-cf-pages.yml
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  deploy:
+  deploy-worker:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         project:
-          - workers/authichain-dashboard
           - workers/qron-automation
-          - workers/qron-image-gen
-          - workers/qron-outreach
-          - workers/qron-space
-          - workers/resend-relay
-          - workers/strainchain-io
-          # Vercel Apps
-          - apps/authichain-com
-          - apps/authichain-dashboard
-          - apps/strainchain-io
-
+    name: deploy (${{ matrix.project }})
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: '10.28.2'
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Enable Corepack
-        run: corepack enable
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: |
-          corepack prepare pnpm@9 --activate
-          pnpm install --no-frozen-lockfile
-
-      - name: Detect project type
-        id: detect
-        run: |
-          if [[ "${{ matrix.project }}" == workers/* ]]; then
-            echo "type=worker" >> $GITHUB_OUTPUT
-          else
-            echo "type=vercel" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install Wrangler
-        run: npm install -g wrangler
+        run: pnpm install --no-frozen-lockfile
 
       - name: Deploy Cloudflare Worker
-        if: steps.detect.outputs.type == 'worker'
-        run: pnpm exec wrangler deploy --minify
+        run: npx wrangler deploy --minify --config wrangler.toml
         working-directory: ${{ matrix.project }}
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-      - name: Install npx
-        run: npm install -g npx
-
-      - name: Deploy Vercel App
-        if: steps.detect.outputs.type == 'vercel'
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ${{ matrix.project }}
-          vercel-args: '--prod'

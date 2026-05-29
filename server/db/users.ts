@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
-import { db, getOne } from "../db";
-import { users, type InsertUser } from "@db/schema";
-import { ENV } from "../core/env";
+import { getDb } from "../db";
+import { users, type InsertUser } from "../../drizzle/schema";
+import { ENV } from "../_core/env";
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   try {
+    const db = await getDb();
     const values: InsertUser = {
       openId: user.openId,
       name: user.name ?? null,
@@ -29,7 +30,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
     await db.insert(users)
       .values(values)
-      .onDuplicateKeyUpdate({ set: updateSet });
+      .onConflictDoUpdate({ target: users.openId, set: updateSet });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -37,9 +38,13 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 }
 
 export async function getUserByOpenId(openId: string) {
-  return getOne(db.select().from(users).where(eq(users.openId, openId)).limit(1));
+  const db = await getDb();
+  const rows = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return rows[0] ?? null;
 }
 
 export async function getUserById(id: number) {
-  return getOne(db.select().from(users).where(eq(users.id, id)).limit(1));
+  const db = await getDb();
+  const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return rows[0] ?? null;
 }

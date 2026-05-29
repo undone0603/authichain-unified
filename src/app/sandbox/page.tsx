@@ -21,7 +21,7 @@ export default function SandboxPage() {
             <p className="text-lg text-zinc-400 max-w-2xl leading-relaxed">Welcome to your private sandbox. Below is a live WebXR render of our "Missing Middle" architectural integration. We are mapping blockchain-verified QRON data to physical spaces. No apps required.</p>
           </div>
           <div className="p-1 bg-gradient-to-br from-zinc-800 to-zinc-950 rounded-2xl shadow-2xl">
-            <ARHousingViewer projectName="Roscommon Pilot" />
+            <ARHousingViewer />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
@@ -44,7 +44,7 @@ export default function SandboxPage() {
             </div>
             <AgenticCloser />
             <div className="text-center"><p className="text-xs text-zinc-600 font-mono">Powered by AuthiChain Autonomous Logic</p></div>
-          </div>^s
+          </div>
         </div>
       </main>
     </div>

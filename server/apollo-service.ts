@@ -2,7 +2,7 @@
  * Apollo.io API integration for high-quality B2B lead discovery.
  * Replaces LLM web-search with verified contact + company data.
  */
-import { ENV } from "./_core/env.js";
+import { ENV } from "./_core/env";
 
 export interface ApolloLead {
   name: string;

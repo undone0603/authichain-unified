@@ -5,6 +5,7 @@
 import Stripe from "stripe";
 import { STRIPE_PRODUCTS, type PlanKey, getPlanQuota } from "./stripe-products";
 import { ENV } from "./_core/env";
+import { safeOrigin } from "./_core/allowed-origins";
 
 let _stripe: Stripe | null = null;
 
@@ -12,7 +13,7 @@ export function getStripe(): Stripe {
   if (!_stripe) {
     const secretKey = ENV.stripeSecretKey;
     if (!secretKey) throw new Error("STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(secretKey, { apiVersion: "2025-03-31.basil" as any });
+    _stripe = new Stripe(secretKey, { apiVersion: "2026-04-22.dahlia" as const });
   }
   return _stripe;
 }
@@ -27,6 +28,9 @@ export interface CreateCheckoutParams {
   billing: "monthly" | "annual";
   origin: string;
   stripeCustomerId?: string;
+  trialDays?: number;
+  brand?: string;
+  contractSetupOrderId?: string;
 }
 
 export async function createSubscriptionCheckout(params: CreateCheckoutParams): Promise<string> {
@@ -36,6 +40,18 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
     ? product.priceAnnual
     : product.priceMonthly;
 
+  const sharedMeta: Record<string, string> = {
+    user_id: params.userId.toString(),
+    customer_email: params.userEmail,
+    customer_name: params.userName,
+    plan: params.plan,
+    billing: params.billing,
+    ...(params.brand ? { brand: params.brand } : {}),
+    ...(params.contractSetupOrderId
+      ? { contract: "true", setup_order_id: params.contractSetupOrderId }
+      : {}),
+  };
+
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
     payment_method_types: ["card"],
@@ -43,12 +59,10 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
     client_reference_id: params.userId.toString(),
     customer_email: params.stripeCustomerId ? undefined : params.userEmail,
     customer: params.stripeCustomerId || undefined,
-    metadata: {
-      user_id: params.userId.toString(),
-      customer_email: params.userEmail,
-      customer_name: params.userName,
-      plan: params.plan,
-      billing: params.billing,
+    metadata: sharedMeta,
+    subscription_data: {
+      metadata: sharedMeta,
+      ...(params.trialDays ? { trial_period_days: params.trialDays } : {}),
     },
     line_items: [
       {
@@ -66,8 +80,8 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
         quantity: 1,
       },
     ],
-    success_url: `${params.origin}/subscriptions?session_id={CHECKOUT_SESSION_ID}&success=true`,
-    cancel_url: `${params.origin}/subscriptions?cancelled=true`,
+    success_url: `${safeOrigin(params.origin)}/subscriptions?session_id={CHECKOUT_SESSION_ID}&success=true`,
+    cancel_url: `${safeOrigin(params.origin)}/subscriptions?cancelled=true`,
   };
 
   const session = await stripe.checkout.sessions.create(sessionConfig);
@@ -87,7 +101,7 @@ export interface CreatePaymentCheckoutParams {
   metadata?: Record<string, string>;
 }
 
-export async function createPaymentCheckout(params: CreatePaymentCheckoutParams): Promise<string> {
+export async function createPaymentCheckout(params: CreatePaymentCheckoutParams): Promise<{ url: string; sessionId: string }> {
   const stripe = getStripe();
 
   const session = await stripe.checkout.sessions.create({
@@ -115,11 +129,11 @@ export async function createPaymentCheckout(params: CreatePaymentCheckoutParams)
         quantity: 1,
       },
     ],
-    success_url: `${params.origin}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
-    cancel_url: `${params.origin}/payments?cancelled=true`,
+    success_url: `${safeOrigin(params.origin)}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
+    cancel_url: `${safeOrigin(params.origin)}/payments?cancelled=true`,
   });
 
-  return session.url!;
+  return { url: session.url!, sessionId: session.id };
 }
 
 // ─── Customer Management ────────────────────────────────────────────────────

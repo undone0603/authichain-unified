@@ -31,9 +31,9 @@ const TITLES: Record<string, string> = {
   LAUNCH_AUTHICHAIN:  'AuthiChain.com – Full Launch Orchestration',
 };
 
-// ─── Mock db module ───────────────────────────────────────────────────────────
+// ─── Mock missions.db module (what the router actually imports) ───────────────
 
-vi.mock('./db', () => ({
+vi.mock('./missions/missions.db', () => ({
   getMissions: async (statusFilter?: string) => {
     const all = [...store.missions.values()];
     return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
@@ -80,10 +80,12 @@ vi.mock('./db', () => ({
     const t = store.tasks.get(id);
     if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
   },
+}));
 
-  // getDb returns null — tests using direct db access guard with if (db)
+// ─── Mock shared db module for helpers not in missions.db ────────────────────
+
+vi.mock('./db', () => ({
   getDb: async () => null,
-
   logActivity:               vi.fn().mockResolvedValue(undefined),
   createSystemNotification:  vi.fn().mockResolvedValue(undefined),
 }));
@@ -103,7 +105,7 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),
-    },
+    } as any,
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
   };
@@ -142,13 +144,13 @@ describe('missions — auth guards', () => {
 
 describe('missions.list', () => {
   it('returns an array', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const result = await caller.missions.list({});
     expect(Array.isArray(result)).toBe(true);
   });
 
   it('filters by status', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const result = await caller.missions.list({ status: 'PLANNED' });
     expect(Array.isArray(result)).toBe(true);
     result.forEach((m: any) => expect(m.status).toBe('PLANNED'));
@@ -161,7 +163,7 @@ describe('missions.create', () => {
   let missionId: string;
 
   it('creates a RETAIL_PILOT mission and returns an id', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const result = await caller.missions.create({ type: 'RETAIL_PILOT' });
     expect(result).toHaveProperty('id');
     expect(typeof result.id).toBe('string');
@@ -169,7 +171,7 @@ describe('missions.create', () => {
   });
 
   it('missions.get returns mission with correct type', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const result = await caller.missions.get({ id: missionId }) as any;
     expect(result).not.toBeNull();
     expect(result.type).toBe('RETAIL_PILOT');
@@ -177,7 +179,7 @@ describe('missions.create', () => {
   });
 
   it('missions.get includes seeded tasks', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const result = await caller.missions.get({ id: missionId }) as any;
     expect(Array.isArray(result?.tasks)).toBe(true);
     expect(result.tasks.length).toBeGreaterThan(0);
@@ -188,7 +190,7 @@ describe('missions.create', () => {
   });
 
   it('tasks.list returns same tasks for mission', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const fromGet = (await caller.missions.get({ id: missionId }) as any)?.tasks ?? [];
     const fromList = await caller.tasks.list({ missionId });
     expect((fromList as any[]).length).toBe(fromGet.length);
@@ -210,7 +212,7 @@ describe('missions.create — task counts', () => {
 
   for (const [type, count] of Object.entries(expectedTaskCounts)) {
     it(`${type} creates ${count} tasks`, async () => {
-      const caller = appRouter.createCaller(makeCtx());
+      const caller = appRouter.createCaller(makeCtx('admin'));
       const { id } = await caller.missions.create({ type: type as any });
       const tasks = await caller.tasks.list({ missionId: id });
       expect((tasks as any[]).length).toBe(count);
@@ -224,13 +226,13 @@ describe('missions.updateStatus', () => {
   let missionId: string;
 
   beforeAll(async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const result = await caller.missions.create({ type: 'PARTNER_ONBOARDING' });
     missionId = result.id;
   });
 
   it('transitions PLANNED → IN_PROGRESS', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const result = await caller.missions.updateStatus({ id: missionId, status: 'IN_PROGRESS' });
     expect(result).toEqual({ ok: true });
 
@@ -239,7 +241,7 @@ describe('missions.updateStatus', () => {
   });
 
   it('transitions IN_PROGRESS → COMPLETED', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     await caller.missions.updateStatus({ id: missionId, status: 'COMPLETED' });
     const mission = await caller.missions.get({ id: missionId }) as any;
     expect(mission?.status).toBe('COMPLETED');
@@ -252,7 +254,8 @@ describe('tasks.retry', () => {
   let failedTaskId: string;
 
   beforeAll(async () => {
-    const { createMission, getTasksByMission, getDb } = await import('./db');
+    const { createMission, getTasksByMission } = await import('./missions/missions.db');
+    const { getDb } = await import('./db');
 
     const missionId = await createMission('TECH_OS_LOCK');
     const tasks = await getTasksByMission(missionId);
@@ -274,7 +277,7 @@ describe('tasks.retry', () => {
   });
 
   it('retries a FAILED task — resets to PENDING', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const result = await caller.tasks.retry({ id: failedTaskId });
     expect(result).toEqual({ ok: true });
 
@@ -285,7 +288,7 @@ describe('tasks.retry', () => {
   });
 
   it('retry on a PENDING task is a safe no-op', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     await expect(caller.tasks.retry({ id: failedTaskId })).resolves.toEqual({ ok: true });
     const task = store.tasks.get(failedTaskId);
     expect(task?.status).toBe('PENDING');
@@ -296,7 +299,7 @@ describe('tasks.retry', () => {
 
 describe('missions.get edge cases', () => {
   it('returns null for a non-existent mission id', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const result = await caller.missions.get({ id: '00000000-0000-0000-0000-000000000000' });
     expect(result).toBeNull();
   });
@@ -306,7 +309,7 @@ describe('missions.get edge cases', () => {
 
 describe('missions.list — status filtering after mutations', () => {
   it('lists IN_PROGRESS missions after status update', async () => {
-    const caller = appRouter.createCaller(makeCtx());
+    const caller = appRouter.createCaller(makeCtx('admin'));
     const { id } = await caller.missions.create({ type: 'GOV_PILOT' });
     await caller.missions.updateStatus({ id, status: 'IN_PROGRESS' });
 

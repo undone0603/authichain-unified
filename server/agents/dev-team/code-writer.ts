@@ -18,16 +18,17 @@
  *   Reads existing files, LLM proposes changes, writes them via GitHub API.
  */
 
-import { invokeLLM } from '../../_core/llm.js';
-import { logActivity, markTaskWaitingHuman } from '../../db.js';
-import type { MissionTask as Task } from '../../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from '../../_core/llm';
+import { logActivity, getDb } from '../../db';
+import { missionTasks } from '../../../drizzle/schema';
+import type { MissionTask as Task } from '../../../drizzle/schema';
 import {
   createBranch,
   getFile,
   writeFile,
   searchCode,
   listFiles,
-} from './github-service.js';
+} from './github-service';
 
 // ─── Codebase knowledge injected into every code-write prompt ────────────
 
@@ -147,29 +148,26 @@ Rules:
     followupTasks: Array<{ kind: string; payload: Record<string, unknown> }>;
   };
 
-  try {
-    plan = JSON.parse(result.choices[0].message.content as string);
-  } catch {
-    throw new Error('PLAN_SPRINT: LLM returned unparseable JSON');
-  }
+  plan = parseLLMContent<typeof plan>(result.choices[0].message.content);
 
   // Create the feature branch
   await createBranch(plan.branch);
 
   // Enqueue all planned tasks (WRITE_CODE + OPEN_PR + RUN_TESTS + CODE_REVIEW)
-  const { db } = await import('../../../drizzle/schema.js').then(() => import('../../db.js'));
+  const db = await getDb();
   const allTasks = [...plan.tasks, ...plan.followupTasks];
 
-  for (let i = 0; i < allTasks.length; i++) {
-    const t = allTasks[i]!;
-    const taskId = crypto.randomUUID();
-    // Stagger run_at so they execute in order (5 min apart after each other)
-    const runAt = new Date(Date.now() + (i + 1) * 5 * 60 * 1000);
-    await (db as any).execute(
-      `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,$3,$4,'PENDING',$5)`,
-      [taskId, task.missionId, t.kind, JSON.stringify(t.payload), runAt]
-    );
-  }
+  await db.insert(missionTasks).values(
+    allTasks.map((t, i) => ({
+      id: crypto.randomUUID(),
+      missionId: task.missionId,
+      kind: t.kind,
+      title: `${t.kind.replace(/_/g, ' ')}: ${p.feature.slice(0, 60)}`,
+      payload: t.payload,
+      status: 'PENDING' as const,
+      scheduledAt: new Date(Date.now() + (i + 1) * 5 * 60 * 1000),
+    }))
+  );
 
   await logActivity({
     userId: null,
@@ -261,11 +259,7 @@ Write the code changes. Return the full JSON response as specified in your syste
     nextSteps: string[];
   };
 
-  try {
-    codeResult = JSON.parse(result.choices[0].message.content as string);
-  } catch {
-    throw new Error('WRITE_CODE: LLM returned unparseable JSON');
-  }
+  codeResult = parseLLMContent<typeof codeResult>(result.choices[0].message.content);
 
   if (!codeResult.files?.length) {
     throw new Error('WRITE_CODE: LLM returned no files');

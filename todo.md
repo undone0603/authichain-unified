@@ -124,22 +124,23 @@
 - [x] Verify newly scoped HUBSPOT_SERVICE_KEY works for contacts, companies, and deals (7 contacts, 8 companies, 4 deals)
 - [x] Seed initial partnership companies and deals into HubSpot CRM (LVMH, Pfizer, Walmart, Sotheby's + 4 deals)
 - [x] Verify CRM dashboard shows all three tabs with live data
-
 ## MACROHARD Integration (Phase 5)
 - [x] Scaffold MACROHARD tRPC router (status, sync, query, pushEvent endpoints)
 - [x] Build MACROHARD frontend page at /macrohard with connection status, sync panel, event push, API query
 - [x] Add MACROHARD nav item to admin sidebar (Cpu icon)
-- [ ] Configure MACROHARD_API_URL and MACROHARD_API_KEY environment variables
+- [x] Configure MACROHARD_API_URL and MACROHARD_API_KEY environment variables
 - [x] Map MACROHARD data model to AuthiChain entities
-- [ ] Add real-time event webhooks from AuthiChain → MACROHARD
+- [x] Add real-time event webhooks from AuthiChain → MACROHARD
 - [x] Integration tests for MACROHARD router
 
 ## DHS SVIP Grant Application
 - [x] Write complete Phase I application ($200K ask, FIPS 140-2, W3C VC, CBP field app)
+- [x] Prepare DHS SVIP grant application materials
 - [ ] SAM.gov registration (required before submission — register at sam.gov)
 - [ ] CAGE code + UEI number
 - [ ] sbir.gov account creation
 - [ ] Submit at https://www.dhs.gov/science-and-technology/svip-application-process
+
 
 ## qron.space Domain Setup
 - [x] Add qron.space to Vercel project (vercel.com → qron-app → Settings → Domains)

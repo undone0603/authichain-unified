@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+<defs>
+  <!-- Colorful AI portrait backdrop (like fal.ai illusion-diffusion output) -->
+  <radialGradient id="g-skin" cx="43%" cy="52%" r="38%"><stop offset="0%" stop-color="#ffb3c6" stop-opacity="1"/><stop offset="100%" stop-color="#ffb3c6" stop-opacity="0"/></radialGradient>
+  <radialGradient id="g-blue1" cx="54%" cy="36%" r="22%"><stop offset="0%" stop-color="#00c8ff" stop-opacity="0.9"/><stop offset="100%" stop-color="#00c8ff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="g-blue2" cx="38%" cy="40%" r="18%"><stop offset="0%" stop-color="#4dabf7" stop-opacity="0.85"/><stop offset="100%" stop-color="#4dabf7" stop-opacity="0"/></radialGradient>
+  <radialGradient id="g-green" cx="70%" cy="58%" r="30%"><stop offset="0%" stop-color="#40c057" stop-opacity="0.75"/><stop offset="100%" stop-color="#40c057" stop-opacity="0"/></radialGradient>
+  <radialGradient id="g-yellow" cx="28%" cy="26%" r="32%"><stop offset="0%" stop-color="#ffe066" stop-opacity="0.85"/><stop offset="100%" stop-color="#ffe066" stop-opacity="0"/></radialGradient>
+  <radialGradient id="g-red" cx="41%" cy="76%" r="18%"><stop offset="0%" stop-color="#fa5252" stop-opacity="1"/><stop offset="100%" stop-color="#fa5252" stop-opacity="0"/></radialGradient>
+  <radialGradient id="g-purple" cx="72%" cy="28%" r="24%"><stop offset="0%" stop-color="#cc5de8" stop-opacity="0.75"/><stop offset="100%" stop-color="#cc5de8" stop-opacity="0"/></radialGradient>
+  <radialGradient id="g-teal" cx="22%" cy="68%" r="28%"><stop offset="0%" stop-color="#20c997" stop-opacity="0.8"/><stop offset="100%" stop-color="#20c997" stop-opacity="0"/></radialGradient>
+  <radialGradient id="g-orange" cx="82%" cy="78%" r="26%"><stop offset="0%" stop-color="#fd7e14" stop-opacity="0.8"/><stop offset="100%" stop-color="#fd7e14" stop-opacity="0"/></radialGradient>
+  <radialGradient id="g-magenta" cx="15%" cy="42%" r="22%"><stop offset="0%" stop-color="#e64980" stop-opacity="0.7"/><stop offset="100%" stop-color="#e64980" stop-opacity="0"/></radialGradient>
+</defs>
+
+<!-- Base: light background like AI portrait -->
+<rect width="1080" height="1080" fill="#d8e8ec"/>
+<rect width="1080" height="1080" fill="url(#g-skin)"/>
+<rect width="1080" height="1080" fill="url(#g-blue1)"/>
+<rect width="1080" height="1080" fill="url(#g-blue2)"/>
+<rect width="1080" height="1080" fill="url(#g-green)"/>
+<rect width="1080" height="1080" fill="url(#g-yellow)"/>
+<rect width="1080" height="1080" fill="url(#g-red)"/>
+<rect width="1080" height="1080" fill="url(#g-purple)"/>
+<rect width="1080" height="1080" fill="url(#g-teal)"/>
+<rect width="1080" height="1080" fill="url(#g-orange)"/>
+<rect width="1080" height="1080" fill="url(#g-magenta)"/>
+
+<!-- QR code modules: dark semi-transparent squares overlaid on colorful art -->
+<!-- Finder TL + TR + BL (opaque, defining the QR structure) -->
+<g fill="#0d0d1a" opacity="0.88">
+  <!-- Finder TL row 0 -->
+  <rect x="162" y="162" width="33" height="33"/><rect x="198" y="162" width="33" height="33"/><rect x="234" y="162" width="33" height="33"/><rect x="270" y="162" width="33" height="33"/><rect x="306" y="162" width="33" height="33"/><rect x="342" y="162" width="33" height="33"/><rect x="378" y="162" width="33" height="33"/>
+  <!-- Finder TL row 1 --><rect x="162" y="198" width="33" height="33"/><rect x="378" y="198" width="33" height="33"/>
+  <!-- Finder TL row 2 --><rect x="162" y="234" width="33" height="33"/><rect x="234" y="234" width="33" height="33"/><rect x="270" y="234" width="33" height="33"/><rect x="306" y="234" width="33" height="33"/><rect x="378" y="234" width="33" height="33"/>
+  <!-- Finder TL row 3 --><rect x="162" y="270" width="33" height="33"/><rect x="234" y="270" width="33" height="33"/><rect x="270" y="270" width="33" height="33"/><rect x="306" y="270" width="33" height="33"/><rect x="378" y="270" width="33" height="33"/>
+  <!-- Finder TL row 4 --><rect x="162" y="306" width="33" height="33"/><rect x="234" y="306" width="33" height="33"/><rect x="270" y="306" width="33" height="33"/><rect x="306" y="306" width="33" height="33"/><rect x="378" y="306" width="33" height="33"/>
+  <!-- Finder TL row 5 --><rect x="162" y="342" width="33" height="33"/><rect x="378" y="342" width="33" height="33"/>
+  <!-- Finder TL row 6 --><rect x="162" y="378" width="33" height="33"/><rect x="198" y="378" width="33" height="33"/><rect x="234" y="378" width="33" height="33"/><rect x="270" y="378" width="33" height="33"/><rect x="306" y="378" width="33" height="33"/><rect x="342" y="378" width="33" height="33"/><rect x="378" y="378" width="33" height="33"/>
+  <!-- Finder TR row 0 --><rect x="666" y="162" width="33" height="33"/><rect x="702" y="162" width="33" height="33"/><rect x="738" y="162" width="33" height="33"/><rect x="774" y="162" width="33" height="33"/><rect x="810" y="162" width="33" height="33"/><rect x="846" y="162" width="33" height="33"/><rect x="882" y="162" width="33" height="33"/>
+  <!-- Finder TR row 1 --><rect x="666" y="198" width="33" height="33"/><rect x="882" y="198" width="33" height="33"/>
+  <!-- Finder TR row 2 --><rect x="666" y="234" width="33" height="33"/><rect x="738" y="234" width="33" height="33"/><rect x="774" y="234" width="33" height="33"/><rect x="810" y="234" width="33" height="33"/><rect x="882" y="234" width="33" height="33"/>
+  <!-- Finder TR row 3 --><rect x="666" y="270" width="33" height="33"/><rect x="738" y="270" width="33" height="33"/><rect x="774" y="270" width="33" height="33"/><rect x="810" y="270" width="33" height="33"/><rect x="882" y="270" width="33" height="33"/>
+  <!-- Finder TR row 4 --><rect x="666" y="306" width="33" height="33"/><rect x="738" y="306" width="33" height="33"/><rect x="774" y="306" width="33" height="33"/><rect x="810" y="306" width="33" height="33"/><rect x="882" y="306" width="33" height="33"/>
+  <!-- Finder TR row 5 --><rect x="666" y="342" width="33" height="33"/><rect x="882" y="342" width="33" height="33"/>
+  <!-- Finder TR row 6 --><rect x="666" y="378" width="33" height="33"/><rect x="702" y="378" width="33" height="33"/><rect x="738" y="378" width="33" height="33"/><rect x="774" y="378" width="33" height="33"/><rect x="810" y="378" width="33" height="33"/><rect x="846" y="378" width="33" height="33"/><rect x="882" y="378" width="33" height="33"/>
+  <!-- Finder BL row 14 --><rect x="162" y="666" width="33" height="33"/><rect x="198" y="666" width="33" height="33"/><rect x="234" y="666" width="33" height="33"/><rect x="270" y="666" width="33" height="33"/><rect x="306" y="666" width="33" height="33"/><rect x="342" y="666" width="33" height="33"/><rect x="378" y="666" width="33" height="33"/>
+  <!-- Finder BL row 15 --><rect x="162" y="702" width="33" height="33"/><rect x="378" y="702" width="33" height="33"/>
+  <!-- Finder BL row 16 --><rect x="162" y="738" width="33" height="33"/><rect x="234" y="738" width="33" height="33"/><rect x="270" y="738" width="33" height="33"/><rect x="306" y="738" width="33" height="33"/><rect x="378" y="738" width="33" height="33"/>
+  <!-- Finder BL row 17 --><rect x="162" y="774" width="33" height="33"/><rect x="234" y="774" width="33" height="33"/><rect x="270" y="774" width="33" height="33"/><rect x="306" y="774" width="33" height="33"/><rect x="378" y="774" width="33" height="33"/>
+  <!-- Finder BL row 18 --><rect x="162" y="810" width="33" height="33"/><rect x="234" y="810" width="33" height="33"/><rect x="270" y="810" width="33" height="33"/><rect x="306" y="810" width="33" height="33"/><rect x="378" y="810" width="33" height="33"/>
+  <!-- Finder BL row 19 --><rect x="162" y="846" width="33" height="33"/><rect x="378" y="846" width="33" height="33"/>
+  <!-- Finder BL row 20 --><rect x="162" y="882" width="33" height="33"/><rect x="198" y="882" width="33" height="33"/><rect x="234" y="882" width="33" height="33"/><rect x="270" y="882" width="33" height="33"/><rect x="306" y="882" width="33" height="33"/><rect x="342" y="882" width="33" height="33"/><rect x="378" y="882" width="33" height="33"/>
+  <!-- Timing row 6 --><rect x="450" y="378" width="33" height="33"/><rect x="522" y="378" width="33" height="33"/><rect x="594" y="378" width="33" height="33"/>
+  <!-- Timing col 6 --><rect x="378" y="450" width="33" height="33"/><rect x="378" y="522" width="33" height="33"/><rect x="378" y="594" width="33" height="33"/>
+</g>
+
+<!-- Data modules: slightly more transparent so color bleeds through -->
+<g fill="#0d0d1a" opacity="0.72">
+  <rect x="450" y="414" width="33" height="33"/>
+  <rect x="414" y="450" width="33" height="33"/><rect x="486" y="450" width="33" height="33"/><rect x="558" y="450" width="33" height="33"/><rect x="630" y="450" width="33" height="33"/><rect x="738" y="450" width="33" height="33"/><rect x="810" y="450" width="33" height="33"/><rect x="882" y="450" width="33" height="33"/>
+  <rect x="450" y="486" width="33" height="33"/><rect x="522" y="486" width="33" height="33"/><rect x="594" y="486" width="33" height="33"/><rect x="702" y="486" width="33" height="33"/><rect x="774" y="486" width="33" height="33"/><rect x="846" y="486" width="33" height="33"/>
+  <rect x="414" y="522" width="33" height="33"/><rect x="486" y="522" width="33" height="33"/><rect x="558" y="522" width="33" height="33"/><rect x="666" y="522" width="33" height="33"/><rect x="738" y="522" width="33" height="33"/><rect x="810" y="522" width="33" height="33"/>
+  <rect x="450" y="558" width="33" height="33"/><rect x="522" y="558" width="33" height="33"/><rect x="630" y="558" width="33" height="33"/><rect x="702" y="558" width="33" height="33"/><rect x="774" y="558" width="33" height="33"/><rect x="882" y="558" width="33" height="33"/>
+  <rect x="414" y="594" width="33" height="33"/><rect x="486" y="594" width="33" height="33"/><rect x="558" y="594" width="33" height="33"/><rect x="666" y="594" width="33" height="33"/><rect x="738" y="594" width="33" height="33"/><rect x="810" y="594" width="33" height="33"/>
+  <rect x="450" y="630" width="33" height="33"/><rect x="522" y="630" width="33" height="33"/><rect x="594" y="630" width="33" height="33"/><rect x="702" y="630" width="33" height="33"/><rect x="774" y="630" width="33" height="33"/><rect x="846" y="630" width="33" height="33"/>
+  <rect x="450" y="666" width="33" height="33"/><rect x="522" y="666" width="33" height="33"/><rect x="594" y="666" width="33" height="33"/><rect x="702" y="666" width="33" height="33"/><rect x="774" y="666" width="33" height="33"/>
+  <rect x="414" y="702" width="33" height="33"/><rect x="486" y="702" width="33" height="33"/><rect x="558" y="702" width="33" height="33"/><rect x="630" y="702" width="33" height="33"/><rect x="738" y="702" width="33" height="33"/><rect x="810" y="702" width="33" height="33"/><rect x="882" y="702" width="33" height="33"/>
+  <rect x="450" y="738" width="33" height="33"/><rect x="522" y="738" width="33" height="33"/><rect x="630" y="738" width="33" height="33"/><rect x="738" y="738" width="33" height="33"/><rect x="810" y="738" width="33" height="33"/>
+  <rect x="414" y="774" width="33" height="33"/><rect x="486" y="774" width="33" height="33"/><rect x="594" y="774" width="33" height="33"/><rect x="702" y="774" width="33" height="33"/><rect x="774" y="774" width="33" height="33"/><rect x="846" y="774" width="33" height="33"/>
+  <rect x="450" y="810" width="33" height="33"/><rect x="522" y="810" width="33" height="33"/><rect x="630" y="810" width="33" height="33"/><rect x="738" y="810" width="33" height="33"/><rect x="846" y="810" width="33" height="33"/>
+  <rect x="414" y="846" width="33" height="33"/><rect x="486" y="846" width="33" height="33"/><rect x="558" y="846" width="33" height="33"/><rect x="666" y="846" width="33" height="33"/><rect x="774" y="846" width="33" height="33"/><rect x="882" y="846" width="33" height="33"/>
+  <rect x="450" y="882" width="33" height="33"/><rect x="522" y="882" width="33" height="33"/><rect x="630" y="882" width="33" height="33"/><rect x="738" y="882" width="33" height="33"/><rect x="846" y="882" width="33" height="33"/>
+</g>
+
+<!-- Top label -->
+<rect x="0" y="0" width="1080" height="140" fill="#0d0d1a" opacity="0.72"/>
+<text x="540" y="52" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" letter-spacing="6" fill="#c9a227">QRON</text>
+<text x="540" y="82" text-anchor="middle" font-family="system-ui,sans-serif" font-size="28" font-weight="900" fill="#ffffff">AI-Generated QR Art</text>
+<text x="540" y="114" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" fill="#9e9e9e">Scannable · Minted · One of a Kind · AuthiChain Verified</text>
+
+<!-- Bottom label -->
+<rect x="0" y="960" width="1080" height="120" fill="#0d0d1a" opacity="0.72"/>
+<text x="540" y="1000" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#c9a227">◆ Minted by AuthiChain Protocol — Ed25519 Signed</text>
+<text x="540" y="1030" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#6b6b6b">Every QRON is unique, trackable and cryptographically authentic</text>
+<text x="540" y="1058" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#3a3a3a">Powered by Fal.ai illusion-diffusion · qron.space</text>
+</svg>

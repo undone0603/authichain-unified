@@ -42,6 +42,42 @@ vi.mock("./db", async (importOriginal) => {
       if (idx >= 0) store.notifications.splice(idx, 1);
     }),
     createLead: vi.fn(async (_data: any) => ({ id: store.nextLeadId() })),
+    // certificates
+    getCertificateByNumber: vi.fn(async () => null),
+    // nft
+    listNfts: vi.fn(async () => []),
+    listCollections: vi.fn(async () => []),
+    getActiveAuctions: vi.fn(async () => []),
+    // referral
+    getReferralByCode: vi.fn(async () => undefined),
+    getUserReferrals: vi.fn(async () => []),
+    // white-label
+    getWhiteLabelByApiKey: vi.fn(async () => null),
+    // subscriptions
+    getUserSubscription: vi.fn(async () => null),
+    // autopilot
+    getAutopilotConfig: vi.fn(async () => null),
+    getRecentDecisions: vi.fn(async () => []),
+    // email campaigns/drafts
+    getUserEmailCampaigns: vi.fn(async () => []),
+    getPendingDrafts: vi.fn(async () => []),
+    // affiliate
+    getAffiliateByUserId: vi.fn(async () => null),
+    // ab testing
+    getAllAbTests: vi.fn(async () => []),
+    // dashboard
+    getDashboardMetrics: vi.fn(async () => ({ totalProducts: 0, totalAuthentications: 0, totalCertificates: 0, totalNfts: 0 })),
+    // admin
+    getAdminDashboardMetrics: vi.fn(async () => ({ totalUsers: 0, totalProducts: 0, totalAuthentications: 0, totalRevenue: 0, totalLeads: 0, totalNfts: 0 })),
+    getAllUsers: vi.fn(async () => []),
+    getRevenueAnalytics: vi.fn(async () => []),
+    getSubscriptionAnalytics: vi.fn(async () => []),
+    getOpenFraudAlerts: vi.fn(async () => []),
+    getAllHealthScores: vi.fn(async () => []),
+    getRecentActivity: vi.fn(async () => []),
+    getWhiteLabelClients: vi.fn(async () => []),
+    // make getDb return null so character/scheduler null-guards activate
+    getDb: vi.fn(async () => null),
   };
 });
 
@@ -59,7 +95,7 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
-  };
+  } as any;
 
   return {
     user,
@@ -243,7 +279,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("autopilot.getStatus returns status object", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.autopilot.getStatus();
       expect(result).toBeDefined();
@@ -252,7 +288,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("autopilot.getDecisions returns array", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.autopilot.getDecisions({ limit: 5 });
       expect(Array.isArray(result)).toBe(true);
@@ -266,7 +302,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("emailDrafts.listPending returns array", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.emailDrafts.listPending();
       expect(Array.isArray(result)).toBe(true);
@@ -287,7 +323,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
 
     it("abTesting.list returns array", async () => {
-      const ctx = createAuthContext();
+      const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
       const result = await caller.abTesting.list();
       expect(Array.isArray(result)).toBe(true);
@@ -324,7 +360,7 @@ describe("AuthiChain Unified Platform Routers", () => {
       const ctx = createPublicContext();
       const caller = appRouter.createCaller(ctx);
       await expect(caller.blockchain.mintNFT({
-        name: "Test", walletAddress: "0x123", contractAddress: "0x456", privateKey: "0x789",
+        name: "Test", walletAddress: "0x123", contractAddress: "0x456",
       })).rejects.toThrow();
     });
 
@@ -333,7 +369,7 @@ describe("AuthiChain Unified Platform Routers", () => {
       const caller = appRouter.createCaller(ctx);
       await expect(caller.blockchain.mintCertificateNFT({
         productId: 1, certificateNumber: "CERT-001",
-        walletAddress: "0x123", contractAddress: "0x456", privateKey: "0x789",
+        walletAddress: "0x123", contractAddress: "0x456",
       })).rejects.toThrow();
     });
 
@@ -684,6 +720,253 @@ describe("AuthiChain Unified Platform Routers", () => {
       await expect(
         caller.character.generate({ archetype: "invalid_archetype" as any })
       ).rejects.toThrow();
+    });
+  });
+
+  describe("analytics", () => {
+    it("requires auth for myStats", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.analytics.myStats()).rejects.toThrow();
+    });
+
+    it("returns aggregated stats for authenticated user (empty when db unavailable)", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const stats = await caller.analytics.myStats();
+      expect(stats).toBeDefined();
+      expect(typeof stats).toBe("object");
+    });
+  });
+
+  describe("personalization", () => {
+    it("getPersonalizedContent returns null when db unavailable", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.personalization.getPersonalizedContent({
+        sessionId: "test-session-123",
+      });
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("products", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.products.list()).rejects.toThrow();
+    });
+    it("getById requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.products.getById({ id: 1 })).rejects.toThrow();
+    });
+  });
+
+  describe("payments", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.payments.list()).rejects.toThrow();
+    });
+    it("createStripe requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.payments.createStripe({ amount: "100", currency: "usd" })).rejects.toThrow();
+    });
+  });
+
+  describe("services", () => {
+    it("catalog is public and returns array", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.services.catalog();
+      expect(Array.isArray(result)).toBe(true);
+    });
+    it("myOrders requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.services.myOrders()).rejects.toThrow();
+    });
+    it("allOrders requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.services.allOrders()).rejects.toThrow();
+    });
+  });
+
+  describe("staking", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.staking.list()).rejects.toThrow();
+    });
+  });
+
+  describe("feedback", () => {
+    it("myFeedback requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.feedback.myFeedback()).rejects.toThrow();
+    });
+  });
+
+  describe("missions", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.missions.list({ status: "PLANNED" })).rejects.toThrow();
+    });
+  });
+
+  describe("tasks", () => {
+    it("list requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.tasks.list({ missionId: "test-id" })).rejects.toThrow();
+    });
+  });
+
+  describe("stripeConnect", () => {
+    it("provisionAccount requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.stripeConnect.provisionAccount({ country: "US" })).rejects.toThrow();
+    });
+  });
+
+  describe("heygen", () => {
+    it("avatars requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.heygen.avatars()).rejects.toThrow();
+    });
+  });
+
+  describe("marketplace", () => {
+    it("purchaseModel requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.marketplace.purchaseModel({ modelId: 1 })).rejects.toThrow();
+    });
+    it("myPurchases requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.marketplace.myPurchases()).rejects.toThrow();
+    });
+  });
+
+  describe("ai", () => {
+    it("chat requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.ai.chat({ messages: [{ role: "user", content: "hello" }] })).rejects.toThrow();
+    });
+  });
+
+  describe("bonuses", () => {
+    it("getUserBonuses requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.bonuses.getUserBonuses()).rejects.toThrow();
+    });
+    it("claimBonus requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.bonuses.claimBonus({ bonusId: 1 })).rejects.toThrow();
+    });
+  });
+
+  describe("govchain", () => {
+    it("stats is public", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.govchain.stats();
+      expect(result).toBeDefined();
+    });
+    it("issuePassport requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.govchain.issuePassport({ documentId: "doc1", claims: {}, recipientEmail: "a@b.com" })).rejects.toThrow();
+    });
+  });
+
+  describe("supplyChain", () => {
+    it("getEvents requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.supplyChain.getEvents({ productId: 1 })).rejects.toThrow();
+    });
+    it("addEvent requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.supplyChain.addEvent({ productId: 1, eventType: "shipped", location: "NYC", notes: "" })).rejects.toThrow();
+    });
+  });
+
+  describe("devTeam", () => {
+    it("writeCode requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.devTeam.writeCode({ missionId: "m1", prompt: "add feature" })).rejects.toThrow();
+    });
+    it("tasks requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.devTeam.tasks({ missionId: "m1" })).rejects.toThrow();
+    });
+  });
+
+  describe("macrohard", () => {
+    it("status requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.macrohard.status()).rejects.toThrow();
+    });
+    it("sync requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.macrohard.sync({ entity: "products" })).rejects.toThrow();
+    });
+  });
+
+  describe("sales", () => {
+    it("calculateRoi is public", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.sales.calculateRoi({
+        numProducts: 100,
+        complianceHoursPerMonth: 10,
+        hourlyRate: 50,
+        existingTechCosts: 5000,
+        industry: "retail",
+      });
+      expect(result).toBeDefined();
+      expect(typeof result.year1Savings).toBe("number");
+    });
+  });
+
+  describe("metrc", () => {
+    it("stats is public", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.metrc.stats();
+      expect(result).toBeDefined();
+      expect(typeof result.activeLicenses).toBe("number");
+    });
+    it("sync requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.metrc.sync({ licenseNumber: "LIC-123" })).rejects.toThrow();
+    });
+  });
+
+  describe("authenticate", () => {
+    it("analyze requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.authenticate.analyze({ productId: 1, imageUrl: "https://example.com/img.jpg" })).rejects.toThrow();
+    });
+    it("history requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.authenticate.history()).rejects.toThrow();
+    });
+  });
+
+  describe("qrcode", () => {
+    it("generate requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.qrcode.generate({ productId: 1 })).rejects.toThrow();
+    });
+    it("listForProduct requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.qrcode.listForProduct({ productId: 1 })).rejects.toThrow();
+    });
+  });
+
+  describe("hubspot", () => {
+    it("status requires auth", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      await expect(caller.hubspot.status()).rejects.toThrow();
+    });
+  });
+
+  describe("system", () => {
+    it("health is public and returns ok", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.system.health({ timestamp: Date.now() });
+      expect(result.ok).toBe(true);
+    });
+    it("notifyOwner requires admin", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.system.notifyOwner({ title: "t", content: "c" })).rejects.toThrow();
     });
   });
 });

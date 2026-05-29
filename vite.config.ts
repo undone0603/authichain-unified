@@ -1,9 +1,8 @@
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react";
+
+import react from "@vitejs/plugin-react";import tailwindcss from "@tailwindcss/vite";
 import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
-import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -151,7 +150,7 @@ function vitePluginManusDebugCollector(): Plugin {
 
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), vitePluginManusRuntime()],
+      plugins: [tailwindcss(), react(), vitePluginManusDebugCollector()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -165,6 +164,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    target: "esnext",
   },
   server: {
     host: true,

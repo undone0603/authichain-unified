@@ -8,12 +8,13 @@ import { runRetentionAutomation } from "./retention";
 import { runWeeklyDigestDispatch } from "./weekly-digest";
 import { runQuarterlyValueReportDispatch } from "./quarterly-value";
 import { runOrganicTrafficAutomation } from "./organic-traffic";
+import { runBrowserAgentJobs } from "./browser-jobs";
 import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
 
-export async function runPipelineTick() {
-  if (!ENV.autonomousPipelineEnabled) {
+export async function runPipelineTick(options?: { force?: boolean }) {
+  if (!ENV.autonomousPipelineEnabled && !options?.force) {
     return { enabled: false, skipped: true, reason: "AUTONOMOUS_PIPELINE_ENABLED=false" };
   }
 
@@ -23,6 +24,7 @@ export async function runPipelineTick() {
   const weeklyDigest = await runWeeklyDigestDispatch();
   const quarterlyValue = await runQuarterlyValueReportDispatch();
   const organicTraffic = await runOrganicTrafficAutomation();
+  const browserJobs = await runBrowserAgentJobs();
 
   // Mission task orchestration — UCB1 prioritisation
   // Score each task's kind by: E[conversion] + exploration bonus.
@@ -37,14 +39,29 @@ export async function runPipelineTick() {
   const totalTasks = Math.max(runCount, 1);
 
   const kindToSegment: Record<string, string> = {
-    FIND_GOV_LEADS:       'GOV',
-    FIND_RETAIL_LEADS:    'RETAIL',
-    DRAFT_OUTBOUND_EMAIL: 'GOV',
-    FOLLOWUP_SEQUENCE:    'GOV',
-    BUILD_PILOT_PACKET:   'PARTNER',
-    DRAFT_INTEL_DOSSIER:  'PRESS',
-    CRM_UPDATE:           'PARTNER',
-    DRAFT_PRESS_RELEASE:  'PRESS',
+    FIND_GOV_LEADS:              'GOV',
+    FIND_RETAIL_LEADS:           'RETAIL',
+    FIND_LUXURY_LEADS:           'LUXURY',
+    FIND_PHARMA_LEADS:           'PHARMA',
+    FIND_TIMEPIECE_LEADS:        'TIMEPIECE',
+    FIND_CANNABIS_LEADS:         'CANNABIS',
+    DRAFT_OUTBOUND_EMAIL:        'GOV',
+    DRAFT_CANNABIS_OUTREACH:     'CANNABIS',
+    FOLLOWUP_SEQUENCE:           'GOV',
+    BUILD_PILOT_PACKET:          'PARTNER',
+    DRAFT_INTEL_DOSSIER:         'PRESS',
+    CRM_UPDATE:                  'PARTNER',
+    DRAFT_PRESS_RELEASE:         'PRESS',
+    SEND_CONTRACT:               'HIGH_INTENT',
+    GENERATE_PROPOSAL:           'HIGH_INTENT',
+    CHECK_REPLIES:               'HIGH_INTENT',
+    ANCHOR_METRC_PACKAGE:        'CANNABIS',
+    BROWSE_RESEARCH_LEAD:        'DEFAULT',
+    BROWSE_COMPETITOR_MONITOR:   'DEFAULT',
+    BROWSE_SCRAPE_INDUSTRY_NEWS: 'DEFAULT',
+    BROWSE_VERIFY_PRODUCT_URL:   'DEFAULT',
+    BROWSE_VISION_RESEARCH_LEAD: 'DEFAULT',
+    BROWSE_VISION_FREEFORM:      'DEFAULT',
   };
 
   const scored = dueTasks.map(task => {
@@ -68,8 +85,13 @@ export async function runPipelineTick() {
   // ── PMF auto-scale: if a segment's posterior mean exceeds threshold AND
   //    no active mission of that type exists, create one automatically. ──────
   const PMF_THRESHOLDS: Record<string, { missionType: string; threshold: number }> = {
-    GOV:    { missionType: 'GOV_PILOT',    threshold: 0.12 },
-    RETAIL: { missionType: 'RETAIL_PILOT', threshold: 0.10 },
+    GOV:      { missionType: 'GOV_PILOT',        threshold: 0.05 },
+    RETAIL:   { missionType: 'RETAIL_PILOT',      threshold: 0.04 },
+    LUXURY:   { missionType: 'LUXURY_BLITZ',      threshold: 0.03 },
+    PHARMA:   { missionType: 'PHARMA_AUDIT',      threshold: 0.03 },
+    // Cannabis is the warmest vertical — 9+ named chains in HubSpot pipeline.
+    // Low threshold so missions auto-spawn as soon as any prior data exists.
+    CANNABIS: { missionType: 'STRAINCHAIN_BLITZ', threshold: 0.02 },
   };
   const activeMissionTypes = await getActiveMissionTypes();
   const pmfCreated: string[] = [];
@@ -91,6 +113,7 @@ export async function runPipelineTick() {
     weeklyDigest,
     quarterlyValue,
     organicTraffic,
+    browserJobs,
     missionTasks: taskResults,
     pmfCreated,
   };

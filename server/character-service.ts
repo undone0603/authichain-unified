@@ -16,7 +16,7 @@ import {
 } from "../drizzle/schema";
 import { eq, desc, sql, and, count } from "drizzle-orm";
 import { generateImage } from "./_core/imageGeneration";
-import { invokeLLM } from "./_core/llm";
+import { invokeLLM, parseLLMContent } from "./_core/llm";
 import { storagePut } from "./storage";
 import crypto from "crypto";
 
@@ -344,8 +344,7 @@ Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`,
     });
 
     const content = result.choices[0]?.message?.content;
-    const scoreText = typeof content === "string" ? content : "";
-    const scores = JSON.parse(scoreText);
+    const scores = parseLLMContent<any>(content);
 
     // Calculate weighted total (out of 10)
     const totalScore = (
@@ -751,6 +750,8 @@ export async function submitVerificationClaim(
   return { claimId: result.id };
 }
 
+import { checkUserMilestones } from "./hubspot/automation";
+
 /**
  * Reward user's agent for completing a verification (called from authenticate.analyze)
  */
@@ -777,6 +778,10 @@ export async function rewardAgentForVerification(userId: number, wasSuccessful: 
 
   await awardQRON(agent.id, userId, qronReward, "verification_reward", "verification", 0);
   console.log(`[Agent XP] User ${userId} agent ${agent.id} earned ${xpReward} XP + ${qronReward} QRON`);
+
+  // Check for HubSpot automation milestones
+  await checkUserMilestones(userId);
 }
+
 
 export { ARCHETYPES };

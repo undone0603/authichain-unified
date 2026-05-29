@@ -110,6 +110,10 @@ export function updatePrior(
 export const SEGMENT_PRIORS: Record<string, BetaPrior> = {
   GOV:     { alpha: 2,  beta: 23 }, // ~8 %  reply rate, slow-moving
   RETAIL:  { alpha: 3,  beta: 17 }, // ~15 % reply rate
+  LUXURY:  { alpha: 4,  beta: 16 }, // ~20 % — high value but high barrier
+  PHARMA:  { alpha: 3,  beta: 17 }, // ~15 % — regulatory driven
+  MEDTECH: { alpha: 2,  beta: 18 }, // ~10 % — long sales cycle, high complexity
+  TIMEPIECE: { alpha: 3,  beta: 17 }, // ~15 % — prestige driven, relationship focused
   PRESS:   { alpha: 4,  beta: 16 }, // ~20 % — journalists are responsive
   PARTNER: { alpha: 5,  beta: 15 }, // ~25 % — aligned incentive
   DEFAULT: { alpha: 2,  beta: 23 },
@@ -119,6 +123,10 @@ export const SEGMENT_PRIORS: Record<string, BetaPrior> = {
 export const SEGMENT_REVENUE: Record<string, number> = {
   GOV:     120_000,
   RETAIL:   18_000,
+  LUXURY:   45_000,
+  PHARMA:   90_000,
+  MEDTECH: 100_000,
+  TIMEPIECE: 75_000,
   PRESS:     5_000, // brand value, not direct revenue
   PARTNER:  40_000,
   DEFAULT:  10_000,
@@ -144,6 +152,24 @@ export const TONE_PRIORS: Record<string, Record<EmailTone, BetaPrior>> = {
     warm:   { alpha: 4, beta: 6  }, // retail is relationship-driven
     direct: { alpha: 3, beta: 7  },
     story:  { alpha: 3, beta: 7  },
+  },
+  LUXURY: {
+    formal: { alpha: 5, beta: 5  }, // luxury likes prestige
+    warm:   { alpha: 2, beta: 8  },
+    direct: { alpha: 1, beta: 9  },
+    story:  { alpha: 5, beta: 5  }, // storytelling is key for luxury
+  },
+  PHARMA: {
+    formal: { alpha: 6, beta: 4  }, // pharma is heavily formal/regulatory
+    warm:   { alpha: 1, beta: 9  },
+    direct: { alpha: 4, beta: 6  },
+    story:  { alpha: 1, beta: 9  },
+  },
+  MEDTECH: {
+    formal: { alpha: 5, beta: 5  },
+    warm:   { alpha: 2, beta: 8  },
+    direct: { alpha: 6, beta: 4  }, // medtech wants specs and ROI direct
+    story:  { alpha: 2, beta: 8  },
   },
   PRESS: {
     formal: { alpha: 1, beta: 9  },

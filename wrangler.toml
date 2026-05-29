@@ -1,29 +1,26 @@
-name = 'authichain'
-main = "worker/index.ts"
-compatibility_date = "2024-12-01"
+name = "authichain-unified"
+main = ".open-next/worker.js"
+compatibility_date = "2025-05-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Static assets built by Vite → dist/public
+routes = [
+  { pattern = "authichain.com", custom_domain = true },
+  { pattern = "www.authichain.com", custom_domain = true }
+]
+
 [assets]
-directory = "dist/public"
+directory = ".open-next/assets"
 binding = "ASSETS"
 
-# Environment variables (injected via Cloudflare dashboard)
 [vars]
 APP_ENV = "production"
+# DATABASE_URL is required for production (to be set via wrangler secret)
 
-# KV namespaces
+# KV namespaces (available as bindings in CF Workers)
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "7c8e9466e57843199f6f768615e42a5c"
 
-# D1 database
-[[d1_databases]]
-binding = "DB"
-database_name = "authichain-db"
-database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
-
-# R2 bucket for subdomain microsites
-[[r2_buckets]]
-binding = "MICROSITES_BUCKET"
-bucket_name = "authichain-microsites"
+[[kv_namespaces]]
+binding = "MICROSITES_KV"
+id = "a992900da1db4b998af1cdf4eccf550a"

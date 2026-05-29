@@ -97,14 +97,15 @@ export async function reportUsageToStripe(tenantId: number, endpoint: string, qu
   const today = new Date().toISOString().slice(0, 10);
   await db.insert(apiUsageDaily).values({
     tenantId,
-    date: today,
+    date: new Date(today),
     endpoint,
     callCount: quantity,
     cost: (pricePerCall * quantity).toFixed(4),
+    clientId: tenantId,
   }).onConflictDoUpdate({
-    target: [apiUsageDaily.tenantId, apiUsageDaily.date, apiUsageDaily.endpoint],
+    target: apiUsageDaily.id,
     set: {
-      callCount: quantity, // Will be incremented in the Worker before reporting
+      callCount: quantity,
       cost: (pricePerCall * quantity).toFixed(4),
     },
   });
@@ -127,7 +128,7 @@ export async function getTenantBillingStatus(tenantId: number) {
       eq(apiUsageDaily.tenantId, tenantId),
     ));
 
-  const monthUsage = usage.filter(u => u.date >= monthStart);
+  const monthUsage = usage.filter(u => u.date >= new Date(monthStart));
   const totalCalls = monthUsage.reduce((sum, u) => sum + (u.callCount || 0), 0);
   const totalCost = monthUsage.reduce((sum, u) => sum + parseFloat(u.cost || "0"), 0);
 
@@ -146,6 +147,6 @@ export async function getTenantBillingStatus(tenantId: number) {
 }
 
 // ─── Generate API Key ────────────────────────────────────────────────────────
-export function generateApiKey(prefix: "ac_live" | "ac_test" | "ac_gpt" = "ac_live"): string {
+export function generateApiKey(prefix: string = "ac_live"): string {
   return `${prefix}_${randomBytes(24).toString("hex")}`;
 }

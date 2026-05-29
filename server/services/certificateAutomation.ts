@@ -3,8 +3,15 @@ import { certificates, products, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { storagePut } from '../storage';
 import { notifyOwner } from '../_core/notification';
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local?.[0] ?? ''}***@${domain}`;
+}
 import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../thirdweb';
 import { ENV } from '../_core/env';
+import { sendCertificateEmail as sendCrispCertificateEmail } from './crispService';
 
 /**
  * Automated Certificate Generation Service
@@ -317,11 +324,8 @@ async function sendCertificateEmail(
 
   const userResult = await db
     .select()
-    .from({ users: (await import('../../drizzle/schema')).users })
-    .where((await import('drizzle-orm')).eq(
-      (await import('../../drizzle/schema')).users.id,
-      certificateData.userId
-    ))
+    .from(users)
+    .where(eq(users.id, certificateData.userId))
     .limit(1);
 
   if (!userResult || userResult.length === 0) {
@@ -337,24 +341,41 @@ async function sendCertificateEmail(
     return;
   }
 
-  // Send email using Crisp
-  const { sendCertificateEmail: sendEmail } = await import('./crispService');
-  
-  const emailSent = await sendEmail({
+  // Send email via the unified provider chain (Resend → SMTP → Gmail OAuth2).
+  const { sendEmail } = await import('../email-service');
+  const customerName = (user as any).name || 'there';
+  const isAuthentic = certificateData.isAuthentic === 1;
+  const verdict = isAuthentic
+    ? 'AUTHENTIC ✅'
+    : 'COUNTERFEIT ❌';
+
+  const body = [
+    `Hi ${customerName},`,
+    ``,
+    `Your AuthiChain ${certificateData.tier?.toUpperCase?.() || 'authentication'} certificate is ready.`,
+    ``,
+    `Product:        ${certificateData.productName}`,
+    `Certificate #:  ${certificateData.certificateNumber}`,
+    `Result:         ${verdict}`,
+    `Confidence:     ${certificateData.confidenceScore}%`,
+    `NFT Token:      ${nftData.tokenId}`,
+    ``,
+    `View certificate: ${certificateUrl}`,
+    ``,
+    `Your certificate is permanently stored on the blockchain and can be verified anytime.`,
+    ``,
+    `— The AuthiChain Team`,
+  ].join('\n');
+
+  const result = await sendEmail({
     to: customerEmail,
-    customerName: user.name || undefined,
-    certificateNumber: certificateData.certificateNumber,
-    productName: certificateData.productName,
-    tier: certificateData.tier,
-    isAuthentic: certificateData.isAuthentic === 1,
-    confidenceScore: certificateData.confidenceScore,
-    certificateUrl,
-    nftTokenId: nftData.tokenId,
+    subject: `Your AuthiChain Certificate — ${certificateData.productName}`,
+    body,
   });
 
-  if (emailSent) {
-    console.log(`[Email] Certificate email sent successfully to ${customerEmail}`);
+  if (result.status === 'sent') {
+    console.log(`[Email] Certificate email sent to ${maskEmail(customerEmail)} via ${result.provider}`);
   } else {
-    console.error(`[Email] Failed to send certificate email to ${customerEmail}`);
+    console.error(`[Email] Certificate email ${result.status}: ${result.reason ?? 'unknown'}`);
   }
 }

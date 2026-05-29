@@ -71,9 +71,9 @@ const ecosystem = [
 ];
 
 const pricing = [
-  { name: "Starter", price: "$49", period: "/mo", features: ["100 authentications/month", "Basic AI analysis", "QR code generation", "Certificate issuance", "Email support"] },
-  { name: "Professional", price: "$149", period: "/mo", features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email automation"] },
-  { name: "Enterprise", price: "$499", period: "/mo", features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA & support"] },
+  { name: "Starter", price: "$49", period: "/mo", highlighted: false, features: ["100 authentications/month", "Basic AI analysis", "QR code generation", "Certificate issuance", "Email support"] },
+  { name: "Professional", price: "$149", period: "/mo", highlighted: true, features: ["1,000 authentications/month", "Advanced AI + blockchain", "NFT marketplace access", "Supply chain tracking", "AI Autopilot", "Email automation"] },
+  { name: "Enterprise", price: "$499", period: "/mo", highlighted: false, features: ["10,000 authentications/month", "White-label solutions", "Custom API access", "Advanced analytics", "Dedicated account manager", "SLA & support"] },
 ];
 
 /* ─── Stat Item (with optional counter) ─── */
@@ -365,6 +365,14 @@ export default function AuthiChainHome() {
             <p className="text-sm text-muted-foreground text-center">
               The Truth Layer for the Global Economy. Authenticity infrastructure for the physical world.
             </p>
+          </div>
+          <div className="flex justify-center gap-8 py-2">
+            <a href="/whitepapers" className="text-xs text-primary hover:underline transition-all uppercase tracking-[0.2em] font-bold">
+              Technical Resource Center &rarr;
+            </a>
+            <a href="/investor-portal" className="text-xs text-muted-foreground hover:text-foreground transition-all uppercase tracking-[0.2em]">
+              Investor Portal
+            </a>
           </div>
           <div className="pt-4 border-t border-border/40"><EcosystemNav /></div>
           <p className="text-center text-xs text-muted-foreground/60">&copy; 2026 AuthiChain, Inc.</p>

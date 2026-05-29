@@ -9,10 +9,10 @@
  *   pnpm tsx server/missions/seed.ts        (env loaded from .env automatically by tsx)
  */
 
-import { createMission, getMissions, getDb } from '../db.js';
-import { leads, missionTasks } from '../../drizzle/schema.js';
+import { createMission, getMissions, getDb } from '../db';
+import { leads, missionTasks } from '../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
-import type { MissionType } from './types.js';
+import type { MissionType } from './types';
 
 const ALL_TYPES: MissionType[] = [
   'GOV_PILOT',
@@ -131,7 +131,7 @@ async function seedFailedTask(
   if (tasks[0]) {
     await db
       .update(missionTasks)
-      .set({ status: 'FAILED', lastError: 'seeded failure for test', updatedAt: new Date() })
+      .set({ status: 'FAILED', error: 'seeded failure for test', updatedAt: new Date() })
       .where(eq(missionTasks.id, tasks[0].id));
     return tasks[0].id;
   }

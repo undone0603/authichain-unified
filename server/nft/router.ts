@@ -2,6 +2,7 @@ import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { triggerMacrohardEvent } from "../macrohard/service";
 
 export const nftRouter = router({
   list: publicProcedure.input(z.object({
@@ -27,8 +28,18 @@ export const nftRouter = router({
   })).mutation(async ({ ctx, input }) => {
     const result = await db.createNft({ ...input, ownerId: ctx.user.id, creatorId: ctx.user.id, status: "listed" });
     await db.logActivity({ userId: ctx.user.id, action: "nft_created", entityType: "nft", entityId: result.id });
+
+    // Trigger MACROHARD Webhook: nft_minted
+    await triggerMacrohardEvent("nft_minted", {
+      nftId: result.id,
+      name: result.name,
+      productId: input.productId,
+      userId: ctx.user.id
+    });
+
     return result;
   }),
+
   collections: router({
     list: publicProcedure.query(async () => {
       return await db.listCollections();
@@ -61,6 +72,9 @@ export const nftRouter = router({
       reservePrice: z.string().optional(),
       endsAt: z.string(),
     })).mutation(async ({ ctx, input }) => {
+      const nft = await db.getNftById(input.nftId);
+      if (!nft) throw new TRPCError({ code: "NOT_FOUND", message: "NFT not found" });
+      if (nft.ownerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You do not own this NFT" });
       return await db.createAuction({ ...input, sellerId: ctx.user.id, endsAt: new Date(input.endsAt) });
     }),
     bid: protectedProcedure.input(z.object({

@@ -12,13 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Shield, Film, Bot, Globe, BookOpen, Building2, ArrowLeft, Check, Star, Zap, Clock, ArrowRight, Loader2 } from "lucide-react";
+import { useBrand } from "@/contexts/BrandContext";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Shield, Film, Bot, Globe, BookOpen, Building2,
 };
 
 export default function Services() {
+  const { brand } = useBrand();
   const { user } = useAuth();
+// ... (rest of the file)
   const [, navigate] = useLocation();
   const { data: catalog, isLoading } = trpc.services.catalog.useQuery();
   const checkout = trpc.services.checkout.useMutation();
@@ -74,7 +77,7 @@ export default function Services() {
             <Zap className="mr-1 h-3 w-3" /> Professional Services
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
-            Authenticity as a <span className="text-primary">Service</span>
+            {brand.displayName} <span className="text-primary">Services</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             From $99 landing pages to $2,500 government dossiers. We build trust infrastructure for your brand, products, and supply chain.

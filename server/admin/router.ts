@@ -83,7 +83,7 @@ export const adminRouter = router({
   healthScores: adminProcedure.query(async () => {
     return await db.getAllHealthScores();
   }),
-  activity: adminProcedure.input(z.object({ limit: z.number().optional().default(50) })).query(async ({ input }) => {
+  activity: adminProcedure.input(z.object({ limit: z.number().min(1).max(500).optional().default(50) })).query(async ({ input }) => {
     return await db.getRecentActivity(input.limit);
   }),
   subscriptions: adminProcedure.query(async () => {
@@ -93,5 +93,20 @@ export const adminRouter = router({
     // stakingPositions schema table is scaffolded but not yet migrated;
     // return safe zeros until the staking feature is fully deployed.
     return { totalStaked: 0, activeStakers: 0, totalRewardsDistributed: 0, avgApy: 0 };
+  }),
+  createSovereignDeal: adminProcedure.input(z.object({
+    manufacturerName: z.string().min(1),
+    dealType: z.enum(['pilot', 'enterprise', 'government', 'partnership']),
+    value: z.number().min(0),
+    description: z.string().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    await db.logActivity({
+      userId: ctx.user.id,
+      action: 'sovereign_deal_created',
+      entityType: 'deal',
+      entityId: 0,
+      details: input,
+    });
+    return { success: true, dealId: `SDeal-${Date.now()}`, ...input };
   }),
 });

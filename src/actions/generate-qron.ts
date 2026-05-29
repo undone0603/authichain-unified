@@ -1,5 +1,6 @@
 'use server'
 
+// @ts-ignore - package installed separately
 import { HfInference } from '@huggingface/inference';
 
 // Initialize with the verified token from your .env.local
