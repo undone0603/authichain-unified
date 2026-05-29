@@ -45,6 +45,7 @@ const nextConfig: NextConfig = {
       'thirdweb/chains':         cfCompatStub,
       'thirdweb/react':          cfCompatStub,
       'thirdweb/wallets':        cfCompatStub,
+      'thirdweb/extensions/erc721': cfCompatStub,
       // transitive deps of thirdweb/wagmi that use dns.resolve() or browser-only APIs
       viem:                      cfCompatStub,
       '@walletconnect/sign-client': stub,
