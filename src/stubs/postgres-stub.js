@@ -15,6 +15,8 @@ function stubbedPostgres() {
   return sql;
 }
 
+stubbedPostgres.__esModule = true;
 stubbedPostgres.default = stubbedPostgres;
 module.exports = stubbedPostgres;
+module.exports.__esModule = true;
 module.exports.default = stubbedPostgres;
