@@ -25,7 +25,7 @@ jobs:
   deploy:
     name: Deploy ${{ matrix.worker }}
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.worker == 'strainchain-io' || matrix.worker == 'govchain-us' || matrix.worker == 'qron-space' || matrix.worker == 'outreach-queue' || matrix.worker == 'bitcoin-auth' }}
+    continue-on-error: ${{ matrix.worker == 'outreach-queue' || matrix.worker == 'bitcoin-auth' }}
     strategy:
       fail-fast: false
       matrix:
