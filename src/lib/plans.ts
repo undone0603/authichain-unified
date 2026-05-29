@@ -132,7 +132,7 @@ export const PLANS: Plan[] = [
       'Real-time Security Webhooks',
       '24/7 AuthiChain Core Support',
     ],
-    cta: 'Contact for Theater 3',
+    cta: 'Start Theater 3',
     highlighted: true,
   },
 ];
