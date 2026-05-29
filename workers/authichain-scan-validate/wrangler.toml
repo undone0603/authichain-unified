@@ -15,9 +15,6 @@ database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 pattern = "authichain.com/api/qron/scan-validate*"
 custom_domain = true
 
-[build]
-command = "npm run build"
-
 [env.production]
 name = "authichain-scan-validate"
 
