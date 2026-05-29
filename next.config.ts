@@ -41,14 +41,9 @@ const nextConfig: NextConfig = {
       // logging: no-op on CF Workers (use console.log instead)
       pino:                      stub,
       'pino-pretty':             stub,
-      // @emotion: CSS-in-JS; stub so esbuild never bundles module-scope init code
-      '@emotion/styled':         stub,
-      '@emotion/react':          stub,
-      '@emotion/cache':          stub,
-      '@emotion/utils':          stub,
-      '@emotion/use-insertion-effect-with-fallbacks': stub,
-      '@emotion/serialize':      stub,
-      '@emotion/hash':           stub,
+      // NOTE: @emotion/* intentionally NOT stubbed universally — thirdweb uses emotion
+      // on the client and it's browser-compatible. Server never sees it since
+      // thirdweb/react is stubbed server-only in the isServer block below.
       // postgres-js uses dns.resolve() — needs callable stub so drizzle can init
       postgres: path.resolve(__dirname, 'src/stubs/postgres-stub.mjs'),
       // drizzle postgres-js adapter accesses client internals at init time; stub the whole adapter
