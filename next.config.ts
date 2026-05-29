@@ -22,30 +22,27 @@ const nextConfig: NextConfig = {
 
   webpack: (config: { resolve: { fallback: Record<string, boolean>; alias: Record<string, unknown> } }) => {
     const stub = path.resolve(__dirname, 'src/stubs/empty.js');
+    const cfCompatStub = path.resolve(__dirname, 'src/stubs/cf-compat.mjs');
     config.resolve.fallback = { ...config.resolve.fallback, pino: false, 'pino-pretty': false, jimp: false, net: false, tls: false, crypto: false };
     // Stub packages that cannot run on CF Workers so esbuild never sees require() calls for them.
-    // resolve.alias: false is ineffective for server-side webpack; pointing to a real stub file works.
+    // Packages with ESM named/default imports need cf-compat.mjs (proper export declarations);
+    // plain CJS-only packages can use empty.js.
     config.resolve.alias = {
       ...config.resolve.alias,
       ioredis: stub,
       redis: stub,
       'playwright-core': stub,
       'chromium-bidi': stub,
-      // Stripe: ~1.9 MB JS-only. Webhook + billing routes return 500 when stubbed; everything else is unaffected.
-      stripe: stub,
-      // Vercel AI SDK: ~10 MB combined. /api/chat returns 500; all other routes unaffected.
-      ai: stub,
-      '@ai-sdk/openai': stub,
-      // MCP SDK: ~4 MB. /api/mcp returns 500; all other routes unaffected.
-      '@modelcontextprotocol/sdk': stub,
-      // Blockchain: anchoring routes return 500; QR/auth/payments unaffected.
-      ethers: stub,
-      // QR code generation: /api/generate returns 500; scan/verify routes unaffected.
-      qrcode: stub,
-      // Email transports: welcome/trial emails fail; core app unaffected.
-      nodemailer: stub,
-      resend: stub,
-      // postgres-js uses dns.resolve() which is not available in CF Workers. /api/telemetry returns 500.
+      // ESM-imported packages — need cf-compat.mjs for webpack 5 static analysis
+      stripe:                    cfCompatStub,
+      ai:                        cfCompatStub,
+      '@ai-sdk/openai':          cfCompatStub,
+      '@modelcontextprotocol/sdk': cfCompatStub,
+      ethers:                    cfCompatStub,
+      qrcode:                    cfCompatStub,
+      nodemailer:                cfCompatStub,
+      resend:                    cfCompatStub,
+      // postgres-js uses dns.resolve() — needs callable stub so drizzle can init
       postgres: path.resolve(__dirname, 'src/stubs/postgres-stub.mjs'),
     };
     return config;
