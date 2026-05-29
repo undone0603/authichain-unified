@@ -40,8 +40,11 @@ const nextConfig: NextConfig = {
       nodemailer:                cfCompatStub,
       resend:                    cfCompatStub,
       // thirdweb: runs module-scope init code that crashes CF Workers at startup
-      thirdweb:                  cfCompatStub,
+      // Use $ suffix for exact match so subpath imports aren't eaten by the parent alias
+      'thirdweb$':               cfCompatStub,
       'thirdweb/chains':         cfCompatStub,
+      'thirdweb/react':          cfCompatStub,
+      'thirdweb/wallets':        cfCompatStub,
       // transitive deps of thirdweb/wagmi that use dns.resolve() or browser-only APIs
       viem:                      cfCompatStub,
       '@walletconnect/sign-client': stub,
