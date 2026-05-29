@@ -2,7 +2,11 @@
 // .mjs so webpack 5 static ESM analysis sees the default export.
 
 function stubbedSql() {
-  return Object.assign(Promise.resolve([]), { end: () => Promise.resolve() });
+  return Object.assign(Promise.resolve([]), {
+    end: () => Promise.resolve(),
+    resolve: () => {},
+    reject: () => {},
+  });
 }
 
 export default function stubbedPostgres() {
