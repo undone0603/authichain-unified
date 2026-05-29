@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
       from: 'QRON <noreply@qron.space>',
       to: email,
       subject: '4 days left on your QRON Pro trial',
-      html: `<h2>Hi ${name},</h2><p>You have <strong>4 days left</strong> on your QRON Pro trial. Here's what you've been able to do so far:</p><ul><li>Create AI-styled QR codes</li><li>Track scan analytics</li><li>Use custom redirect domains</li></ul><p>To keep all these features after your trial ends, <a href="https://qron.space/pricing">upgrade to Pro now</a> â€” starting at just $29/mo.</p><p>Questions? Just reply to this email.</p>`,
+      html: `<h2>Hi ${name},</h2><p>You have <strong>4 days left</strong> on your QRON Pro trial. Here's what you've been able to do so far:</p><ul><li>Create AI-styled QR codes</li><li>Track scan analytics</li><li>Use custom redirect domains</li></ul><p>To keep all these features after your trial ends, <a href=”https://qron.space/pricing”>upgrade to Pro now</a> &mdash; starting at just $29/mo.</p><p>Questions? Just reply to this email.</p>`,
     }).catch(() => {});
     sent++;
   }
@@ -59,8 +59,8 @@ export async function GET(req: NextRequest) {
     await resend.emails.send({
       from: 'QRON <noreply@qron.space>',
       to: email,
-      subject: 'Your QRON trial ends tomorrow â€” keep your QR codes',
-      html: `<h2>Hi ${name},</h2><p>Your QRON Pro trial ends <strong>tomorrow</strong>. After that, you'll lose access to:</p><ul><li>AI-generated QR art styles</li><li>Scan analytics &amp; heatmaps</li><li>Custom redirect domains</li><li>Bulk export</li></ul><p><a href="https://qron.space/pricing" style="background:#6366f1;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;">Upgrade Now â€” from $29/mo</a></p><p>Use code <strong>EARLYBIRD20</strong> for 20% off your first 3 months.</p>`,
+      subject: 'Your QRON trial ends tomorrow — keep your QR codes',
+      html: `<h2>Hi ${name},</h2><p>Your QRON Pro trial ends <strong>tomorrow</strong>. After that, you'll lose access to:</p><ul><li>AI-generated QR art styles</li><li>Scan analytics &amp; heatmaps</li><li>Custom redirect domains</li><li>Bulk export</li></ul><p><a href=”https://qron.space/pricing” style=”background:#6366f1;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;”>Upgrade Now &mdash; from $29/mo</a></p><p>Use code <strong>EARLYBIRD20</strong> for 20% off your first 3 months.</p>`,
     }).catch(() => {});
     sent++;
   }
