@@ -39,9 +39,10 @@ export const mainnet = {};
 export const sepolia = {};
 
 // thirdweb/react: React components must be plain functions, not classes
+// ThirdwebProvider must pass through children — it wraps the entire page in layout.tsx
 export const ConnectButton = NoopComponent;
 export const useActiveAccount = noop;
-export const ThirdwebProvider = NoopComponent;
+export function ThirdwebProvider({ children }) { return children || null; }
 
 // thirdweb/wallets: import { createWallet, inAppWallet, privateKeyAccount } from 'thirdweb/wallets'
 export const createWallet = noop;
