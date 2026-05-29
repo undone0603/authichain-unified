@@ -1,13 +1,9 @@
 {
   "version": 2,
-  "ignoreCommand": "exit 0",
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "dist/public",
+  "buildCommand": "next build",
   "installCommand": "pnpm install --no-frozen-lockfile",
   "rewrites": [
-    { "source": "/gov", "destination": "https://govchain.us" },
-    { "source": "/api/(.*)", "destination": "/api/server.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/gov", "destination": "https://govchain.us" }
   ],
   "headers": [
     {
