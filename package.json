@@ -57,6 +57,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sendgrid/mail": "^8.1.4",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/ssr": "^0.6.1",
     "@tanstack/react-query": "^5.100.10",
     "@supabase/supabase-js": "^2.105.4",
     "@trpc/client": "^11.0.0-rc.359",

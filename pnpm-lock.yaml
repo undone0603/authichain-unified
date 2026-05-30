@@ -131,6 +131,9 @@ importers:
       '@supabase/auth-helpers-nextjs':
         specifier: ^0.10.0
         version: 0.10.0(@supabase/supabase-js@2.106.1)
+      '@supabase/ssr':
+        specifier: ^0.6.1
+        version: 0.6.1(@supabase/supabase-js@2.106.1)
       '@supabase/supabase-js':
         specifier: ^2.105.4
         version: 2.106.1
@@ -4196,6 +4199,11 @@ packages:
   '@supabase/realtime-js@2.106.1':
     resolution: {integrity: sha512-eQCYri5E8KsjpDgC7g28cOOS2britjUWdNSJluFMainqrMRepzjOnaxqXc3RoAz7H0dxmBrfLUNF6NGP8C+YaA==}
     engines: {node: '>=20.0.0'}
+
+  '@supabase/ssr@0.6.1':
+    resolution: {integrity: sha512-QtQgEMvaDzr77Mk3vZ3jWg2/y+D8tExYF7vcJT+wQ8ysuvOeGGjYbZlvj5bHYsj/SpC0bihcisnwPrM4Gp5G4g==}
+    peerDependencies:
+      '@supabase/supabase-js': ^2.43.4
 
   '@supabase/storage-js@2.106.1':
     resolution: {integrity: sha512-HWcLIhqinhWKpOQ3WzglR2unjW0eh9J7yOu3IZrZNIEkraK4La/HDvTqndljGsNw0itPtyHhuKBxRoPG1VUARw==}
@@ -13793,6 +13801,11 @@ snapshots:
     dependencies:
       '@supabase/phoenix': 0.4.2
       tslib: 2.8.1
+
+  '@supabase/ssr@0.6.1(@supabase/supabase-js@2.106.1)':
+    dependencies:
+      '@supabase/supabase-js': 2.106.1
+      cookie: 1.1.1
 
   '@supabase/storage-js@2.106.1':
     dependencies:
