@@ -33,6 +33,7 @@ jobs:
           - authichain-api
           - authichain-api-gateway
           - authichain-automation
+          - authichain-infra
           - authichain-dashboard
           - qron-automation
           - qron-image-gen
