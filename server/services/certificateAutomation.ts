@@ -31,7 +31,7 @@ interface CertificateData {
 
 /**
  * Generate certificate automatically after payment
- * This is called by the Paddle webhook handler
+ * Called by the Stripe webhook handler after checkout.session.completed
  */
 export async function generateCertificateAfterPayment(certificateId: number): Promise<void> {
   const db = await getDb();

@@ -30,13 +30,6 @@ export const ENV = {
   openaiApiKey:     process.env.OPENAI_API_KEY ?? "",
   geminiApiKey:     process.env.GEMINI_API_KEY ?? "",
 
-  // ── Paddle ────────────────────────────────────────────────────────────────
-  paddleApiKey:           process.env.PADDLE_API_KEY ?? "",
-  paddleWebhookSecret:    process.env.PADDLE_WEBHOOK_SECRET ?? "",
-  paddleBasicPriceId:     process.env.PADDLE_BASIC_PRICE_ID ?? "",
-  paddlePremiumPriceId:   process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
-  paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
-
   // ── Blockchain / Wallet ───────────────────────────────────────────────────
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
 
