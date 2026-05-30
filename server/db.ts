@@ -40,6 +40,7 @@ import {
   modelPurchases,
   modelReviews,
   serviceOrders,
+  webhookEvents,
   missions,
   missionTasks,
   stakingPositions,
@@ -1342,14 +1343,26 @@ export async function getSubscriptionByStripeSubscriptionId(stripeSubscriptionId
   return result[0];
 }
 
-export async function hasWebhookEventProcessed(eventId: string): Promise<boolean> {
+export async function claimWebhookEvent(
+  provider: string,
+  eventId: string,
+  eventType: string,
+): Promise<boolean> {
   const db = await getDb();
-  if (!db) return false;
-  const [row] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(activityLog)
-    .where(sql`${activityLog.details}->>'eventId' = ${eventId}`);
-  return (row?.count ?? 0) > 0;
+  if (!db) return true;
+  const inserted = await db.insert(webhookEvents)
+    .values({ provider, eventId, eventType })
+    .onConflictDoNothing({ target: [webhookEvents.provider, webhookEvents.eventId] })
+    .returning({ id: webhookEvents.id });
+  return inserted.length > 0;
+}
+
+export async function markWebhookEventProcessed(provider: string, eventId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(webhookEvents)
+    .set({ processedAt: new Date() })
+    .where(and(eq(webhookEvents.provider, provider), eq(webhookEvents.eventId, eventId)));
 }
 
 // ─── Paddle Subscription Helpers ──────────────────────────────────────────────

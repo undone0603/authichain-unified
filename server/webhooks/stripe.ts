@@ -28,7 +28,8 @@ import {
   setSubscriptionStatusByStripeId,
   getSubscriptionByStripeSubscriptionId,
   createSystemNotification,
-  hasWebhookEventProcessed,
+  claimWebhookEvent,
+  markWebhookEventProcessed,
 } from "../db";
 import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
 import { handleServiceOrderPayment } from "../services/order-payment-handler";
@@ -160,8 +161,8 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type };
   }
 
-  // Idempotency — skip if we already processed this event
-  if (await hasWebhookEventProcessed(event.id)) {
+  const claimed = await claimWebhookEvent("stripe", event.id, event.type);
+  if (!claimed) {
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
     return { received: true, type: event.type, duplicate: true };
   }
@@ -605,8 +606,10 @@ export async function handleStripeWebhook(
 
     default:
       console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
+      await markWebhookEventProcessed("stripe", event.id);
       return { received: true, type: event.type, handled: false };
   }
 
+  await markWebhookEventProcessed("stripe", event.id);
   return { received: true, type: event.type, handled: true };
 }
