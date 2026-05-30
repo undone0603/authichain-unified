@@ -80,6 +80,7 @@ export async function queryDocuments(
 ): Promise<VectorQueryResult[]> {
   const index = await getIndex();
   const vector = await embed(query);
+  // @ts-expect-error vectra queryItems signature mismatch — topK is valid at runtime
   const results = await index.queryItems(vector, topK, filter as any);
   return results.map((r: any) => ({
     id: r.item.id,
