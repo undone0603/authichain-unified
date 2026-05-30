@@ -34,7 +34,7 @@ export default function StudioPage() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      setResult(data.imageUrl);
+      setResult(data.qron?.imageUrl || data.imageUrl);
     } catch (err: any) {
       setError(err.message || 'Generation failed. Please try again.');
     } finally {
@@ -125,7 +125,8 @@ export default function StudioPage() {
                 {generating ? (
                   <><div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />Generating...</>
                 ) : (
-                  <><Sparkles className="w-5 h-5" />Generate QRON &mdash; $5</>
+                  <><Sparkles className="w-5 h-5" />Generate QRON</>
+
                 )}
               </button>
             </form>
