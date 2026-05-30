@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('stripe_customer_id, full_name')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single();
 
     if (profile?.stripe_customer_id) {
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         metadata: { supabase_user_id: user.id, platform: 'qron' },
       });
       stripeCustomerId = customer.id;
-      await supabase.from('profiles').update({ stripe_customer_id: customer.id }).eq('id', user.id);
+      await supabase.from('profiles').update({ stripe_customer_id: customer.id }).eq('user_id', user.id);
     }
 
     const origin = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
