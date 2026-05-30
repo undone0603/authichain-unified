@@ -32,7 +32,7 @@ export async function POST(_request: Request) {
     const { error } = await supabase
       .from('profiles')
       .update({ affiliate_id: affiliateId, updated_at: new Date().toISOString() })
-      .eq('id', userId);
+      .eq('user_id', userId);
 
     if (error) throw error;
 

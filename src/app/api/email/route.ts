@@ -39,13 +39,6 @@ export async function POST(req: NextRequest) {
 
   // Resolve email from Supabase if not provided directly
   if (!toEmail && user_id) {
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('email:id, full_name')
-      .eq('id', user_id)
-      .single() as any;
-
-    // profiles.id is the auth user id — fetch from auth.users via admin
     const { data: { user } } = await admin.auth.admin.getUserById(user_id);
     toEmail = user?.email;
   }
