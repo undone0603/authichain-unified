@@ -13,7 +13,7 @@ export async function hasUnlimitedPlan(userId: string): Promise<boolean> {
   const { data } = await admin
     .from('profiles')
     .select('tier, generations_limit')
-    .eq('id', userId)
+    .eq('user_id', userId)
     .single();
 
   // Business/enterprise tier OR generations_limit >= 999999 (unlimited sentinel)
@@ -37,7 +37,7 @@ export async function deductCredit(
   const { data: profile } = await admin
     .from('profiles')
     .select('generations_used, generations_limit, tier')
-    .eq('id', userId)
+    .eq('user_id', userId)
     .single();
 
   if (!profile) return { ok: false, error: 'Profile not found' };
@@ -54,7 +54,7 @@ export async function deductCredit(
   const { error } = await admin
     .from('profiles')
     .update({ generations_used: profile.generations_used + 1 })
-    .eq('id', userId);
+    .eq('user_id', userId);
 
   if (error) return { ok: false, error: error.message };
 
