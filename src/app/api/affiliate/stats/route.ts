@@ -22,7 +22,7 @@ export async function GET(_request: Request) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('affiliate_id')
-      .eq('id', session.user.id)
+      .eq('user_id', session.user.id)
       .single();
 
     if (!profile?.affiliate_id) {
