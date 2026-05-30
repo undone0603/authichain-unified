@@ -2,7 +2,6 @@
   "version": 2,
   "framework": "nextjs",
   "crons": [
-    { "path": "/api/cron/pipeline", "schedule": "*/5 * * * *" },
     { "path": "/api/automation/cron", "schedule": "0 6 * * *" }
   ]
 }
