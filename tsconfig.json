@@ -59,8 +59,7 @@
     "scripts/**/*",
     "libs/**/*",
     "client/**/*",
-    "server/src/**/*",
-    "server/scripts/**/*",
+    "server/**/*",
     "app/**/*",
     "src/db/qron_schema.ts"
   ]

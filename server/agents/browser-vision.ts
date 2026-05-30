@@ -10,6 +10,7 @@
  *   - PLAYWRIGHT_EXECUTABLE_PATH env var, or Chromium found on PATH
  */
 
+// @ts-expect-error playwright-core is an optional runtime dep, not installed in CF Worker builds
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { invokeLLM, parseLLMContent, type Message, type Tool } from '../_core/llm';
 import { logActivity, getDb, enqueueTask } from '../db';
@@ -179,7 +180,7 @@ async function visionLoop(page: Page, objective: string): Promise<string> {
 
         case 'scroll': {
           const px = args.pixels ?? 600;
-          await page.evaluate((y) => window.scrollBy(0, y), args.direction === 'down' ? px : -px);
+          await page.evaluate((y: number) => window.scrollBy(0, y), args.direction === 'down' ? px : -px);
           await page.waitForTimeout(400);
           break;
         }
