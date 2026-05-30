@@ -179,7 +179,13 @@
       "nodemailer": ">=7.0.11",
       "h3": ">=1.15.6",
       "picomatch": ">=4.0.4",
-      "drizzle-orm": ">=0.45.2"
+      "drizzle-orm": ">=0.45.2",
+      "minimatch": ">=10.2.3",
+      "undici": ">=6.24.0",
+      "effect": ">=3.20.0",
+      "tmp": ">=0.2.6",
+      "postcss": ">=8.5.10",
+      "next-auth": "5.0.0-beta.30"
     }
   }
 }
