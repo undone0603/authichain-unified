@@ -10,7 +10,7 @@ import crypto from 'node:crypto';
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'not_configured'
 );
 
 export type WebhookEvent = 'qron_scanned' | 'security_anomaly' | 'certification_approved';
