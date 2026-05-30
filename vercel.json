@@ -1,16 +1,4 @@
 {
   "version": 2,
-  "buildCommand": "npx vite build",
-  "installCommand": "npm install --legacy-peer-deps",
-  "outputDirectory": "dist/public",
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/server.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+  "framework": "nextjs"
 }
