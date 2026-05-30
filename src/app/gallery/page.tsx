@@ -25,9 +25,21 @@ export const metadata: Metadata = {
  */
 export default async function MarketplacePage() {
   const supabase = await createClient();
-  
+
+  // Current user — for personal generations section
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // 0. Fetch this user's recent generations from qron_generations
+  const { data: myGenerations } = user
+    ? await supabase
+        .from('qron_generations')
+        .select('id, image_url, destination_url, prompt, mode, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(12)
+    : { data: null };
+
   // 1. Fetch High-Value SVG Artifacts (Industrial & Premium)
-  // These are assets stored in Supabase with .svg extensions or marked as premium
   const { data: artifacts } = await supabase
     .from('qrons')
     .select('*')
@@ -96,6 +108,37 @@ export default async function MarketplacePage() {
             Industrial telemetry meets creative digital scarcity.
           </p>
         </div>
+
+        {/* My QRONs — personal studio generations */}
+        {myGenerations && myGenerations.length > 0 && (
+          <section className="mb-20 pb-16 border-b border-zinc-900">
+            <div className="flex items-center gap-3 mb-8">
+              <Sparkles className="w-5 h-5 text-gold" />
+              <h2 className="text-xl font-black uppercase tracking-tight italic">My QRONs</h2>
+              <Link href="/studio" className="ml-auto text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-gold transition-colors">
+                + Create New
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {myGenerations.map((g) => (
+                <div key={g.id} className="protocol-card aspect-square overflow-hidden group cursor-pointer border-zinc-900/50 relative">
+                  <Image
+                    src={g.image_url.startsWith('generated:') ? '/placeholder-qron.png' : g.image_url}
+                    alt={g.prompt || 'My QRON'}
+                    width={200}
+                    height={200}
+                    className="object-cover transition-transform duration-500 group-hover:scale-110 w-full h-full"
+                  />
+                  {g.prompt && (
+                    <div className="absolute inset-x-0 bottom-0 bg-black/80 p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                      <p className="text-[9px] text-zinc-400 line-clamp-2">{g.prompt}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Featured Drop: Voyage Bloom x Myles High */}
         <section className="mb-32">
