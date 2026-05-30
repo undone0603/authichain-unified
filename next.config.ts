@@ -68,17 +68,6 @@ const nextConfig: NextConfig = {
     return config;
   },
   
-  allowedDevOrigins: [
-    'govchain.us',
-    'www.govchain.us',
-    'strainchain.io',
-    'www.strainchain.io',
-    'authichain.com',
-    'www.authichain.com',
-    'qron.space',
-    'www.qron.space',
-  ],
-  
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
