@@ -34,13 +34,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        
-      - name: Build frontend (+ dist/public for Wrangler [assets])
-        run: pnpm run build
-        env:
-          VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
-          VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
-          VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
 
       - name: Publish Worker + Assets (dashboard.authichain.com)
         run: npx wrangler deploy --config wrangler.toml

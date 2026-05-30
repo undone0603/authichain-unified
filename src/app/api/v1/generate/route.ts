@@ -7,7 +7,7 @@ import { logAutomation } from '@/lib/automation';
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'not_configured'
 );
 
 export const runtime = 'nodejs';
