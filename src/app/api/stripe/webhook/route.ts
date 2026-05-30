@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
             subscription_plan: plan,
             subscription_status: 'active',
             subscribed_at: new Date().toISOString(),
-          }).eq('id', userId);
+          }).eq('user_id', userId);
 
           await getSupabase().from('checkout_sessions').update({ status: 'completed' })
             .eq('session_id', session.id);
