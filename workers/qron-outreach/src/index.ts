@@ -278,9 +278,9 @@ Endpoints:
   /send-all?key=TOKEN - Send all remaining emails`);
   },
 
-  async scheduled(event: any, env: any, ctx: any) {
-    // Send 3 emails per cron trigger
-    ctx.waitUntil(sendNextBatch(env, 3));
+  async scheduled(_event: any, _env: any, _ctx: any) {
+    // PAUSED: re-enable after verifying delivery rates via Resend API
+    console.log('[qron-outreach] scheduled handler disabled — outreach paused');
   }
 };
 
