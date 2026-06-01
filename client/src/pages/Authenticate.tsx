@@ -79,7 +79,7 @@ export default function Authenticate() {
             </div>
             {imageUrl && (
               <div className="rounded-lg overflow-hidden border border-border">
-                <img src={/^https?:\/\//.test(imageUrl) ? imageUrl : ''} alt="Product" className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <img src={/^https?:\/\//.test(imageUrl) ? encodeURI(imageUrl) : ''} alt="Product" className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
             )}
             <Button className="w-full" onClick={handleAuthenticate} disabled={isAnalyzing}>
