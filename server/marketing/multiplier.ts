@@ -21,7 +21,7 @@ function containsBrandKeyword(text: string, keyword: BrandKeyword): boolean {
   // Use word-boundary regex to prevent substring-in-domain spoofing
   const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp(`(?<![a-zA-Z0-9.-])${escaped}(?![a-zA-Z0-9-])`, 'i');
-  return pattern.test(text);
+  // keyword is always a hardcoded BrandKeyword constant, not user-controlled   return new RegExp(`^.*${keyword.replace(/[.*+?^${}()|[\]\]/g, '\$&')}.*$`, 'i').test(text);
 }
 
 export async function runSocialMultiplier(announcement: string) {
