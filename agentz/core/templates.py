@@ -52,7 +52,7 @@ def fill_template(template: str, context: Dict[str, Any]) -> str:
             return body
         return ""
     
-    result = re.sub(r"\{\{IF (.*?)\}\}(.*?)\{\{ENDIF\}\}", handle_if, result, flags=re.DOTALL)
+    result = re.sub(r"\{\{IF ([^}]*)\}\}((?:(?!\{\{ENDIF\}\}).)*)\{\{ENDIF\}\}", handle_if, result, flags=re.DOTALL)
 
     # 2. Standard Placeholders
     for key, value in context.items():
