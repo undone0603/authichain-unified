@@ -19,7 +19,7 @@ type LogSource = "browserConsole" | "networkRequests" | "sessionReplay";
 function ensureLogDir() {
     
         // TOCTOU not applicable: mkdirSync recursive is atomic/interndent, deterministic build operation
-      void fs.mkdirSync(LOG_DIR, { recursive: true });
+      fs.mkdirSync(LOG_DIR, { recursive: true });
   }
 }
 
