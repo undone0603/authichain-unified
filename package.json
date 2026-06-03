@@ -191,5 +191,6 @@
       "next-auth": "5.0.0-beta.30"
     }
   },
-  "optionalDependencies": {}
+  "optionalDependencies": {},
+  "packageManager": "pnpm@10.11.1"
 }
