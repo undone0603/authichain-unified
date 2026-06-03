@@ -140,5 +140,6 @@
       "effect": ">=3.20.0",
       "esbuild": ">=0.25.0"
     }
-  }
+  },
+  "optionalDependencies": {}
 }
