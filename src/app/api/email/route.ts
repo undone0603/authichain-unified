@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
   const result = await sendEmail({ to: toEmail, from: FROM, subject, html });
 
   if (!result.ok) {
-    console.error(`[email] Failed to send ${type} to ${toEmail}:`, result.error);
+    console.error(`[email] Failed to send email:`, result.error);
     return NextResponse.json({ error: result.error, provider: result.provider }, { status: 502 });
   }
 

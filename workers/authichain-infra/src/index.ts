@@ -98,7 +98,7 @@ async function checkStripeWebhook(env: Env): Promise<CheckResult> {
         detail: `${events.length} events, id: ${correctEndpoint.id}`
       };
     }
-    const anyMatch = endpoints.find((e: any) => e.url.includes('authichain.com'));
+    const anyMatch = endpoints.find((e: any) => { try { return (h => h === 'authichain.com' || h.endsWith('.authichain.com'))(new URL(e.url).hostname); } catch { return false; } });
     if (anyMatch) {
       return {
         name: 'stripe-webhook-config',

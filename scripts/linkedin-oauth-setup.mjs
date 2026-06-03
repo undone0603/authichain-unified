@@ -96,7 +96,7 @@ const { accessToken, refreshToken, personUrn } = await new Promise((resolve, rej
 
     if (errorParam || !code) {
       res.writeHead(400, { "Content-Type": "text/html" });
-      res.end(`<h2 style="color:red">Error: ${errorParam || "no code"}</h2>`);
+                res.end(`<h2 style="color:red">Error: ${(errorParam||'no code').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</h2>`);
       server.close(() => reject(new Error(errorParam || "no code returned")));
       return;
     }
