@@ -1,16 +1,1 @@
-{
-  "version": 2,
-  "buildCommand": "npx vite build",
-  "outputDirectory": "dist/public",
-  "ignoreCommand": "bash -c '[ \"$VERCEL_GIT_COMMIT_AUTHOR_LOGIN\" = \"undone0603\" ] && exit 1 || exit 0'",
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/server.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
+﻿{"installCommand":"pnpm install --no-frozen-lockfile","framework":"nextjs","buildCommand":"pnpm run vercel-build"}
