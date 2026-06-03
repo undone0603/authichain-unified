@@ -1,12 +1,12 @@
 'use server'
 
-// @ts-ignore - package installed separately
+// @ts-expect-error - package installed separately
 import { HfInference } from '@huggingface/inference';
 
 // Initialize with the verified token from your .env.local
 const hf = new HfInference(process.env.HUGGINGFACE_TOKEN);
 
-export async function generateAutomotiveQRON(vendorName: string, destinationUrl: string) {
+export async function generateAutomotiveQRON(vendorName: string, _destinationUrl: string) {
   console.log(`🎨 Initiating QRON Generation for: ${vendorName}`);
 
   try {

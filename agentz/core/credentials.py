@@ -38,9 +38,11 @@ CRED_KEY_TO_ENV = {
     "polygon_session":      "POLYGON_SESSION_COOKIE",
     "github_pat_zkie":      "GITHUB_PAT_ZKIE",
     "github_pat_undone":    "GITHUB_PAT_UNDONE",
-    "supabase_anon":        "SUPABASE_ANON_KEY",
+    "supabase_anon":        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "supabase_service_key": "SUPABASE_SERVICE_ROLE_KEY",
-    "supabase_url":         "SUPABASE_URL",
+    "supabase_url":         "NEXT_PUBLIC_SUPABASE_URL",
+    "next_public_supabase_url": "NEXT_PUBLIC_SUPABASE_URL",
+    "supabase_service_role_key": "SUPABASE_SERVICE_ROLE_KEY",
     "pinecone_api_key":     "PINECONE_API_KEY",
     "groq_api_key":         "GROQ_API_KEY",
     "gemini_api_key":       "GEMINI_API_KEY",
@@ -225,10 +227,10 @@ def get_or_placeholder(key: str, ctx) -> str:
 
 
 _PLACEHOLDER_VALUES = frozenset({
-    "TODO_PASTE",
-    "TODO_PASTE_OR_GENERATE",
-    "TODO_PASTE_DEEPSEEK_KEY",
-    "TODO_PASTE_PI_KEY",
+    "PLACEHOLDER_PASTE_YOUR_KEY_HERE",
+    "PLACEHOLDER_GENERATE_OR_PASTE",
+    "PLACEHOLDER_DEEPSEEK_KEY",
+    "PLACEHOLDER_PI_KEY",
     "INVALID_REPLACE_WITH_AIza_KEY_FROM_AISTUDIO",
     "'new_healed_token'",
     "new_healed_token",

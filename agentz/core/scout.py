@@ -47,11 +47,76 @@ async def scout_businesses(city: str, ctx: Optional[ExecutionContext] = None) ->
             {"name": "Zingerman's Delicatessen", "category": "artisanal", "city": "Ann Arbor", "rating": 4.8, "website": "https://zingermans.com"},
             {"name": "Jolly Pumpkin Cafe & Brewery", "category": "brewery", "city": "Ann Arbor", "rating": 4.6, "website": "https://jollypumpkin.com"},
             {"name": "Information Flora", "category": "dispensary", "city": "Ann Arbor", "rating": 4.7, "website": "https://infoflora.com"},
+        ],
+        "chicago": [
+            {"name": "Goose Island Brewhouse", "category": "brewery", "city": "Chicago", "rating": 4.5, "website": "https://gooseisland.com"},
+            {"name": "Maison de Fashion", "category": "luxury", "city": "Chicago", "rating": 4.9, "website": "https://chicago-luxury.com"},
+        ],
+        "geneva": [
+            {"name": "Patek Philippe Museum", "category": "luxury", "city": "Geneva", "rating": 5.0, "website": "https://patek.com"},
+            {"name": "Vacheron Constantin", "category": "luxury", "city": "Geneva", "rating": 4.9, "website": "https://vacheron-constantin.com"},
         ]
     }
 
     if ctx and ctx.mode == Mode.DRY_RUN:
-        return fallbacks.get(city.lower(), fallbacks["detroit"])[:2]
+        results = fallbacks.get(city.lower(), fallbacks["detroit"])[:2]
+    else:
+        try:
+            from browser_use import Agent, Controller
+            from agentz.core.browser import attach_interceptor, run_with_healing
+            
+            controller = Controller()
+            if ctx:
+                attach_interceptor(controller, ctx)
+                
+            task = (
+                f"Search for top-rated artisanal businesses, breweries, and dispensaries in {city}, Michigan. "
+                "Extract a list of 5 businesses including their name, category (vertical), city, rating, and website. "
+                "Return the data as a clean JSON list of objects."
+            )
+            
+            llm = get_llm(model="gpt-4o") 
+            agent = Agent(task=task, llm=llm, controller=controller)
+            
+            if not ctx:
+                history = await agent.run()
+            else:
+                history = await run_with_healing(agent, ctx)
+                
+            last_content = history.final_result()
+            if not last_content:
+                raise ValueError("No browser results")
+                
+            if "```json" in last_content:
+                last_content = last_content.split("```json")[1].split("```")[0].strip()
+            elif "```" in last_content:
+                last_content = last_content.split("```")[1].split("```")[0].strip()
+                
+            results = json.loads(last_content)
+        except Exception:
+            results = fallbacks.get(city.lower(), fallbacks["detroit"])
+
+    # Rank and finalize
+    for b in results:
+        b["score"] = calculate_pilot_fit(b)
+        
+    return sorted(results, key=lambda x: x.get("score", 0), reverse=True)
+
+async def deep_research_business(business: Dict[str, Any], ctx: Optional[ExecutionContext] = None) -> Dict[str, Any]:
+    """
+    Performs deep research on a specific business by navigating to its website and extracting
+    brand story, values, and key products. This context is used for hyper-personalized StoryMode generation.
+    """
+    website = business.get("website")
+    name = business.get("name")
+    
+    if not website or website == "N/A":
+        business["deep_context"] = f"A prominent {business.get('category', 'business')} in {business.get('city', 'Michigan')}."
+        return business
+
+    if ctx and ctx.mode == Mode.DRY_RUN:
+        business["deep_context"] = f"[DRY-RUN: Simulated deep research for {name}] Founded by local artisans, focusing on sustainable, locally sourced materials."
+        return business
 
     try:
         from browser_use import Agent, Controller
@@ -62,9 +127,10 @@ async def scout_businesses(city: str, ctx: Optional[ExecutionContext] = None) ->
             attach_interceptor(controller, ctx)
             
         task = (
-            f"Search for top-rated artisanal businesses, breweries, and dispensaries in {city}, Michigan. "
-            "Extract a list of 5 businesses including their name, category (vertical), city, rating, and website. "
-            "Return the data as a clean JSON list of objects."
+            f"Navigate to {website} (the website for {name}). "
+            "Read the homepage and the 'About Us' or 'Our Story' page if available. "
+            "Extract a concise summary of their brand history, core values, and any signature products. "
+            "Return ONLY a 2-3 sentence paragraph containing this deep contextual information."
         )
         
         llm = get_llm(model="gpt-4o") 
@@ -75,21 +141,9 @@ async def scout_businesses(city: str, ctx: Optional[ExecutionContext] = None) ->
         else:
             history = await run_with_healing(agent, ctx)
             
-        last_content = history.final_result()
-        if not last_content:
-            raise ValueError("No browser results")
-            
-        if "```json" in last_content:
-            last_content = last_content.split("```json")[1].split("```")[0].strip()
-        elif "```" in last_content:
-            last_content = last_content.split("```")[1].split("```")[0].strip()
-            
-        results = json.loads(last_content)
-    except Exception:
-        results = fallbacks.get(city.lower(), fallbacks["detroit"])
-
-    # Rank and finalize
-    for b in results:
-        b["score"] = calculate_pilot_fit(b)
+        context = history.final_result()
+        business["deep_context"] = context.strip() if context else "Standard brand profile."
+    except Exception as e:
+        business["deep_context"] = f"A premium {business.get('category', 'brand')} based in {business.get('city', 'Michigan')}."
         
-    return sorted(results, key=lambda x: x.get("score", 0), reverse=True)
+    return business

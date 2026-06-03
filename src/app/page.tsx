@@ -851,7 +851,7 @@ export default function Home() {
                                         <Sparkles className="w-3 h-3 text-gold" /> StoryMode Narrative
                                     </h5>
                                     <p className="text-sm font-medium text-white leading-relaxed italic">
-                                        "This artifact represents a fusion of peak industrial engineering and creative autonomous AI. Every module is a signature of truth, anchored forever on the Polygon network..."
+                                        &quot;This artifact represents a fusion of peak industrial engineering and creative autonomous AI. Every module is a signature of truth, anchored forever on the Polygon network...&quot;
                                     </p>
                                     <div className="mt-6 flex gap-3">
                                         <div className="flex-1 h-10 rounded-xl bg-gold flex items-center justify-center text-black text-xs font-black uppercase tracking-widest">Buy Now</div>
@@ -1031,7 +1031,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-gold">Living Portals & $QRON</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                  Generators create "Living Portals"—dynamic redirect hubs that update based on time, location, or user profile. Powered by the $QRON utility token for high-volume enterprise minting.
+                  Generators create &quot;Living Portals&quot;—dynamic redirect hubs that update based on time, location, or user profile. Powered by the $QRON utility token for high-volume enterprise minting.
                 </p>
                 <div className="inline-flex items-center gap-2 bg-zinc-900 px-3 py-1 rounded text-[10px] font-mono border border-zinc-800">
                   <span className="text-zinc-500">Contract:</span>

@@ -1,75 +1,104 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
+import AgentXPDisplay from '@/components/AgentXPDisplay';
+import { Zap } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
-async function getStats() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseKey) return null;
-  try {
-    const sb = createClient(supabaseUrl, supabaseKey);
-    const [qrCount, userCount] = await Promise.all([
-      sb.from('qr_codes').select('id', { count: 'exact', head: true }),
-      sb.from('profiles').select('id', { count: 'exact', head: true }),
-    ]);
-    return { totalQr: qrCount.count ?? 0, totalUsers: userCount.count ?? 0 };
-  } catch { return null; }
+async function getDashboardData() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const [qrCount, profileCount, agent] = await Promise.all([
+    supabase.from('qr_codes').select('id', { count: 'exact', head: true }),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase.from('protocol_agents').select('*').eq('user_id', user.id).eq('status', 'active').single()
+  ]);
+
+  return { 
+    totalQr: qrCount.count ?? 0, 
+    totalUsers: profileCount.count ?? 0,
+    agent: agent.data
+  };
 }
 
 export default async function Dashboard() {
-  const stats = await getStats();
+  const data = await getDashboardData();
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">QRON Dashboard</h1>
-          <p className="text-gray-400 mt-1 text-sm">
-            {stats ? 'Live data from Supabase' : 'Configure Supabase env vars for live data'}
+          <h1 className="text-3xl font-bold uppercase tracking-tight">Protocol <span className="text-blue-500">Dashboard</span></h1>
+          <p className="text-gray-500 mt-1 text-[10px] font-black uppercase tracking-widest">
+            {data ? 'Live Truth Layer Feed' : 'Offline Mode'}
           </p>
         </div>
         <div className="flex gap-3">
-          <Link href="/studio" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">
+          <Link href="/studio" className="px-6 py-2 bg-blue-600 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95">
             Open Studio
-          </Link>
-          <Link href="/gallery" className="px-4 py-2 bg-zinc-800 text-white rounded-lg text-sm font-semibold hover:bg-zinc-700 transition-colors">
-            Gallery
           </Link>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: 'Total QR Codes', value: stats ? stats.totalQr.toLocaleString() : '—', color: 'text-blue-400' },
-          { label: 'Registered Users', value: stats ? stats.totalUsers.toLocaleString() : '—', color: 'text-green-400' },
-          { label: 'Active Edge Nodes', value: '300+', color: 'text-purple-400' },
-          { label: 'Uptime (30d)', value: '99.97%', color: 'text-emerald-400' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">{label}</p>
-            <p className={`text-2xl font-black ${color}`}>{value}</p>
+      <div className="grid lg:grid-cols-3 gap-8 mb-8">
+        {/* Left: Stats & Links */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Total QR Codes', value: data ? data.totalQr.toLocaleString() : '—', color: 'text-blue-400' },
+              { label: 'Registered Users', value: data ? data.totalUsers.toLocaleString() : '—', color: 'text-green-400' },
+              { label: 'Active Edge Nodes', value: '300+', color: 'text-purple-400' },
+              { label: 'Uptime (30d)', value: '99.97%', color: 'text-emerald-400' },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
+                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-2">{label}</p>
+                <p className={`text-xl font-black ${color}`}>{value}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Quick Links */}
-      <div className="grid md:grid-cols-4 gap-4 mb-8">
-        {[
-          { href: '/studio', label: 'Create QRON', desc: 'Generate AI-powered QR art', color: 'from-blue-600 to-blue-800' },
-          { href: '/dashboard/products', label: 'Products & QR Codes', desc: 'Manage products and tamper-evident QR codes', color: 'from-emerald-600 to-teal-800' },
-          { href: '/gallery', label: 'Browse Gallery', desc: 'View all generated QRONs', color: 'from-purple-600 to-purple-800' },
-          { href: '/dashboard/autonomous', label: 'Autonomous Ops', desc: 'AgentZ pipeline, scheduled jobs, control panel', color: 'from-yellow-600 to-orange-700' },
-        ].map(({ href, label, desc, color }) => (
-          <Link key={href} href={href}
-            className={`block p-6 rounded-xl bg-gradient-to-br ${color} text-white hover:opacity-90 transition-opacity`}
-            style={{ textDecoration: 'none' }}>
-            <p className="font-black text-lg mb-1">{label}</p>
-            <p className="text-sm opacity-80">{desc}</p>
-          </Link>
-        ))}
+          {/* Quick Links */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { href: '/studio', label: 'Create QRON', desc: 'Generate AI-powered QR art', color: 'from-blue-600 to-blue-800' },
+              { href: '/dashboard/products', label: 'Products & QR Codes', desc: 'Manage products and tamper-evident QR codes', color: 'from-emerald-600 to-teal-800' },
+              { href: '/gallery', label: 'Browse Gallery', desc: 'View all generated QRONs', color: 'from-purple-600 to-purple-800' },
+              { href: '/dashboard/autonomous', label: 'Autonomous Ops', desc: 'AgentZ pipeline, scheduled jobs, control panel', color: 'from-yellow-600 to-orange-700' },
+            ].map(({ href, label, desc, color }) => (
+              <Link key={href} href={href}
+                className={`block p-6 rounded-xl bg-gradient-to-br ${color} text-white hover:opacity-90 transition-opacity`}
+                style={{ textDecoration: 'none' }}>
+                <p className="font-black text-lg mb-1 uppercase tracking-tight">{label}</p>
+                <p className="text-xs opacity-80 uppercase font-bold">{desc}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Agent Status */}
+        <div className="space-y-8">
+           {data?.agent ? (
+             <AgentXPDisplay agent={{
+               name: data.agent.name,
+               level: data.agent.level || 1,
+               xp: data.agent.xp || 0,
+               reputationScore: data.agent.reputationScore || 0,
+               totalVerifications: data.agent.totalVerifications || 0,
+               agentType: data.agent.agentType || 'Standard'
+             }} />
+           ) : (
+             <div className="protocol-card p-8 bg-zinc-950/50 border-zinc-900 text-center">
+                <Zap className="w-8 h-8 text-zinc-700 mx-auto mb-4" />
+                <h3 className="text-xs font-black uppercase text-zinc-500 mb-2">No Active Agent</h3>
+                <p className="text-[10px] text-zinc-600 font-bold uppercase mb-6">Initialize your protocol guardian to start earning $QRON</p>
+                <Link href="/studio" className="btn-gold py-3 text-[10px]">Initialize Agent</Link>
+             </div>
+           )}
+        </div>
       </div>
 
       {/* YouTube Channel */}

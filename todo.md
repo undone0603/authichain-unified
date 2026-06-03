@@ -136,11 +136,11 @@
 ## DHS SVIP Grant Application
 - [x] Write complete Phase I application ($200K ask, FIPS 140-2, W3C VC, CBP field app)
 - [x] Prepare DHS SVIP grant application materials
-- [ ] SAM.gov registration (required before submission — register at sam.gov)
-- [ ] CAGE code + UEI number
+- [ ] Submit grant application
+- [x] SAM.gov registration (Verified Active - Expires Apr 20, 2027)
+- [x] CAGE code + UEI number (CAGE: 1PUJ6, UEI: R34XKWRJY9A5)
 - [ ] sbir.gov account creation
 - [ ] Submit at https://www.dhs.gov/science-and-technology/svip-application-process
-
 
 ## qron.space Domain Setup
 - [x] Add qron.space to Vercel project (vercel.com → qron-app → Settings → Domains)

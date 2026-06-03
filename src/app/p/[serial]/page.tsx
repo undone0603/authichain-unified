@@ -13,11 +13,26 @@ import {
   Hammer, 
   FileText,
   Truck,
-  Sparkles
+  Sparkles,
+  Activity,
+  MapPin,
+  Lock
 } from 'lucide-react';
+
+import ProductConcierge from '@/components/ProductConcierge';
+import QRONRewardUtility from '@/components/QRONRewardUtility';
+import StoryModePlayer from '@/components/StoryModePlayer';
+import AIContentTranslator from '@/components/AIContentTranslator';
 
 interface PageProps {
   params: Promise<{ serial: string }>;
+}
+
+interface TimelineEvent {
+  event: string;
+  location: string;
+  timestamp: string;
+  status: 'complete' | 'pending';
 }
 
 interface SupplyChainEvent {
@@ -39,6 +54,11 @@ export default async function CertificationPage({ params }: PageProps) {
     notFound();
   }
 
+  const product = cert.products as any;
+  const metadata = (product.metadata as any) || {};
+  const timeline = (metadata.timeline as TimelineEvent[]) || [];
+  const score = product.authenticity_score || 100;
+
   // Fetch DPP data if it exists
   const { data: dpp } = await supabase
     .from('dpp_data')
@@ -46,9 +66,10 @@ export default async function CertificationPage({ params }: PageProps) {
     .eq('certification_id', cert.id)
     .single();
 
-  const isValid = cert.status === 'approved';
+  const isValid = cert.status === 'approved' && score >= 80;
   const isRevoked = cert.status === 'revoked';
   const isPending = cert.status === 'pending';
+  const isSuspect = score < 80 && !isRevoked;
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
@@ -56,9 +77,25 @@ export default async function CertificationPage({ params }: PageProps) {
         {/* Status Header */}
         <div className="text-center mb-12">
           {isValid && (
-            <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-400 border border-green-500/20 px-8 py-4 rounded-full font-black uppercase tracking-widest animate-gold-pulse">
-              <ShieldCheck className="w-6 h-6" />
-              Verified Authentic
+            <div className="inline-flex flex-col items-center gap-4">
+              <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-400 border border-green-500/20 px-8 py-4 rounded-full font-black uppercase tracking-widest animate-gold-pulse">
+                <ShieldCheck className="w-6 h-6" />
+                Verified Authentic
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                Authenticity Index: <span className="text-green-400">{score}%</span>
+              </div>
+            </div>
+          )}
+          {isSuspect && (
+            <div className="inline-flex flex-col items-center gap-4">
+              <div className="inline-flex items-center gap-2 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-8 py-4 rounded-full font-black uppercase tracking-widest">
+                <ShieldAlert className="w-6 h-6" />
+                Suspect Artifact
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                Authenticity Index: <span className="text-yellow-500">{score}%</span>
+              </div>
             </div>
           )}
           {isRevoked && (
@@ -76,7 +113,15 @@ export default async function CertificationPage({ params }: PageProps) {
         </div>
 
         {/* Seal / QR Display */}
-        <div className="protocol-card mb-12 overflow-hidden bg-white group">
+        <div className="protocol-card mb-12 overflow-hidden bg-white group relative">
+          {/* Trust Overlay */}
+          <div className="absolute top-4 right-4 z-20">
+             <div className="bg-black text-white px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-2 shadow-2xl">
+                <Activity className="w-3 h-3 text-gold" />
+                <span className="text-[9px] font-black uppercase tracking-widest">Live Truth Stream</span>
+             </div>
+          </div>
+          
           <div className="relative aspect-[4/5] md:aspect-[1/1] max-w-2xl mx-auto p-4 flex items-center justify-center">
             {cert.seal_svg_url ? (
               <Image
@@ -117,6 +162,14 @@ export default async function CertificationPage({ params }: PageProps) {
           </div>
         </div>
 
+        {/* AI StoryMode Player */}
+        <StoryModePlayer 
+          videoUrl={metadata.video_url}
+          thumbnailUrl={metadata.thumbnail_url || product.imageUrl}
+          brandName={product.brand || 'AuthiChain'}
+          productName={product.name}
+        />
+
         {/* Product Details */}
         <div className="grid md:grid-cols-3 gap-8 mb-12">
           <div className="md:col-span-2 space-y-8">
@@ -128,11 +181,13 @@ export default async function CertificationPage({ params }: PageProps) {
                 </h2>
               </div>
               <h1 className="text-4xl font-black mb-4 gold-text leading-tight">
-                {cert.products.name}
+                {product.name}
               </h1>
               <p className="text-zinc-400 text-lg leading-relaxed mb-8">
-                {cert.products.description}
+                {product.description}
               </p>
+
+              <AIContentTranslator content={product.description || ''} />
 
               <div className="grid grid-cols-2 gap-y-8 gap-x-4 border-t border-zinc-800 pt-8">
                 <div>
@@ -140,7 +195,7 @@ export default async function CertificationPage({ params }: PageProps) {
                     Manufacturer
                   </h3>
                   <p className="font-bold text-zinc-200 uppercase">
-                    {cert.products.manufacturer}
+                    {product.manufacturer}
                   </p>
                 </div>
                 <div>
@@ -148,7 +203,7 @@ export default async function CertificationPage({ params }: PageProps) {
                     Model Identifier
                   </h3>
                   <p className="font-bold text-zinc-200 uppercase">
-                    {cert.products.model_number || 'Standard Edition'}
+                    {product.model_number || 'Standard Edition'}
                   </p>
                 </div>
                 <div>
@@ -185,9 +240,56 @@ export default async function CertificationPage({ params }: PageProps) {
               )}
             </div>
 
+            {/* Dynamic Identity Timeline */}
+            <div className="protocol-card p-8 bg-zinc-900/30 border-zinc-800">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-gold" />
+                  <h3 className="text-sm font-black uppercase tracking-widest text-white">
+                    Dynamic Identity Timeline
+                  </h3>
+                </div>
+                <div className="flex items-center gap-1.5">
+                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                   <span className="text-[9px] font-black text-zinc-500 uppercase tracking-tighter">Real-time Proofs</span>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {timeline.length > 0 ? (
+                  timeline.map((event, i) => (
+                    <div key={i} className="flex gap-4 relative">
+                      {i < timeline.length - 1 && (
+                        <div className="absolute left-2 top-5 w-px h-full bg-zinc-800" />
+                      )}
+                      <div className={`w-4 h-4 rounded-full mt-1 shrink-0 flex items-center justify-center z-10 ${
+                        event.status === 'complete' ? 'bg-gold/20 border border-gold/40' : 'bg-zinc-800 border border-zinc-700'
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${event.status === 'complete' ? 'bg-gold' : 'bg-zinc-600'}`} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <p className="text-xs font-black text-zinc-200 uppercase tracking-tighter">{event.event}</p>
+                          <p className="text-[9px] font-mono text-zinc-600">{new Date(event.timestamp).toLocaleString()}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 text-zinc-500">
+                          <MapPin className="w-2.5 h-2.5" />
+                          <p className="text-[10px] font-bold uppercase tracking-tight">{event.location}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                     <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">No life events recorded yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Storymode Narrative */}
             {(() => {
-              const pm = cert.products.metadata as Record<string, unknown> | null;
+              const pm = product.metadata as Record<string, unknown> | null;
               const story = pm?.storymode as { chapters: Array<{ title: string; content: string }> } | undefined;
               if (!story?.chapters?.length) return null;
               return (
@@ -307,6 +409,13 @@ export default async function CertificationPage({ params }: PageProps) {
                 )}
               </div>
             )}
+
+            <ProductConcierge 
+              productName={product.name} 
+              brandName={product.brand || 'AuthiChain Partner'} 
+              productId={product.id.toString()}
+              personaPrompt={(product.metadata as Record<string, unknown>)?.persona_prompt as string | undefined}
+            />
           </div>
 
           <div className="space-y-6">
@@ -328,7 +437,27 @@ export default async function CertificationPage({ params }: PageProps) {
                   <span className="font-mono text-zinc-200">Success</span>
                 </div>
               </div>
+              <div className="mt-6 pt-6 border-t border-zinc-800">
+                <a 
+                  href={`/api/v1/credentials/${product.id}`}
+                  target="_blank"
+                  className="flex items-center justify-center gap-2 w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/10 transition-all group"
+                >
+                  <FileText className="w-3.5 h-3.5 group-hover:text-gold transition-colors" />
+                  Download W3C Credential
+                </a>
+                <a 
+                  href={`/api/v1/zk-proof/${product.id}?attr=origin`}
+                  target="_blank"
+                  className="flex items-center justify-center gap-2 w-full py-3 mt-3 bg-blue-500/5 border border-blue-500/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-blue-500/10 transition-all group"
+                >
+                  <Lock className="w-3.5 h-3.5 group-hover:text-blue-400 transition-colors" />
+                  Generate Private Proof
+                </a>
+              </div>
             </div>
+
+            <QRONRewardUtility productId={product.id} />
 
             <Link
               href="/"

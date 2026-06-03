@@ -8,4 +8,4 @@
 - Dashboard shows: 0 Products, 0 Authentications, 0 Certificates, 0 NFTs Owned
 - Subscription: Starter plan, Active, 0/500 usage
 - Blockchain Status: Thirdweb Connected, Polygon Amoy Testnet (80002)
-- User: Zachary Kietzman (z@strainchain.io)
+- User: Zachary Kietzman (authichain@gmail.com)

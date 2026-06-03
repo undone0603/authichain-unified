@@ -78,9 +78,16 @@ def power_launch_all(
 
     if mode == "auto" and parallel:
         if verbose:
-            print(f"Launching {len(ALL_AGENTS)} agents in parallel …\n")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
-            futures = {pool.submit(_run_agent, cls, client): cls for cls in ALL_AGENTS}
+            print(f"Launching {len(ALL_AGENTS)} agents in parallel (staggered) …\n")
+        
+        # Reduce max_workers to prevent immediate rate limit overload
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            futures = {}
+            for cls in ALL_AGENTS:
+                # Add a small delay between submitting tasks to stagger API hits
+                time.sleep(1.5)
+                futures[pool.submit(_run_agent, cls, client)] = cls
+                
             for future in concurrent.futures.as_completed(futures):
                 result = future.result()
                 results.append(result)

@@ -119,7 +119,10 @@ async def enqueue_media_request(supabase, product_id: str, script: str):
 async def generate_story_mode(supabase, product_id: str) -> str:
     """
     Generates a full StoryMode experience. Now uses a queued strategy.
+    Includes generation of AI Concierge persona.
     """
+    from agentz.core.concierge import generate_concierge_persona
+
     # 1. Fetch product data
     product_res = supabase.table("products").select("*").eq("id", product_id).single().execute()
     product = product_res.data
@@ -127,16 +130,21 @@ async def generate_story_mode(supabase, product_id: str) -> str:
     if not product:
         raise ValueError(f"Product {product_id} not found in Supabase.")
 
-    # 2. Generate Narration (Try immediate, fallback to hardcoded)
+    # 2. Generate Narration & Persona
     script = await generate_narration(product)
+    persona = await generate_concierge_persona(product)
     
     # 3. Enqueue Video Generation (Async)
-    # Instead of waiting for HeyGen, we enqueue the task for the background factory
     await enqueue_media_request(supabase, product_id, script)
     
-    # 4. Update product record with 'Processing' state
+    # 4. Update product record with 'Processing' state and persona
     supabase.table("products").update({
-        "metadata": {**product.get("metadata", {}), "narration_script": script, "media_status": "processing"}
+        "metadata": {
+            **product.get("metadata", {}), 
+            "narration_script": script, 
+            "persona_prompt": persona,
+            "media_status": "processing"
+        }
     }).eq("id", product_id).execute()
     
     return "https://heygen.com/v/processing" # Return processing URL

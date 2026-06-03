@@ -299,11 +299,16 @@ export async function updateLead(id: number, data: any) {
 }
 
 export async function getLeadById(id: number) {
-  const d = await getDb();
-  const rows = await d.select().from(leads).where(eq(leads.id, id)).limit(1);
-  return rows[0] ?? null;
-}
+    const d = await getDb();
+    const rows = await d.select().from(leads).where(eq(leads.id, id)).limit(1);
+    return rows[0] ?? null;
+  }
 
+  export async function getLeadBySlug(slug: string) {
+    const d = await getDb();
+    const rows = await d.select().from(leads).where(eq(leads.slug, slug)).limit(1);
+    return rows[0] ?? null;
+  }
 export async function getAllLeads() {
   const d = await getDb();
   return d.select().from(leads).orderBy(desc(leads.createdAt)).limit(1000);

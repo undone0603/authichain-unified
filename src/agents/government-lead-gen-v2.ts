@@ -13,6 +13,52 @@
 import { vectorStoreUtils, type GovernmentOpportunity } from '../../packages/vector-store/index';
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Interfaces for Federal Data Sources
+// ──────────────────────────────────────────────────────────────────────────────
+interface SAMOpportunity {
+  noticeId?: string;
+  title?: string;
+  agency?: string;
+  organizationType?: string;
+  pointOfContact?: Array<{ fullName?: string }>;
+  [key: string]: any;
+}
+
+interface SAMContractAward {
+  id?: string;
+  contractAwardId?: string;
+  title?: string;
+  contractingAgency?: string;
+  awardingAgencyName?: string;
+  piid?: string;
+  [key: string]: any;
+}
+
+interface USASpendingAward {
+  'Award ID'?: string;
+  'Recipient Name'?: string;
+  'Awarding Agency'?: string;
+  'Award Amount'?: string;
+  'Award Date'?: string;
+  [key: string]: any;
+}
+
+interface NormalizedLead {
+  id: string;
+  title: string;
+  agency: string;
+  contact: string;
+  source: string;
+  raw: Record<string, unknown>;
+  awardsContext?: unknown[];
+  spendingContext?: unknown;
+  relevanceScore?: number;
+}
+
+interface ConsensusResult { approved: boolean; score: number; rationale: string }
+interface QRON { signature: string; payload: unknown; style: string }
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Active entity (the GovChain.us pilot signer)
 // ──────────────────────────────────────────────────────────────────────────────
 const ACTIVE_ENTITY = {
@@ -28,14 +74,14 @@ const DRY_RUN = process.env.DRY_RUN !== 'false'; // default TRUE for safety
 // ──────────────────────────────────────────────────────────────────────────────
 // Lazy Pinecone init (so import doesn't crash environments without the key)
 // ──────────────────────────────────────────────────────────────────────────────
-let _pineconeIndex: any = null;
+let _pineconeIndex: unknown = null;
 async function getPineconeIndex() {
   if (_pineconeIndex) return _pineconeIndex;
   if (!process.env.PINECONE_API_KEY) {
     console.warn('[gov-engine] PINECONE_API_KEY not set — Pinecone disabled');
     return null;
   }
-  // @ts-ignore - package installed separately
+  // @ts-expect-error - package installed separately
   const { Pinecone } = await import('@pinecone-database/pinecone');
   const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
   _pineconeIndex = pinecone.index(process.env.PINECONE_INDEX || 'authichain-gov-leads');
@@ -58,7 +104,7 @@ function rollingWindow(days: number) {
 // ──────────────────────────────────────────────────────────────────────────────
 // SAM.gov Opportunities v2  (real endpoint)
 // ──────────────────────────────────────────────────────────────────────────────
-async function fetchSAMOpportunities(): Promise<any[]> {
+async function fetchSAMOpportunities(): Promise<SAMOpportunity[]> {
   const key = process.env.SAM_GOV_API_KEY;
   if (!key) {
     console.warn('[gov-engine] SAM_GOV_API_KEY not set — skipping Opportunities');
@@ -78,7 +124,7 @@ async function fetchSAMOpportunities(): Promise<any[]> {
       console.error(`[gov-engine] SAM Opportunities ${res.status} ${res.statusText}`);
       return [];
     }
-    const data: any = await res.json();
+    const data = await res.json() as { opportunitiesData?: SAMOpportunity[] };
     return data.opportunitiesData || [];
   } catch (err) {
     console.error('[gov-engine] fetchSAMOpportunities failed:', err);
@@ -89,7 +135,7 @@ async function fetchSAMOpportunities(): Promise<any[]> {
 // ──────────────────────────────────────────────────────────────────────────────
 // SAM.gov Contract Awards v1  (real, official FPDS replacement)
 // ──────────────────────────────────────────────────────────────────────────────
-async function fetchSAMContractAwards(): Promise<any[]> {
+async function fetchSAMContractAwards(): Promise<SAMContractAward[]> {
   const key = process.env.SAM_GOV_API_KEY;
   if (!key) {
     console.warn('[gov-engine] SAM_GOV_API_KEY not set — skipping Contract Awards');
@@ -107,7 +153,7 @@ async function fetchSAMContractAwards(): Promise<any[]> {
       console.error(`[gov-engine] SAM Contract Awards ${res.status} ${res.statusText}`);
       return [];
     }
-    const data: any = await res.json();
+    const data = await res.json() as { results?: SAMContractAward[], contractAwardsData?: SAMContractAward[] };
     return data.results || data.contractAwardsData || [];
   } catch (err) {
     console.error('[gov-engine] fetchSAMContractAwards failed:', err);
@@ -118,17 +164,18 @@ async function fetchSAMContractAwards(): Promise<any[]> {
 // ──────────────────────────────────────────────────────────────────────────────
 // USAspending v2  (public, no key required)
 // ──────────────────────────────────────────────────────────────────────────────
-async function fetchUSASpendingAwards(agencyName?: string): Promise<any[]> {
+async function fetchUSASpendingAwards(agencyName?: string): Promise<USASpendingAward[]> {
   const { isoFrom, isoTo } = rollingWindow(120);
-  const body: any = {
+  const body = {
     filters: {
       award_type_codes: ['A', 'B', 'C', 'D'],
       time_period: [{ start_date: isoFrom, end_date: isoTo }],
+      agencies: undefined as unknown[] | undefined
     },
     fields: ['Award ID', 'Recipient Name', 'Awarding Agency', 'Award Amount', 'Award Date'],
     limit: 8,
     sort: 'Award Date',
-    order: 'desc',
+    order: 'desc' as const,
   };
   if (agencyName) {
     body.filters.agencies = [{ type: 'awarding', tier: 'toptier', name: agencyName }];
@@ -140,7 +187,7 @@ async function fetchUSASpendingAwards(agencyName?: string): Promise<any[]> {
       body: JSON.stringify(body),
     });
     if (!res.ok) return [];
-    const data: any = await res.json();
+    const data = await res.json() as { results?: USASpendingAward[] };
     return data.results || [];
   } catch (err) {
     console.error('[gov-engine] fetchUSASpendingAwards failed:', err);
@@ -152,10 +199,9 @@ async function fetchUSASpendingAwards(agencyName?: string): Promise<any[]> {
 // STUBS for not-yet-built modules. Replace with real impls when ready.
 // All side-effecting stubs respect DRY_RUN.
 // ──────────────────────────────────────────────────────────────────────────────
-type ConsensusResult = { approved: boolean; score: number; rationale: string };
 
 // TODO(real-impl): wire to your 5-agent (Guardian, Archivist, Sentinel, Scout, Arbiter) module.
-async function runFiveAgentConsensus(lead: any): Promise<ConsensusResult> {
+async function runFiveAgentConsensus(lead: NormalizedLead): Promise<ConsensusResult> {
   // Lightweight heuristic so the pipeline runs end-to-end before the real agents land.
   const haystack = JSON.stringify(lead).toLowerCase();
   const hits = ['counterfeit', 'buy american', 'traceability', 'authentication', 'verification']
@@ -164,17 +210,15 @@ async function runFiveAgentConsensus(lead: any): Promise<ConsensusResult> {
   return { approved: score >= 60, score, rationale: `heuristic-stub: ${hits} keyword hits` };
 }
 
-type QRON = { signature: string; payload: any; style: string };
-
 // TODO(real-impl): wire to QRONGenerator when published.
-async function generateQRON(payload: any): Promise<QRON> {
+async function generateQRON(payload: unknown): Promise<QRON> {
   // Deterministic placeholder signature; safe to log, not safe to trust on-chain.
   const sig = 'qron-stub-' + Buffer.from(JSON.stringify(payload)).toString('base64').slice(0, 24);
   return { signature: sig, payload, style: 'american-seal-eagle-govchain' };
 }
 
 // TODO(real-impl): wire to LeadGenEngine.generateProposal + outreach (SendGrid / Nodemailer).
-async function sendOutreach(lead: any, proposal: string, qron: QRON): Promise<void> {
+async function sendOutreach(lead: NormalizedLead, _proposal: string, _qron: QRON): Promise<void> {
   if (DRY_RUN) {
     console.log(`[gov-engine] DRY_RUN outreach skipped for ${lead.agency || 'lead'}`);
     return;
@@ -202,23 +246,38 @@ async function mintPilotNFT(args: {
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers to normalize lead shapes across the three federal sources
 // ──────────────────────────────────────────────────────────────────────────────
-function normalizeLead(raw: any, source: string) {
+function normalizeLead(raw: Record<string, unknown>, source: string): NormalizedLead {
+  const r = raw as Record<string, unknown> & {
+    id?: string;
+    noticeId?: string;
+    opportunity_id?: string;
+    piid?: string;
+    contractAwardId?: string;
+    title?: string;
+    contractDescription?: string;
+    agency?: string;
+    contractingAgency?: string;
+    awardingAgencyName?: string;
+    organizationType?: string;
+    contact?: string;
+    pointOfContact?: Array<{ fullName?: string }>;
+  };
   return {
     id:
-      raw.id ||
-      raw.noticeId ||
-      raw.opportunity_id ||
-      raw.piid ||
-      raw.contractAwardId ||
+      r.id ||
+      r.noticeId ||
+      r.opportunity_id ||
+      r.piid ||
+      r.contractAwardId ||
       `lead_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    title: raw.title || raw.contractDescription || '',
+    title: r.title || r.contractDescription || '',
     agency:
-      raw.agency ||
-      raw.contractingAgency ||
-      raw.awardingAgencyName ||
-      raw.organizationType ||
+      r.agency ||
+      r.contractingAgency ||
+      r.awardingAgencyName ||
+      r.organizationType ||
       'Federal Agency',
-    contact: raw.contact || raw.pointOfContact?.[0]?.fullName || 'Procurement Team',
+    contact: r.contact || r.pointOfContact?.[0]?.fullName || 'Procurement Team',
     source,
     raw,
   };
@@ -245,14 +304,14 @@ export async function runAdvancedGovernmentLeadGen() {
   );
 
   // 2. Enrich opportunities with USAspending + matched contract awards
-  const enrichedLeads: any[] = [];
+  const enrichedLeads: NormalizedLead[] = [];
   for (const opp of opportunities) {
-    const lead = normalizeLead(opp, 'sam.gov-opportunity');
+    const lead = normalizeLead(opp as any, 'sam.gov-opportunity');
     const spending = await fetchUSASpendingAwards(lead.agency);
     enrichedLeads.push({
       ...lead,
       awardsContext: awards
-        .filter((a: any) => (a.awardingAgencyName || a.agency) === lead.agency)
+        .filter((a: SAMContractAward) => (a.awardingAgencyName || a.contractingAgency) === lead.agency)
         .slice(0, 3),
       spendingContext: spending[0] || null,
       relevanceScore: spending.length > 0 ? 90 : 70,
@@ -262,7 +321,7 @@ export async function runAdvancedGovernmentLeadGen() {
   // 3. Add raw contract awards as their own leads
   for (const award of awards) {
     enrichedLeads.push({
-      ...normalizeLead(award, 'sam.gov-contract-awards'),
+      ...normalizeLead(award as any, 'sam.gov-contract-awards'),
       awardsContext: [award],
       relevanceScore: 85,
     });
@@ -294,7 +353,7 @@ export async function runAdvancedGovernmentLeadGen() {
   const allLeads = [
     ...enrichedLeads,
     ...pineconeLeads.map(p => ({
-      ...normalizeLead(p, 'pinecone-vector'),
+      ...normalizeLead(p as any, 'pinecone-vector'),
       relevanceScore: Math.round((p.score ?? 0.5) * 100),
     })),
   ];

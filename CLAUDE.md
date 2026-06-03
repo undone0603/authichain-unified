@@ -7,6 +7,12 @@ This project is optimized for Agentic Workflows. When assisting, adhere to the *
 3. **Act**: Generate assets, mint NFTs, or trigger outreach.
 4. **Log**: Record every action to the immutable Supabase ledger.
 
+### Claude Code Access
+To enable full agentic capabilities for Claude Code:
+- **Config**: `.claude/settings.json` is configured with required permissions.
+- **MCP Server**: The `authichain` MCP server is available via `npx tsx server/mcp/index.ts`.
+- **Tools**: Includes `verify_authenticity`, `mint_certificate`, and `classify_product`.
+
 ## 🛠 Essential Commands
 - **Install**: `pnpm install`
 - **Dev**: `pnpm dev` (Vite + Express)

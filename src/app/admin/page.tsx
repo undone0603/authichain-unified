@@ -14,7 +14,10 @@ import {
   Flame,
   ChevronRight,
   Loader2,
-  ArrowUpRight
+  ArrowUpRight,
+  Mail,
+  Sparkles,
+  Trophy
 } from 'lucide-react';
 
 interface AdminStats {
@@ -22,7 +25,7 @@ interface AdminStats {
   industrial: { total_products: number; total_certifications: number };
   governance: { total_staked_qron: number; total_burned_qron: number; active_brands: number };
   pipeline: { total_leads: number };
-  recent_logs: Array<{ workflow_name: string; status: string; created_at: string }>;
+  recent_logs: Array<{ workflow_name: string; status: string; created_at: string; payload?: any }>;
 }
 
 export default function AdminDashboard() {
@@ -190,6 +193,18 @@ export default function AdminDashboard() {
                     </div>
                     <ChevronRight className="w-4 h-4 text-zinc-800" />
                 </Link>
+                <Link href="/admin/analytics" className="protocol-card p-6 flex items-center justify-between group hover:border-gold/40 transition-all md:col-span-2">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-lg bg-zinc-900 text-zinc-500 group-hover:text-gold transition-colors">
+                            <BarChart3 className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-white uppercase text-sm">Executive ROI Dashboard</h4>
+                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Autonomous Pipeline & Token Economics</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-zinc-800" />
+                </Link>
                 <Link href="/admin/ops" className="protocol-card p-6 flex items-center justify-between group hover:border-gold/40 transition-all md:col-span-2">
                     <div className="flex items-center gap-4">
                         <div className="p-3 rounded-lg bg-zinc-900 text-zinc-500 group-hover:text-gold transition-colors">
@@ -198,6 +213,42 @@ export default function AdminDashboard() {
                         <div>
                             <h4 className="font-bold text-white uppercase text-sm">Operations Console</h4>
                             <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Workflow health · last 24h</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-zinc-800" />
+                </Link>
+                <Link href="/admin/email-campaigns" className="protocol-card p-6 flex items-center justify-between group hover:border-gold/40 transition-all md:col-span-2">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-lg bg-zinc-900 text-zinc-500 group-hover:text-gold transition-colors">
+                            <Mail className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-white uppercase text-sm">Autonomous Outreach</h4>
+                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">AgentZ Mission Control · Review Drafts</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-zinc-800" />
+                </Link>
+                <Link href="/admin/onboarding" className="protocol-card p-6 flex items-center justify-between group hover:border-gold/40 transition-all md:col-span-2">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-lg bg-zinc-900 text-zinc-500 group-hover:text-gold transition-colors">
+                            <Zap className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-white uppercase text-sm">Sovereign Activator</h4>
+                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Pilot Activation · L1 Anchoring</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-zinc-800" />
+                </Link>
+                <Link href="/admin/marketing" className="protocol-card p-6 flex items-center justify-between group hover:border-gold/40 transition-all md:col-span-2">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-lg bg-zinc-900 text-zinc-500 group-hover:text-gold transition-colors">
+                            <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-white uppercase text-sm">Marketing Factory</h4>
+                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">StoryMode Assets · HeyGen Avatars</p>
                         </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-zinc-800" />
@@ -241,6 +292,53 @@ export default function AdminDashboard() {
                         </div>
                     )) : (
                         <p className="text-[10px] text-zinc-700 font-black uppercase text-center py-4">Waiting for Protocol Pulse...</p>
+                    )}
+                </div>
+            </section>
+
+            {/* Recent Autonomous Wins */}
+            <section className="protocol-card p-8 bg-emerald-500/5 border-emerald-500/10">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                        <Trophy className="w-5 h-5 text-emerald-400" />
+                        <h2 className="text-sm font-black uppercase tracking-widest text-white">Recent Autonomous Wins</h2>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Revenue Active</span>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {stats?.recent_logs.filter(l => l.workflow_name === 'first_autonomous_sale').map((log, i) => {
+                        const payload = JSON.parse(typeof log.payload === 'string' ? log.payload : JSON.stringify(log.payload));
+                        return (
+                            <div key={i} className="bg-black/40 border border-emerald-500/10 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 group hover:border-emerald-500/30 transition-all">
+                                <div className="flex items-center gap-6">
+                                    <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:border-emerald-500/30 transition-colors">
+                                        <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-white uppercase text-sm">{payload.brand} Pilot</h3>
+                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Closed Won &bull; {new Date(log.created_at).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-8 w-full md:w-auto">
+                                    <div className="text-right">
+                                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Contract Revenue</p>
+                                        <p className="text-xl font-black text-emerald-400">${payload.revenue.toLocaleString()}</p>
+                                    </div>
+                                    <Link href={payload.l2_anchor ? `https://amoy.polygonscan.com/tx/${payload.l2_anchor}` : '#'} target="_blank" className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-500 hover:text-white hover:border-emerald-500/50 transition-all">
+                                        <Activity className="w-4 h-4" />
+                                    </Link>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {(!stats?.recent_logs.some(l => l.workflow_name === 'first_autonomous_sale')) && (
+                        <div className="text-center py-12 border border-dashed border-zinc-800 rounded-2xl">
+                           <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">Waiting for first autonomous conversion...</p>
+                        </div>
                     )}
                 </div>
             </section>

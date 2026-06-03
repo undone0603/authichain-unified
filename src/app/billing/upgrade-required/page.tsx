@@ -19,7 +19,7 @@ export default async function UpgradeRequiredPage({
         </div>
 
         <p className="mb-6 text-sm leading-relaxed text-slate-400">
-          Your organization's access to the <span className="font-semibold text-slate-200">BrandContext Multi-Tenant Middleware</span> has dropped to an inactive state. Active logging of production supply chain digital twins and serialization matrices is currently paused for this tenant.
+          Your organization&apos;s access to the <span className="font-semibold text-slate-200">BrandContext Multi-Tenant Middleware</span> has dropped to an inactive state. Active logging of production supply chain digital twins and serialization matrices is currently paused for this tenant.
         </p>
 
         <div className="mb-8 rounded-lg bg-slate-900/80 p-4 border border-slate-800 text-xs text-slate-400 space-y-2">

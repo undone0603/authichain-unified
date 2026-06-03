@@ -1,4 +1,4 @@
-name: Deploy Next.js to Cloudflare Workers (OpenNext)
+name: Deploy AuthiChain Unified (Next.js)
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v4
         with:
           version: '10.30.3'
 
@@ -59,22 +59,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      - name: Patch handler.mjs — remove require.resolve cache calls OpenNext missed
-        run: |
-          HANDLER=".open-next/server-functions/default/handler.mjs"
-          if [ ! -f "$HANDLER" ]; then echo "handler.mjs not found, skipping"; exit 0; fi
-          echo "=== handler.mjs size: $(wc -l < "$HANDLER") lines ==="
-          echo "=== searching for require.resolve cache calls ==="
-          grep -n "resolve.*cache\.cjs\|cacheHandlerPath\|composable-cache\.cjs" "$HANDLER" | head -10
-          # Patch: replace __require.resolve("./cache.cjs") and variants with ""
-          # These are require.resolve calls for Next.js cache modules that crash on CF Workers
-          sed -i 's/\b\w\+\.resolve("\.\/cache\.cjs")/\"\"/g' "$HANDLER"
-          sed -i 's/\b\w\+\.resolve("\.\/composable-cache\.cjs")/\"\"/g' "$HANDLER"
-          echo "=== after patch — remaining resolve calls ==="
-          grep -n "resolve.*cache\.cjs\|resolve.*composable-cache" "$HANDLER" | head -5 || echo "(none — patched successfully)"
-
       - name: Deploy to Cloudflare Workers
-        run: pnpm exec wrangler deploy
+        run: pnpm exec wrangler deploy --config wrangler.toml
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

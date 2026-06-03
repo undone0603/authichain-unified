@@ -192,3 +192,56 @@ async def prioritize_leads_by_sentiment(deals: List[Dict[str, Any]]) -> List[Dic
     except Exception as e:
         logger.error(f"Sentiment prioritization failed: {e}")
         return deals
+
+async def create_contact(email: str, firstname: str, lastname: str) -> Optional[str]:
+    """Creates a new contact in HubSpot. Returns the contact ID."""
+    token = get("hubspot_token")
+    if not token: return None
+
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    body = {
+        "properties": {
+            "email": email,
+            "firstname": firstname,
+            "lastname": lastname
+        }
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post("https://api.hubapi.com/crm/v3/objects/contacts", headers=headers, json=body)
+            if r.status_code in (201, 200):
+                return r.json().get("id")
+            elif r.status_code == 409: # Conflict - already exists
+                # Extract ID from error message if possible or search
+                pass
+    except Exception as e:
+        logger.error(f"Failed to create contact {email}: {e}")
+    return None
+
+async def create_deal(name: str, amount: str, stage: str = "appointmentscheduled", contact_id: Optional[str] = None) -> Optional[str]:
+    """Creates a new deal in HubSpot and optionally associates it with a contact."""
+    token = get("hubspot_token")
+    if not token: return None
+
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    body = {
+        "properties": {
+            "dealname": name,
+            "amount": amount,
+            "dealstage": stage
+        }
+    }
+    if contact_id:
+        body["associations"] = [{
+            "to": {"id": contact_id},
+            "types": [{"associationCategory": "HUBSPOT_DEFINED", "associationTypeId": 3}] # Deal to Contact
+        }]
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post("https://api.hubapi.com/crm/v3/objects/deals", headers=headers, json=body)
+            if r.status_code in (201, 200):
+                return r.json().get("id")
+    except Exception as e:
+        logger.error(f"Failed to create deal {name}: {e}")
+    return None

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import {
-  Leaf, Shield, Package, MapPin, Activity, Zap,
+  Leaf, Shield, MapPin, Activity,
   ArrowRight, CheckCircle, Dna, AlertTriangle, Lock,
   BarChart3, Truck, ScanLine,
 } from 'lucide-react';

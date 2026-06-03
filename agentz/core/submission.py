@@ -47,7 +47,7 @@ async def submit_proposal_via_browser(
 
     llm = get_llm(model="gpt-4o")
     browser = Browser(headless=True)
-    agent = Agent(task=prompt, llm=llm, browser=browser)
+    agent = Agent(task=prompt, llm=llm, browser=browser, max_steps=30)
 
     try:
         history = await agent.run()
@@ -62,4 +62,7 @@ async def submit_proposal_via_browser(
         logger.error(f"Submission failed for {notice_id}: {e}")
         return False, str(e)
     finally:
-        await browser.close()
+        # Browser session is cleaned up by reset or context
+        pass
+    
+    return False, "Submission process ended."

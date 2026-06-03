@@ -75,10 +75,34 @@ export const products = pgTable('products', {
   audioUrl: text('audioUrl'),
   visionMarkers: json('visionMarkers'),
   rarityScore: integer('rarityScore'),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+  authenticityScore: integer('authenticity_score').default(100),
+  isRegistered: boolean('is_registered').default(false),
+  truemarkId: varchar('truemark_id', { length: 256 }),
+  truemarkData: jsonb('truemark_data').default({}),
+  blockchainHash: varchar('blockchain_hash', { length: 256 }),
+  counterfeitReports: integer('counterfeit_reports').default(0),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
 });
 
+export const dppData = pgTable('dpp_data', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  certificationId: integer('certification_id').notNull(),
+  materialComposition: jsonb('material_composition').default({}),
+  carbonFootprint: real('carbon_footprint'),
+  repairabilityScore: integer('repairability_score'),
+  supplyChainProvenance: jsonb('supply_chain_provenance').default([]),
+  lastUpdated: timestamp('last_updated').defaultNow().notNull(),
+});
+
+export const automationLogs = pgTable("automation_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workflowName: varchar("workflow_name", { length: 256 }).notNull(),
+  triggerType: varchar("trigger_type", { length: 128 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull(),
+  payload: jsonb("payload").default({}),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
 
@@ -356,8 +380,8 @@ export const leads = pgTable("leads", {
   contractOpened: boolean("contractOpened").default(false),
   contractSigned: boolean("contractSigned").default(false),
   roiSavings: integer("roiSavings"),
-  numProducts: integer("numProducts"),
-  dealStage: varchar("dealStage", { length: 64 }),
+  slug: varchar("slug", { length: 256 }).unique(),
+  numProducts: integer("numProducts"),  dealStage: varchar("dealStage", { length: 64 }),
   status: varchar("status", { length: 50 }).default("new"),
   industry: varchar("industry", { length: 128 }),
   notes: text("notes"),
@@ -1140,6 +1164,28 @@ export const personalizationEvents = pgTable("personalization_events", {
   ruleId: integer("ruleId"),
   variant: varchar("variant", { length: 64 }),
   metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const disputedArtifacts = pgTable("disputed_artifacts", {
+  id: serial("id").primaryKey(),
+  productId: integer("productId").notNull(),
+  aiScore: integer("aiScore").notNull(),
+  status: varchar("status", { length: 50 }).default("open"), 
+  verdict: varchar("verdict", { length: 50 }), 
+  votesAuthentic: integer("votesAuthentic").default(0),
+  votesCounterfeit: integer("votesCounterfeit").default(0),
+  deadline: timestamp("deadline").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const governanceVotes = pgTable("governance_votes", {
+  id: serial("id").primaryKey(),
+  disputeId: integer("disputeId").notNull(),
+  userId: integer("userId").notNull(),
+  agentId: integer("agentId").notNull(),
+  vote: varchar("vote", { length: 50 }).notNull(), 
+  weight: numeric("weight", { precision: 20, scale: 9 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

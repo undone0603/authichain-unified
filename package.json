@@ -20,6 +20,7 @@
     "format": "prettier --write .",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "verify:integrations": "tsx scripts/verify-integrations.ts",
+    "lint": "next lint",
     "env:pull": "vercel pull --environment=development --yes"
   },
   "dependencies": {
@@ -28,6 +29,7 @@
     "@aws-sdk/s3-request-presigner": "^3.693.0",
     "@hookform/resolvers": "^5.2.2",
     "@hubspot/api-client": "^13.4.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@notionhq/client": "^2.3.0",
     "@paddle/paddle-node-sdk": "^1.7.0",
     "@radix-ui/react-accordion": "^1.2.1",
@@ -144,6 +146,8 @@
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.6",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
     "patch-package": "^8.0.1",

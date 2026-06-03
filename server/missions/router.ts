@@ -9,6 +9,8 @@ import {
   retryTask,
 } from "./missions.db";
 import { MISSION_TYPES, MISSION_STATUSES } from "./types";
+import { spawn } from "child_process";
+import path from "path";
 
 export const missionsRouter = router({
   list: adminProcedure
@@ -21,6 +23,31 @@ export const missionsRouter = router({
     .input(z.object({ type: z.enum(MISSION_TYPES) }))
     .mutation(async ({ input }) => {
       const id = await createMission(input.type);
+      
+      // 🚀 Trigger Autonomous Revenue Blitz (Python Port)
+      const projectRoot = path.resolve(process.cwd());
+      const scriptPath = path.join(projectRoot, "scripts", "revenue-blitz.py");
+      
+      // Map mission type to target city or industry
+      const CITY_MAP: Record<string, string> = {
+        "LUXURY_OUTREACH": "Paris",
+        "PHARMA_OUTREACH": "New Jersey",
+        "MEDTECH_OUTREACH": "Minneapolis",
+        "TIMEPIECE_OUTREACH": "Geneva"
+      };
+
+      const target = CITY_MAP[input.type] || "Detroit";
+      
+      console.log(`[AgentZ] Launching Autonomous Blitz for ${target} (Mission ${id})`);
+      
+      const child = spawn("python", [scriptPath, target], {
+        env: { ...process.env, PYTHONPATH: projectRoot },
+        detached: true,
+        stdio: "ignore"
+      });
+
+      child.unref();
+
       return { id };
     }),
 

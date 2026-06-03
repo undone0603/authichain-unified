@@ -90,6 +90,14 @@ class LLMProxy:
         
         robust = RobustAIMessage(content=content)
         
+        # Preserve tool calls and other AIMessage attributes
+        if hasattr(res, "tool_calls"):
+            robust.tool_calls = res.tool_calls
+        if hasattr(res, "additional_kwargs"):
+            robust.additional_kwargs = res.additional_kwargs
+        if hasattr(res, "response_metadata"):
+            robust.response_metadata = res.response_metadata
+        
         # Copy usage if available
         if hasattr(res, "usage_metadata") and res.usage_metadata is not None:
             m = res.usage_metadata
@@ -128,6 +136,7 @@ class LimitProofLLM:
         
         self.providers = [
             ("gpt-4o", self._get_openai),
+            ("claude-3-5-sonnet", self._get_claude),
             ("gemini-1.5-flash", self._get_gemini),
             ("cerebras-llama3.1", self._get_cerebras),
             ("deepseek-chat", self._get_deepseek),
@@ -160,6 +169,13 @@ class LimitProofLLM:
         api_key = get("openai_api_key", required=False)
         if not api_key: raise RuntimeError("Missing OpenAI Key")
         llm = ChatOpenAI(model="gpt-4o", temperature=self.temperature, api_key=api_key, max_retries=0)
+        return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
+
+    def _get_claude(self):
+        from langchain_anthropic import ChatAnthropic
+        api_key = get("anthropic_api_key", required=False)
+        if not api_key: raise RuntimeError("Missing Anthropic Key")
+        llm = ChatAnthropic(model="claude-3-5-sonnet-20241022", temperature=self.temperature, anthropic_api_key=api_key)
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def _get_gemini(self):

@@ -148,10 +148,16 @@ async def run_with_healing(
         )
         
         ctx.step(f"Healer: Suggested recovery prompt: {recovery_prompt}")
-        
-        if ctx.step("Healer: Apply recovery prompt and retry?"):
+
+        should_retry = False
+        if ctx.mode == Mode.AUTO:
+            should_retry = True
+        elif ctx.step("Healer: Apply recovery prompt and retry?"):
+            should_retry = True
+
+        if should_retry:
             from browser_use import Agent as BrowserAgent
-            # We recreate the agent with the new task. 
+            # We recreate the agent with the new task.
             # Note: We reuse the controller and browser if possible.
             new_agent = BrowserAgent(
                 task=f"ORIGINAL TASK: {agent.task}\n\nRECOVERY INSTRUCTIONS: {recovery_prompt}",
@@ -162,7 +168,6 @@ async def run_with_healing(
             return await run_with_healing(new_agent, ctx, max_heals - 1)
         else:
             ctx.step("Healer: Recovery aborted by user.")
-
     # Record usage in ctx
     try:
         usage = {

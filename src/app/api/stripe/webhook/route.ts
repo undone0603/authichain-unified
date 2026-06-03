@@ -2,7 +2,70 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          user_id: string;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          subscription_plan: string | null;
+          subscription_status: string | null;
+          subscribed_at: string | null;
+          last_payment_at: string | null;
+          cancelled_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_plan?: string | null;
+          subscription_status?: string | null;
+          subscribed_at?: string | null;
+          last_payment_at?: string | null;
+          cancelled_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_plan?: string | null;
+          subscription_status?: string | null;
+          subscribed_at?: string | null;
+          last_payment_at?: string | null;
+          cancelled_at?: string | null;
+        };
+      };
+      checkout_sessions: {
+        Row: { id: number; session_id: string; status: string; user_id: string };
+        Insert: { id?: number; session_id: string; status: string; user_id: string };
+        Update: { status?: string };
+      };
+      payment_history: {
+        Row: { id: string; user_id: string };
+        Insert: {
+          user_id: string;
+          stripe_invoice_id: string;
+          stripe_subscription_id: string | null;
+          amount: number;
+          currency: string;
+          status: string;
+          paid_at: string;
+        };
+      };
+      stripe_events: {
+        Row: { id: string };
+        Insert: { event_id: string; event_type: string; processed_at: string };
+      };
+    };
+  };
+}
 
 // Lazy singletons — avoid build-time throw when env vars are absent.
 let _stripe: Stripe | null = null;
@@ -15,11 +78,10 @@ function getStripe(): Stripe {
   return _stripe;
 }
 
-let _supabase: ReturnType<typeof createClient> | null = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getSupabase(): any {
+let _supabase: SupabaseClient<Database> | null = null;
+function getSupabase(): SupabaseClient<Database> {
   if (!_supabase) {
-    _supabase = createClient(
+    _supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
@@ -39,34 +101,35 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get('stripe-signature')!;
 
-  let event: any;
+  let event: Stripe.Event;
   try {
     // 2. UPDATED: Must use constructEventAsync for Edge compatibility
     event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
-  } catch (err: any) {
-    console.error('Stripe webhook signature verification failed:', err.message);
-    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Stripe webhook signature verification failed:', message);
+    return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
   }
 
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object;
+        const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.user_id;
         const plan = session.metadata?.plan;
         const customerId = session.customer;
         const subscriptionId = session.subscription;
 
         if (userId) {
-          await getSupabase().from('profiles').update({
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
+          await (getSupabase().from('profiles') as any).update({
+            stripe_customer_id: customerId as string,
+            stripe_subscription_id: subscriptionId as string,
             subscription_plan: plan,
             subscription_status: 'active',
             subscribed_at: new Date().toISOString(),
           }).eq('user_id', userId);
 
-          await getSupabase().from('checkout_sessions').update({ status: 'completed' })
+          await (getSupabase().from('checkout_sessions') as any).update({ status: 'completed' })
             .eq('session_id', session.id);
 
           // Trigger welcome/confirmation email
@@ -80,24 +143,24 @@ export async function POST(req: NextRequest) {
       }
 
       case 'invoice.paid': {
-        const invoice = event.data.object;
-        const customerId = invoice.customer;
-        const subscriptionId = invoice.subscription;
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = invoice.customer as string;
+        const subscriptionId = (invoice as any).subscription as string;
         const amountPaid = invoice.amount_paid / 100;
 
-        const { data: profile } = await getSupabase()
-          .from('profiles')
+        const { data: profile } = await (getSupabase()
+          .from('profiles') as any)
           .select('id, subscription_plan')
           .eq('stripe_customer_id', customerId)
           .single();
 
         if (profile) {
-          await getSupabase().from('profiles').update({
+          await (getSupabase().from('profiles') as any).update({
             subscription_status: 'active',
             last_payment_at: new Date().toISOString(),
           }).eq('id', profile.id);
 
-          await getSupabase().from('payment_history').insert({
+          await (getSupabase().from('payment_history') as any).insert({
             user_id: profile.id,
             stripe_invoice_id: invoice.id,
             stripe_subscription_id: subscriptionId,
@@ -111,17 +174,17 @@ export async function POST(req: NextRequest) {
       }
 
       case 'invoice.payment_failed': {
-        const invoice = event.data.object;
-        const customerId = invoice.customer;
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = invoice.customer as string;
 
-        const { data: profile } = await getSupabase()
-          .from('profiles')
+        const { data: profile } = await (getSupabase()
+          .from('profiles') as any)
           .select('id')
           .eq('stripe_customer_id', customerId)
-          .single() as any;
+          .single();
 
         if (profile) {
-          await getSupabase().from('profiles').update({
+          await (getSupabase().from('profiles') as any).update({
             subscription_status: 'past_due',
           }).eq('id', profile.id);
 
@@ -135,10 +198,10 @@ export async function POST(req: NextRequest) {
       }
 
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        const customerId = subscription.customer;
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
 
-        await getSupabase().from('profiles').update({
+        await (getSupabase().from('profiles') as any).update({
           subscription_status: 'cancelled',
           subscription_plan: 'free',
           cancelled_at: new Date().toISOString(),
@@ -147,11 +210,11 @@ export async function POST(req: NextRequest) {
       }
 
       case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        const customerId = subscription.customer;
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
         const status = subscription.status;
 
-        await getSupabase().from('profiles').update({
+        await (getSupabase().from('profiles') as any).update({
           subscription_status: status,
           stripe_subscription_id: subscription.id,
         }).eq('stripe_customer_id', customerId);
@@ -159,11 +222,11 @@ export async function POST(req: NextRequest) {
       }
 
       case 'customer.subscription.trial_will_end': {
-        const subscription = event.data.object;
-        const customerId = subscription.customer;
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
 
-        const { data: profile } = await getSupabase()
-          .from('profiles')
+        const { data: profile } = await (getSupabase()
+          .from('profiles') as any)
           .select('id')
           .eq('stripe_customer_id', customerId)
           .single();
@@ -183,15 +246,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Log all events
-    await getSupabase().from('stripe_events').insert({
+    await (getSupabase().from('stripe_events') as any).insert({
       event_id: event.id,
       event_type: event.type,
       processed_at: new Date().toISOString(),
     }).select();
 
     return NextResponse.json({ received: true, type: event.type });
-  } catch (err: any) {
-    console.error('Webhook processing error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Webhook processing error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

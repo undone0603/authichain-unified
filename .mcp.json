@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "authichain": {
+      "command": "npx",
+      "args": ["tsx", "server/mcp/index.ts"],
+      "env": {
+        "DATABASE_URL": "PLACEHOLDER_LOADED_FROM_ENV",
+        "SUPABASE_SERVICE_ROLE_KEY": "PLACEHOLDER_LOADED_FROM_ENV"
+      }
+    }
+  }
+}

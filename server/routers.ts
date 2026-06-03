@@ -35,6 +35,8 @@ import { paymentsRouter } from "./payments/router";
 import { heygenRouter } from "./heygen/router";
 import { abTestingRouter } from "./ab-testing/router";
 import { macrohardRouter } from "./macrohard/router";
+import { qronRouter } from "./qron/router";
+import { governanceRouter } from "./governance/router";
 
 // Import routers from routers/ folder
 import { metrcRouter } from "./routers/metrc";
@@ -207,13 +209,73 @@ export const appRouter = router({
       if (!product || product.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
       return await getRecentScanEvents(input.productId);
     }),
-    scan: publicProcedure.input(z.object({ productId: z.number() })).query(async ({ input }) => {
-      const { getProductById, getProductQrCodes, incrementScanCount } = await import("./db");
+    scan: publicProcedure.input(z.object({ 
+      productId: z.number(),
+      location: z.object({ city: z.string().optional(), country: z.string().optional() }).optional()
+    })).query(async ({ input, ctx }) => {
+      const { getProductById, getProductQrCodes, incrementScanCount, logScanEvent, updateProduct, getRecentScanEvents } = await import("./db");
       const product = await getProductById(input.productId);
       if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+      
       const qrCodes = await getProductQrCodes(input.productId);
-      if (qrCodes.length > 0) await incrementScanCount(qrCodes[0].id);
-      return { product, scanCount: (qrCodes[0]?.scanCount || 0) + 1 };
+      if (qrCodes.length > 0) {
+        const qrId = qrCodes[0].id;
+        await incrementScanCount(qrId);
+        await logScanEvent({ 
+          qrCodeId: qrId, 
+          productId: input.productId, 
+          isAuthentic: true, 
+          userAgent: (ctx.req.headers["user-agent"] as string) || "unknown" 
+        });
+      }
+
+      // ─── Security Council 5-Agent Consensus ───
+      const { SecurityCouncil } = await import("./_core/consensus");
+      const consensus = await SecurityCouncil.renderVerdict(product.id, { 
+        location: input.location,
+        userAgent: (ctx.req.headers["user-agent"] as string) || "unknown"
+      });
+
+      // ─── Autonomous Fraud Mitigation ───
+      if (consensus.status === 'counterfeit') {
+         const { FraudMitigation } = await import("./fraud-mitigation");
+         await FraudMitigation.triggerResponse(product.id, consensus);
+      }
+
+      const metadata = (product.metadata as any) || {};
+      const score = consensus.finalScore;
+
+      // Update Dynamic Timeline with Consensus Data
+      if (!metadata.timeline) {
+        metadata.timeline = [{ event: "Identity Created", status: "complete", timestamp: product.createdAt }];
+      }
+      
+      const locationStr = input.location ? `${input.location.city || "Unknown"}, ${input.location.country || "??"}` : "Unknown Location";
+      metadata.timeline.push({
+        event: "Weighted Consensus Reached",
+        location: locationStr,
+        timestamp: consensus.timestamp,
+        status: "complete",
+        details: { 
+           verdict: consensus.status,
+           score: consensus.finalScore,
+           agents: Object.keys(consensus.verdicts)
+        }
+      });
+
+      // Limit timeline size
+      if (metadata.timeline.length > 15) metadata.timeline.shift();
+
+      await updateProduct(product.id, {
+        metadata,
+        authenticityScore: score // Correct property name updated in Phase 4
+      });
+
+      return { 
+        product: { ...product, metadata, authenticityScore: score }, 
+        scanCount: (qrCodes[0]?.scanCount || 0) + 1,
+        consensus
+      };
     }),
   }),
 
@@ -276,6 +338,8 @@ export const appRouter = router({
   heygen: heygenRouter,
   abTesting: abTestingRouter,
   macrohard: macrohardRouter,
+  qron: qronRouter,
+  governance: governanceRouter,
 });
 
 export type AppRouter = typeof appRouter;

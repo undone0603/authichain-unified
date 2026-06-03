@@ -59,11 +59,12 @@ export async function anchorToPolygon(
       txHash: receipt.hash,
       blockNumber: receipt.blockNumber
     };
-  } catch (error: any) {
-    console.error('[Blockchain Anchor] Critical failure:', error.message);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[Blockchain Anchor] Critical failure:', message);
     return { 
       success: false, 
-      error: error.message,
+      error: message,
       txHash: null 
     };
   }

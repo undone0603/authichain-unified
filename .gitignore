@@ -39,6 +39,7 @@ agentz/runs.jsonl
 .vscode/
 .idea/
 .claude/
+!.claude/settings.json
 Thumbs.db
 
 # TypeScript

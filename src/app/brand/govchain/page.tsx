@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import {
-  Vote, Shield, Zap, Lock, Users, TrendingUp,
-  ArrowRight, CheckCircle, Coins, Scale, Globe, Activity,
+  Vote, Shield, Lock, Users, TrendingUp,
+  ArrowRight, Coins, Scale, Globe, Activity,
 } from 'lucide-react';
 
 const BLUE = '#3b82f6';

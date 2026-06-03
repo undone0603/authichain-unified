@@ -7,7 +7,7 @@ import { createClient } from '@/utils/supabase/server';
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    await supabase.auth.getSession();
 
     // In a real scenario, we might want to restrict this to Theater 3/Enterprise users
     // For the demo, we'll allow authenticated users.
@@ -26,10 +26,11 @@ export async function POST(request: Request) {
       qron: result
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Gilmore Pipeline Error:', error);
+    const message = error instanceof Error ? error.message : 'Error generating automotive art';
     return NextResponse.json({ 
-      message: error.message || 'Error generating automotive art' 
+      message
     }, { status: 500 });
   }
 }

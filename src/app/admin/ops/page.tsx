@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Activity, AlertTriangle, CheckCircle2, ChevronLeft, Loader2, RefreshCw } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, ChevronLeft, Loader2, RefreshCw, Terminal } from 'lucide-react';
+import MatrixActivityFeed from '@/components/MatrixActivityFeed';
 
 interface OpsData {
   window_hours: number;
@@ -46,7 +47,12 @@ export default function OpsDashboard() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (loading && !data) {
     return (
@@ -121,7 +127,14 @@ export default function OpsDashboard() {
         </div>
 
         <section className="mb-12">
-          <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-4">Workflow Summary</h2>
+          <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
+            <Terminal className="w-4 h-4 text-emerald-500" />
+            Autonomous Activity Stream
+          </h2>
+          <MatrixActivityFeed />
+        </section>
+
+        <section className="mb-12">
           <div className="protocol-card bg-zinc-950/50 border-zinc-900 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-zinc-900/50 text-[10px] font-black uppercase tracking-widest text-zinc-500">

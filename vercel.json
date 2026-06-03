@@ -1,6 +1,9 @@
 {
   "version": 2,
   "framework": "nextjs",
+  "rewrites": [
+    { "source": "/microsite/:slug", "destination": "/microsite/:slug" }
+  ],
   "crons": [
     { "path": "/api/automation/cron", "schedule": "0 6 * * *" }
   ]

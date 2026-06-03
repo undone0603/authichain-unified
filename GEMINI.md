@@ -53,3 +53,9 @@ Every scan MUST resolve to a configuration that includes:
 3. AI Concierge Personification (Voice of Product).
 4. Token-Gated Chapters (Hidden Content).
 5. QRON Reward & Burn Utility (Merchant Discounts).
+
+## 🏆 Dominant Platform Standards (Phase 3)
+- **Truth Anchoring**: High-value artifacts MUST be anchored to L1 (Bitcoin) via `scripts/truth-anchor-worker.ts` within 24h.
+- **Compliance Audit**: Ledger MUST pass the daily `compliance_worker.py` check against EU DPP mandates.
+- **Visual Evidence**: The `status/map` MUST accurately reflect global protocol activity for investor observability.
+- **Revenue Blitz**: New city expansions MUST be triggered via `scripts/revenue-blitz.py` for unified lead registration.

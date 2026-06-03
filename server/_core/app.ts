@@ -17,6 +17,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import { rateLimit } from "express-rate-limit";
 import { registerOAuthRoutes } from "./oauth";
+import { registerGmailOAuthRoutes } from "../gmail-oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { createInternalRouter } from "../internal-api";
@@ -217,6 +218,7 @@ export function createApp() {
   // ─── OAuth callback: stricter rate limit ─────────────────────────────────
   app.use("/api/oauth", oauthRateLimit);
   registerOAuthRoutes(app);
+  registerGmailOAuthRoutes(app);
 
   // ─── Contact form: 5/hr per IP ───────────────────────────────────────────
   app.use("/api/contact", contactRateLimit, contactRouter);

@@ -28,6 +28,35 @@ export const marketingRouter = router({
     await db.updateLeadStatus(input.id, input.status);
     return { success: true };
   }),
+  activateBrand: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    const lead = await db.getLeadById(input.id);
+    if (!lead) throw new Error("Lead not found");
+
+    // 1. Create a production product entry for the new brand
+    const productName = `${lead.company || lead.name} Signature Series`;
+    const product = await db.createProduct({
+      userId: 1, // System admin
+      name: productName,
+      brand: lead.company || lead.name || "Pilot Partner",
+      category: "Luxury",
+      description: `Authentic digital twin for ${lead.company}. Anchored in the AuthiChain Protocol.`,
+      isRegistered: true,
+      metadata: { pilot_lead_id: lead.id }
+    });
+
+    // 2. Anchor to L1 (Simulation of the worker we built)
+    const { anchorToPolygon } = await import("../../src/actions/anchor");
+    const anchor = await anchorToPolygon(`ACTIVATE-${product.id}`, `0x${Buffer.from(productName).toString('hex')}`, product.id);
+
+    if (anchor.success) {
+       await db.updateProduct(product.id, { blockchainTxHash: anchor.txHash });
+    }
+
+    // 3. Mark lead as active
+    await db.updateLeadStatus(input.id, "active_partner");
+
+    return { success: true, productId: product.id, productCount: 1 };
+  }),
   generateContent: protectedProcedure.input(z.object({
     type: z.enum(["email", "social", "blog"]),
     topic: z.string(),

@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import {
-  Shield, Zap, Lock, Package, Globe, Activity,
-  ArrowRight, CheckCircle, Code2, Building2, Pill,
-  ShieldCheck, Leaf, Vote, Sparkles, Terminal,
+  Shield, Lock, Package, Globe, Activity,
+  ArrowRight, Code2, Building2, Pill,
+  ShieldCheck, Leaf, Sparkles, Terminal,
 } from 'lucide-react';
 
 const STATS = [
