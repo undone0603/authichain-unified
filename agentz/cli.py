@@ -21,12 +21,6 @@ import json
 import sys
 from pathlib import Path
 
-# Ensure stdout/stderr can handle Unicode on Windows (CP1252 terminals)
-if hasattr(sys.stdout, "buffer"):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-if hasattr(sys.stderr, "buffer"):
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
-
 
 # ── pulse ─────────────────────────────────────────────────────────────────────
 def cmd_pulse(args: argparse.Namespace) -> int:
@@ -123,7 +117,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     reg = load_registry()
 
     if getattr(args, "all", False):
-        ordered = resolve_order(reg, [wf.id for wf in reg.values() if wf.type != "browser"])
+        requested = [wf.id for wf in reg.values() if wf.type != "browser"]
     else:
         wf_id = args.workflow_id
         if not wf_id:
@@ -132,7 +126,16 @@ def cmd_run(args: argparse.Namespace) -> int:
         if wf_id not in reg:
             print(f"Unknown workflow: {wf_id}. Run 'python -m agentz.cli list' to see all.", file=sys.stderr)
             return 1
-        ordered = resolve_order(reg, [wf_id])
+        requested = [wf_id]
+
+    if getattr(args, "revenue_only", False):
+        requested = [wf_id for wf_id in requested if reg[wf_id].blocks_revenue]
+        if not requested:
+            msg = "No revenue workflows found." if getattr(args, "all", False) else f"Workflow {wf_id} does not block revenue."
+            print(msg, file=sys.stderr)
+            return 1
+
+    ordered = resolve_order(reg, requested)
 
     results = []
     for wf in ordered:
@@ -216,6 +219,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_p = sub.add_parser("run", help="Run a workflow by ID (or --all)")
     run_p.add_argument("workflow_id", nargs="?")
     run_p.add_argument("--all",  action="store_true", help="Run all non-browser workflows")
+    run_p.add_argument("--revenue-only", action="store_true", help="Only run workflows that block revenue")
     run_p.add_argument("--mode", choices=["auto", "confirm", "dry-run"], default="auto")
     run_p.add_argument("--serial", action="store_true")
     run_p.add_argument("--quiet",  action="store_true")
@@ -247,6 +251,12 @@ def cmd_task(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Ensure stdout/stderr can handle Unicode on Windows (CP1252 terminals)
+    if hasattr(sys.stdout, "buffer"):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "buffer"):
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+
     parser = build_parser()
     args = parser.parse_args(argv)
 
