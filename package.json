@@ -141,5 +141,7 @@
       "esbuild": ">=0.25.0"
     }
   },
-  "optionalDependencies": {}
+  "optionalDependencies": {
+    "@cloudflare/workerd-windows-64": "*"
+  }
 }
