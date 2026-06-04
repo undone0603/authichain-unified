@@ -1,20 +1,29 @@
-name = "authichain-com"
+name = 'authichain'
+main = "worker/index.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".open-next"
 
+# Static assets built by Vite → dist/public
+[assets]
+directory = "dist/public"
+binding = "ASSETS"
+
+# Environment variables (injected via Cloudflare dashboard)
 [vars]
 APP_ENV = "production"
 
+# KV namespaces
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "7c8e9466e57843199f6f768615e42a5c"
 
+# D1 database
 [[d1_databases]]
 binding = "DB"
 database_name = "authichain-db"
 database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 
+# R2 bucket for subdomain microsites
 [[r2_buckets]]
 binding = "MICROSITES_BUCKET"
 bucket_name = "authichain-microsites"

@@ -2,6 +2,9 @@ import { z } from "zod";
 import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { issueSovereignPassport, verifySovereignPassport } from "./vc-service";
 import * as db from "../db";
+import { getDb } from "../db";
+import { activityLog } from "../../drizzle/schema";
+import { eq, count, countDistinct } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 export const govchainRouter = router({
@@ -73,10 +76,26 @@ export const govchainRouter = router({
    * GovChain Stats: Real-time metrics for the government vertical
    */
   stats: publicProcedure.query(async () => {
+    const d = await getDb();
+    if (!d) {
+      return { activeAgencies: 0, passportsIssued: 0, complianceScore: 100, network: "GovChain Federal Hub (FIPS 140-2)" };
+    }
+    const [issuedRow] = await d.select({ total: count() }).from(activityLog)
+      .where(eq(activityLog.action, "govchain_passport_issued"));
+    const [agenciesRow] = await d.select({ total: countDistinct(activityLog.userId) }).from(activityLog)
+      .where(eq(activityLog.action, "govchain_passport_issued"));
+    const [verifiedRow] = await d.select({ total: count() }).from(activityLog)
+      .where(eq(activityLog.action, "govchain_passport_verified"));
+    const [failedRow] = await d.select({ total: count() }).from(activityLog)
+      .where(eq(activityLog.action, "govchain_passport_verification_failed"));
+    const verified = verifiedRow?.total ?? 0;
+    const failed = failedRow?.total ?? 0;
+    const totalVerifications = verified + failed;
+    const complianceScore = totalVerifications > 0 ? Math.round((verified / totalVerifications) * 1000) / 10 : 100;
     return {
-      activeAgencies: 12,
-      passportsIssued: 1420,
-      complianceScore: 99.9,
+      activeAgencies: agenciesRow?.total ?? 0,
+      passportsIssued: issuedRow?.total ?? 0,
+      complianceScore,
       network: "GovChain Federal Hub (FIPS 140-2)"
     };
   }),

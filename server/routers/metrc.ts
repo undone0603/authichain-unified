@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
 import { syncMetrcTransfers, anchorPackageToTruthLayer } from "../metrc-service";
+import { getDb } from "../db";
+import { activityLog, whiteLabelClients } from "../../drizzle/schema";
+import { eq, count, sql } from "drizzle-orm";
 
 export const metrcRouter = router({
   /**
@@ -38,10 +41,26 @@ export const metrcRouter = router({
    * Get sync status for the state-wide truth layer
    */
   stats: publicProcedure.query(async () => {
+    const d = await getDb();
+    if (!d) {
+      return { activeLicenses: 0, manifestsReconciled: 0, taxIntegrityScore: 0, network: "METRC Michigan (LARA)" };
+    }
+    const [licenseRow] = await d.select({ total: count() }).from(whiteLabelClients)
+      .where(eq(whiteLabelClients.status, "active"));
+    const [manifestRow] = await d.select({ total: count() }).from(activityLog)
+      .where(eq(activityLog.action, "metrc_manifest_synced"));
+    const [verifiedRow] = await d.select({ total: count() }).from(activityLog)
+      .where(eq(activityLog.action, "metrc_manifest_synced"));
+    const [failedRow] = await d.select({ total: count() }).from(activityLog)
+      .where(eq(activityLog.action, "metrc_manifest_failed"));
+    const verified = verifiedRow?.total ?? 0;
+    const failed = failedRow?.total ?? 0;
+    const total = verified + failed;
+    const taxIntegrityScore = total > 0 ? Math.round((verified / total) * 1000) / 10 : 100;
     return {
-      activeLicenses: 42,
-      manifestsReconciled: 1042,
-      taxIntegrityScore: 98.4,
+      activeLicenses: licenseRow?.total ?? 0,
+      manifestsReconciled: manifestRow?.total ?? 0,
+      taxIntegrityScore,
       network: "METRC Michigan (LARA)"
     };
   }),
