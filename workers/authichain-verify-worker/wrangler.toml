@@ -2,14 +2,8 @@ name = "authichain-verify-worker"
 main = "src/index.ts"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = true
 
 [vars]
 NEXT_PUBLIC_SITE_URL = "https://authichain.com"
-
-# Uncomment and set via wrangler secret put SUPABASE_URL etc.
-# [vars]
-# SUPABASE_URL = ""
-# SUPABASE_ANON_KEY = ""
-
-account_id = "4c1869b90f13f86940aa3747839bf420"
-workers_dev = true
