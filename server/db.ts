@@ -287,10 +287,46 @@ export async function createServiceOrder(data: any) {
   return { id, ...data };
 }
 
+export async function getServiceOrderById(id: number) {
+  const d = await getDb();
+  if (!d) return null;
+  const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getServiceOrdersByUser(userId: number) {
+  const d = await getDb();
+  if (!d) return [];
+  return d.select().from(serviceOrders)
+    .where(eq(serviceOrders.userId, userId))
+    .orderBy(desc(serviceOrders.createdAt));
+}
+
+export async function getAllServiceOrders() {
+  const d = await getDb();
+  if (!d) return [];
+  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
+}
+
 export async function getServiceOrderBySessionId(sessionId: string) {
   const d = await getDb();
+  if (!d) return null;
   const rows = await d.select().from(serviceOrders).where(sql`(${serviceOrders.details}::jsonb)->>'sessionId' = ${sessionId}`).limit(1);
   return rows[0] ?? null;
+}
+
+export async function updateServiceOrderStatus(
+  id: number,
+  status: string,
+  updates?: { stripePaymentIntentId?: string; [key: string]: unknown },
+) {
+  const d = await getDb();
+  if (!d) return;
+  const setValues: Record<string, unknown> = { status, updatedAt: new Date() };
+  if (updates?.stripePaymentIntentId) {
+    setValues.stripePaymentIntentId = updates.stripePaymentIntentId;
+  }
+  await d.update(serviceOrders).set(setValues as any).where(eq(serviceOrders.id, id));
 }
 
 // ─────────────────────────────────────────────────────────────

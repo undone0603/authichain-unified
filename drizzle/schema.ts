@@ -649,11 +649,15 @@ export const budgetConfig = pgTable("budget_config", {
 // ─── Service Orders ──────────────────────────────────────────────────────────
 export const serviceOrders = pgTable("service_orders", {
   id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
-  serviceType: varchar("serviceType", { length: 64 }).notNull(),
+  userId: integer("userId"),
+  serviceType: varchar("serviceType", { length: 64 }),
   status: varchar("status", { length: 50 }).default("pending").notNull(),
   priority: integer("priority").default(0),
+  amount: numeric("amount", { precision: 18, scale: 2 }),
+  currency: varchar("currency", { length: 8 }).default("USD"),
   details: json("details"),
+  stripeSessionId: varchar("stripeSessionId", { length: 256 }),
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 256 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
