@@ -43,28 +43,42 @@ export default {
 
     // API key validation
     const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!apiKey) return json({ error: 'Missing API key.' }, cors, 401);
+    if (!apiKey) return json({ error: 'Missing API key. Get one at https://api.authichain.com/docs' }, cors, 401);
 
-    // Rate Limiting Logic (KV-backed)
-    if (!env.RATE_LIMITS) {
-      return json({ error: 'Rate limiting service unavailable. Try again later.' }, cors, 503);
+    // Key status endpoint
+    if (path === '/api/v1/key/status') {
+      return handleKeyStatus(apiKey, env, cors);
     }
-    {
-      const limitKey = `usage:${apiKey}:${new Date().getUTCHours()}`;
-      const currentUsage = await env.RATE_LIMITS.get(limitKey) || "0";
-      const limit = apiKey.includes("demo") ? 10 : 5000;
 
-      if (parseInt(currentUsage) >= limit) {
-        return json({ error: 'Rate limit exceeded for this hour.', tier: apiKey.includes("demo") ? 'Free' : 'Pro' }, cors, 429);
+    // Resolve key data: check KV for provisioned keys, fall back to demo
+    let keyData: { name: string; plan: string; limit: number };
+    const isDemo = apiKey === 'demo_test_key_2026';
+
+    if (isDemo) {
+      keyData = { name: 'Free', plan: 'free', limit: 10 };
+    } else if (env.API_KEYS) {
+      const raw = await env.API_KEYS.get(`key:${apiKey}`);
+      if (raw) {
+        const stored = JSON.parse(raw);
+        if (!stored.active) return json({ error: 'API key has been deactivated.' }, cors, 403);
+        keyData = { name: stored.name, plan: stored.plan, limit: stored.limit };
+      } else {
+        return json({ error: 'Invalid API key. Get one at https://api.authichain.com/docs', validDemo: 'demo_test_key_2026' }, cors, 401);
       }
-      await env.RATE_LIMITS.put(limitKey, (parseInt(currentUsage) + 1).toString(), { expirationTtl: 3600 });
+    } else {
+      keyData = { name: 'Free', plan: 'free', limit: 10 };
     }
 
-    const keyData = {
-      name: apiKey.includes("demo") ? "Free" : "Pro",
-      plan: apiKey.includes("demo") ? "free" : "premium",
-      limit: apiKey.includes("demo") ? 10 : 5000,
-    };
+    // Rate Limiting (KV-backed)
+    if (env.RATE_LIMITS) {
+      const limitKey = `usage:${apiKey}:${new Date().getUTCHours()}`;
+      const currentUsage = parseInt(await env.RATE_LIMITS.get(limitKey) || '0');
+
+      if (currentUsage >= keyData.limit) {
+        return json({ error: 'Rate limit exceeded for this hour.', plan: keyData.name, limit: keyData.limit, upgrade: 'https://api.authichain.com/docs#pricing' }, cors, 429);
+      }
+      await env.RATE_LIMITS.put(limitKey, (currentUsage + 1).toString(), { expirationTtl: 3600 });
+    }
 
     // Route handling
     try {
@@ -398,6 +412,33 @@ async function handleLeadCapture(request: Request, env: any, cors: any): Promise
   return json({ success: true, message: 'Thanks! We\'ll be in touch.' }, cors, 201);
 }
 
+// ── Key Status ──────────────────────────────────────────────────────────
+
+async function handleKeyStatus(apiKey: string, env: any, cors: any): Promise<Response> {
+  if (apiKey === 'demo_test_key_2026') {
+    const usage = env.RATE_LIMITS ? parseInt(await env.RATE_LIMITS.get(`usage:${apiKey}:${new Date().getUTCHours()}`) || '0') : 0;
+    return json({ plan: 'Free', limit: 10, used: usage, remaining: Math.max(0, 10 - usage), active: true }, cors);
+  }
+
+  if (!env.API_KEYS) return json({ error: 'Key store unavailable' }, cors, 503);
+
+  const raw = await env.API_KEYS.get(`key:${apiKey}`);
+  if (!raw) return json({ error: 'Invalid API key' }, cors, 401);
+
+  const data = JSON.parse(raw);
+  const usage = env.RATE_LIMITS ? parseInt(await env.RATE_LIMITS.get(`usage:${apiKey}:${new Date().getUTCHours()}`) || '0') : 0;
+
+  return json({
+    plan: data.name,
+    email: data.email,
+    limit: data.limit,
+    used: usage,
+    remaining: Math.max(0, data.limit - usage),
+    active: data.active,
+    createdAt: data.createdAt,
+  }, cors);
+}
+
 // ── Stripe Accounts v2 (admin-gated) ────────────────────
 
 async function handleV2(request: Request, path: string, url: URL, env: any, cors: any) {
@@ -542,9 +583,13 @@ td{padding:12px;border-bottom:1px solid #111}
 </div>
 
 <div style="margin-bottom:48px">
-  <a href="mailto:authichain@gmail.com?subject=API%20Key%20Request" class="cta">Get API Key</a>
+  <form id="key-form" style="display:inline-flex;gap:8px;margin-right:12px;vertical-align:middle">
+    <input type="email" id="key-email" placeholder="you@company.com" required style="padding:12px 16px;border-radius:4px;border:1px solid #333;background:#0d0d10;color:#e0e0e0;font-size:14px;width:240px">
+    <button type="submit" class="cta" style="border:none;cursor:pointer">Get API Key</button>
+  </form>
   <a href="https://strainchain.io" class="cta outline">StrainChain</a>
   <a href="https://qron-portfolio.undone-k.workers.dev/" class="cta outline">QRON Portfolio</a>
+  <p id="key-msg" style="color:#3ddc60;font-size:13px;margin-top:8px;display:none"></p>
 </div>
 
 <h2>Authentication</h2>
@@ -642,8 +687,8 @@ console.log(data.result);  <span style="color:#555">// "authentic"</span></pre>
 
 <div style="margin:48px 0;padding:32px;background:#0d0d10;border:1px solid #1a1a1a;border-radius:8px;text-align:center">
   <h3 style="margin-bottom:8px">Ready to integrate?</h3>
-  <p>Get your API key and start exploring the demo endpoints.</p>
-  <a href="mailto:authichain@gmail.com?subject=API%20Key%20Request" class="cta">Request API Key</a>
+  <p>Use the demo key above to test, or get a production key:</p>
+  <a href="#" onclick="document.getElementById('key-email').focus();return false" class="cta">Get Production Key</a>
 </div>
 
 <div class="footer-eco">
@@ -660,5 +705,20 @@ console.log(data.result);  <span style="color:#555">// "authentic"</span></pre>
 </div>
 
 </div>
+<script>
+document.getElementById('key-form').addEventListener('submit',async function(e){
+  e.preventDefault();
+  const email=document.getElementById('key-email').value;
+  const msg=document.getElementById('key-msg');
+  try{
+    const r=await fetch('/api/v1/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,source:'api-docs'})});
+    const d=await r.json();
+    msg.textContent=r.ok?'Check your email — we will send your API key within 24 hours.':d.error;
+    msg.style.display='block';
+    msg.style.color=r.ok?'#3ddc60':'#ff6b6b';
+    if(r.ok)this.reset();
+  }catch(err){msg.textContent='Something went wrong.';msg.style.display='block';msg.style.color='#ff6b6b';}
+});
+</script>
 </body>
 </html>`;
