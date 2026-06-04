@@ -323,15 +323,25 @@ async function handleStripeWebhook(request: Request, env: any, cors: any): Promi
     const session = event.data.object;
     const email = session.customer_email || session.customer_details?.email;
 
-    // Expand line_items from Stripe API — not included in webhook payload by default
+    // Resolve plan: metadata.plan (set by stripe-service.ts) takes precedence;
+    // fall back to price ID lookup against plan map via expanded line_items.
+    const metadataPlan = session.metadata?.plan as string | undefined;
     let priceId: string = session.metadata?.priceId || session.metadata?.price_id || 'unknown';
     if (priceId === 'unknown' && env.STRIPE_SECRET_KEY) {
       const expanded = await fetchStripeSession(session.id, env.STRIPE_SECRET_KEY);
       priceId = expanded?.line_items?.data?.[0]?.price?.id || priceId;
     }
 
+    const METADATA_PLAN_LIMITS: Record<string, { plan: string; limit: number; name: string }> = {
+      starter: { plan: 'starter', limit: 1000, name: 'AuthiChain Starter' },
+      professional: { plan: 'professional', limit: 10000, name: 'AuthiChain Professional' },
+      pro: { plan: 'pro', limit: 10000, name: 'AuthiChain Pro' },
+      enterprise: { plan: 'enterprise', limit: 100000, name: 'AuthiChain Enterprise' },
+    };
     const planMap = buildPlanMap(env);
-    const planInfo = planMap[priceId] || { plan: 'starter', limit: 1000, name: 'AuthiChain Starter' };
+    const planInfo = (metadataPlan && METADATA_PLAN_LIMITS[metadataPlan])
+      ? METADATA_PLAN_LIMITS[metadataPlan]
+      : (planMap[priceId] || { plan: 'starter', limit: 1000, name: 'AuthiChain Starter' });
 
     const apiKey = generateApiKey(planInfo.plan);
     const keyData = {
