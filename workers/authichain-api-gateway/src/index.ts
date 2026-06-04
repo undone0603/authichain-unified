@@ -31,7 +31,10 @@ export default {
     if (!apiKey) return json({ error: 'Missing API key.' }, cors, 401);
 
     // Rate Limiting Logic (KV-backed)
-    if (env.RATE_LIMITS) {
+    if (!env.RATE_LIMITS) {
+      return json({ error: 'Rate limiting service unavailable. Try again later.' }, cors, 503);
+    }
+    {
       const limitKey = `usage:${apiKey}:${new Date().getUTCHours()}`;
       const currentUsage = await env.RATE_LIMITS.get(limitKey) || "0";
       const limit = apiKey.includes("demo") ? 10 : 5000;

@@ -4,7 +4,7 @@
   "description": "Autonomous Trust Infrastructure",
   "main": "index.js",
   "scripts": {
-    "test": "venv\\Scripts\\python.exe -m pytest tests",
+    "test": "vitest run",
     "build:router": "wrangler deploy --dry-run authichain-router/src/index.ts",
     "build:worker": "wrangler deploy --dry-run outreach-worker/src/index.ts",
     "build:cf": "pnpm run build:router && pnpm run build:worker",
@@ -151,7 +151,6 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
     "patch-package": "^8.0.1",
-    "pnpm": "^11.1.1",
     "postcss": "^8.4.47",
     "postinstall-postinstall": "^2.1.0",
     "prettier": "^3.6.2",
