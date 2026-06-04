@@ -11,18 +11,33 @@ import { runOrganicTrafficAutomation } from "./organic-traffic";
 import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
+import { withRetry } from "../_core/retry";
+import { getCircuitBreaker } from "../_core/circuit-breaker";
+
+async function safeRun<T>(name: string, fn: () => Promise<T>): Promise<T | null> {
+  const cb = getCircuitBreaker(name, { failureThreshold: 3, timeoutMs: 5 * 60_000 });
+  try {
+    return await cb.exec(() => withRetry(fn, { maxAttempts: 2, baseDelayMs: 1000 }));
+  } catch (err) {
+    console.warn(`[pipeline-tick] ${name} failed:`, err);
+    return null;
+  }
+}
 
 export async function runPipelineTick() {
   if (!ENV.autonomousPipelineEnabled) {
     return { enabled: false, skipped: true, reason: "AUTONOMOUS_PIPELINE_ENABLED=false" };
   }
 
-  const budgetMonitor = await runBudgetMonitor();
-  const dunning = await runDunningEscalation();
-  const retention = await runRetentionAutomation();
-  const weeklyDigest = await runWeeklyDigestDispatch();
-  const quarterlyValue = await runQuarterlyValueReportDispatch();
-  const organicTraffic = await runOrganicTrafficAutomation();
+  const [budgetMonitor, dunning, retention, weeklyDigest, quarterlyValue, organicTraffic] =
+    await Promise.all([
+      safeRun("budgetMonitor",   runBudgetMonitor),
+      safeRun("dunning",         runDunningEscalation),
+      safeRun("retention",       runRetentionAutomation),
+      safeRun("weeklyDigest",    runWeeklyDigestDispatch),
+      safeRun("quarterlyValue",  runQuarterlyValueReportDispatch),
+      safeRun("organicTraffic",  runOrganicTrafficAutomation),
+    ]);
 
   // Mission task orchestration — UCB1 prioritisation
   // Score each task's kind by: E[conversion] + exploration bonus.
