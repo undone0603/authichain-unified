@@ -68,6 +68,33 @@ app.get("/", (c) => {
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 
+const WORKER_HEALTH_URLS = [
+  { name: "authichain-api-gateway", url: "https://authichain-api.undone-k.workers.dev/health" },
+  { name: "govchain-us", url: "https://govchain-us.undone-k.workers.dev/health" },
+  { name: "qron-space", url: "https://qron-space.undone-k.workers.dev/health" },
+  { name: "strainchain-io", url: "https://strainchain.io/health" },
+  { name: "bitcoin-auth", url: "https://bitcoin-auth.undone-k.workers.dev/health" },
+];
+
+app.get("/api/status", async (c) => {
+  const checks = await Promise.allSettled(
+    WORKER_HEALTH_URLS.map(async ({ name, url }) => {
+      const start = Date.now();
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      return { name, status: res.ok ? "ok" : "error", latencyMs: Date.now() - start };
+    }),
+  );
+
+  const results = checks.map((r, i) =>
+    r.status === "fulfilled"
+      ? r.value
+      : { name: WORKER_HEALTH_URLS[i].name, status: "unreachable", latencyMs: -1 },
+  );
+
+  const allOk = results.every((r) => r.status === "ok");
+  return c.json({ status: allOk ? "ok" : "degraded", services: results, ts: new Date().toISOString() }, allOk ? 200 : 503);
+});
+
 // ---------------------------------------------------------------------------
 // Product verification (physical QR scan entry point)
 // ---------------------------------------------------------------------------
