@@ -113,6 +113,11 @@ __pycache__/
 # Node
 node_modules/
 
+# Build artifacts
+.open-next/
+.next/
+dist/
+
 # Externally cloned repos (exploration only)
 authichain_premium/
 qron-platform/
