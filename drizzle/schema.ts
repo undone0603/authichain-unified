@@ -1,4 +1,4 @@
-import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, numeric, bigint } from "drizzle-orm/pg-core";
+import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, numeric, bigint, bigserial } from "drizzle-orm/pg-core";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const users = pgTable("users", {
@@ -34,6 +34,7 @@ export const products = pgTable("products", {
   category: varchar("category", { length: 128 }),
   description: text("description"),
   imageUrl: text("imageUrl"),
+  audioUrl: text("audioUrl"),
   serialNumber: varchar("serialNumber", { length: 256 }),
   batchNumber: varchar("batchNumber", { length: 256 }),
   manufacturingDate: timestamp("manufacturingDate"),
@@ -626,7 +627,7 @@ export const promptCache = pgTable("prompt_cache", {
 
 // ─── Scheduled Job Runs ──────────────────────────────────────────────────────
 export const scheduledJobRuns = pgTable("scheduled_job_runs", {
-  id: bigint("id", { mode: "number" }).primaryKey(),
+  id: bigserial("id", { mode: "number" }).primaryKey(),
   jobName: varchar("jobName", { length: 128 }).notNull(),
   status: varchar("status", { length: 50 }).notNull(),
   startedAt: timestamp("startedAt").defaultNow().notNull(),
@@ -927,3 +928,60 @@ export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = typeof feedback.$inferInsert;
 export type FeedbackVote = typeof feedbackVotes.$inferSelect;
 export type InsertFeedbackVote = typeof feedbackVotes.$inferInsert;
+
+// ─── Personalization ─────────────────────────────────────────────────────────
+export const visitorProfiles = pgTable("visitor_profiles", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("sessionId", { length: 128 }).notNull(),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  country: varchar("country", { length: 64 }),
+  city: varchar("city", { length: 128 }),
+  region: varchar("region", { length: 128 }),
+  trafficSource: varchar("trafficSource", { length: 64 }),
+  referrer: text("referrer"),
+  utmSource: varchar("utmSource", { length: 128 }),
+  utmMedium: varchar("utmMedium", { length: 128 }),
+  utmCampaign: varchar("utmCampaign", { length: 128 }),
+  deviceType: varchar("deviceType", { length: 32 }),
+  segment: varchar("segment", { length: 64 }),
+  pageViews: integer("pageViews").default(0).notNull(),
+  converted: integer("converted").default(0).notNull(),
+  timeOnSite: integer("timeOnSite").default(0).notNull(),
+  lastSeen: timestamp("lastSeen").defaultNow(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const personalizationRules = pgTable("personalization_rules", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 256 }),
+  targetElement: varchar("targetElement", { length: 128 }).notNull(),
+  conditions: json("conditions"),
+  content: json("content"),
+  priority: integer("priority").default(0),
+  status: varchar("status", { length: 50 }).default("active"),
+  views: integer("views").default(0).notNull(),
+  conversions: integer("conversions").default(0).notNull(),
+  conversionRate: numeric("conversionRate", { precision: 5, scale: 2 }).default("0"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const personalizationEvents = pgTable("personalization_events", {
+  id: serial("id").primaryKey(),
+  ruleId: integer("ruleId").notNull(),
+  sessionId: varchar("sessionId", { length: 128 }).notNull(),
+  eventType: varchar("eventType", { length: 32 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Dead Letter Queue ───────────────────────────────────────────────────────
+export const deadLetterQueue = pgTable("dead_letter_queue", {
+  id: serial("id").primaryKey(),
+  type: varchar("type", { length: 64 }).notNull(),
+  payload: json("payload"),
+  status: varchar("status", { length: 50 }).default("pending").notNull(),
+  error: text("error"),
+  retries: integer("retries").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});

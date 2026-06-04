@@ -152,7 +152,7 @@ export async function withdrawStaking(positionId: number, userId: number) {
     .update(stakingPositions)
     .set({
       status: "withdrawn",
-      endDate: now,
+      releaseAt: now,
       updatedAt: now,
     })
     .where(eq(stakingPositions.id, positionId));
@@ -161,7 +161,7 @@ export async function withdrawStaking(positionId: number, userId: number) {
   return {
     principal: updatedPosition.amount,
     rewards: updatedPosition.rewardsEarned,
-    total: updatedPosition.amount + updatedPosition.rewardsEarned,
+    total: String(Number(updatedPosition.amount) + Number(updatedPosition.rewardsEarned ?? 0)),
   };
 }
 
@@ -186,8 +186,8 @@ export async function getUserStakingStats(userId: number) {
 
   const activePositions = positions.filter((p) => p.status === "active");
 
-  const totalStaked = activePositions.reduce((sum, p) => sum + p.amount, 0);
-  const totalRewards = positions.reduce((sum, p) => sum + p.rewardsEarned, 0);
+  const totalStaked = activePositions.reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalRewards = positions.reduce((sum, p) => sum + Number(p.rewardsEarned ?? "0"), 0);
 
   return {
     totalStaked,
@@ -215,10 +215,8 @@ export async function createTransaction(data: {
   const transaction: InsertTransaction = {
     userId: data.userId,
     type: data.type as any,
-    amount: data.amount,
+    amount: String(data.amount),
     status: data.status as any,
-    feeAmount: data.feeAmount || 0,
-    stakingId: data.stakingId,
     metadata: data.metadata,
   };
 
@@ -240,11 +238,8 @@ export async function createPlatformFee(data: {
   if (!db) throw new Error("Database not available");
 
   const fee: InsertPlatformFee = {
-    feeType: data.feeType,
-    percentage: data.percentage,
-    amount: data.amount,
-    transactionId: data.transactionId,
-    description: data.description,
+    type: data.feeType,
+    amount: String(data.amount),
   };
 
   await db.insert(platformFees).values(fee);

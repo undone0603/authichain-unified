@@ -72,6 +72,16 @@ export const missionTemplates: Record<MissionType, MissionTemplate> = {
     title: 'Newsjacking Launch – Viral PR Response',
     priority: 7,
   },
+  MEDTECH_VIDEO_BRIEFING: {
+    type: 'MEDTECH_VIDEO_BRIEFING',
+    title: 'MedTech Video Briefing – ISO 13485 Audit Automation',
+    priority: 8,
+  },
+  MI_CRA_PARTNERSHIP: {
+    type: 'MI_CRA_PARTNERSHIP',
+    title: 'Michigan CRA Partnership – Audit Integrity Shield',
+    priority: 9,
+  },
 };
 
 export const taskTemplates: Record<MissionType, TaskTemplate[]> = {

@@ -43,6 +43,7 @@ import {
   stakingPositions,
   budgetConfig,
   webhookEvents,
+  bayesianPriors,
   type Product,
   type InsertProduct,
   type InsertNotification,
@@ -223,10 +224,16 @@ export async function getActiveMissionTypes(): Promise<string[]> {
   return rows.map(r => r.title);
 }
 
-export async function getAdaptivePriors() {
+export async function getAdaptivePriors(): Promise<Record<string, { alpha: number; beta: number }>> {
   const d = await getDb();
-  const rows = await d.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(50);
-  return rows;
+  const rows = await d.select().from(bayesianPriors);
+  const map: Record<string, { alpha: number; beta: number }> = {
+    DEFAULT: { alpha: 2, beta: 23 },
+  };
+  for (const row of rows) {
+    map[row.segment] = { alpha: Number(row.priorAlpha ?? "2"), beta: Number(row.priorBeta ?? "23") };
+  }
+  return map;
 }
 
 export async function createLead(data: any) {
@@ -277,6 +284,14 @@ export async function updateLeadScore(id: number, score: number) {
 export async function updateLeadStatus(id: number, status: string) {
   const d = await getDb();
   await d.update(leads).set({ status: status as any }).where(eq(leads.id, id));
+}
+
+export async function incrementInteractionCount(id: number) {
+  const d = await getDb();
+  if (!d) return;
+  await d.update(leads)
+    .set({ interactionsCount: sql`${leads.interactionsCount} + 1` })
+    .where(eq(leads.id, id));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -351,7 +366,21 @@ export async function getLeadCohorts() {
 export async function getBudgetStatus() {
   const d = await getDb();
   const rows = await d.select().from(budgetConfig).limit(1);
-  return rows[0] ?? { monthlyLimit: "1000.00", spent: "0.00" };
+  const row = rows[0] ?? { monthlyLimit: "1000.00", spent: "0.00" };
+  const limit = Number(row.monthlyLimit);
+  const spent = Number(row.spent ?? "0");
+  const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+  const now = new Date();
+  return {
+    ...row,
+    llm: { pct },
+    ads: { pct },
+    enrichment: { pct },
+    period: {
+      month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
+      day: now.toISOString().slice(0, 10),
+    },
+  };
 }
 
 export async function markTaskRunning(id: string) {

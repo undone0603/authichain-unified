@@ -34,4 +34,5 @@ export const ENV = {
   paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
   smsRecipient: process.env.SMS_RECIPIENT ?? "",
   makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
+  qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
 };
