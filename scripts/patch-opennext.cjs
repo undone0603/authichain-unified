@@ -53,6 +53,29 @@ if (fs.existsSync(serverDir)) {
   }
 }
 
+// ── 2.5. Patch handler.mjs: add node: prefix to bare Node built-in requires ─
+// The CF Pages wrangler bundler is invoked from the project root and cannot
+// find a valid pages wrangler.toml (both Pages projects share the root
+// wrangler.toml, but their output dirs differ so pages_build_output_dir can't
+// be set for both). Without nodejs_compat the bundler can't resolve bare names
+// like require("fs"). Using the "node:" prefix is flag-free and always works.
+const handlerMjs = path.join(serverDir, 'handler.mjs');
+patchFile(handlerMjs, [
+  ['require("async_hooks")', 'require("node:async_hooks")'],
+  ['require("buffer")',      'require("node:buffer")'],
+  ['require("crypto")',      'require("node:crypto")'],
+  ['require("events")',      'require("node:events")'],
+  ['require("fs")',          'require("node:fs")'],
+  ['require("http")',        'require("node:http")'],
+  ['require("https")',       'require("node:https")'],
+  ['require("os")',          'require("node:os")'],
+  ['require("path")',        'require("node:path")'],
+  ['require("stream")',      'require("node:stream")'],
+  ['require("url")',         'require("node:url")'],
+  ['require("util")',        'require("node:util")'],
+  ['require("vm")',          'require("node:vm")'],
+]);
+
 // ── 3. Remove unsupported Node.js built-ins from edge bundles ────────────────
 const edgeDir = path.join(OPEN_NEXT_DIR, 'edge-functions');
 if (fs.existsSync(edgeDir)) {
@@ -125,18 +148,5 @@ if (fs.existsSync(assetsDir)) {
   }
   console.log('  flattened: .open-next/assets/ → dist/');
 }
-
-// Write a Pages-compatible wrangler.toml into dist/ so the CF Pages bundler
-// applies nodejs_compat when it processes _worker.js. CF Pages reads this file
-// from the output directory when bundling in advanced (_worker.js) mode.
-// This file must NOT contain [assets] binding = "ASSETS" — that name is
-// reserved by CF Pages and is only valid in root Worker wrangler.toml configs.
-const pagesWranglerToml = [
-  'compatibility_date = "2024-12-01"',
-  'compatibility_flags = ["nodejs_compat"]',
-  '',
-].join('\n');
-fs.writeFileSync(path.join(distDir, 'wrangler.toml'), pagesWranglerToml, 'utf8');
-console.log('  created: dist/wrangler.toml (nodejs_compat for CF Pages bundler)');
 
 console.log('[patch-opennext] Done.');
