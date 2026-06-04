@@ -29,6 +29,11 @@ import { heygenRouter } from "./heygen/router";
 import { macrohardRouter } from "./macrohard/router";
 import { servicesRouter } from "./routers/services";
 import { schedulerRouter } from "./routers/scheduler";
+import { missionsRouter, tasksRouter } from "./missions/router";
+import { characterRouter } from "./character/router";
+import { stakingRouter } from "./staking/router";
+import { govchainRouter } from "./govchain/router";
+import { salesRouter } from "./sales/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -61,6 +66,12 @@ export const appRouter = router({
   macrohard: macrohardRouter,
   services: servicesRouter,
   scheduler: schedulerRouter,
+  missions: missionsRouter,
+  tasks: tasksRouter,
+  character: characterRouter,
+  staking: stakingRouter,
+  govchain: govchainRouter,
+  sales: salesRouter,
 });
 
 export type AppRouter = typeof appRouter;

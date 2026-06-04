@@ -14,7 +14,7 @@ export default function GovOnboarding() {
   const [, setLocation] = useLocation();
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const createDeal = trpc.admin.createSovereignDeal.useMutation({
+  const createDeal = trpc.govchain.createSovereignDeal.useMutation({
     onSuccess: () => {
       setIsSubmitted(true);
       toast.success("Sovereign Deal Staged Successfully");
@@ -26,10 +26,10 @@ export default function GovOnboarding() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     createDeal.mutate({
-      manufacturerName: formData.get("name") as string,
-      dealType: formData.get("type") as any,
-      value: parseFloat(formData.get("value") as string) || 0,
-      description: formData.get("description") as string,
+      agencyName: formData.get("name") as string,
+      contactEmail: (formData.get("email") as string) || "contact@agency.gov",
+      dealType: formData.get("type") as string,
+      notes: formData.get("description") as string,
     });
   };
 

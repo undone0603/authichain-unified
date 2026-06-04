@@ -51,8 +51,11 @@ function makeTask(kind: string): MissionTask {
     kind,
     payload: {},
     status: 'PENDING',
-    lastError: null,
+    error: null,
     order: 0,
+    priority: 0,
+    result: null,
+    scheduledAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

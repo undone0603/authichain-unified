@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { 
-  getConnectionStatus, 
-  uploadImageToIPFS, 
+import {
+  checkThirdwebConnection as getConnectionStatus,
+  uploadImageToIPFS,
   uploadMetadataToIPFS,
   buildAuthCertificateMetadata,
   mintAuthenticationNFT
@@ -17,7 +17,8 @@ describe('Thirdweb Service', () => {
   it('should build auth certificate metadata correctly', () => {
     const data = {
       certificateNumber: '123',
-      authenticatorId: 'auth1',
+      productName: 'Test Product',
+      authenticatorId: 1,
       confidenceScore: 0.95,
       verificationDate: '2024-01-01'
     };
