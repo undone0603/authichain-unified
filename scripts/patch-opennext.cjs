@@ -126,4 +126,17 @@ if (fs.existsSync(assetsDir)) {
   console.log('  flattened: .open-next/assets/ → dist/');
 }
 
+// Write a Pages-compatible wrangler.toml into dist/ so the CF Pages bundler
+// applies nodejs_compat when it processes _worker.js. CF Pages reads this file
+// from the output directory when bundling in advanced (_worker.js) mode.
+// This file must NOT contain [assets] binding = "ASSETS" — that name is
+// reserved by CF Pages and is only valid in root Worker wrangler.toml configs.
+const pagesWranglerToml = [
+  'compatibility_date = "2024-12-01"',
+  'compatibility_flags = ["nodejs_compat"]',
+  '',
+].join('\n');
+fs.writeFileSync(path.join(distDir, 'wrangler.toml'), pagesWranglerToml, 'utf8');
+console.log('  created: dist/wrangler.toml (nodejs_compat for CF Pages bundler)');
+
 console.log('[patch-opennext] Done.');
