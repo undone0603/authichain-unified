@@ -106,7 +106,7 @@ export const subscriptionsRouter = router({
       name: input.name || `AuthiChain ${input.percentOff}% Off`,
     });
     const promo = await stripe.promotionCodes.create({
-      promotion: { type: 'coupon', coupon: coupon.id },
+      coupon: coupon.id,
       code: input.code,
       active: true,
     });
