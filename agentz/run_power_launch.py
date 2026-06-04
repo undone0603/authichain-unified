@@ -77,8 +77,14 @@ def main() -> None:
     print(f"Launching {len(ALL_AGENTS)} agents in parallel…\n")
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
         futures = {pool.submit(_run_agent, cls): cls for cls in ALL_AGENTS}
-        for future in concurrent.futures.as_completed(futures):
-            result = future.result()
+        for future in concurrent.futures.as_completed(futures, timeout=300):
+            cls = futures[future]
+            try:
+                result = future.result(timeout=120)
+            except concurrent.futures.TimeoutError:
+                result = AgentResult(
+                    name=cls.__name__, ok=False, error="timeout", output="", duration_ms=120000
+                )
             results.append(result)
             _print_result(result)
 
