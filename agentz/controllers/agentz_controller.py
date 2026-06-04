@@ -24,8 +24,8 @@ class AgentzController:
         if isinstance(raw_result, str):
             try:
                 return AgentOutput.model_validate_json(raw_result)
-            except Exception:
-                return AgentOutput(output=raw_result, ok=True)
+            except Exception as e:
+                return AgentOutput(output=raw_result, ok=False, error=f"Parse failed: {e}")
 
         if isinstance(raw_result, dict):
             try:
