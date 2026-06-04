@@ -42,6 +42,12 @@ export default {
       await env.RATE_LIMITS.put(limitKey, (parseInt(currentUsage) + 1).toString(), { expirationTtl: 3600 });
     }
 
+    const keyData = {
+      name: apiKey.includes("demo") ? "Free" : "Pro",
+      plan: apiKey.includes("demo") ? "free" : "premium",
+      limit: apiKey.includes("demo") ? 10 : 5000,
+    };
+
     // Route handling
     try {
       if (path === '/api/v1/classify' && request.method === 'POST') {
@@ -105,7 +111,7 @@ export default {
           mode: 'demo',
           forensicStatus: hasForensicPattern ? 'MATCH' : 'NOT_FOUND',
           depthShiftScore: hasForensicPattern ? 0.94 : 0,
-          authenticity: hasForensicPattern ? 'CONFIRMED_ARTIFIACT' : 'UNVERIFIED_COPY',
+          authenticity: hasForensicPattern ? 'CONFIRMED_ARTIFACT' : 'UNVERIFIED_COPY',
           notice: 'Magic Eye technology detected the underlying cryptographic depth map.'
         }, cors);
       }

@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
@@ -31,26 +32,30 @@ const BRANDS = {
   },
 } as const;
 
-function cssVars(brand: keyof typeof BRANDS) {
-  const b = BRANDS[brand];
-  return `:root {
-    --bg: \${b.bg};
-    --bg2: \${b.bg2};
-    --bg3: \${b.bg3};
-    --text: \${b.text};
-    --text-dim: \${b.textDim};
-    --primary: \${b.primary};
-    --primary-dim: \${b.primaryDim};
-    --secondary: \${b.secondary};
-    --border: \${b.border};
-    --border-dim: \${b.borderDim};
-    --primary-glow: \${b.glowRgba};
-    --mono: 'JetBrains Mono', monospace;
-    --display: 'Bebas Neue', cursive;
-    --body: 'Outfit', sans-serif;
-    --radius: 12px;
-  }`;
-}
+const MARKETING_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AuthiChain — The Truth Layer for the Global Economy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050505;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}
+.wrap{max-width:600px}
+.logo{font-size:48px;font-weight:800;color:#d4af37;letter-spacing:2px;margin-bottom:16px}
+.tagline{font-size:20px;color:#a0a0a0;margin-bottom:40px}
+.cta{display:inline-block;padding:14px 36px;background:#d4af37;color:#050505;font-weight:700;border-radius:8px;text-decoration:none;font-size:16px;letter-spacing:1px}
+.cta:hover{background:#b8952d}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">AuthiChain</div>
+  <p class="tagline">The Truth Layer for the Global Economy</p>
+  <a class="cta" href="https://authichain.com/app">Get Started</a>
+</div>
+</body>
+</html>`;
 
 const app = new Hono<{ Bindings: Bindings }>();
 app.use("*", cors());

@@ -77,7 +77,6 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const { pathname, method } = Object.assign(url, { method: request.method });
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
