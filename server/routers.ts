@@ -27,6 +27,8 @@ import { bonusesRouter } from "./bonuses/router";
 import { marketplaceRouter } from "./marketplace/router";
 import { heygenRouter } from "./heygen/router";
 import { macrohardRouter } from "./macrohard/router";
+import { servicesRouter } from "./routers/services";
+import { schedulerRouter } from "./routers/scheduler";
 
 export const appRouter = router({
   system: systemRouter,
@@ -57,6 +59,8 @@ export const appRouter = router({
   marketplace: marketplaceRouter,
   heygen: heygenRouter,
   macrohard: macrohardRouter,
+  services: servicesRouter,
+  scheduler: schedulerRouter,
 });
 
 export type AppRouter = typeof appRouter;

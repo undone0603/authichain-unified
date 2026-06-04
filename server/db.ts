@@ -171,16 +171,19 @@ export async function createProduct(data: Omit<InsertProduct, "id" | "createdAt"
 
 export async function getRecentActivity(limit = 20) {
   const d = await getDb();
+  if (!d) return [];
   return d.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(limit);
 }
 
 export async function getRecentDecisions(limit = 10) {
   const d = await getDb();
+  if (!d) return [];
   return d.select().from(autopilotDecisions).orderBy(desc(autopilotDecisions.createdAt)).limit(limit);
 }
 
 export async function logActivity(actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number; details?: any }, details?: string) {
   const d = await getDb();
+  if (!d) return;
   if (typeof actionOrData === "string") {
     await d.insert(activityLog).values({ action: actionOrData, details: details ? { text: details } : undefined });
   } else {
