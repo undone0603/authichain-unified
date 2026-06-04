@@ -47,6 +47,7 @@ const QrArtGallery = lazy(() => import("./pages/QrArtGallery"));
 const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
 const ScheduledTasks = lazy(() => import("./pages/ScheduledTasks"));
 const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
+const AutonomousControl = lazy(() => import("./pages/AutonomousControl"));
 
 function PageLoader() {
   return (
@@ -89,6 +90,7 @@ function DashboardRoutes() {
           <WRoute path="/sba-loan" component={SbaDisasterLoan} />
           <WRoute path="/scheduled-tasks" component={ScheduledTasks} />
           <WRoute path="/service-orders" component={ServiceOrders} />
+          <WRoute path="/autonomous" component={AutonomousControl} />
           <WRoute path="/services" component={Services} />
           <WRoute path="/storymode" component={Storymode} />
           <WRoute path="/regulatory-demo" component={RegulatoryDemo} />

@@ -448,7 +448,7 @@ describe("New Features", () => {
           body: "<p>Hello!</p>", prospectName: "Alice",
           prospectCompany: null, prospectTitle: null, industry: null,
           status: "pending", templateUsed: null, generatedBy: "ai_manager",
-          approvedBy: null, approvedAt: null, sentAt: null, notes: null, createdAt: new Date(),
+          taskId: null, approvedBy: null, approvedAt: null, sentAt: null, notes: null, createdAt: new Date(),
         }]);
         await appRouter.createCaller(createAuthContext()).emailDrafts.approve({ id: 42 });
         const { sendEmail } = await import("./email/smtp");

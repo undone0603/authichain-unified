@@ -34,6 +34,7 @@ import { characterRouter } from "./character/router";
 import { stakingRouter } from "./staking/router";
 import { govchainRouter } from "./govchain/router";
 import { salesRouter } from "./sales/router";
+import { autonomousRouter } from "./autonomous/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -72,6 +73,7 @@ export const appRouter = router({
   staking: stakingRouter,
   govchain: govchainRouter,
   sales: salesRouter,
+  autonomous: autonomousRouter,
 });
 
 export type AppRouter = typeof appRouter;

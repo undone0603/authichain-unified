@@ -398,7 +398,7 @@ export async function markTaskFailed(id: string, error: string) {
   await d.update(missionTasks).set({ status: "failed", error, updatedAt: new Date() }).where(eq(missionTasks.id, id));
 }
 
-export async function enqueueTask(missionId: string, kind: string, payload: any) {
+export async function enqueueTask(missionId: string, kind: string, payload: any, scheduledAt?: Date) {
   const d = await getDb();
   const id = randomUUID();
   await d.insert(missionTasks).values({
@@ -408,6 +408,7 @@ export async function enqueueTask(missionId: string, kind: string, payload: any)
     title: kind,
     status: "pending",
     payload,
+    scheduledAt: scheduledAt ?? null,
   });
   return id;
 }

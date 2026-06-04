@@ -26,7 +26,7 @@ import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
   Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Video, Cpu,
-  Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins,
+  Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins, Zap,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -42,6 +42,7 @@ const menuItems = [
   { icon: Gem, label: "NFT Marketplace", path: "/nft" },
   { icon: Truck, label: "Supply Chain", path: "/supply-chain" },
   { icon: Bot, label: "AI Autopilot", path: "/autopilot" },
+  { icon: Zap, label: "Autonomous Control", path: "/autonomous" },
   { icon: Mail, label: "Email Campaigns", path: "/email-campaigns" },
   { icon: CreditCard, label: "Subscriptions", path: "/subscriptions" },
   { icon: Link2, label: "Referrals", path: "/referrals" },
