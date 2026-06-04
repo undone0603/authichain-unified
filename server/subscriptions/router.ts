@@ -109,7 +109,7 @@ export const subscriptionsRouter = router({
       coupon: coupon.id,
       code: input.code,
       active: true,
-    });
+    } as any);
     return { success: true, code: promo.code, id: promo.id, percentOff: input.percentOff };
   }),
 });

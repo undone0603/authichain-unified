@@ -785,8 +785,11 @@ export const stakingPositions = pgTable("staking_positions", {
   status: varchar("status", { length: 50 }).default("active"),
   multiplier: numeric("multiplier", { precision: 5, scale: 2 }).default("1.00"),
   apy: numeric("apy", { precision: 5, scale: 2 }).default("5.00"),
+  rewardsEarned: numeric("rewardsEarned", { precision: 20, scale: 9 }).default("0"),
+  lastRewardCalculation: timestamp("lastRewardCalculation"),
   stakedAt: timestamp("stakedAt").defaultNow().notNull(),
   releaseAt: timestamp("releaseAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
@@ -896,3 +899,31 @@ export type PlatformFee = typeof platformFees.$inferSelect;
 export type InsertPlatformFee = typeof platformFees.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = typeof transactions.$inferInsert;
+
+// ─── Feedback ────────────────────────────────────────────────────────────────
+export const feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId"),
+  type: varchar("type", { length: 50 }).default("feature").notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).default("new").notNull(),
+  priority: varchar("priority", { length: 50 }).default("medium").notNull(),
+  votes: integer("votes").default(0).notNull(),
+  adminResponse: text("adminResponse"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const feedbackVotes = pgTable("feedback_votes", {
+  id: serial("id").primaryKey(),
+  feedbackId: integer("feedbackId").notNull(),
+  userId: integer("userId").notNull(),
+  voteType: varchar("voteType", { length: 10 }).default("up").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = typeof feedback.$inferInsert;
+export type FeedbackVote = typeof feedbackVotes.$inferSelect;
+export type InsertFeedbackVote = typeof feedbackVotes.$inferInsert;

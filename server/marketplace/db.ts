@@ -25,8 +25,8 @@ export async function createModel(data: {
   price: number;
   creatorId: number;
 }) {
-  const result = await db.insert(aiModels).values({ ...data, status: "draft" });
-  return { id: result[0].insertId };
+  const [row] = await db.insert(aiModels).values({ ...data, status: "draft" }).returning({ id: aiModels.id });
+  return { id: row!.id };
 }
 
 export async function purchaseModel(data: {
@@ -36,12 +36,11 @@ export async function purchaseModel(data: {
   purchaseType: "purchase" | "subscription" | "rental";
   expiresAt?: Date;
 }) {
-  const result = await db.insert(modelPurchases).values({ ...data, status: "active" });
-  // Increment download count
+  const [row] = await db.insert(modelPurchases).values({ ...data, status: "active" }).returning({ id: modelPurchases.id });
   await db.update(aiModels)
     .set({ downloads: sql`${aiModels.downloads} + 1` })
     .where(eq(aiModels.id, data.modelId));
-  return { id: result[0].insertId };
+  return { id: row!.id };
 }
 
 export async function getUserPurchases(userId: number) {
@@ -51,15 +50,14 @@ export async function getUserPurchases(userId: number) {
 }
 
 export async function addReview(data: { modelId: number; userId: number; rating: number; review?: string }) {
-  const result = await db.insert(modelReviews).values(data);
-  // Update model rating average
+  const [row] = await db.insert(modelReviews).values(data).returning({ id: modelReviews.id });
   const [avg] = await db.select({ avg: sql<string>`AVG(rating)`, count: sql<number>`COUNT(*)` })
     .from(modelReviews)
     .where(eq(modelReviews.modelId, data.modelId));
   await db.update(aiModels)
     .set({ rating: avg.avg, reviewCount: avg.count })
     .where(eq(aiModels.id, data.modelId));
-  return { id: result[0].insertId };
+  return { id: row!.id };
 }
 
 export async function getModelReviews(modelId: number) {

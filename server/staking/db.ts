@@ -48,10 +48,10 @@ export async function createStakingPosition(data: {
 
   const position: InsertStakingPosition = {
     userId: data.userId,
-    amount: data.amount,
-    apy: data.apy,
+    amount: String(data.amount),
+    apy: String(data.apy),
     status: "active",
-    rewardsEarned: 0,
+    rewardsEarned: "0",
     lastRewardCalculation: new Date(),
   };
 
@@ -85,11 +85,10 @@ export async function calculateRewards(positionId: number) {
 
   // Calculate time elapsed since last calculation
   const now = new Date();
-  const lastCalc = new Date(position.lastRewardCalculation);
+  const lastCalc = new Date(position.lastRewardCalculation ?? now);
   const hoursElapsed = (now.getTime() - lastCalc.getTime()) / (1000 * 60 * 60);
 
-  // Calculate rewards: (amount * APY / 100 / 365 / 24) * hoursElapsed
-  const annualReward = (position.amount * position.apy) / 10000; // APY is in basis points (1200 = 12%)
+  const annualReward = (Number(position.amount) * Number(position.apy)) / 10000;
   const hourlyReward = annualReward / 365 / 24;
   const newRewards = Math.floor(hourlyReward * hoursElapsed);
 
@@ -97,7 +96,7 @@ export async function calculateRewards(positionId: number) {
   await db
     .update(stakingPositions)
     .set({
-      rewardsEarned: position.rewardsEarned + newRewards,
+      rewardsEarned: String(Number(position.rewardsEarned ?? "0") + newRewards),
       lastRewardCalculation: now,
       updatedAt: now,
     })

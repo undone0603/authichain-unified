@@ -108,7 +108,7 @@ export async function triggerFulfillmentFromPayment(sessionId: string) {
 
   return await processPhysicalFulfillment({
     orderId: order.id,
-    customerName: order.customerName || "AuthiChain Customer",
+    customerName: (order.details as any)?.customerName || "AuthiChain Customer",
     shippingAddress: {
       line1: "123 Main St",
       city: "Detroit",
@@ -116,7 +116,7 @@ export async function triggerFulfillmentFromPayment(sessionId: string) {
       zip: "48226",
       country: "US",
     },
-    artworkUrl: order.deliveryUrl || "",
+    artworkUrl: (order.details as any)?.deliveryUrl || "",
     quantity: 1000,
   });
 }

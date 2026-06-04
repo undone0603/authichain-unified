@@ -73,7 +73,7 @@ export const authenticateRouter = router({
       // Trigger MACROHARD Webhook: certificate_issued
       await triggerMacrohardEvent("certificate_issued", {
         certificateId: cert.id,
-        certificateNumber: cert.certificateNumber,
+        certificateNumber: certNumber,
         productId: input.productId,
         userId: ctx.user.id
       });
