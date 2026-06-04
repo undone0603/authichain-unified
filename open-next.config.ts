@@ -2,9 +2,9 @@ import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 
 export default {
   ...defineCloudflareConfig({}),
-  // Prevent circular dependency: opennextjs-cloudflare build internally calls
-  // the buildCommand to run Next.js. If buildCommand = "pnpm build" and the
-  // "build" script is "opennextjs-cloudflare build", that creates a loop.
-  // Use a dedicated "build:next" script instead.
-  buildCommand: "pnpm run build:next",
+  // opennextjs-cloudflare build internally calls buildCommand to compile Next.js.
+  // Using "pnpm run" here hits a corepack version-mismatch error on CF Pages
+  // (packageManager=pnpm@10.11.1 vs installed pnpm@11.x). Invoke next directly
+  // via node_modules/.bin to bypass pnpm/corepack entirely.
+  buildCommand: "node_modules/.bin/next build",
 };
