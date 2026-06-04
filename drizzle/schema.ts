@@ -834,8 +834,11 @@ export const missionTasks = pgTable("mission_tasks", {
 // ─── Platform Fees ───────────────────────────────────────────────────────────
 export const platformFees = pgTable("platform_fees", {
   id: serial("id").primaryKey(),
-  type: varchar("type", { length: 64 }).notNull(),
+  feeType: varchar("feeType", { length: 64 }).notNull(),
+  percentage: numeric("percentage", { precision: 5, scale: 2 }).default("0"),
   amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
+  transactionId: integer("transactionId"),
+  description: text("description"),
   currency: varchar("currency", { length: 16 }).default("USD"),
   status: varchar("status", { length: 50 }).default("pending"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -847,6 +850,8 @@ export const transactions = pgTable("transactions", {
   userId: integer("userId").notNull(),
   type: varchar("type", { length: 64 }).notNull(),
   amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
+  feeAmount: numeric("feeAmount", { precision: 18, scale: 8 }).default("0"),
+  stakingId: integer("stakingId"),
   currency: varchar("currency", { length: 16 }).default("USD"),
   status: varchar("status", { length: 50 }).default("pending"),
   metadata: json("metadata"),
