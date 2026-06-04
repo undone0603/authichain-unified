@@ -11,15 +11,5 @@ NEXT_PUBLIC_SITE_URL = "https://authichain.com"
 # SUPABASE_URL = ""
 # SUPABASE_ANON_KEY = ""
 
-[[routes]]
-pattern = "authichain.com/api/verify*"
-custom_domain = true
-
-[build]
-command = "npm run build"
-
-[env.production]
-name = "authichain-verify-worker"
-
-[env.staging]
-name = "authichain-verify-worker-staging"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = true
