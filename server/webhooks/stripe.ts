@@ -162,6 +162,9 @@ export async function handleStripeWebhook(
       const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
       if (userId) {
+        // current_period_start/end removed from Stripe v22 types but still
+        // present in the API payload; cast through any.
+        const subAny = sub as any;
         await upsertStripeSubscription({
           userId,
           plan,
@@ -170,11 +173,11 @@ export async function handleStripeWebhook(
           billingCycle,
           stripeCustomerId: customerId ?? null,
           stripeSubscriptionId: sub.id,
-          currentPeriodStart: sub.current_period_start
-            ? new Date(sub.current_period_start * 1000)
+          currentPeriodStart: subAny.current_period_start
+            ? new Date(subAny.current_period_start * 1000)
             : new Date(),
-          currentPeriodEnd: sub.current_period_end
-            ? new Date(sub.current_period_end * 1000)
+          currentPeriodEnd: subAny.current_period_end
+            ? new Date(subAny.current_period_end * 1000)
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
         });
@@ -227,10 +230,11 @@ export async function handleStripeWebhook(
     case "invoice.payment_succeeded":
     case "invoice.paid": {
       const inv = event.data.object as Stripe.Invoice;
+      const invAny = inv as any;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
-      const subscriptionId = typeof inv.subscription === "string"
-        ? inv.subscription
-        : (inv.subscription as any)?.id;
+      const subscriptionId = typeof invAny.subscription === "string"
+        ? invAny.subscription
+        : invAny.subscription?.id ?? null;
 
       // Resolve userId — try subscription metadata first, then customer
       let userId: number | undefined;
@@ -246,8 +250,8 @@ export async function handleStripeWebhook(
       const amountUsd = amountCents / 100;
       const currency = (inv.currency ?? "usd").toUpperCase();
 
-      // Detect plan from invoice line items
-      const firstLine = inv.lines?.data?.[0];
+      // Detect plan from invoice line items (price field removed from InvoiceLineItem in v22)
+      const firstLine = invAny.lines?.data?.[0];
       const priceId = firstLine?.price?.id ?? null;
       const plan = detectPlan(priceId, amountCents);
 
@@ -295,10 +299,11 @@ export async function handleStripeWebhook(
     // ── Invoice payment failed ───────────────────────────────────────────────
     case "invoice.payment_failed": {
       const inv = event.data.object as Stripe.Invoice;
+      const invAny2 = inv as any;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
-      const subscriptionId = typeof inv.subscription === "string"
-        ? inv.subscription
-        : (inv.subscription as any)?.id;
+      const subscriptionId = typeof invAny2.subscription === "string"
+        ? invAny2.subscription
+        : invAny2.subscription?.id ?? null;
 
       let userId: number | undefined;
       if (subscriptionId) {

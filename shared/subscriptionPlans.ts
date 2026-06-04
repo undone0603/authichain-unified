@@ -64,9 +64,14 @@ export const SUBSCRIPTION_PLANS = {
     highlighted: false,
     badge: "Best Value",
   },
+} as const;
+
+// High-ticket plans sold via direct sales engagement, not Stripe checkout.
+// These do NOT participate in the subscription router's plan enum.
+export const HIGH_TICKET_PLANS = {
   medtech: {
     name: "MedTech Enterprise",
-    monthlyPrice: 12500, // $150K / 12
+    monthlyPrice: 12500,
     annualPrice: 150000,
     monthlyQuota: 50000,
     perAuthCost: "0.25",
@@ -84,6 +89,7 @@ export const SUBSCRIPTION_PLANS = {
     ],
     highlighted: false,
     badge: "High-Ticket",
+    contactSales: true,
   },
 } as const;
 
