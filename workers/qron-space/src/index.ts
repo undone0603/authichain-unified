@@ -184,9 +184,28 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
 
 <div class="cta-section">
   <h2>Ready to stake $QRON?</h2>
-  <p style="color:var(--muted);margin:1rem 0 2rem">Connect your wallet and start earning yield on Polygon today.</p>
-  <a href="https://authichain.com/dapp" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Launch dApp</a>
+  <p style="color:var(--muted);margin:1rem 0 2rem">Get notified when staking goes live on Polygon.</p>
+  <form id="lead-form" style="max-width:440px;margin:0 auto 1.5rem;display:flex;gap:.5rem">
+    <input type="email" id="lead-email" placeholder="you@example.com" required style="flex:1;padding:.75rem 1rem;border-radius:.5rem;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.95rem">
+    <button type="submit" class="btn btn-primary" style="white-space:nowrap">Join Waitlist</button>
+  </form>
+  <p id="lead-msg" style="color:var(--cyan);font-size:.9rem;display:none"></p>
 </div>
+<script>
+document.getElementById('lead-form').addEventListener('submit',async function(e){
+  e.preventDefault();
+  const email=document.getElementById('lead-email').value;
+  const msg=document.getElementById('lead-msg');
+  try{
+    const r=await fetch('https://api.authichain.com/api/v1/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,source:'qron.space'})});
+    const d=await r.json();
+    msg.textContent=d.message||'You\\'re on the list!';
+    msg.style.display='block';
+    msg.style.color=r.ok?'var(--cyan)':'#ff6b6b';
+    if(r.ok)this.reset();
+  }catch{msg.textContent='Something went wrong. Try again.';msg.style.display='block';msg.style.color='#ff6b6b';}
+});
+</script>
 
 <footer>
   <p>© 2026 QRON / AuthiChain Protocol · <a href="https://authichain.com">authichain.com</a> · Contract: 0xAebfA6b08fb25b59748c93273aB8880e20FfE437</p>

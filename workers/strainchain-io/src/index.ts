@@ -188,8 +188,27 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
 <div class="cta-section">
   <h2>Ready for Regulator-Proof Tracking?</h2>
   <p style="color:var(--muted);margin:1rem 0 2rem">Join 847+ cannabis operators using StrainChain across 38 legal markets.</p>
-  <a href="https://authichain.com/dapp" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Request Demo</a>
+  <form id="lead-form" style="max-width:440px;margin:0 auto 1.5rem;display:flex;gap:.5rem">
+    <input type="email" id="lead-email" placeholder="you@dispensary.com" required style="flex:1;padding:.75rem 1rem;border-radius:.5rem;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.95rem">
+    <button type="submit" class="btn btn-primary" style="white-space:nowrap">Request Demo</button>
+  </form>
+  <p id="lead-msg" style="color:var(--green);font-size:.9rem;display:none"></p>
 </div>
+<script>
+document.getElementById('lead-form').addEventListener('submit',async function(e){
+  e.preventDefault();
+  const email=document.getElementById('lead-email').value;
+  const msg=document.getElementById('lead-msg');
+  try{
+    const r=await fetch('https://api.authichain.com/api/v1/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,source:'strainchain.io'})});
+    const d=await r.json();
+    msg.textContent=d.message||'Thanks! We\\'ll be in touch.';
+    msg.style.display='block';
+    msg.style.color=r.ok?'var(--green)':'#ff6b6b';
+    if(r.ok)this.reset();
+  }catch{msg.textContent='Something went wrong. Try again.';msg.style.display='block';msg.style.color='#ff6b6b';}
+});
+</script>
 
 <footer>
   <p>© 2026 StrainChain · Powered by AuthiChain Protocol · <a href="https://authichain.com">authichain.com</a></p>
