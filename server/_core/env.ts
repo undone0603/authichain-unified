@@ -35,4 +35,5 @@ export const ENV = {
   smsRecipient: process.env.SMS_RECIPIENT ?? "",
   makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
   qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
+  cronSecret: process.env.CRON_SECRET ?? "",
 };

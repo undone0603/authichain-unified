@@ -2,5 +2,11 @@
   "framework": null,
   "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm vite build",
-  "outputDirectory": "dist/public"
+  "outputDirectory": "dist/public",
+  "crons": [
+    {
+      "path": "/api/cron/pipeline",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }

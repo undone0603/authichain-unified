@@ -104,6 +104,24 @@ export function createApp() {
     app.use("/api/contact", contactRouter);
     app.use("/api/gpt", gptRouter);
 
+  // ─── Autonomous Pipeline Cron ────────────────────────────────────────────
+  // Called by Vercel Cron every 5 minutes. Authenticated by CRON_SECRET header.
+  app.post("/api/cron/pipeline", async (req, res) => {
+    const { ENV } = await import("./env");
+    const auth = req.headers["authorization"];
+    if (ENV.cronSecret && auth !== `Bearer ${ENV.cronSecret}`) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+      const { runPipelineTick } = await import("../jobs/pipeline-tick");
+      const result = await runPipelineTick();
+      res.json({ ok: true, result });
+    } catch (err: any) {
+      console.error("[cron/pipeline]", err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   // Internal API for gateway worker
   app.use("/api/internal", createInternalRouter());
 
