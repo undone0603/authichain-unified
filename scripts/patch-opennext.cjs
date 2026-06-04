@@ -80,16 +80,50 @@ if (fs.existsSync(workerEntry)) {
   }
 }
 
-// ── 5. Copy .open-next/assets/ → dist/ for CF Pages output dir ──────────────
-// CF Pages reads wrangler.toml; if it lacks `pages_build_output_dir` it skips
-// the file and uses the dashboard-configured output dir, which defaults to
-// `dist`. Copy assets here so CF Pages finds the output without touching
-// wrangler.toml (which is shared with the authichain-unified Pages project).
+// ── 5. Build dist/ for CF Pages output directory ────────────────────────────
+// CF Pages (wrangler 3.x) finds _worker.js in the output dir and bundles it,
+// resolving all relative imports from the same directory. The opennext worker
+// imports ./cloudflare/, ./middleware/, ./server-functions/, ./.build/ — those
+// modules must be co-located with _worker.js. Static assets must also be at
+// the output root (not in ./assets/) for correct URL-path serving via ASSETS KV.
+//
+// Structure produced:
+//   dist/_worker.js          ← patched .open-next/worker.js
+//   dist/cloudflare/         ← worker runtime modules (bundled by wrangler)
+//   dist/middleware/         ← middleware handler (bundled by wrangler)
+//   dist/server-functions/   ← server function (bundled by wrangler)
+//   dist/.build/             ← durable objects (bundled by wrangler)
+//   dist/_next/              ← static chunks from .open-next/assets/_next/
+//   dist/[other static]      ← anything else in .open-next/assets/
 const assetsDir = path.join(OPEN_NEXT_DIR, 'assets');
 const distDir = path.join(ROOT, 'dist');
+
+// Recreate dist/ clean
+if (fs.existsSync(distDir)) fs.rmSync(distDir, { recursive: true });
+fs.mkdirSync(distDir, { recursive: true });
+
+// Copy worker module dependencies so wrangler can bundle _worker.js
+for (const dep of ['cloudflare', 'middleware', 'server-functions', '.build']) {
+  const src = path.join(OPEN_NEXT_DIR, dep);
+  if (fs.existsSync(src)) {
+    fs.cpSync(src, path.join(distDir, dep), { recursive: true });
+  }
+}
+
+// Place _worker.js at dist/ root (CF Pages custom-worker entry point)
+if (fs.existsSync(workerEntry)) {
+  fs.copyFileSync(workerEntry, path.join(distDir, '_worker.js'));
+  console.log('  created: dist/_worker.js');
+}
+
+// Flatten .open-next/assets/ to dist/ root (skip the _worker.js placed there
+// by step 4 — we already have the correct one from workerEntry above)
 if (fs.existsSync(assetsDir)) {
-  fs.cpSync(assetsDir, distDir, { recursive: true });
-  console.log(`  copied: ${path.relative(ROOT, assetsDir)} → ${path.relative(ROOT, distDir)}`);
+  for (const entry of fs.readdirSync(assetsDir)) {
+    if (entry === '_worker.js') continue;
+    fs.cpSync(path.join(assetsDir, entry), path.join(distDir, entry), { recursive: true });
+  }
+  console.log('  flattened: .open-next/assets/ → dist/');
 }
 
 console.log('[patch-opennext] Done.');
