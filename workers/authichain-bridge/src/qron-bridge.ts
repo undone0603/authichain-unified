@@ -7,9 +7,9 @@ export interface BridgeEnv {
   GOVCHAIN_API_KEY: string;
   BRIDGE_WORKER_SECRET: string;
   BRIDGE_KV: KVNamespace;
+  QRON_CONTRACT_ADDRESS?: string;
 }
 
-const QRON_CONTRACT_ADDRESS = "0xQRON_CONTRACT_PLACEHOLDER"; // replace with deployed address
 const QRON_DECIMALS = 18;
 
 interface BridgeInitiateRequest {
@@ -135,7 +135,7 @@ async function initiateQronBridgePayment(
     throw new Error(`Agency ${agencyId} not verified on GovChain`);
   }
 
-  const { qronAmount, txHash } = await lockQronEscrow(amountUsd, contractRef);
+  const { qronAmount, txHash } = await lockQronEscrow(amountUsd, contractRef, env.QRON_CONTRACT_ADDRESS);
   await updateBridgeRecord(bridgeId, env, { status: "locked", qronAmount, txHash });
 
   await postGovChainPayment({ agencyId, contractRef, amountUsd, txHash }, env);
@@ -169,16 +169,18 @@ async function verifyGovChainAgency(
 
 async function lockQronEscrow(
   amountUsd: number,
-  contractRef: string
+  contractRef: string,
+  contractAddress?: string,
 ): Promise<{ qronAmount: string; txHash: string }> {
   // TODO: integrate with Polygon RPC + QRON contract ABI
+  // contractAddress should be set via QRON_CONTRACT_ADDRESS env var
+  void contractAddress; void contractRef;
   const qronPerUsd = 4.2; // mock rate — replace with oracle call
   const qronRaw = BigInt(Math.round(amountUsd * qronPerUsd * 10 ** QRON_DECIMALS));
   const qronAmount = qronRaw.toString();
   const txHash = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("")}`;
-  console.log(`[qron-bridge] Locking ${qronAmount} QRON (${amountUsd} USD) for ref=${contractRef} on ${QRON_CONTRACT_ADDRESS}`);
   return { qronAmount, txHash };
 }
 
