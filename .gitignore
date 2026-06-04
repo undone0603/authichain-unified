@@ -109,3 +109,10 @@ temp/
 
 __pycache__/
 *.py[cod]
+
+# Externally cloned repos (exploration only)
+authichain_premium/
+qron-platform/
+qron/
+govchain.us/
+maison-elite-ai-dropship/
