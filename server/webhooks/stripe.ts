@@ -348,6 +348,16 @@ export async function handleStripeWebhook(
       const customerId = typeof session.customer === "string" ? session.customer : undefined;
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : undefined;
 
+      // Fulfill service orders paid via one-time Stripe Checkout
+      const { handleServiceOrderPayment } = await import("../services/order-payment-handler");
+      const orderResult = await handleServiceOrderPayment({
+        id: session.id,
+        payment_intent: session.payment_intent ?? null,
+      });
+      if (orderResult.handled) {
+        console.log(`[stripe-webhook] Service order fulfilled: orderId=${orderResult.orderId}`);
+      }
+
       await logAutomationAudit(
         "billing_checkout_completed",
         {
@@ -358,6 +368,7 @@ export async function handleStripeWebhook(
           amountUsd,
           stripeSubscriptionId: subscriptionId ?? null,
           stripeCustomerId: customerId ?? null,
+          serviceOrderFulfilled: orderResult.handled ? orderResult.orderId : null,
         },
         userId,
       );
