@@ -125,11 +125,13 @@ const distDir = path.join(ROOT, 'dist');
 if (fs.existsSync(distDir)) fs.rmSync(distDir, { recursive: true });
 fs.mkdirSync(distDir, { recursive: true });
 
-// Copy worker module dependencies so wrangler can bundle _worker.js
+// Copy worker module dependencies so wrangler can bundle _worker.js.
+// dereference:true resolves symlinks to real files — CF Pages rejects output
+// dirs containing symlinks that point outside the directory.
 for (const dep of ['cloudflare', 'middleware', 'server-functions', '.build']) {
   const src = path.join(OPEN_NEXT_DIR, dep);
   if (fs.existsSync(src)) {
-    fs.cpSync(src, path.join(distDir, dep), { recursive: true });
+    fs.cpSync(src, path.join(distDir, dep), { recursive: true, dereference: true });
   }
 }
 
@@ -144,7 +146,7 @@ if (fs.existsSync(workerEntry)) {
 if (fs.existsSync(assetsDir)) {
   for (const entry of fs.readdirSync(assetsDir)) {
     if (entry === '_worker.js') continue;
-    fs.cpSync(path.join(assetsDir, entry), path.join(distDir, entry), { recursive: true });
+    fs.cpSync(path.join(assetsDir, entry), path.join(distDir, entry), { recursive: true, dereference: true });
   }
   console.log('  flattened: .open-next/assets/ → dist/');
 }
