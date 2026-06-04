@@ -25,19 +25,33 @@ jobs:
       fail-fast: false
       matrix:
         worker:
+          # authichain cluster
           - authichain-api
           - authichain-api-gateway
           - authichain-automation
+          - authichain-autopilot
+          - authichain-bridge
+          - authichain-chain-data
           - authichain-com
           - authichain-dashboard
+          - authichain-gateway
+          - authichain-license-issuer
+          - authichain-qron-provenance
+          - authichain-scan-validate
+          - authichain-telegram
+          - authichain-verify-worker
+          # qron cluster
           - qron-automation
           - qron-image-gen
           - qron-outreach
           - qron-space
-          - resend-relay
-          - strainchain-io
+          # govchain
+          - govchain-us
+          # shared infra
           - bitcoin-auth
           - outreach-queue
+          - resend-relay
+          - strainchain-io
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
