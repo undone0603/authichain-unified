@@ -288,7 +288,7 @@ export async function createServiceOrder(data: any) {
 
 export async function getServiceOrderBySessionId(sessionId: string) {
   const d = await getDb();
-  const rows = await d.select().from(serviceOrders).where(eq(sql`json_extract(details, '$.sessionId')`, sessionId)).limit(1);
+  const rows = await d.select().from(serviceOrders).where(sql`(${serviceOrders.details}::jsonb)->>'sessionId' = ${sessionId}`).limit(1);
   return rows[0] ?? null;
 }
 
@@ -419,7 +419,7 @@ export async function hasDunningStepLogged(subscriptionId: number, step: string)
   const rows = await d.select().from(activityLog)
     .where(and(
       like(activityLog.action, `dunning:${step}:%`),
-      sql`JSON_EXTRACT(${activityLog.details}, '$.text') LIKE ${'%sub:' + subscriptionId + '%'}`
+      sql`(${activityLog.details}::jsonb)->>'text' LIKE ${'%sub:' + subscriptionId + '%'}`
     )).limit(1);
   return rows.length > 0;
 }
@@ -1199,7 +1199,7 @@ export async function hasWebhookEventProcessed(eventId: string): Promise<boolean
   const [row] = await db
     .select({ count: sql<number>`count(*)` })
     .from(activityLog)
-    .where(sql`JSON_EXTRACT(${activityLog.details}, '$.eventId') = ${eventId}`);
+    .where(sql`(${activityLog.details}::jsonb)->>'eventId' = ${eventId}`);
   return (row?.count ?? 0) > 0;
 }
 
