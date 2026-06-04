@@ -26,12 +26,12 @@ export function generateAffiliateCode(userId: number): string {
 
 export async function createReferralCode(referrerId: number): Promise<{ id: number; referralCode: string }> {
   const code = generateReferralCode(referrerId);
-  const result = await db.insert(referrals).values({
+  const [row] = await db.insert(referrals).values({
     referrerId,
     referralCode: code,
     status: "pending",
-  });
-  return { id: result[0].insertId, referralCode: code };
+  }).returning({ id: referrals.id });
+  return { id: row.id, referralCode: code };
 }
 
 export async function trackReferralClick(params: {
