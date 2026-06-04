@@ -234,7 +234,7 @@ workflows:
     type: composite
     estimated_minutes: 5
     requires: [] # Token handled internally for simulation
-    prerequisites: [authichain_review_outreach]
+    prerequisites: [authichain_crm_outreach]
     description: |
       Scans for generated partnership agreements and autonomously
       dispatches them for signature via the DocuSign API template.

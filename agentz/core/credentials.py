@@ -51,6 +51,7 @@ CRED_KEY_TO_ENV = {
     "outreach_admin_token": "OUTREACH_ADMIN_TOKEN",
     "outreach_worker_url":   "OUTREACH_WORKER_URL",
     "agent_secret":         "AGENT_SECRET",
+    "agentz_api_url":       "AGENTZ_API_URL",
     "polygon_rpc_url":      "POLYGON_RPC_URL",
     "polygon_private_key":  "POLYGON_PRIVATE_KEY",
     "deepseek_api_key":      "DEEPSEEK_API_KEY",
