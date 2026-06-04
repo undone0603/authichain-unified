@@ -4,5 +4,9 @@
   "private": true,
   "scripts": {
     "deploy": "npx wrangler deploy"
+  },
+  "dependencies": {
+    "@noble/secp256k1": "^1.7.1",
+    "@noble/hashes": "^1.3.3"
   }
 }
