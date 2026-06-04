@@ -80,4 +80,16 @@ if (fs.existsSync(workerEntry)) {
   }
 }
 
+// ── 5. Copy .open-next/assets/ → dist/ for CF Pages output dir ──────────────
+// CF Pages reads wrangler.toml; if it lacks `pages_build_output_dir` it skips
+// the file and uses the dashboard-configured output dir, which defaults to
+// `dist`. Copy assets here so CF Pages finds the output without touching
+// wrangler.toml (which is shared with the authichain-unified Pages project).
+const assetsDir = path.join(OPEN_NEXT_DIR, 'assets');
+const distDir = path.join(ROOT, 'dist');
+if (fs.existsSync(assetsDir)) {
+  fs.cpSync(assetsDir, distDir, { recursive: true });
+  console.log(`  copied: ${path.relative(ROOT, assetsDir)} → ${path.relative(ROOT, distDir)}`);
+}
+
 console.log('[patch-opennext] Done.');
