@@ -28,8 +28,17 @@ jobs:
           - authichain-api
           - authichain-api-gateway
           - authichain-automation
+          - authichain-autopilot
+          - authichain-chain-data
           - authichain-com
           - authichain-dashboard
+          - authichain-gateway
+          - authichain-license-issuer
+          - authichain-qron-provenance
+          - authichain-scan-validate
+          - authichain-telegram
+          - authichain-verify-worker
+          - govchain-us
           - qron-automation
           - qron-image-gen
           - qron-outreach
