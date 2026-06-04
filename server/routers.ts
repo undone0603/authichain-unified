@@ -27,6 +27,19 @@ import { bonusesRouter } from "./bonuses/router";
 import { marketplaceRouter } from "./marketplace/router";
 import { heygenRouter } from "./heygen/router";
 import { macrohardRouter } from "./macrohard/router";
+// ── Additional routers (previously only in server/routers/index.ts) ──────────
+import { metrcRouter } from "./routers/metrc";
+import { schedulerRouter } from "./routers/scheduler";
+import { servicesRouter } from "./routers/services";
+import { analyticsRouter } from "./analytics/router";
+import { feedbackRouter } from "./feedback/router";
+import { personalizationRouter } from "./personalization/router";
+import { characterRouter } from "./character/router";
+import { missionsRouter } from "./missions/router";
+import { stakingRouter } from "./staking/router";
+import { govchainRouter } from "./govchain/router";
+import { salesRouter } from "./sales/router";
+import { devTeamRouter } from "./agents/dev-team/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -57,6 +70,19 @@ export const appRouter = router({
   marketplace: marketplaceRouter,
   heygen: heygenRouter,
   macrohard: macrohardRouter,
+  // ── Additional routers ────────────────────────────────────────────────────
+  metrc: metrcRouter,
+  scheduler: schedulerRouter,
+  services: servicesRouter,
+  analytics: analyticsRouter,
+  feedback: feedbackRouter,
+  personalization: personalizationRouter,
+  character: characterRouter,
+  missions: missionsRouter,
+  staking: stakingRouter,
+  govchain: govchainRouter,
+  sales: salesRouter,
+  devTeam: devTeamRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,6 +1,7 @@
 import { adminProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 export const adminRouter = router({
   metrics: adminProcedure.query(async () => {
@@ -91,5 +92,18 @@ export const adminRouter = router({
   }),
   platformStaking: adminProcedure.query(async () => {
     return await db.getPlatformStakingStats();
+  }),
+  createSovereignDeal: adminProcedure.input(z.object({
+    manufacturerName: z.string().min(1),
+    dealType: z.enum(["MADE_IN_USA", "GOV_CONTRACT", "INFRASTRUCTURE"]),
+    value: z.number().min(0),
+    description: z.string(),
+  })).mutation(async ({ input }) => {
+    const id = randomUUID();
+    await db.logActivity({
+      action: "sovereign_deal_staged",
+      details: { id, ...input },
+    });
+    return { success: true, dealId: id };
   }),
 });
