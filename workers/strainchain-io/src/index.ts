@@ -8,6 +8,14 @@ export default {
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>StrainChain — Cannabis Supply Chain on Blockchain</title>
 <meta name="description" content="End-to-end cannabis supply chain tracking: strain NFTs, compliance automation, 4-layer audit trail from seed to shelf.">
+<meta property="og:title" content="StrainChain — Cannabis Supply Chain on Blockchain">
+<meta property="og:description" content="Immutable strain NFTs, automated METRC/BioTrack compliance, and a 4-layer audit trail from seed to shelf. 38 legal markets.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://strainchain.io">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="StrainChain — Cannabis Supply Chain on Blockchain">
+<meta name="twitter:description" content="Seed-to-shelf tracking on Polygon. Strain NFTs, compliance automation, regulator dashboards.">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"StrainChain","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Blockchain-based cannabis supply chain compliance platform. Seed-to-shelf tracking, strain NFTs, METRC/BioTrack integration.","url":"https://strainchain.io","offers":[{"@type":"Offer","name":"Grower","price":"199","priceCurrency":"USD","priceSpecification":{"@type":"UnitPriceSpecification","billingDuration":"P1M"}},{"@type":"Offer","name":"Operator","price":"499","priceCurrency":"USD","priceSpecification":{"@type":"UnitPriceSpecification","billingDuration":"P1M"}},{"@type":"Offer","name":"Enterprise","price":"999","priceCurrency":"USD","priceSpecification":{"@type":"UnitPriceSpecification","billingDuration":"P1M"}}]}</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#030c04;--surface:#071209;--border:#0f2b12;--green:#10b981;--gold:#f59e0b;--text:#e2e8f0;--muted:#64748b}

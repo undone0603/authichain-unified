@@ -8,6 +8,13 @@ export default {
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>$QRON Token Hub — Stake, Govern, Bridge</title>
 <meta name="description" content="The $QRON token powers staking, governance, and cross-chain bridge for the AuthiChain ecosystem.">
+<meta property="og:title" content="$QRON Token Hub — Stake, Govern, Bridge">
+<meta property="og:description" content="Stake $QRON for 8-24% APY, vote on protocol upgrades, and bridge across Polygon, Base, and Solana.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://qron.space">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="$QRON Token Hub">
+<meta name="twitter:description" content="Stake, govern, and bridge with $QRON — the utility token of the AuthiChain ecosystem.">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#020817;--surface:#0d1425;--border:#1e2d4a;--cyan:#06b6d4;--purple:#8b5cf6;--text:#e2e8f0;--muted:#64748b}

@@ -288,6 +288,12 @@ const DOCS_HTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AuthiChain API — Product Authentication as a Service</title>
 <meta name="description" content="AuthiChain B2B API for product authentication. AI classification, verification, and certificate generation. 10 industries, demo mode.">
+<meta property="og:title" content="AuthiChain API — Product Authentication as a Service">
+<meta property="og:description" content="AI-powered product classification, verification, and certificate generation across 10 industries.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="AuthiChain API">
+<meta name="twitter:description" content="B2B product authentication API. AI classification, blockchain verification, 10 industries.">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#08080a;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;line-height:1.6}
