@@ -3,6 +3,9 @@ main = "worker/index.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Cloudflare Pages: points next build output at the Pages deploy step
+pages_build_output_dir = ".next"
+
 # Static assets built by Vite → dist/public
 [assets]
 directory = "dist/public"
