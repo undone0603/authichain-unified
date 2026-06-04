@@ -151,4 +151,37 @@ if (fs.existsSync(assetsDir)) {
   console.log('  flattened: .open-next/assets/ → dist/');
 }
 
+// ── Post-process: resolve any remaining symlinks in dist/ ───────────────────
+// fs.cpSync dereference:true does not reliably follow directory-level symlinks
+// in all Node.js versions. CF Pages asset validation rejects ANY symlink in the
+// output dir. Walk the entire dist/ tree and replace every symlink (file or
+// directory) with a real copy of its target.
+function fixSymlinks(dir) {
+  for (const entry of fs.readdirSync(dir)) {
+    const p = path.join(dir, entry);
+    const lst = fs.lstatSync(p);
+    if (lst.isSymbolicLink()) {
+      try {
+        const real = fs.realpathSync(p);
+        const rst = fs.statSync(real);
+        fs.unlinkSync(p);
+        if (rst.isDirectory()) {
+          fs.cpSync(real, p, { recursive: true, dereference: true });
+          fixSymlinks(p); // recurse into the newly copied directory
+        } else {
+          fs.copyFileSync(real, p);
+        }
+      } catch (e) {
+        // Broken symlink — remove it so CF Pages doesn't see it
+        try { fs.unlinkSync(p); } catch {}
+        console.warn(`  warn: removed broken symlink ${path.relative(ROOT, p)}: ${e.message}`);
+      }
+    } else if (lst.isDirectory()) {
+      fixSymlinks(p);
+    }
+  }
+}
+fixSymlinks(distDir);
+console.log('  resolved: symlinks in dist/');
+
 console.log('[patch-opennext] Done.');
