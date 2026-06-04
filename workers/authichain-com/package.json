@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "AuthiChain.com Cloudflare Worker",
   "scripts": {
+    "build": "node -e \"const fs=require('fs');fs.mkdirSync('dist',{recursive:true});fs.writeFileSync('dist/index.html','<!doctype html><html><head><meta charset=utf-8><title>AuthiChain</title></head></html>')\"",
     "deploy": "npx wrangler deploy"
   },
   "devDependencies": {}
