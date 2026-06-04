@@ -291,6 +291,30 @@ export async function getServiceOrderBySessionId(sessionId: string) {
   return rows[0] ?? null;
 }
 
+export async function getServiceOrdersByUser(userId: number) {
+  const d = await getDb();
+  if (!d) return [];
+  return await d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId)).orderBy(desc(serviceOrders.createdAt));
+}
+
+export async function getAllServiceOrders() {
+  const d = await getDb();
+  if (!d) return [];
+  return await d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
+}
+
+export async function updateServiceOrderStatus(id: number, status: string) {
+  const d = await getDb();
+  if (!d) return;
+  await d.update(serviceOrders).set({ status: status as any, updatedAt: new Date() }).where(eq(serviceOrders.id, id));
+}
+
+export async function incrementInteractionCount(leadId: number) {
+  const d = await getDb();
+  if (!d) return;
+  await d.update(leads).set({ interactionsCount: sql`${leads.interactionsCount} + 1`, updatedAt: new Date() }).where(eq(leads.id, leadId));
+}
+
 // ─────────────────────────────────────────────────────────────
 // BUDGET & TASKS
 // ─────────────────────────────────────────────────────────────

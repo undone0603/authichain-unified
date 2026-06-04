@@ -872,6 +872,84 @@ export const bayesianPriors = pgTable("bayesian_priors", {
 export type BayesianPrior = typeof bayesianPriors.$inferSelect;
 export type InsertBayesianPrior = typeof bayesianPriors.$inferInsert;
 
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+export const feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId"),
+  type: varchar("type", { length: 50 }).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).default("new"),
+  priority: varchar("priority", { length: 50 }).default("medium"),
+  votes: integer("votes").default(0),
+  adminResponse: text("adminResponse"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = typeof feedback.$inferInsert;
+
+// ─── Feedback Votes ──────────────────────────────────────────────────────────
+export const feedbackVotes = pgTable("feedback_votes", {
+  id: serial("id").primaryKey(),
+  feedbackId: integer("feedbackId").notNull(),
+  userId: integer("userId").notNull(),
+  voteType: varchar("voteType", { length: 10 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type InsertFeedbackVote = typeof feedbackVotes.$inferInsert;
+
+// ─── Visitor Profiles ─────────────────────────────────────────────────────────
+export const visitorProfiles = pgTable("visitor_profiles", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("sessionId", { length: 128 }).notNull().unique(),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  country: varchar("country", { length: 64 }),
+  city: varchar("city", { length: 128 }),
+  region: varchar("region", { length: 128 }),
+  trafficSource: varchar("trafficSource", { length: 64 }),
+  referrer: text("referrer"),
+  utmSource: varchar("utmSource", { length: 128 }),
+  utmMedium: varchar("utmMedium", { length: 128 }),
+  utmCampaign: varchar("utmCampaign", { length: 128 }),
+  deviceType: varchar("deviceType", { length: 20 }).default("desktop"),
+  segment: varchar("segment", { length: 64 }),
+  pageViews: integer("pageViews").default(0),
+  converted: integer("converted").default(0),
+  lastSeen: timestamp("lastSeen").defaultNow(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Personalization Rules ────────────────────────────────────────────────────
+export const personalizationRules = pgTable("personalization_rules", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  description: text("description"),
+  targetElement: varchar("targetElement", { length: 128 }).notNull(),
+  conditions: text("conditions"),
+  content: text("content").notNull(),
+  priority: integer("priority").default(0),
+  status: varchar("status", { length: 50 }).default("draft"),
+  aiGenerated: integer("aiGenerated").default(0),
+  views: integer("views").default(0),
+  conversions: integer("conversions").default(0),
+  conversionRate: numeric("conversionRate", { precision: 6, scale: 2 }).default("0"),
+  createdBy: integer("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// ─── Personalization Events ───────────────────────────────────────────────────
+export const personalizationEvents = pgTable("personalization_events", {
+  id: serial("id").primaryKey(),
+  ruleId: integer("ruleId").notNull(),
+  sessionId: varchar("sessionId", { length: 128 }).notNull(),
+  eventType: varchar("eventType", { length: 50 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export type Mission = typeof missions.$inferSelect;
 export type MissionTask = typeof missionTasks.$inferSelect;
 export type CharacterGeneration = typeof characterGenerations.$inferSelect;
