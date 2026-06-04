@@ -2,7 +2,7 @@
 /**
  * patch-opennext.cjs
  * Post-process the .open-next build output for Cloudflare Pages compatibility.
- * Runs as the first step of `pnpm cf:build` before `opennextjs-cloudflare build`.
+ * Runs AFTER `opennextjs-cloudflare build` as a post-build step.
  */
 
 'use strict';
@@ -27,7 +27,12 @@ function patchFile(filePath, patches) {
   console.log(`  patched: ${path.relative(ROOT, filePath)}`);
 }
 
-console.log('[patch-opennext] Starting OpenNext → Cloudflare compatibility patches...');
+if (!fs.existsSync(OPEN_NEXT_DIR)) {
+  console.error('[patch-opennext] ERROR: .open-next/ not found — run opennextjs-cloudflare build first');
+  process.exit(1);
+}
+
+console.log('[patch-opennext] Starting OpenNext → Cloudflare Pages compatibility patches...');
 
 // ── 1. Worker entry-point patches ───────────────────────────────────────────
 const workerEntry = path.join(OPEN_NEXT_DIR, 'worker.js');
@@ -43,7 +48,6 @@ const serverDir = path.join(OPEN_NEXT_DIR, 'server-functions', 'default');
 if (fs.existsSync(serverDir)) {
   for (const file of fs.readdirSync(serverDir).filter(f => f.endsWith('.js'))) {
     patchFile(path.join(serverDir, file), [
-      // Cloudflare Workers use globalThis instead of process for some globals
       ['process.env.NEXT_RUNTIME', '"edge"'],
     ]);
   }
@@ -54,9 +58,25 @@ const edgeDir = path.join(OPEN_NEXT_DIR, 'edge-functions');
 if (fs.existsSync(edgeDir)) {
   for (const file of fs.readdirSync(edgeDir).filter(f => f.endsWith('.js'))) {
     patchFile(path.join(edgeDir, file), [
-      // Patch out any stray crypto.createHash references that aren't available in edge
       ['require("crypto")', 'globalThis.crypto'],
     ]);
+  }
+}
+
+// ── 4. Create _worker.js for Cloudflare Pages compatibility ─────────────────
+// Cloudflare Pages requires the custom Worker to be named `_worker.js` in the
+// build output directory. opennextjs-cloudflare outputs `worker.js` (Worker
+// deployment convention), so we copy it to `_worker.js` for Pages.
+if (fs.existsSync(workerEntry)) {
+  const pagesWorker = path.join(OPEN_NEXT_DIR, '_worker.js');
+  fs.copyFileSync(workerEntry, pagesWorker);
+  console.log(`  created: ${path.relative(ROOT, pagesWorker)} (Cloudflare Pages _worker.js)`);
+
+  // Also place _worker.js in assets/ in case that is the Pages output directory
+  const assetsWorker = path.join(OPEN_NEXT_DIR, 'assets', '_worker.js');
+  if (fs.existsSync(path.join(OPEN_NEXT_DIR, 'assets'))) {
+    fs.copyFileSync(workerEntry, assetsWorker);
+    console.log(`  created: ${path.relative(ROOT, assetsWorker)}`);
   }
 }
 
