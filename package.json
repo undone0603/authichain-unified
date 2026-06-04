@@ -9,6 +9,7 @@
     "build:worker": "wrangler deploy --dry-run outreach-worker/src/index.ts",
     "build:cf": "pnpm run build:router && pnpm run build:worker",
     "build": "opennextjs-cloudflare build && node scripts/patch-opennext.cjs",
+    "build:next": "next build",
     "cf:build": "opennextjs-cloudflare build && node scripts/patch-opennext.cjs",
     "vercel-build": "next build",
     "patch:workerd": "python scripts/patch_workerd.py",
