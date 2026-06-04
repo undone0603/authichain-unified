@@ -781,8 +781,11 @@ export const stakingPositions = pgTable("staking_positions", {
   status: varchar("status", { length: 50 }).default("active"),
   multiplier: numeric("multiplier", { precision: 5, scale: 2 }).default("1.00"),
   apy: numeric("apy", { precision: 5, scale: 2 }).default("5.00"),
+  rewardsEarned: numeric("rewardsEarned", { precision: 20, scale: 9 }).default("0"),
+  lastRewardCalculation: timestamp("lastRewardCalculation"),
   stakedAt: timestamp("stakedAt").defaultNow().notNull(),
   releaseAt: timestamp("releaseAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 

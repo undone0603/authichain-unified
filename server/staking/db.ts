@@ -2,13 +2,9 @@ import { eq, and, desc } from "drizzle-orm";
 import { getDb } from "../db";
 import { stakingPositions, platformFees, transactions, InsertStakingPosition, InsertPlatformFee, InsertTransaction } from "../../drizzle/schema";
 
-/**
- * Get user's staking positions
- */
 export async function getUserStakingPositions(userId: number) {
   const db = await getDb();
   if (!db) return [];
-
   return await db
     .select()
     .from(stakingPositions)
@@ -16,28 +12,16 @@ export async function getUserStakingPositions(userId: number) {
     .orderBy(desc(stakingPositions.createdAt));
 }
 
-/**
- * Get active staking positions for a user
- */
 export async function getActiveStakingPositions(userId: number) {
   const db = await getDb();
   if (!db) return [];
-
   return await db
     .select()
     .from(stakingPositions)
-    .where(
-      and(
-        eq(stakingPositions.userId, userId),
-        eq(stakingPositions.status, "active")
-      )
-    )
+    .where(and(eq(stakingPositions.userId, userId), eq(stakingPositions.status, "active")))
     .orderBy(desc(stakingPositions.createdAt));
 }
 
-/**
- * Create a new staking position
- */
 export async function createStakingPosition(data: {
   userId: number;
   amount: number;
@@ -55,49 +39,40 @@ export async function createStakingPosition(data: {
     lastRewardCalculation: new Date(),
   };
 
-  await db.insert(stakingPositions).values(position);
-  return 0; // Return placeholder ID
+  const [row] = await db.insert(stakingPositions).values(position).returning({ id: stakingPositions.id });
+  return row.id;
 }
 
-/**
- * Calculate and update rewards for a staking position
- */
 export async function calculateRewards(positionId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Get position
   const positions = await db
     .select()
     .from(stakingPositions)
     .where(eq(stakingPositions.id, positionId))
     .limit(1);
 
-  if (positions.length === 0) {
-    throw new Error("Staking position not found");
-  }
+  if (positions.length === 0) throw new Error("Staking position not found");
 
   const position = positions[0];
+  if (position.status !== "active") return 0;
 
-  if (position.status !== "active") {
-    return 0;
-  }
-
-  // Calculate time elapsed since last calculation
   const now = new Date();
-  const lastCalc = new Date(position.lastRewardCalculation);
-  const hoursElapsed = (now.getTime() - lastCalc.getTime()) / (1000 * 60 * 60);
+  const lastCalc = position.lastRewardCalculation ?? position.stakedAt;
+  const hoursElapsed = (now.getTime() - new Date(lastCalc).getTime()) / (1000 * 60 * 60);
 
-  // Calculate rewards: (amount * APY / 100 / 365 / 24) * hoursElapsed
-  const annualReward = (position.amount * position.apy) / 10000; // APY is in basis points (1200 = 12%)
-  const hourlyReward = annualReward / 365 / 24;
-  const newRewards = Math.floor(hourlyReward * hoursElapsed);
+  // Rewards: (amount * APY% / 100) / 365 / 24 * hoursElapsed
+  const amount = parseFloat(String(position.amount));
+  const apy = parseFloat(String(position.apy));
+  const earned = parseFloat(String(position.rewardsEarned ?? "0"));
+  const hourlyReward = (amount * apy) / 100 / 365 / 24;
+  const newRewards = hourlyReward * hoursElapsed;
 
-  // Update position
   await db
     .update(stakingPositions)
     .set({
-      rewardsEarned: position.rewardsEarned + newRewards,
+      rewardsEarned: String(earned + newRewards),
       lastRewardCalculation: now,
       updatedAt: now,
     })
@@ -106,79 +81,42 @@ export async function calculateRewards(positionId: number) {
   return newRewards;
 }
 
-/**
- * Withdraw from staking position
- */
 export async function withdrawStaking(positionId: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Get position
   const positions = await db
     .select()
     .from(stakingPositions)
-    .where(
-      and(
-        eq(stakingPositions.id, positionId),
-        eq(stakingPositions.userId, userId)
-      )
-    )
+    .where(and(eq(stakingPositions.id, positionId), eq(stakingPositions.userId, userId)))
     .limit(1);
 
-  if (positions.length === 0) {
-    throw new Error("Staking position not found");
-  }
+  if (positions.length === 0) throw new Error("Staking position not found");
+  if (positions[0].status !== "active") throw new Error("Position is not active");
 
-  const position = positions[0];
-
-  if (position.status !== "active") {
-    throw new Error("Position is not active");
-  }
-
-  // Calculate final rewards
   await calculateRewards(positionId);
 
-  // Get updated position
-  const updatedPositions = await db
+  const [updated] = await db
     .select()
     .from(stakingPositions)
     .where(eq(stakingPositions.id, positionId))
     .limit(1);
 
-  const updatedPosition = updatedPositions[0];
-
-  // Mark as withdrawn
-  const now = new Date();
   await db
     .update(stakingPositions)
-    .set({
-      status: "withdrawn",
-      endDate: now,
-      updatedAt: now,
-    })
+    .set({ status: "withdrawn", releaseAt: new Date(), updatedAt: new Date() })
     .where(eq(stakingPositions.id, positionId));
 
-  // Return total amount (principal + rewards)
   return {
-    principal: updatedPosition.amount,
-    rewards: updatedPosition.rewardsEarned,
-    total: updatedPosition.amount + updatedPosition.rewardsEarned,
+    principal: parseFloat(String(updated.amount)),
+    rewards: parseFloat(String(updated.rewardsEarned ?? "0")),
+    total: parseFloat(String(updated.amount)) + parseFloat(String(updated.rewardsEarned ?? "0")),
   };
 }
 
-/**
- * Get total staking statistics for a user
- */
 export async function getUserStakingStats(userId: number) {
   const db = await getDb();
-  if (!db) {
-    return {
-      totalStaked: 0,
-      totalRewards: 0,
-      activePositions: 0,
-      totalPositions: 0,
-    };
-  }
+  if (!db) return { totalStaked: 0, totalRewards: 0, activePositions: 0, totalPositions: 0 };
 
   const positions = await db
     .select()
@@ -186,9 +124,8 @@ export async function getUserStakingStats(userId: number) {
     .where(eq(stakingPositions.userId, userId));
 
   const activePositions = positions.filter((p) => p.status === "active");
-
-  const totalStaked = activePositions.reduce((sum, p) => sum + p.amount, 0);
-  const totalRewards = positions.reduce((sum, p) => sum + p.rewardsEarned, 0);
+  const totalStaked = activePositions.reduce((s, p) => s + parseFloat(String(p.amount)), 0);
+  const totalRewards = positions.reduce((s, p) => s + parseFloat(String(p.rewardsEarned ?? "0")), 0);
 
   return {
     totalStaked,
@@ -198,9 +135,6 @@ export async function getUserStakingStats(userId: number) {
   };
 }
 
-/**
- * Create a transaction record
- */
 export async function createTransaction(data: {
   userId: number;
   type: string;
@@ -218,18 +152,15 @@ export async function createTransaction(data: {
     type: data.type as any,
     amount: data.amount,
     status: data.status as any,
-    feeAmount: data.feeAmount || 0,
+    feeAmount: data.feeAmount ?? 0,
     stakingId: data.stakingId,
     metadata: data.metadata,
   };
 
-  await db.insert(transactions).values(transaction);
-  return 0; // Return placeholder ID
+  const [row] = await db.insert(transactions).values(transaction).returning({ id: transactions.id });
+  return row.id;
 }
 
-/**
- * Create a platform fee record
- */
 export async function createPlatformFee(data: {
   feeType: string;
   percentage: number;
@@ -248,6 +179,6 @@ export async function createPlatformFee(data: {
     description: data.description,
   };
 
-  await db.insert(platformFees).values(fee);
-  return 0; // Return placeholder ID
+  const [row] = await db.insert(platformFees).values(fee).returning({ id: platformFees.id });
+  return row.id;
 }

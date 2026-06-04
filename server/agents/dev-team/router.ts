@@ -1,5 +1,5 @@
 import { router, protectedProcedure } from "../../_core/trpc";
-import * as db from "../../db";
+import { enqueueTask } from "../../db";
 import { z } from "zod";
 
 export const devTeamRouter = router({
@@ -9,27 +9,38 @@ export const devTeamRouter = router({
       prompt: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { missionTasks } = await import("../../../drizzle/schema");
-      // TODO: Implement actual code writing logic
-      return { success: true, message: "Code written" };
+      const taskId = await enqueueTask(input.missionId, 'PLAN_SPRINT', {
+        feature: input.prompt,
+        context: `Requested by user ${ctx.user.id}`,
+      });
+      return { success: true, taskId, message: "Sprint planning queued" };
     }),
 
   runTests: protectedProcedure
     .input(z.object({
       missionId: z.string(),
+      branch: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      // TODO: Implement actual test running logic
-      return { success: true, message: "Tests passed" };
+      const taskId = await enqueueTask(input.missionId, 'RUN_TESTS', {
+        branch: input.branch ?? `agentz/${input.missionId}`,
+      });
+      return { success: true, taskId, message: "Tests queued" };
     }),
 
   managePR: protectedProcedure
     .input(z.object({
       missionId: z.string(),
       title: z.string(),
+      branch: z.string().optional(),
+      body: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      // TODO: Implement actual PR management logic
-      return { success: true, message: "PR created" };
+      const taskId = await enqueueTask(input.missionId, 'OPEN_PR', {
+        branch: input.branch ?? `agentz/${input.missionId}`,
+        title: input.title,
+        body: input.body ?? '',
+      });
+      return { success: true, taskId, message: "PR creation queued" };
     }),
 });

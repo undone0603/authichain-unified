@@ -1,9 +1,15 @@
-name: Deploy Vercel App
+name: Deploy Vercel Apps
 
+# NOTE: This workflow is a template for future Vercel app deployments.
+# Worker deployments are handled by deploy-workers.yml.
+# This workflow is manually triggered until Vercel app directories exist.
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'App directory to deploy (e.g. apps/authichain-com)'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -16,22 +22,6 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - workers/authichain-dashboard
-          - workers/qron-automation
-          - workers/qron-image-gen
-          - workers/qron-outreach
-          - workers/qron-space
-          - workers/resend-relay
-          - workers/strainchain-io
-          # Vercel Apps
-          - apps/authichain-com
-          - apps/authichain-dashboard
-          - apps/strainchain-io
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -49,30 +39,13 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-
-      - name: Detect project type
-        id: detect
-        run: |
-          if [[ "${{ matrix.project }}" == workers/* ]]; then
-            echo "type=worker" >> $GITHUB_OUTPUT
-          else
-            echo "type=vercel" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Deploy Cloudflare Worker
-        if: steps.detect.outputs.type == 'worker'
-        run: pnpm exec wrangler deploy --minify --config wrangler.toml
-        working-directory: ${{ matrix.project }}
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        working-directory: ${{ inputs.app }}
 
       - name: Deploy Vercel App
-        if: steps.detect.outputs.type == 'vercel'
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ${{ matrix.project }}
+          working-directory: ${{ inputs.app }}
           vercel-args: '--prod'

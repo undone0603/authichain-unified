@@ -25,6 +25,7 @@ const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructiv
 };
 
 export default function AdminDashboard() {
+  const utils = trpc.useUtils();
   const { data: metrics, isLoading } = trpc.admin.metrics.useQuery();
   const { data: users } = trpc.admin.users.useQuery();
   const { data: revenue } = trpc.admin.revenue.useQuery();
@@ -34,8 +35,10 @@ export default function AdminDashboard() {
   const { data: activity } = trpc.admin.activity.useQuery({ limit: 30 });
   const { data: subscriptions } = trpc.admin.subscriptions.useQuery();
   const { data: stakingStats } = trpc.admin.platformStaking.useQuery();
-  const serviceOrders: any[] = [];
-  const updateOrderStatus = { mutate: (_: any) => {}, isPending: false };
+  const { data: serviceOrders } = trpc.services.allOrders.useQuery();
+  const updateOrderStatus = trpc.services.updateStatus.useMutation({
+    onSuccess: () => utils.services.allOrders.invalidate(),
+  });
 
   if (isLoading) return (
     <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -65,6 +68,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="health">Health Scores</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="subs">Subscriptions</TabsTrigger>
+          <TabsTrigger value="orders">Orders ({serviceOrders?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="staking">Staking</TabsTrigger>
         </TabsList>
 

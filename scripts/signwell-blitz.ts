@@ -12,7 +12,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { SignWellClient, createSignWellClientFromEnv, type OutreachRecipient } from "./lib/signwell.js";
+import { SignWellClient, createSignWellClientFromEnv, type OutreachRecipient } from "./lib/signwell";
 
 interface OutreachQueueItem {
   id: string;

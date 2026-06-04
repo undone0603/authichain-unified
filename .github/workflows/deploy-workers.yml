@@ -30,12 +30,14 @@ jobs:
           - authichain-automation
           - authichain-com
           - authichain-dashboard
+          - govchain-us
           - qron-automation
           - qron-image-gen
           - qron-outreach
           - qron-space
           - resend-relay
           - strainchain-io
+          - authichain-verify-worker
           - bitcoin-auth
           - outreach-queue
     steps:

@@ -1003,6 +1003,24 @@ export async function getSubscriptionAnalytics() {
   return await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt));
 }
 
+export async function getPlatformStakingStats() {
+  const db = await getDb();
+  if (!db) return { totalStaked: 0, activeStakers: 0, totalRewardsDistributed: 0, avgApy: 0 };
+  const [row] = await db
+    .select({
+      totalStaked: sql<string>`COALESCE(SUM(CASE WHEN status = 'active' THEN amount ELSE 0 END), 0)`,
+      activeStakers: sql<number>`COUNT(DISTINCT CASE WHEN status = 'active' THEN "userId" END)`,
+      avgApy: sql<string>`COALESCE(AVG(CASE WHEN status = 'active' THEN apy ELSE NULL END), 0)`,
+    })
+    .from(stakingPositions);
+  return {
+    totalStaked: parseFloat(row?.totalStaked ?? "0"),
+    activeStakers: row?.activeStakers ?? 0,
+    totalRewardsDistributed: 0,
+    avgApy: parseFloat(row?.avgApy ?? "0"),
+  };
+}
+
 // ─── Notification Helpers ───────────────────────────────────────────────────
 export async function createNotification(data: Omit<InsertNotification, "id" | "createdAt">) {
   const db = await getDb();
