@@ -1169,6 +1169,12 @@ export async function upsertStripeSubscription(data: {
       trialEndsAt: data.trialEndsAt ?? undefined,
     });
   }
+  // Keep users.stripeCustomerId in sync so paymentHistory tRPC query works
+  if (data.stripeCustomerId) {
+    await db.update(users)
+      .set({ stripeCustomerId: data.stripeCustomerId })
+      .where(eq(users.id, data.userId));
+  }
 }
 
 export async function setSubscriptionStatusByStripeId(
