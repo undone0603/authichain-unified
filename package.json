@@ -4,7 +4,9 @@
   "description": "Autonomous Trust Infrastructure",
   "main": "index.js",
   "scripts": {
-    "test": "venv\\Scripts\\python.exe -m pytest tests",
+    "test:js": "vitest run",
+    "test:py": "python -m pytest tests",
+    "test": "pnpm run test:js && pnpm run test:py",
     "build:router": "wrangler deploy --dry-run authichain-router/src/index.ts",
     "build:worker": "wrangler deploy --dry-run outreach-worker/src/index.ts",
     "build:cf": "pnpm run build:router && pnpm run build:worker",

@@ -23,4 +23,21 @@ export const ENV = {
   paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
   samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
+<<<<<<< HEAD
+=======
+
+  // ── Pipeline Flags ────────────────────────────────────────────────────────
+  // Defaults to enabled unless explicitly disabled, to keep the revenue/autopilot
+  // pipeline alive even when the env var is not present.
+  autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED !== "false",
+  requireOutreachApproval:   process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
+  requireDevApproval:        process.env.REQUIRE_DEV_APPROVAL !== "false",
+
+  // ── Video / Media ─────────────────────────────────────────────────────────
+  heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
+  internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",
+  qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
+  makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
+  smsRecipient: process.env.SMS_RECIPIENT ?? "",
+>>>>>>> 753cae2d (Fix Story Mode redirect/reveal flow, enable autonomous pipeline by default, and add HubSpot closed-won revenue verification)
 };
