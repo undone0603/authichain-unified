@@ -265,7 +265,7 @@ async function verifyStripeSignature(body: string, sigHeader: string, secret: st
   return expected === v1;
 }
 
-const PLAN_MAP: Record<string, { plan: string; limit: number; name: string }> = {
+const STATIC_PLAN_MAP: Record<string, { plan: string; limit: number; name: string }> = {
   'price_strainchain_basic': { plan: 'starter', limit: 1000, name: 'StrainChain Basic' },
   'price_strainchain_pro': { plan: 'pro', limit: 10000, name: 'StrainChain Pro' },
   'price_strainchain_enterprise': { plan: 'enterprise', limit: 100000, name: 'StrainChain Enterprise' },
@@ -273,6 +273,34 @@ const PLAN_MAP: Record<string, { plan: string; limit: number; name: string }> = 
   'price_qron_brand': { plan: 'pro', limit: 5000, name: 'QRON Brand Pack' },
   'price_qron_enterprise': { plan: 'enterprise', limit: 100000, name: 'QRON Enterprise' },
 };
+
+function buildPlanMap(env: any): Record<string, { plan: string; limit: number; name: string }> {
+  const map = { ...STATIC_PLAN_MAP };
+  if (env.STRIPE_AGENT_BROWSER_PRO_PRICE_ID)
+    map[env.STRIPE_AGENT_BROWSER_PRO_PRICE_ID] = { plan: 'pro', limit: 10000, name: 'Agent Browser Pro' };
+  if (env.STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID)
+    map[env.STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID] = { plan: 'enterprise', limit: 100000, name: 'Agent Browser Enterprise' };
+  if (env.STRIPE_STRAINCHAIN_BASIC_PRICE_ID)
+    map[env.STRIPE_STRAINCHAIN_BASIC_PRICE_ID] = { plan: 'starter', limit: 1000, name: 'StrainChain Basic' };
+  if (env.STRIPE_STRAINCHAIN_PRO_PRICE_ID)
+    map[env.STRIPE_STRAINCHAIN_PRO_PRICE_ID] = { plan: 'pro', limit: 10000, name: 'StrainChain Pro' };
+  if (env.STRIPE_STRAINCHAIN_ENTERPRISE_PRICE_ID)
+    map[env.STRIPE_STRAINCHAIN_ENTERPRISE_PRICE_ID] = { plan: 'enterprise', limit: 100000, name: 'StrainChain Enterprise' };
+  if (env.STRIPE_QRON_ENTERPRISE_PRICE_ID)
+    map[env.STRIPE_QRON_ENTERPRISE_PRICE_ID] = { plan: 'enterprise', limit: 100000, name: 'QRON Enterprise' };
+  return map;
+}
+
+async function fetchStripeSession(sessionId: string, stripeKey: string): Promise<any> {
+  try {
+    const res = await fetch(
+      `https://api.stripe.com/v1/checkout/sessions/${sessionId}?expand[]=line_items`,
+      { headers: { Authorization: `Bearer ${stripeKey}` } }
+    );
+    if (res.ok) return res.json();
+  } catch {}
+  return null;
+}
 
 // ── Stripe Webhook — provisions API keys on checkout ────────────────────
 
@@ -294,8 +322,16 @@ async function handleStripeWebhook(request: Request, env: any, cors: any): Promi
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const email = session.customer_email || session.customer_details?.email;
-    const priceId = session.line_items?.data?.[0]?.price?.id || 'unknown';
-    const planInfo = PLAN_MAP[priceId] || { plan: 'starter', limit: 1000, name: 'AuthiChain Starter' };
+
+    // Expand line_items from Stripe API — not included in webhook payload by default
+    let priceId: string = session.metadata?.priceId || session.metadata?.price_id || 'unknown';
+    if (priceId === 'unknown' && env.STRIPE_SECRET_KEY) {
+      const expanded = await fetchStripeSession(session.id, env.STRIPE_SECRET_KEY);
+      priceId = expanded?.line_items?.data?.[0]?.price?.id || priceId;
+    }
+
+    const planMap = buildPlanMap(env);
+    const planInfo = planMap[priceId] || { plan: 'starter', limit: 1000, name: 'AuthiChain Starter' };
 
     const apiKey = generateApiKey(planInfo.plan);
     const keyData = {
@@ -304,6 +340,7 @@ async function handleStripeWebhook(request: Request, env: any, cors: any): Promi
       plan: planInfo.plan,
       name: planInfo.name,
       limit: planInfo.limit,
+      priceId,
       stripeSessionId: session.id,
       stripeCustomerId: session.customer,
       createdAt: new Date().toISOString(),
@@ -318,7 +355,7 @@ async function handleStripeWebhook(request: Request, env: any, cors: any): Promi
       }
     }
 
-    return json({ received: true, apiKey, plan: planInfo.name }, cors);
+    return json({ received: true, apiKey, plan: planInfo.name, priceId }, cors);
   }
 
   return json({ received: true }, cors);
