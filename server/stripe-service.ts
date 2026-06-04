@@ -50,6 +50,16 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
       plan: params.plan,
       billing: params.billing,
     },
+    // Propagate user_id onto the Subscription object so lifecycle events
+    // (created, updated, deleted, invoice.payment_failed) can resolve userId
+    // without a separate customer lookup.
+    subscription_data: {
+      metadata: {
+        user_id: params.userId.toString(),
+        plan: params.plan,
+        billing: params.billing,
+      },
+    },
     line_items: [
       {
         price_data: {

@@ -42,6 +42,7 @@ import {
   missionTasks,
   stakingPositions,
   budgetConfig,
+  webhookEvents,
   type Product,
   type InsertProduct,
   type InsertNotification,
@@ -1193,14 +1194,16 @@ export async function getSubscriptionByStripeSubscriptionId(stripeSubscriptionId
   return result[0];
 }
 
-export async function hasWebhookEventProcessed(eventId: string): Promise<boolean> {
+export async function hasWebhookEventProcessed(eventId: string, eventType = "unknown", provider = "stripe"): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
-  const [row] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(activityLog)
-    .where(sql`(${activityLog.details}::jsonb)->>'eventId' = ${eventId}`);
-  return (row?.count ?? 0) > 0;
+  // Atomic claim: INSERT returns 0 rows on conflict → already processed.
+  const result = await db
+    .insert(webhookEvents)
+    .values({ provider, eventId, eventType, receivedAt: new Date() })
+    .onConflictDoNothing()
+    .returning({ id: webhookEvents.id });
+  return result.length === 0;
 }
 
 // ─── Paddle Subscription Helpers ──────────────────────────────────────────────

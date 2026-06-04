@@ -141,8 +141,8 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type };
   }
 
-  // Idempotency — skip if we already processed this event
-  if (await hasWebhookEventProcessed(event.id)) {
+  // Idempotency — atomic INSERT into webhook_events; returns true if already processed
+  if (await hasWebhookEventProcessed(event.id, event.type, "stripe")) {
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
     return { received: true, type: event.type, duplicate: true };
   }

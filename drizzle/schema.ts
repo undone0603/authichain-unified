@@ -864,6 +864,20 @@ export const bayesianPriors = pgTable("bayesian_priors", {
 export type BayesianPrior = typeof bayesianPriors.$inferSelect;
 export type InsertBayesianPrior = typeof bayesianPriors.$inferInsert;
 
+// ─── Webhook Events (idempotency) ────────────────────────────────────────────
+// Atomic dedup table: INSERT … ON CONFLICT DO NOTHING. Unique on (provider, eventId).
+// Replaces the slow activityLog JSONB scan in hasWebhookEventProcessed.
+export const webhookEvents = pgTable("webhook_events", {
+  id: serial("id").primaryKey(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  eventId: varchar("eventId", { length: 128 }).notNull(),
+  eventType: varchar("eventType", { length: 128 }).notNull(),
+  receivedAt: timestamp("receivedAt").defaultNow().notNull(),
+  processedAt: timestamp("processedAt"),
+});
+
+export type WebhookEvent = typeof webhookEvents.$inferSelect;
+
 export type Mission = typeof missions.$inferSelect;
 export type MissionTask = typeof missionTasks.$inferSelect;
 export type CharacterGeneration = typeof characterGenerations.$inferSelect;
