@@ -110,6 +110,9 @@ temp/
 __pycache__/
 *.py[cod]
 
+# Node
+node_modules/
+
 # Externally cloned repos (exploration only)
 authichain_premium/
 qron-platform/
