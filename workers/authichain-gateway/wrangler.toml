@@ -3,24 +3,20 @@ main = "src/index.ts"
 compatibility_date = "2026-04-01"
 compatibility_flags = ["nodejs_compat"]
 account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = true
 
-# KV Namespaces (create with: wrangler kv namespace create <NAME>)
 [[kv_namespaces]]
 binding = "RATE_LIMITS"
-id = "placeholder-rate-limits"
+id = "a887e667586b44f295dd10de41de919f"
 
 [[kv_namespaces]]
 binding = "TENANT_CACHE"
-id = "placeholder-tenant-cache"
+id = "c3e2e895739445acb68870fa938bd32a"
 
 [[kv_namespaces]]
 binding = "USAGE_BUFFER"
-id = "placeholder-usage-buffer"
+id = "6d148fb5083c4c72a85571be154de0e0"
 
 [vars]
 BACKEND_URL = "https://authichain-unified.vercel.app"
 WORKER_VERSION = "2.0.0"
-
-# Cron trigger: flush usage buffer every 5 minutes
-[triggers]
-crons = ["*/5 * * * *"]
