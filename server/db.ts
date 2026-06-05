@@ -282,6 +282,21 @@ export async function updateLeadScore(id: number, score: number) {
   await d.update(leads).set({ score }).where(eq(leads.id, id));
 }
 
+export async function recordEmailOpen(email: string) {
+  const d = await getDb();
+  await d.update(leads).set({ emailOpened: true, updatedAt: new Date() }).where(eq(leads.email, email.toLowerCase()));
+}
+
+export async function recordEmailClick(email: string) {
+  const d = await getDb();
+  await d.update(leads).set({ emailClicked: true, updatedAt: new Date() }).where(eq(leads.email, email.toLowerCase()));
+}
+
+export async function recordEmailReply(email: string) {
+  const d = await getDb();
+  await d.update(leads).set({ emailReplied: true, updatedAt: new Date() }).where(eq(leads.email, email.toLowerCase()));
+}
+
 export async function updateLeadStatus(id: number, status: string) {
   const d = await getDb();
   await d.update(leads).set({ status: status as any }).where(eq(leads.id, id));
