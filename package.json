@@ -106,7 +106,7 @@
     "react": "^19.2.1",
     "react-day-picker": "^10.0.0",
     "react-dom": "^19.2.1",
-    "react-hook-form": "^7.64.0",
+    "react-hook-form": "^7.77.0",
     "react-resizable-panels": "^4.11.0",
     "recharts": "^2.15.2",
     "resend": "^4.0.1",
