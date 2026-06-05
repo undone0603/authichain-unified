@@ -315,8 +315,8 @@ importers:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       vectra:
-        specifier: ^0.14.0
-        version: 0.14.0(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3)
+        specifier: ^0.15.0
+        version: 0.15.0(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3)
       wouter:
         specifier: ^3.3.5
         version: 3.9.0(react@19.2.7)
@@ -8952,18 +8952,6 @@ packages:
     resolution: {integrity: sha512-XgFPPM+B28FtCCgSb9I+s9szOC1vZRSwgWsRUA5ylIxRTgKozqjOCrVOqGsYABPYK5qnfqClxZTFBa8PKt2v6Q==}
     engines: {node: '>=12'}
 
-  openai@4.104.0:
-    resolution: {integrity: sha512-p99EFNsA/yX6UhVO93f5kJsDRLAg+CTA2RBqdHK4RtK8u5IJw32Hyb2dTGKbnnFmnuoBv5r7Z2CURI9sGZpSuA==}
-    hasBin: true
-    peerDependencies:
-      ws: ^8.18.0
-      zod: ^3.23.8
-    peerDependenciesMeta:
-      ws:
-        optional: true
-      zod:
-        optional: true
-
   openai@6.42.0:
     resolution: {integrity: sha512-1WFEt/uXMXOLhYRNkgJWo08Y2YNvNwpVU72K7ibrWgWpNOXd4VojXLbe6SQ4bLiUQ3Y8jz4IiyVkylJCL1DtZg==}
     peerDependencies:
@@ -9456,6 +9444,10 @@ packages:
 
   protobufjs@7.6.2:
     resolution: {integrity: sha512-N9EiLovGEQOJSPF26Ij7qUGvahfEnq0eeYZ02aigIedkmz1qZSwjnP9SBITHJuF/6MYbIW4HDN8zdYjsjqJKXQ==}
+    engines: {node: '>=12.0.0'}
+
+  protobufjs@8.6.0:
+    resolution: {integrity: sha512-PIOO89BMGMXGz2333TVv/OqPNVWm7w30ll/4FtLbtLBaonzJMYwTbAZSSlobjIy9MoUgIAxSVUpK7aP7EpTtkg==}
     engines: {node: '>=12.0.0'}
 
   proxy-addr@2.0.7:
@@ -10691,8 +10683,8 @@ packages:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
 
-  uuid@11.1.1:
-    resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
+  uuid@13.0.2:
+    resolution: {integrity: sha512-vzi9uRZ926x4XV73S/4qQaTwPXM2JBj6/6lI/byHH1jOpCzb0zDbfytgA9LcN/hzb2l7WQSQnxITOVx5un/wGw==}
     hasBin: true
 
   uuid@14.0.0:
@@ -10731,12 +10723,12 @@ packages:
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc
 
-  vectra@0.14.0:
-    resolution: {integrity: sha512-uD1ohmUgQu9Fq+oWl7Q//CS/WaI09FF8BsPmt/uKjew5VkLmlG+Kpbtg6rwc3ED/vU/0di2BxRQO8xvL9H9CdQ==}
+  vectra@0.15.0:
+    resolution: {integrity: sha512-p2wyITw9v4V7XHdcuNfTprfpLoW5f5vYZr6WKFlqIqWbaVMY296+liAmSf3xIBfGoxdaJhTqeI3DGhJ1TCnIwQ==}
     engines: {node: '>=22.x'}
     hasBin: true
     peerDependencies:
-      '@huggingface/transformers': ^3.8.1
+      '@huggingface/transformers': ^4.0.1
     peerDependenciesMeta:
       '@huggingface/transformers':
         optional: true
@@ -21820,21 +21812,6 @@ snapshots:
       is-docker: 2.2.1
       is-wsl: 2.2.0
 
-  openai@4.104.0(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3):
-    dependencies:
-      '@types/node': 18.19.130
-      '@types/node-fetch': 2.6.13
-      abort-controller: 3.0.0
-      agentkeepalive: 4.6.0
-      form-data-encoder: 1.7.2
-      formdata-node: 4.4.1
-      node-fetch: 2.7.0
-    optionalDependencies:
-      ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
-      zod: 4.4.3
-    transitivePeerDependencies:
-      - encoding
-
   openai@6.42.0(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3):
     optionalDependencies:
       ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -22380,6 +22357,11 @@ snapshots:
       '@protobufjs/utf8': 1.1.1
       '@types/node': 25.9.1
       long: 5.3.2
+
+  protobufjs@8.6.0:
+    dependencies:
+      long: 5.3.2
+    optional: true
 
   proxy-addr@2.0.7:
     dependencies:
@@ -23830,7 +23812,7 @@ snapshots:
 
   utils-merge@1.0.1: {}
 
-  uuid@11.1.1: {}
+  uuid@13.0.2: {}
 
   uuid@14.0.0: {}
 
@@ -23858,25 +23840,24 @@ snapshots:
       - '@types/react'
       - '@types/react-dom'
 
-  vectra@0.14.0(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3):
+  vectra@0.15.0(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3):
     dependencies:
       '@grpc/grpc-js': 1.14.4
       '@grpc/proto-loader': 0.8.1
       buffer: 6.0.3
       cheerio: 1.2.0
-      dotenv: 16.6.1
+      dotenv: 17.4.2
       gpt-tokenizer: 3.4.0
       json-colorizer: 3.0.1
-      openai: 4.104.0(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3)
+      openai: 6.42.0(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3)
       turndown: 7.2.4
-      uuid: 11.1.1
+      uuid: 13.0.2
       wink-bm25-text-search: 3.1.2
       wink-nlp: 2.4.0
-      yargs: 17.7.2
+      yargs: 18.0.0
     optionalDependencies:
-      protobufjs: 7.6.2
+      protobufjs: 8.6.0
     transitivePeerDependencies:
-      - encoding
       - ws
       - zod
 
