@@ -23,6 +23,7 @@ import {
   getSubscriptionByStripeSubscriptionId,
   createSystemNotification,
   hasWebhookEventProcessed,
+  getDb,
 } from "../db";
 import { getPlanQuota } from "../stripe-products";
 
@@ -363,6 +364,37 @@ export async function handleStripeWebhook(
         console.log(`[stripe-webhook] Service order fulfilled: orderId=${orderResult.orderId}`);
       }
 
+      // ── Proposal payment: mark ACCEPTED, update lead status, send welcome ──
+      const leadEmail = session.metadata?.leadEmail;
+      const checkoutSessionId = session.id;
+      if (leadEmail) {
+        try {
+          const { proposals, leads } = await import("../../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          const db = await getDb();
+          await db.update(proposals)
+            .set({ status: "ACCEPTED", acceptedAt: new Date() })
+            .where(eq(proposals.checkoutSessionId, checkoutSessionId));
+          await db.update(leads)
+            .set({ status: "CLOSED_WON", updatedAt: new Date() })
+            .where(eq(leads.email, leadEmail.toLowerCase()));
+          const { sendEmail } = await import("../email-service");
+          await sendEmail({
+            to: leadEmail,
+            subject: "Welcome to AuthiChain — your pilot is confirmed",
+            body: `Hi there,\n\nThank you for your payment — your AuthiChain pilot is confirmed and active.\n\nGet started now: https://authichain.com/dashboard\n\nYour onboarding team will be in touch within 1 business day. In the meantime, you can explore the dashboard and connect your first data source.\n\nWelcome aboard,\nThe AuthiChain Team`,
+            fromName: "AuthiChain",
+          });
+          await logActivity({
+            userId: null, action: "proposal_accepted", entityType: "proposal", entityId: 0,
+            details: { checkoutSessionId, leadEmail, amountUsd },
+          });
+          console.log(`[stripe-webhook] Proposal accepted: ${leadEmail} $${amountUsd}`);
+        } catch (err: any) {
+          console.error(`[stripe-webhook] Proposal accept error:`, err.message);
+        }
+      }
+
       await logAutomationAudit(
         "billing_checkout_completed",
         {
@@ -374,6 +406,7 @@ export async function handleStripeWebhook(
           stripeSubscriptionId: subscriptionId ?? null,
           stripeCustomerId: customerId ?? null,
           serviceOrderFulfilled: orderResult.handled ? orderResult.orderId : null,
+          proposalAccepted: !!leadEmail,
         },
         userId,
       );

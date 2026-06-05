@@ -237,6 +237,36 @@ export async function getAdaptivePriors(): Promise<Record<string, { alpha: numbe
   return map;
 }
 
+export async function updateBayesianPrior(segment: string, alphaDelta: number, betaDelta: number) {
+  const d = await getDb();
+  await d.insert(bayesianPriors).values({
+    segment,
+    priorAlpha: String(2 + alphaDelta),
+    priorBeta: String(23 + betaDelta),
+    observationsCount: 1,
+    updatedAt: new Date(),
+  }).onConflictDoUpdate({
+    target: bayesianPriors.segment,
+    set: {
+      priorAlpha: sql`${bayesianPriors.priorAlpha}::numeric + ${alphaDelta}`,
+      priorBeta: sql`${bayesianPriors.priorBeta}::numeric + ${betaDelta}`,
+      currentMean: sql`(${bayesianPriors.priorAlpha}::numeric + ${alphaDelta}) / ((${bayesianPriors.priorAlpha}::numeric + ${alphaDelta}) + (${bayesianPriors.priorBeta}::numeric + ${betaDelta}))`,
+      observationsCount: sql`${bayesianPriors.observationsCount} + 1`,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+export async function getRecentOutcomeSignals(sinceMs = 5 * 60 * 1000): Promise<Array<{ segment: string; signal: string }>> {
+  const d = await getDb();
+  const since = new Date(Date.now() - sinceMs);
+  const rows = await d.select().from(activityLog)
+    .where(and(eq(activityLog.action, "outcome_signal"), gte(activityLog.createdAt, since)));
+  return rows
+    .map(r => ({ segment: (r.details as any)?.segment as string, signal: (r.details as any)?.signal as string }))
+    .filter(r => r.segment && r.signal);
+}
+
 export async function createLead(data: any) {
   const d = await getDb();
   const values = {

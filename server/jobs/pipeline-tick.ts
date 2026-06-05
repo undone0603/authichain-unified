@@ -9,9 +9,12 @@ import { runWeeklyDigestDispatch } from "./weekly-digest";
 import { runQuarterlyValueReportDispatch } from "./quarterly-value";
 import { runOrganicTrafficAutomation } from "./organic-traffic";
 import { runLeadScoring } from "../sales/scoring-service";
-import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
+import {
+  getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes,
+  updateBayesianPrior, getRecentOutcomeSignals, enqueueTask,
+} from "../db";
 import { runTask } from "./task-runner";
-import { ucb1Score, betaMean } from "../_core/bayesian";
+import { ucb1Score, betaMean, updatePrior, SEGMENT_PRIORS } from "../_core/bayesian";
 import { withRetry } from "../_core/retry";
 import { getCircuitBreaker } from "../_core/circuit-breaker";
 
@@ -100,6 +103,57 @@ export async function runPipelineTick() {
     }
   }
 
+  // ── Bayesian prior write-back from outcome signals ─────────────────────────
+  // Read signals logged in the last tick window and update the priors table so
+  // UCB1 actually learns over time instead of using static seeded values.
+  const SIGNAL_DELTAS: Record<string, { a: number; b: number }> = {
+    email_replied:    { a: 5,  b: 0 },
+    email_opened:     { a: 1,  b: 0 },
+    email_clicked:    { a: 2,  b: 0 },
+    converted:        { a: 12, b: 0 },
+    no_response:      { a: 0,  b: 1 },
+    unsubscribed:     { a: 0,  b: 4 },
+  };
+  const recentSignals = await getRecentOutcomeSignals(6 * 60 * 1000); // last 6 min
+  const priorUpdates: string[] = [];
+  for (const { segment, signal } of recentSignals) {
+    const delta = SIGNAL_DELTAS[signal];
+    if (!delta || !segment) continue;
+    await updateBayesianPrior(segment, delta.a, delta.b).catch(() => {});
+    priorUpdates.push(`${segment}:${signal}`);
+  }
+
+  // ── Lead task seeding — ensure top-of-funnel never runs dry ───────────────
+  // If no FIND_GOV_LEADS or FIND_RETAIL_LEADS tasks are pending, create them
+  // so Apollo.io keeps discovering fresh prospects every cycle.
+  const pendingKinds = new Set(dueTasks.map(t => t.kind));
+  const leadSeedCreated: string[] = [];
+  const LEAD_TASKS: Array<{ kind: string; missionType: string }> = [
+    { kind: "FIND_GOV_LEADS",    missionType: "GOV_PILOT" },
+    { kind: "FIND_RETAIL_LEADS", missionType: "RETAIL_PILOT" },
+  ];
+  for (const { kind, missionType } of LEAD_TASKS) {
+    if (!pendingKinds.has(kind)) {
+      let missionId: string | undefined;
+      const activeMissions = await getActiveMissionTypes();
+      if (!activeMissions.includes(missionType)) {
+        missionId = await createMission(missionType as any);
+      } else {
+        // Reuse existing active mission of this type
+        const { getDb } = await import("../db");
+        const { missions } = await import("../../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        const rows = await db.select().from(missions).where(eq(missions.title, missionType)).limit(1);
+        missionId = rows[0]?.id;
+      }
+      if (missionId) {
+        await enqueueTask(missionId, kind, { segment: kind === "FIND_GOV_LEADS" ? "GOV" : "RETAIL", count: 10 });
+        leadSeedCreated.push(kind);
+      }
+    }
+  }
+
   const summary = {
     enabled: true,
     budgetMonitor,
@@ -111,6 +165,8 @@ export async function runPipelineTick() {
     leadScoring,
     missionTasks: taskResults,
     pmfCreated,
+    priorUpdates,
+    leadSeedCreated,
   };
 
   await logActivity({
