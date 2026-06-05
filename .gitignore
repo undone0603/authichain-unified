@@ -82,7 +82,8 @@ package-lock.json
 
 # Next.js build output
 .next
-.open-next
+# .open-next is tracked so authichain-unified Pages (no build command) always
+# has a valid output directory; authichain-com's cf:build overwrites it.
 next-env.d.ts
 
 # Nuxt.js build / generate output
