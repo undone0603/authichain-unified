@@ -342,6 +342,14 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
 
   await updateLeadStatus(leadEmail, 'PILOT_PROPOSED');
 
+  // Mark contractSent so the scoring loop doesn't re-trigger another proposal
+  const db = await getDb();
+  if (db) {
+    await db.update(leads)
+      .set({ contractSent: true, updatedAt: new Date() })
+      .where(eq(leads.email, leadEmail.toLowerCase()));
+  }
+
   await logActivity({
     userId: null, action: 'proposal_sent', entityType: 'task', entityId: 0,
     details: {
