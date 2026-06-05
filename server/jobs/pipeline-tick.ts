@@ -11,8 +11,10 @@ import { runOrganicTrafficAutomation } from "./organic-traffic";
 import { runLeadScoring } from "../sales/scoring-service";
 import {
   getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes,
-  updateBayesianPrior, getRecentOutcomeSignals, enqueueTask,
+  updateBayesianPrior, getRecentOutcomeSignals, enqueueTask, getDb,
 } from "../db";
+import { missions } from "../../drizzle/schema";
+import { eq as drizzleEq } from "drizzle-orm";
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean, updatePrior, SEGMENT_PRIORS } from "../_core/bayesian";
 import { withRetry } from "../_core/retry";
@@ -149,12 +151,8 @@ export async function runPipelineTick() {
       if (!activeMissions.includes(missionType)) {
         missionId = await createMission(missionType as any);
       } else {
-        // Reuse existing active mission of this type
-        const { getDb } = await import("../db");
-        const { missions } = await import("../../drizzle/schema");
-        const { eq } = await import("drizzle-orm");
         const db = await getDb();
-        const rows = await db.select().from(missions).where(eq(missions.title, missionType)).limit(1);
+        const rows = await db.select().from(missions).where(drizzleEq(missions.title, missionType)).limit(1);
         missionId = rows[0]?.id;
       }
       if (missionId) {

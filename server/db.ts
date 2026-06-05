@@ -239,22 +239,27 @@ export async function getAdaptivePriors(): Promise<Record<string, { alpha: numbe
 
 export async function updateBayesianPrior(segment: string, alphaDelta: number, betaDelta: number) {
   const d = await getDb();
-  await d.insert(bayesianPriors).values({
-    segment,
-    priorAlpha: String(2 + alphaDelta),
-    priorBeta: String(23 + betaDelta),
-    observationsCount: 1,
-    updatedAt: new Date(),
-  }).onConflictDoUpdate({
-    target: bayesianPriors.segment,
-    set: {
-      priorAlpha: sql`${bayesianPriors.priorAlpha}::numeric + ${alphaDelta}`,
-      priorBeta: sql`${bayesianPriors.priorBeta}::numeric + ${betaDelta}`,
-      currentMean: sql`(${bayesianPriors.priorAlpha}::numeric + ${alphaDelta}) / ((${bayesianPriors.priorAlpha}::numeric + ${alphaDelta}) + (${bayesianPriors.priorBeta}::numeric + ${betaDelta}))`,
-      observationsCount: sql`${bayesianPriors.observationsCount} + 1`,
-      updatedAt: new Date(),
-    },
-  });
+  // Use raw SQL UPSERT for atomic increment — Drizzle's onConflictDoUpdate set field
+  // does not accept sql template expressions, so we use execute() directly.
+  await d.execute(sql`
+    INSERT INTO bayesian_priors (segment, "priorAlpha", "priorBeta", "currentMean", "observationsCount", "updatedAt")
+    VALUES (
+      ${segment},
+      ${2 + alphaDelta},
+      ${23 + betaDelta},
+      ${(2 + alphaDelta) / (2 + alphaDelta + 23 + betaDelta)},
+      1,
+      NOW()
+    )
+    ON CONFLICT (segment) DO UPDATE SET
+      "priorAlpha" = bayesian_priors."priorAlpha"::numeric + ${alphaDelta},
+      "priorBeta"  = bayesian_priors."priorBeta"::numeric  + ${betaDelta},
+      "currentMean" = (bayesian_priors."priorAlpha"::numeric + ${alphaDelta})
+                    / (bayesian_priors."priorAlpha"::numeric + ${alphaDelta}
+                       + bayesian_priors."priorBeta"::numeric + ${betaDelta}),
+      "observationsCount" = bayesian_priors."observationsCount" + 1,
+      "updatedAt" = NOW()
+  `);
 }
 
 export async function getRecentOutcomeSignals(sinceMs = 5 * 60 * 1000): Promise<Array<{ segment: string; signal: string }>> {
@@ -474,7 +479,7 @@ export async function createProposal(data: {
   pilotPriceUsd: number;
 }): Promise<string> {
   const d = await getDb();
-  const id = crypto.randomUUID();
+  const id = randomUUID();
   await d.insert(proposals).values({
     id,
     leadEmail: data.leadEmail,
