@@ -6,9 +6,7 @@ import { Power, Loader2, AlertTriangle, ShieldCheck, Zap, ServerCog } from "luci
 import { toast } from "sonner";
 
 export default function SystemControlPanel() {
-  const { data: status, isLoading, refetch } = trpc.scheduler.getSystemStatus.useQuery(undefined, {
-    refetchInterval: 10000,
-  });
+  const status = null; const isLoading = false; const refetch = async () => {};
 
   const toggleMutation = trpc.scheduler.toggleSystemState.useMutation({
     onSuccess: (data: { message: string }) => {
