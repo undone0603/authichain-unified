@@ -44,6 +44,7 @@ import {
   budgetConfig,
   webhookEvents,
   bayesianPriors,
+  proposals,
   type Product,
   type InsertProduct,
   type InsertNotification,
@@ -417,9 +418,31 @@ export async function enqueueTask(missionId: string, kind: string, payload: any,
 // PROPOSALS
 // ─────────────────────────────────────────────────────────────
 
-export async function createProposal(data: any) {
+export async function createProposal(data: {
+  leadEmail: string;
+  missionId: string;
+  taskId?: string;
+  segment: string;
+  content: string;
+  paymentLink?: string;
+  checkoutSessionId?: string;
+  pilotPriceUsd: number;
+}): Promise<string> {
   const d = await getDb();
-  await d.execute(sql`INSERT INTO proposals (data) VALUES (${JSON.stringify(data)})`);
+  const id = crypto.randomUUID();
+  await d.insert(proposals).values({
+    id,
+    leadEmail: data.leadEmail,
+    missionId: data.missionId,
+    taskId: data.taskId ?? null,
+    segment: data.segment,
+    content: data.content,
+    paymentLink: data.paymentLink ?? null,
+    checkoutSessionId: data.checkoutSessionId ?? null,
+    pilotPriceUsd: data.pilotPriceUsd,
+    status: "SENT",
+  });
+  return id;
 }
 
 // ─────────────────────────────────────────────────────────────
