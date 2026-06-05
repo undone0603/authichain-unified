@@ -9,6 +9,7 @@ on:
       dry_run:
         description: 'Dry run (no email sends or DB writes)'
         required: false
+        default: 'false'
         type: boolean
 
 concurrency:
@@ -36,8 +37,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -89,8 +88,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -130,8 +127,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -172,8 +167,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -209,8 +202,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -221,11 +212,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-     # Slack notification is best-effort — a dead/expired SLACK_BOT_TOKEN
+      # Slack notification is best-effort — a dead/expired SLACK_BOT_TOKEN
       # should not mark the whole pipeline run as failed when ingest/score/
       # generate all succeeded. The step still shows red in the UI so the
       # token can be rotated, but the run conclusion reflects pipeline work.
-      
       - name: Send Slack digest
         # FIXED: Only run if all required upstream jobs explicitly succeeded
         if: ${{ needs.ingest-opportunities.result == 'success' && needs.score-and-rank.result == 'success' && needs.generate-proposals.result == 'success' }}
