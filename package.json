@@ -8,7 +8,7 @@
     "build:router": "wrangler deploy --dry-run authichain-router/src/index.ts",
     "build:worker": "wrangler deploy --dry-run outreach-worker/src/index.ts",
     "build:cf": "pnpm run build:router && pnpm run build:worker",
-    "build": "next build",
+    "build": "opennextjs-cloudflare build",
     "cf:build": "opennextjs-cloudflare build",
     "vercel-build": "next build",
     "patch:workerd": "python scripts/patch_workerd.py",
