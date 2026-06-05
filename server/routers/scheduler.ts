@@ -15,8 +15,8 @@ export const schedulerRouter = router({
   getHistory: adminProcedure.input(z.object({
     jobName: z.string().optional(),
     limit: z.number().optional().default(50),
-  })).query(({ input }) => {
-    return getJobHistory(input.jobName, input.limit);
+  })).query(async ({ input }) => {
+    return await getJobHistory(input.jobName, input.limit);
   }),
   runManually: adminProcedure.input(z.object({
     jobName: z.string(),

@@ -415,7 +415,7 @@ export const personalizationRouter = router({
         totalRules: rules.length,
         totalViews: rules.reduce((sum, r) => sum + r.views, 0),
         totalConversions: rules.reduce((sum, r) => sum + r.conversions, 0),
-        avgConversionRate: rules.reduce((sum, r) => sum + r.conversionRate, 0) / rules.length,
+        avgConversionRate: rules.reduce((sum, r) => sum + parseFloat(String(r.conversionRate ?? "0")), 0) / rules.length,
         topPerformers: analysis.topPerformers,
         insights: analysis.insights,
         recommendations: analysis.recommendations,

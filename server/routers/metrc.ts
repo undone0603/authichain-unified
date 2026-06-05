@@ -50,7 +50,7 @@ export const metrcRouter = router({
     const [manifestRow] = await d.select({ total: count() }).from(activityLog)
       .where(eq(activityLog.action, "metrc_manifest_synced"));
     const [verifiedRow] = await d.select({ total: count() }).from(activityLog)
-      .where(eq(activityLog.action, "metrc_manifest_synced"));
+      .where(eq(activityLog.action, "metrc_manifest_verified"));
     const [failedRow] = await d.select({ total: count() }).from(activityLog)
       .where(eq(activityLog.action, "metrc_manifest_failed"));
     const verified = verifiedRow?.total ?? 0;
