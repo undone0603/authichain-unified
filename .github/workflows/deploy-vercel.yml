@@ -1,78 +1,115 @@
-name: Deploy Vercel App
+name: Deploy to Cloudflare
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write
-  deployments: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NODE_VERSION: '22'
 
 jobs:
-  deploy:
+  # ── Job 1: Dynamically Discover Workers ─────────────────────────────────────
+  setup-matrix:
+    name: Discover Worker Directories
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - workers/authichain-dashboard
-          - workers/qron-automation
-          - workers/qron-image-gen
-          - workers/qron-outreach
-          - workers/qron-space
-          - workers/resend-relay
-          - workers/strainchain-io
-          # Vercel Apps
-          - apps/authichain-com
-          - apps/authichain-dashboard
-          - apps/strainchain-io
-
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
+      - name: Generate matrix from workers/ directory
+        id: set-matrix
+        run: |
+          node -e "
+            const fs = require('fs');
+            const dirs = fs.readdirSync('workers').filter(f => {
+              const isDir = fs.statSync('workers/'+f).isDirectory();
+              const hasToml = fs.existsSync('workers/'+f+'/wrangler.toml');
+              return isDir && hasToml;
+            });
+            console.log('matrix=' + JSON.stringify(dirs));
+          " >> "$GITHUB_OUTPUT"
+
+  # ── Job 2: Build Frontend (Runs Exactly Once) ───────────────────────────────
+  build-frontend:
+    name: Build Frontend Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
         uses: pnpm/action-setup@v5
         with:
-          version: '10.28.2'
+          run_install: false
 
-      - name: Setup Node 22
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Detect project type
-        id: detect
-        run: |
-          if [[ "${{ matrix.project }}" == workers/* ]]; then
-            echo "type=worker" >> $GITHUB_OUTPUT
-          else
-            echo "type=vercel" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Deploy Cloudflare Worker
-        if: steps.detect.outputs.type == 'worker'
-        run: pnpm exec wrangler deploy --minify --config wrangler.toml
-        working-directory: ${{ matrix.project }}
+      - name: Build frontend
+        run: pnpm run build
         env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
 
-      - name: Deploy Vercel App
-        if: steps.detect.outputs.type == 'vercel'
-        uses: amondnet/vercel-action@v25
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ${{ matrix.project }}
-          vercel-args: '--prod'
+          name: frontend-dist
+          path: dist/
+          retention-days: 1 # Only needed temporarily for this pipeline run
+
+  # ── Job 3: Deploy Matrix (Runs 22x in Parallel) ─────────────────────────────
+  deploy-workers:
+    name: Deploy ${{ matrix.worker }}
+    runs-on: ubuntu-latest
+    # Wait for BOTH the matrix discovery and the frontend build to finish
+    needs: [setup-matrix, build-frontend]
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: ${{ fromJson(needs.setup-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Download the pre-built frontend instead of building it again!
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v5
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Publish Worker + Assets
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config workers/${{ matrix.worker }}/wrangler.toml
