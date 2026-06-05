@@ -18,8 +18,7 @@
     "jsx": "preserve",
     "incremental": true,
     "allowImportingTsExtensions": true,
-    "baseUrl": ".",
-    "types": [
+        "types": [
       "node",
       "vite/client"
     ],
