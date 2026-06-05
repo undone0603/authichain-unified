@@ -57,14 +57,20 @@ export async function runPipelineTick() {
   const totalTasks = Math.max(runCount, 1);
 
   const kindToSegment: Record<string, string> = {
-    FIND_GOV_LEADS:       'GOV',
-    FIND_RETAIL_LEADS:    'RETAIL',
-    DRAFT_OUTBOUND_EMAIL: 'GOV',
-    FOLLOWUP_SEQUENCE:    'GOV',
-    BUILD_PILOT_PACKET:   'PARTNER',
-    DRAFT_INTEL_DOSSIER:  'PRESS',
-    CRM_UPDATE:           'PARTNER',
-    DRAFT_PRESS_RELEASE:  'PRESS',
+    FIND_GOV_LEADS:           'GOV',
+    FIND_RETAIL_LEADS:        'RETAIL',
+    FIND_ENTERTAINMENT_LEADS: 'ENTERTAINMENT',
+    FIND_SPORTS_LEADS:        'SPORTS',
+    FIND_CREATOR_LEADS:       'CREATOR',
+    FIND_COLLECTIBLES_LEADS:  'COLLECTIBLES',
+    DRAFT_OUTBOUND_EMAIL:     'GOV',
+    FOLLOWUP_SEQUENCE:        'GOV',
+    PITCH_MOONSHOT_DEAL:      'ENTERTAINMENT',
+    MOONSHOT_PROPOSAL:        'ENTERTAINMENT',
+    BUILD_PILOT_PACKET:       'PARTNER',
+    DRAFT_INTEL_DOSSIER:      'PRESS',
+    CRM_UPDATE:               'PARTNER',
+    DRAFT_PRESS_RELEASE:      'PRESS',
   };
 
   const scored = dueTasks.map(task => {
@@ -128,11 +134,15 @@ export async function runPipelineTick() {
   // so Apollo.io keeps discovering fresh prospects every cycle.
   const pendingKinds = new Set(dueTasks.map(t => t.kind));
   const leadSeedCreated: string[] = [];
-  const LEAD_TASKS: Array<{ kind: string; missionType: string }> = [
-    { kind: "FIND_GOV_LEADS",    missionType: "GOV_PILOT" },
-    { kind: "FIND_RETAIL_LEADS", missionType: "RETAIL_PILOT" },
+  const LEAD_TASKS: Array<{ kind: string; missionType: string; segment: string }> = [
+    { kind: "FIND_GOV_LEADS",            missionType: "GOV_PILOT",           segment: "GOV" },
+    { kind: "FIND_RETAIL_LEADS",         missionType: "RETAIL_PILOT",        segment: "RETAIL" },
+    { kind: "FIND_ENTERTAINMENT_LEADS",  missionType: "ENTERTAINMENT_PILOT", segment: "ENTERTAINMENT" },
+    { kind: "FIND_SPORTS_LEADS",         missionType: "SPORTS_PILOT",        segment: "SPORTS" },
+    { kind: "FIND_CREATOR_LEADS",        missionType: "CREATOR_PILOT",       segment: "CREATOR" },
+    { kind: "FIND_COLLECTIBLES_LEADS",   missionType: "COLLECTIBLES_PILOT",  segment: "COLLECTIBLES" },
   ];
-  for (const { kind, missionType } of LEAD_TASKS) {
+  for (const { kind, missionType, segment } of LEAD_TASKS) {
     if (!pendingKinds.has(kind)) {
       let missionId: string | undefined;
       const activeMissions = await getActiveMissionTypes();
@@ -148,7 +158,7 @@ export async function runPipelineTick() {
         missionId = rows[0]?.id;
       }
       if (missionId) {
-        await enqueueTask(missionId, kind, { segment: kind === "FIND_GOV_LEADS" ? "GOV" : "RETAIL", count: 10 });
+        await enqueueTask(missionId, kind, { segment, count: 10 });
         leadSeedCreated.push(kind);
       }
     }
