@@ -3,8 +3,8 @@ import { z } from "zod";
 import * as db from "../db";
 import { runPipelineTick } from "../jobs/pipeline-tick";
 import { getDb } from "../db";
-import { activityLog, revenueRecords, missions } from "../../drizzle/schema";
-import { desc, gte, sql } from "drizzle-orm";
+import { activityLog, revenueRecords, missions, leads } from "../../drizzle/schema";
+import { desc, gte, sql, eq, and } from "drizzle-orm";
 
 export const autonomousRouter = router({
   getSystemStatus: protectedProcedure.query(async () => {
@@ -60,6 +60,95 @@ export const autonomousRouter = router({
   triggerPipelineTick: protectedProcedure.mutation(async () => {
     const result = await runPipelineTick();
     return { success: true, result };
+  }),
+
+  runDealBlitz: protectedProcedure.mutation(async () => {
+    const d = await getDb();
+
+    const ALL_SEGMENTS = [
+      { kind: "FIND_GOV_LEADS",           missionType: "GOV_PILOT",           segment: "GOV" },
+      { kind: "FIND_RETAIL_LEADS",         missionType: "RETAIL_PILOT",        segment: "RETAIL" },
+      { kind: "FIND_ENTERTAINMENT_LEADS",  missionType: "ENTERTAINMENT_PILOT", segment: "ENTERTAINMENT" },
+      { kind: "FIND_SPORTS_LEADS",         missionType: "SPORTS_PILOT",        segment: "SPORTS" },
+      { kind: "FIND_CREATOR_LEADS",        missionType: "CREATOR_PILOT",       segment: "CREATOR" },
+      { kind: "FIND_COLLECTIBLES_LEADS",   missionType: "COLLECTIBLES_PILOT",  segment: "COLLECTIBLES" },
+    ];
+
+    const tasksQueued: string[] = [];
+    const hotLeadsPitched: string[] = [];
+
+    // ── 1. Seed all lead-finding tasks immediately ────────────────────────────
+    await Promise.all(ALL_SEGMENTS.map(async ({ kind, missionType, segment }) => {
+      let missionId: string | undefined;
+      const activeMissionTypes = await db.getActiveMissionTypes();
+      if (!activeMissionTypes.includes(missionType)) {
+        missionId = await db.createMission(missionType as any);
+      } else {
+        const rows = await d.select().from(missions).where(eq(missions.title, missionType)).limit(1);
+        missionId = rows[0]?.id;
+      }
+      if (missionId) {
+        await db.enqueueTask(missionId, kind, { segment, count: 25 }); // blitz = 25 leads per segment
+        tasksQueued.push(kind);
+      }
+    }));
+
+    // ── 2. Pitch all existing HOT leads that haven't been contacted yet ───────
+    const MOONSHOT_SEGMENTS = new Set(["ENTERTAINMENT", "SPORTS", "CREATOR", "COLLECTIBLES"]);
+    const hotLeads = await d.select().from(leads)
+      .where(and(
+        sql`${leads.leadScore} >= 70`,
+        eq(leads.contractSent, false),
+        sql`${leads.status} NOT IN ('MOONSHOT_PITCHED','PILOT_PROPOSED','CLOSED_WON','CLOSED_LOST')`,
+      ))
+      .limit(50);
+
+    for (const lead of hotLeads) {
+      if (!lead.email) continue;
+      const seg = lead.segment ?? "GOV";
+      const taskKind = MOONSHOT_SEGMENTS.has(seg) ? "PITCH_MOONSHOT_DEAL" : "GENERATE_PROPOSAL";
+
+      // Find or create a mission for this segment
+      const missionType = `${seg}_PILOT`;
+      const activeMissionTypes = await db.getActiveMissionTypes();
+      let missionId: string | undefined;
+      if (!activeMissionTypes.includes(missionType)) {
+        missionId = await db.createMission(missionType as any);
+      } else {
+        const rows = await d.select().from(missions).where(eq(missions.title, missionType)).limit(1);
+        missionId = rows[0]?.id;
+      }
+      if (missionId) {
+        await db.enqueueTask(missionId, taskKind, {
+          segment: seg,
+          leadEmail: lead.email,
+          leadName: lead.name ?? undefined,
+          leadOrg: lead.company ?? undefined,
+          leadTitle: lead.title ?? undefined,
+        });
+        hotLeadsPitched.push(lead.email);
+      }
+    }
+
+    // ── 3. Run a full pipeline tick to kick everything off immediately ────────
+    const tickResult = await runPipelineTick();
+
+    await db.logActivity({
+      userId: null,
+      action: "deal_blitz_executed",
+      entityType: "automation",
+      entityId: 0,
+      details: { tasksQueued, hotLeadsPitched: hotLeadsPitched.length, tickResult },
+    });
+
+    return {
+      success: true,
+      tasksQueued,
+      hotLeadsPitched: hotLeadsPitched.length,
+      hotLeads: hotLeadsPitched,
+      segmentsHit: ALL_SEGMENTS.length,
+      tickResult,
+    };
   }),
 
   getActiveMissions: protectedProcedure.query(async () => {

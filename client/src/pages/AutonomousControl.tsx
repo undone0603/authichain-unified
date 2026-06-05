@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import {
   Activity, Zap, DollarSign, Target, AlertTriangle,
   RefreshCw, Play, TrendingUp, CheckCircle2, Clock, XCircle,
-  Cpu, Radio
+  Cpu, Radio, Flame
 } from "lucide-react";
 
 function formatCurrency(n: number) {
@@ -42,6 +42,17 @@ export default function AutonomousControl() {
 
   const triggerTick = trpc.autonomous.triggerPipelineTick.useMutation({
     onSuccess: () => { toast.success("Pipeline tick triggered."); activity.refetch(); },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+
+  const dealBlitz = trpc.autonomous.runDealBlitz.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        `Deal Blitz launched — ${data.segmentsHit} segments, ${data.tasksQueued.length} tasks queued, ${data.hotLeadsPitched} HOT leads pitched.`,
+        { duration: 6000 }
+      );
+      status.refetch(); activity.refetch(); missions.refetch();
+    },
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
@@ -190,17 +201,28 @@ export default function AutonomousControl() {
 
         <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-400">Manual Pipeline Trigger</CardTitle>
+            <CardTitle className="text-sm text-gray-400">Pipeline Controls</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-xs text-gray-500 mb-4">Force an immediate pipeline tick — runs all automation jobs and task orchestration now.</p>
+          <CardContent className="space-y-3">
             <Button
-              className="w-full bg-cyan-700 hover:bg-cyan-600"
-              onClick={() => triggerTick.mutate()}
-              disabled={triggerTick.isPending}
+              className="w-full bg-red-700 hover:bg-red-600 font-bold text-base"
+              onClick={() => dealBlitz.mutate()}
+              disabled={dealBlitz.isPending || triggerTick.isPending}
             >
-              {triggerTick.isPending ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
-              {triggerTick.isPending ? "Running..." : "Trigger Now"}
+              {dealBlitz.isPending
+                ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                : <Flame className="w-4 h-4 mr-2" />}
+              {dealBlitz.isPending ? "Blitzing..." : "DEAL BLITZ"}
+            </Button>
+            <p className="text-xs text-gray-500 text-center">All 6 segments, 25 leads each, HOT leads pitched now.</p>
+            <Button
+              className="w-full bg-cyan-900 hover:bg-cyan-800 text-sm"
+              onClick={() => triggerTick.mutate()}
+              disabled={triggerTick.isPending || dealBlitz.isPending}
+              variant="outline"
+            >
+              {triggerTick.isPending ? <RefreshCw className="w-3 h-3 mr-2 animate-spin" /> : <Play className="w-3 h-3 mr-2" />}
+              {triggerTick.isPending ? "Running..." : "Trigger Tick"}
             </Button>
           </CardContent>
         </Card>
