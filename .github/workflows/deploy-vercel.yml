@@ -1,4 +1,4 @@
-name: Deploy to Cloudflare
+name: Deploy Next.js to Vercel
 
 on:
   push:
@@ -6,51 +6,33 @@ on:
       - main
   workflow_dispatch:
 
-permissions:
-  contents: read
+# Ensures that only one deployment runs at a time
+concurrency:
+  group: vercel-deploy
+  cancel-in-progress: true
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Required by Vercel CLI to link the project
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
   NODE_VERSION: '22'
 
 jobs:
-  # ── Job 1: Dynamically Discover Workers ─────────────────────────────────────
-  setup-matrix:
-    name: Discover Worker Directories
+  deploy-production:
+    name: Autonomous Vercel Production Deployment
     runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    timeout-minutes: 15
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate matrix from workers/ directory
-        id: set-matrix
-        run: |
-          node -e "
-            const fs = require('fs');
-            const dirs = fs.readdirSync('workers').filter(f => {
-              const isDir = fs.statSync('workers/'+f).isDirectory();
-              const hasToml = fs.existsSync('workers/'+f+'/wrangler.toml');
-              return isDir && hasToml;
-            });
-            console.log('matrix=' + JSON.stringify(dirs));
-          " >> "$GITHUB_OUTPUT"
-
-  # ── Job 2: Build Frontend (Runs Exactly Once) ───────────────────────────────
-  build-frontend:
-    name: Build Frontend Assets
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup PNPM
+      - name: Setup pnpm
         uses: pnpm/action-setup@v5
         with:
           run_install: false
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -59,57 +41,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build frontend
-        run: pnpm run build
-        env:
-          VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
+      - name: Install Vercel CLI
+        run: pnpm add -g vercel@latest
 
-      - name: Upload dist artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: dist/
-          retention-days: 1 # Only needed temporarily for this pipeline run
+      - name: Pull Vercel Environment Information
+        # Fetches the linked project's production environment variables
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
-  # ── Job 3: Deploy Matrix (Runs 22x in Parallel) ─────────────────────────────
-  deploy-workers:
-    name: Deploy ${{ matrix.worker }}
-    runs-on: ubuntu-latest
-    # Wait for BOTH the matrix discovery and the frontend build to finish
-    needs: [setup-matrix, build-frontend]
-    strategy:
-      fail-fast: false
-      matrix:
-        worker: ${{ fromJson(needs.setup-matrix.outputs.matrix) }}
+      - name: Build Project Artifacts
+        # Uses Next.js to compile the production build locally in the runner
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # Download the pre-built frontend instead of building it again!
-      - name: Download frontend artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: dist/
-
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v5
-        with:
-          run_install: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Publish Worker + Assets
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --config workers/${{ matrix.worker }}/wrangler.toml
+      - name: Deploy to Vercel
+        # Pushes the prebuilt artifacts to Vercel for immediate deployment
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
