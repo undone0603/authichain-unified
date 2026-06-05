@@ -8,6 +8,7 @@ import { runRetentionAutomation } from "./retention";
 import { runWeeklyDigestDispatch } from "./weekly-digest";
 import { runQuarterlyValueReportDispatch } from "./quarterly-value";
 import { runOrganicTrafficAutomation } from "./organic-traffic";
+import { runLeadScoring } from "../sales/scoring-service";
 import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
@@ -29,7 +30,7 @@ export async function runPipelineTick() {
     return { enabled: false, skipped: true, reason: "AUTONOMOUS_PIPELINE_ENABLED=false" };
   }
 
-  const [budgetMonitor, dunning, retention, weeklyDigest, quarterlyValue, organicTraffic] =
+  const [budgetMonitor, dunning, retention, weeklyDigest, quarterlyValue, organicTraffic, leadScoring] =
     await Promise.all([
       safeRun("budgetMonitor",   runBudgetMonitor),
       safeRun("dunning",         runDunningEscalation),
@@ -37,6 +38,7 @@ export async function runPipelineTick() {
       safeRun("weeklyDigest",    runWeeklyDigestDispatch),
       safeRun("quarterlyValue",  runQuarterlyValueReportDispatch),
       safeRun("organicTraffic",  runOrganicTrafficAutomation),
+      safeRun("leadScoring",     runLeadScoring),
     ]);
 
   // Mission task orchestration — UCB1 prioritisation
@@ -106,6 +108,7 @@ export async function runPipelineTick() {
     weeklyDigest,
     quarterlyValue,
     organicTraffic,
+    leadScoring,
     missionTasks: taskResults,
     pmfCreated,
   };
