@@ -21,7 +21,6 @@ permissions:
 
 env:
   NODE_VERSION: '22'
-  PNPM_VERSION: '10.28.2'
 
 jobs:
   # ── Job 1: Ingest SAM.gov ───────────────────────────────────────────────────
@@ -38,8 +37,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -91,8 +88,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -132,8 +127,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -174,8 +167,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -211,8 +202,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -228,6 +217,8 @@ jobs:
       # generate all succeeded. The step still shows red in the UI so the
       # token can be rotated, but the run conclusion reflects pipeline work.
       - name: Send Slack digest
+        # FIXED: Only run if all required upstream jobs explicitly succeeded
+        if: ${{ needs.ingest-opportunities.result == 'success' && needs.score-and-rank.result == 'success' && needs.generate-proposals.result == 'success' }}
         continue-on-error: true
         run: pnpm exec tsx scripts/send-digest.ts
         env:
@@ -239,7 +230,8 @@ jobs:
           DRY_RUN:              ${{ inputs.dry_run || 'false' }}
 
       - name: Report pipeline failure to Slack
-        if: failure()
+        # FIXED: Run if ANY required upstream job failed or was skipped due to an earlier failure
+        if: ${{ always() && (needs.ingest-opportunities.result != 'success' || needs.score-and-rank.result != 'success' || needs.generate-proposals.result != 'success') }}
         continue-on-error: true
         run: pnpm exec tsx scripts/report-failure.ts
         env:

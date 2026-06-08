@@ -1,27 +1,31 @@
-name: Deploy Vercel Apps
+name: Deploy Next.js to Vercel
 
 # NOTE: This workflow is a template for future Vercel app deployments.
 # Worker deployments are handled by deploy-workers.yml.
 # This workflow is manually triggered until Vercel app directories exist.
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      app:
-        description: 'App directory to deploy (e.g. apps/authichain-com)'
-        required: true
-        type: string
 
-permissions:
-  contents: read
-  id-token: write
-  deployments: write
+# Ensures that only one deployment runs at a time
+concurrency:
+  group: vercel-deploy
+  cancel-in-progress: true
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Required by Vercel CLI to link the project
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  NODE_VERSION: '22'
 
 jobs:
-  deploy:
+  deploy-production:
+    name: Autonomous Vercel Production Deployment
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,23 +33,28 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
         with:
-          version: '10.28.2'
+          run_install: false
 
-      - name: Setup Node 22
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-        working-directory: ${{ inputs.app }}
 
-      - name: Deploy Vercel App
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ${{ inputs.app }}
-          vercel-args: '--prod'
+      - name: Install Vercel CLI
+        run: pnpm add -g vercel@latest
+
+      - name: Pull Vercel Environment Information
+        # Fetches the linked project's production environment variables
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        # Uses Next.js to compile the production build locally in the runner
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        # Pushes the prebuilt artifacts to Vercel for immediate deployment
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

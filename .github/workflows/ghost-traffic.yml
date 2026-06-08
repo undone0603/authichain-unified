@@ -2,26 +2,86 @@ name: Ghost Traffic Engine
 
 on:
   schedule:
-    - cron: '0 13 * * *' # Fires every day at 9:00 AM EST
-  workflow_dispatch: # Allows you to click "Run" manually to test it
+    - cron: '0 9 * * *'
+      timezone: 'America/New_York' # Runs daily at 9:00 AM New York time
+  workflow_dispatch:
+
+concurrency:
+  group: ghost-traffic-engine
+  cancel-in-progress: false
 
 jobs:
   run-strike:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-python@v5
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          
-      - name: Install Arsenal
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
+            setup.py
+
+      - name: Prepare log directory
+        run: mkdir -p logs
+
+      - name: Install Python dependencies
         run: |
-          pip install playwright
-          playwright install chromium
-          
+          python -m pip install --upgrade pip setuptools wheel
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install playwright
+          fi
+
+      - name: Install Chromium + system deps
+        run: python -m playwright install --with-deps chromium
+
       - name: Execute Autonomous Strike
-        run: python artifacts/linkedin_strike.py
+        id: strike
+        shell: bash
         env:
-          # Securely injects your session cookie to bypass login screens
           LINKEDIN_SESSION_COOKIE: ${{ secrets.LINKEDIN_SESSION_COOKIE }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -o pipefail
+          python artifacts/linkedin_strike.py 2>&1 | tee logs/strike.log
+
+      - name: Upload run logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghost-traffic-engine-logs-${{ github.run_number }}
+          path: logs/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload screenshots if present
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghost-traffic-engine-screenshots-${{ github.run_number }}
+          path: |
+            screenshots/
+            artifacts/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Playwright traces if present
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghost-traffic-engine-traces-${{ github.run_number }}
+          path: |
+            playwright-report/
+            test-results/
+            traces/
+          if-no-files-found: ignore
+          retention-days: 7
