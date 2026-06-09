@@ -121,14 +121,14 @@ export const SEGMENT_PRIORS: Record<string, BetaPrior> = {
 
 /** Revenue proxy per segment (USD, conservative pilot value) */
 export const SEGMENT_REVENUE: Record<string, number> = {
-  GOV:     120_000,
+  GOV:     140_000,
   RETAIL:   18_000,
   LUXURY:   45_000,
-  PHARMA:   90_000,
-  MEDTECH: 150_000,
+  PHARMA:   80_000,
+  MEDTECH: 120_000,
   TIMEPIECE: 75_000,
   PRESS:     5_000, // brand value, not direct revenue
-  PARTNER:  40_000,
+  PARTNER:  50_000,
   DEFAULT:  10_000,
 };
 

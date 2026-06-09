@@ -17,8 +17,39 @@ const store = vi.hoisted(() => {
 
 vi.mock("./db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./db")>();
+  const mockDb = {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    execute: vi.fn().mockResolvedValue([]),
+    insert: vi.fn().mockReturnThis(),
+    values: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue([{ id: 1 }]),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    onConflictDoUpdate: vi.fn().mockReturnThis(),
+  };
+
   return {
     ...actual,
+    getDb: vi.fn().mockResolvedValue({
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      execute: vi.fn().mockResolvedValue([]),
+      insert: vi.fn().mockReturnThis(),
+      values: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue([{ id: 1 }]),
+      update: vi.fn().mockReturnThis(),
+      set: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      onConflictDoUpdate: vi.fn().mockReturnThis(),
+    }),
     createNotification: vi.fn(async (data: any) => {
       const id = store.nextNotifId();
       store.notifications.push({ ...data, id, createdAt: new Date() });
@@ -56,6 +87,14 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     loginMethod: "manus",
     role,
     stripeCustomerId: null,
+    walletAddress: null,
+    avatarUrl: null,
+    company: null,
+    title: null,
+    phone: null,
+    onboardingCompleted: 0,
+    paddleCustomerId: null,
+    points: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),

@@ -15,5 +15,9 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    setupFiles: ["server/test-setup.ts"],
+    env: {
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/authichain_test",
+    },
   },
 });
