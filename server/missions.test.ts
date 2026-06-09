@@ -31,61 +31,76 @@ const TITLES: Record<string, string> = {
   LAUNCH_AUTHICHAIN:  'AuthiChain.com – Full Launch Orchestration',
 };
 
-// ─── Mock db module ───────────────────────────────────────────────────────────
+// ─── Mock missions.db module ──────────────────────────────────────────────────
 
-vi.mock('./db', () => ({
-  getMissions: async (statusFilter?: string) => {
-    const all = [...store.missions.values()];
-    return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
-  },
+vi.mock('./missions/missions.db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./missions/missions.db')>();
+  return {
+    ...actual,
+    getMissions: async (statusFilter?: string) => {
+      const all = [...store.missions.values()];
+      return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
+    },
 
-  getMissionById: async (id: string) => {
-    const m = store.missions.get(id);
-    if (!m) return null;
-    const tasks = [...store.tasks.values()].filter((t: any) => t.missionId === id);
-    return { ...m, tasks };
-  },
+    getMissionById: async (id: string) => {
+      const m = store.missions.get(id);
+      if (!m) return null;
+      const tasks = [...store.tasks.values()].filter((t: any) => t.missionId === id);
+      return { ...m, tasks };
+    },
 
-  createMission: async (type: string) => {
-    const id = crypto.randomUUID();
-    store.missions.set(id, {
-      id, type,
-      title: TITLES[type] ?? type,
-      status: 'PLANNED',
-      priority: 5,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    for (const kind of (TASK_KINDS[type] ?? [])) {
-      const taskId = crypto.randomUUID();
-      store.tasks.set(taskId, {
-        id: taskId, missionId: id, kind, payload: {}, status: 'PENDING',
-        runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null,
-        createdAt: new Date(), updatedAt: new Date(),
+    createMission: async (type: string) => {
+      const id = crypto.randomUUID();
+      store.missions.set(id, {
+        id, type,
+        title: TITLES[type] ?? type,
+        status: 'PLANNED',
+        priority: 5,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
-    }
-    return id;
-  },
+      for (const kind of (TASK_KINDS[type] ?? [])) {
+        const taskId = crypto.randomUUID();
+        store.tasks.set(taskId, {
+          id: taskId, missionId: id, kind, payload: {}, status: 'PENDING',
+          runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null,
+          createdAt: new Date(), updatedAt: new Date(),
+        });
+      }
+      return id;
+    },
 
-  updateMissionStatus: async (id: string, status: string) => {
-    const m = store.missions.get(id);
-    if (m) store.missions.set(id, { ...m, status, updatedAt: new Date() });
-  },
+    updateMissionStatus: async (id: string, status: string) => {
+      const m = store.missions.get(id);
+      if (m) store.missions.set(id, { ...m, status, updatedAt: new Date() });
+    },
 
-  getTasksByMission: async (missionId: string) => {
-    return [...store.tasks.values()].filter((t: any) => t.missionId === missionId);
-  },
+    getTasksByMission: async (missionId: string) => {
+      return [...store.tasks.values()].filter((t: any) => t.missionId === missionId);
+    },
 
-  retryTask: async (id: string) => {
-    const t = store.tasks.get(id);
-    if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
-  },
+    retryTask: async (id: string) => {
+      const t = store.tasks.get(id);
+      if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
+    },
+  };
+});
 
-  // getDb returns null — tests using direct db access guard with if (db)
-  getDb: async () => null,
-
+// Mock db separately for non-mission functions
+vi.mock('./db', () => ({
   logActivity:               vi.fn().mockResolvedValue(undefined),
   createSystemNotification:  vi.fn().mockResolvedValue(undefined),
+  getDb: async () => ({
+    select:  vi.fn().mockReturnThis(),
+    from:    vi.fn().mockReturnThis(),
+    where:   vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit:   vi.fn().mockReturnThis(),
+    insert:  vi.fn().mockReturnThis(),
+    values:  vi.fn().mockResolvedValue([{ insertId: 1 }]),
+    update:  vi.fn().mockReturnThis(),
+    set:     vi.fn().mockReturnThis(),
+  }),
 }));
 
 // ─── Shared test context ──────────────────────────────────────────────────────
@@ -100,6 +115,14 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
       loginMethod: 'manus',
       role,
       stripeCustomerId: null,
+    walletAddress: null,
+    avatarUrl: null,
+    company: null,
+    title: null,
+    phone: null,
+    onboardingCompleted: 0,
+    paddleCustomerId: null,
+    points: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),

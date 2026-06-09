@@ -82,7 +82,11 @@ vi.mock("./db", async (importOriginal) => {
 
 // Mock character-service as well since it also uses getDb
 vi.mock("./character-service", () => ({
-  getNetworkStats: vi.fn().mockResolvedValue({ agents: 0, verifications: 0, qronCirculating: 0 }),
+  getNetworkStats: vi.fn().mockResolvedValue({ 
+    totalAgents: 0, 
+    totalVerifications: 0, 
+    totalQRONDistributed: 0 
+  }),
   getAgentLeaderboard: vi.fn().mockResolvedValue([]),
   getUserGenerations: vi.fn().mockResolvedValue([]),
   getUserCharacterAssets: vi.fn().mockResolvedValue([]),
@@ -93,7 +97,22 @@ vi.mock("./character-service", () => ({
 // Mock scheduled-jobs as well
 vi.mock("./scheduled-jobs", () => ({
   getJobHistory: vi.fn().mockResolvedValue([]),
-  runJobManually: vi.fn().mockResolvedValue({ success: true }),
+  runJobManually: vi.fn(async ({ jobName }) => {
+    if (jobName === "nonexistent-job") {
+      return { success: false, message: `Failed to start job "${jobName}"` };
+    }
+    return { success: true, message: `Job "${jobName}" started successfully` };
+  }),
   executeJob: vi.fn().mockResolvedValue({ success: true }),
+  getRegisteredJobs: vi.fn().mockReturnValue([
+    { name: "subscription-health-check", description: "check health", schedule: "0 0 * * *", enabled: true },
+    { name: "certificate-expiry-check", description: "check expiry", schedule: "0 0 * * *", enabled: true },
+    { name: "lead-nurturing", description: "nurture leads", schedule: "0 0 * * *", enabled: true },
+    { name: "database-cleanup", description: "cleanup", schedule: "0 0 * * *", enabled: true },
+    { name: "weekly-analytics-digest", description: "digest", schedule: "0 0 * * *", enabled: true },
+    { name: "hubspot-crm-sync", description: "sync", schedule: "0 0 * * *", enabled: true },
+    { name: "customer-health-score", description: "score", schedule: "0 0 * * *", enabled: true },
+    { name: "fraud-detection-sweep", description: "sweep", schedule: "0 0 * * *", enabled: true },
+  ]),
   REGISTERED_JOBS: [],
 }));
