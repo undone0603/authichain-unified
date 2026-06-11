@@ -154,11 +154,13 @@ describe("Stripe Connect Service (v2)", () => {
 
       expect(mockStripe.subscriptions.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          customer_account: "acct_123",
+          customer: "acct_123",
           default_payment_method: "pm_123",
           payment_settings: { payment_method_types: ["stripe_balance"] },
         }),
-        expect.anything(),
+        expect.objectContaining({
+          idempotencyKey: expect.any(String),
+        }),
       );
       expect(result).toEqual(mockSub);
     });

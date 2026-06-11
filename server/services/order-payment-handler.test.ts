@@ -29,7 +29,7 @@ describe("handleServiceOrderPayment", () => {
       id: 42,
       userId: 7,
       status: "pending",
-      amount: 19900,
+      details: { amount: 19900 },
       serviceType: "authenticity_audit",
     } as any);
 
@@ -67,7 +67,7 @@ describe("handleServiceOrderPayment", () => {
       id: 43,
       userId: null,
       status: "pending",
-      amount: 9900,
+      details: { amount: 9900 },
       serviceType: "landing_page",
     } as any);
 
@@ -87,7 +87,7 @@ describe("handleServiceOrderPayment", () => {
       id: 44,
       userId: 7,
       status: "paid",
-      amount: 19900,
+      details: { amount: 19900 },
       serviceType: "authenticity_audit",
     } as any);
 
