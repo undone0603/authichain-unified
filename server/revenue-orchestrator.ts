@@ -81,8 +81,9 @@ export async function ingestLeadAndRoute(input: IncomingLead) {
      const { createMission } = await import("./missions/missions.db");
      await createMission({
         userId: 1, // System Admin
-        title: \`High-Intent Outreach: \${normalizedEmail}\`,
-        description: \`Lead from \${input.company || "Unknown"} scored \${scoring.score}. Triggering AgentZ sales sequence.\`,
+        title: `High-Intent Outreach: ${normalizedEmail}`,
+        description: `Lead from ${input.company || "Unknown"} scored ${scoring.score}. Triggering AgentZ sales sequence.`,
+        type: "REVENUE_OPS" as any,
         tasks: [
            { kind: "AGENTZ_EXTERNAL", payload: { workflowId: "linkedin_strainchain_outreach", args: [normalizedEmail] } }
         ]

@@ -82,6 +82,11 @@ export const missionTemplates: Record<MissionType, MissionTemplate> = {
     title: 'Newsjacking Launch – Viral PR Response',
     priority: 7,
   },
+  REVENUE_OPS: {
+    type: 'REVENUE_OPS',
+    title: 'Autonomous Revenue Sequence',
+    priority: 1,
+  },
 };
 
 export const taskTemplates: Record<MissionType, TaskTemplate[]> = {
@@ -176,5 +181,8 @@ export const taskTemplates: Record<MissionType, TaskTemplate[]> = {
     { kind: 'DRAFT_PRESS_RELEASE', payload: { newsjacking: true } },
     { kind: 'DRAFT_OUTBOUND_EMAIL', payload: { segment: 'PRESS', sequence: 1 } },
     { kind: 'SCHEDULE_SOCIAL_POSTS', payload: { platforms: ['twitter', 'linkedin'] } },
+  ],
+  REVENUE_OPS: [
+    { kind: 'AGENTZ_EXTERNAL', payload: { workflowId: 'linkedin_strainchain_outreach' } },
   ],
 };
