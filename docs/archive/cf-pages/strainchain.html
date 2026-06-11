@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StrainChain - Founder's Pass LIVE!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-b from-purple-900 via-black to-black text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Hero Section -->
+        <div class="text-center mb-12">
+            <h1 class="text-6xl font-bold mb-4 animate-pulse">
+                🌿 StrainChain is LIVE!
+            </h1>
+            <p class="text-2xl text-green-400 mb-8">
+                Cannabis Verification + NFTs on Polygon
+            </p>
+        </div>
+
+        <!-- Founder's Pass -->
+        <div class="max-w-2xl mx-auto bg-gradient-to-r from-purple-800 to-green-800 rounded-2xl p-8 mb-12 shadow-2xl">
+            <h2 class="text-4xl font-bold text-center mb-6">
+                ⚡ FOUNDER'S PASS ⚡
+            </h2>
+            
+            <div class="grid md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-black/50 rounded-lg p-6">
+                    <p class="text-3xl font-bold text-green-400 mb-2">99 MATIC</p>
+                    <p class="text-gray-300">Launch Price (~$84)</p>
+                </div>
+                <div class="bg-black/50 rounded-lg p-6">
+                    <p class="text-3xl font-bold text-yellow-400 mb-2">
+                        <span id="remaining">73</span>/100
+                    </p>
+                    <p class="text-gray-300">Remaining</p>
+                </div>
+            </div>
+
+            <div class="space-y-3 mb-8">
+                <p class="flex items-center">✅ 0% Platform Fees FOREVER</p>
+                <p class="flex items-center">✅ Revenue Share from ALL Fees</p>
+                <p class="flex items-center">✅ Exclusive NFT Drops Access</p>
+                <p class="flex items-center">✅ VIP Discord Role</p>
+                <p class="flex items-center">✅ Vote on Platform Decisions</p>
+            </div>
+
+            <button onclick="mintPass()" class="w-full bg-green-500 hover:bg-green-600 text-black font-bold py-4 px-6 rounded-lg text-xl transition-all transform hover:scale-105">
+                MINT FOUNDER'S PASS NOW
+            </button>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <div class="bg-white/10 backdrop-blur rounded-lg p-6 text-center">
+                <p class="text-3xl font-bold text-green-400">2-10</p>
+                <p>MATIC per Verification</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur rounded-lg p-6 text-center">
+                <p class="text-3xl font-bold text-purple-400">$0.01</p>
+                <p>Gas Fees on Polygon</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur rounded-lg p-6 text-center">
+                <p class="text-3xl font-bold text-yellow-400">24/7</p>
+                <p>AI Support Active</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulate decreasing supply
+        setInterval(() => {
+            const el = document.getElementById('remaining');
+            const current = parseInt(el.textContent);
+            if (current > 15) {
+                el.textContent = current - 1;
+            }
+        }, 30000);
+
+        function mintPass() {
+            alert('Connect your wallet and send 99 MATIC to:\n\n0x742d35Cc6634C0532925a3b844Bc9e7595f7E3A3\n\nThen DM us on Twitter @strainchain with your TX hash!');
+        }
+    </script>
+<!-- Cloudflare Pages Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b27dc2bd40084153a772dbc34277413a"}'></script><!-- Cloudflare Pages Analytics --></body>
+</html>
