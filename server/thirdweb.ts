@@ -140,6 +140,78 @@ export async function mintAuthenticationNFT(params: MintNFTParams) {
   };
 }
 
+// ─── AuthiChain Seal (SBT) ──────────────────────────────────────────────────
+
+export async function mintSecuritySeal(params: {
+  contractAddress: string;
+  recipientAddress: string;
+  tokenId: number;
+  uri: string;
+  privateKey: string;
+  chainId?: number;
+}) {
+  const client = getThirdwebClient();
+  const chain = params.chainId ? defineChain(params.chainId) : getDefaultChain();
+  const contract = getContract({ client, chain, address: params.contractAddress });
+  const account = privateKeyToAccount({ client, privateKey: params.privateKey as `0x${string}` });
+
+  const transaction = {
+    contract,
+    method: "function safeMint(address to, uint256 tokenId, string memory uri)",
+    params: [params.recipientAddress, BigInt(params.tokenId), params.uri],
+  } as any;
+
+  const result = await sendTransaction({ transaction, account });
+  return { transactionHash: result.transactionHash };
+}
+
+export async function voidSecuritySeal(params: {
+  contractAddress: string;
+  tokenId: number;
+  privateKey: string;
+  chainId?: number;
+}) {
+  const client = getThirdwebClient();
+  const chain = params.chainId ? defineChain(params.chainId) : getDefaultChain();
+  const contract = getContract({ client, chain, address: params.contractAddress });
+  const account = privateKeyToAccount({ client, privateKey: params.privateKey as `0x${string}` });
+
+  const transaction = {
+    contract,
+    method: "function voidSeal(uint256 tokenId)",
+    params: [BigInt(params.tokenId)],
+  } as any;
+
+  const result = await sendTransaction({ transaction, account });
+  return { transactionHash: result.transactionHash };
+}
+
+// ─── Counterfeit Bounty ─────────────────────────────────────────────────────
+
+export async function lockCounterfeitBounty(params: {
+  contractAddress: string;
+  certificateNumber: string;
+  tokenAddress: string;
+  amount: string;
+  durationDays: number;
+  privateKey: string;
+  chainId?: number;
+}) {
+  const client = getThirdwebClient();
+  const chain = params.chainId ? defineChain(params.chainId) : getDefaultChain();
+  const contract = getContract({ client, chain, address: params.contractAddress });
+  const account = privateKeyToAccount({ client, privateKey: params.privateKey as `0x${string}` });
+
+  const transaction = {
+    contract,
+    method: "function lockBounty(string _certificateNumber, address _token, uint256 _amount, uint256 _durationDays)",
+    params: [params.certificateNumber, params.tokenAddress, BigInt(params.amount), BigInt(params.durationDays)],
+  } as any;
+
+  const result = await sendTransaction({ transaction, account });
+  return { transactionHash: result.transactionHash };
+}
+
 // ─── Read Operations ────────────────────────────────────────────────────────
 
 export async function getNFTBalance(contractAddress: string, walletAddress: string, chainId?: number) {
