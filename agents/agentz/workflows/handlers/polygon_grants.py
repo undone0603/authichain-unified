@@ -1,10 +1,10 @@
-"""Stub: polygon_grants — see _stubs.py for pattern; flesh out when prioritized."""
+"""
+agentz.workflows.handlers.polygon_grants
+---------------------------------------
+Thin wrapper for the generic grant_application handler.
+"""
 from agentz.core.modes import ExecutionContext
-from agentz.workflows.handlers._stubs import _stub
+from agentz.workflows.handlers import grant_application
 
 def run(ctx: ExecutionContext) -> str:
-    return _stub(ctx, "polygon_grants", [
-        "load workflow-specific config",
-        "perform side-effects (browser or API)",
-        "log results to Supabase audit table",
-    ])
+    return grant_application.run(ctx)

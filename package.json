@@ -14,7 +14,7 @@
     "db:migrate": "wrangler d1 migrations apply authichain-db --remote",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "deploy:all": "wrangler deploy --name authichain-api && wrangler deploy --name authichain-scan-validate && wrangler deploy --name authichain-dashboard && cd workers/authichain-com && npm run deploy && cd ../qron-space && npm run deploy && cd ../govchain-us && npm run deploy && cd ../strainchain-io && npm run deploy"
+    "deploy:all": "wrangler deploy --name authichain-api && wrangler deploy --name authichain-scan-validate && wrangler deploy --name authichain-dashboard && cd workers/authichain-com && npm run deploy && cd ../qron-space && npm run deploy && cd ../govchain-us && npm run deploy && cd ../strainchain-io && npm run deploy && cd ../blockchain && npm run deploy"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1042.0",
