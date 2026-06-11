@@ -10,6 +10,24 @@ from pathlib import Path
 from typing import Any, List
 
 TRAINING_LOG = Path("/home/zac/agentz/agentz/logs/training_data.jsonl")
+KNOWLEDGE_BASE = Path(__file__).parent.parent / "knowledge"
+
+def get_knowledge(doc_name: str) -> str:
+    """Retrieves a specific document from the AgentZ Knowledge Base."""
+    doc_path = KNOWLEDGE_BASE / f"{doc_name}.md"
+    if not doc_path.exists():
+        # Try templates folder as fallback
+        doc_path = KNOWLEDGE_BASE.parent / "templates" / f"{doc_name}.md"
+        
+    if not doc_path.exists():
+        return ""
+        
+    with open(doc_path, "r") as f:
+        return f.read()
+
+def get_ecosystem_context() -> str:
+    """Returns the core strategy and value props for LLM prompts."""
+    return get_knowledge("ECOSYSTEM_STRATEGY")
 
 def get_recent_success_signals(limit: int = 5) -> List[dict]:
     """Reads the last N success patterns from the training ledger."""

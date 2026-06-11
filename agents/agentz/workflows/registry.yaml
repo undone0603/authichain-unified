@@ -166,6 +166,47 @@ workflows:
       LinkedIn weekly limit. Logs sent IDs to Supabase to prevent
       double-touching.
 
+  - id: arbitrum_grant_outreach
+    title: "Arbitrum Foundation Grant: L2 Provenance Protocol"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.grant_application
+    type: browser
+    estimated_minutes: 30
+    requires: [github_session, discord_session]
+    prerequisites: []
+    description: |
+      Submit "L2 Industrial Provenance" grant to Arbitrum Foundation. 
+      Uses knowledge/GRANT_NARRATIVES.md for the technical spec. 
+      Targeting $25k-50k for infra expansion.
+
+  - id: shopify_app_store_listing
+    title: "Draft Shopify App Store presence: 'AuthiChain Truth Layer'"
+    priority: medium
+    blocks_revenue: true
+    handler: handlers.shopify_setup
+    type: browser
+    estimated_minutes: 25
+    requires: [shopify_partner_session]
+    prerequisites: []
+    description: |
+      Draft the "AuthiChain for Shopify" listing. Focuses on preventing 
+      return fraud using QRON-signed package seals. Sets pricing at 
+      $49/mo + $0.05/code.
+
+  - id: twitter_truth_shilling
+    title: "Generate 5-tweet thread on 'The Truth Layer' economy"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.twitter_post
+    type: browser
+    estimated_minutes: 10
+    requires: [twitter_session]
+    prerequisites: []
+    description: |
+      Post high-fidelity threads about QRON.space and GovChain.us. 
+      Uses templates/OUTREACH_TEMPLATES.md for the hook and structure.
+
   # =================================================================
   # HIGH — PROTOCOL DEFENSE
   # =================================================================

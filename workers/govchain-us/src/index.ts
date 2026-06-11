@@ -1,4 +1,6 @@
-// Inlined Authichain Theme Module for Cloudflare Worker compatibility
+// GovChain.us - Government Authentication Landing Page
+// (c) 2026 AuthiChain Inc.
+
 const BRANDS = {
   govchain: {
     name: 'GovChain',
@@ -19,7 +21,7 @@ const BRANDS = {
   }
 };
 
-const FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">`;
+const FONTS_LINK = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">';
 
 function svgLogo(brand, size = 36) {
   const b = BRANDS[brand];
@@ -63,6 +65,7 @@ body {
   font-size: 16px;
   line-height: 1.6;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 body::before {
   content: '';
@@ -134,165 +137,123 @@ nav {
   margin: 0 auto 40px;
   line-height: 1.6;
 }
+.btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 14px 28px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: all 0.2s;
+  display: inline-block;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-secondary {
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.section-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--primary);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
 footer {
   padding: 60px 24px;
   border-top: 1px solid var(--border-dim);
   background: var(--bg2);
-}
-.footer-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 40px;
-}
-@media (min-width: 1024px) {
-  .footer-grid { grid-template-columns: 2fr 1fr 1fr 1fr; }
+  text-align: center;
 }
 `;
-
-function communityHub(brand) {
-  return `
-<section class="web3-section" id="community" style="padding: 80px 24px; border-top: 1px solid var(--border-dim)">
-  <div class="hero-content" style="max-width:1000px">
-    <div style="color: var(--secondary); font-family: var(--mono); font-size: 11px; margin-bottom: 8px">$QRON ECOSYSTEM</div>
-    <h2>COMMUNITY <span class="accent">HUB</span></h2>
-    <p class="hero-sub">The protocol belongs to you. Participate in the Truth Layer economy through $QRON utility and BTC Ordinals anchoring.</p>
-  </div>
-</section>`;
-}
-
-function foundersVision() {
-  return `
-<section style="padding: 100px 24px; background: linear-gradient(to bottom, var(--bg), var(--bg2))">
-  <div class="hero-content" style="max-width: 900px">
-    <div class="section-tag">Founder's Vision</div>
-    <h2 style="font-size: clamp(32px, 6vw, 56px)">THE <span class="accent">AUTHENTICATION</span> LAYER</h2>
-    <p class="hero-sub" style="font-style: italic; border-left: 2px solid var(--primary); padding-left: 24px; text-align: left; margin: 40px auto">
-      "We are building the authentication layer for the physical world. Our product, QRON, transforms physical items into scannable identities."
-    </p>
-  </div>
-</section>`;
-}
-
-function techStack() {
-  return `
-<section style="padding: 80px 24px; border-top: 1px solid var(--border-dim)">
-  <div class="hero-content" style="max-width: 1100px">
-    <div class="section-tag">Core Technology</div>
-    <h2>THE <span class="accent">GOVCHAIN</span> STACK</h2>
-    <div class="grid" style="margin-top:48px; text-align:left; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px">
-      <div class="card glass" style="padding: 32px; border: 1px solid var(--border-dim); border-radius: 8px">
-        <div style="font-family: var(--mono); font-size: 11px; color: var(--primary); margin-bottom: 8px">01 / TRUMARK</div>
-        <p style="font-size:14px; color:var(--text-dim)">Sovereign document verification protocol.</p>
-      </div>
-    </div>
-  </div>
-</section>`;
-}
-
-function ecosystemFooter() {
-  return `
-<footer>
-  <div class="footer-grid" style="max-width: 1200px; margin: 0 auto">
-    <div>
-      <div class="nav-logo" style="margin-bottom:16px">
-        ${svgLogo('govchain', 28)}
-        <span class="nav-logo-text">GOV<span>CHAIN</span></span>
-      </div>
-      <p style="font-size:14px; color:var(--text-dim)">Sovereign Provenance Protocol.</p>
-    </div>
-  </div>
-</footer>`;
-}
-
-const BRAND = 'govchain';
-const b = BRANDS[BRAND];
 
 const HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${b.name} — ${b.tagline}</title>
+  <title>GovChain — Sovereign Document Verification Protocol</title>
   ${FONTS_LINK}
   <style>
-    ${cssVars(BRAND)}
+    ${cssVars('govchain')}
     ${BASE_CSS}
   </style>
 </head>
 <body>
   <nav>
     <a class="nav-logo" href="/">
-      ${svgLogo(BRAND)}
+      ${svgLogo('govchain', 28)}
       <span class="nav-logo-text">GOV<span>CHAIN</span></span>
     </a>
+    <a href="https://authichain-unified.vercel.app/governance" class="btn btn-primary" style="padding: 8px 16px; font-size: 10px">DAO Console</a>
   </nav>
 
   <section class="hero">
     <div class="hero-content">
+      <div class="section-tag">Sovereign Protocol</div>
       <h1 class="hero-title"><span>PUBLIC</span><span class="accent">TRUST.</span></h1>
-      <p class="hero-sub">GovChain is the government associated blockchain authentication vertical, providing a truth layer for official manufacturers and state records.</p>
-      <div class="hero-actions">
-        <a href="https://authichain-unified.vercel.app/onboard" class="btn btn-primary">Manufacturer Onboarding</a>
-        <a href="#sectors" class="btn btn-secondary">Explore Sectors</a>
+      <p class="hero-sub">The government-grade truth layer for manufacturing, federal grants, and state records. Verified by the AuthiChain Protocol.</p>
+      <div style="display: flex; gap: 16px; justify-content: center">
+        <a href="https://authichain-unified.vercel.app/governance" class="btn btn-primary">Participate in DAO</a>
+        <a href="https://authichain-unified.vercel.app/grants" class="btn btn-secondary">View Grant Hub</a>
       </div>
     </div>
   </section>
 
-  <section id="sectors" style="padding: 80px 24px">
-    <div class="hero-content" style="max-width: 1000px">
-      <div class="section-tag">Strategic Verticals</div>
-      <h2>SECURED <span class="accent">INFRASTRUCTURE</span></h2>
-      <div class="grid" style="margin-top:48px; text-align:left">
-        <div class="card glass">
-          <div style="font-size:32px; margin-bottom:16px">🇺🇸</div>
-          <h3 style="font-family:var(--display); font-size:24px; margin-bottom:12px">MADE IN USA</h3>
-          <p style="font-size:14px; color:var(--text-dim)">Official manufacturers' deal tracking for domestic integrity.</p>
+  <section style="padding: 100px 24px; background: var(--bg2)">
+    <div class="hero-content" style="max-width: 1100px; text-align: left">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center">
+        <div style="background: var(--bg); aspect-ratio: 1; border: 1px solid var(--border); border-radius: 24px; display: flex; align-items: center; justify-content: center; overflow: hidden">
+           <div style="font-family: var(--mono); color: var(--primary); font-size: 10px; text-align: center">
+            [ SOVEREIGN ASSET: MILITARY GRADE ]<br>
+            <span style="font-size: 80px">🦅</span>
+          </div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="military-use" style="padding: 100px 24px; background: linear-gradient(to bottom, var(--bg), var(--bg2))">
-    <div class="hero-content" style="max-width: 1100px">
-      <div class="section-tag">High-Security Protocol</div>
-      <h2>SOVEREIGN <span class="accent">MANUFACTURING</span></h2>
-      <p class="hero-sub">The ultimate utility of a QronCode: Fusing visual deterrence with cryptographic certainty.</p>
-      
-      <div class="glass" style="margin-top: 48px; display: grid; grid-template-columns: 1fr; gap: 40px; padding: 40px; text-align: left; align-items: center">
-        <div style="order: 2">
-          <h3 style="font-family: var(--display); font-size: 32px; margin-bottom: 20px">QRONCODE: MILITARY & GOV EDITION</h3>
-          <p style="color: var(--text-dim); margin-bottom: 24px">A QronCode is more than a link; it's a cinematic artifact that carries the weight of official verification. In government and defense sectors, this technology provides:</p>
-          <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px">
-            <li style="font-size: 14px; display: flex; align-items: center; gap: 12px">
-              <span style="color: var(--primary)">&#10003;</span> <strong>Visual Provenance</strong>: Instantly recognizable branding (e.g. Patriotic Eagle/M1 Abrams) that psychological deters counterfeiters.
+        <div>
+          <div class="section-tag">High-Security Utility</div>
+          <h2 style="font-family: var(--display); font-size: 56px; margin-bottom: 24px">NATIONAL <span class="accent">PROVENANCE</span></h2>
+          <p style="color: var(--text-dim); margin-bottom: 32px">GovChain provides cryptographic certainty for national supply chains, fusing visual deterrence with immutable blockchain signatures.</p>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 20px">
+            <li style="font-size: 15px; display: flex; align-items: start; gap: 16px">
+              <span style="color: var(--primary); font-weight: bold; margin-top: 2px">✓</span>
+              <span><strong>Visual Deterrence</strong>: Recognizable sovereign branding psychological deters counterfeiting at the point of scan.</span>
             </li>
-            <li style="font-size: 14px; display: flex; align-items: center; gap: 12px">
-              <span style="color: var(--primary)">&#10003;</span> <strong>Forensic Utility</strong>: Magic Eye technology hidden within the QR pattern allows field agents to verify authenticity even without a database connection.
+            <li style="font-size: 15px; display: flex; align-items: start; gap: 16px">
+              <span style="color: var(--primary); font-weight: bold; margin-top: 2px">✓</span>
+              <span><strong>Forensic Utility</strong>: Magic Eye depth-shifting hidden within the QR pattern allows for offline verification by field agents.</span>
             </li>
-            <li style="font-size: 14px; display: flex; align-items: center; gap: 12px">
-              <span style="color: var(--primary)">&#10003;</span> <strong>Immutable Audit</strong>: Every "Made in the USA" manufacturer deal is sealed with a TrueMark ID, creating a perfect paper trail for state and federal contracts.
+            <li style="font-size: 15px; display: flex; align-items: start; gap: 16px">
+              <span style="color: var(--primary); font-weight: bold; margin-top: 2px">✓</span>
+              <span><strong>Immutable Audit</strong>: Every "Made in USA" manufacturer deal is sealed with a TrueMark ID on-chain.</span>
             </li>
           </ul>
         </div>
-        <div style="order: 1; aspect-ratio: 1; background: #000; border: 1px solid var(--border); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; overflow: hidden">
-          <div style="font-family: var(--mono); color: var(--primary); font-size: 10px; text-align: center">
-            [ QRON ASSET: LaQa1.jpg - Military Grade QR ]<br>
-            <span style="font-size: 48px">🦅</span>
-          </div>
-        </div>
       </div>
     </div>
   </section>
 
-  ${foundersVision()}
-  ${techStack()}
-  ${communityHub(BRAND)}
-  ${ecosystemFooter()}
+  <footer>
+    <div class="nav-logo" style="justify-content: center; margin-bottom: 24px">
+      ${svgLogo('govchain', 28)}
+      <span class="nav-logo-text">GOV<span>CHAIN</span></span>
+    </div>
+    <p style="font-size: 12px; color: var(--text-dim); font-family: var(--mono); letter-spacing: 0.1em uppercase">Sovereign Document Verification Protocol</p>
+    <div style="margin-top: 32px">
+      <a href="https://authichain-unified.vercel.app/grants" style="color: var(--text-dim); font-size: 12px; margin: 0 16px; text-decoration: none">Grant Hub</a>
+      <a href="https://authichain.com" style="color: var(--text-dim); font-size: 12px; margin: 0 16px; text-decoration: none">AuthiChain Protocol</a>
+    </div>
+  </footer>
 </body>
 </html>`;
 
 export default {
-  async fetch(request: Request) {
+  async fetch(request) {
     return new Response(HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 };

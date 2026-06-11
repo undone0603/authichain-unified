@@ -21,8 +21,8 @@ export async function runAgentZExternal(task: Task): Promise<void> {
     throw new Error('AGENTZ_EXTERNAL: No workflowId in payload');
   }
 
-  // Path to the agentz orchestrator (sibling of authichain-unified)
-  const agentzPath = '/home/zac/agentz';
+  // Path to the agentz orchestrator (integrated in authichain-unified)
+  const agentzPath = '/home/zac/authichain-unified/agents';
   
   // Construct command: set PYTHONPATH and run the module
   const command = `cd ${agentzPath} && PYTHONPATH=. python3 -m agentz.cli run ${workflowId} --mode ${mode} ${payload.args?.join(' ') || ''}`;
