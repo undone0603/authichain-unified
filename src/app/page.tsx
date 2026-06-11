@@ -24,6 +24,7 @@ import Image from 'next/image';
 import { FeaturedQRONs } from '@/components/FeaturedQRONs';
 import { LeadCapturePopup } from '@/components/LeadCapturePopup';
 import { SocialShareCTA } from '@/components/SocialShareCTA';
+import { TrustAuditMagnet } from '@/components/TrustAuditMagnet';
 
 const StaticImageGallery = dynamic(
   () =>
@@ -1348,6 +1349,14 @@ export default function Home() {
             Visit AuthiChain Enterprise →
           </a>
         </div>
+
+        {/* Lead Magnet Section */}
+        <section className="mb-24 py-12 relative overflow-hidden">
+           <div className="absolute inset-0 bg-gold/5 blur-[120px] rounded-full -translate-y-1/2" />
+           <div className="relative z-10 max-w-4xl mx-auto">
+              <TrustAuditMagnet />
+           </div>
+        </section>
 
         {/* FAQ */}
         <section className="mb-12">
