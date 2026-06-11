@@ -1,7 +1,7 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "../drizzle/schema";
-import { eq, desc, and, gte, lte, like, sql, SQL } from "drizzle-orm";
+import { eq, ne, desc, and, gte, lte, like, sql, SQL } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   users,
@@ -146,6 +146,98 @@ export async function getUserById(id: number) {
   if (!db) return null;
   const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return result[0] ?? null;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const normalized = email.trim().toLowerCase();
+  const result = await db
+    .select()
+    .from(users)
+    .where(sql`lower(${users.email}) = ${normalized}`)
+    .orderBy(desc(users.createdAt));
+  if (result.length === 0) return null;
+  // Prefer a real (OAuth) account over a stripe-provisioned placeholder
+  return result.find((u) => u.loginMethod !== "stripe") ?? result[0];
+}
+
+/**
+ * Find or create a user keyed by email. Used by the Stripe webhook to fulfil
+ * payment-link purchases that carry no user_id metadata: the buyer gets a
+ * placeholder account (loginMethod="stripe") which is claimed and merged the
+ * first time they sign in with OAuth using the same email address.
+ */
+export async function findOrCreateUserByEmail(input: {
+  email: string;
+  name?: string | null;
+  stripeCustomerId?: string | null;
+}): Promise<number | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const email = input.email.trim().toLowerCase();
+  const existing = await getUserByEmail(email);
+  if (existing) {
+    if (input.stripeCustomerId && !existing.stripeCustomerId) {
+      await db
+        .update(users)
+        .set({ stripeCustomerId: input.stripeCustomerId })
+        .where(eq(users.id, existing.id));
+    }
+    return existing.id;
+  }
+  const openId = `stripe:${input.stripeCustomerId ?? email}`;
+  const inserted = await db
+    .insert(users)
+    .values({
+      openId,
+      email,
+      name: input.name ?? null,
+      loginMethod: "stripe",
+      stripeCustomerId: input.stripeCustomerId ?? null,
+    })
+    .onConflictDoUpdate({ target: users.openId, set: { email } })
+    .returning({ id: users.id });
+  return inserted[0]?.id;
+}
+
+/**
+ * After an OAuth sign-in, re-point any subscriptions held by stripe-provisioned
+ * placeholder users with the same email at the real user, and copy the Stripe
+ * customer id over. Best-effort: callers must not fail login on errors here.
+ */
+export async function claimStripeProvisionedUser(
+  realOpenId: string,
+  email: string | null | undefined,
+): Promise<void> {
+  if (!email) return;
+  const db = await getDb();
+  if (!db) return;
+  const real = await getUserByOpenId(realOpenId);
+  if (!real) return;
+  const normalized = email.trim().toLowerCase();
+  const placeholders = await db
+    .select({ id: users.id, stripeCustomerId: users.stripeCustomerId })
+    .from(users)
+    .where(
+      and(
+        sql`lower(${users.email}) = ${normalized}`,
+        eq(users.loginMethod, "stripe"),
+        ne(users.id, real.id),
+      ),
+    );
+  for (const placeholder of placeholders) {
+    await db
+      .update(subscriptions)
+      .set({ userId: real.id })
+      .where(eq(subscriptions.userId, placeholder.id));
+    if (placeholder.stripeCustomerId && !real.stripeCustomerId) {
+      await db
+        .update(users)
+        .set({ stripeCustomerId: placeholder.stripeCustomerId })
+        .where(eq(users.id, real.id));
+    }
+  }
 }
 
 export async function getAllUsers() {
