@@ -51,7 +51,7 @@ export const appRouter = router({
   auth: authRouter,
   autopilot: autopilotRouter,
   payments: paymentsRouter,
-  subscriptions: subscriptionsRouter,
+  subscription: subscriptionsRouter,
   blockchain: blockchainRouter,
   nft: nftRouter,
   authenticate: authenticateRouter,

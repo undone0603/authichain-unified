@@ -5,7 +5,7 @@ const BRANDS = {
   govchain: {
     name: 'GovChain',
     tagline: 'Sovereign Document Verification Protocol',
-    primary: '#3b82f6', // Blue focus for GovChain
+    primary: '#3b82f6',
     primaryDim: '#2563eb',
     secondary: '#facc15',
     bg: '#08080a',
@@ -37,68 +37,26 @@ function cssVars(brand) {
   --border: ${b.border};
   --border-dim: ${b.borderDim};
   --radius-sq: 42px;
-  --shadow-tactile: 0 20px 40px -10px rgba(0,0,0,0.5), 0 0 20px rgba(59,130,246,0.05);
+  --shadow-tactile: 0 20px 40px -10px rgba(0,0,0,0.5), 0 0 20px ${b.border};
 }`;
 }
 
 const BASE_CSS = `
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Outfit', sans-serif;
-  line-height: 1.5;
-  overflow-x: hidden;
-}
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 240px;
-  gap: 20px;
-  max-width: 1200px;
-  margin: 100px auto;
-  padding: 0 24px;
-}
-.tile {
-  background: var(--bg2);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius-sq);
-  padding: 32px;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-  box-shadow: var(--shadow-tactile);
-}
-.tile:hover {
-  transform: translateY(-5px) scale(1.01);
-  border-color: var(--border);
-}
+body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; line-height: 1.5; overflow-x: hidden; }
+.bento-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 240px; gap: 20px; max-width: 1200px; margin: 100px auto; padding: 0 24px; }
+.tile { background: var(--bg2); border: 1px solid var(--border-dim); border-radius: var(--radius-sq); padding: 32px; position: relative; overflow: hidden; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); box-shadow: var(--shadow-tactile); }
+.tile:hover { transform: translateY(-5px) scale(1.01); border-color: var(--primary); }
 .tile-content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; }
 .tile-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.2em; margin-bottom: 12px; }
 .tile-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; line-height: 1; letter-spacing: 1px; margin-bottom: 12px; }
 .tile-desc { font-size: 14px; color: var(--text-dim); font-weight: 300; }
 .col-2 { grid-column: span 2; }
 .row-2 { grid-row: span 2; }
-.btn-sq {
-  background: var(--primary);
-  color: #fff;
-  padding: 16px 32px;
-  border-radius: 20px;
-  text-decoration: none;
-  font-weight: 900;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  display: inline-block;
-  margin-top: auto;
-  transition: transform 0.2s;
-}
-.btn-sq:hover { transform: scale(1.05); }
-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-  padding: 24px; display: flex; justify-content: space-between; align-items: center;
-  background: rgba(8,8,10,0.8); backdrop-filter: blur(20px);
-}
+.btn-sq { background: var(--primary); color: #fff; padding: 16px 32px; border-radius: 20px; text-decoration: none; font-weight: 900; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-top: auto; transition: transform 0.2s; }
+.jit-search { background: rgba(255,255,255,0.05); border: 1px solid var(--border-dim); border-radius: 20px; padding: 10px 20px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 12px; width: 300px; outline: none; transition: border-color 0.2s; }
+.jit-search:focus { border-color: var(--primary); }
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding: 24px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(20px); }
 .logo { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 2px; color: #fff; text-decoration: none; }
 .logo span { color: var(--primary); }
 `;
@@ -111,15 +69,27 @@ const HTML = `<!DOCTYPE html>
   <title>GovChain — Sovereign Document Protocol</title>
   ${FONTS_LINK}
   <style>${cssVars('govchain')}${BASE_CSS}</style>
+  <script>
+    function handleJITSearch(e) {
+      if (e.key === 'Enter') {
+        const val = e.target.value.toLowerCase();
+        let route = 'https://authichain-unified.vercel.app/governance';
+        if (val.includes('art') || val.includes('qr')) route = 'https://qron.space';
+        else if (val.includes('cannabis') || val.includes('metrc')) route = 'https://strainchain.io';
+        else if (val.includes('enterprise') || val.includes('protocol')) route = 'https://authichain.com';
+        window.location.href = route;
+      }
+    }
+  </script>
 </head>
 <body>
   <nav>
     <a href="/" class="logo">GOV<span>CHAIN</span></a>
+    <input type="text" class="jit-search" placeholder="JIT Engine: Type 'art' or 'cannabis'..." onkeydown="handleJITSearch(event)" />
     <a href="https://authichain-unified.vercel.app/governance" class="btn-sq" style="padding: 10px 20px; font-size: 9px">DAO Portal</a>
   </nav>
 
   <div class="bento-grid">
-    <!-- Hero Tile -->
     <div class="tile col-2 row-2">
       <div class="tile-content">
         <div class="tile-tag">Sovereign 2026</div>
@@ -130,25 +100,22 @@ const HTML = `<!DOCTYPE html>
       <div style="position: absolute; bottom: 10%; right: 10%; font-size: 120px; opacity: 0.05;">🦅</div>
     </div>
 
-    <!-- Stats Tile -->
     <div class="tile">
       <div class="tile-content">
         <div class="tile-tag">Compliance</div>
-        <div class="tile-title" style="font-size: 42px;">MIL-STD</div>
-        <p class="tile-desc">NIST SP 800-131A Compliant</p>
+        <div class="tile-title">NIST-NATIVE</div>
+        <p class="tile-desc">SP 800-131A Compliant signatures.</p>
       </div>
     </div>
 
-    <!-- DAO Tile -->
     <div class="tile">
       <div class="tile-content">
-        <div class="tile-tag">Community</div>
-        <div class="tile-title">DAO READY</div>
-        <p class="tile-desc">Participate in protocol governance.</p>
+        <div class="tile-tag">Status</div>
+        <div class="tile-title" style="color: #3b82f6;">AUTHORIZED</div>
+        <p class="tile-desc">Federal Registry Active.</p>
       </div>
     </div>
 
-    <!-- MUSA Tile -->
     <div class="tile col-2">
       <div class="tile-content">
         <div class="tile-tag">Industrial</div>
@@ -157,7 +124,6 @@ const HTML = `<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- Integration -->
     <div class="tile col-2">
       <div class="tile-content">
         <div class="tile-tag">Infrastructure</div>
