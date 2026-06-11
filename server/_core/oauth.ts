@@ -94,6 +94,14 @@ export function registerOAuthRoutes(app: Express) {
         lastSignedIn: new Date(),
       });
 
+      // Claim any stripe-provisioned placeholder account (payment-link buyer
+      // who purchased before signing in) — best-effort, never blocks login.
+      try {
+        await db.claimStripeProvisionedUser(userInfo.openId, email);
+      } catch (claimError) {
+        console.error("[OAuth] Failed to claim stripe-provisioned user", claimError);
+      }
+
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
         name: userInfo.name || "",
         expiresInMs: ONE_YEAR_MS,
