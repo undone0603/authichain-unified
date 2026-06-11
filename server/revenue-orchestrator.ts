@@ -76,6 +76,19 @@ export async function ingestLeadAndRoute(input: IncomingLead) {
     source: input.source || "website_form",
   });
 
+  // $0 TRIGGER: If lead is qualified, trigger autonomous outreach mission
+  if (newStatus === "qualified") {
+     const { createMission } = await import("./missions/missions.db");
+     await createMission({
+        userId: 1, // System Admin
+        title: \`High-Intent Outreach: \${normalizedEmail}\`,
+        description: \`Lead from \${input.company || "Unknown"} scored \${scoring.score}. Triggering AgentZ sales sequence.\`,
+        tasks: [
+           { kind: "AGENTZ_EXTERNAL", payload: { workflowId: "linkedin_strainchain_outreach", args: [normalizedEmail] } }
+        ]
+     });
+  }
+
   return {
     accepted: true as const,
     leadId: upserted.id,

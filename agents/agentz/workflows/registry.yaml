@@ -290,3 +290,76 @@ workflows:
       (currently $0), Supabase queue lengths, n8n run counts,
       Vercel deploy success rates. Output to Notion Session Codex
       page (340460fea35581ae8955fabaa556d6db).
+
+  - id: sam_gov_dhs_submit
+    title: "SAM.gov CAGE link + DHS SVIP Grant Submission ($200K)"
+    priority: critical
+    blocks_revenue: true
+    handler: handlers.sam_gov_dhs
+    type: browser
+    estimated_minutes: 30
+    requires: [sam_gov_session, dhs_portal_session]
+    prerequisites: []
+    confirm_before_run: true
+    description: |
+      1) Login to SAM.gov, navigate to Entity Registration.
+      2) Link CAGE code 1PUJ6 to AuthiChain, Inc. legal entity.
+      3) Navigate to DHS SVIP submission portal.
+      4) Upload Technical Volume from DHS_SVIP_Grant_Application.md.
+      5) Fill cost volume ($200K Phase I) and submit.
+
+  - id: medtech_traffic_boost
+    title: "MedTech Organic Traffic Boost (LI + Reddit + X)"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.medtech_traffic_boost
+    type: browser
+    estimated_minutes: 15
+    requires: [linkedin_session, reddit_session, twitter_session]
+    prerequisites: []
+    confirm_before_run: true
+    description: |
+      Automatically post optimized MedTech ROI narratives to LinkedIn,
+      Reddit (r/supplychain), and Twitter/X to drive organic leads.
+
+  - id: qron_traffic_boost
+    title: "QRON Dimensional Gateway Traffic Boost (LI + Reddit + X)"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.qron_traffic_boost
+    type: browser
+    estimated_minutes: 15
+    requires: [linkedin_session, reddit_session, twitter_session]
+    prerequisites: []
+    confirm_before_run: true
+    description: |
+      Post QRON cinematic gateway announcements to drive high-engagement
+      consumer brand leads.
+
+  - id: strainchain_traffic_boost
+    title: "StrainChain Truth Layer Traffic Boost (LI + Reddit + X)"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.strainchain_traffic_boost
+    type: browser
+    estimated_minutes: 15
+    requires: [linkedin_session, reddit_session, twitter_session]
+    prerequisites: []
+    confirm_before_run: true
+    description: |
+      Post StrainChain METRC auto-anchoring announcements to Michigan
+      cannabis cultivators.
+
+  - id: govchain_traffic_boost
+    title: "GovChain Sovereign Passport Traffic Boost (LI + Reddit + X)"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.govchain_traffic_boost
+    type: browser
+    estimated_minutes: 15
+    requires: [linkedin_session, reddit_session, twitter_session]
+    prerequisites: []
+    confirm_before_run: true
+    description: |
+      Post GovChain W3C VC announcements targeting federal and defense
+      supply chain contractors.
