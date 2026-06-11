@@ -108,16 +108,16 @@ function DraftReviewDialog({ taskId, open, onClose, onActioned }: {
   onClose: () => void;
   onActioned: () => void;
 }) {
-  const utils = trpc.useUtils();
-  const draftQuery = trpc.emailDrafts.getByTaskId.useQuery(
+  const utils = (trpc as any).useUtils();
+  const draftQuery = (trpc as any).emailDrafts.getByTaskId.useQuery(
     { taskId },
     { enabled: open },
   );
   const draft = draftQuery.data;
 
-  const approveMut = trpc.emailDrafts.approve.useMutation();
-  const sendMut    = trpc.emailDrafts.sendById.useMutation();
-  const rejectMut  = trpc.emailDrafts.reject.useMutation();
+  const approveMut = (trpc as any).emailDrafts.approve.useMutation();
+  const sendMut    = (trpc as any).emailDrafts.sendById.useMutation();
+  const rejectMut  = (trpc as any).emailDrafts.reject.useMutation();
 
   const handleApproveAndSend = async () => {
     if (!draft) return;
@@ -125,7 +125,7 @@ function DraftReviewDialog({ taskId, open, onClose, onActioned }: {
       await approveMut.mutateAsync({ id: draft.id });
       await sendMut.mutateAsync({ id: draft.id });
       toast.success("Draft approved and sent");
-      utils.emailDrafts.listPending.invalidate();
+      (utils as any).emailDrafts.listPending.invalidate();
       onActioned();
       onClose();
     } catch (e: any) {
@@ -138,7 +138,7 @@ function DraftReviewDialog({ taskId, open, onClose, onActioned }: {
     try {
       await rejectMut.mutateAsync({ id: draft.id });
       toast.success("Draft rejected");
-      utils.emailDrafts.listPending.invalidate();
+      (utils as any).emailDrafts.listPending.invalidate();
       onActioned();
       onClose();
     } catch (e: any) {
@@ -258,7 +258,7 @@ function TaskTimeLabel({ task }: { task: Task }) {
 
 function TaskRow({ task, onRetry }: { task: Task; onRetry: (id: string) => void }) {
   const [reviewOpen, setReviewOpen] = useState(false);
-  const retryMut = trpc.tasks.retry.useMutation({ onSuccess: onRetry.bind(null, task.id) });
+  const retryMut = (trpc as any).tasks.retry.useMutation({ onSuccess: onRetry.bind(null, task.id) });
 
   return (
     <>
@@ -328,15 +328,15 @@ function TaskRow({ task, onRetry }: { task: Task; onRetry: (id: string) => void 
 
 function MissionCard({ mission }: { mission: Mission }) {
   const [open, setOpen] = useState(false);
-  const utils = trpc.useUtils();
+  const utils = (trpc as any).useUtils();
 
-  const tasksQuery = trpc.tasks.list.useQuery(
+  const tasksQuery = (trpc as any).tasks.list.useQuery(
     { missionId: mission.id },
     { enabled: open, refetchInterval: open ? 5_000 : false },
   );
 
-  const updateStatus = trpc.missions.updateStatus.useMutation({
-    onSuccess: () => utils.missions.list.invalidate(),
+  const updateStatus = (trpc as any).missions.updateStatus.useMutation({
+    onSuccess: () => (utils as any).missions.list.invalidate(),
   });
 
   const tasks: Task[] = (tasksQuery.data as Task[] | undefined) ?? (mission.tasks as Task[] | undefined) ?? [];
@@ -463,7 +463,7 @@ function MissionCard({ mission }: { mission: Mission }) {
 
 function PipelineStatusBar() {
   useTick(); // re-render every second for live countdown
-  const { data: tick, isLoading } = trpc.pipeline.status.useQuery(undefined, {
+  const { data: tick, isLoading } = (trpc as any).pipeline.status.useQuery(undefined, {
     refetchInterval: 10_000,
   });
 
@@ -560,15 +560,15 @@ function IntelPanel() {
   const [open, setOpen] = useState(false);
   const [seg, setSeg] = useState("GOV");
   const [signal, setSignal] = useState<OutcomeSignal>("email_replied");
-  const utils = trpc.useUtils();
+  const utils = (trpc as any).useUtils();
 
-  const statsQuery = trpc.outcomes.getSegmentStats.useQuery(undefined, { enabled: open });
-  const recordMut  = trpc.outcomes.record.useMutation({
+  const statsQuery = (trpc as any).outcomes.getSegmentStats.useQuery(undefined, { enabled: open });
+  const recordMut  = (trpc as any).outcomes.record.useMutation({
     onSuccess: () => {
       toast.success(`Recorded: ${SIGNAL_LABEL[signal]} for ${seg}`);
-      utils.outcomes.getSegmentStats.invalidate();
+      (utils as any).outcomes.getSegmentStats.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
   const stats = statsQuery.data ?? {};
@@ -682,11 +682,11 @@ function IntelPanel() {
 
 function CreateMissionButton({ onCreated }: { onCreated: () => void }) {
   const [type, setType] = useState<MissionType>("GOV_PILOT");
-  const utils = trpc.useUtils();
+  const utils = (trpc as any).useUtils();
 
-  const create = trpc.missions.create.useMutation({
+  const create = (trpc as any).missions.create.useMutation({
     onSuccess: () => {
-      utils.missions.list.invalidate();
+      (utils as any).missions.list.invalidate();
       onCreated();
     },
   });
@@ -721,9 +721,9 @@ function CreateMissionButton({ onCreated }: { onCreated: () => void }) {
 export default function Missions() {
   const [statusFilter, setStatusFilter] = useState<MissionStatus | "ALL">("ALL");
   const [refreshKey, setRefreshKey] = useState(0);
-  const utils = trpc.useUtils();
+  const utils = (trpc as any).useUtils();
 
-  const { data: missions, isLoading } = trpc.missions.list.useQuery(
+  const { data: missions, isLoading } = (trpc as any).missions.list.useQuery(
     { status: statusFilter === "ALL" ? undefined : statusFilter },
     { refetchInterval: 15_000 },
   );
@@ -772,7 +772,7 @@ export default function Missions() {
           </button>
         ))}
         <button
-          onClick={() => utils.missions.list.invalidate()}
+          onClick={() => (utils as any).missions.list.invalidate()}
           className="ml-auto px-2 py-1 rounded-full text-xs text-white/40 hover:text-white/70"
         >
           <RefreshCw className="h-3 w-3" />

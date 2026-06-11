@@ -8,7 +8,8 @@ import { runRetentionAutomation } from "./retention";
 import { runWeeklyDigestDispatch } from "./weekly-digest";
 import { runQuarterlyValueReportDispatch } from "./quarterly-value";
 import { runOrganicTrafficAutomation } from "./organic-traffic";
-import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
+import { getDueTasks, getRunTaskCount, getAdaptivePriors, getActiveMissionTypes } from "../db";
+import { createMission } from "../missions/missions.db";
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
 

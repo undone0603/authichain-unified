@@ -59,7 +59,7 @@ vi.mock('./db', () => ({
     for (const kind of (TASK_KINDS[type] ?? [])) {
       const taskId = crypto.randomUUID();
       store.tasks.set(taskId, {
-        id: taskId, missionId: id, kind, payload: {}, status: 'PENDING',
+        id: taskId, missionId: id as any, kind, payload: {}, status: 'PENDING',
         runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null,
         createdAt: new Date(), updatedAt: new Date(),
       });
@@ -103,7 +103,7 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
     walletAddress: null, avatarUrl: null, company: null, title: null, phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
-      lastSignedIn: new Date(),
+      lastSignedIn: new Date(), metadata: {},
     },
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
@@ -166,7 +166,7 @@ describe('missions.create', () => {
     const result = await caller.missions.create({ type: 'RETAIL_PILOT' });
     expect(result).toHaveProperty('id');
     expect(typeof result.id).toBe('string');
-    missionId = result.id;
+    missionId = result.id as any;
   });
 
   it('missions.get returns mission with correct type', async () => {
@@ -213,7 +213,7 @@ describe('missions.create — task counts', () => {
     it(`${type} creates ${count} tasks`, async () => {
       const caller = appRouter.createCaller(makeCtx());
       const { id } = await caller.missions.create({ type: type as any });
-      const tasks = await caller.tasks.list({ missionId: id });
+      const tasks = await caller.tasks.list({ missionId: id as any });
       expect((tasks as any[]).length).toBe(count);
     });
   }
@@ -227,7 +227,7 @@ describe('missions.updateStatus', () => {
   beforeAll(async () => {
     const caller = appRouter.createCaller(makeCtx());
     const result = await caller.missions.create({ type: 'PARTNER_ONBOARDING' });
-    missionId = result.id;
+    missionId = result.id as any;
   });
 
   it('transitions PLANNED → IN_PROGRESS', async () => {
@@ -256,7 +256,7 @@ describe('tasks.retry', () => {
     const { createMission, getTasksByMission, getDb } = await import('./db');
 
     const missionId = await createMission('TECH_OS_LOCK');
-    const tasks = await getTasksByMission(missionId);
+    const tasks = await getTasksByMission(missionId as any);
     failedTaskId = tasks[0].id;
 
     // Directly mark the task FAILED in the in-memory store
@@ -309,7 +309,7 @@ describe('missions.list — status filtering after mutations', () => {
   it('lists IN_PROGRESS missions after status update', async () => {
     const caller = appRouter.createCaller(makeCtx());
     const { id } = await caller.missions.create({ type: 'GOV_PILOT' });
-    await caller.missions.updateStatus({ id, status: 'IN_PROGRESS' });
+    await caller.missions.updateStatus({ id: id.id, status: 'IN_PROGRESS' });
 
     const inProgress = await caller.missions.list({ status: 'IN_PROGRESS' }) as any[];
     expect(inProgress.some((m: any) => m.id === id)).toBe(true);

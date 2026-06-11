@@ -158,7 +158,7 @@ function GenerateTab() {
     onError: (e) => toast.error(e.message),
   });
 
-  const generateMutation = trpc.heygen.generate.useMutation({
+  const generateMutation = trpc.heygen.generateVideo.useMutation({
     onSuccess: (res) => {
       toast.success(`Video queued! ID: ${res.videoId} — check Library in ~2 min.`);
       setScript(""); setTitle("");
@@ -183,7 +183,7 @@ function GenerateTab() {
       toast.error("Fill in all fields first");
       return;
     }
-    generateMutation.mutate({ avatarId, voiceId, script, title, aspectRatio }, {
+    generateMutation.mutate({ avatarId, voiceId, script, title }, {
       onSuccess: (r) => setPendingId(r.videoId),
     });
   };

@@ -42,14 +42,14 @@ const STATUS_BADGE: Record<string, React.ReactNode> = {
 };
 
 function TaskRow({ task, missionId }: { task: any; missionId: string }) {
-  const utils = trpc.useUtils();
+  const utils = (trpc as any).useUtils();
 
-  const retry = trpc.devTeam.retryTask.useMutation({
-    onSuccess: () => { toast.success("Task re-queued"); utils.devTeam.sprintTasks.invalidate({ missionId }); },
+  const retry = (trpc as any).devTeam.retryTask.useMutation({
+    onSuccess: () => { toast.success("Task re-queued"); (utils as any).devTeam.sprintTasks.invalidate({ missionId }); },
     onError: (e: any) => toast.error(e.message),
   });
-  const approve = trpc.devTeam.approveMerge.useMutation({
-    onSuccess: () => { toast.success("Merge approved — AgentZ will merge on next tick"); utils.devTeam.sprintTasks.invalidate({ missionId }); },
+  const approve = (trpc as any).devTeam.approveMerge.useMutation({
+    onSuccess: () => { toast.success("Merge approved — AgentZ will merge on next tick"); (utils as any).devTeam.sprintTasks.invalidate({ missionId }); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -93,7 +93,7 @@ function TaskRow({ task, missionId }: { task: any; missionId: string }) {
 
 function SprintCard({ sprint }: { sprint: any }) {
   const [expanded, setExpanded] = useState(false);
-  const { data: tasks = [], refetch } = trpc.devTeam.sprintTasks.useQuery(
+  const { data: tasks = [], refetch } = (trpc as any).devTeam.sprintTasks.useQuery(
     { missionId: sprint.id },
     { enabled: expanded, refetchInterval: expanded ? 15_000 : false }
   );
@@ -151,14 +151,14 @@ function SprintCard({ sprint }: { sprint: any }) {
 function NewSprintForm() {
   const [feature, setFeature] = useState("");
   const [context, setContext] = useState("");
-  const utils = trpc.useUtils();
+  const utils = (trpc as any).useUtils();
 
-  const create = trpc.devTeam.createSprint.useMutation({
+  const create = (trpc as any).devTeam.createSprint.useMutation({
     onSuccess: (data: any) => {
       toast.success("Sprint created", { description: `PLAN_SPRINT task queued. AgentZ will start on the next 5-min tick.` });
       setFeature("");
       setContext("");
-      utils.devTeam.sprints.invalidate();
+      (utils as any).devTeam.sprints.invalidate();
     },
     onError: (e: any) => toast.error("Sprint failed", { description: e.message }),
   });
@@ -283,7 +283,7 @@ function LoopDiagram() {
 // ─── Main page ────────────────────────────────────────────────────────────
 
 export default function BuildLoop() {
-  const { data: sprints = [], isLoading, refetch } = trpc.devTeam.sprints.useQuery(
+  const { data: sprints = [], isLoading, refetch } = (trpc as any).devTeam.sprints.useQuery(
     undefined,
     { refetchInterval: 30_000 }
   );

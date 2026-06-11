@@ -11,7 +11,7 @@ import { subscriptionsRouter } from '../subscriptions/router';
 import { blockchainRouter } from '../blockchain/router';
 import { nftRouter } from '../nft/router';
 import { authenticateRouter } from '../authenticate/router';
-import { qrcodeRouter } from '../qrcode/router';
+import { qronRouter } from '../qron/router';
 import { dashboardRouter } from '../dashboard/router';
 import { analyticsRouter } from '../analytics/router';
 import { notificationsRouter } from '../notifications/router';
@@ -55,7 +55,7 @@ export const appRouter = router({
   blockchain: blockchainRouter,
   nft: nftRouter,
   authenticate: authenticateRouter,
-  qrcode: qrcodeRouter,
+  qron: qronRouter,
   dashboard: dashboardRouter,
   analytics: analyticsRouter,
   notifications: notificationsRouter,
@@ -87,3 +87,4 @@ export const appRouter = router({
 
 
 export type AppRouter = typeof appRouter;
+
