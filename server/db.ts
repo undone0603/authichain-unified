@@ -1381,3 +1381,16 @@ export async function getSubscriptionByPaddleSubscriptionId(paddleSubscriptionId
     .limit(1);
   return result[0];
 }
+
+// ─────────────────────────────────────────────────────────────
+// AGENTZ INTELLIGENCE HELPERS
+// ─────────────────────────────────────────────────────────────
+
+export async function getRecentAgentZActivity(limit = 10) {
+  const d = await getDb();
+  return await d.select()
+    .from(activityLog)
+    .where(eq(activityLog.entityType, "agentz"))
+    .orderBy(desc(activityLog.createdAt))
+    .limit(limit);
+}
