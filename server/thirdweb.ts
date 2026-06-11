@@ -177,6 +177,15 @@ export interface AuthCertificateNFTData {
   certificateNumber: string;
   imageUrl?: string;
   authenticatorId: number;
+  result?: unknown;
+}
+
+/**
+ * Lightweight connection-status probe used by tests and health checks.
+ */
+export function getConnectionStatus() {
+  const clientId = process.env.VITE_THIRDWEB_CLIENT_ID ?? "";
+  return { connected: !!clientId, clientConfigured: !!clientId };
 }
 
 export function buildAuthCertificateMetadata(data: AuthCertificateNFTData): NFTMetadata {

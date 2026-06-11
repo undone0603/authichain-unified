@@ -170,11 +170,11 @@ export async function handleStripeWebhook(
           billingCycle,
           stripeCustomerId: customerId ?? null,
           stripeSubscriptionId: sub.id,
-          currentPeriodStart: sub.current_period_start
-            ? new Date(sub.current_period_start * 1000)
+          currentPeriodStart: (sub as any).current_period_start
+            ? new Date((sub as any).current_period_start * 1000)
             : new Date(),
-          currentPeriodEnd: sub.current_period_end
-            ? new Date(sub.current_period_end * 1000)
+          currentPeriodEnd: (sub as any).current_period_end
+            ? new Date((sub as any).current_period_end * 1000)
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
         });
@@ -228,9 +228,9 @@ export async function handleStripeWebhook(
     case "invoice.paid": {
       const inv = event.data.object as Stripe.Invoice;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
-      const subscriptionId = typeof inv.subscription === "string"
-        ? inv.subscription
-        : (inv.subscription as any)?.id;
+      const subscriptionId = typeof (inv as any).subscription === "string"
+        ? (inv as any).subscription
+        : (inv as any).subscription?.id;
 
       // Resolve userId — try subscription metadata first, then customer
       let userId: number | undefined;
@@ -248,7 +248,7 @@ export async function handleStripeWebhook(
 
       // Detect plan from invoice line items
       const firstLine = inv.lines?.data?.[0];
-      const priceId = firstLine?.price?.id ?? null;
+      const priceId = (firstLine as any)?.price?.id ?? null;
       const plan = detectPlan(priceId, amountCents);
 
       if (amountUsd > 0) {
@@ -296,9 +296,9 @@ export async function handleStripeWebhook(
     case "invoice.payment_failed": {
       const inv = event.data.object as Stripe.Invoice;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
-      const subscriptionId = typeof inv.subscription === "string"
-        ? inv.subscription
-        : (inv.subscription as any)?.id;
+      const subscriptionId = typeof (inv as any).subscription === "string"
+        ? (inv as any).subscription
+        : (inv as any).subscription?.id;
 
       let userId: number | undefined;
       if (subscriptionId) {

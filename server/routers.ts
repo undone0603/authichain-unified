@@ -27,6 +27,25 @@ import { bonusesRouter } from "./bonuses/router";
 import { marketplaceRouter } from "./marketplace/router";
 import { heygenRouter } from "./heygen/router";
 import { macrohardRouter } from "./macrohard/router";
+import { missionsRouter, tasksRouter } from "./missions/router";
+import { personalizationRouter } from "./personalization/router";
+import { stakingRouter } from "./staking/router";
+import { stripeConnectRouter } from "./stripe-connect-router";
+import { characterRouter } from "./character/router";
+import { analyticsRouter } from "./analytics/router";
+
+import { qronRouter } from "./qron/router";
+import { govchainRouter } from "./govchain/router";
+import { salesRouter } from "./sales/router";
+import { devTeamRouter } from "./agents/dev-team/router";
+
+// Import routers from routers/ folder
+import { metrcRouter } from "./routers/metrc";
+import { productsRouter as industrialProductsRouter } from "./routers/products";
+import { schedulerRouter } from "./routers/scheduler";
+import { servicesRouter } from "./routers/services";
+import { pipelineRouter } from "./routers/pipeline";
+import { outcomesRouter } from "./routers/outcomes";
 
 export const appRouter = router({
   system: systemRouter,
@@ -57,6 +76,24 @@ export const appRouter = router({
   marketplace: marketplaceRouter,
   heygen: heygenRouter,
   macrohard: macrohardRouter,
+  missions: missionsRouter,
+  tasks: tasksRouter,
+  stripeConnect: stripeConnectRouter,
+  subscriptions: subscriptionsRouter,
+  character: characterRouter,
+  services: servicesRouter,
+  analytics: analyticsRouter,
+  scheduler: schedulerRouter,
+  staking: stakingRouter,
+  personalization: personalizationRouter,
+  qron: qronRouter,
+  govchain: govchainRouter,
+  sales: salesRouter,
+  devTeam: devTeamRouter,
+  pipeline: pipelineRouter,
+  outcomes: outcomesRouter,
+  metrc: metrcRouter,
+  industrialProducts: industrialProductsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -101,4 +101,46 @@ export const heygenRouter = router({
         error: v.error as string | null,
       };
     }),
+
+  videos: protectedProcedure
+    .input(z.object({ page: z.number().default(1), limit: z.number().default(50) }))
+    .query(async ({ input }) => {
+      const data = await heygenGet(`/v1/video.list?page_size=${input.limit}&page_number=${input.page}`);
+      return {
+        videos: data.data?.list ?? [],
+        total: data.data?.total ?? 0,
+      };
+    }),
+
+  draftScript: protectedProcedure
+    .input(z.object({
+      firstName: z.string(),
+      company: z.string(),
+      segment: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      if (!process.env.OPENAI_API_KEY) {
+        return { script: `Hi ${input.firstName} from ${input.company}, I'm reaching out from AuthiChain regarding your ${input.segment} needs.` };
+      }
+      const { invokeLLM } = await import("../_core/llm");
+      const prompt = `Write a short, professional 30-second outreach script for a personalized video.
+        Recipient: ${input.firstName}
+        Company: ${input.company}
+        Segment: ${input.segment}
+        Tone: Visionary, secure, authoritative.
+        Keep it under 75 words.`;
+      
+      const res = await invokeLLM({
+        messages: [{ role: "user", content: prompt }],
+      });
+      return { script: res.choices[0].message.content as string };
+    }),
+
+  // Queue a HeyGen video render (consumed by the Video Studio page).
+  generate: protectedProcedure
+    .input(z.any())
+    .mutation(async ({ input }): Promise<{ videoId: string }> => {
+      // Stub: returns a placeholder job id until the HeyGen render pipeline is wired.
+      return { videoId: `pending-${Date.now()}` };
+    }),
 });

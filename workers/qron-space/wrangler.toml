@@ -5,9 +5,9 @@ account_id = "4c1869b90f13f86940aa3747839bf420"
 workers_dev = false
 
 [[routes]]
-pattern = "qron.space/*"
+pattern = "qron.space/"
 zone_name = "qron.space"
 
 [[routes]]
-pattern = "www.qron.space/*"
+pattern = "www.qron.space/"
 zone_name = "qron.space"

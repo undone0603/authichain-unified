@@ -34,7 +34,7 @@ export default function Subscriptions() {
   const handleCheckout = async (plan: PlanKey) => {
     try {
       const result = await checkout.mutateAsync({
-        plan,
+        plan: plan as any,
         billing,
         origin: window.location.origin,
       });

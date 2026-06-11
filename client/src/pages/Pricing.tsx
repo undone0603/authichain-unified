@@ -360,7 +360,7 @@ export default function Pricing() {
                       variant={plan.highlighted ? "default" : "outline"}
                       asChild
                     >
-                      <a href={plan.paymentLink} target="_blank" rel="noopener noreferrer">
+                      <a href={(plan as any).paymentLink} target="_blank" rel="noopener noreferrer">
                         {key === "enterprise" ? "Buy Enterprise" : "Buy Now"} <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
