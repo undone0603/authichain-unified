@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
   paddleCustomerId: varchar("paddleCustomerId", { length: 128 }),
   points: integer("points").default(0),
+  metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
