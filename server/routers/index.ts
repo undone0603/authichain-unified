@@ -1,4 +1,5 @@
 import { router } from '../_core/trpc';
+import { systemRouter } from '../_core/systemRouter';
 import { metrcRouter } from './metrc';
 import { productsRouter } from './products';
 import { schedulerRouter } from './scheduler';
@@ -43,6 +44,7 @@ import { salesRouter } from '../sales/router';
  * Imported by server/_core/app.ts as appRouter.
  */
 export const appRouter = router({
+  system: systemRouter,
   metrc: metrcRouter,
   products: productsRouter,
   scheduler: schedulerRouter,
@@ -52,6 +54,8 @@ export const appRouter = router({
   autopilot: autopilotRouter,
   payments: paymentsRouter,
   subscriptions: subscriptionsRouter,
+  // Alias: client pages call `trpc.subscription.*` (singular)
+  subscription: subscriptionsRouter,
   blockchain: blockchainRouter,
   nft: nftRouter,
   authenticate: authenticateRouter,

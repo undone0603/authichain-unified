@@ -22,6 +22,7 @@
     "@hubspot/api-client": "^13.4.0",
     "@notionhq/client": "^2.3.0",
     "@paddle/paddle-node-sdk": "^1.7.0",
+    "@pinecone-database/pinecone": "^7.2.0",
     "@radix-ui/react-accordion": "^1.2.1",
     "@radix-ui/react-alert-dialog": "^1.1.2",
     "@radix-ui/react-aspect-ratio": "^1.1.0",

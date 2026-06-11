@@ -23,4 +23,6 @@ export const ENV = {
   paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
   samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
+  makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
+  smsRecipient: process.env.SMS_RECIPIENT ?? "",
 };

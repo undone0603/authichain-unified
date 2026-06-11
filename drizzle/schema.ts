@@ -1,4 +1,4 @@
-import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, numeric, bigint } from "drizzle-orm/pg-core";
+import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, numeric, bigint, uniqueIndex } from "drizzle-orm/pg-core";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const users = pgTable("users", {
@@ -466,13 +466,19 @@ export const whiteLabelClients = pgTable("white_label_clients", {
 export type WhiteLabelClient = typeof whiteLabelClients.$inferSelect;
 
 // ─── API Usage (Daily) ───────────────────────────────────────────────────────
-export const apiUsageDaily = pgTable("api_usage_daily", {
-  id: serial("id").primaryKey(),
-  clientId: integer("clientId").notNull(),
-  date: timestamp("date").notNull(),
-  calls: integer("calls").default(0),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+export const apiUsageDaily = pgTable(
+  "api_usage_daily",
+  {
+    id: serial("id").primaryKey(),
+    clientId: integer("clientId").notNull(),
+    date: timestamp("date").notNull(),
+    endpoint: varchar("endpoint", { length: 128 }).default("api").notNull(),
+    calls: integer("calls").default(0),
+    cost: numeric("cost", { precision: 12, scale: 4 }).default("0"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("api_usage_daily_client_date_endpoint_idx").on(t.clientId, t.date, t.endpoint)],
+);
 
 // ─── Activity Log ────────────────────────────────────────────────────────────
 export const activityLog = pgTable("activity_log", {
@@ -781,6 +787,8 @@ export const stakingPositions = pgTable("staking_positions", {
   status: varchar("status", { length: 50 }).default("active"),
   multiplier: numeric("multiplier", { precision: 5, scale: 2 }).default("1.00"),
   apy: numeric("apy", { precision: 5, scale: 2 }).default("5.00"),
+  rewardsEarned: numeric("rewardsEarned", { precision: 20, scale: 9 }).default("0").notNull(),
+  lastRewardCalculation: timestamp("lastRewardCalculation").defaultNow().notNull(),
   stakedAt: timestamp("stakedAt").defaultNow().notNull(),
   releaseAt: timestamp("releaseAt"),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
