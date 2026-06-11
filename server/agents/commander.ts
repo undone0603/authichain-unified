@@ -6,6 +6,7 @@
  */
 import { logActivity } from "../db";
 import { createMission } from "../missions/missions.db";
+import type { MissionType } from "../missions/types";
 
 export interface DirectiveOptions {
   userId: number;
@@ -26,7 +27,7 @@ export async function processDirective(options: DirectiveOptions) {
   });
 
   // Basic Directive Classification Logic
-  let missionType: any = "REVENUE_OPS";
+  let missionType: MissionType = "REVENUE_OPS";
   let workflowId = "twitter_truth_shilling";
 
   if (text.toLowerCase().includes("grant")) {

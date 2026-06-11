@@ -111,7 +111,7 @@ async function seedMissions(): Promise<Map<MissionType, string>> {
     } else {
       const id = await createMission(type);
       console.log(`  created ${type} → ${id}`);
-      created.set(type, id.id);
+      created.set(type, id);
     }
   }
   return created;
