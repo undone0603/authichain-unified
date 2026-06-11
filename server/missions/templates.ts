@@ -17,6 +17,16 @@ export const missionTemplates: Record<MissionType, MissionTemplate> = {
     title: 'Tech Sprint – Feature Development',
     priority: 8,
   },
+  MEDTECH_VIDEO_BRIEFING: {
+    type: 'MEDTECH_VIDEO_BRIEFING',
+    title: 'MedTech Video Briefing – Cinematic Outreach',
+    priority: 7,
+  },
+  MI_CRA_PARTNERSHIP: {
+    type: 'MI_CRA_PARTNERSHIP',
+    title: 'Michigan CRA Partnership – Gov Audit Integrity',
+    priority: 9,
+  },
   GOV_PILOT: {
     type: 'GOV_PILOT',
     title: 'Government Pilot – Initial Agency',

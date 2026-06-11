@@ -14,6 +14,7 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from "./types/manusTypes";
+import { exchangeGoogleCode, fetchGoogleUserInfo, mapGoogleUserInfo } from "./google-oauth";
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -120,9 +121,15 @@ class SDKServer {
    */
   async exchangeCodeForToken(
     code: string,
-    state: string
+    redirectUri: string
   ): Promise<ExchangeTokenResponse> {
-    return this.oauthService.getTokenByCode(code, state);
+    const { accessToken } = await exchangeGoogleCode({
+      code,
+      redirectUri,
+      clientId: ENV.googleClientId,
+      clientSecret: ENV.googleClientSecret,
+    });
+    return { accessToken } as ExchangeTokenResponse;
   }
 
   /**
@@ -131,18 +138,8 @@ class SDKServer {
    * const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
    */
   async getUserInfo(accessToken: string): Promise<GetUserInfoResponse> {
-    const data = await this.oauthService.getUserInfoByToken({
-      accessToken,
-    } as ExchangeTokenResponse);
-    const loginMethod = this.deriveLoginMethod(
-      (data as any)?.platforms,
-      (data as any)?.platform ?? data.platform ?? null
-    );
-    return {
-      ...(data as any),
-      platform: loginMethod,
-      loginMethod,
-    } as GetUserInfoResponse;
+    const raw = await fetchGoogleUserInfo(accessToken);
+    return mapGoogleUserInfo(raw) as unknown as GetUserInfoResponse;
   }
 
   private parseCookies(cookieHeader: string | undefined) {

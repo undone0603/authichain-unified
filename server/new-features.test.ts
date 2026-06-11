@@ -116,6 +116,7 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1, openId: "test-user-001", email: "test@authichain.com",
     name: "Test User", loginMethod: "manus", role, stripeCustomerId: null,
+    walletAddress: null, avatarUrl: null, company: null, title: null, phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,
     createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
   };
   return {
@@ -446,7 +447,7 @@ describe("New Features", () => {
           body: "<p>Hello!</p>", prospectName: "Alice",
           prospectCompany: null, prospectTitle: null, industry: null,
           status: "pending", templateUsed: null, generatedBy: "ai_manager",
-          approvedBy: null, approvedAt: null, sentAt: null, notes: null, createdAt: new Date(),
+          approvedBy: null, approvedAt: null, sentAt: null, notes: null, taskId: null, createdAt: new Date(),
         }]);
         await appRouter.createCaller(createAuthContext()).emailDrafts.approve({ id: 42 });
         const { sendEmail } = await import("./email/smtp");

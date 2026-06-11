@@ -41,6 +41,7 @@ jobs:
           - authichain-telegram
           - authichain-verify-worker
           # qron cluster
+          - govchain-us
           - qron-automation
           - qron-image-gen
           - qron-outreach
@@ -52,6 +53,8 @@ jobs:
           - outreach-queue
           - resend-relay
           - strainchain-io
+          - authichain-telegram
+          - authichain-verify-worker
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

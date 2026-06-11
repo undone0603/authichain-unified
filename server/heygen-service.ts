@@ -131,5 +131,5 @@ Product: AuthiChain — product authentication & anti-counterfeiting platform.
 Tone: professional, warm, direct. End with a soft CTA to book a 15-min call.
 Return ONLY the script text, no labels or quotes.`;
   const res = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
-  return res.choices?.[0]?.message?.content?.trim() ?? "";
+  return (res.choices?.[0]?.message?.content as string | undefined)?.trim() ?? "";
 }

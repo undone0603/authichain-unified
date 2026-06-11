@@ -2188,6 +2188,11 @@ nav {
   color: var(--text);
 }
 .nav-logo-text span { color: var(--primary); }
+.nav-cta {
+  width: auto;
+  padding: 10px 20px;
+  font-size: 11px;
+}
 .hero {
   position: relative;
   z-index: 1;
@@ -2362,12 +2367,14 @@ const HTML = `<!DOCTYPE html>
       ${svgLogo(BRAND)}
       <span class="nav-logo-text">AUTHI<span>CHAIN</span></span>
     </a>
+    <a class="btn btn-primary nav-cta" href="https://app.authichain.com">Launch App</a>
   </nav>
 
   <section class="hero">
     <div class="hero-content">
       <h1 class="hero-title"><span>VERIFY</span><span class="accent">EVERYTHING.</span></h1>
       <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets.</p>
+      <a class="btn btn-primary" style="display:inline-block;width:auto" href="https://app.authichain.com">Launch App &rarr;</a>
     </div>
   </section>
 
@@ -2393,6 +2400,9 @@ export default {
     }
     if (p === '/apple-touch-icon.svg' || p === '/apple-touch-icon.png' || p === '/apple-touch-icon-precomposed.png') {
       return assetResponse(FAVICON_SVG);
+    }
+    if (p === '/login' || p === '/signin' || p === '/app' || p.startsWith('/app/')) {
+      return Response.redirect('https://app.authichain.com/', 302);
     }
     if (p === '/dapp' || p.startsWith('/dapp/')) {
       return Response.redirect('https://authichain.com/dashboard', 302);

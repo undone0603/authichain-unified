@@ -23,8 +23,6 @@ export const ENV = {
   paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
   samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
-<<<<<<< HEAD
-=======
 
   // ── Pipeline Flags ────────────────────────────────────────────────────────
   // Defaults to enabled unless explicitly disabled, to keep the revenue/autopilot
@@ -39,5 +37,25 @@ export const ENV = {
   qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
   makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
   smsRecipient: process.env.SMS_RECIPIENT ?? "",
->>>>>>> 753cae2d (Fix Story Mode redirect/reveal flow, enable autonomous pipeline by default, and add HubSpot closed-won revenue verification)
+
+  // ── Supabase ──────────────────────────────────────────────────────────────
+  SUPABASE_URL: process.env.SUPABASE_URL ?? "",
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+
+  // ── AI ────────────────────────────────────────────────────────────────────
+  openaiApiKey: process.env.OPENAI_API_KEY ?? "",
+
+  // ── Paddle Price IDs ──────────────────────────────────────────────────────
+  paddleBasicPriceId: process.env.PADDLE_BASIC_PRICE_ID ?? "",
+  paddlePremiumPriceId: process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
+  paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
+
+  // ── Blockchain ────────────────────────────────────────────────────────────
+  defaultNftContract: process.env.DEFAULT_NFT_CONTRACT ?? process.env.AUTHICHAIN_NFT_CONTRACT ?? "",
+  blockchainPrivateKey: process.env.BLOCKCHAIN_PRIVATE_KEY ?? process.env.WALLET_PRIVATE_KEY ?? "",
+
+  // ── Google OAuth ──────────────────────────────────────────────────────────
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  ownerEmails: process.env.OWNER_EMAILS ?? "",
 };

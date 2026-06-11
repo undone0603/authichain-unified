@@ -1,0 +1,251 @@
+# AgentZ Workflow Registry
+# ----------------------------------------------------------------------
+# Declarative definitions for all "assumed" workflows derived from
+# Zac's current operational state. Add/edit entries here, then run
+# via `python -m agentz.cli run <workflow_id>` or `python -m agentz.cli run --all`.
+#
+# Fields:
+#   id                  : unique slug
+#   title               : human-readable
+#   priority            : critical | high | medium | low
+#   blocks_revenue      : true if completion unlocks $$$ flow
+#   handler             : python module path under agentz.workflows.handlers
+#   type                : browser | api | shell | composite
+#   estimated_minutes   : approximate runtime
+#   requires            : list of credential keys (from creds.yaml)
+#   prerequisites       : list of workflow IDs that must complete first
+#   description         : what this workflow does
+#   confirm_before_run  : if true, runner prompts even in --auto mode
+# ----------------------------------------------------------------------
+
+workflows:
+
+  # =================================================================
+  # CRITICAL — TIME-SENSITIVE
+  # =================================================================
+
+  - id: pinecone_trial_decision
+    title: "Pinecone trial expiry: renew, downgrade, or migrate gov-opportunities index"
+    priority: critical
+    blocks_revenue: true   # gov-engine depends on this for SBIR/SVIP discovery
+    handler: handlers.pinecone_trial
+    type: composite
+    estimated_minutes: 15
+    requires: [pinecone_api_key]
+    prerequisites: []
+    confirm_before_run: true
+    description: |
+      Pinecone trial expires ~May 2 2026. Workflow:
+        1) Check current usage of gov-opportunities index (1536 dims).
+        2) Decide path: paid plan ($70/mo Starter) OR migrate to pgvector in Supabase.
+        3) If migrate: dump index → upsert to Supabase pgvector table.
+        4) Update gov-engine env vars to point to new backend.
+
+  # =================================================================
+  # HIGH — INFRASTRUCTURE BLOCKERS
+  # =================================================================
+
+  - id: vercel_fix_authichain_unified
+    title: "Change authichain-unified-v2 framework preset Vite → Other"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.vercel_fix_preset
+    type: browser
+    estimated_minutes: 3
+    requires: [vercel_session]
+    prerequisites: []
+    description: |
+      Open Vercel dashboard for prj_mIb6SSMtMy8KsXg9gNta0T3tDJg1,
+      navigate Settings → General → Build & Development Settings,
+      change Framework Preset from "Vite" to "Other", save, trigger redeploy.
+      Confirms deployment turns green before exiting.
+
+  - id: gsc_setup_authichain
+    title: "Google Search Console verification for authichain.com"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.gsc_setup
+    type: browser
+    estimated_minutes: 8
+    requires: [google_session, cloudflare_api_token]
+    prerequisites: []
+    description: |
+      Add authichain.com as a property in GSC, generate TXT verification
+      record, push it to Cloudflare DNS via API, wait for propagation,
+      click verify. Submit sitemap.xml afterwards.
+
+  - id: gsc_setup_qron
+    title: "Google Search Console verification for qron.space"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.gsc_setup
+    type: browser
+    estimated_minutes: 8
+    requires: [google_session, cloudflare_api_token]
+    prerequisites: []
+    description: |
+      Same as gsc_setup_authichain but for qron.space domain.
+
+  - id: stripe_mcp_reconnect
+    title: "Reconnect Stripe MCP server"
+    priority: high
+    blocks_revenue: true   # required for autonomous payment ops
+    handler: handlers.stripe_mcp
+    type: api
+    estimated_minutes: 5
+    requires: [stripe_secret]
+    prerequisites: []
+    description: |
+      Validate acct_1SXIyEGqTruSqV8T API key is live, refresh MCP
+      OAuth token in Claude.ai connector config, run smoke-test
+      (list 3 most recent charges).
+
+  - id: n8n_activate_workflows
+    title: "Activate dormant n8n workflows (10 blueprints in Supabase, 0 active)"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.n8n_activate
+    type: api
+    estimated_minutes: 12
+    requires: [n8n_api_key, resend_api_key]
+    prerequisites: []
+    description: |
+      Verify Resend key (re_Lc5G2g2X_2o73cM6xhL8xZUeGvv12AQXE) is
+      injected into n8n environment, then activate each of the 10
+      blueprints sequentially with a 30s health-check between each.
+
+  # =================================================================
+  # HIGH — REVENUE WORKFLOWS
+  # =================================================================
+
+  - id: hubspot_drip_unstick
+    title: "Fix 29 prospects stuck at status='active' (silent drip failure)"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.hubspot_drip_unstick
+    type: api
+    estimated_minutes: 10
+    requires: [hubspot_token]
+    prerequisites: []
+    description: |
+      Query HubSpot for contacts where drip_status='active' AND
+      last_drip_sent < NOW() - INTERVAL '7 days'. For each:
+      reset to 'queued', re-trigger drip workflow, log to Supabase
+      audit table. Should release ~29 stuck follow-ups.
+
+  - id: hubspot_near_term_followups
+    title: "7-day follow-up cycle: Cloud Cannabis, Oakley Signs, PufCreativ, Lettuce"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.hubspot_followups
+    type: api
+    estimated_minutes: 8
+    requires: [hubspot_token, gmail_oauth]
+    prerequisites: [stripe_mcp_reconnect]
+    description: |
+      For each of the 4 near-term deals, check last touch date.
+      If >7 days, send next-in-sequence email from drafts (already
+      created), update HubSpot task to "completed", create next
+      task for +7d. All async-only CTAs (no call asks).
+
+  - id: linkedin_strainchain_outreach
+    title: "Michigan cannabis decision-maker outreach (StrainChain $299)"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.linkedin_outreach
+    type: browser
+    estimated_minutes: 45
+    requires: [linkedin_session]
+    prerequisites: []
+    confirm_before_run: true   # rate-limit risk
+    description: |
+      Sales Nav search: title=(compliance OR operations OR COO),
+      industry=cannabis, geography=Michigan. Send connection
+      request + first-touch message referencing Bitcoin-inscribed
+      product certifications. Cap: 18 invites/day to stay under
+      LinkedIn weekly limit. Logs sent IDs to Supabase to prevent
+      double-touching.
+
+  # =================================================================
+  # HIGH — PROTOCOL DEFENSE
+  # =================================================================
+
+  - id: sentinel_threat_hunting
+    title: "Marketplace Threat Sweep: Unauthorized QRON Claims"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.sentinel_threat_hunting
+    type: browser
+    estimated_minutes: 15
+    requires: [ebay_session, amazon_session]
+    prerequisites: []
+    description: |
+      Scans eBay and Amazon for products claiming "Verified by AuthiChain" 
+      or using QRON visual markers. Cross-references IDs with the truth layer 
+      database. Flags unauthorized sellers as protocol threats.
+
+  # =================================================================
+  # MEDIUM — GROWTH / DISTRIBUTION
+  # =================================================================
+
+  - id: reddit_qron_post
+    title: "Post QRON launch thread to r/QRcode and r/generative"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.reddit_post
+    type: browser
+    estimated_minutes: 10
+    requires: [reddit_session]
+    prerequisites: []
+    description: |
+      r/QRcode: post between 7-9pm ET. r/generative: conditional
+      on r/QRcode exceeding 50 upvotes. Pulls post copy from
+      /content/launch/qron_reddit_v3.md. Replies to first 3
+      comments within 30min using llama3.2 generated drafts
+      (queued for human approval).
+
+  - id: polygon_grants_submit
+    title: "Submit Polygon CDK ecosystem grant application"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.polygon_grants
+    type: browser
+    estimated_minutes: 20
+    requires: [polygon_session]
+    prerequisites: []
+    description: |
+      Pull narrative from /content/grants/polygon_v2.md, fill
+      application at polygon.technology/grants, attach pitch deck
+      from Notion (340460fea35581ae8955fabaa556d6db), submit.
+
+  # =================================================================
+  # LOW — MAINTENANCE
+  # =================================================================
+
+  - id: revoke_temp_pat
+    title: "Revoke temp PAT 'claude-authichain-unified-fix' on undone0603"
+    priority: low
+    blocks_revenue: false
+    handler: handlers.github_revoke_pat
+    type: api
+    estimated_minutes: 1
+    requires: [github_pat_undone]
+    prerequisites: [vercel_fix_authichain_unified]
+    description: |
+      Once Vercel fix is confirmed deployed, revoke the temporary
+      GitHub PAT to close the access window.
+
+  - id: pipeline_health_report
+    title: "Generate weekly pipeline health snapshot"
+    priority: low
+    blocks_revenue: false
+    handler: handlers.pipeline_report
+    type: composite
+    estimated_minutes: 6
+    requires: [hubspot_token, stripe_secret, supabase_anon]
+    prerequisites: []
+    description: |
+      Compile: HubSpot deal-stage counts, Stripe last-30d revenue
+      (currently $0), Supabase queue lengths, n8n run counts,
+      Vercel deploy success rates. Output to Notion Session Codex
+      page (340460fea35581ae8955fabaa556d6db).
