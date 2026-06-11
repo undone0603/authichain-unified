@@ -97,6 +97,41 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const appPassword = ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
   const fromName = input.fromName || "AuthiChain";
 
+  // ─── Method 0: Resend (verified authichain.com domain, SPF+DKIM+DMARC) ─────
+  // RESEND_API_KEY is the only mail credential present in Vercel production —
+  // without this method, transactional email (purchase access emails, dunning
+  // notices) silently no-ops in prod.
+  const resendKey = process.env.RESEND_API_KEY || "";
+  if (resendKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: `${fromName} <noreply@authichain.com>`,
+          to: [to],
+          subject: input.subject,
+          text: input.body,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({} as any));
+        return {
+          status: "sent",
+          provider: "resend",
+          providerMessageId: data?.id,
+        };
+      }
+      const txt = await res.text().catch(() => "");
+      console.warn(`[email-service] Resend failed (${res.status}): ${txt.slice(0, 200)} — falling back to Gmail`);
+    } catch (resendErr: any) {
+      console.warn("[email-service] Resend errored, falling back to Gmail...", resendErr.message);
+    }
+  }
+
   // ─── Method 1: SMTP via App Password (Reliable Fallback) ───────────────────
   if (fromEmail && appPassword) {
     try {
