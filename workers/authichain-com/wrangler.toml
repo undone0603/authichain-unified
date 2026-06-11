@@ -3,14 +3,11 @@ main = "src/index.ts"
 compatibility_date = "2026-04-01"
 account_id = "4c1869b90f13f86940aa3747839bf420"
 workers_dev = false
+preview_urls = false
 
-[[routes]]
-pattern = "authichain.com/"
-zone_name = "authichain.com"
 
-[[routes]]
-pattern = "www.authichain.com/"
-zone_name = "authichain.com"
+
+
 
 # Apex globs — taken over from the deleted legacy `authichain-unified` worker
 # (2026-06-10 consolidation). Fallback in src/index.ts serves the landing for

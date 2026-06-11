@@ -8,11 +8,9 @@ NEXT_PUBLIC_SITE_URL = "https://authichain.com"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "authichain-provenance"
+database_name = "authichain-scan-validate"
 database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 
-[[routes]]
-pattern = "authichain.com/api/qron/scan-validate*"
 custom_domain = true
 
 [build]
@@ -22,4 +20,4 @@ command = "npm run build"
 name = "authichain-scan-validate"
 
 [env.staging]
-name = "authichain-scan-validate-staging"
+name = "authichain-scan-validate"

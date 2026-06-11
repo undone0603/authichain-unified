@@ -309,7 +309,7 @@ describe('missions.list — status filtering after mutations', () => {
   it('lists IN_PROGRESS missions after status update', async () => {
     const caller = appRouter.createCaller(makeCtx());
     const { id } = await caller.missions.create({ type: 'GOV_PILOT' });
-    await caller.missions.updateStatus({ id: id.id, status: 'IN_PROGRESS' });
+    await caller.missions.updateStatus({ id: id, status: 'IN_PROGRESS' });
 
     const inProgress = await caller.missions.list({ status: 'IN_PROGRESS' }) as any[];
     expect(inProgress.some((m: any) => m.id === id)).toBe(true);

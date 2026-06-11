@@ -363,3 +363,16 @@ workflows:
     description: |
       Post GovChain W3C VC announcements targeting federal and defense
       supply chain contractors.
+
+  - id: linkedin_authority_post
+    title: "Generate strategic authority post on LinkedIn"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.linkedin_post
+    type: browser
+    estimated_minutes: 15
+    requires: [linkedin_session]
+    prerequisites: []
+    description: |
+      Post high-fidelity strategic content about AuthiChain's 
+      provenance model. Uses knowledge/ECOSYSTEM_STRATEGY.md.

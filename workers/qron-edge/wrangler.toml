@@ -6,6 +6,4 @@ compatibility_date = "2024-04-29"
 NEXT_PUBLIC_SUPABASE_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co"
 
 # Binding for the redirect engine
-[[routes]]
-pattern = "qron.space/s/*"
 custom_domain = false
