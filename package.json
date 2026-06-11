@@ -16,7 +16,7 @@
     "db:studio": "drizzle-kit studio",
     "deploy:all": "npx wrangler deploy --name authichain-api && npx wrangler deploy --name authichain-scan-validate && npx wrangler deploy --name authichain-dashboard && cd workers/authichain-com && npx wrangler deploy && cd ../qron-space && npx wrangler deploy && cd ../govchain-us && npx wrangler deploy && cd ../strainchain-io && npx wrangler deploy && cd ../blockchain && npx wrangler deploy",
     "deploy:unified": "npx wrangler deploy"
-    },
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1042.0",
     "@aws-sdk/s3-request-presigner": "^3.1038.0",
@@ -139,7 +139,7 @@
     "typescript": "5.9.3",
     "vite": "^7.3.2",
     "vite-plugin-manus-runtime": "^0.0.57",
-    "vitest": "^3.2.4",
+    "vitest": "^3.2.6",
     "wrangler": "^4.90.0"
   },
   "packageManager": "pnpm@10.28.2",
