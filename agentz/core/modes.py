@@ -72,8 +72,7 @@ class ExecutionContext:
         try:
             TRAINING_LOG.parent.mkdir(parents=True, exist_ok=True)
             with open(TRAINING_LOG, "a") as f:
-                f.write(json.dumps(signal) + "
-")
+                f.write(json.dumps(signal) + "\n")
         except Exception as e:
             print(f"  [Context] Warning: Failed to record win signal: {e}")
 
