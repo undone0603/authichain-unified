@@ -33,7 +33,9 @@ const TITLES: Record<string, string> = {
 
 // ─── Mock db module ───────────────────────────────────────────────────────────
 
-vi.mock('./db', () => ({
+// The missions/tasks routers import directly from ./missions/missions.db (not
+// ./db), so the in-memory store must mock THAT module.
+vi.mock('./missions/missions.db', () => ({
   getMissions: async (statusFilter?: string) => {
     const all = [...store.missions.values()];
     return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
@@ -81,12 +83,19 @@ vi.mock('./db', () => ({
     if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
   },
 
-  // getDb returns null — tests using direct db access guard with if (db)
-  getDb: async () => null,
-
-  logActivity:               vi.fn().mockResolvedValue(undefined),
-  createSystemNotification:  vi.fn().mockResolvedValue(undefined),
+  updateTaskStatus: vi.fn().mockResolvedValue(undefined),
 }));
+
+vi.mock('./db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./db')>();
+  return {
+    ...actual,
+    // getDb returns null — tests using direct db access guard with if (db)
+    getDb: async () => null,
+    logActivity:              vi.fn().mockResolvedValue(undefined),
+    createSystemNotification: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 // ─── Shared test context ──────────────────────────────────────────────────────
 
@@ -253,7 +262,8 @@ describe('tasks.retry', () => {
   let failedTaskId: string;
 
   beforeAll(async () => {
-    const { createMission, getTasksByMission, getDb } = await import('./db');
+    const { createMission, getTasksByMission } = await import('./missions/missions.db');
+    const { getDb } = await import('./db');
 
     const missionId = await createMission('TECH_OS_LOCK');
     const tasks = await getTasksByMission(missionId as any);

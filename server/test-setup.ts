@@ -45,16 +45,15 @@ vi.mock("./db", async (importOriginal) => {
       totalUsers: 0,
       totalProducts: 0,
       totalAuthentications: 0,
-      totalCertificates: 0,
-      totalSubscriptions: 0,
+      totalRevenue: 0,
+      totalLeads: 0,
+      totalNfts: 0,
     }),
     getAllUsers: vi.fn().mockResolvedValue([]),
     getOpenFraudAlerts: vi.fn().mockResolvedValue([]),
     getAllHealthScores: vi.fn().mockResolvedValue([]),
     getRecentActivity: vi.fn().mockResolvedValue([]),
-    getSubscriptionAnalytics: vi.fn().mockResolvedValue({
-      total: 0, active: 0, cancelled: 0, pastDue: 0
-    }),
+    getSubscriptionAnalytics: vi.fn().mockResolvedValue([]),
     getRevenueAnalytics: vi.fn().mockResolvedValue([]),
     getWhiteLabelClients: vi.fn().mockResolvedValue([]),
     getServiceOrdersByUser: vi.fn().mockResolvedValue([]),
@@ -97,12 +96,8 @@ vi.mock("./character-service", () => ({
 // Mock scheduled-jobs as well
 vi.mock("./scheduled-jobs", () => ({
   getJobHistory: vi.fn().mockResolvedValue([]),
-  runJobManually: vi.fn(async ({ jobName }) => {
-    if (jobName === "nonexistent-job") {
-      return { success: false, message: `Failed to start job "${jobName}"` };
-    }
-    return { success: true, message: `Job "${jobName}" started successfully` };
-  }),
+  // Mirrors the real signature: runJobManually(jobName: string): Promise<boolean>
+  runJobManually: vi.fn(async (jobName: string) => jobName !== "nonexistent-job"),
   executeJob: vi.fn().mockResolvedValue({ success: true }),
   getRegisteredJobs: vi.fn().mockReturnValue([
     { name: "subscription-health-check", description: "check health", schedule: "0 0 * * *", enabled: true },
