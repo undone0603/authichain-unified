@@ -1,19 +1,12 @@
 {
-<<<<<<< HEAD
   "name": "strainchain-io",
   "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "deploy": "npx wrangler deploy"
-=======
-  "name": "strainchain-io-worker",
-  "version": "1.0.0",
   "type": "module",
+  "private": true,
   "scripts": {
     "deploy": "npx wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^3.109.0"
->>>>>>> cf12d6d (feat: Implement domains and AgentZ, configure conflict-free deployments)
   }
 }
