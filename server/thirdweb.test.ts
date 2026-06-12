@@ -11,7 +11,7 @@ describe('Thirdweb Service', () => {
   it('should return connection status', async () => {
     const status = await getConnectionStatus();
     expect(status).toHaveProperty('connected');
-    expect(status).toHaveProperty('clientId');
+    expect(status).toHaveProperty('clientConfigured');
   });
 
   it('should build auth certificate metadata correctly', () => {
