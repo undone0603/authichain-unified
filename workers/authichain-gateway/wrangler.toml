@@ -7,15 +7,15 @@ account_id = "4c1869b90f13f86940aa3747839bf420"
 # KV Namespaces (create with: wrangler kv namespace create <NAME>)
 [[kv_namespaces]]
 binding = "RATE_LIMITS"
-id = "placeholder-rate-limits"
+id = "412b3dad203a4a4581f503c7f0a922cc"
 
 [[kv_namespaces]]
 binding = "TENANT_CACHE"
-id = "placeholder-tenant-cache"
+id = "8e81690a90eb426da747e969d35c52af"
 
 [[kv_namespaces]]
 binding = "USAGE_BUFFER"
-id = "placeholder-usage-buffer"
+id = "1d3cbcfaa1fc40e9834dd585c7362a0c"
 
 [vars]
 BACKEND_URL = "https://authichain-unified.vercel.app"
