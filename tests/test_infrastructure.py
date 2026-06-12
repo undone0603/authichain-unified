@@ -2,11 +2,25 @@
 tests.test_infrastructure
 ------------------------
 Integration tests verifying live connectivity to production end-points.
+
+Skipped automatically when live credentials are not present (e.g. CI).
 """
+import os
+
 import pytest
 from agentz.core.credentials import get
 from supabase import create_client
 import httpx
+
+# NOTE: tests/test_api.py sets SUPABASE_URL to a placeholder at import time, and
+# pytest imports every module during collection — so a bare "is it set?" guard is
+# always true and these integration tests never skip (they fail on bad creds).
+# Treat the placeholder as "no live creds" so the suite skips in CI / without real creds.
+_LIVE_URL = os.environ.get("SUPABASE_URL", "")
+pytestmark = pytest.mark.skipif(
+    not _LIVE_URL or "example" in _LIVE_URL,
+    reason="integration: requires live credentials (real SUPABASE_URL etc. in env)",
+)
 
 def test_supabase_connection():
     """Verify Supabase is reachable and authenticated."""
