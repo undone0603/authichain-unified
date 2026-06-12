@@ -12,6 +12,7 @@ zone_name = "govchain.us"
 pattern = "www.govchain.us/*"
 zone_name = "govchain.us"
 
+[[routes]]
 pattern = "govchain.us/"
 zone_name = "govchain.us"
 
