@@ -11,7 +11,7 @@
     "build": "next build",
     "cf:build": "node scripts/patch-opennext.cjs && opennextjs-cloudflare build",
     "vercel-build": "next build",
-    "patch:workerd": "python scripts/patch_workerd.py",
+    "patch:workerd": "python3 scripts/patch_workerd.py",
     "postinstall": "pnpm run patch:workerd",
     "prepare": "husky",
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
