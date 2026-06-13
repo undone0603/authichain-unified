@@ -7,5 +7,10 @@
   },
   "devDependencies": {
     "wrangler": "^3.109.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": ">=0.28.1"
+    }
   }
 }
