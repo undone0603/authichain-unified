@@ -6,6 +6,7 @@
 import { createThirdwebClient, getContract, defineChain } from "thirdweb";
 import { privateKeyToAccount } from "thirdweb/wallets";
 import { mintTo, balanceOf, totalSupply, getOwnedNFTs } from "thirdweb/extensions/erc721";
+import { transfer as erc20Transfer } from "thirdweb/extensions/erc20";
 import { upload } from "thirdweb/storage";
 import { sendTransaction, readContract } from "thirdweb";
 import { ENV } from "./_core/env";
@@ -210,6 +211,54 @@ export async function lockCounterfeitBounty(params: {
 
   const result = await sendTransaction({ transaction, account });
   return { transactionHash: result.transactionHash };
+}
+
+// ─── ERC-20 ($QRON) Transfers ───────────────────────────────────────────────
+
+export interface Erc20TransferParams {
+  /** ERC-20 token contract address. Defaults to ENV.qronTokenAddress. */
+  tokenAddress?: string;
+  /** Recipient wallet address. */
+  to: string;
+  /** Human-readable token amount (e.g. "12.5"), converted by the extension. */
+  amount: string | number;
+  /** Treasury signer private key. Defaults to ENV.blockchainPrivateKey. */
+  privateKey?: string;
+  chainId?: number;
+}
+
+/**
+ * Send ERC-20 tokens from the treasury wallet. Refuses to act unless both a
+ * token address and a signing key are configured — never guesses a contract.
+ */
+export async function transferErc20(params: Erc20TransferParams) {
+  const tokenAddress = params.tokenAddress || ENV.qronTokenAddress;
+  const privateKey = params.privateKey || ENV.blockchainPrivateKey;
+  if (!tokenAddress) throw new Error("transferErc20: no token address configured (QRON_TOKEN_ADDRESS)");
+  if (!privateKey) throw new Error("transferErc20: no treasury private key configured (BLOCKCHAIN_PRIVATE_KEY)");
+
+  const client = getThirdwebClient();
+  const chain = params.chainId ? defineChain(params.chainId) : getDefaultChain();
+  const contract = getContract({ client, chain, address: tokenAddress });
+  const account = privateKeyToAccount({ client, privateKey: privateKey as `0x${string}` });
+
+  const transaction = erc20Transfer({ contract, to: params.to, amount: String(params.amount) });
+  const result = await sendTransaction({ transaction, account });
+  return { transactionHash: result.transactionHash, chain: chain.id };
+}
+
+/**
+ * Buyback/burn: send tokens to the burn sink (ENV.qronBurnAddress, default
+ * the standard dead address). Same guards as transferErc20.
+ */
+export async function burnErc20(params: { tokenAddress?: string; amount: string | number; privateKey?: string; chainId?: number }) {
+  return transferErc20({
+    tokenAddress: params.tokenAddress,
+    to: ENV.qronBurnAddress,
+    amount: params.amount,
+    privateKey: params.privateKey,
+    chainId: params.chainId,
+  });
 }
 
 // ─── Read Operations ────────────────────────────────────────────────────────
