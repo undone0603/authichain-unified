@@ -1,6 +1,6 @@
 // server/scheduled-jobs.ts
 import { getDb } from "./db";
-import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts } from "../drizzle/schema";
+import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger } from "../drizzle/schema";
 import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
@@ -670,10 +670,10 @@ registerJob({
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
     
     // Simple logic: apply 12.5% APY / 365 to all active positions
-    const activePositions = await db.select().from((await import("../drizzle/schema")).stakingPositions).where(eq((await import("../drizzle/schema")).stakingPositions.status, "active"));
+    const activePositions = await db.select().from(stakingPositions).where(eq(stakingPositions.status, "active"));
     for (const pos of activePositions) {
       const dailyReward = (Number(pos.amount) * 0.125) / 365;
-      await db.insert((await import("../drizzle/schema")).qronRewardLedger).values({
+      await db.insert(qronRewardLedger).values({
         agentId: pos.agentId || 0,
         userId: pos.userId,
         amount: dailyReward.toFixed(9),
