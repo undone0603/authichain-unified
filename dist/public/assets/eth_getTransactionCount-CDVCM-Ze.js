@@ -1,0 +1,1 @@
+import{bk as n,b8 as r}from"./index-DRYwlDmy.js";async function c(t,o){const e=await t({method:"eth_getTransactionCount",params:[o.address,o.blockNumber?n(o.blockNumber):o.blockTag||"pending"]});return r(e)}export{c as eth_getTransactionCount};
