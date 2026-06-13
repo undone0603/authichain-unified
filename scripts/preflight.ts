@@ -12,6 +12,9 @@ import "./_preflight-env"; // MUST be first — loads .env/.env.local before ENV
 import { sql } from "drizzle-orm";
 import { ENV } from "../server/_core/env";
 import { getDb } from "../server/db";
+import { AGENTZ_ENV_KEYS } from "./_agentz-env-keys";
+
+const FULL = process.argv.includes("--full");
 
 type Status = "ok" | "warn" | "fail";
 interface Check { label: string; status: Status; detail: string; }
@@ -77,6 +80,23 @@ async function main() {
     dbChecks.push({ label: "Connectivity", status: "fail", detail: `error: ${String(err?.message ?? err).slice(0, 80)}` });
   }
   all.push(...section("Database", dbChecks));
+
+  // ── Full audit (--full): the entire AgentZ credential map ──────────────────
+  // Reports SET / MISSING per known env var name — never prints values.
+  if (FULL) {
+    console.log("\nAgentZ credential map (status only — values never printed)");
+    const set: string[] = [];
+    const missing: string[] = [];
+    for (const k of AGENTZ_ENV_KEYS) {
+      const v = process.env[k];
+      if (typeof v === "string" && v.trim().length > 0) set.push(k);
+      else missing.push(k);
+    }
+    console.log(`  ✅ set     (${set.length})`);
+    for (const k of set) console.log(`     · ${k}`);
+    console.log(`  🟡 missing (${missing.length})`);
+    for (const k of missing) console.log(`     · ${k}`);
+  }
 
   // ── Verdict ──────────────────────────────────────────────────────────────────
   const fails = all.filter(c => c.status === "fail").length;
