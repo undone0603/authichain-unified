@@ -25,6 +25,8 @@ Options for 'run power_launch_all':
 from __future__ import annotations
 
 import argparse
+import dataclasses
+import io
 import json
 import sys
 from pathlib import Path
@@ -166,8 +168,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     print(f"\n  Summary: {ok} ok, {skip} skipped, {fail} failed/blocked")
 
     if getattr(args, "json_out", None):
+        serializable = [
+            dataclasses.asdict(r) if dataclasses.is_dataclass(r) else r.__dict__
+            for r in results
+        ]
         with open(args.json_out, "w") as fh:
-            json.dump(payload, fh, indent=2)
+            json.dump(serializable, fh, indent=2)
         if not args.quiet:
             print(f"\nResults written to {args.json_out}")
 
@@ -232,6 +238,12 @@ def build_parser() -> argparse.ArgumentParser:
     # ── list-agents ──────────────────────────────────────────────────────────
     sub.add_parser("list-agents", help="List all registered agents")
 
+    # ── pulse ────────────────────────────────────────────────────────────────
+    sub.add_parser("pulse", help="Print credential heartbeat")
+
+    # ── list ─────────────────────────────────────────────────────────────────
+    sub.add_parser("list", help="List all registered workflows")
+
     creds_p = sub.add_parser("creds", help="Full credential audit")
     creds_p.add_argument("--json", action="store_true")
 
@@ -260,13 +272,15 @@ def build_parser() -> argparse.ArgumentParser:
     task_p.add_argument("--mode", choices=["auto", "confirm", "dry-run"], default="auto")
 
     return root
-# Ensure stdout/stderr can handle Unicode on Windows (CP1252 terminals)
+
+
+def _ensure_unicode_streams() -> None:
+    """Ensure stdout/stderr can handle Unicode on Windows (CP1252 terminals)."""
     if hasattr(sys.stdout, "buffer"):
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     if hasattr(sys.stderr, "buffer"):
         sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-    
 
 def cmd_task(args: argparse.Namespace) -> int:
     import asyncio
@@ -287,6 +301,7 @@ def cmd_task(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _ensure_unicode_streams()
     parser = build_parser()
     args = parser.parse_args(argv)
 
