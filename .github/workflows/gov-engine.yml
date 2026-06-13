@@ -8,16 +8,37 @@ on:
 permissions:
   contents: read
 
+# Hourly schedule + manual triggers should not pile up if a run is slow.
+concurrency:
+  group: gov-engine
+  cancel-in-progress: false
+
 jobs:
   activate-economy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # The repo uses pnpm (pnpm-lock.yaml, no package-lock.json), so the
+      # previous `npm ci` step had no lockfile to honor and was failing.
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Use Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: pnpm
+
       - name: Install deps
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+
       - name: Activate economy
+        env:
+          # Set as a repo / environment secret in GitHub Settings → Secrets and
+          # variables → Actions. The script refuses to run without it (no more
+          # hardcoded URL in the source).
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: node activate-economy.cjs

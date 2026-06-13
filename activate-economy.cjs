@@ -2,7 +2,11 @@
 const postgres = require('postgres');
 require('dotenv').config();
 
-const sql = postgres('postgresql://postgres.nhdnkzhtadfkkluiulhs:QronOps2026!@aws-1-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require');
+if (!process.env.DATABASE_URL) {
+  console.error('[activate-economy] DATABASE_URL is not set. Refusing to run with a hardcoded URL.');
+  process.exit(2);
+}
+const sql = postgres(process.env.DATABASE_URL);
 
 const schema = `
 CREATE TABLE IF NOT EXISTS "automation_logs" (
