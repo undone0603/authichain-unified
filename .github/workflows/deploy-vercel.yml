@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 # Ensures that only one deployment runs at a time
 concurrency:
   group: vercel-deploy
