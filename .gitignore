@@ -116,3 +116,9 @@ node_modules
 node_modules
 node_modules
 node_modules/
+.env.autonomous\nall_used_envs.txt\nclean_envs.txt\n.env.local
+
+.env.autonomous
+all_used_envs.txt
+clean_envs.txt
+dist/
