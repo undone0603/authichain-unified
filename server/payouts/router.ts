@@ -5,6 +5,7 @@ import {
   dryRunReport,
   approvePayouts,
   executeApprovedPayouts,
+  listPayouts,
 } from "./service";
 import { logActivity } from "../db";
 
@@ -21,6 +22,13 @@ export const payoutsRouter = router({
   dryRun: adminProcedure.query(async () => {
     return await dryRunReport();
   }),
+
+  // List queued/approved/recent payouts for the admin panel.
+  list: adminProcedure
+    .input(z.object({ statuses: z.array(z.string()).optional(), limit: z.number().int().positive().max(500).optional() }).optional())
+    .query(async ({ input }) => {
+      return await listPayouts(input ?? {});
+    }),
 
   // Enqueue eligible payouts for review. Moves no funds.
   prepare: adminProcedure.mutation(async ({ ctx }) => {
