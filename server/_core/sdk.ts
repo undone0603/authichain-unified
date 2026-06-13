@@ -153,6 +153,14 @@ class SDKServer {
 
   private getSessionSecret() {
     const secret = ENV.cookieSecret;
+    if (!secret) {
+      // Fail closed: an empty signing key makes session tokens trivially
+      // forgeable (anyone can mint a valid HS256 JWT). Refuse to sign or
+      // verify rather than silently accepting forged sessions.
+      throw new Error(
+        "JWT_SECRET is not configured; cannot sign or verify session tokens."
+      );
+    }
     return new TextEncoder().encode(secret);
   }
 
