@@ -46,6 +46,7 @@ import { schedulerRouter } from "./routers/scheduler";
 import { servicesRouter } from "./routers/services";
 import { pipelineRouter } from "./routers/pipeline";
 import { outcomesRouter } from "./routers/outcomes";
+import { payoutsRouter } from "./payouts/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -94,6 +95,7 @@ export const appRouter = router({
   outcomes: outcomesRouter,
   metrc: metrcRouter,
   industrialProducts: industrialProductsRouter,
+  payouts: payoutsRouter,
 });
 
 export type AppRouter = typeof appRouter;

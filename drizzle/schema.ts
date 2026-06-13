@@ -416,6 +416,35 @@ export const affiliateCommissions = pgTable("affiliate_commissions", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+// ─── Payouts (approval-gated fund movement) ──────────────────────────────────
+// Every outbound payment — affiliate fiat, on-chain $QRON, buyback/burn — is
+// queued here as `pending_approval`. Funds only move after a human approves a
+// batch AND the global PAYOUTS_ENABLED flag is on. idempotencyKey (derived from
+// the source row) is UNIQUE, so re-running preparation never double-queues.
+export const payouts = pgTable("payouts", {
+  id: serial("id").primaryKey(),
+  rail: varchar("rail", { length: 32 }).notNull(),            // stripe_connect | qron_onchain | buyback_burn
+  amount: numeric("amount", { precision: 20, scale: 9 }).notNull(),
+  currency: varchar("currency", { length: 16 }).notNull().default("usd"), // fiat code or token symbol
+  destination: varchar("destination", { length: 256 }),       // connected acct id / wallet addr (null for burn)
+  userId: integer("userId"),
+  referenceType: varchar("referenceType", { length: 48 }),    // affiliate_commission | staking_reward | buyback_burn
+  referenceId: varchar("referenceId", { length: 128 }),       // source row id(s)
+  idempotencyKey: varchar("idempotencyKey", { length: 160 }).notNull().unique(),
+  status: varchar("status", { length: 32 }).notNull().default("pending_approval"),
+  // pending_approval → approved → processing → paid | failed ; or rejected | held
+  approvedBy: integer("approvedBy"),
+  approvedAt: timestamp("approvedAt"),
+  txRef: varchar("txRef", { length: 256 }),                   // stripe transfer id or on-chain tx hash
+  failureReason: text("failureReason"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type Payout = typeof payouts.$inferSelect;
+export type InsertPayout = typeof payouts.$inferInsert;
+
 // ─── Autopilot Config ────────────────────────────────────────────────────────
 export const autopilotConfig = pgTable("autopilot_config", {
   id: serial("id").primaryKey(),

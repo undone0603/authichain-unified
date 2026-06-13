@@ -1,6 +1,6 @@
 // server/scheduled-jobs.ts
 import { getDb } from "./db";
-import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts } from "../drizzle/schema";
+import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger } from "../drizzle/schema";
 import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
@@ -669,19 +669,52 @@ registerJob({
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
     
-    // Simple logic: apply 12.5% APY / 365 to all active positions
-    const activePositions = await db.select().from((await import("../drizzle/schema")).stakingPositions).where(eq((await import("../drizzle/schema")).stakingPositions.status, "active"));
+    // Simple logic: apply 12.5% APY / 365 to all active positions.
+    // Idempotency: only positions not rewarded in the last ~23h are eligible,
+    // so a re-run or process restart on the same day cannot double-distribute.
+    const rewardCutoff = new Date(Date.now() - 23 * 60 * 60 * 1000);
+    const activePositions = await db.select().from(stakingPositions).where(
+      and(
+        eq(stakingPositions.status, "active"),
+        lt(stakingPositions.lastRewardCalculation, rewardCutoff),
+      )
+    );
+    const now = new Date();
     for (const pos of activePositions) {
       const dailyReward = (Number(pos.amount) * 0.125) / 365;
-      await db.insert((await import("../drizzle/schema")).qronRewardLedger).values({
+      await db.insert(qronRewardLedger).values({
         agentId: pos.agentId || 0,
         userId: pos.userId,
         amount: dailyReward.toFixed(9),
         reason: "staking_reward",
+        referenceType: "staking_position",
+        referenceId: pos.id,
         status: "pending"
       });
+      // Stamp the position so it is not rewarded again until the next window.
+      await db.update(stakingPositions)
+        .set({ lastRewardCalculation: now, updatedAt: now })
+        .where(eq(stakingPositions.id, pos.id));
     }
     return { itemsProcessed: activePositions.length, details: { status: "rewards_distributed" } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 14: Payout Preparation (Runs daily at 5 AM UTC)
+// ═══════════════════════════════════════════════════════════════════════════
+// Queues eligible payouts (affiliate commissions, staking rewards) as
+// `pending_approval`. This moves NO funds — an admin must approve a batch and
+// PAYOUTS_ENABLED must be true before payouts.execute sends anything.
+registerJob({
+  name: "payout-preparation",
+  description: "Queue eligible affiliate/staking payouts for human approval (no funds move)",
+  schedule: "0 5 * * *",
+  enabled: ENV.autonomousPipelineEnabled,
+  handler: async (): Promise<JobResult> => {
+    const { preparePayouts } = await import("./payouts/service");
+    const res = await preparePayouts();
+    return { itemsProcessed: res.queued, details: { ...res, note: "queued for approval; no funds moved" } };
   },
 });
 

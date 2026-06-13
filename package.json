@@ -8,6 +8,8 @@
     "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild server/vercel-entry.ts --platform=node --packages=external --bundle --format=esm --outfile=api/server.js --banner:js=\"import{createRequire as _cr}from'module';const require=_cr(import.meta.url);\"",
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
+    "preflight": "tsx scripts/preflight.ts",
+    "preflight:full": "tsx scripts/preflight.ts --full",
     "format": "prettier --write .",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
