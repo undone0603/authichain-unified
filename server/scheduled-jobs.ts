@@ -669,8 +669,17 @@ registerJob({
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
     
-    // Simple logic: apply 12.5% APY / 365 to all active positions
-    const activePositions = await db.select().from(stakingPositions).where(eq(stakingPositions.status, "active"));
+    // Simple logic: apply 12.5% APY / 365 to all active positions.
+    // Idempotency: only positions not rewarded in the last ~23h are eligible,
+    // so a re-run or process restart on the same day cannot double-distribute.
+    const rewardCutoff = new Date(Date.now() - 23 * 60 * 60 * 1000);
+    const activePositions = await db.select().from(stakingPositions).where(
+      and(
+        eq(stakingPositions.status, "active"),
+        lt(stakingPositions.lastRewardCalculation, rewardCutoff),
+      )
+    );
+    const now = new Date();
     for (const pos of activePositions) {
       const dailyReward = (Number(pos.amount) * 0.125) / 365;
       await db.insert(qronRewardLedger).values({
@@ -678,8 +687,14 @@ registerJob({
         userId: pos.userId,
         amount: dailyReward.toFixed(9),
         reason: "staking_reward",
+        referenceType: "staking_position",
+        referenceId: pos.id,
         status: "pending"
       });
+      // Stamp the position so it is not rewarded again until the next window.
+      await db.update(stakingPositions)
+        .set({ lastRewardCalculation: now, updatedAt: now })
+        .where(eq(stakingPositions.id, pos.id));
     }
     return { itemsProcessed: activePositions.length, details: { status: "rewards_distributed" } };
   },
