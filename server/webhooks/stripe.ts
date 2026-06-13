@@ -421,6 +421,23 @@ export async function handleStripeWebhook(
         });
       }
 
+      // Service-order checkouts: transition the matching order pending → paid
+      // (and notify the buyer). Without this, a paid service order would stay
+      // "pending" forever and never enter fulfillment. Best-effort: a missing
+      // order or failure here must not fail the webhook.
+      try {
+        const { handleServiceOrderPayment } = await import("../services/order-payment-handler");
+        const orderResult = await handleServiceOrderPayment({
+          id: session.id,
+          payment_intent: session.payment_intent ?? null,
+        });
+        if (orderResult.handled) {
+          console.log(`[stripe-webhook] Service order ${orderResult.orderId} marked paid`);
+        }
+      } catch (err: any) {
+        console.error(`[stripe-webhook] Service order handling failed: ${err.message}`);
+      }
+
       await logAutomationAudit(
         "billing_checkout_completed",
         {

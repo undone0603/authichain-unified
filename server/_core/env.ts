@@ -53,6 +53,18 @@ export const ENV = {
   // ── Blockchain ────────────────────────────────────────────────────────────
   defaultNftContract: process.env.DEFAULT_NFT_CONTRACT ?? process.env.AUTHICHAIN_NFT_CONTRACT ?? "",
   blockchainPrivateKey: process.env.BLOCKCHAIN_PRIVATE_KEY ?? process.env.WALLET_PRIVATE_KEY ?? "",
+  qronTokenAddress: process.env.QRON_TOKEN_ADDRESS ?? "",
+  qronBurnAddress: process.env.QRON_BURN_ADDRESS ?? "0x000000000000000000000000000000000000dEaD",
+
+  // ── Payouts (fund movement safety) ────────────────────────────────────────
+  // Master kill-switch: funds NEVER leave unless this is explicitly "true".
+  // Default off so a misconfigured or fresh deploy cannot send money.
+  payoutsEnabled: process.env.PAYOUTS_ENABLED === "true",
+  // Circuit breakers (USD-equivalent / token units). A payout above the
+  // per-item cap, or one that would push a run past the total cap, is held
+  // for manual review rather than auto-sent.
+  payoutMaxPerItem: parseFloat(process.env.PAYOUT_MAX_PER_ITEM || "500"),
+  payoutMaxPerRun: parseFloat(process.env.PAYOUT_MAX_PER_RUN || "5000"),
 
   // ── Google OAuth ──────────────────────────────────────────────────────────
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
