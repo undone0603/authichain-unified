@@ -145,6 +145,19 @@ export async function dryRunReport() {
   };
 }
 
+// ─── Listing (for the admin panel) ───────────────────────────────────────────
+
+export async function listPayouts(opts: { statuses?: string[]; limit?: number } = {}) {
+  const db = await getDb();
+  if (!db) return [];
+  const limit = Math.min(opts.limit ?? 100, 500);
+  const base = db.select().from(payouts);
+  const rows = opts.statuses && opts.statuses.length > 0
+    ? await base.where(inArray(payouts.status, opts.statuses)).limit(limit)
+    : await base.limit(limit);
+  return rows.sort((a, b) => b.id - a.id);
+}
+
 // ─── Approval ────────────────────────────────────────────────────────────────
 
 export async function approvePayouts(ids: number[], approverUserId: number): Promise<number> {
