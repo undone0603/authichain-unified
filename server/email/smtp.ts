@@ -25,7 +25,8 @@ async function createTransporter() {
   const nodemailer = await getNodemailer();
   const nm = nodemailer.default ?? nodemailer;
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
-  const port = parseInt(process.env.SMTP_PORT || "587", 10);
+  const parsedPort = parseInt(process.env.SMTP_PORT || "587", 10);
+  const port = Number.isFinite(parsedPort) ? parsedPort : 587;
   const secure = process.env.SMTP_SECURE === "true";
   return nm.createTransport({
     host,
@@ -75,7 +76,10 @@ export async function sendBulkEmails(emails: EmailOptions[]): Promise<{ sent: nu
 
 export function replaceTemplateVariables(template: string, vars: Record<string, string>): string {
   return Object.entries(vars).reduce(
-    (result, [key, value]) => result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value),
+    (result, [key, value]) => result.replace(
+      new RegExp(`\\{\\{${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\}\\}`, "g"),
+      () => value,
+    ),
     template
   );
 }
