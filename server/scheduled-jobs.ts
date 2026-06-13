@@ -700,6 +700,24 @@ registerJob({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 14: Payout Preparation (Runs daily at 5 AM UTC)
+// ═══════════════════════════════════════════════════════════════════════════
+// Queues eligible payouts (affiliate commissions, staking rewards) as
+// `pending_approval`. This moves NO funds — an admin must approve a batch and
+// PAYOUTS_ENABLED must be true before payouts.execute sends anything.
+registerJob({
+  name: "payout-preparation",
+  description: "Queue eligible affiliate/staking payouts for human approval (no funds move)",
+  schedule: "0 5 * * *",
+  enabled: ENV.autonomousPipelineEnabled,
+  handler: async (): Promise<JobResult> => {
+    const { preparePayouts } = await import("./payouts/service");
+    const res = await preparePayouts();
+    return { itemsProcessed: res.queued, details: { ...res, note: "queued for approval; no funds moved" } };
+  },
+});
+
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
 
 let _systemActive = true;
