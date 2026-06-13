@@ -8,7 +8,7 @@
  * makes no changes and moves no money — it only tells you what is wired and
  * what is one setting away from live.
  */
-import "dotenv/config";
+import "./_preflight-env"; // MUST be first — loads .env/.env.local before ENV reads process.env
 import { sql } from "drizzle-orm";
 import { ENV } from "../server/_core/env";
 import { getDb } from "../server/db";
