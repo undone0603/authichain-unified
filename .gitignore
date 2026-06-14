@@ -112,6 +112,14 @@ __pycache__/
 
 # Build output
 dist/
+.open-next/
 
 # Dependencies
 node_modules/
+
+# Sub-project workspaces (standalone repos, not tracked here)
+qron/
+qron-platform/
+govchain.us/
+maison-elite-ai-dropship/
+authichain_premium/
