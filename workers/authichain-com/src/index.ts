@@ -2317,6 +2317,12 @@ footer {
   color: var(--text-dim);
   margin-bottom: 20px;
 }
+/* Push anchored sections below the fixed nav (nav ≈ 64px) */
+section[id] { scroll-margin-top: 80px; }
+/* Hide nav links on small screens to prevent overflow */
+@media (max-width: 767px) {
+  .nav-links { display: none; }
+}
 `;
 
 function communityHub(brand) {
@@ -2463,7 +2469,7 @@ const HTML = `<!DOCTYPE html>
 
   <section class="hero" id="hero">
     <div class="hero-content">
-      <h1 class="hero-title"><span>VERIFY</span><span class="accent">EVERYTHING.</span></h1>
+      <h1 class="hero-title"><span>VERIFY </span><span class="accent">EVERYTHING.</span></h1>
       <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets. ERC-721 NFTs · AI QR · 2.1-second verification.</p>
       <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:40px">
         <a class="btn btn-primary" style="width:auto; min-width:200px" href="https://authichain-unified.vercel.app/auth">Start Free Trial</a>
