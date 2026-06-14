@@ -50,4 +50,5 @@ export const ENV = {
   qronTokenAddress: process.env.QRON_TOKEN_ADDRESS ?? "",
   qronBurnAddress: process.env.QRON_BURN_ADDRESS ?? "",
   pineconeApiKey: process.env.PINECONE_API_KEY ?? "",
+  ownerEmails: process.env.OWNER_EMAILS ?? "",
 };

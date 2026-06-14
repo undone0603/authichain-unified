@@ -26,10 +26,10 @@ export default function GovOnboarding() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     createDeal.mutate({
-      agencyName: formData.get("name") as string,
+      manufacturerName: formData.get("name") as string,
       contactEmail: (formData.get("email") as string) || "contact@agency.gov",
-      dealType: formData.get("type") as string,
-      notes: formData.get("description") as string,
+      dealType: (formData.get("type") as string | null) as "procurement" | "compliance" | "passport" | "supply_chain" | undefined,
+      description: (formData.get("description") as string) || undefined,
     });
   };
 

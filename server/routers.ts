@@ -35,6 +35,8 @@ import { stakingRouter } from "./staking/router";
 import { govchainRouter } from "./govchain/router";
 import { salesRouter } from "./sales/router";
 import { autonomousRouter } from "./autonomous/router";
+import { payoutsRouter } from "./payouts/router";
+import { qronRouter } from "./qron/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -74,6 +76,8 @@ export const appRouter = router({
   govchain: govchainRouter,
   sales: salesRouter,
   autonomous: autonomousRouter,
+  payouts: payoutsRouter,
+  qron: qronRouter,
 });
 
 export type AppRouter = typeof appRouter;

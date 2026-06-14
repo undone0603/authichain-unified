@@ -108,6 +108,7 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
       stripeCustomerId: null,
       paddleCustomerId: null,
       points: 0,
+      metadata: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),

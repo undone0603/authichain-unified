@@ -1450,3 +1450,103 @@ export async function getSubscriptionByPaddleSubscriptionId(paddleSubscriptionId
     .limit(1);
   return result[0];
 }
+
+// ─── Additional Helpers ───────────────────────────────────────────────────────
+
+export async function getLeads() {
+  const d = await getDb();
+  if (!d) return [];
+  return d.select().from(leads).orderBy(desc(leads.createdAt));
+}
+
+export async function getRecentAgentZActivity(limit = 10) {
+  const d = await getDb();
+  if (!d) return [];
+  return d.select().from(activityLog)
+    .where(eq(activityLog.entityType, "agent"))
+    .orderBy(desc(activityLog.createdAt))
+    .limit(limit);
+}
+
+export async function getQronList(): Promise<any[]> {
+  const d = await getDb();
+  if (!d) return [];
+  return d.select().from(qrCodes).orderBy(desc(qrCodes.createdAt));
+}
+
+export async function createQron(data: {
+  id?: string;
+  productId: number;
+  productName?: string;
+  brand?: string;
+  category?: string;
+  mode?: string;
+  seed?: string;
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  fingerprintHash?: string;
+  nftTokenId?: string;
+  openartUrl?: string;
+  trustScore?: number;
+}): Promise<any[]> {
+  const d = await getDb();
+  if (!d) throw new Error("Database not available");
+  const [row] = await d.insert(qrCodes).values({
+    productId: data.productId,
+    userId: 0,
+    qrData: data.id ?? String(data.productId),
+    qrImageUrl: data.imageUrl,
+  }).returning();
+  return [{ ...row, ...data }];
+}
+
+export async function getQronById(id: string | number): Promise<any | null> {
+  const d = await getDb();
+  if (!d) return null;
+  if (typeof id === "string") {
+    const rows = await d.select().from(qrCodes).where(eq(qrCodes.qrData, id)).limit(1);
+    return rows[0] ?? null;
+  }
+  const rows = await d.select().from(qrCodes).where(eq(qrCodes.id, id as number)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function createQronScanVerdict(data: {
+  qronId: number | string;
+  scannedImageUrl?: string;
+  similarityScore?: number;
+  verdict?: string;
+  details?: string;
+}): Promise<void> {
+  const d = await getDb();
+  if (!d) return;
+  // Log as activity since we don't have a dedicated scan_verdicts table
+  await d.insert(activityLog).values({
+    action: "qron_scan_verdict",
+    entityType: "qron",
+    entityId: typeof data.qronId === "number" ? data.qronId : undefined,
+    details: data,
+  });
+}
+
+export async function updateQron(id: number | string, data: Partial<{
+  verifiedScanCount: number;
+  fakeFlagCount: number;
+  trustScore: number;
+  [key: string]: unknown;
+}>): Promise<void> {
+  const d = await getDb();
+  if (!d) return;
+  if (typeof id === "number") {
+    await d.update(qrCodes).set({ scanCount: data.verifiedScanCount ?? undefined }).where(eq(qrCodes.id, id));
+  }
+}
+
+export async function claimStripeProvisionedUser(openId: string, email: string): Promise<void> {
+  const d = await getDb();
+  if (!d) return;
+  if (!email) return;
+  await d.update(users)
+    .set({ openId })
+    .where(and(eq(users.email, email), sql`${users.openId} LIKE 'stripe_provisioned_%'`));
+}

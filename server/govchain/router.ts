@@ -117,25 +117,4 @@ export const govchainRouter = router({
     };
   }),
 
-  /**
-   * Create a sovereign deal (pilot agreement with a government agency)
-   */
-  createSovereignDeal: protectedProcedure
-    .input(z.object({
-      agencyName: z.string(),
-      contactEmail: z.string().email(),
-      dealType: z.string().optional(),
-      notes: z.string().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      await db.createLead({
-        email: input.contactEmail,
-        company: input.agencyName,
-        source: "sovereign_deal",
-        status: "new",
-        industry: "government",
-        metadata: { dealType: input.dealType, notes: input.notes },
-      });
-      return { success: true, message: "Sovereign deal staged successfully" };
-    }),
 });
