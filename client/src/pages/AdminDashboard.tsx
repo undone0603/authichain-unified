@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3, Settings, ShoppingBag } from "lucide-react";
 import SystemControlPanel from "@/components/SystemControlPanel";
 import PayoutsPanel from "@/components/PayoutsPanel";
+import FounderPanel from "@/components/FounderPanel";
 import { ORDER_STATUSES, type OrderStatus } from "@shared/const";
 
 const SERVICE_NAMES: Record<string, string> = {
@@ -57,8 +58,9 @@ export default function AdminDashboard() {
         <MetricCard icon={AlertTriangle} label="Fraud Alerts" value={fraudAlerts?.length ?? 0} color="text-red-400" />
       </div>
 
-      <Tabs defaultValue="analytics">
+      <Tabs defaultValue="founder">
         <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="founder">Founder</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="users">Users ({users?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
@@ -69,6 +71,10 @@ export default function AdminDashboard() {
           <TabsTrigger value="staking">Staking</TabsTrigger>
           <TabsTrigger value="payouts">Payouts</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="founder" className="mt-4">
+          <FounderPanel />
+        </TabsContent>
 
         <TabsContent value="analytics" className="mt-4 space-y-4">
           {revenueStats ? (
