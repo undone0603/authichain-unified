@@ -44,4 +44,22 @@ export const emailDraftsRouter = router({
     for (const id of input.ids) await db.updateDraftStatus(id, "approved", ctx.user.id);
     return { success: true, count: input.ids.length };
   }),
+
+  // Fetch the draft generated for a given AgentZ task (consumed by the Missions review modal).
+  getByTaskId: protectedProcedure.input(z.object({ taskId: z.string() })).query(async ({ input }): Promise<any> => {
+    const d = await db.getDb();
+    const { emailDrafts } = await import("../../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const rows = await d.select().from(emailDrafts).where(eq(emailDrafts.taskId, input.taskId)).limit(1);
+    return rows[0] ?? null;
+  }),
+
+  // Mark a draft as sent by id.
+  sendById: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }): Promise<{ success: boolean }> => {
+    const d = await db.getDb();
+    const { emailDrafts } = await import("../../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    await d.update(emailDrafts).set({ status: "sent", sentAt: new Date() }).where(eq(emailDrafts.id, input.id));
+    return { success: true };
+  }),
 });

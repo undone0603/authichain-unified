@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3, Settings, ShoppingBag } from "lucide-react";
 import SystemControlPanel from "@/components/SystemControlPanel";
+import PayoutsPanel from "@/components/PayoutsPanel";
 import { ORDER_STATUSES, type OrderStatus } from "@shared/const";
 
 const SERVICE_NAMES: Record<string, string> = {
@@ -66,6 +67,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="subs">Subscriptions</TabsTrigger>
           <TabsTrigger value="staking">Staking</TabsTrigger>
+          <TabsTrigger value="payouts">Payouts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics" className="mt-4 space-y-4">
@@ -376,6 +378,10 @@ export default function AdminDashboard() {
             <StatCard label="Avg APY" value={stakingStats ? `${(stakingStats.avgApy / 100).toFixed(1)}%` : "—"} sub="basis points / 100" color="text-green-400" />
           </div>
           {(!stakingStats || stakingStats.activeStakers === 0) && <EmptyState text="No active staking positions yet" />}
+        </TabsContent>
+
+        <TabsContent value="payouts" className="mt-4">
+          <PayoutsPanel />
         </TabsContent>
       </Tabs>
     </div>

@@ -234,7 +234,7 @@ workflows:
     type: composite
     estimated_minutes: 5
     requires: [] # Token handled internally for simulation
-    prerequisites: [authichain_review_outreach]
+    prerequisites: [authichain_crm_outreach]
     description: |
       Scans for generated partnership agreements and autonomously
       dispatches them for signature via the DocuSign API template.
@@ -787,3 +787,17 @@ workflows:
     estimated_minutes: 15
     requires: [reddit_session] # twitter for simulation
     prerequisites: [gsc_setup_govchain, pinecone_trial_decision]
+
+  - id: scout
+    title: "Autonomous Lead Scouting"
+    priority: medium
+    blocks_revenue: true
+    handler: handlers.scout
+    type: browser
+    estimated_minutes: 20
+    requires: []
+    prerequisites: []
+    description: |
+      Autonomous lead scouting using ref-based native browser automation.
+      Uses recent Win Signals to prioritize prospects that match 
+      high-conversion profiles.

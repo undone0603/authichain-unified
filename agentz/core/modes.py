@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 CHECKPOINT_DIR = Path(__file__).resolve().parents[1] / "logs" / "checkpoints"
+TRAINING_LOG = Path(__file__).resolve().parents[1] / "logs" / "training_data.jsonl"
 
 
 class Mode(str, Enum):
@@ -54,6 +55,26 @@ class ExecutionContext:
         path = CHECKPOINT_DIR / f"{self.workflow_id}.json"
         if path.exists():
             path.unlink()
+
+    def record_success_signal(self, data: dict):
+        """
+        Appends a successful outcome to the training ledger.
+        """
+        if self.mode == Mode.DRY_RUN:
+            return
+
+        signal = {
+            "workflow_id": self.workflow_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            **data
+        }
+        
+        try:
+            TRAINING_LOG.parent.mkdir(parents=True, exist_ok=True)
+            with open(TRAINING_LOG, "a") as f:
+                f.write(json.dumps(signal) + "\n")
+        except Exception as e:
+            print(f"  [Context] Warning: Failed to record win signal: {e}")
 
     def set_usage(self, token_usage: dict[str, int], cost_usd: float = 0.0) -> None:
         """Record resource usage for this execution."""

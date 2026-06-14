@@ -1,8 +1,12 @@
 {
   "name": "strainchain-io",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "deploy": "npx wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.109.0"
   }
 }

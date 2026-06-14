@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="#0d0d1a"/>
+  <!-- QR pattern (stylized) -->
+  <rect x="14" y="14" width="10" height="10" rx="1" fill="#a855f7"/>
+  <rect x="40" y="14" width="10" height="10" rx="1" fill="#a855f7"/>
+  <rect x="14" y="40" width="10" height="10" rx="1" fill="#a855f7"/>
+  <!-- Inner squares -->
+  <rect x="17" y="17" width="4" height="4" fill="#e879f9"/>
+  <rect x="43" y="17" width="4" height="4" fill="#e879f9"/>
+  <rect x="17" y="43" width="4" height="4" fill="#e879f9"/>
+  <!-- Data modules -->
+  <rect x="28" y="14" width="4" height="4" fill="#06b6d4"/>
+  <rect x="28" y="28" width="8" height="8" rx="4" fill="#a855f7"/>
+  <rect x="40" y="28" width="4" height="4" fill="#06b6d4"/>
+  <rect x="14" y="28" width="4" height="4" fill="#06b6d4"/>
+  <rect x="28" y="40" width="4" height="4" fill="#06b6d4"/>
+  <rect x="46" y="40" width="4" height="4" fill="#06b6d4"/>
+  <rect x="40" y="46" width="4" height="4" fill="#06b6d4"/>
+  <!-- Sparkle accent -->
+  <path d="M48 44l2-4 2 4-4 2 4 2-2 4-2-4-4-2z" fill="#fbbf24" opacity="0.8"/>
+</svg>
