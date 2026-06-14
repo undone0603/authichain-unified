@@ -73,6 +73,38 @@ vi.mock("./db", async (importOriginal) => {
       if (idx >= 0) store.notifications.splice(idx, 1);
     }),
     createLead: vi.fn(async (_data: any) => ({ id: store.nextLeadId() })),
+    // Read helpers: the real implementations call the real getDb() via an
+    // internal module binding that mocking the export cannot redirect, so they
+    // must be stubbed directly to keep the suite hermetic (no live Postgres).
+    getUserProducts: vi.fn().mockResolvedValue([]),
+    getProductById: vi.fn().mockResolvedValue(null),
+    getUserSubscription: vi.fn().mockResolvedValue(null),
+    getCertificateByNumber: vi.fn().mockResolvedValue(null),
+    listNfts: vi.fn().mockResolvedValue([]),
+    listCollections: vi.fn().mockResolvedValue([]),
+    getActiveAuctions: vi.fn().mockResolvedValue([]),
+    getReferralByCode: vi.fn().mockResolvedValue(null),
+    getWhiteLabelByApiKey: vi.fn().mockResolvedValue(null),
+    getAutopilotConfig: vi.fn().mockResolvedValue(null),
+    getRecentDecisions: vi.fn().mockResolvedValue([]),
+    getUserEmailCampaigns: vi.fn().mockResolvedValue([]),
+    getPendingDrafts: vi.fn().mockResolvedValue([]),
+    getUserReferrals: vi.fn().mockResolvedValue([]),
+    getAffiliateByUserId: vi.fn().mockResolvedValue(null),
+    getAllAbTests: vi.fn().mockResolvedValue([]),
+    getAllUsers: vi.fn().mockResolvedValue([]),
+    getOpenFraudAlerts: vi.fn().mockResolvedValue([]),
+    getAllHealthScores: vi.fn().mockResolvedValue([]),
+    getRecentActivity: vi.fn().mockResolvedValue([]),
+    getSubscriptionAnalytics: vi.fn().mockResolvedValue([]),
+    getRevenueAnalytics: vi.fn().mockResolvedValue([]),
+    getWhiteLabelClients: vi.fn().mockResolvedValue([]),
+    getDashboardMetrics: vi.fn().mockResolvedValue({
+      totalProducts: 0, totalAuthentications: 0, totalCertificates: 0, subscription: null,
+    }),
+    getAdminDashboardMetrics: vi.fn().mockResolvedValue({
+      totalUsers: 0, totalProducts: 0, totalAuthentications: 0, totalRevenue: 0, totalLeads: 0, totalNfts: 0,
+    }),
   };
 });
 
