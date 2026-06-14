@@ -1,4 +1,4 @@
-import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, numeric, bigint, bigserial } from "drizzle-orm/pg-core";
+import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, jsonb, numeric, bigint, bigserial } from "drizzle-orm/pg-core";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const users = pgTable("users", {
@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
   paddleCustomerId: varchar("paddleCustomerId", { length: 128 }),
   points: integer("points").default(0),
+  metadata: jsonb("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -1007,3 +1008,17 @@ export const deadLetterQueue = pgTable("dead_letter_queue", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
+
+// ─── Payouts ─────────────────────────────────────────────────────────────────
+export const payouts = pgTable("payouts", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenantId"),
+  authenticatorId: integer("authenticatorId"),
+  amount: integer("amount"),
+  status: varchar("status", { length: 50 }),
+  stripePayoutId: varchar("stripePayoutId"),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+export type Payout = typeof payouts.$inferSelect;
+export type InsertPayout = typeof payouts.$inferInsert;

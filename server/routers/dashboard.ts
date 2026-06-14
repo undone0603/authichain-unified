@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { ENV } from "../_core/env";
 
-const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_SERVICE_ROLE_KEY);
+const supabase = createClient(ENV.supabaseUrl, ENV.supabaseServiceRoleKey);
 
 export const dashboardRouter = router({
   status: publicProcedure.query(async () => {
