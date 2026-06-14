@@ -911,7 +911,7 @@ export async function getAutopilotConfig() {
 export async function upsertAutopilotConfig(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(autopilotConfig).values(data).onConflictDoUpdate({ target: autopilotConfig.tenantId, set: data }).returning();
+  const [result] = await db.insert(autopilotConfig).values(data).onConflictDoUpdate({ target: autopilotConfig.id, set: data }).returning();
   return result?.id;
 }
 

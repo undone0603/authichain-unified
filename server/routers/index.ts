@@ -1,7 +1,7 @@
 import { router } from '../_core/trpc';
 import { systemRouter } from '../_core/systemRouter';
 import { metrcRouter } from './metrc';
-import { productsRouter } from './products';
+import { productsRouter } from '../products/router';
 import { schedulerRouter } from './scheduler';
 import { servicesRouter } from './services';
 import { aiRouter } from '../ai/router';
@@ -30,7 +30,7 @@ import { whiteLabelRouter } from '../white-label/router';
 import { adminRouter } from '../admin/router';
 import { marketplaceRouter } from '../marketplace/router';
 import { marketingRouter } from '../marketing/router';
-import { missionsRouter } from '../missions/router';
+import { missionsRouter, tasksRouter } from '../missions/router';
 import { emailDraftsRouter } from '../email-drafts/router';
 import { emailCampaignsRouter } from '../email-campaigns/router';
 import { stakingRouter } from '../staking/router';
@@ -78,6 +78,7 @@ export const appRouter = router({
   marketplace: marketplaceRouter,
   marketing: marketingRouter,
   missions: missionsRouter,
+  tasks: tasksRouter,
   emailDrafts: emailDraftsRouter,
   emailCampaigns: emailCampaignsRouter,
   staking: stakingRouter,

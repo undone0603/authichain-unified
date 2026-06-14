@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db, getOne } from "../db";
-import { users, type InsertUser } from "@db/schema";
-import { ENV } from "../core/env";
+import { users, type InsertUser } from "../../drizzle/schema";
+import { ENV } from "../_core/env";
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
@@ -29,7 +29,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
     await db.insert(users)
       .values(values)
-      .onDuplicateKeyUpdate({ set: updateSet });
+      .onConflictDoUpdate({ target: users.openId, set: updateSet });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;

@@ -58,15 +58,11 @@ async function triggerAutoContract(leadId: number) {
   if (!lead) return;
 
   // We use the mission system to handle the contract sending as an async task
-  const mission = await db.createMission({
-    type: "LUXURY_OUTREACH", // Reuse outreach type or create CONTRACT_SENDING
-    title: `Automated Contract: ${lead.company || lead.email}`,
-    priority: 10,
-    status: "PLANNED"
-  });
+  // Reuse outreach type for contract sending
+  const missionId = await db.createMission("LUXURY_OUTREACH");
 
   await db.createTask({
-    missionId: mission.id,
+    missionId,
     kind: "GENERATE_PROPOSAL", // This task will be handled by the DocuSign service
     priority: 1,
     status: "PENDING",

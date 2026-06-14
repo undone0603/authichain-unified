@@ -13,7 +13,8 @@ const FREE_TIER_MONTHLY_LIMIT = 50; // Assumed free tier cap for ProductDNA anal
  * Checks if B44 usage is within the free tier limit for the current month.
  */
 async function isWithinB44FreeTier() {
-  const { data: usageCount } = await db.getAutopilotDecisionCountByMonth("dna_verification");
+  const now = new Date();
+  const usageCount = await db.getAutopilotDecisionCountByMonth(now.getFullYear(), now.getMonth() + 1);
   return usageCount < FREE_TIER_MONTHLY_LIMIT;
 }
 

@@ -1,18 +1,40 @@
 import { Request, Response } from 'express';
+import { eq } from 'drizzle-orm';
 import { getPaddle } from '../paddle-service';
 import { ENV } from '../_core/env';
 import {
+  db,
   logAutomationAudit,
   recordRevenue,
   upsertPaddleSubscription,
-  setSubscriptionStatusByPaddleId,
-  getSubscriptionByPaddleSubscriptionId,
   createSystemNotification,
   createInvoice,
 } from '../db';
+import { subscriptions } from '../../drizzle/schema';
 import { getPlanQuota } from '../stripe-products';
 
 type PaddlePlan = "starter" | "professional" | "enterprise";
+
+// Thin Paddle subscription helpers (no shared db.ts equivalents exist)
+async function setSubscriptionStatusByPaddleId(
+  paddleSubscriptionId: string,
+  status: string,
+  cancelledAt?: Date,
+) {
+  await db
+    .update(subscriptions)
+    .set(cancelledAt ? { status, cancelledAt } : { status })
+    .where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId));
+}
+
+async function getSubscriptionByPaddleSubscriptionId(paddleSubscriptionId: string) {
+  const rows = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId))
+    .limit(1);
+  return rows[0] ?? null;
+}
 
 function detectPlanFromPaddleData(priceId: string | null | undefined, amountCents: number): PaddlePlan {
   if (priceId) {

@@ -73,7 +73,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
         body,
         status: 'pending',
         generatedBy: 'agentz_followup',
-        taskId: task.id,
+        notes: `taskId:${task.id}`,
       });
       await db.update(leads)
         .set({ nextActionAt, metadata: { ...meta, followupCount: followupNum }, updatedAt: new Date() })

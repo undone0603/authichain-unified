@@ -10,7 +10,7 @@ async function checkLeadsSchema() {
   }
   
   try {
-    const [rows] = await d.execute("DESCRIBE leads");
+    const rows = (await d.execute("DESCRIBE leads")).rows;
     console.log(JSON.stringify(rows, null, 2));
   } catch (err: any) {
     console.error("❌ Schema check failed:", err.message);
