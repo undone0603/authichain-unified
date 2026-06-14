@@ -42,6 +42,44 @@ vi.mock("./db", async (importOriginal) => {
       if (idx >= 0) store.notifications.splice(idx, 1);
     }),
     createLead: vi.fn(async (_data: any) => ({ id: store.nextLeadId() })),
+    // ── DB read stubs ─────────────────────────────────────────────────────────
+    // This file-level vi.mock REPLACES the test-setup.ts mock for "./db", so the
+    // stubs below must be repeated here or these procedures hit a real database.
+    getCertificateByNumber: vi.fn(async () => null),
+    listNfts: vi.fn(async () => []),
+    listCollections: vi.fn(async () => []),
+    getActiveAuctions: vi.fn(async () => []),
+    getReferralByCode: vi.fn(async () => null),
+    getWhiteLabelByApiKey: vi.fn(async () => null),
+    getUserSubscription: vi.fn(async () => null),
+    getAutopilotConfig: vi.fn(async () => null),
+    getRecentDecisions: vi.fn(async () => []),
+    getUserEmailCampaigns: vi.fn(async () => []),
+    getPendingDrafts: vi.fn(async () => []),
+    getUserReferrals: vi.fn(async () => []),
+    getAffiliateByUserId: vi.fn(async () => null),
+    getAllAbTests: vi.fn(async () => []),
+    getDashboardMetrics: vi.fn(async () => ({
+      totalProducts: 0,
+      totalAuthentications: 0,
+      totalCertificates: 0,
+      subscription: null,
+    })),
+    getAdminDashboardMetrics: vi.fn(async () => ({
+      totalUsers: 0,
+      totalProducts: 0,
+      totalAuthentications: 0,
+      totalRevenue: 0,
+      totalLeads: 0,
+      totalNfts: 0,
+    })),
+    getAllUsers: vi.fn(async () => []),
+    getOpenFraudAlerts: vi.fn(async () => []),
+    getAllHealthScores: vi.fn(async () => []),
+    getRecentActivity: vi.fn(async () => []),
+    getSubscriptionAnalytics: vi.fn(async () => []),
+    getRevenueAnalytics: vi.fn(async () => []),
+    getWhiteLabelClients: vi.fn(async () => []),
   };
 });
 

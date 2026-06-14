@@ -45,6 +45,12 @@ vi.mock('./db.js', () => ({
   createMission:         vi.fn().mockResolvedValue('mock-mission-id'),
   getActiveMissionTypes: vi.fn().mockResolvedValue([]),
   logActivity:           vi.fn().mockResolvedValue(undefined),
+  getRecentOutcomeSignals: vi.fn().mockResolvedValue([]),
+  getAllLeads:            vi.fn().mockResolvedValue([]),
+  getLeadById:           vi.fn().mockResolvedValue(null),
+  updateLead:            vi.fn().mockResolvedValue(undefined),
+  createTask:            vi.fn().mockResolvedValue({ id: 1 }),
+  enqueueTask:           vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

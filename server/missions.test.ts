@@ -88,6 +88,56 @@ vi.mock('./db', () => ({
   createSystemNotification:  vi.fn().mockResolvedValue(undefined),
 }));
 
+// Mock missions.db so the router doesn't need a real DB connection
+vi.mock('./missions/missions.db', () => ({
+  getMissions: async (statusFilter?: string) => {
+    const all = [...store.missions.values()];
+    return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
+  },
+  getMissionById: async (id: string) => {
+    const m = store.missions.get(id);
+    if (!m) return null;
+    const tasks = [...store.tasks.values()].filter((t: any) => t.missionId === id);
+    return { ...m, tasks };
+  },
+  createMission: async (type: string) => {
+    const id = crypto.randomUUID();
+    const TASK_KINDS_LOCAL: Record<string, string[]> = {
+      GOV_PILOT:          ['BUILD_PILOT_PACKET', 'DRAFT_INTEL_DOSSIER', 'FIND_GOV_LEADS', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
+      RETAIL_PILOT:       ['FINALIZE_RETAIL_SIGNAGE', 'PACKAGE_SKU_ONBOARDING', 'FIND_RETAIL_LEADS', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
+      PRESS_LAUNCH:       ['FIND_RETAIL_LEADS', 'DRAFT_PRESS_RELEASE', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'SCHEDULE_SOCIAL_POSTS'],
+      PARTNER_ONBOARDING: ['BUILD_PILOT_PACKET', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
+      TECH_OS_LOCK:       ['BUILD_PILOT_PACKET', 'DRAFT_INTEL_DOSSIER', 'GENERATE_LAUNCH_CHECKLIST'],
+      LAUNCH_AUTHICHAIN:  ['CHECK_DNS_CONFIG', 'VERIFY_SSL', 'RUN_LIGHTHOUSE_AUDIT', 'GENERATE_LAUNCH_CHECKLIST', 'DRAFT_LAUNCH_EMAIL', 'DRAFT_PRESS_RELEASE', 'SCHEDULE_SOCIAL_POSTS'],
+    };
+    const TITLES_LOCAL: Record<string, string> = {
+      GOV_PILOT: 'Government Pilot – Initial Agency',
+      RETAIL_PILOT: 'Retail Pilot – Dispensary / Retail Partner',
+      PRESS_LAUNCH: 'Press Launch – Media & PR Outreach',
+      PARTNER_ONBOARDING: 'Partner Onboarding',
+      TECH_OS_LOCK: 'Tech OS Lock – Platform Defensibility',
+      LAUNCH_AUTHICHAIN: 'AuthiChain.com – Full Launch Orchestration',
+    };
+    store.missions.set(id, { id, type, title: TITLES_LOCAL[type] ?? type, status: 'PLANNED', priority: 5, createdAt: new Date(), updatedAt: new Date() });
+    for (const kind of (TASK_KINDS_LOCAL[type] ?? [])) {
+      const taskId = crypto.randomUUID();
+      store.tasks.set(taskId, { id: taskId, missionId: id, kind, payload: {}, status: 'PENDING', runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null, createdAt: new Date(), updatedAt: new Date() });
+    }
+    return id;
+  },
+  updateMissionStatus: async (id: string, status: string) => {
+    const m = store.missions.get(id);
+    if (m) store.missions.set(id, { ...m, status, updatedAt: new Date() });
+  },
+  getTasksByMission: async (missionId: string) => {
+    return [...store.tasks.values()].filter((t: any) => t.missionId === missionId);
+  },
+  retryTask: async (id: string) => {
+    const t = store.tasks.get(id);
+    if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
+  },
+}));
+
 // ─── Shared test context ──────────────────────────────────────────────────────
 
 function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
