@@ -94,15 +94,15 @@ export async function reportUsageToStripe(tenantId: number, endpoint: string, qu
   const pricePerCall = PRICING[plan]?.[endpoint] || 0.02;
 
   // Record in our usage table (date column is a timestamp; use midnight UTC of today)
-  const today = new Date(new Date().toISOString().slice(0, 10));
+  const today = new Date().toISOString().slice(0, 10);
   await db.insert(apiUsageDaily).values({
-    clientId: tenantId,
+    tenantId,
     date: today,
     endpoint,
     calls: quantity,
     cost: (pricePerCall * quantity).toFixed(4),
   }).onConflictDoUpdate({
-    target: [apiUsageDaily.clientId, apiUsageDaily.date, apiUsageDaily.endpoint],
+    target: [apiUsageDaily.tenantId, apiUsageDaily.date, apiUsageDaily.endpoint],
     set: {
       calls: quantity, // Will be incremented in the Worker before reporting
       cost: (pricePerCall * quantity).toFixed(4),
@@ -119,12 +119,12 @@ export async function getTenantBillingStatus(tenantId: number) {
   if (!tenant) return null;
 
   const today = new Date().toISOString().slice(0, 10);
-  const monthStart = new Date(today.slice(0, 8) + "01");
+  const monthStart = today.slice(0, 8) + "01";
 
   // Sum this month's usage
   const usage = await db.select().from(apiUsageDaily)
     .where(and(
-      eq(apiUsageDaily.clientId, tenantId),
+      eq(apiUsageDaily.tenantId, tenantId),
     ));
 
   const monthUsage = usage.filter(u => u.date >= monthStart);

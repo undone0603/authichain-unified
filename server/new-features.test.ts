@@ -122,6 +122,7 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     walletAddress: null, avatarUrl: null, company: null, title: null,
     phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,
     createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+    metadata: null,
   };
   return {
     user,
@@ -451,7 +452,7 @@ describe("New Features", () => {
           body: "<p>Hello!</p>", prospectName: "Alice",
           prospectCompany: null, prospectTitle: null, industry: null,
           status: "pending", templateUsed: null, generatedBy: "ai_manager",
-          approvedBy: null, approvedAt: null, sentAt: null, notes: null, createdAt: new Date(),
+          approvedBy: null, approvedAt: null, sentAt: null, notes: null, taskId: null, createdAt: new Date(),
         }]);
         await appRouter.createCaller(createAuthContext()).emailDrafts.approve({ id: 42 });
         const { sendEmail } = await import("./email/smtp");

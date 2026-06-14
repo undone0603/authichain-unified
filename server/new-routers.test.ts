@@ -67,6 +67,7 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
+    metadata: null,
   };
 
   return {

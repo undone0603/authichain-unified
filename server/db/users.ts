@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db, getOne } from "../db";
+import { db } from "../db";
 import { users, type InsertUser } from "../../drizzle/schema";
 import { ENV } from "../_core/env";
 
@@ -37,9 +37,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 }
 
 export async function getUserByOpenId(openId: string) {
-  return getOne(db.select().from(users).where(eq(users.openId, openId)).limit(1));
+  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return result[0] ?? null;
 }
 
 export async function getUserById(id: number) {
-  return getOne(db.select().from(users).where(eq(users.id, id)).limit(1));
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result[0] ?? null;
 }
