@@ -13,7 +13,7 @@ export async function getUserStakingPositions(userId: number) {
     .select()
     .from(stakingPositions)
     .where(eq(stakingPositions.userId, userId))
-    .orderBy(desc(stakingPositions.createdAt));
+    .orderBy(desc(stakingPositions.stakedAt));
 }
 
 /**
@@ -32,7 +32,7 @@ export async function getActiveStakingPositions(userId: number) {
         eq(stakingPositions.status, "active")
       )
     )
-    .orderBy(desc(stakingPositions.createdAt));
+    .orderBy(desc(stakingPositions.stakedAt));
 }
 
 /**
@@ -48,10 +48,10 @@ export async function createStakingPosition(data: {
 
   const position: InsertStakingPosition = {
     userId: data.userId,
-    amount: data.amount,
-    apy: data.apy,
+    amount: String(data.amount),
+    apy: String(data.apy),
     status: "active",
-    rewardsEarned: 0,
+    rewardsEarned: "0",
     lastRewardCalculation: new Date(),
   };
 
@@ -89,7 +89,7 @@ export async function calculateRewards(positionId: number) {
   const hoursElapsed = (now.getTime() - lastCalc.getTime()) / (1000 * 60 * 60);
 
   // Calculate rewards: (amount * APY / 100 / 365 / 24) * hoursElapsed
-  const annualReward = (position.amount * position.apy) / 10000; // APY is in basis points (1200 = 12%)
+  const annualReward = (Number(position.amount) * Number(position.apy ?? 0)) / 10000; // APY is in basis points (1200 = 12%)
   const hourlyReward = annualReward / 365 / 24;
   const newRewards = Math.floor(hourlyReward * hoursElapsed);
 
@@ -97,7 +97,7 @@ export async function calculateRewards(positionId: number) {
   await db
     .update(stakingPositions)
     .set({
-      rewardsEarned: position.rewardsEarned + newRewards,
+      rewardsEarned: String(Number(position.rewardsEarned) + newRewards),
       lastRewardCalculation: now,
       updatedAt: now,
     })
@@ -153,16 +153,16 @@ export async function withdrawStaking(positionId: number, userId: number) {
     .update(stakingPositions)
     .set({
       status: "withdrawn",
-      endDate: now,
+      releaseAt: now,
       updatedAt: now,
     })
     .where(eq(stakingPositions.id, positionId));
 
   // Return total amount (principal + rewards)
   return {
-    principal: updatedPosition.amount,
-    rewards: updatedPosition.rewardsEarned,
-    total: updatedPosition.amount + updatedPosition.rewardsEarned,
+    principal: Number(updatedPosition.amount),
+    rewards: Number(updatedPosition.rewardsEarned),
+    total: Number(updatedPosition.amount) + Number(updatedPosition.rewardsEarned),
   };
 }
 
@@ -187,8 +187,8 @@ export async function getUserStakingStats(userId: number) {
 
   const activePositions = positions.filter((p) => p.status === "active");
 
-  const totalStaked = activePositions.reduce((sum, p) => sum + p.amount, 0);
-  const totalRewards = positions.reduce((sum, p) => sum + p.rewardsEarned, 0);
+  const totalStaked = activePositions.reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalRewards = positions.reduce((sum, p) => sum + Number(p.rewardsEarned), 0);
 
   return {
     totalStaked,
@@ -213,14 +213,17 @@ export async function createTransaction(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // feeAmount/stakingId have no dedicated columns in Postgres schema; store in metadata json
   const transaction: InsertTransaction = {
     userId: data.userId,
-    type: data.type as any,
-    amount: data.amount,
-    status: data.status as any,
-    feeAmount: data.feeAmount || 0,
-    stakingId: data.stakingId,
-    metadata: data.metadata,
+    type: data.type,
+    amount: String(data.amount),
+    status: data.status,
+    metadata: {
+      feeAmount: data.feeAmount || 0,
+      ...(data.stakingId !== undefined ? { stakingId: data.stakingId } : {}),
+      ...(data.metadata !== undefined ? { details: data.metadata } : {}),
+    },
   };
 
   await db.insert(transactions).values(transaction);
@@ -240,12 +243,10 @@ export async function createPlatformFee(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // percentage/transactionId/description have no columns in Postgres schema; feeType maps to type
   const fee: InsertPlatformFee = {
-    feeType: data.feeType,
-    percentage: data.percentage,
-    amount: data.amount,
-    transactionId: data.transactionId,
-    description: data.description,
+    type: data.feeType,
+    amount: String(data.amount),
   };
 
   await db.insert(platformFees).values(fee);
