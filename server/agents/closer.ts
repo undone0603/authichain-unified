@@ -8,11 +8,43 @@
  */
 import { invokeLLM } from '../_core/llm.js';
 import { sendEmail, checkThreadReplies } from '../email-service.js';
-import { logActivity, enqueueTask, getDb, createProposal } from '../db.js';
-import { leads } from '../../drizzle/schema.js';
+import { logActivity, enqueueTask, getDb, createProposal, markTaskWaitingHuman } from '../db.js';
+import { leads, emailDrafts } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import { getStripe } from '../stripe-service.js';
+import { ENV } from '../_core/env.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
+
+// Persist a generated email as a pending draft and pause the task for human
+// review. Used wherever we'd otherwise auto-send.
+async function persistDraft(opts: {
+  task: Task;
+  to: string;
+  subject: string;
+  body: string;
+  leadName?: string;
+  leadOrg?: string;
+  leadTitle?: string;
+  segment?: string;
+  kind: string;
+}) {
+  const db = await getDb();
+  if (db) {
+    await db.insert(emailDrafts).values({
+      prospectEmail: opts.to,
+      prospectName: opts.leadName ?? undefined,
+      prospectCompany: opts.leadOrg ?? undefined,
+      prospectTitle: opts.leadTitle ?? undefined,
+      industry: opts.segment ?? undefined,
+      subject: opts.subject,
+      body: opts.body,
+      status: 'pending',
+      generatedBy: opts.kind,
+      taskId: opts.task.id,
+    });
+  }
+  await markTaskWaitingHuman(opts.task.id);
+}
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -211,6 +243,12 @@ Return JSON: { "subject": "...", "body": "..." }`;
 
   if (!body) throw new Error('Demo packet LLM returned empty body');
 
+  if (ENV.requireOutreachApproval) {
+    await persistDraft({ task, to: leadEmail, subject, body, leadName, leadOrg, leadTitle, segment, kind: 'demo_packet' });
+    await logActivity({ userId: null, action: 'demo_packet_draft_pending_approval', entityType: 'task', entityId: 0, details: { taskId: task.id, leadEmail, segment, subject } });
+    return;
+  }
+
   const sendResult = await sendEmail({ to: leadEmail, subject, body });
 
   if (sendResult.status === 'sent') {
@@ -398,6 +436,14 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
     throw new Error('SEND_CONTRACT LLM returned unparseable JSON');
   }
 
+  if (ENV.requireOutreachApproval) {
+    // Persist contract text + price for human review BEFORE creating a Stripe
+    // checkout session. Approver will trigger the actual send + checkout.
+    await persistDraft({ task, to: leadEmail, subject, body: contractBody, leadName, leadOrg, segment, kind: 'contract' });
+    await logActivity({ userId: null, action: 'contract_draft_pending_approval', entityType: 'task', entityId: 0, details: { taskId: task.id, leadEmail, segment, subject, priceUsd } });
+    return;
+  }
+
   // Re-use existing payment link from payload or create a new checkout session
   let paymentLink = payload.paymentLink;
   if (!paymentLink && priceUsd > 0) {
@@ -487,6 +533,12 @@ Return JSON: { "subject": "Re: [keep thread subject]", "body": "..." }`;
     body = parsed.body ?? '';
   } catch {
     throw new Error('AUTO_REPLY LLM returned unparseable JSON');
+  }
+
+  if (ENV.requireOutreachApproval) {
+    await persistDraft({ task, to: leadEmail, subject, body, leadName, leadOrg, segment, kind: 'auto_reply' });
+    await logActivity({ userId: null, action: 'auto_reply_draft_pending_approval', entityType: 'task', entityId: 0, details: { taskId: task.id, leadEmail, segment, intent, subject } });
+    return;
   }
 
   const sendResult = await sendEmail({ to: leadEmail, subject, body });
