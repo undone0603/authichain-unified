@@ -31,81 +31,69 @@ const TITLES: Record<string, string> = {
   LAUNCH_AUTHICHAIN:  'AuthiChain.com – Full Launch Orchestration',
 };
 
-// ─── Mock missions.db module ──────────────────────────────────────────────────
+// ─── Mock db module ───────────────────────────────────────────────────────────
 
-vi.mock('./missions/missions.db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./missions/missions.db')>();
-  return {
-    ...actual,
-    getMissions: async (statusFilter?: string) => {
-      const all = [...store.missions.values()];
-      return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
-    },
+// The missions/tasks routers import directly from ./missions/missions.db (not
+// ./db), so the in-memory store must mock THAT module.
+vi.mock('./missions/missions.db', () => ({
+  getMissions: async (statusFilter?: string) => {
+    const all = [...store.missions.values()];
+    return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
+  },
 
-    getMissionById: async (id: string) => {
-      const m = store.missions.get(id);
-      if (!m) return null;
-      const tasks = [...store.tasks.values()].filter((t: any) => t.missionId === id);
-      return { ...m, tasks };
-    },
+  getMissionById: async (id: string) => {
+    const m = store.missions.get(id);
+    if (!m) return null;
+    const tasks = [...store.tasks.values()].filter((t: any) => t.missionId === id);
+    return { ...m, tasks };
+  },
 
-    createMission: async (type: string) => {
-      const id = crypto.randomUUID();
-      store.missions.set(id, {
-        id, type,
-        title: TITLES[type] ?? type,
-        status: 'PLANNED',
-        priority: 5,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+  createMission: async (type: string) => {
+    const id = crypto.randomUUID();
+    store.missions.set(id, {
+      id, type,
+      title: TITLES[type] ?? type,
+      status: 'PLANNED',
+      priority: 5,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    for (const kind of (TASK_KINDS[type] ?? [])) {
+      const taskId = crypto.randomUUID();
+      store.tasks.set(taskId, {
+        id: taskId, missionId: id as any, kind, payload: {}, status: 'PENDING',
+        runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null,
+        createdAt: new Date(), updatedAt: new Date(),
       });
-      for (const kind of (TASK_KINDS[type] ?? [])) {
-        const taskId = crypto.randomUUID();
-        store.tasks.set(taskId, {
-          id: taskId, missionId: id, kind, payload: {}, status: 'PENDING',
-          runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null,
-          createdAt: new Date(), updatedAt: new Date(),
-        });
-      }
-      return id;
-    },
+    }
+    return id;
+  },
 
-    updateMissionStatus: async (id: string, status: string) => {
-      const m = store.missions.get(id);
-      if (m) store.missions.set(id, { ...m, status, updatedAt: new Date() });
-    },
+  updateMissionStatus: async (id: string, status: string) => {
+    const m = store.missions.get(id);
+    if (m) store.missions.set(id, { ...m, status, updatedAt: new Date() });
+  },
 
-    getTasksByMission: async (missionId: string) => {
-      return [...store.tasks.values()].filter((t: any) => t.missionId === missionId);
-    },
+  getTasksByMission: async (missionId: string) => {
+    return [...store.tasks.values()].filter((t: any) => t.missionId === missionId);
+  },
 
-    retryTask: async (id: string) => {
-      const t = store.tasks.get(id);
-      if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
-    },
-  };
-});
+  retryTask: async (id: string) => {
+    const t = store.tasks.get(id);
+    if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
+  },
 
-// Mock db separately for non-mission functions. Spread the real module so the
-// fully-wired appRouter (which transitively imports many db helpers) doesn't
-// throw on missing exports; override only what these tests exercise.
+  updateTaskStatus: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('./db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./db')>();
   return {
     ...actual,
-    logActivity:               vi.fn().mockResolvedValue(undefined),
-    createSystemNotification:  vi.fn().mockResolvedValue(undefined),
-    getDb: async () => ({
-      select:  vi.fn().mockReturnThis(),
-      from:    vi.fn().mockReturnThis(),
-      where:   vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit:   vi.fn().mockReturnThis(),
-      insert:  vi.fn().mockReturnThis(),
-      values:  vi.fn().mockResolvedValue([{ insertId: 1 }]),
-      update:  vi.fn().mockReturnThis(),
-      set:     vi.fn().mockReturnThis(),
-    }),
+    // getDb returns null — tests using direct db access guard with if (db)
+    getDb: async () => null,
+    logActivity:              vi.fn().mockResolvedValue(undefined),
+    createSystemNotification: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -121,17 +109,10 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
       loginMethod: 'manus',
       role,
       stripeCustomerId: null,
-    walletAddress: null,
-    avatarUrl: null,
-    company: null,
-    title: null,
-    phone: null,
-    onboardingCompleted: 0,
-    paddleCustomerId: null,
-    points: 0,
+    walletAddress: null, avatarUrl: null, company: null, title: null, phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
-      lastSignedIn: new Date(),
+      lastSignedIn: new Date(), metadata: {},
     },
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
@@ -194,7 +175,7 @@ describe('missions.create', () => {
     const result = await caller.missions.create({ type: 'RETAIL_PILOT' });
     expect(result).toHaveProperty('id');
     expect(typeof result.id).toBe('string');
-    missionId = result.id;
+    missionId = result.id as any;
   });
 
   it('missions.get returns mission with correct type', async () => {
@@ -241,7 +222,7 @@ describe('missions.create — task counts', () => {
     it(`${type} creates ${count} tasks`, async () => {
       const caller = appRouter.createCaller(makeCtx());
       const { id } = await caller.missions.create({ type: type as any });
-      const tasks = await caller.tasks.list({ missionId: id });
+      const tasks = await caller.tasks.list({ missionId: id as any });
       expect((tasks as any[]).length).toBe(count);
     });
   }
@@ -255,7 +236,7 @@ describe('missions.updateStatus', () => {
   beforeAll(async () => {
     const caller = appRouter.createCaller(makeCtx());
     const result = await caller.missions.create({ type: 'PARTNER_ONBOARDING' });
-    missionId = result.id;
+    missionId = result.id as any;
   });
 
   it('transitions PLANNED → IN_PROGRESS', async () => {
@@ -281,12 +262,11 @@ describe('tasks.retry', () => {
   let failedTaskId: string;
 
   beforeAll(async () => {
-    // createMission/getTasksByMission are the in-memory-store-backed mocks
     const { createMission, getTasksByMission } = await import('./missions/missions.db');
     const { getDb } = await import('./db');
 
     const missionId = await createMission('TECH_OS_LOCK');
-    const tasks = await getTasksByMission(missionId);
+    const tasks = await getTasksByMission(missionId as any);
     failedTaskId = tasks[0].id;
 
     // Directly mark the task FAILED in the in-memory store
@@ -339,7 +319,7 @@ describe('missions.list — status filtering after mutations', () => {
   it('lists IN_PROGRESS missions after status update', async () => {
     const caller = appRouter.createCaller(makeCtx());
     const { id } = await caller.missions.create({ type: 'GOV_PILOT' });
-    await caller.missions.updateStatus({ id, status: 'IN_PROGRESS' });
+    await caller.missions.updateStatus({ id: id, status: 'IN_PROGRESS' });
 
     const inProgress = await caller.missions.list({ status: 'IN_PROGRESS' }) as any[];
     expect(inProgress.some((m: any) => m.id === id)).toBe(true);

@@ -78,3 +78,13 @@ CREATE TABLE IF NOT EXISTS public_reports (
 CREATE INDEX IF NOT EXISTS idx_products_qr_id ON products(qr_id);
 CREATE INDEX IF NOT EXISTS idx_scan_events_product_id ON scan_events(product_id);
 CREATE INDEX IF NOT EXISTS idx_scan_events_wallet ON scan_events(wallet);
+
+-- 7. Training Signals Table (V3 Intelligence Loop)
+CREATE TABLE IF NOT EXISTS training_signals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workflow_id TEXT NOT NULL,
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  duration_s NUMERIC,
+  notes TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb
+);

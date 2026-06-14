@@ -9,12 +9,17 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.12.14"
+    "hono": "^4.12.25"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240307.0",
-    "@types/node": "^25.9.0",
-    "wrangler": "^4.87.0",
+    "@cloudflare/workers-types": "^4.20260613.1",
+    "@types/node": "^25.9.3",
+    "wrangler": "^4.93.0",
     "typescript": "6.0.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": ">=0.28.1"
+    }
   }
 }

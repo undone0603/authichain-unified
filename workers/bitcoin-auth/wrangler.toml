@@ -10,7 +10,7 @@ zone_name = "authichain.com"
 
 [[kv_namespaces]]
 binding = "AUTH_KV"
-id = "AUTH_KV_ID_REPLACE_ME"
+id = "02ae8193c85e42e68026b5faaf58420c"
 
 [vars]
 BITCOIN_NETWORK = "mainnet"

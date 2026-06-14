@@ -1,16 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "npx vite build",
+  "framework": null,
+  "buildCommand": "pnpm build",
   "outputDirectory": "dist/public",
-  "ignoreCommand": "bash -c '[ \"$VERCEL_GIT_COMMIT_AUTHOR_LOGIN\" = \"undone0603\" ] && exit 1 || exit 0'",
+  "crons": [
+    { "path": "/api/automation/cron", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/pipeline", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/jobs", "schedule": "0 8 * * *" }
+  ],
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/server.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/(.*)", "destination": "/api/server" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

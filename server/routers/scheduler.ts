@@ -1,12 +1,12 @@
 import { adminProcedure, router } from "../_core/trpc";
-import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import {
-  getRegisteredJobs,
-  getJobHistory,
-  runJobManually,
-  getSystemStatus,
-  toggleKillSwitch
+import { z } from "zod";
+import { 
+  getRegisteredJobs, 
+  getJobHistory, 
+  runJobManually, 
+  getSystemStatus, 
+  toggleKillSwitch 
 } from "../scheduled-jobs";
 
 export const schedulerRouter = router({
@@ -24,8 +24,10 @@ export const schedulerRouter = router({
   })).mutation(async ({ input }) => {
     const success = await runJobManually(input.jobName);
     if (!success) {
-      // runJobManually returns false only when no job matches the name.
-      throw new TRPCError({ code: "NOT_FOUND", message: `Unknown job "${input.jobName}"` });
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Failed to start job "${input.jobName}"`,
+      });
     }
     return {
       success,

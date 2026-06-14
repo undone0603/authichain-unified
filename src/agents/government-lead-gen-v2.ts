@@ -11,6 +11,24 @@
 //   process.env.DRY_RUN === 'false'  →  performs real outreach + minting (requires real impls wired in)
 
 import { vectorStoreUtils, type GovernmentOpportunity } from '../../packages/vector-store/index';
+import { invokeLLM } from '../../server/_core/llm';
+import { generateProductQRON } from '../../server/qron-service';
+import { sendEmail } from '../../server/email-service';
+import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../../server/thirdweb';
+import { logActivity } from '../../server/db';
+import { ENV } from '../../server/_core/env';
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────────────
+function stringToHash(s: string): number {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash << 5) - hash + s.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Active entity (the GovChain.us pilot signer)
@@ -148,46 +166,125 @@ async function fetchUSASpendingAwards(agencyName?: string): Promise<any[]> {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// STUBS for not-yet-built modules. Replace with real impls when ready.
-// All side-effecting stubs respect DRY_RUN.
+// CORE LOGIC — Consensus, QRON, Outreach, Minting
 // ──────────────────────────────────────────────────────────────────────────────
-type ConsensusResult = { approved: boolean; score: number; rationale: string };
+type ConsensusResult = { 
+  approved: boolean; 
+  score: number; 
+  rationale: string;
+  agentFeedbacks?: {
+    scout: string;
+    guardian: string;
+    archivist: string;
+    sentinel: string;
+    arbiter: string;
+  }
+};
 
-// TODO(real-impl): wire to your 5-agent (Guardian, Archivist, Sentinel, Scout, Arbiter) module.
+/**
+ * 5-Agent Consensus Module (Scout, Guardian, Archivist, Sentinel, Arbiter)
+ * Uses LLM to simulate a multi-agent review board.
+ */
 async function runFiveAgentConsensus(lead: any): Promise<ConsensusResult> {
-  // Lightweight heuristic so the pipeline runs end-to-end before the real agents land.
-  const haystack = JSON.stringify(lead).toLowerCase();
-  const hits = ['counterfeit', 'buy american', 'traceability', 'authentication', 'verification']
-    .filter(k => haystack.includes(k)).length;
-  const score = Math.min(100, 50 + hits * 12);
-  return { approved: score >= 60, score, rationale: `heuristic-stub: ${hits} keyword hits` };
+  const prompt = `[GOVERNMENT PROCUREMENT CONSENSUS BOARD]
+You are a board of 5 autonomous agents evaluating a federal procurement lead for AuthiChain's "GovChain" division.
+AuthiChain Value Prop: AI-powered product authentication, QR/QRON traceability, and on-chain provenance for government supply chains.
+
+LEAD DATA:
+${JSON.stringify(lead, null, 2)}
+
+AGENT ROLES:
+1. SCOUT: Focused on keyword alignment (counterfeit, traceability, Buy American) and initial relevance.
+2. GUARDIAN: Evaluates policy alignment, agency importance (DHS, DoD, Commerce), and national interest.
+3. ARCHIVIST: Looks at historical context, contract size, spending trends, and precedent via USAspending context.
+4. SENTINEL: Analyzes technical requirements, security needs, and anti-counterfeit necessity.
+5. ARBITER: Weighs all inputs and makes the final go/no-go decision.
+
+Return a JSON object with:
+{
+  "approved": boolean,
+  "score": 0-100,
+  "rationale": "summary of decision",
+  "agentFeedbacks": {
+    "scout": "...",
+    "guardian": "...",
+    "archivist": "...",
+    "sentinel": "...",
+    "arbiter": "..."
+  }
+}`;
+
+  try {
+    const result = await invokeLLM({
+      messages: [{ role: 'user', content: prompt }],
+      responseFormat: { type: 'json_object' },
+    });
+    
+    const content = result.choices[0].message.content as string;
+    return JSON.parse(content) as ConsensusResult;
+  } catch (err) {
+    console.error('[gov-engine] LLM Consensus failed, falling back to heuristic:', err);
+    // Heuristic fallback
+    const haystack = JSON.stringify(lead).toLowerCase();
+    const hits = ['counterfeit', 'buy american', 'traceability', 'authentication', 'verification']
+      .filter(k => haystack.includes(k)).length;
+    const score = Math.min(100, 50 + hits * 12);
+    return { approved: score >= 60, score, rationale: `heuristic-fallback: ${hits} keyword hits` };
+  }
 }
 
-type QRON = { signature: string; payload: any; style: string };
+type QRON = { signature: string; imageUrl: string; openartUrl?: string };
 
-// TODO(real-impl): wire to QRONGenerator when published.
-async function generateQRON(payload: any): Promise<QRON> {
-  // Deterministic placeholder signature; safe to log, not safe to trust on-chain.
-  const sig = 'qron-stub-' + Buffer.from(JSON.stringify(payload)).toString('base64').slice(0, 24);
-  return { signature: sig, payload, style: 'american-seal-eagle-govchain' };
+/**
+ * Generates a real QRON visual fingerprint for the lead.
+ */
+async function generateQRON(lead: any): Promise<QRON> {
+  const qron = await generateProductQRON({
+    productId: stringToHash(lead.id),
+    productName: lead.title.slice(0, 50),
+    brand: lead.agency,
+    category: 'other',
+    tier: 'enterprise',
+    verifyUrl: `https://govchain.us/verify?lead=${lead.id}`
+  });
+
+  return { 
+    signature: qron.fingerprintHash, 
+    imageUrl: qron.imageUrl,
+    openartUrl: qron.openartUrl
+  };
 }
 
-// TODO(real-impl): wire to LeadGenEngine.generateProposal + outreach (SendGrid / Nodemailer).
+/**
+ * Dispatches real email outreach via platform services.
+ */
 async function sendOutreach(lead: any, proposal: string, qron: QRON): Promise<void> {
   if (DRY_RUN) {
     console.log(`[gov-engine] DRY_RUN outreach skipped for ${lead.agency || 'lead'}`);
     return;
   }
-  // TODO: integrate @sendgrid/mail or nodemailer here, gated behind explicit consent.
-  throw new Error('Real outreach not yet wired. Set DRY_RUN=true or implement sendOutreach().');
+
+  const result = await sendEmail({
+    to: lead.contactEmail || 'procurement@' + lead.agency.toLowerCase().replace(/ /g, '') + '.gov',
+    subject: `GovChain.us Pilot — Authenticity Verification for ${lead.agency}`,
+    body: proposal + `\n\nView your pilot QRON visual fingerprint: ${qron.imageUrl}`,
+    fromName: 'GovChain Executive Assistant'
+  });
+
+  if (result.status !== 'sent') {
+    throw new Error(`Outreach failed: ${result.reason}`);
+  }
 }
 
-// TODO(real-impl): wire to thirdweb / ethers polygon contract when deployed.
+/**
+ * Mints a real Pilot NFT on Polygon via Thirdweb.
+ */
 async function mintPilotNFT(args: {
   leadId: string;
   agency: string;
   qronSignature: string;
   consensusScore: number;
+  imageUrl: string;
 }): Promise<void> {
   if (DRY_RUN) {
     console.log(
@@ -195,7 +292,24 @@ async function mintPilotNFT(args: {
     );
     return;
   }
-  throw new Error('Real on-chain mint not yet wired. Set DRY_RUN=true or implement mintPilotNFT().');
+
+  const metadata = buildAuthCertificateMetadata({
+    productName: `Government Pilot: ${args.agency}`,
+    productBrand: 'GovChain',
+    confidenceScore: args.consensusScore,
+    verificationDate: new Date().toISOString(),
+    certificateNumber: `GC-PILOT-${args.leadId}`,
+    imageUrl: args.imageUrl,
+    authenticatorId: 100, // GovChain System Authenticator
+    result: 'verified_government_lead'
+  });
+
+  await mintAuthenticationNFT({
+    contractAddress: ENV.defaultNftContract,
+    recipientAddress: ACTIVE_ENTITY.wallet,
+    metadata,
+    privateKey: ENV.blockchainPrivateKey
+  });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -308,11 +422,7 @@ export async function runAdvancedGovernmentLeadGen() {
       continue;
     }
 
-    const qron = await generateQRON({
-      leadId: lead.id,
-      entity: ACTIVE_ENTITY.name,
-      agency: lead.agency,
-    });
+    const qron = await generateQRON(lead);
 
     const proposal = [
       `Subject: GovChain.us — Instant Verification Pilot for ${lead.agency}`,
@@ -337,6 +447,13 @@ export async function runAdvancedGovernmentLeadGen() {
       agency: lead.agency,
       qronSignature: qron.signature,
       consensusScore: consensus.score,
+      imageUrl: qron.imageUrl,
+    });
+
+    await logActivity({
+      action: 'gov_lead_processed',
+      entityType: 'lead',
+      details: { agency: lead.agency, score: consensus.score, qron: qron.signature }
     });
 
     processed++;

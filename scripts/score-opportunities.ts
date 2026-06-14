@@ -100,14 +100,26 @@ Description: ${(opp.description ?? '').slice(0, 2000)}
   return { scored, failed, total: opps.length };
 }
 
-const { scored, failed, total } = await scoreOpportunities();
-console.log(`✅ Scored ${scored}/${total} opportunities (${failed} failed)`);
+// ── Main Execution ────────────────────────────────────────────────────────────
+async function main() {
+  try {
+    const { scored, failed, total } = await scoreOpportunities();
+    console.log(`✅ Scored ${scored}/${total} opportunities (${failed} failed)`);
 
-// Only fail the job if we had opportunities to score but scored exactly zero.
-// Otherwise, partial success is still success — failed opps stay at status='new'
-// and will be retried on the next cron run.
-if (total > 0 && scored === 0) {
-  console.error('❌ All scoring attempts failed — see provider errors above.');
-  process.exit(1);
+    // Only fail the job if we had opportunities to score but scored exactly zero.
+    // Otherwise, partial success is still success — failed opps stay at status='new'
+    // and will be retried on the next cron run.
+    if (total > 0 && scored === 0) {
+      console.error('❌ All scoring attempts failed — see provider errors above.');
+      process.exit(1);
+    }
+    
+    process.exit(0);
+  } catch (error) {
+    console.error('Fatal error during opportunity scoring:', error);
+    process.exit(1);
+  }
 }
-process.exit(0);
+
+// Execute the wrapper
+main();

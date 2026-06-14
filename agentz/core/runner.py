@@ -122,7 +122,7 @@ def execute(
                 status="blocked",
                 started_at=started_iso,
                 finished_at=datetime.now(timezone.utc).isoformat(),
-                duration_s=time.time() - started,
+                duration_s=duration,
                 notes=msg,
             )
 
@@ -135,7 +135,7 @@ def execute(
             status="blocked",
             started_at=started_iso,
             finished_at=datetime.now(timezone.utc).isoformat(),
-            duration_s=time.time() - started,
+            duration_s=duration,
             notes=msg,
         )
     if missing and mode == Mode.DRY_RUN and verbose:
@@ -171,7 +171,7 @@ def execute(
             status="failed",
             started_at=started_iso,
             finished_at=datetime.now(timezone.utc).isoformat(),
-            duration_s=time.time() - started,
+            duration_s=duration,
             error=f"handler import failed: {e}",
         )
 
@@ -181,7 +181,7 @@ def execute(
             status="failed",
             started_at=started_iso,
             finished_at=datetime.now(timezone.utc).isoformat(),
-            duration_s=time.time() - started,
+            duration_s=duration,
             error=f"handler {wf.handler} has no run(ctx) function",
         )
 
@@ -192,13 +192,17 @@ def execute(
         attempts += 1
         try:
             notes = module.run(ctx) or ""
+        duration = time.time() - started
+        status = "ok" if effective_mode != Mode.DRY_RUN else "skipped"
+        if status == "ok":
+            ctx.record_success_signal({"duration_s": duration, "notes": notes})
             token_usage, cost_usd = ctx.get_usage()
             res = RunResult(
                 workflow_id=wf.id,
-                status="ok" if effective_mode != Mode.DRY_RUN else "skipped",
+                status,
                 started_at=started_iso,
                 finished_at=datetime.now(timezone.utc).isoformat(),
-                duration_s=time.time() - started,
+                duration_s=duration,
                 notes=notes,
                 token_usage=token_usage,
                 cost_usd=cost_usd,
@@ -219,7 +223,7 @@ def execute(
                 status="failed",
                 started_at=started_iso,
                 finished_at=datetime.now(timezone.utc).isoformat(),
-                duration_s=time.time() - started,
+                duration_s=duration,
                 error=f"{type(e).__name__}: {e}\n{traceback.format_exc()}",
             )
             _trigger_notifications(wf, "Failed", f"Workflow {wf.id} failed.\nError: {e}")
