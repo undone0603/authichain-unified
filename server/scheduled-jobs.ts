@@ -719,6 +719,24 @@ registerJob({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 15: Cron Health Monitor (Runs every 15 minutes)
+// ═══════════════════════════════════════════════════════════════════════════
+// Watches scheduled_job_runs for consecutive failures and pings the owner via
+// notifyOwner. Dedups so an open incident does not re-alert; clears once the
+// job recovers. No external side effects beyond the notification fetch.
+registerJob({
+  name: "cron-health-monitor",
+  description: "Alert on cron job failure streaks; clear on recovery",
+  schedule: "*/15 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runCronHealthMonitor } = await import("./jobs/cron-health-monitor");
+    const res = await runCronHealthMonitor();
+    return { itemsProcessed: res.alerts.length + res.recoveries.length, details: res };
+  },
+});
+
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
 
 let _systemActive = true;
