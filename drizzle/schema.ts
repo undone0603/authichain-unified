@@ -1,4 +1,4 @@
-import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, numeric, bigint, uniqueIndex } from "drizzle-orm/pg-core";
+import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, numeric, bigint, uniqueIndex, doublePrecision } from "drizzle-orm/pg-core";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const users = pgTable("users", {
@@ -40,6 +40,9 @@ export const products = pgTable("products", {
   blockchainTxHash: varchar("blockchainTxHash", { length: 128 }),
   nftTokenId: varchar("nftTokenId", { length: 128 }),
   status: varchar("status", { length: 50 }).default("active"),
+  audioUrl: text("audioUrl"),
+  visionMarkers: json("visionMarkers"),
+  rarityScore: integer("rarityScore"),
   metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -272,9 +275,11 @@ export const leads = pgTable("leads", {
   numProducts: integer("numProducts"),
   dealStage: varchar("dealStage", { length: 64 }),
   status: varchar("status", { length: 50 }).default("new"),
+  segment: varchar("segment", { length: 64 }),
   industry: varchar("industry", { length: 128 }),
   notes: text("notes"),
   lastContactedAt: timestamp("lastContactedAt"),
+  nextActionAt: timestamp("nextActionAt"),
   assignedTo: integer("assignedTo"),
   metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -886,3 +891,100 @@ export type PlatformFee = typeof platformFees.$inferSelect;
 export type InsertPlatformFee = typeof platformFees.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = typeof transactions.$inferInsert;
+
+// ─── Feedback ────────────────────────────────────────────────────────────────
+export const feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId"),
+  type: varchar("type", { length: 32 }).notNull().default("feature"),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 32 }).default("new").notNull(),
+  priority: varchar("priority", { length: 32 }).default("medium").notNull(),
+  votes: integer("votes").default(0).notNull(),
+  adminResponse: text("adminResponse"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export const feedbackVotes = pgTable(
+  "feedback_votes",
+  {
+    id: serial("id").primaryKey(),
+    feedbackId: integer("feedbackId").notNull(),
+    userId: integer("userId").notNull(),
+    voteType: varchar("voteType", { length: 8 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("feedback_votes_feedback_user_idx").on(t.feedbackId, t.userId)],
+);
+
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = typeof feedback.$inferInsert;
+export type FeedbackVote = typeof feedbackVotes.$inferSelect;
+export type InsertFeedbackVote = typeof feedbackVotes.$inferInsert;
+
+// ─── Personalization ─────────────────────────────────────────────────────────
+export const visitorProfiles = pgTable("visitor_profiles", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("sessionId", { length: 128 }).notNull(),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  country: varchar("country", { length: 64 }),
+  city: varchar("city", { length: 128 }),
+  region: varchar("region", { length: 128 }),
+  trafficSource: varchar("trafficSource", { length: 64 }),
+  referrer: text("referrer"),
+  utmSource: varchar("utmSource", { length: 128 }),
+  utmMedium: varchar("utmMedium", { length: 128 }),
+  utmCampaign: varchar("utmCampaign", { length: 128 }),
+  deviceType: varchar("deviceType", { length: 32 }),
+  segment: varchar("segment", { length: 64 }),
+  pageViews: integer("pageViews").default(0).notNull(),
+  timeOnSite: integer("timeOnSite").default(0).notNull(),
+  converted: integer("converted").default(0).notNull(),
+  lastSeen: timestamp("lastSeen").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const personalizationRules = pgTable("personalization_rules", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  description: text("description"),
+  targetElement: varchar("targetElement", { length: 128 }).notNull(),
+  conditions: json("conditions"),
+  content: text("content").notNull(),
+  priority: integer("priority").default(0).notNull(),
+  status: varchar("status", { length: 32 }).default("draft").notNull(),
+  aiGenerated: integer("aiGenerated").default(0).notNull(),
+  views: integer("views").default(0).notNull(),
+  conversions: integer("conversions").default(0).notNull(),
+  conversionRate: doublePrecision("conversionRate").default(0).notNull(),
+  createdBy: integer("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const personalizationEvents = pgTable("personalization_events", {
+  id: serial("id").primaryKey(),
+  ruleId: integer("ruleId").notNull(),
+  sessionId: varchar("sessionId", { length: 128 }).notNull(),
+  eventType: varchar("eventType", { length: 32 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type VisitorProfile = typeof visitorProfiles.$inferSelect;
+export type PersonalizationRule = typeof personalizationRules.$inferSelect;
+export type PersonalizationEvent = typeof personalizationEvents.$inferSelect;
+
+// ─── Dead Letter Queue ───────────────────────────────────────────────────────
+export const deadLetterQueue = pgTable("dead_letter_queue", {
+  id: serial("id").primaryKey(),
+  jobType: varchar("jobType", { length: 128 }).notNull(),
+  payload: json("payload"),
+  error: text("error"),
+  attempts: integer("attempts").default(0).notNull(),
+  status: varchar("status", { length: 32 }).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DeadLetterEntry = typeof deadLetterQueue.$inferSelect;
+export type InsertDeadLetterEntry = typeof deadLetterQueue.$inferInsert;
