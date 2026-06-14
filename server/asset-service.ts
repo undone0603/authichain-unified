@@ -52,7 +52,7 @@ export async function generateProductAssets(productId: number) {
     
     // Push to Dead Letter Queue for retry
     await db.insert(deadLetterQueue).values({
-      jobType: "asset_generation",
+      taskType: "asset_generation",
       payload: { productId },
       error: error.message,
       status: "pending",
@@ -81,7 +81,7 @@ export async function retryFailedAssets() {
     } catch (e) {
       await db.update(deadLetterQueue)
         .set({
-          attempts: (task.attempts || 0) + 1,
+          retryCount: (task.retryCount || 0) + 1,
         })
         .where(eq(deadLetterQueue.id, task.id));
     }
