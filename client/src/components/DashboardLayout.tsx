@@ -27,6 +27,7 @@ import {
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
   Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Video, Cpu,
   Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins,
+  Globe, ShoppingBag, Package, Target, Fingerprint,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -46,6 +47,14 @@ const menuItems = [
   { icon: CreditCard, label: "Subscriptions", path: "/subscriptions" },
   { icon: Link2, label: "Referrals", path: "/referrals" },
   { icon: Blocks, label: "Blockchain Hub", path: "/blockchain" },
+  { icon: Sparkles, label: "My Agent", path: "/character" },
+  { icon: Globe, label: "Network & Leaderboard", path: "/network" },
+  { icon: ShoppingBag, label: "Services", path: "/services" },
+  { icon: Package, label: "My Orders", path: "/orders" },
+  { icon: Target, label: "Missions", path: "/missions" },
+  { icon: Activity, label: "Build Loop", path: "/build-loop" },
+  { icon: Fingerprint, label: "Physical Auth", path: "/physical-auth" },
+  { icon: Video, label: "Video Studio", path: "/video-studio" },
   { icon: Bell, label: "Notifications", path: "/notifications" },
   { icon: Sparkles, label: "AI Characters", path: "/character" },
   { icon: Image, label: "QR Art Gallery", path: "/qr-gallery" },

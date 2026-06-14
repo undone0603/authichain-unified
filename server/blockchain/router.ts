@@ -76,7 +76,7 @@ export const blockchainRouter = router({
       privateKey: input.privateKey,
       chainId: input.chainId,
     });
-    await db.logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "nft", entityId: 0 });
+    await db.logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "nft" });
     return { transactionHash: result.transactionHash, metadataUri: result.metadataUri, chain: result.chain };
   }),
   getNFTBalance: publicProcedure.input(z.object({

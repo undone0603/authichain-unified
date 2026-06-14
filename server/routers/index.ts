@@ -1,7 +1,6 @@
 import { router } from '../_core/trpc';
-import { systemRouter } from '../_core/systemRouter';
 import { metrcRouter } from './metrc';
-import { productsRouter } from '../products/router';
+import { productsRouter } from './products';
 import { schedulerRouter } from './scheduler';
 import { servicesRouter } from './services';
 import { aiRouter } from '../ai/router';
@@ -12,7 +11,7 @@ import { subscriptionsRouter } from '../subscriptions/router';
 import { blockchainRouter } from '../blockchain/router';
 import { nftRouter } from '../nft/router';
 import { authenticateRouter } from '../authenticate/router';
-import { qrcodeRouter } from '../qrcode/router';
+import { qronRouter } from '../qron/router';
 import { dashboardRouter } from '../dashboard/router';
 import { analyticsRouter } from '../analytics/router';
 import { notificationsRouter } from '../notifications/router';
@@ -30,7 +29,7 @@ import { whiteLabelRouter } from '../white-label/router';
 import { adminRouter } from '../admin/router';
 import { marketplaceRouter } from '../marketplace/router';
 import { marketingRouter } from '../marketing/router';
-import { missionsRouter, tasksRouter } from '../missions/router';
+import { missionsRouter } from '../missions/router';
 import { emailDraftsRouter } from '../email-drafts/router';
 import { emailCampaignsRouter } from '../email-campaigns/router';
 import { stakingRouter } from '../staking/router';
@@ -44,7 +43,6 @@ import { salesRouter } from '../sales/router';
  * Imported by server/_core/app.ts as appRouter.
  */
 export const appRouter = router({
-  system: systemRouter,
   metrc: metrcRouter,
   products: productsRouter,
   scheduler: schedulerRouter,
@@ -53,13 +51,11 @@ export const appRouter = router({
   auth: authRouter,
   autopilot: autopilotRouter,
   payments: paymentsRouter,
-  subscriptions: subscriptionsRouter,
-  // Alias: client pages call `trpc.subscription.*` (singular)
   subscription: subscriptionsRouter,
   blockchain: blockchainRouter,
   nft: nftRouter,
   authenticate: authenticateRouter,
-  qrcode: qrcodeRouter,
+  qron: qronRouter,
   dashboard: dashboardRouter,
   analytics: analyticsRouter,
   notifications: notificationsRouter,
@@ -78,7 +74,6 @@ export const appRouter = router({
   marketplace: marketplaceRouter,
   marketing: marketingRouter,
   missions: missionsRouter,
-  tasks: tasksRouter,
   emailDrafts: emailDraftsRouter,
   emailCampaigns: emailCampaignsRouter,
   staking: stakingRouter,
@@ -92,3 +87,4 @@ export const appRouter = router({
 
 
 export type AppRouter = typeof appRouter;
+

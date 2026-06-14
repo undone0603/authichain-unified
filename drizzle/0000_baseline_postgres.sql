@@ -274,16 +274,6 @@ CREATE TABLE "customer_health_scores" (
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "dead_letter_queue" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"jobType" varchar(128) NOT NULL,
-	"payload" json,
-	"error" text,
-	"attempts" integer DEFAULT 0 NOT NULL,
-	"status" varchar(32) DEFAULT 'pending' NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "email_campaigns" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"userId" integer NOT NULL,
@@ -319,28 +309,6 @@ CREATE TABLE "email_drafts" (
 	"approvedAt" timestamp,
 	"sentAt" timestamp,
 	"notes" text,
-	"createdAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "feedback" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"userId" integer,
-	"type" varchar(32) DEFAULT 'feature' NOT NULL,
-	"title" varchar(256) NOT NULL,
-	"description" text,
-	"status" varchar(32) DEFAULT 'new' NOT NULL,
-	"priority" varchar(32) DEFAULT 'medium' NOT NULL,
-	"votes" integer DEFAULT 0 NOT NULL,
-	"adminResponse" text,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "feedback_votes" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"feedbackId" integer NOT NULL,
-	"userId" integer NOT NULL,
-	"voteType" varchar(8) NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -396,11 +364,9 @@ CREATE TABLE "leads" (
 	"numProducts" integer,
 	"dealStage" varchar(64),
 	"status" varchar(50) DEFAULT 'new',
-	"segment" varchar(64),
 	"industry" varchar(128),
 	"notes" text,
 	"lastContactedAt" timestamp,
-	"nextActionAt" timestamp,
 	"assignedTo" integer,
 	"metadata" json,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
@@ -527,31 +493,6 @@ CREATE TABLE "payments" (
 	"updatedAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "personalization_events" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"ruleId" integer NOT NULL,
-	"sessionId" varchar(128) NOT NULL,
-	"eventType" varchar(32) NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "personalization_rules" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"name" varchar(256) NOT NULL,
-	"description" text,
-	"targetElement" varchar(128) NOT NULL,
-	"conditions" json,
-	"content" text NOT NULL,
-	"priority" integer DEFAULT 0 NOT NULL,
-	"status" varchar(32) DEFAULT 'draft' NOT NULL,
-	"aiGenerated" integer DEFAULT 0 NOT NULL,
-	"views" integer DEFAULT 0 NOT NULL,
-	"conversions" integer DEFAULT 0 NOT NULL,
-	"conversionRate" double precision DEFAULT 0 NOT NULL,
-	"createdBy" integer,
-	"createdAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "platform_fees" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"type" varchar(64) NOT NULL,
@@ -575,9 +516,6 @@ CREATE TABLE "products" (
 	"blockchainTxHash" varchar(128),
 	"nftTokenId" varchar(128),
 	"status" varchar(50) DEFAULT 'active',
-	"audioUrl" text,
-	"visionMarkers" json,
-	"rarityScore" integer,
 	"metadata" json,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL
@@ -807,27 +745,6 @@ CREATE TABLE "verification_claims" (
 	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "visitor_profiles" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"sessionId" varchar(128) NOT NULL,
-	"ipAddress" varchar(64),
-	"country" varchar(64),
-	"city" varchar(128),
-	"region" varchar(128),
-	"trafficSource" varchar(64),
-	"referrer" text,
-	"utmSource" varchar(128),
-	"utmMedium" varchar(128),
-	"utmCampaign" varchar(128),
-	"deviceType" varchar(32),
-	"segment" varchar(64),
-	"pageViews" integer DEFAULT 0 NOT NULL,
-	"timeOnSite" integer DEFAULT 0 NOT NULL,
-	"converted" integer DEFAULT 0 NOT NULL,
-	"lastSeen" timestamp DEFAULT now() NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "white_label_clients" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"userId" integer NOT NULL,
@@ -847,5 +764,4 @@ CREATE TABLE "white_label_clients" (
 	CONSTRAINT "white_label_clients_apiKey_unique" UNIQUE("apiKey")
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX "api_usage_daily_client_date_endpoint_idx" ON "api_usage_daily" USING btree ("clientId","date","endpoint");--> statement-breakpoint
-CREATE UNIQUE INDEX "feedback_votes_feedback_user_idx" ON "feedback_votes" USING btree ("feedbackId","userId");
+CREATE UNIQUE INDEX "api_usage_daily_client_date_endpoint_idx" ON "api_usage_daily" USING btree ("clientId","date","endpoint");

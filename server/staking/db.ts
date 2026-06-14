@@ -89,7 +89,7 @@ export async function calculateRewards(positionId: number) {
   const hoursElapsed = (now.getTime() - lastCalc.getTime()) / (1000 * 60 * 60);
 
   // Calculate rewards: (amount * APY / 100 / 365 / 24) * hoursElapsed
-  const annualReward = (Number(position.amount) * Number(position.apy ?? 0)) / 10000; // APY is in basis points (1200 = 12%)
+  const annualReward = (Number(position.amount) * Number(position.apy)) / 10000; // APY is in basis points (1200 = 12%)
   const hourlyReward = annualReward / 365 / 24;
   const newRewards = Math.floor(hourlyReward * hoursElapsed);
 
@@ -159,10 +159,12 @@ export async function withdrawStaking(positionId: number, userId: number) {
     .where(eq(stakingPositions.id, positionId));
 
   // Return total amount (principal + rewards)
+  const principal = Number(updatedPosition.amount);
+  const rewards = Number(updatedPosition.rewardsEarned);
   return {
-    principal: Number(updatedPosition.amount),
-    rewards: Number(updatedPosition.rewardsEarned),
-    total: Number(updatedPosition.amount) + Number(updatedPosition.rewardsEarned),
+    principal,
+    rewards,
+    total: principal + rewards,
   };
 }
 
@@ -213,17 +215,12 @@ export async function createTransaction(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // feeAmount/stakingId have no dedicated columns in Postgres schema; store in metadata json
   const transaction: InsertTransaction = {
     userId: data.userId,
     type: data.type,
     amount: String(data.amount),
     status: data.status,
-    metadata: {
-      feeAmount: data.feeAmount || 0,
-      ...(data.stakingId !== undefined ? { stakingId: data.stakingId } : {}),
-      ...(data.metadata !== undefined ? { details: data.metadata } : {}),
-    },
+    metadata: data.metadata,
   };
 
   await db.insert(transactions).values(transaction);
@@ -243,7 +240,6 @@ export async function createPlatformFee(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // percentage/transactionId/description have no columns in Postgres schema; feeType maps to type
   const fee: InsertPlatformFee = {
     type: data.feeType,
     amount: String(data.amount),

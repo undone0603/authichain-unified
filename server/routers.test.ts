@@ -17,39 +17,8 @@ const store = vi.hoisted(() => {
 
 vi.mock("./db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./db")>();
-  const mockDb = {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    execute: vi.fn().mockResolvedValue([]),
-    insert: vi.fn().mockReturnThis(),
-    values: vi.fn().mockReturnThis(),
-    returning: vi.fn().mockResolvedValue([{ id: 1 }]),
-    update: vi.fn().mockReturnThis(),
-    set: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    onConflictDoUpdate: vi.fn().mockReturnThis(),
-  };
-
   return {
     ...actual,
-    getDb: vi.fn().mockResolvedValue({
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      execute: vi.fn().mockResolvedValue([]),
-      insert: vi.fn().mockReturnThis(),
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: 1 }]),
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      onConflictDoUpdate: vi.fn().mockReturnThis(),
-    }),
     createNotification: vi.fn(async (data: any) => {
       const id = store.nextNotifId();
       store.notifications.push({ ...data, id, createdAt: new Date() });
@@ -73,38 +42,44 @@ vi.mock("./db", async (importOriginal) => {
       if (idx >= 0) store.notifications.splice(idx, 1);
     }),
     createLead: vi.fn(async (_data: any) => ({ id: store.nextLeadId() })),
-    // Read helpers: the real implementations call the real getDb() via an
-    // internal module binding that mocking the export cannot redirect, so they
-    // must be stubbed directly to keep the suite hermetic (no live Postgres).
-    getUserProducts: vi.fn().mockResolvedValue([]),
-    getProductById: vi.fn().mockResolvedValue(null),
-    getUserSubscription: vi.fn().mockResolvedValue(null),
-    getCertificateByNumber: vi.fn().mockResolvedValue(null),
-    listNfts: vi.fn().mockResolvedValue([]),
-    listCollections: vi.fn().mockResolvedValue([]),
-    getActiveAuctions: vi.fn().mockResolvedValue([]),
-    getReferralByCode: vi.fn().mockResolvedValue(null),
-    getWhiteLabelByApiKey: vi.fn().mockResolvedValue(null),
-    getAutopilotConfig: vi.fn().mockResolvedValue(null),
-    getRecentDecisions: vi.fn().mockResolvedValue([]),
-    getUserEmailCampaigns: vi.fn().mockResolvedValue([]),
-    getPendingDrafts: vi.fn().mockResolvedValue([]),
-    getUserReferrals: vi.fn().mockResolvedValue([]),
-    getAffiliateByUserId: vi.fn().mockResolvedValue(null),
-    getAllAbTests: vi.fn().mockResolvedValue([]),
-    getAllUsers: vi.fn().mockResolvedValue([]),
-    getOpenFraudAlerts: vi.fn().mockResolvedValue([]),
-    getAllHealthScores: vi.fn().mockResolvedValue([]),
-    getRecentActivity: vi.fn().mockResolvedValue([]),
-    getSubscriptionAnalytics: vi.fn().mockResolvedValue([]),
-    getRevenueAnalytics: vi.fn().mockResolvedValue([]),
-    getWhiteLabelClients: vi.fn().mockResolvedValue([]),
-    getDashboardMetrics: vi.fn().mockResolvedValue({
-      totalProducts: 0, totalAuthentications: 0, totalCertificates: 0, subscription: null,
-    }),
-    getAdminDashboardMetrics: vi.fn().mockResolvedValue({
-      totalUsers: 0, totalProducts: 0, totalAuthentications: 0, totalRevenue: 0, totalLeads: 0, totalNfts: 0,
-    }),
+    // ── DB read stubs ─────────────────────────────────────────────────────────
+    // This file-level vi.mock REPLACES the test-setup.ts mock for "./db", so the
+    // stubs below must be repeated here or these procedures hit a real database.
+    getCertificateByNumber: vi.fn(async () => null),
+    listNfts: vi.fn(async () => []),
+    listCollections: vi.fn(async () => []),
+    getActiveAuctions: vi.fn(async () => []),
+    getReferralByCode: vi.fn(async () => null),
+    getWhiteLabelByApiKey: vi.fn(async () => null),
+    getUserSubscription: vi.fn(async () => null),
+    getAutopilotConfig: vi.fn(async () => null),
+    getRecentDecisions: vi.fn(async () => []),
+    getUserEmailCampaigns: vi.fn(async () => []),
+    getPendingDrafts: vi.fn(async () => []),
+    getUserReferrals: vi.fn(async () => []),
+    getAffiliateByUserId: vi.fn(async () => null),
+    getAllAbTests: vi.fn(async () => []),
+    getDashboardMetrics: vi.fn(async () => ({
+      totalProducts: 0,
+      totalAuthentications: 0,
+      totalCertificates: 0,
+      subscription: null,
+    })),
+    getAdminDashboardMetrics: vi.fn(async () => ({
+      totalUsers: 0,
+      totalProducts: 0,
+      totalAuthentications: 0,
+      totalRevenue: 0,
+      totalLeads: 0,
+      totalNfts: 0,
+    })),
+    getAllUsers: vi.fn(async () => []),
+    getOpenFraudAlerts: vi.fn(async () => []),
+    getAllHealthScores: vi.fn(async () => []),
+    getRecentActivity: vi.fn(async () => []),
+    getSubscriptionAnalytics: vi.fn(async () => []),
+    getRevenueAnalytics: vi.fn(async () => []),
+    getWhiteLabelClients: vi.fn(async () => []),
   };
 });
 
@@ -119,16 +94,9 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     loginMethod: "manus",
     role,
     stripeCustomerId: null,
-    walletAddress: null,
-    avatarUrl: null,
-    company: null,
-    title: null,
-    phone: null,
-    onboardingCompleted: 0,
-    paddleCustomerId: null,
-    points: 0,
+    walletAddress: null, avatarUrl: null, company: null, title: null, phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,
     createdAt: new Date(),
-    updatedAt: new Date(),
+    updatedAt: new Date(), metadata: {},
     lastSignedIn: new Date(),
   };
 

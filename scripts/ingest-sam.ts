@@ -1,6 +1,4 @@
 // scripts/ingest-sam.ts
-// FIXED: proper ESM .ts file — replaces broken `tsx -e "..."` inline pattern
-// Top-level await works correctly here when invoked via `pnpm exec tsx scripts/ingest-sam.ts`
 import { createClient } from '@supabase/supabase-js';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { embed } from './lib/embed.ts';
@@ -135,17 +133,28 @@ async function embedAndStore(opportunities: any[]): Promise<number> {
   return count;
 }
 
-// ── Main (top-level await) ────────────────────────────────────────────────────
-console.log('🔍 Fetching SAM.gov opportunities...');
-const opportunities = await fetchSAMOpportunities();
-console.log(`📦 Fetched ${opportunities.length} opportunities`);
+// ── Main Execution ────────────────────────────────────────────────────────────
+async function main() {
+  try {
+    console.log('🔍 Fetching SAM.gov opportunities...');
+    const opportunities = await fetchSAMOpportunities();
+    console.log(`📦 Fetched ${opportunities.length} opportunities`);
 
-const count = await embedAndStore(opportunities);
-console.log(`✅ Ingested ${count} opportunities${isDryRun ? ' (DRY RUN — no writes)' : ''}`);
+    const count = await embedAndStore(opportunities);
+    console.log(`✅ Ingested ${count} opportunities${isDryRun ? ' (DRY RUN — no writes)' : ''}`);
 
-// Set GitHub Actions output via GITHUB_OUTPUT env file (::set-output is deprecated)
-if (process.env.GITHUB_OUTPUT) {
-  const { appendFileSync } = await import('node:fs');
-  appendFileSync(process.env.GITHUB_OUTPUT, `count=${count}\n`);
+    // Set GitHub Actions output via GITHUB_OUTPUT env file (::set-output is deprecated)
+    if (process.env.GITHUB_OUTPUT) {
+      const { appendFileSync } = await import('node:fs');
+      appendFileSync(process.env.GITHUB_OUTPUT, `count=${count}\n`);
+    }
+    
+    process.exit(0);
+  } catch (error) {
+    console.error('Fatal error during SAM ingestion:', error);
+    process.exit(1);
+  }
 }
-process.exit(0);
+
+// Execute the wrapper
+main();

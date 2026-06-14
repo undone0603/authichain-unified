@@ -43,7 +43,11 @@ async function startServer() {
 
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
-    await initializeScheduler();
+    try {
+      await initializeScheduler();
+    } catch (err) {
+      console.error("Failed to initialize scheduler:", err);
+    }
   });
 }
 

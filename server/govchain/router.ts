@@ -11,7 +11,7 @@ export const govchainRouter = router({
   issuePassport: protectedProcedure
     .input(z.object({
       documentId: z.string(),
-      claims: z.record(z.any()),
+      claims: z.record(z.string(), z.any()),
       recipientEmail: z.string().email(),
     }))
     .mutation(async ({ ctx, input }) => {
