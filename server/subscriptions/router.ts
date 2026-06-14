@@ -109,7 +109,7 @@ export const subscriptionsRouter = router({
       promotion: { type: 'coupon', coupon: coupon.id },
       code: input.code,
       active: true,
-    });
+    } as any); // newer Stripe API field not in installed typings
     return { success: true, code: promo.code, id: promo.id, percentOff: input.percentOff };
   }),
 });

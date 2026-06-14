@@ -21,7 +21,7 @@ export default function Storymode() {
     );
   }
 
-  const story = storyQuery.data;
+  const story = storyQuery.data as any;
   const chapters = (story?.metadata as any)?.storymode?.chapters || [
     {
       title: "ROOTED IN AUTHENTICITY",

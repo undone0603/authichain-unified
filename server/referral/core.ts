@@ -30,8 +30,8 @@ export async function createReferralCode(referrerId: number): Promise<{ id: numb
     referrerId,
     referralCode: code,
     status: "pending",
-  });
-  return { id: result[0].insertId, referralCode: code };
+  }).returning({ id: referrals.id });
+  return { id: result[0].id, referralCode: code };
 }
 
 export async function trackReferralClick(params: {

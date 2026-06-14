@@ -70,6 +70,42 @@ export const govchainRouter = router({
     }),
 
   /**
+   * Sovereign Onboarding: Stage a government/manufacturer partnership deal.
+   * Captures the facility as a government-segment lead for advisor follow-up.
+   */
+  createSovereignDeal: publicProcedure
+    .input(z.object({
+      manufacturerName: z.string().min(1),
+      dealType: z.enum(["procurement", "compliance", "passport", "supply_chain"]).optional(),
+      value: z.number().nonnegative().optional().default(0),
+      description: z.string().optional(),
+      contactEmail: z.string().email().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const lead = await db.createLead({
+        email: input.contactEmail ?? `${input.manufacturerName.replace(/\s+/g, ".").toLowerCase()}@gov.pending`,
+        name: input.manufacturerName,
+        company: input.manufacturerName,
+        source: "govchain_onboarding",
+        segment: "government",
+        industry: "government",
+        status: "new",
+        notes: input.description,
+        metadata: { dealType: input.dealType, value: input.value },
+      });
+
+      await db.logActivity({
+        userId: null,
+        action: "govchain_sovereign_deal_staged",
+        entityType: "lead",
+        entityId: typeof lead?.id === "number" ? lead.id : 0,
+        details: { manufacturerName: input.manufacturerName, dealType: input.dealType, value: input.value },
+      });
+
+      return { success: true, staged: true };
+    }),
+
+  /**
    * GovChain Stats: Real-time metrics for the government vertical
    */
   stats: publicProcedure.query(async () => {

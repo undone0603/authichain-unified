@@ -1,3 +1,4 @@
+// @ts-expect-error optional dependency, not installed in this environment
 import { LocalIndex, IndexItem } from "vectra";
 import OpenAI from "openai";
 import * as path from "path";
@@ -111,7 +112,7 @@ export async function getDocumentCount(): Promise<number> {
   return docs.length;
 }
 
-export interface GovernmentOpportunity extends VectorQueryResult {
+export interface GovernmentOpportunity extends Omit<VectorQueryResult, "score"> {
   score?: number;
 }
 

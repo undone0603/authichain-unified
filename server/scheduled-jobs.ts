@@ -41,6 +41,7 @@ export async function executeJob(job: JobDefinition): Promise<void> {
 
   // Insert running record
   const [runRecord] = await db.insert(scheduledJobRuns).values({
+    id: Date.now(),
     jobName: job.name,
     status: "running",
     startedAt: new Date(),
@@ -134,7 +135,7 @@ registerJob({
     // Reset monthly quotas for subscriptions at period start
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     if (now.getDate() === 1) {
-      const [resetResult] = await db.update(subscriptions)
+      await db.update(subscriptions)
         .set({ usedQuota: 0 })
         .where(eq(subscriptions.status, "active"));
       details.quotasReset = true;
@@ -181,7 +182,7 @@ registerJob({
     }
 
     // Auto-expire certificates that have passed their expiry date
-    const [expiredResult] = await db.update(certificates)
+    await db.update(certificates)
       .set({ status: "expired" })
       .where(and(
         eq(certificates.status, "active"),
@@ -267,7 +268,7 @@ registerJob({
     const details: Record<string, any> = {};
 
     // Delete read notifications older than 30 days
-    const [notifResult] = await db.delete(notifications)
+    await db.delete(notifications)
       .where(and(
         eq(notifications.isRead, 1),
         lt(notifications.createdAt, thirtyDaysAgo),
@@ -276,7 +277,7 @@ registerJob({
     processed++;
 
     // Delete completed job runs older than 90 days
-    const [jobRunResult] = await db.delete(scheduledJobRuns)
+    await db.delete(scheduledJobRuns)
       .where(and(
         eq(scheduledJobRuns.status, "completed"),
         lt(scheduledJobRuns.startedAt, ninetyDaysAgo),

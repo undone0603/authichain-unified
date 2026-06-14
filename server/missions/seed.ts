@@ -131,7 +131,7 @@ async function seedFailedTask(
   if (tasks[0]) {
     await db
       .update(missionTasks)
-      .set({ status: 'FAILED', lastError: 'seeded failure for test', updatedAt: new Date() })
+      .set({ status: 'FAILED', error: 'seeded failure for test', updatedAt: new Date() })
       .where(eq(missionTasks.id, tasks[0].id));
     return tasks[0].id;
   }

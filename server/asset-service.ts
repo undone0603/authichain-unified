@@ -52,11 +52,10 @@ export async function generateProductAssets(productId: number) {
     
     // Push to Dead Letter Queue for retry
     await db.insert(deadLetterQueue).values({
-      taskType: "asset_generation",
+      jobType: "asset_generation",
       payload: { productId },
       error: error.message,
       status: "pending",
-      lastAttemptedAt: new Date()
     });
   }
 }
@@ -81,9 +80,8 @@ export async function retryFailedAssets() {
         .where(eq(deadLetterQueue.id, task.id));
     } catch (e) {
       await db.update(deadLetterQueue)
-        .set({ 
-          retryCount: (task.retryCount || 0) + 1,
-          lastAttemptedAt: new Date() 
+        .set({
+          attempts: (task.attempts || 0) + 1,
         })
         .where(eq(deadLetterQueue.id, task.id));
     }

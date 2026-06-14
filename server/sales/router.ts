@@ -24,12 +24,14 @@ export const salesRouter = router({
       if (input.userEmail) {
         let lead = await db.getLeadByEmail(input.userEmail);
         if (!lead) {
-          lead = await db.createLead({
+          const created = await db.createLead({
             email: input.userEmail,
             industry: input.industry,
             source: "roi_calculator"
           });
+          lead = await db.getLeadById(created.id);
         }
+        if (!lead) return results;
 
         await db.updateLead(lead.id, {
           roiCalculated: true,
@@ -69,6 +71,6 @@ export const salesRouter = router({
   getLeadStatus: protectedProcedure
     .query(async ({ ctx }) => {
       // Assuming users can see their own lead status
-      return await db.getLeadByEmail(ctx.user.email);
+      return await db.getLeadByEmail(ctx.user.email ?? "");
     }),
 });

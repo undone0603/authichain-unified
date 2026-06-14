@@ -122,7 +122,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
         body,
         status:      'pending',
         generatedBy: 'agentz',
-        taskId:      task.id,
+        notes:       `taskId:${task.id}`,
       });
     }
 
