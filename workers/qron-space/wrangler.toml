@@ -3,7 +3,14 @@ main = "src/index.ts"
 compatibility_date = "2026-05-08"
 account_id = "4c1869b90f13f86940aa3747839bf420"
 workers_dev = false
-preview_urls = false
+
+[[routes]]
+pattern = "qron.space/*"
+zone_name = "qron.space"
+
+[[routes]]
+pattern = "www.qron.space/*"
+zone_name = "qron.space"
 
 
 

@@ -58,7 +58,8 @@ async function triggerAutoContract(leadId: number) {
   if (!lead) return;
 
   // We use the mission system to handle the contract sending as an async task
-  const missionId = await db.createMission("LUXURY_OUTREACH"); // Reuse outreach type for contract sending
+  // Reuse outreach type for contract sending
+  const missionId = await db.createMission("LUXURY_OUTREACH");
 
   await db.createTask({
     missionId,

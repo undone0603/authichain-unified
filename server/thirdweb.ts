@@ -366,6 +366,7 @@ export function buildSupplyChainMetadata(data: SupplyChainNFTData): NFTMetadata 
 
 export async function checkThirdwebConnection(): Promise<{
   connected: boolean;
+  clientConfigured: boolean;
   clientId: string;
   chain: string;
   error?: string;
@@ -375,12 +376,14 @@ export async function checkThirdwebConnection(): Promise<{
     const chain = getDefaultChain();
     return {
       connected: true,
+      clientConfigured: !!ENV.thirdwebClientId,
       clientId: ENV.thirdwebClientId || "configured",
       chain: ENV.isProduction ? "Polygon Mainnet (137)" : "Polygon Amoy Testnet (80002)",
     };
   } catch (error: any) {
     return {
       connected: false,
+      clientConfigured: !!ENV.thirdwebClientId,
       clientId: "",
       chain: "",
       error: error.message,

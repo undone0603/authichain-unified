@@ -56,10 +56,18 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     loginMethod: "manus",
     role,
     stripeCustomerId: null,
-    walletAddress: null, avatarUrl: null, company: null, title: null, phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,
+    walletAddress: null,
+    avatarUrl: null,
+    company: null,
+    title: null,
+    phone: null,
+    onboardingCompleted: 0,
+    paddleCustomerId: null,
+    points: 0,
     createdAt: new Date(),
-    updatedAt: new Date(), metadata: {},
+    updatedAt: new Date(),
     lastSignedIn: new Date(),
+    metadata: null,
   };
 
   return {

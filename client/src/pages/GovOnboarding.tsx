@@ -14,7 +14,7 @@ export default function GovOnboarding() {
   const [, setLocation] = useLocation();
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const createDeal = trpc.admin.createSovereignDeal.useMutation({
+  const createDeal = trpc.govchain.createSovereignDeal.useMutation({
     onSuccess: () => {
       setIsSubmitted(true);
       toast.success("Sovereign Deal Staged Successfully");

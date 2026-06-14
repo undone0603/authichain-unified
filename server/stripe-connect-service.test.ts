@@ -154,8 +154,10 @@ describe("Stripe Connect Service (v2)", () => {
 
       expect(mockStripe.subscriptions.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // Stripe V2 (Dahlia) Connect uses customer_account + items, not customer
           customer_account: "acct_123",
           default_payment_method: "pm_123",
+          items: [{ price: "price_123", quantity: 1 }],
           payment_settings: { payment_method_types: ["stripe_balance"] },
         }),
         expect.objectContaining({

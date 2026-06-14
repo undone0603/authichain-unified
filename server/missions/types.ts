@@ -10,10 +10,9 @@ export type MissionType =
   | 'MEDTECH_OUTREACH'
   | 'TIMEPIECE_OUTREACH'
   | 'NEWSJACKING_LAUNCH'
-  | 'TECH_SPRINT'
   | 'MEDTECH_VIDEO_BRIEFING'
   | 'MI_CRA_PARTNERSHIP'
-  | 'REVENUE_OPS';
+  | 'TECH_SPRINT';
 
 export type MissionStatus = 'PLANNED' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';
 
@@ -57,9 +56,7 @@ export type TaskKind =
   | 'MERGE_PR'
   | 'MONITOR_DEPLOY'
   | 'FILE_BUG'
-  | 'AUTO_FIX'
-  // ── External agent dispatch (Commander / AgentZ) ──────────
-  | 'AGENTZ_EXTERNAL';
+  | 'AUTO_FIX';
 
 export type LeadSegment = 'GOV' | 'RETAIL' | 'PRESS';
 

@@ -21,8 +21,8 @@ export default function Storymode() {
     );
   }
 
-  const story = storyQuery.data;
-  const chapters = ((story as any)?.metadata)?.storymode?.chapters || [
+  const story = storyQuery.data as any;
+  const chapters = (story?.metadata as any)?.storymode?.chapters || [
     {
       title: "ROOTED IN AUTHENTICITY",
       content: "This product was birthed from the volcanic soils and artisanal curation verified under the AuthiChain Truth Protocol. Every molecule of its existence was observed and logged."
@@ -50,7 +50,7 @@ export default function Storymode() {
               AI STORYMODE ACTIVE
             </Badge>
             <h1 className="text-5xl font-bold tracking-tighter mb-2 italic">
-              THE JOURNEY OF {(story as any)?.name || "TRUTH"}
+              THE JOURNEY OF {story?.name || "TRUTH"}
             </h1>
             <p className="text-gray-400 font-mono text-sm tracking-widest uppercase">
               Provenance Ledger: {truemarkId || "SECURED"}

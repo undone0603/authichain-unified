@@ -116,7 +116,7 @@ export async function triggerFulfillmentFromPayment(sessionId: string) {
       zip: "48226",
       country: "US",
     },
-    artworkUrl: (order.details as any)?.deliveryUrl || "",
+    artworkUrl: (order.details as any)?.artworkUrl ?? (order.details as any)?.deliveryUrl ?? "",
     quantity: 1000,
   });
 }

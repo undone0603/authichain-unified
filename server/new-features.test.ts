@@ -32,8 +32,9 @@ vi.mock("./db", async (importOriginal) => {
       values: (data: any) => {
         const id = store.nextId();
         store.bonuses.push({ ...data, id });
-        const result: any = [{ insertId: id }];
-        result.returning = (_cols?: any) => [{ id }];
+        // Postgres-style: insert resolves to [] but supports .returning({ id })
+        const result: any = Promise.resolve([{ insertId: id }]);
+        result.returning = () => Promise.resolve([{ id }]);
         return result;
       },
     }),
@@ -118,8 +119,10 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1, openId: "test-user-001", email: "test@authichain.com",
     name: "Test User", loginMethod: "manus", role, stripeCustomerId: null,
-    walletAddress: null, avatarUrl: null, company: null, title: null, phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0, metadata: null,
+    walletAddress: null, avatarUrl: null, company: null, title: null,
+    phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,
     createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+    metadata: null,
   };
   return {
     user,

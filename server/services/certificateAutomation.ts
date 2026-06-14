@@ -315,12 +315,14 @@ async function sendCertificateEmail(
     return;
   }
 
-  const { users: usersTable } = await import('../../drizzle/schema');
-  const { eq: eqOp } = await import('drizzle-orm');
+  const usersTable = (await import('../../drizzle/schema')).users;
   const userResult = await db
-    .select()
+    .select({ email: usersTable.email, name: usersTable.name })
     .from(usersTable)
-    .where(eqOp(usersTable.id, certificateData.userId))
+    .where((await import('drizzle-orm')).eq(
+      usersTable.id,
+      certificateData.userId
+    ))
     .limit(1);
 
   if (!userResult || userResult.length === 0) {
