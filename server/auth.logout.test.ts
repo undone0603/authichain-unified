@@ -20,19 +20,19 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
     name: "Sample User",
     loginMethod: "manus",
     role: "user",
-    stripeCustomerId: null,
     walletAddress: null,
     avatarUrl: null,
     company: null,
     title: null,
     phone: null,
     onboardingCompleted: 0,
+    stripeCustomerId: null,
     paddleCustomerId: null,
     points: 0,
+    metadata: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
-    metadata: null,
   };
 
   const ctx: TrpcContext = {

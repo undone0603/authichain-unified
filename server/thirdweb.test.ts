@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  checkThirdwebConnection,
+  checkThirdwebConnection as getConnectionStatus,
   uploadImageToIPFS,
   uploadMetadataToIPFS,
   buildAuthCertificateMetadata,
@@ -9,15 +9,15 @@ import {
 
 describe('Thirdweb Service', () => {
   it('should return connection status', async () => {
-    const status = await checkThirdwebConnection();
+    const status = await getConnectionStatus();
     expect(status).toHaveProperty('connected');
-    expect(status).toHaveProperty('clientConfigured');
+    expect(status).toHaveProperty('clientId');
   });
 
   it('should build auth certificate metadata correctly', () => {
     const data = {
-      productName: 'Test Product',
       certificateNumber: '123',
+      productName: 'Test Product',
       authenticatorId: 1,
       confidenceScore: 0.95,
       verificationDate: '2024-01-01'

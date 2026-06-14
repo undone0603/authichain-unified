@@ -7,3 +7,16 @@ workers_dev = false
 [[routes]]
 pattern = "api.authichain.com/*"
 zone_name = "authichain.com"
+
+# API keys + lead storage (set STRIPE_WEBHOOK_SECRET + ADMIN_SECRET via `wrangler secret put`)
+[[kv_namespaces]]
+binding = "API_KEYS"
+id = "e1b1bff527d547d3b740440f9ecc78b3"
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "f80875ad11c043c4ac9fdf3740f0faa1"
+
+[[kv_namespaces]]
+binding = "LEADS"
+id = "720b15b316324b22b3d8225ab5780b10"

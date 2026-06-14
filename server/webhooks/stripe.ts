@@ -23,7 +23,7 @@ import {
   getSubscriptionByStripeSubscriptionId,
   createSystemNotification,
   hasWebhookEventProcessed,
-  findOrCreateUserByEmail,
+  getDb,
 } from "../db";
 import { getPlanQuota } from "../stripe-products";
 
@@ -112,47 +112,6 @@ async function resolveUserId(
   return undefined;
 }
 
-/**
- * Like resolveUserId, but falls back to provisioning an account by the
- * customer's email. Payment-link / dashboard-created checkouts carry no
- * user_id metadata — without this fallback the buyer pays and nothing is
- * provisioned. Returns undefined only when no email can be found either.
- */
-async function resolveOrProvisionUser(
-  stripe: Stripe,
-  customerId: string | null | undefined,
-  subscriptionMeta?: Stripe.Metadata | null,
-  fallback?: { email?: string | null; name?: string | null },
-): Promise<number | undefined> {
-  const resolved = await resolveUserId(stripe, customerId, subscriptionMeta);
-  if (resolved) return resolved;
-
-  let email = fallback?.email ?? null;
-  let name = fallback?.name ?? null;
-  if (!email && customerId) {
-    try {
-      const customer = await stripe.customers.retrieve(customerId);
-      if (!customer.deleted) {
-        email = (customer as Stripe.Customer).email ?? null;
-        name = name ?? (customer as Stripe.Customer).name ?? null;
-      }
-    } catch {
-      // Best-effort; fall through
-    }
-  }
-  if (!email) return undefined;
-
-  const userId = await findOrCreateUserByEmail({
-    email,
-    name,
-    stripeCustomerId: customerId ?? null,
-  });
-  if (userId) {
-    console.log(`[stripe-webhook] Provisioned user ${userId} by email for customer ${customerId ?? "(none)"}`);
-  }
-  return userId;
-}
-
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 export interface StripeWebhookResult {
@@ -183,8 +142,8 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type };
   }
 
-  // Idempotency — skip if we already processed this event
-  if (await hasWebhookEventProcessed(event.id)) {
+  // Idempotency — atomic INSERT into webhook_events; returns true if already processed
+  if (await hasWebhookEventProcessed(event.id, event.type, "stripe")) {
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
     return { received: true, type: event.type, duplicate: true };
   }
@@ -201,9 +160,12 @@ export async function handleStripeWebhook(
       const plan = detectPlan(priceId, amountCents);
       const status = mapStripeStatus(sub.status);
       const billingCycle = firstItem?.price?.recurring?.interval === "year" ? "annual" : "monthly";
-      const userId = await resolveOrProvisionUser(stripe, customerId, sub.metadata);
+      const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
       if (userId) {
+        // current_period_start/end removed from Stripe v22 types but still
+        // present in the API payload; cast through any.
+        const subAny = sub as any;
         await upsertStripeSubscription({
           userId,
           plan,
@@ -212,11 +174,11 @@ export async function handleStripeWebhook(
           billingCycle,
           stripeCustomerId: customerId ?? null,
           stripeSubscriptionId: sub.id,
-          currentPeriodStart: (sub as any).current_period_start
-            ? new Date((sub as any).current_period_start * 1000)
+          currentPeriodStart: subAny.current_period_start
+            ? new Date(subAny.current_period_start * 1000)
             : new Date(),
-          currentPeriodEnd: (sub as any).current_period_end
-            ? new Date((sub as any).current_period_end * 1000)
+          currentPeriodEnd: subAny.current_period_end
+            ? new Date(subAny.current_period_end * 1000)
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
         });
@@ -269,10 +231,11 @@ export async function handleStripeWebhook(
     case "invoice.payment_succeeded":
     case "invoice.paid": {
       const inv = event.data.object as Stripe.Invoice;
+      const invAny = inv as any;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
-      const subscriptionId = typeof (inv as any).subscription === "string"
-        ? (inv as any).subscription
-        : (inv as any).subscription?.id;
+      const subscriptionId = typeof invAny.subscription === "string"
+        ? invAny.subscription
+        : invAny.subscription?.id ?? null;
 
       // Resolve userId — try subscription metadata first, then customer
       let userId: number | undefined;
@@ -288,9 +251,9 @@ export async function handleStripeWebhook(
       const amountUsd = amountCents / 100;
       const currency = (inv.currency ?? "usd").toUpperCase();
 
-      // Detect plan from invoice line items
-      const firstLine = inv.lines?.data?.[0];
-      const priceId = (firstLine as any)?.price?.id ?? null;
+      // Detect plan from invoice line items (price field removed from InvoiceLineItem in v22)
+      const firstLine = invAny.lines?.data?.[0];
+      const priceId = firstLine?.price?.id ?? null;
       const plan = detectPlan(priceId, amountCents);
 
       if (amountUsd > 0) {
@@ -337,10 +300,11 @@ export async function handleStripeWebhook(
     // ── Invoice payment failed ───────────────────────────────────────────────
     case "invoice.payment_failed": {
       const inv = event.data.object as Stripe.Invoice;
+      const invAny2 = inv as any;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
-      const subscriptionId = typeof (inv as any).subscription === "string"
-        ? (inv as any).subscription
-        : (inv as any).subscription?.id;
+      const subscriptionId = typeof invAny2.subscription === "string"
+        ? invAny2.subscription
+        : invAny2.subscription?.id ?? null;
 
       let userId: number | undefined;
       if (subscriptionId) {
@@ -380,62 +344,55 @@ export async function handleStripeWebhook(
     // ── Checkout session completed ───────────────────────────────────────────
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      const metaUserId = session.metadata?.user_id
+      const userId = session.metadata?.user_id
         ? parseInt(session.metadata.user_id, 10)
         : undefined;
+      const plan = (session.metadata?.plan as Plan | undefined) ?? "starter";
       const billingCycle = session.metadata?.billing === "annual" ? "annual" : "monthly";
       const amountCents = session.amount_total ?? 0;
       const amountUsd = amountCents / 100;
-      const currency = (session.currency ?? "usd").toUpperCase();
       const customerId = typeof session.customer === "string" ? session.customer : undefined;
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : undefined;
-      const email = session.customer_details?.email ?? session.customer_email ?? null;
-      const customerName = session.customer_details?.name ?? null;
-      const plan = (session.metadata?.plan as Plan | undefined) ?? detectPlan(null, amountCents);
 
-      // Payment-link checkouts carry no user_id metadata — provision by email
-      // so every paying customer ends up with an account.
-      const userId =
-        metaUserId && !isNaN(metaUserId)
-          ? metaUserId
-          : await resolveOrProvisionUser(stripe, customerId, session.metadata, {
-              email,
-              name: customerName,
-            });
-
-      // One-time purchases (mode=payment) never produce an invoice event, so
-      // record their revenue here. Subscription revenue is recorded on
-      // invoice.payment_succeeded to avoid double counting.
-      if (session.mode === "payment" && amountUsd > 0) {
-        await recordRevenue({
-          source: "stripe",
-          amount: amountUsd.toFixed(2),
-          currency,
-          type: "one_time",
-          userId: userId ?? null,
-          metadata: {
-            eventId: event.id,
-            checkoutSessionId: session.id,
-            stripeCustomerId: customerId ?? null,
-          },
-        });
+      // Fulfill service orders paid via one-time Stripe Checkout
+      const { handleServiceOrderPayment } = await import("../services/order-payment-handler");
+      const orderResult = await handleServiceOrderPayment({
+        id: session.id,
+        payment_intent: session.payment_intent ?? null,
+      });
+      if (orderResult.handled) {
+        console.log(`[stripe-webhook] Service order fulfilled: orderId=${orderResult.orderId}`);
       }
 
-      // Service-order checkouts: transition the matching order pending → paid
-      // (and notify the buyer). Without this, a paid service order would stay
-      // "pending" forever and never enter fulfillment. Best-effort: a missing
-      // order or failure here must not fail the webhook.
-      try {
-        const { handleServiceOrderPayment } = await import("../services/order-payment-handler");
-        const orderResult = await handleServiceOrderPayment({
-          id: session.id,
-          payment_intent: session.payment_intent ?? null,
-        });
-        if (orderResult.handled) {
-          console.log(`[stripe-webhook] Service order ${orderResult.orderId} marked paid`);
+      // ── Proposal payment: mark ACCEPTED, update lead status, send welcome ──
+      const leadEmail = session.metadata?.leadEmail;
+      const checkoutSessionId = session.id;
+      if (leadEmail) {
+        try {
+          const { proposals, leads } = await import("../../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          const db = await getDb();
+          await db.update(proposals)
+            .set({ status: "ACCEPTED", acceptedAt: new Date() })
+            .where(eq(proposals.checkoutSessionId, checkoutSessionId));
+          await db.update(leads)
+            .set({ status: "CLOSED_WON", updatedAt: new Date() })
+            .where(eq(leads.email, leadEmail.toLowerCase()));
+          const { sendEmail } = await import("../email-service");
+          await sendEmail({
+            to: leadEmail,
+            subject: "Welcome to AuthiChain — your pilot is confirmed",
+            body: `Hi there,\n\nThank you for your payment — your AuthiChain pilot is confirmed and active.\n\nGet started now: https://authichain.com/dashboard\n\nYour onboarding team will be in touch within 1 business day. In the meantime, you can explore the dashboard and connect your first data source.\n\nWelcome aboard,\nThe AuthiChain Team`,
+            fromName: "AuthiChain",
+          });
+          await logActivity({
+            userId: null, action: "proposal_accepted", entityType: "proposal", entityId: 0,
+            details: { checkoutSessionId, leadEmail, amountUsd },
+          });
+          console.log(`[stripe-webhook] Proposal accepted: ${leadEmail} $${amountUsd}`);
+        } catch (err: any) {
+          console.error(`[stripe-webhook] Proposal accept error:`, err.message);
         }
-      } catch (err: any) {
-        console.error(`[stripe-webhook] Service order handling failed: ${err.message}`);
       }
 
       await logAutomationAudit(
@@ -446,41 +403,15 @@ export async function handleStripeWebhook(
           plan,
           billingCycle,
           amountUsd,
-          mode: session.mode,
           stripeSubscriptionId: subscriptionId ?? null,
           stripeCustomerId: customerId ?? null,
+          serviceOrderFulfilled: orderResult.handled ? orderResult.orderId : null,
+          proposalAccepted: !!leadEmail,
         },
         userId,
       );
 
-      // Access email — the buyer's only pointer to where their purchase lives.
-      if (email) {
-        try {
-          const { sendEmail } = await import("../email-service");
-          const what =
-            session.mode === "subscription"
-              ? `Your AuthiChain ${plan.charAt(0).toUpperCase() + plan.slice(1)} subscription is active`
-              : `Your AuthiChain purchase is confirmed`;
-          await sendEmail({
-            to: email,
-            subject: `${what} — here's how to get started`,
-            body:
-              `Hi ${customerName || "there"},\n\n` +
-              `Thanks for your purchase ($${amountUsd.toFixed(2)} ${currency}).\n\n` +
-              `Your account is ready. Sign in with Google using this email address (${email}) at:\n` +
-              `https://app.authichain.com\n\n` +
-              `Your subscription and usage will be waiting for you on the dashboard.\n\n` +
-              `Questions? Just reply to this email.\n\n` +
-              `— The AuthiChain Team\nhttps://authichain.com`,
-            fromName: "AuthiChain",
-          });
-          console.log(`[stripe-webhook] Access email sent to ${email}`);
-        } catch (err: any) {
-          console.error(`[stripe-webhook] Access email failed: ${err.message}`);
-        }
-      }
-
-      console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan} mode=${session.mode}`);
+      console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);
       break;
     }
 

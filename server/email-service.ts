@@ -1,8 +1,5 @@
 import { ENV } from "./_core/env";
 import nodemailer from "nodemailer";
-import { getDb } from "./db";
-import { activityLog } from "../drizzle/schema";
-import { sql, and, gte, eq } from "drizzle-orm";
 
 // ─── Gmail token cache (auto-refresh) ────────────────────────────────────────
 
@@ -59,6 +56,7 @@ export type SendEmailInput = {
   subject: string;
   body: string;
   fromName?: string;
+  trackLeadEmail?: string; // if set, embeds open pixel + click tracking
 };
 
 export type SendEmailResult = {
@@ -90,63 +88,19 @@ function toBase64Url(input: string) {
     .replace(/=+$/g, "");
 }
 
-/**
- * Rate-limit check — counts past `email_sent` rows in activity_log.
- * Returns null when allowed, or a "reason" string when over a cap. Disabled
- * if no DB is available (best-effort; do not let metering block delivery).
- */
-async function checkSendCaps(to: string): Promise<string | null> {
-  try {
-    const db = await getDb();
-    if (!db) return null;
-    const now = Date.now();
-    const dayCutoff = new Date(now - 24 * 60 * 60 * 1000);
-    const hourCutoff = new Date(now - 60 * 60 * 1000);
+const BASE_URL = "https://authichain.com";
 
-    // Per-recipient/day
-    const [perRecipient] = await db
-      .select({ n: sql<number>`count(*)` })
-      .from(activityLog)
-      .where(and(
-        eq(activityLog.action, "email_sent"),
-        gte(activityLog.createdAt, dayCutoff),
-        sql`${activityLog.details}->>'to' = ${to}`,
-      ));
-    const perRecipientCount = Number(perRecipient?.n ?? 0);
-    if (perRecipientCount >= ENV.emailMaxPerRecipientDay) {
-      return `per-recipient daily cap (${ENV.emailMaxPerRecipientDay}) reached`;
-    }
-
-    // Global/hour
-    const [globalHour] = await db
-      .select({ n: sql<number>`count(*)` })
-      .from(activityLog)
-      .where(and(
-        eq(activityLog.action, "email_sent"),
-        gte(activityLog.createdAt, hourCutoff),
-      ));
-    const globalHourCount = Number(globalHour?.n ?? 0);
-    if (globalHourCount >= ENV.emailMaxPerHourGlobal) {
-      return `global hourly cap (${ENV.emailMaxPerHourGlobal}) reached`;
-    }
-    return null;
-  } catch (err) {
-    console.warn("[email-service] rate-limit check failed (allowing send):", err);
-    return null;
-  }
-}
-
-async function recordSent(to: string, provider: string): Promise<void> {
-  try {
-    const db = await getDb();
-    if (!db) return;
-    await db.insert(activityLog).values({
-      action: "email_sent",
-      details: { to, provider, sentAt: new Date().toISOString() },
+function buildHtmlEmail(plainBody: string, trackToken: string): string {
+  const htmlBody = plainBody
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br>")
+    .replace(/(https?:\/\/[^\s<]+)/g, (url) => {
+      const encodedUrl = encodeURIComponent(url);
+      const clickUrl = `${BASE_URL}/api/track/click/${trackToken}?url=${encodedUrl}`;
+      return `<a href="${clickUrl}">${url}</a>`;
     });
-  } catch (err) {
-    console.warn("[email-service] failed to record send:", err);
-  }
+  const pixel = `<img src="${BASE_URL}/api/track/open/${trackToken}" width="1" height="1" alt="" style="display:none">`;
+  return `<html><body style="font-family:sans-serif;line-height:1.6">${htmlBody}${pixel}</body></html>`;
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
@@ -154,50 +108,14 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   if (isSuppressed(to)) {
     return { status: "suppressed", reason: "suppression_list" };
   }
-  const capReason = await checkSendCaps(to);
-  if (capReason) {
-    return { status: "skipped", reason: capReason };
-  }
 
   const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
   const appPassword = ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
   const fromName = input.fromName || "AuthiChain";
 
-  // ─── Method 0: Resend (verified authichain.com domain, SPF+DKIM+DMARC) ─────
-  // RESEND_API_KEY is the only mail credential present in Vercel production —
-  // without this method, transactional email (purchase access emails, dunning
-  // notices) silently no-ops in prod.
-  const resendKey = process.env.RESEND_API_KEY || "";
-  if (resendKey) {
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: `${fromName} <noreply@authichain.com>`,
-          to: [to],
-          subject: input.subject,
-          text: input.body,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json().catch(() => ({} as any));
-        await recordSent(to, "resend");
-        return {
-          status: "sent",
-          provider: "resend",
-          providerMessageId: data?.id,
-        };
-      }
-      const txt = await res.text().catch(() => "");
-      console.warn(`[email-service] Resend failed (${res.status}): ${txt.slice(0, 200)} — falling back to Gmail`);
-    } catch (resendErr: any) {
-      console.warn("[email-service] Resend errored, falling back to Gmail...", resendErr.message);
-    }
-  }
+  const trackToken = input.trackLeadEmail
+    ? toBase64Url(input.trackLeadEmail.trim().toLowerCase())
+    : null;
 
   // ─── Method 1: SMTP via App Password (Reliable Fallback) ───────────────────
   if (fromEmail && appPassword) {
@@ -207,14 +125,16 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         auth: { user: fromEmail, pass: appPassword },
       });
 
-      const info = await transporter.sendMail({
+      const mailOpts: any = {
         from: `${fromName} <${fromEmail}>`,
         to,
         subject: input.subject,
         text: input.body,
-      });
+      };
+      if (trackToken) mailOpts.html = buildHtmlEmail(input.body, trackToken);
 
-      await recordSent(to, "gmail-smtp");
+      const info = await transporter.sendMail(mailOpts);
+
       return {
         status: "sent",
         provider: "gmail-smtp",
@@ -235,15 +155,26 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { status: "skipped", reason: "gmail_token_unavailable", provider: "gmail" };
   }
 
-  const mime = [
-    `From: ${fromName} <${fromEmail}>`,
-    `To: ${to}`,
-    `Subject: ${input.subject}`,
-    "MIME-Version: 1.0",
-    "Content-Type: text/plain; charset=UTF-8",
-    "",
-    input.body,
-  ].join("\r\n");
+  const htmlVersion = trackToken ? buildHtmlEmail(input.body, trackToken) : null;
+  const mime = htmlVersion
+    ? [
+        `From: ${fromName} <${fromEmail}>`,
+        `To: ${to}`,
+        `Subject: ${input.subject}`,
+        "MIME-Version: 1.0",
+        'Content-Type: text/html; charset=UTF-8',
+        "",
+        htmlVersion,
+      ].join("\r\n")
+    : [
+        `From: ${fromName} <${fromEmail}>`,
+        `To: ${to}`,
+        `Subject: ${input.subject}`,
+        "MIME-Version: 1.0",
+        "Content-Type: text/plain; charset=UTF-8",
+        "",
+        input.body,
+      ].join("\r\n");
 
   const raw = toBase64Url(mime);
   const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
@@ -265,7 +196,6 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   }
 
   const data = await response.json().catch(() => ({} as any));
-  await recordSent(to, "gmail-oauth");
   return {
     status: "sent",
     provider: "gmail-oauth",

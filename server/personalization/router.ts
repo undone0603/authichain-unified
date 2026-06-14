@@ -108,14 +108,14 @@ export const personalizationRouter = router({
           utmSource: profile.utmSource || undefined,
           utmMedium: profile.utmMedium || undefined,
           utmCampaign: profile.utmCampaign || undefined,
-          deviceType: (profile.deviceType as "desktop" | "mobile" | "tablet" | null) || undefined,
+          deviceType: (profile.deviceType as any) || undefined,
           segment: profile.segment || undefined,
         },
         rules.map(r => ({
           id: r.id,
-          conditions: typeof r.conditions === "string" ? r.conditions : JSON.stringify(r.conditions ?? {}),
-          content: r.content,
-          priority: r.priority,
+          conditions: JSON.stringify(r.conditions),
+          content: JSON.stringify(r.content),
+          priority: r.priority ?? 0,
         }))
       );
 
@@ -142,7 +142,7 @@ export const personalizationRouter = router({
           await db
             .update(personalizationRules)
             .set({
-              conversionRate: newRate,
+              conversionRate: String(newRate),
             })
             .where(eq(personalizationRules.id, matchedRule.id));
         }
@@ -203,7 +203,7 @@ export const personalizationRouter = router({
           await db
             .update(personalizationRules)
             .set({
-              conversionRate: newRate,
+              conversionRate: String(newRate),
             })
             .where(eq(personalizationRules.id, input.ruleId));
         }
@@ -228,14 +228,11 @@ export const personalizationRouter = router({
 
       await db.insert(personalizationRules).values({
         name: input.name,
-        description: input.description,
         targetElement: input.targetElement,
-        conditions: JSON.stringify(input.conditions),
+        conditions: input.conditions,
         content: input.content,
         priority: input.priority,
         status: "draft",
-        aiGenerated: 0,
-        createdBy: ctx.user.id,
       });
 
       return { success: true };
@@ -262,12 +259,10 @@ export const personalizationRouter = router({
         await db.insert(personalizationRules).values({
           name: rule.name,
           targetElement: input.targetElement,
-          conditions: JSON.stringify(rule.conditions),
+          conditions: rule.conditions,
           content: rule.content,
           priority: 0,
           status: "draft",
-          aiGenerated: 1,
-          createdBy: ctx.user.id,
         });
       }
 
@@ -403,11 +398,11 @@ export const personalizationRouter = router({
 
       const analysis = await analyzePersonalizationPerformance(
         rules.map(r => ({
-          name: r.name,
-          conditions: typeof r.conditions === "string" ? r.conditions : JSON.stringify(r.conditions ?? {}),
+          name: r.name ?? "",
+          conditions: JSON.stringify(r.conditions),
           views: r.views,
           conversions: r.conversions,
-          conversionRate: r.conversionRate,
+          conversionRate: Number(r.conversionRate ?? 0),
         }))
       );
 
@@ -415,7 +410,7 @@ export const personalizationRouter = router({
         totalRules: rules.length,
         totalViews: rules.reduce((sum, r) => sum + r.views, 0),
         totalConversions: rules.reduce((sum, r) => sum + r.conversions, 0),
-        avgConversionRate: rules.reduce((sum, r) => sum + r.conversionRate, 0) / rules.length,
+        avgConversionRate: rules.reduce((sum, r) => sum + Number(r.conversionRate ?? 0), 0) / rules.length,
         topPerformers: analysis.topPerformers,
         insights: analysis.insights,
         recommendations: analysis.recommendations,

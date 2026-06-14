@@ -33,9 +33,7 @@ const TITLES: Record<string, string> = {
 
 // ─── Mock db module ───────────────────────────────────────────────────────────
 
-// The missions/tasks routers import directly from ./missions/missions.db (not
-// ./db), so the in-memory store must mock THAT module.
-vi.mock('./missions/missions.db', () => ({
+vi.mock('./db', () => ({
   getMissions: async (statusFilter?: string) => {
     const all = [...store.missions.values()];
     return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
@@ -61,7 +59,7 @@ vi.mock('./missions/missions.db', () => ({
     for (const kind of (TASK_KINDS[type] ?? [])) {
       const taskId = crypto.randomUUID();
       store.tasks.set(taskId, {
-        id: taskId, missionId: id as any, kind, payload: {}, status: 'PENDING',
+        id: taskId, missionId: id, kind, payload: {}, status: 'PENDING',
         runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null,
         createdAt: new Date(), updatedAt: new Date(),
       });
@@ -83,19 +81,62 @@ vi.mock('./missions/missions.db', () => ({
     if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
   },
 
-  updateTaskStatus: vi.fn().mockResolvedValue(undefined),
+  // getDb returns null — tests using direct db access guard with if (db)
+  getDb: async () => null,
+
+  logActivity:               vi.fn().mockResolvedValue(undefined),
+  createSystemNotification:  vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('./db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./db')>();
-  return {
-    ...actual,
-    // getDb returns null — tests using direct db access guard with if (db)
-    getDb: async () => null,
-    logActivity:              vi.fn().mockResolvedValue(undefined),
-    createSystemNotification: vi.fn().mockResolvedValue(undefined),
-  };
-});
+// Mock missions.db so the router doesn't need a real DB connection
+vi.mock('./missions/missions.db', () => ({
+  getMissions: async (statusFilter?: string) => {
+    const all = [...store.missions.values()];
+    return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
+  },
+  getMissionById: async (id: string) => {
+    const m = store.missions.get(id);
+    if (!m) return null;
+    const tasks = [...store.tasks.values()].filter((t: any) => t.missionId === id);
+    return { ...m, tasks };
+  },
+  createMission: async (type: string) => {
+    const id = crypto.randomUUID();
+    const TASK_KINDS_LOCAL: Record<string, string[]> = {
+      GOV_PILOT:          ['BUILD_PILOT_PACKET', 'DRAFT_INTEL_DOSSIER', 'FIND_GOV_LEADS', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
+      RETAIL_PILOT:       ['FINALIZE_RETAIL_SIGNAGE', 'PACKAGE_SKU_ONBOARDING', 'FIND_RETAIL_LEADS', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
+      PRESS_LAUNCH:       ['FIND_RETAIL_LEADS', 'DRAFT_PRESS_RELEASE', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'SCHEDULE_SOCIAL_POSTS'],
+      PARTNER_ONBOARDING: ['BUILD_PILOT_PACKET', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
+      TECH_OS_LOCK:       ['BUILD_PILOT_PACKET', 'DRAFT_INTEL_DOSSIER', 'GENERATE_LAUNCH_CHECKLIST'],
+      LAUNCH_AUTHICHAIN:  ['CHECK_DNS_CONFIG', 'VERIFY_SSL', 'RUN_LIGHTHOUSE_AUDIT', 'GENERATE_LAUNCH_CHECKLIST', 'DRAFT_LAUNCH_EMAIL', 'DRAFT_PRESS_RELEASE', 'SCHEDULE_SOCIAL_POSTS'],
+    };
+    const TITLES_LOCAL: Record<string, string> = {
+      GOV_PILOT: 'Government Pilot – Initial Agency',
+      RETAIL_PILOT: 'Retail Pilot – Dispensary / Retail Partner',
+      PRESS_LAUNCH: 'Press Launch – Media & PR Outreach',
+      PARTNER_ONBOARDING: 'Partner Onboarding',
+      TECH_OS_LOCK: 'Tech OS Lock – Platform Defensibility',
+      LAUNCH_AUTHICHAIN: 'AuthiChain.com – Full Launch Orchestration',
+    };
+    store.missions.set(id, { id, type, title: TITLES_LOCAL[type] ?? type, status: 'PLANNED', priority: 5, createdAt: new Date(), updatedAt: new Date() });
+    for (const kind of (TASK_KINDS_LOCAL[type] ?? [])) {
+      const taskId = crypto.randomUUID();
+      store.tasks.set(taskId, { id: taskId, missionId: id, kind, payload: {}, status: 'PENDING', runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null, createdAt: new Date(), updatedAt: new Date() });
+    }
+    return id;
+  },
+  updateMissionStatus: async (id: string, status: string) => {
+    const m = store.missions.get(id);
+    if (m) store.missions.set(id, { ...m, status, updatedAt: new Date() });
+  },
+  getTasksByMission: async (missionId: string) => {
+    return [...store.tasks.values()].filter((t: any) => t.missionId === missionId);
+  },
+  retryTask: async (id: string) => {
+    const t = store.tasks.get(id);
+    if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
+  },
+}));
 
 // ─── Shared test context ──────────────────────────────────────────────────────
 
@@ -108,11 +149,19 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
       name: 'AgentZ Test',
       loginMethod: 'manus',
       role,
+      walletAddress: null,
+      avatarUrl: null,
+      company: null,
+      title: null,
+      phone: null,
+      onboardingCompleted: 0,
       stripeCustomerId: null,
-    walletAddress: null, avatarUrl: null, company: null, title: null, phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,
+      paddleCustomerId: null,
+      points: 0,
+      metadata: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      lastSignedIn: new Date(), metadata: {},
+      lastSignedIn: new Date(),
     },
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
@@ -175,7 +224,7 @@ describe('missions.create', () => {
     const result = await caller.missions.create({ type: 'RETAIL_PILOT' });
     expect(result).toHaveProperty('id');
     expect(typeof result.id).toBe('string');
-    missionId = result.id as any;
+    missionId = result.id;
   });
 
   it('missions.get returns mission with correct type', async () => {
@@ -222,7 +271,7 @@ describe('missions.create — task counts', () => {
     it(`${type} creates ${count} tasks`, async () => {
       const caller = appRouter.createCaller(makeCtx());
       const { id } = await caller.missions.create({ type: type as any });
-      const tasks = await caller.tasks.list({ missionId: id as any });
+      const tasks = await caller.tasks.list({ missionId: id });
       expect((tasks as any[]).length).toBe(count);
     });
   }
@@ -236,7 +285,7 @@ describe('missions.updateStatus', () => {
   beforeAll(async () => {
     const caller = appRouter.createCaller(makeCtx());
     const result = await caller.missions.create({ type: 'PARTNER_ONBOARDING' });
-    missionId = result.id as any;
+    missionId = result.id;
   });
 
   it('transitions PLANNED → IN_PROGRESS', async () => {
@@ -262,11 +311,10 @@ describe('tasks.retry', () => {
   let failedTaskId: string;
 
   beforeAll(async () => {
-    const { createMission, getTasksByMission } = await import('./missions/missions.db');
-    const { getDb } = await import('./db');
+    const { createMission, getTasksByMission, getDb } = await import('./db');
 
     const missionId = await createMission('TECH_OS_LOCK');
-    const tasks = await getTasksByMission(missionId as any);
+    const tasks = await getTasksByMission(missionId);
     failedTaskId = tasks[0].id;
 
     // Directly mark the task FAILED in the in-memory store
@@ -319,7 +367,7 @@ describe('missions.list — status filtering after mutations', () => {
   it('lists IN_PROGRESS missions after status update', async () => {
     const caller = appRouter.createCaller(makeCtx());
     const { id } = await caller.missions.create({ type: 'GOV_PILOT' });
-    await caller.missions.updateStatus({ id: id, status: 'IN_PROGRESS' });
+    await caller.missions.updateStatus({ id, status: 'IN_PROGRESS' });
 
     const inProgress = await caller.missions.list({ status: 'IN_PROGRESS' }) as any[];
     expect(inProgress.some((m: any) => m.id === id)).toBe(true);

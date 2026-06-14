@@ -110,16 +110,17 @@ temp/
 __pycache__/
 *.py[cod]
 
-# Build output
-dist/
-.open-next/
-
-# Dependencies
+# Node
 node_modules/
 
-# Sub-project workspaces (standalone repos, not tracked here)
-qron/
+# Build artifacts
+.open-next/
+.next/
+dist/
+
+# Externally cloned repos (exploration only)
+authichain_premium/
 qron-platform/
+qron/
 govchain.us/
 maison-elite-ai-dropship/
-authichain_premium/

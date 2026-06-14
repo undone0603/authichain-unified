@@ -143,6 +143,59 @@ export function createApp() {
     app.use("/api/contact", contactRouter);
     app.use("/api/gpt", gptRouter);
 
+  // ─── Email Open / Click Tracking ─────────────────────────────────────────
+  app.get("/api/track/open/:token", async (req, res) => {
+    try {
+      const email = Buffer.from(
+        req.params.token.replace(/-/g, "+").replace(/_/g, "/"),
+        "base64",
+      ).toString("utf-8");
+      if (email.includes("@")) {
+        const { recordEmailOpen } = await import("../db");
+        await recordEmailOpen(email).catch(() => {});
+      }
+    } catch { /* ignore malformed tokens */ }
+    // Return 1x1 transparent GIF
+    const gif = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+    res.set({ "Content-Type": "image/gif", "Cache-Control": "no-store" }).send(gif);
+  });
+
+  app.get("/api/track/click/:token", async (req, res) => {
+    const destination = typeof req.query.url === "string" ? decodeURIComponent(req.query.url) : null;
+    try {
+      const email = Buffer.from(
+        req.params.token.replace(/-/g, "+").replace(/_/g, "/"),
+        "base64",
+      ).toString("utf-8");
+      if (email.includes("@")) {
+        const { recordEmailClick } = await import("../db");
+        await recordEmailClick(email).catch(() => {});
+      }
+    } catch { /* ignore malformed tokens */ }
+    if (destination && /^https?:\/\//.test(destination)) {
+      return res.redirect(302, destination);
+    }
+    res.redirect(302, "https://authichain.com");
+  });
+
+  // ─── Autonomous Pipeline Cron ────────────────────────────────────────────
+  // Called by Vercel Cron every 5 minutes. Authenticated by CRON_SECRET header.
+  app.post("/api/cron/pipeline", async (req, res) => {
+    const { ENV } = await import("./env");
+    const auth = req.headers["authorization"];
+    if (ENV.cronSecret && auth !== `Bearer ${ENV.cronSecret}`) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+      const { runPipelineTick } = await import("../jobs/pipeline-tick");
+      const result = await runPipelineTick();
+      res.json({ ok: true, result });
+    } catch (err: any) {
+      console.error("[cron/pipeline]", err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   // Internal API for gateway worker
   app.use("/api/internal", createInternalRouter());
 

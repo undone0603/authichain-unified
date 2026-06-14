@@ -17,8 +17,7 @@ router.post("/verify", async (req, res) => {
     if (!productId) {
       return res.status(400).json({ error: "productId required" });
     }
-    const [product] = await db.select().from(products)
-      .where(eq(products.id, Number(productId))).limit(1);
+    const [product] = await db.select().from(products).where(eq(products.id, Number(productId))).limit(1);
     if (!product) {
       return res.json({
         verified: false,
@@ -27,8 +26,7 @@ router.post("/verify", async (req, res) => {
         blockchain: null,
       });
     }
-    const [cert] = await db.select().from(certificates)
-      .where(eq(certificates.productId, product.id)).limit(1);
+    const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
     return res.json({
       verified: !!cert,
       trustScore: cert ? 95 : 20,
@@ -68,8 +66,7 @@ router.get("/certificates/verify", async (req, res) => {
   try {
     const { certNumber } = req.query;
     if (!certNumber) return res.status(400).json({ error: "certNumber required" });
-    const [cert] = await db.select().from(certificates)
-      .where(eq(certificates.certificateNumber, String(certNumber))).limit(1);
+    const [cert] = await db.select().from(certificates).where(eq(certificates.certificateNumber, String(certNumber))).limit(1);
     if (!cert) return res.json({ valid: false, message: "Certificate not found" });
     return res.json({
       valid: true,
@@ -92,7 +89,7 @@ router.post("/cannabis/verify", async (req, res) => {
       return res.status(400).json({ error: "strainName or batchId required" });
     }
     const product = strainName
-      ? (await db.select().from(products).where(eq(products.name, strainName)).limit(1))[0] ?? null
+      ? await db.select().from(products).where(eq(products.name, strainName)).limit(1).then(r => r[0])
       : null;
     return res.json({
       verified: !!product,
@@ -115,11 +112,9 @@ router.post("/trust-score", async (req, res) => {
   try {
     const { productId } = req.body;
     if (!productId) return res.status(400).json({ error: "productId required" });
-    const [product] = await db.select().from(products)
-      .where(eq(products.id, Number(productId))).limit(1);
+    const [product] = await db.select().from(products).where(eq(products.id, Number(productId))).limit(1);
     if (!product) return res.json({ trustScore: 0, verdict: "UNKNOWN", message: "Product not found" });
-    const [cert] = await db.select().from(certificates)
-      .where(eq(certificates.productId, product.id)).limit(1);
+    const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
     const baseScore = cert ? 85 : 15;
     const trustScore = Math.min(100, baseScore);
     const verdict = trustScore >= 80 ? "TRUSTED" : trustScore >= 50 ? "MODERATE" : "SUSPICIOUS";

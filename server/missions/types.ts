@@ -10,9 +10,9 @@ export type MissionType =
   | 'MEDTECH_OUTREACH'
   | 'TIMEPIECE_OUTREACH'
   | 'NEWSJACKING_LAUNCH'
+  | 'TECH_SPRINT'
   | 'MEDTECH_VIDEO_BRIEFING'
-  | 'MI_CRA_PARTNERSHIP'
-  | 'TECH_SPRINT';
+  | 'MI_CRA_PARTNERSHIP';
 
 export type MissionStatus = 'PLANNED' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';
 

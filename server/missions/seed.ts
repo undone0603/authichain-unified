@@ -89,8 +89,14 @@ async function seedLeads(db: NonNullable<Awaited<ReturnType<typeof getDb>>>) {
 
     if (existing.length === 0) {
       await db.insert(leads).values({
-        ...lead,
-        nextActionAt: (lead as any).nextActionAt ?? null,
+        email: lead.email,
+        name: (lead as any).name ?? null,
+        company: (lead as any).company ?? null,
+        title: (lead as any).title ?? null,
+        source: (lead as any).source ?? null,
+        status: (lead as any).status ?? "new",
+        industry: (lead as any).industry ?? null,
+        metadata: (lead as any).metadata ?? null,
       });
       inserted++;
     }
@@ -131,7 +137,7 @@ async function seedFailedTask(
   if (tasks[0]) {
     await db
       .update(missionTasks)
-      .set({ status: 'FAILED', error: 'seeded failure for test', updatedAt: new Date() })
+      .set({ status: 'failed', error: 'seeded failure for test', updatedAt: new Date() })
       .where(eq(missionTasks.id, tasks[0].id));
     return tasks[0].id;
   }

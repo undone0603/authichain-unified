@@ -52,10 +52,10 @@ function makeTask(kind: string): MissionTask {
     payload: {},
     status: 'PENDING',
     error: null,
-    result: null,
-    priority: 0,
-    scheduledAt: null,
     order: 0,
+    priority: 0,
+    result: null,
+    scheduledAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

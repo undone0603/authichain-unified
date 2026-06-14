@@ -20,6 +20,7 @@ import {
   runSendContract,
   runAutoReply,
 } from '../agents/closer.js';
+import { runPitchMoonshotDeal, runMoonshotProposal } from '../agents/moonshot.js';
 import { runGenerateOutreachVideo } from '../agents/heygen-video.js';
 import { runSecurityAudit } from '../agents/security.js';
 import { runNewsjackingMonitor } from '../agents/news-pr.js';
@@ -37,6 +38,10 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
       case 'FIND_LUXURY_LEADS':
       case 'FIND_PHARMA_LEADS':
       case 'FIND_TIMEPIECE_LEADS':
+      case 'FIND_ENTERTAINMENT_LEADS':
+      case 'FIND_SPORTS_LEADS':
+      case 'FIND_CREATOR_LEADS':
+      case 'FIND_COLLECTIBLES_LEADS':
         await runLeadFinder(task);
         break;
 
@@ -114,6 +119,14 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'AUTO_REPLY':
         await runAutoReply(task);
+        break;
+
+      case 'PITCH_MOONSHOT_DEAL':
+        await runPitchMoonshotDeal(task);
+        break;
+
+      case 'MOONSHOT_PROPOSAL':
+        await runMoonshotProposal(task);
         break;
 
       case 'GENERATE_OUTREACH_VIDEO':

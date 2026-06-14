@@ -1,7 +1,6 @@
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import * as schema from "../drizzle/schema";
-import { eq, ne, desc, and, gte, lte, like, sql, SQL } from "drizzle-orm";
+import { eq, desc, and, gte, lte, like, sql, SQL } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
   users,
@@ -43,18 +42,17 @@ import {
   missionTasks,
   stakingPositions,
   budgetConfig,
-  qrons,
-  qronScanVerdicts,
+  webhookEvents,
+  bayesianPriors,
+  proposals,
   type Product,
   type InsertProduct,
   type InsertNotification,
   type InsertUser,
-  type InsertQron,
-  type InsertQronScanVerdict,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
-type DrizzleInstance = NodePgDatabase<typeof schema>;
+type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
 
 export async function getDb() {
@@ -65,19 +63,10 @@ export async function getDb() {
   }
 
   try {
-    // Strip any `sslmode=...` from the connection string. Newer pg-connection-string
-    // treats `sslmode=require` as `verify-full` (strict CA verification), which
-    // overrides the explicit ssl option below and throws SELF_SIGNED_CERT_IN_CHAIN
-    // against Supabase's self-signed pooler cert. We instead encrypt without CA
-    // verification via the explicit `ssl` config.
-    const connectionString = (process.env.DATABASE_URL || "")
-      .replace(/([?&])sslmode=[^&]*&?/i, "$1")
-      .replace(/[?&]$/, "");
     const pool = new Pool({
-      connectionString,
-      ssl: { rejectUnauthorized: false },
+      connectionString: process.env.DATABASE_URL,
     });
-    _db = drizzle(pool, { schema });
+    _db = drizzle(pool);
     return _db;
   } catch (error) {
     console.error("[Database] Failed to connect:", error);
@@ -148,98 +137,6 @@ export async function getUserById(id: number) {
   return result[0] ?? null;
 }
 
-export async function getUserByEmail(email: string) {
-  const db = await getDb();
-  if (!db) return null;
-  const normalized = email.trim().toLowerCase();
-  const result = await db
-    .select()
-    .from(users)
-    .where(sql`lower(${users.email}) = ${normalized}`)
-    .orderBy(desc(users.createdAt));
-  if (result.length === 0) return null;
-  // Prefer a real (OAuth) account over a stripe-provisioned placeholder
-  return result.find((u) => u.loginMethod !== "stripe") ?? result[0];
-}
-
-/**
- * Find or create a user keyed by email. Used by the Stripe webhook to fulfil
- * payment-link purchases that carry no user_id metadata: the buyer gets a
- * placeholder account (loginMethod="stripe") which is claimed and merged the
- * first time they sign in with OAuth using the same email address.
- */
-export async function findOrCreateUserByEmail(input: {
-  email: string;
-  name?: string | null;
-  stripeCustomerId?: string | null;
-}): Promise<number | undefined> {
-  const db = await getDb();
-  if (!db) return undefined;
-  const email = input.email.trim().toLowerCase();
-  const existing = await getUserByEmail(email);
-  if (existing) {
-    if (input.stripeCustomerId && !existing.stripeCustomerId) {
-      await db
-        .update(users)
-        .set({ stripeCustomerId: input.stripeCustomerId })
-        .where(eq(users.id, existing.id));
-    }
-    return existing.id;
-  }
-  const openId = `stripe:${input.stripeCustomerId ?? email}`;
-  const inserted = await db
-    .insert(users)
-    .values({
-      openId,
-      email,
-      name: input.name ?? null,
-      loginMethod: "stripe",
-      stripeCustomerId: input.stripeCustomerId ?? null,
-    })
-    .onConflictDoUpdate({ target: users.openId, set: { email } })
-    .returning({ id: users.id });
-  return inserted[0]?.id;
-}
-
-/**
- * After an OAuth sign-in, re-point any subscriptions held by stripe-provisioned
- * placeholder users with the same email at the real user, and copy the Stripe
- * customer id over. Best-effort: callers must not fail login on errors here.
- */
-export async function claimStripeProvisionedUser(
-  realOpenId: string,
-  email: string | null | undefined,
-): Promise<void> {
-  if (!email) return;
-  const db = await getDb();
-  if (!db) return;
-  const real = await getUserByOpenId(realOpenId);
-  if (!real) return;
-  const normalized = email.trim().toLowerCase();
-  const placeholders = await db
-    .select({ id: users.id, stripeCustomerId: users.stripeCustomerId })
-    .from(users)
-    .where(
-      and(
-        sql`lower(${users.email}) = ${normalized}`,
-        eq(users.loginMethod, "stripe"),
-        ne(users.id, real.id),
-      ),
-    );
-  for (const placeholder of placeholders) {
-    await db
-      .update(subscriptions)
-      .set({ userId: real.id })
-      .where(eq(subscriptions.userId, placeholder.id));
-    if (placeholder.stripeCustomerId && !real.stripeCustomerId) {
-      await db
-        .update(users)
-        .set({ stripeCustomerId: placeholder.stripeCustomerId })
-        .where(eq(users.id, real.id));
-    }
-  }
-}
-
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
@@ -256,8 +153,8 @@ export async function getUserStakingPositions(userId: number) {
 export async function createStakingPosition(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(stakingPositions).values(data).returning({ id: stakingPositions.id });
-  return { id: result[0].id, ...data };
+  const [row] = await db.insert(stakingPositions).values(data).returning({ id: stakingPositions.id });
+  return { id: row!.id, ...data };
 }
 
 export async function updateStakingPosition(id: number, data: any) {
@@ -270,22 +167,25 @@ export async function updateStakingPosition(id: number, data: any) {
 export async function createProduct(data: Omit<InsertProduct, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(products).values(data).returning({ id: products.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(products).values(data).returning({ id: products.id });
+  return { id: row!.id };
 }
 
 export async function getRecentActivity(limit = 20) {
   const d = await getDb();
+  if (!d) return [];
   return d.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(limit);
 }
 
 export async function getRecentDecisions(limit = 10) {
   const d = await getDb();
+  if (!d) return [];
   return d.select().from(autopilotDecisions).orderBy(desc(autopilotDecisions.createdAt)).limit(limit);
 }
 
 export async function logActivity(actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number; details?: any }, details?: string) {
   const d = await getDb();
+  if (!d) return;
   if (typeof actionOrData === "string") {
     await d.insert(activityLog).values({ action: actionOrData, details: details ? { text: details } : undefined });
   } else {
@@ -325,12 +225,51 @@ export async function getActiveMissionTypes(): Promise<string[]> {
   return rows.map(r => r.title);
 }
 
-export async function getAdaptivePriors(): Promise<Record<string, any>> {
+export async function getAdaptivePriors(): Promise<Record<string, { alpha: number; beta: number }>> {
   const d = await getDb();
-  const rows = await d.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(50);
-  // NOTE: callers index this by segment key (priors[segment] ?? priors.DEFAULT).
-  // Returned loosely-typed for now; see smoke-test follow-up to compute real Bayesian priors.
-  return rows as unknown as Record<string, any>;
+  const rows = await d.select().from(bayesianPriors);
+  const map: Record<string, { alpha: number; beta: number }> = {
+    DEFAULT: { alpha: 2, beta: 23 },
+  };
+  for (const row of rows) {
+    map[row.segment] = { alpha: Number(row.priorAlpha ?? "2"), beta: Number(row.priorBeta ?? "23") };
+  }
+  return map;
+}
+
+export async function updateBayesianPrior(segment: string, alphaDelta: number, betaDelta: number) {
+  const d = await getDb();
+  // Use raw SQL UPSERT for atomic increment — Drizzle's onConflictDoUpdate set field
+  // does not accept sql template expressions, so we use execute() directly.
+  await d.execute(sql`
+    INSERT INTO bayesian_priors (segment, "priorAlpha", "priorBeta", "currentMean", "observationsCount", "updatedAt")
+    VALUES (
+      ${segment},
+      ${2 + alphaDelta},
+      ${23 + betaDelta},
+      ${(2 + alphaDelta) / (2 + alphaDelta + 23 + betaDelta)},
+      1,
+      NOW()
+    )
+    ON CONFLICT (segment) DO UPDATE SET
+      "priorAlpha" = bayesian_priors."priorAlpha"::numeric + ${alphaDelta},
+      "priorBeta"  = bayesian_priors."priorBeta"::numeric  + ${betaDelta},
+      "currentMean" = (bayesian_priors."priorAlpha"::numeric + ${alphaDelta})
+                    / (bayesian_priors."priorAlpha"::numeric + ${alphaDelta}
+                       + bayesian_priors."priorBeta"::numeric + ${betaDelta}),
+      "observationsCount" = bayesian_priors."observationsCount" + 1,
+      "updatedAt" = NOW()
+  `);
+}
+
+export async function getRecentOutcomeSignals(sinceMs = 5 * 60 * 1000): Promise<Array<{ segment: string; signal: string }>> {
+  const d = await getDb();
+  const since = new Date(Date.now() - sinceMs);
+  const rows = await d.select().from(activityLog)
+    .where(and(eq(activityLog.action, "outcome_signal"), gte(activityLog.createdAt, since)));
+  return rows
+    .map(r => ({ segment: (r.details as any)?.segment as string, signal: (r.details as any)?.signal as string }))
+    .filter(r => r.segment && r.signal);
 }
 
 export async function createLead(data: any) {
@@ -347,8 +286,8 @@ export async function createLead(data: any) {
     industry: data.industry ?? null,
     metadata: data.metadata ?? null,
   };
-  const result = await d.insert(leads).values(values).returning();
-  return result[0];
+  const [row] = await d.insert(leads).values(values).returning({ id: leads.id });
+  return { id: row!.id, ...values };
 }
 
 export async function getLeadByEmail(email: string) {
@@ -378,9 +317,32 @@ export async function updateLeadScore(id: number, score: number) {
   await d.update(leads).set({ score }).where(eq(leads.id, id));
 }
 
+export async function recordEmailOpen(email: string) {
+  const d = await getDb();
+  await d.update(leads).set({ emailOpened: true, updatedAt: new Date() }).where(eq(leads.email, email.toLowerCase()));
+}
+
+export async function recordEmailClick(email: string) {
+  const d = await getDb();
+  await d.update(leads).set({ emailClicked: true, updatedAt: new Date() }).where(eq(leads.email, email.toLowerCase()));
+}
+
+export async function recordEmailReply(email: string) {
+  const d = await getDb();
+  await d.update(leads).set({ emailReplied: true, updatedAt: new Date() }).where(eq(leads.email, email.toLowerCase()));
+}
+
 export async function updateLeadStatus(id: number, status: string) {
   const d = await getDb();
   await d.update(leads).set({ status: status as any }).where(eq(leads.id, id));
+}
+
+export async function incrementInteractionCount(id: number) {
+  const d = await getDb();
+  if (!d) return;
+  await d.update(leads)
+    .set({ interactionsCount: sql`${leads.interactionsCount} + 1` })
+    .where(eq(leads.id, id));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -389,118 +351,87 @@ export async function updateLeadStatus(id: number, status: string) {
 
 export async function createServiceOrder(data: any) {
   const d = await getDb();
-  const result = await d.insert(serviceOrders).values(data).returning({ id: serviceOrders.id });
-  const id = result[0].id;
+  const [row] = await d.insert(serviceOrders).values(data).returning({ id: serviceOrders.id });
+  const id = row!.id;
   return { id, ...data };
-}
-
-export async function getServiceOrderBySessionId(sessionId: string) {
-  const d = await getDb();
-  const rows = await d.select().from(serviceOrders).where(eq(sql`details->>'sessionId'`, sessionId)).limit(1);
-  return rows[0] ?? null;
 }
 
 export async function getServiceOrderById(id: number) {
   const d = await getDb();
+  if (!d) return null;
   const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
   return rows[0] ?? null;
 }
 
 export async function getServiceOrdersByUser(userId: number) {
   const d = await getDb();
-  return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId)).orderBy(desc(serviceOrders.createdAt));
+  if (!d) return [];
+  return d.select().from(serviceOrders)
+    .where(eq(serviceOrders.userId, userId))
+    .orderBy(desc(serviceOrders.createdAt));
 }
 
 export async function getAllServiceOrders() {
   const d = await getDb();
+  if (!d) return [];
   return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
 }
 
-export async function updateServiceOrderStatus(id: number, status: string, updates?: Record<string, unknown>) {
+export async function getServiceOrderBySessionId(sessionId: string) {
   const d = await getDb();
-  const setClause: Record<string, unknown> = { status, updatedAt: new Date() };
-  if (updates?.stripePaymentIntentId) {
-    setClause.details = sql`jsonb_set(COALESCE(${serviceOrders.details}::jsonb, '{}'::jsonb), '{stripePaymentIntentId}', to_jsonb(${updates.stripePaymentIntentId}::text))`;
-  }
-  await d.update(serviceOrders).set(setClause).where(eq(serviceOrders.id, id));
-}
-
-// ─────────────────────────────────────────────────────────────
-// QRON (consumer scanner / QR-art provenance)
-// ─────────────────────────────────────────────────────────────
-
-export async function getQronList() {
-  const d = await getDb();
-  return d.select().from(qrons).orderBy(desc(qrons.createdAt));
-}
-
-export async function createQron(data: InsertQron) {
-  const d = await getDb();
-  return d.insert(qrons).values(data).returning();
-}
-
-export async function getQronById(id: string) {
-  const d = await getDb();
-  const rows = await d.select().from(qrons).where(eq(qrons.id, id)).limit(1);
+  if (!d) return null;
+  const rows = await d.select().from(serviceOrders).where(sql`(${serviceOrders.details}::jsonb)->>'sessionId' = ${sessionId}`).limit(1);
   return rows[0] ?? null;
 }
 
-export async function updateQron(id: string, data: Partial<InsertQron>) {
+export async function updateServiceOrderStatus(
+  id: number,
+  status: string,
+  updates?: { stripePaymentIntentId?: string; [key: string]: unknown },
+) {
   const d = await getDb();
-  await d.update(qrons).set({ ...data, updatedAt: new Date() }).where(eq(qrons.id, id));
-}
-
-export async function createQronScanVerdict(data: InsertQronScanVerdict) {
-  const d = await getDb();
-  await d.insert(qronScanVerdicts).values(data);
+  if (!d) return;
+  const setValues: Record<string, unknown> = { status, updatedAt: new Date() };
+  if (updates?.stripePaymentIntentId) {
+    setValues.stripePaymentIntentId = updates.stripePaymentIntentId;
+  }
+  await d.update(serviceOrders).set(setValues as any).where(eq(serviceOrders.id, id));
 }
 
 // ─────────────────────────────────────────────────────────────
 // BUDGET & TASKS
 // ─────────────────────────────────────────────────────────────
 
-export async function getBudgetStatus(_at?: Date) {
+export async function getAcceptanceCriteriaStatus() {
+  return { total: 0, passed: 0, failed: 0, pending: 0 };
+}
+
+export async function getFunnelBySegmentAndChannel() {
+  return [];
+}
+
+export async function getLeadCohorts() {
+  return [];
+}
+
+export async function getBudgetStatus() {
   const d = await getDb();
   const rows = await d.select().from(budgetConfig).limit(1);
-  return rows[0] ?? { monthlyLimit: "1000.00", spent: "0.00" };
-}
-
-// ─── Leads / autopilot helpers (referenced by routers & jobs) ────────────────
-export async function getLeads() {
-  const d = await getDb();
-  return d.select().from(leads).orderBy(desc(leads.createdAt));
-}
-
-export async function incrementInteractionCount(leadId: number) {
-  const d = await getDb();
-  await d.update(leads)
-    .set({ interactionsCount: sql`COALESCE(${leads.interactionsCount}, 0) + 1`, updatedAt: new Date() })
-    .where(eq(leads.id, leadId));
-}
-
-export async function getAutopilotDecisionCountByMonth(_decisionType?: string): Promise<{ data: number }> {
-  const d = await getDb();
-  const since = new Date();
-  since.setDate(1);
-  since.setHours(0, 0, 0, 0);
-  const [row] = await d
-    .select({ count: sql<number>`count(*)` })
-    .from(autopilotDecisions)
-    .where(gte(autopilotDecisions.createdAt, since));
-  return { data: Number(row?.count ?? 0) };
-}
-
-// ─── Analytics aggregations (referenced by jobs/analytics-snapshot) ──────────
-export async function getAcceptanceCriteriaStatus(): Promise<Record<string, unknown>> {
-  return {};
-}
-
-export async function getFunnelBySegmentAndChannel(): Promise<Array<Record<string, unknown>>> {
-  return [];
-}
-
-export async function getLeadCohorts(): Promise<Array<Record<string, unknown>>> {
-  return [];
+  const row = rows[0] ?? { monthlyLimit: "1000.00", spent: "0.00" };
+  const limit = Number(row.monthlyLimit);
+  const spent = Number(row.spent ?? "0");
+  const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+  const now = new Date();
+  return {
+    ...row,
+    llm: { pct },
+    ads: { pct },
+    enrichment: { pct },
+    period: {
+      month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
+      day: now.toISOString().slice(0, 10),
+    },
+  };
 }
 
 export async function markTaskRunning(id: string) {
@@ -537,9 +468,31 @@ export async function enqueueTask(missionId: string, kind: string, payload: any,
 // PROPOSALS
 // ─────────────────────────────────────────────────────────────
 
-export async function createProposal(data: any) {
+export async function createProposal(data: {
+  leadEmail: string;
+  missionId: string;
+  taskId?: string;
+  segment: string;
+  content: string;
+  paymentLink?: string;
+  checkoutSessionId?: string;
+  pilotPriceUsd: number;
+}): Promise<string> {
   const d = await getDb();
-  await d.execute(sql`INSERT INTO proposals (data) VALUES (${JSON.stringify(data)})`);
+  const id = randomUUID();
+  await d.insert(proposals).values({
+    id,
+    leadEmail: data.leadEmail,
+    missionId: data.missionId,
+    taskId: data.taskId ?? null,
+    segment: data.segment,
+    content: data.content,
+    paymentLink: data.paymentLink ?? null,
+    checkoutSessionId: data.checkoutSessionId ?? null,
+    pilotPriceUsd: data.pilotPriceUsd,
+    status: "SENT",
+  });
+  return id;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -621,7 +574,7 @@ export async function hasDunningStepLogged(subscriptionId: number, step: string)
   const rows = await d.select().from(activityLog)
     .where(and(
       like(activityLog.action, `dunning:${step}:%`),
-      sql`${activityLog.details}->>'text' LIKE ${'%sub:' + subscriptionId + '%'}`
+      sql`(${activityLog.details}::jsonb)->>'text' LIKE ${'%sub:' + subscriptionId + '%'}`
     )).limit(1);
   return rows.length > 0;
 }
@@ -738,8 +691,8 @@ export async function updateProduct(id: number, data: any) {
 export async function createAuthentication(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(authentications).values(data).returning({ id: authentications.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(authentications).values(data).returning({ id: authentications.id });
+  return { id: row!.id };
 }
 
 export async function getUserAuthentications(userId: number) {
@@ -771,8 +724,8 @@ export async function incrementShareCount(id: number) {
 export async function createCertificate(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(certificates).values(data).returning();
-  return result[0];
+  const [row] = await db.insert(certificates).values(data).returning({ id: certificates.id });
+  return { id: row!.id };
 }
 
 export async function getCertificateByNumber(certNumber: string) {
@@ -792,8 +745,8 @@ export async function getUserCertificates(userId: number) {
 export async function createQrCode(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(qrCodes).values(data).returning({ id: qrCodes.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(qrCodes).values(data).returning({ id: qrCodes.id });
+  return { id: row!.id };
 }
 
 export async function getProductQrCodes(productId: number) {
@@ -830,8 +783,8 @@ export async function getNftById(id: number) {
 export async function createNft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(nfts).values(data).returning();
-  return result[0];
+  const [row] = await db.insert(nfts).values(data).returning({ id: nfts.id });
+  return { id: row!.id };
 }
 
 export async function listCollections() {
@@ -850,16 +803,16 @@ export async function getCollectionBySlug(slug: string) {
 export async function createCollection(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(nftCollections).values(data).returning({ id: nftCollections.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(nftCollections).values(data).returning({ id: nftCollections.id });
+  return { id: row!.id };
 }
 
 // ─── Auction Helpers ─────────────────────────────────────────────────────────
 export async function createAuction(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(auctions).values(data).returning({ id: auctions.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(auctions).values(data).returning({ id: auctions.id });
+  return { id: row!.id };
 }
 
 export async function getActiveAuctions() {
@@ -903,8 +856,8 @@ export async function getUserSubscription(userId: number) {
 export async function createSubscription(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(subscriptions).values(data).returning({ id: subscriptions.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(subscriptions).values(data).returning({ id: subscriptions.id });
+  return { id: row!.id };
 }
 
 export async function updateSubscriptionUsage(userId: number, usedQuota: number) {
@@ -923,8 +876,8 @@ export async function recordUsage(data: any) {
 export async function createInvoice(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(invoices).values(data).returning({ id: invoices.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(invoices).values(data).returning({ id: invoices.id });
+  return { id: row!.id };
 }
 
 export async function getUserInvoices(userId: number) {
@@ -937,8 +890,8 @@ export async function getUserInvoices(userId: number) {
 export async function createPayment(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(payments).values(data).returning({ id: payments.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(payments).values(data).returning({ id: payments.id });
+  return { id: row!.id };
 }
 
 export async function getUserPayments(userId: number) {
@@ -957,8 +910,8 @@ export async function updatePaymentStatus(id: number, status: string) {
 export async function createEmailCampaign(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(emailCampaigns).values(data).returning({ id: emailCampaigns.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(emailCampaigns).values(data).returning({ id: emailCampaigns.id });
+  return { id: row!.id };
 }
 
 export async function getUserEmailCampaigns(userId: number) {
@@ -977,8 +930,8 @@ export async function updateEmailCampaign(id: number, data: any) {
 export async function createEmailDraft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(emailDrafts).values(data).returning({ id: emailDrafts.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(emailDrafts).values(data).returning({ id: emailDrafts.id });
+  return { id: row!.id };
 }
 
 export async function getPendingDrafts() {
@@ -1000,8 +953,8 @@ export async function updateDraftStatus(id: number, status: string, approvedBy?:
 export async function createSupplyChainEvent(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(supplyChainEvents).values(data).returning({ id: supplyChainEvents.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(supplyChainEvents).values(data).returning({ id: supplyChainEvents.id });
+  return { id: row!.id };
 }
 
 export async function getProductSupplyChain(productId: number) {
@@ -1014,8 +967,8 @@ export async function getProductSupplyChain(productId: number) {
 export async function createReferral(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(referrals).values(data).returning({ id: referrals.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(referrals).values(data).returning({ id: referrals.id });
+  return { id: row!.id };
 }
 
 export async function getReferralByCode(code: string) {
@@ -1042,8 +995,8 @@ export async function getAffiliateByUserId(userId: number) {
 export async function createAffiliate(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(affiliates).values(data).returning({ id: affiliates.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(affiliates).values(data).returning({ id: affiliates.id });
+  return { id: row!.id };
 }
 
 export async function getAffiliateCommissions(affiliateId: number) {
@@ -1063,23 +1016,39 @@ export async function getAutopilotConfig() {
 export async function upsertAutopilotConfig(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(autopilotConfig).values(data).onConflictDoUpdate({ target: autopilotConfig.id, set: data }).returning();
+  const existing = await db.select({ id: autopilotConfig.id }).from(autopilotConfig).limit(1);
+  if (existing.length > 0) {
+    await db.update(autopilotConfig).set(data).where(eq(autopilotConfig.id, existing[0].id));
+    return existing[0].id;
+  }
+  const [result] = await db.insert(autopilotConfig).values(data).returning({ id: autopilotConfig.id });
   return result?.id;
 }
 
 export async function createAutopilotDecision(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(autopilotDecisions).values(data).returning({ id: autopilotDecisions.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(autopilotDecisions).values(data).returning({ id: autopilotDecisions.id });
+  return { id: row!.id };
+}
+
+export async function getAutopilotDecisionCountByMonth(type: string): Promise<{ data: number }> {
+  const db = await getDb();
+  if (!db) return { data: 0 };
+  const start = new Date();
+  start.setDate(1); start.setHours(0, 0, 0, 0);
+  const rows = await db.select({ count: sql<number>`count(*)` })
+    .from(autopilotDecisions)
+    .where(and(eq(autopilotDecisions.type, type), gte(autopilotDecisions.createdAt, start)));
+  return { data: Number(rows[0]?.count ?? 0) };
 }
 
 // ─── A/B Test Helpers ────────────────────────────────────────────────────────
 export async function createAbTest(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(abTests).values(data).returning({ id: abTests.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(abTests).values(data).returning({ id: abTests.id });
+  return { id: row!.id };
 }
 
 export async function getActiveAbTests() {
@@ -1098,8 +1067,8 @@ export async function getAllAbTests() {
 export async function createWhiteLabelClient(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(whiteLabelClients).values(data).returning({ id: whiteLabelClients.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(whiteLabelClients).values(data).returning({ id: whiteLabelClients.id });
+  return { id: row!.id };
 }
 
 export async function getWhiteLabelClients() {
@@ -1119,8 +1088,8 @@ export async function getWhiteLabelByApiKey(apiKey: string) {
 export async function createFraudAlert(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(fraudAlerts).values(data).returning({ id: fraudAlerts.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(fraudAlerts).values(data).returning({ id: fraudAlerts.id });
+  return { id: row!.id };
 }
 
 export async function getOpenFraudAlerts() {
@@ -1210,8 +1179,8 @@ export async function getSubscriptionAnalytics() {
 export async function createNotification(data: Omit<InsertNotification, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(notifications).values(data).returning({ id: notifications.id });
-  return { id: result[0].id };
+  const [row] = await db.insert(notifications).values(data).returning({ id: notifications.id });
+  return { id: row!.id };
 }
 
 export async function getUserNotifications(userId: number, limit = 50) {
@@ -1294,7 +1263,7 @@ export async function upsertLeadByEmail(input: {
     }).where(eq(leads.id, existing[0].id));
     return { id: existing[0].id, created: false };
   }
-  const result = await db.insert(leads).values({
+  const [row] = await db.insert(leads).values({
     email: input.email,
     name: input.name,
     company: input.company,
@@ -1304,7 +1273,7 @@ export async function upsertLeadByEmail(input: {
     industry: input.industry,
     metadata: input.metadata,
   }).returning({ id: leads.id });
-  return { id: result[0].id, created: true };
+  return { id: row!.id, created: true };
 }
 
 export function computeLeadScore(signals: {
@@ -1371,6 +1340,12 @@ export async function upsertStripeSubscription(data: {
       trialEndsAt: data.trialEndsAt ?? undefined,
     });
   }
+  // Keep users.stripeCustomerId in sync so paymentHistory tRPC query works
+  if (data.stripeCustomerId) {
+    await db.update(users)
+      .set({ stripeCustomerId: data.stripeCustomerId })
+      .where(eq(users.id, data.userId));
+  }
 }
 
 export async function setSubscriptionStatusByStripeId(
@@ -1396,14 +1371,16 @@ export async function getSubscriptionByStripeSubscriptionId(stripeSubscriptionId
   return result[0];
 }
 
-export async function hasWebhookEventProcessed(eventId: string): Promise<boolean> {
+export async function hasWebhookEventProcessed(eventId: string, eventType = "unknown", provider = "stripe"): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
-  const [row] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(activityLog)
-    .where(sql`${activityLog.details}->>'eventId' = ${eventId}`);
-  return (row?.count ?? 0) > 0;
+  // Atomic claim: INSERT returns 0 rows on conflict → already processed.
+  const result = await db
+    .insert(webhookEvents)
+    .values({ provider, eventId, eventType, receivedAt: new Date() })
+    .onConflictDoNothing()
+    .returning({ id: webhookEvents.id });
+  return result.length === 0;
 }
 
 // ─── Paddle Subscription Helpers ──────────────────────────────────────────────
@@ -1474,15 +1451,102 @@ export async function getSubscriptionByPaddleSubscriptionId(paddleSubscriptionId
   return result[0];
 }
 
-// ─────────────────────────────────────────────────────────────
-// AGENTZ INTELLIGENCE HELPERS
-// ─────────────────────────────────────────────────────────────
+// ─── Additional Helpers ───────────────────────────────────────────────────────
+
+export async function getLeads() {
+  const d = await getDb();
+  if (!d) return [];
+  return d.select().from(leads).orderBy(desc(leads.createdAt));
+}
 
 export async function getRecentAgentZActivity(limit = 10) {
   const d = await getDb();
-  return await d.select()
-    .from(activityLog)
-    .where(eq(activityLog.entityType, "agentz"))
+  if (!d) return [];
+  return d.select().from(activityLog)
+    .where(eq(activityLog.entityType, "agent"))
     .orderBy(desc(activityLog.createdAt))
     .limit(limit);
+}
+
+export async function getQronList(): Promise<any[]> {
+  const d = await getDb();
+  if (!d) return [];
+  return d.select().from(qrCodes).orderBy(desc(qrCodes.createdAt));
+}
+
+export async function createQron(data: {
+  id?: string;
+  productId: number;
+  productName?: string;
+  brand?: string;
+  category?: string;
+  mode?: string;
+  seed?: string;
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  fingerprintHash?: string;
+  nftTokenId?: string;
+  openartUrl?: string;
+  trustScore?: number;
+}): Promise<any[]> {
+  const d = await getDb();
+  if (!d) throw new Error("Database not available");
+  const [row] = await d.insert(qrCodes).values({
+    productId: data.productId,
+    userId: 0,
+    qrData: data.id ?? String(data.productId),
+    qrImageUrl: data.imageUrl,
+  }).returning();
+  return [{ ...row, ...data }];
+}
+
+export async function getQronById(id: string | number): Promise<any | null> {
+  const d = await getDb();
+  if (!d) return null;
+  if (typeof id === "string") {
+    const rows = await d.select().from(qrCodes).where(eq(qrCodes.qrData, id)).limit(1);
+    return rows[0] ?? null;
+  }
+  const rows = await d.select().from(qrCodes).where(eq(qrCodes.id, id as number)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function createQronScanVerdict(data: {
+  qronId: number | string;
+  scannedImageUrl?: string;
+  similarityScore?: number;
+  verdict?: string;
+  details?: string;
+}): Promise<void> {
+  const d = await getDb();
+  if (!d) return;
+  // Log as activity since we don't have a dedicated scan_verdicts table
+  await d.insert(activityLog).values({
+    action: "qron_scan_verdict",
+    entityType: "qron",
+    entityId: typeof data.qronId === "number" ? data.qronId : undefined,
+    details: data,
+  });
+}
+
+export async function updateQron(id: number | string, data: Partial<{
+  verifiedScanCount: number;
+  fakeFlagCount: number;
+  trustScore: number;
+  [key: string]: unknown;
+}>): Promise<void> {
+  const d = await getDb();
+  if (!d) return;
+  if (typeof id === "number") {
+    await d.update(qrCodes).set({ scanCount: data.verifiedScanCount ?? undefined }).where(eq(qrCodes.id, id));
+  }
+}
+
+export async function claimStripeProvisionedUser(openId: string, email: string): Promise<void> {
+  const d = await getDb();
+  if (!d) return;
+  if (!email) return;
+  await d.update(users)
+    .set({ openId })
+    .where(and(eq(users.email, email), sql`${users.openId} LIKE 'stripe_provisioned_%'`));
 }

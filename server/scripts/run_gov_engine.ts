@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { startGovernmentEngine } from "../../src/agents/government-lead-gen-v2.js";
+import { startGovernmentEngine } from "../agents/government-lead-gen-v2.js";
 
 async function runGovEngine() {
   console.log("🏛️  Launching GovChain Federal Discovery Engine...");

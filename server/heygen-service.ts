@@ -132,5 +132,5 @@ Tone: professional, warm, direct. End with a soft CTA to book a 15-min call.
 Return ONLY the script text, no labels or quotes.`;
   const res = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
   const content = res.choices?.[0]?.message?.content;
-  return typeof content === "string" ? content.trim() : "";
+  return (typeof content === "string" ? content.trim() : "") ?? "";
 }

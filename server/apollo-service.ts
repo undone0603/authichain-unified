@@ -78,6 +78,56 @@ const SEGMENT_PARAMS: Record<string, ApolloSearchParams> = {
       "software", "technology", "saas", "platform", "integration", "api",
     ],
   },
+  ENTERTAINMENT: {
+    person_titles: [
+      "vp of merchandise", "head of brand partnerships", "director of licensing",
+      "chief brand officer", "director of consumer products", "vp of marketing",
+      "head of fan experience", "director of ecommerce", "merchandise director",
+      "head of brand protection", "anti-counterfeiting director",
+    ],
+    person_seniorities: ["director", "vp", "c_suite", "manager", "senior"],
+    q_organization_keyword_tags: [
+      "entertainment", "music", "film studio", "record label", "live events",
+      "concert", "touring", "television", "streaming", "talent management",
+    ],
+  },
+  SPORTS: {
+    person_titles: [
+      "vp of licensing", "director of retail", "head of brand protection",
+      "vp of consumer products", "director of merchandise", "chief revenue officer",
+      "head of ecommerce", "vp of business development", "director of authenticity",
+    ],
+    person_seniorities: ["director", "vp", "c_suite", "manager"],
+    q_organization_keyword_tags: [
+      "sports", "professional sports", "sports league", "athlete brand",
+      "sports merchandise", "trading cards", "collectibles", "sports team",
+      "esports", "sports equipment",
+    ],
+  },
+  CREATOR: {
+    person_titles: [
+      "founder", "ceo", "head of brand", "creative director", "director of merchandise",
+      "vp of partnerships", "head of ecommerce", "chief marketing officer",
+      "director of fan monetization", "head of creator partnerships",
+    ],
+    person_seniorities: ["owner", "founder", "director", "vp", "c_suite"],
+    q_organization_keyword_tags: [
+      "creator economy", "influencer", "content creator", "youtube", "merchandise",
+      "fan merchandise", "streetwear", "direct to consumer", "brand collaboration",
+    ],
+  },
+  COLLECTIBLES: {
+    person_titles: [
+      "ceo", "founder", "head of authentication", "director of marketplace",
+      "vp of product", "chief operating officer", "head of trust and safety",
+      "director of provenance", "authentication manager", "vp of marketplace",
+    ],
+    person_seniorities: ["owner", "founder", "director", "vp", "c_suite"],
+    q_organization_keyword_tags: [
+      "collectibles", "nft", "trading cards", "sneakers", "limited edition",
+      "luxury resale", "authentication", "provenance", "memorabilia", "marketplace",
+    ],
+  },
 };
 
 export async function apolloSearchLeads(segment: string, count: number): Promise<ApolloLead[]> {

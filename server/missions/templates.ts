@@ -74,7 +74,7 @@ export const missionTemplates: Record<MissionType, MissionTemplate> = {
   },
   MEDTECH_VIDEO_BRIEFING: {
     type: 'MEDTECH_VIDEO_BRIEFING',
-    title: 'MedTech Video Briefing – AI Avatar Outreach',
+    title: 'MedTech Video Briefing – ISO 13485 Audit Automation',
     priority: 8,
   },
   MI_CRA_PARTNERSHIP: {
