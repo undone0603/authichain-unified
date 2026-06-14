@@ -112,3 +112,6 @@ __pycache__/
 
 # Build output
 dist/
+
+# Dependencies
+node_modules/
