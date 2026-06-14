@@ -37,6 +37,7 @@ import { salesRouter } from "./sales/router";
 import { autonomousRouter } from "./autonomous/router";
 import { payoutsRouter } from "./payouts/router";
 import { qronRouter } from "./qron/router";
+import { founderRouter } from "./founder/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -78,6 +79,7 @@ export const appRouter = router({
   autonomous: autonomousRouter,
   payouts: payoutsRouter,
   qron: qronRouter,
+  founder: founderRouter,
 });
 
 export type AppRouter = typeof appRouter;
