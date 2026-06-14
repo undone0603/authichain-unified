@@ -31,6 +31,16 @@ export const ENV = {
   requireOutreachApproval:   process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
   requireDevApproval:        process.env.REQUIRE_DEV_APPROVAL !== "false",
 
+  // ── Outreach rate limits ─────────────────────────────────────────────────
+  // Per-recipient/day and global/hour caps as a runaway-blast circuit breaker.
+  // Conservative defaults; raise via env once you've validated deliverability.
+  emailMaxPerRecipientDay: parseInt(process.env.EMAIL_MAX_PER_RECIPIENT_DAY || "3", 10),
+  emailMaxPerHourGlobal:   parseInt(process.env.EMAIL_MAX_PER_HOUR_GLOBAL || "100", 10),
+
+  // ── News intelligence (optional — falls back to LLM simulation) ──────────
+  serpapiKey:    process.env.SERPAPI_KEY ?? "",
+  newsApiKey:    process.env.NEWS_API_KEY ?? "",
+
   // ── Video / Media ─────────────────────────────────────────────────────────
   heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
   internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",

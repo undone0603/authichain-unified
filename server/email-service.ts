@@ -1,5 +1,8 @@
 import { ENV } from "./_core/env";
 import nodemailer from "nodemailer";
+import { getDb } from "./db";
+import { activityLog } from "../drizzle/schema";
+import { sql, and, gte, eq } from "drizzle-orm";
 
 // ─── Gmail token cache (auto-refresh) ────────────────────────────────────────
 
@@ -87,10 +90,73 @@ function toBase64Url(input: string) {
     .replace(/=+$/g, "");
 }
 
+/**
+ * Rate-limit check — counts past `email_sent` rows in activity_log.
+ * Returns null when allowed, or a "reason" string when over a cap. Disabled
+ * if no DB is available (best-effort; do not let metering block delivery).
+ */
+async function checkSendCaps(to: string): Promise<string | null> {
+  try {
+    const db = await getDb();
+    if (!db) return null;
+    const now = Date.now();
+    const dayCutoff = new Date(now - 24 * 60 * 60 * 1000);
+    const hourCutoff = new Date(now - 60 * 60 * 1000);
+
+    // Per-recipient/day
+    const [perRecipient] = await db
+      .select({ n: sql<number>`count(*)` })
+      .from(activityLog)
+      .where(and(
+        eq(activityLog.action, "email_sent"),
+        gte(activityLog.createdAt, dayCutoff),
+        sql`${activityLog.details}->>'to' = ${to}`,
+      ));
+    const perRecipientCount = Number(perRecipient?.n ?? 0);
+    if (perRecipientCount >= ENV.emailMaxPerRecipientDay) {
+      return `per-recipient daily cap (${ENV.emailMaxPerRecipientDay}) reached`;
+    }
+
+    // Global/hour
+    const [globalHour] = await db
+      .select({ n: sql<number>`count(*)` })
+      .from(activityLog)
+      .where(and(
+        eq(activityLog.action, "email_sent"),
+        gte(activityLog.createdAt, hourCutoff),
+      ));
+    const globalHourCount = Number(globalHour?.n ?? 0);
+    if (globalHourCount >= ENV.emailMaxPerHourGlobal) {
+      return `global hourly cap (${ENV.emailMaxPerHourGlobal}) reached`;
+    }
+    return null;
+  } catch (err) {
+    console.warn("[email-service] rate-limit check failed (allowing send):", err);
+    return null;
+  }
+}
+
+async function recordSent(to: string, provider: string): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    await db.insert(activityLog).values({
+      action: "email_sent",
+      details: { to, provider, sentAt: new Date().toISOString() },
+    });
+  } catch (err) {
+    console.warn("[email-service] failed to record send:", err);
+  }
+}
+
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
   const to = input.to.trim().toLowerCase();
   if (isSuppressed(to)) {
     return { status: "suppressed", reason: "suppression_list" };
+  }
+  const capReason = await checkSendCaps(to);
+  if (capReason) {
+    return { status: "skipped", reason: capReason };
   }
 
   const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
@@ -119,6 +185,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       });
       if (res.ok) {
         const data = await res.json().catch(() => ({} as any));
+        await recordSent(to, "resend");
         return {
           status: "sent",
           provider: "resend",
@@ -147,6 +214,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         text: input.body,
       });
 
+      await recordSent(to, "gmail-smtp");
       return {
         status: "sent",
         provider: "gmail-smtp",
@@ -197,6 +265,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   }
 
   const data = await response.json().catch(() => ({} as any));
+  await recordSent(to, "gmail-oauth");
   return {
     status: "sent",
     provider: "gmail-oauth",

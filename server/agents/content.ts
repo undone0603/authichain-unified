@@ -1,7 +1,8 @@
 import { invokeLLM } from '../_core/llm.js';
-import { logActivity } from '../db.js';
+import { logActivity, markTaskWaitingHuman } from '../db.js';
 import { postThread } from '../twitter-service.js';
 import { postLinkedInThread } from '../linkedin-service.js';
+import { ENV } from '../_core/env.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 interface ContentPayload {
@@ -144,6 +145,29 @@ Return JSON: { "platforms": { "<platform>": [{ "day": 0, "copy": "...", "hashtag
     calendar = JSON.parse(result.choices[0].message.content as string ?? '{}');
   } catch {
     throw new Error('Social posts LLM returned unparseable JSON');
+  }
+
+  // ─── Approval gate ──────────────────────────────────────────────────────
+  // Social posts publish to live accounts (Twitter, LinkedIn) — when the
+  // outreach-approval flag is on, persist the generated calendar to the
+  // activity log and pause the task. An approver re-runs in unattended mode
+  // (per-batch) to publish.
+  if (ENV.requireOutreachApproval) {
+    await logActivity({
+      userId: null,
+      action: 'social_posts_pending_approval',
+      entityType: 'task',
+      entityId: 0,
+      details: {
+        taskId: task.id,
+        missionId: task.missionId,
+        platforms,
+        calendar,
+        totalScheduled: Object.values(calendar.platforms ?? {}).reduce((s, arr) => s + arr.length, 0),
+      },
+    });
+    await markTaskWaitingHuman(task.id);
+    return;
   }
 
   const postedUrls: string[] = [];
