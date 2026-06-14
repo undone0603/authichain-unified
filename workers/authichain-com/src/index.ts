@@ -2323,6 +2323,19 @@ section[id] { scroll-margin-top: 80px; }
 @media (max-width: 767px) {
   .nav-links { display: none; }
 }
+h2 {
+  font-family: var(--display);
+  font-size: clamp(28px, 6vw, 52px);
+  letter-spacing: 2px;
+  color: var(--text);
+  margin-bottom: 16px;
+  line-height: 1.1;
+}
+.card:hover {
+  border-color: var(--border);
+  box-shadow: 0 0 24px var(--primary-glow);
+  transform: translateY(-2px);
+}
 `;
 
 function communityHub(brand) {
