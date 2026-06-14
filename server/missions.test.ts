@@ -86,22 +86,28 @@ vi.mock('./missions/missions.db', async (importOriginal) => {
   };
 });
 
-// Mock db separately for non-mission functions
-vi.mock('./db', () => ({
-  logActivity:               vi.fn().mockResolvedValue(undefined),
-  createSystemNotification:  vi.fn().mockResolvedValue(undefined),
-  getDb: async () => ({
-    select:  vi.fn().mockReturnThis(),
-    from:    vi.fn().mockReturnThis(),
-    where:   vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockReturnThis(),
-    limit:   vi.fn().mockReturnThis(),
-    insert:  vi.fn().mockReturnThis(),
-    values:  vi.fn().mockResolvedValue([{ insertId: 1 }]),
-    update:  vi.fn().mockReturnThis(),
-    set:     vi.fn().mockReturnThis(),
-  }),
-}));
+// Mock db separately for non-mission functions. Spread the real module so the
+// fully-wired appRouter (which transitively imports many db helpers) doesn't
+// throw on missing exports; override only what these tests exercise.
+vi.mock('./db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./db')>();
+  return {
+    ...actual,
+    logActivity:               vi.fn().mockResolvedValue(undefined),
+    createSystemNotification:  vi.fn().mockResolvedValue(undefined),
+    getDb: async () => ({
+      select:  vi.fn().mockReturnThis(),
+      from:    vi.fn().mockReturnThis(),
+      where:   vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit:   vi.fn().mockReturnThis(),
+      insert:  vi.fn().mockReturnThis(),
+      values:  vi.fn().mockResolvedValue([{ insertId: 1 }]),
+      update:  vi.fn().mockReturnThis(),
+      set:     vi.fn().mockReturnThis(),
+    }),
+  };
+});
 
 // ─── Shared test context ──────────────────────────────────────────────────────
 
@@ -275,7 +281,9 @@ describe('tasks.retry', () => {
   let failedTaskId: string;
 
   beforeAll(async () => {
-    const { createMission, getTasksByMission, getDb } = await import('./db');
+    // createMission/getTasksByMission are the in-memory-store-backed mocks
+    const { createMission, getTasksByMission } = await import('./missions/missions.db');
+    const { getDb } = await import('./db');
 
     const missionId = await createMission('TECH_OS_LOCK');
     const tasks = await getTasksByMission(missionId);

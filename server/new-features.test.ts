@@ -32,7 +32,10 @@ vi.mock("./db", async (importOriginal) => {
       values: (data: any) => {
         const id = store.nextId();
         store.bonuses.push({ ...data, id });
-        return [{ insertId: id }];
+        // Postgres-style: insert resolves to [] but supports .returning({ id })
+        const result: any = Promise.resolve([{ insertId: id }]);
+        result.returning = () => Promise.resolve([{ id }]);
+        return result;
       },
     }),
     update: () => ({ set: () => ({ where: () => undefined }) }),

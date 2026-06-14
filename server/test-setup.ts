@@ -97,12 +97,9 @@ vi.mock("./character-service", () => ({
 // Mock scheduled-jobs as well
 vi.mock("./scheduled-jobs", () => ({
   getJobHistory: vi.fn().mockResolvedValue([]),
-  runJobManually: vi.fn(async ({ jobName }) => {
-    if (jobName === "nonexistent-job") {
-      return { success: false, message: `Failed to start job "${jobName}"` };
-    }
-    return { success: true, message: `Job "${jobName}" started successfully` };
-  }),
+  // Real signature: runJobManually(jobName: string): Promise<boolean>
+  // (returns false only when no job matches the name).
+  runJobManually: vi.fn(async (jobName: string) => jobName !== "nonexistent-job"),
   executeJob: vi.fn().mockResolvedValue({ success: true }),
   getRegisteredJobs: vi.fn().mockReturnValue([
     { name: "subscription-health-check", description: "check health", schedule: "0 0 * * *", enabled: true },

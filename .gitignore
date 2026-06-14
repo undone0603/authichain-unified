@@ -109,3 +109,6 @@ temp/
 
 __pycache__/
 *.py[cod]
+
+# Build output
+dist/
