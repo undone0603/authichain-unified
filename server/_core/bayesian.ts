@@ -108,27 +108,35 @@ export function updatePrior(
 // Based on typical cold-email B2B benchmarks per vertical.
 
 export const SEGMENT_PRIORS: Record<string, BetaPrior> = {
-  GOV:     { alpha: 2,  beta: 23 }, // ~8 %  reply rate, slow-moving
-  RETAIL:  { alpha: 3,  beta: 17 }, // ~15 % reply rate
-  LUXURY:  { alpha: 4,  beta: 16 }, // ~20 % — high value but high barrier
-  PHARMA:  { alpha: 3,  beta: 17 }, // ~15 % — regulatory driven
-  MEDTECH: { alpha: 2,  beta: 18 }, // ~10 % — long sales cycle, high complexity
-  TIMEPIECE: { alpha: 3,  beta: 17 }, // ~15 % — prestige driven, relationship focused
-  PRESS:   { alpha: 4,  beta: 16 }, // ~20 % — journalists are responsive
-  PARTNER: { alpha: 5,  beta: 15 }, // ~25 % — aligned incentive
-  DEFAULT: { alpha: 2,  beta: 23 },
+  GOV:           { alpha: 2,  beta: 23 }, // ~8 %  reply rate, slow-moving
+  RETAIL:        { alpha: 3,  beta: 17 }, // ~15 % reply rate
+  LUXURY:        { alpha: 4,  beta: 16 }, // ~20 % — high value but high barrier
+  PHARMA:        { alpha: 3,  beta: 17 }, // ~15 % — regulatory driven
+  MEDTECH:       { alpha: 2,  beta: 18 }, // ~10 % — long sales cycle, high complexity
+  TIMEPIECE:     { alpha: 3,  beta: 17 }, // ~15 % — prestige driven, relationship focused
+  PRESS:         { alpha: 4,  beta: 16 }, // ~20 % — journalists are responsive
+  PARTNER:       { alpha: 5,  beta: 15 }, // ~25 % — aligned incentive
+  ENTERTAINMENT: { alpha: 4,  beta: 16 }, // ~20 % — brand protection urgency is high
+  SPORTS:        { alpha: 3,  beta: 12 }, // ~20 % — memorabilia market is a known problem
+  CREATOR:       { alpha: 6,  beta: 14 }, // ~30 % — creators move fast, direct-to-yes culture
+  COLLECTIBLES:  { alpha: 3,  beta: 12 }, // ~20 % — authentication is existential for them
+  DEFAULT:       { alpha: 2,  beta: 23 },
 };
 
 /** Revenue proxy per segment (USD, conservative pilot value) */
 export const SEGMENT_REVENUE: Record<string, number> = {
-  GOV:     140_000,
-  RETAIL:   18_000,
-  LUXURY:   45_000,
-  PHARMA:   80_000,
-  MEDTECH: 120_000,
-  TIMEPIECE: 75_000,
-  PRESS:     5_000, // brand value, not direct revenue
-  PARTNER:  50_000,
+  GOV:           120_000,
+  RETAIL:         18_000,
+  LUXURY:         45_000,
+  PHARMA:         90_000,
+  MEDTECH:       150_000,
+  TIMEPIECE:      75_000,
+  PRESS:           5_000, // brand value, not direct revenue
+  PARTNER:        40_000,
+  ENTERTAINMENT:  75_000,
+  SPORTS:         50_000,
+  CREATOR:        10_000,
+  COLLECTIBLES:  100_000,
   DEFAULT:  10_000,
 };
 

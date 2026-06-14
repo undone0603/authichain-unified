@@ -96,7 +96,7 @@ export async function triggerFulfillmentFromPayment(sessionId: string) {
   if (!order) return;
 
   const physicalServices = ["brand_story_pack", "automation_setup"];
-  if (!physicalServices.includes(order.serviceType)) return;
+  if (!order.serviceType || !physicalServices.includes(order.serviceType)) return;
 
   if (process.env.FULFILLMENT_MOCK_ENABLED !== "true") {
     console.log(
@@ -116,7 +116,7 @@ export async function triggerFulfillmentFromPayment(sessionId: string) {
       zip: "48226",
       country: "US",
     },
-    artworkUrl: (order.details as any)?.artworkUrl ?? (order.details as any)?.deliveryUrl ?? "",
+    artworkUrl: (order.details as any)?.deliveryUrl || "",
     quantity: 1000,
   });
 }

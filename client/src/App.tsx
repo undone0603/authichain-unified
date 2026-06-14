@@ -8,7 +8,6 @@ import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { BrandProvider } from "./contexts/BrandContext";
 import { ThirdwebProvider } from "./components/ThirdwebProvider";
 import DashboardLayout from "./components/DashboardLayout";
 
@@ -48,10 +47,7 @@ const QrArtGallery = lazy(() => import("./pages/QrArtGallery"));
 const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
 const ScheduledTasks = lazy(() => import("./pages/ScheduledTasks"));
 const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
-const Missions = lazy(() => import("./pages/Missions"));
-const BuildLoop = lazy(() => import("./pages/BuildLoop"));
-const PhysicalAuth = lazy(() => import("./pages/PhysicalAuth"));
-const VideoStudio = lazy(() => import("./pages/VideoStudio"));
+const AutonomousControl = lazy(() => import("./pages/AutonomousControl"));
 
 function PageLoader() {
   return (
@@ -94,13 +90,10 @@ function DashboardRoutes() {
           <WRoute path="/sba-loan" component={SbaDisasterLoan} />
           <WRoute path="/scheduled-tasks" component={ScheduledTasks} />
           <WRoute path="/service-orders" component={ServiceOrders} />
+          <WRoute path="/autonomous" component={AutonomousControl} />
           <WRoute path="/services" component={Services} />
           <WRoute path="/storymode" component={Storymode} />
           <WRoute path="/regulatory-demo" component={RegulatoryDemo} />
-          <WRoute path="/missions" component={Missions} />
-          <WRoute path="/build-loop" component={BuildLoop} />
-          <WRoute path="/physical-auth" component={PhysicalAuth} />
-          <WRoute path="/video-studio" component={VideoStudio} />
           <WRoute component={NotFound} />
         </Switch>
       </Suspense>
@@ -140,14 +133,12 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
-        <BrandProvider>
-          <ThirdwebProvider>
-            <TooltipProvider>
-              <Toaster />
-              <AppRouter />
-            </TooltipProvider>
-          </ThirdwebProvider>
-        </BrandProvider>
+        <ThirdwebProvider>
+          <TooltipProvider>
+            <Toaster />
+            <AppRouter />
+          </TooltipProvider>
+        </ThirdwebProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

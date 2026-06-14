@@ -26,7 +26,6 @@ import {
   getFile,
   writeFile,
   searchCode,
-  listFiles,
 } from './github-service.js';
 
 // ─── Codebase knowledge injected into every code-write prompt ────────────
@@ -157,18 +156,17 @@ Rules:
   await createBranch(plan.branch);
 
   // Enqueue all planned tasks (WRITE_CODE + OPEN_PR + RUN_TESTS + CODE_REVIEW)
-  const { db } = await import('../../../drizzle/schema.js').then(() => import('../../db.js'));
+  const { createTask } = await import('../../db.js');
   const allTasks = [...plan.tasks, ...plan.followupTasks];
 
-  for (let i = 0; i < allTasks.length; i++) {
-    const t = allTasks[i]!;
-    const taskId = crypto.randomUUID();
-    // Stagger run_at so they execute in order (5 min apart after each other)
-    const runAt = new Date(Date.now() + (i + 1) * 5 * 60 * 1000);
-    await (db as any).execute(
-      `INSERT INTO tasks (id, mission_id, kind, payload, status, run_at) VALUES ($1,$2,$3,$4,'PENDING',$5)`,
-      [taskId, task.missionId, t.kind, JSON.stringify(t.payload), runAt]
-    );
+  for (const t of allTasks) {
+    await createTask({
+      missionId: task.missionId,
+      kind: t.kind,
+      title: t.kind,
+      payload: t.payload,
+      status: 'pending',
+    });
   }
 
   await logActivity({

@@ -1,5 +1,3 @@
-import { ethers } from 'ethers';
-
 /**
  * $QRON Bridge Worker — workers/authichain-bridge/src/qron-bridge.ts
  * Bridges GovChain agency payments to $QRON token escrow on Polygon.
@@ -9,13 +7,9 @@ export interface BridgeEnv {
   GOVCHAIN_API_KEY: string;
   BRIDGE_WORKER_SECRET: string;
   BRIDGE_KV: KVNamespace;
-  POLYGON_RPC_URL?: string;
-  QRON_BRIDGE_PRIVATE_KEY?: string;
-  QRON_ESCROW_RECEIVER?: string;
   QRON_CONTRACT_ADDRESS?: string;
 }
 
-const DEFAULT_QRON_CONTRACT_ADDRESS = "0xQRON_CONTRACT_PLACEHOLDER"; // replace with deployed address
 const QRON_DECIMALS = 18;
 
 interface BridgeInitiateRequest {
@@ -141,7 +135,7 @@ async function initiateQronBridgePayment(
     throw new Error(`Agency ${agencyId} not verified on GovChain`);
   }
 
-  const { qronAmount, txHash } = await lockQronEscrow(amountUsd, contractRef, env);
+  const { qronAmount, txHash } = await lockQronEscrow(amountUsd, contractRef, env.QRON_CONTRACT_ADDRESS);
   await updateBridgeRecord(bridgeId, env, { status: "locked", qronAmount, txHash });
 
   await postGovChainPayment({ agencyId, contractRef, amountUsd, txHash }, env);
@@ -176,47 +170,17 @@ async function verifyGovChainAgency(
 async function lockQronEscrow(
   amountUsd: number,
   contractRef: string,
-  env: BridgeEnv
+  contractAddress?: string,
 ): Promise<{ qronAmount: string; txHash: string }> {
-  const qronPerUsd = 4.2; // mock rate — replace with oracle/oracle call
+  // TODO: integrate with Polygon RPC + QRON contract ABI
+  // contractAddress should be set via QRON_CONTRACT_ADDRESS env var
+  void contractAddress; void contractRef;
+  const qronPerUsd = 4.2; // mock rate — replace with oracle call
   const qronRaw = BigInt(Math.round(amountUsd * qronPerUsd * 10 ** QRON_DECIMALS));
   const qronAmount = qronRaw.toString();
-  const contractAddress = env.QRON_CONTRACT_ADDRESS ?? DEFAULT_QRON_CONTRACT_ADDRESS;
-
-  if (
-    env.POLYGON_RPC_URL &&
-    env.QRON_BRIDGE_PRIVATE_KEY &&
-    env.QRON_ESCROW_RECEIVER &&
-    env.QRON_CONTRACT_ADDRESS &&
-    env.QRON_CONTRACT_ADDRESS !== DEFAULT_QRON_CONTRACT_ADDRESS
-  ) {
-    const provider = new ethers.JsonRpcProvider(env.POLYGON_RPC_URL);
-    const wallet = new ethers.Wallet(env.QRON_BRIDGE_PRIVATE_KEY, provider);
-    const erc20 = new ethers.Contract(
-      env.QRON_CONTRACT_ADDRESS,
-      [
-        'function transfer(address to, uint256 amount) returns (bool)',
-      ],
-      wallet
-    );
-
-    const tx = await erc20.transfer(env.QRON_ESCROW_RECEIVER, qronRaw.toString());
-    const receipt = await tx.wait();
-
-    console.log(
-      `[qron-bridge] Transferred ${qronAmount} QRON to escrow ${env.QRON_ESCROW_RECEIVER} for ref=${contractRef}. tx=${receipt.transactionHash}`
-    );
-
-    return { qronAmount, txHash: receipt.transactionHash };
-  }
-
   const txHash = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')}`;
-
-  console.log(
-    `[qron-bridge] Mock locking ${qronAmount} QRON (${amountUsd} USD) for ref=${contractRef} on ${contractAddress}`
-  );
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")}`;
   return { qronAmount, txHash };
 }
 

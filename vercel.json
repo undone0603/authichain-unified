@@ -1,15 +1,12 @@
 {
-  "version": 2,
   "framework": null,
-  "buildCommand": "pnpm build",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm vite build",
   "outputDirectory": "dist/public",
   "crons": [
-    { "path": "/api/automation/cron", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/pipeline", "schedule": "0 7 * * *" },
-    { "path": "/api/cron/jobs", "schedule": "0 8 * * *" }
-  ],
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/server" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "path": "/api/cron/pipeline",
+      "schedule": "*/5 * * * *"
+    }
   ]
 }

@@ -13,7 +13,7 @@ export async function getUserStakingPositions(userId: number) {
     .select()
     .from(stakingPositions)
     .where(eq(stakingPositions.userId, userId))
-    .orderBy(desc(stakingPositions.stakedAt));
+    .orderBy(desc(stakingPositions.createdAt));
 }
 
 /**
@@ -32,7 +32,7 @@ export async function getActiveStakingPositions(userId: number) {
         eq(stakingPositions.status, "active")
       )
     )
-    .orderBy(desc(stakingPositions.stakedAt));
+    .orderBy(desc(stakingPositions.createdAt));
 }
 
 /**
@@ -85,11 +85,10 @@ export async function calculateRewards(positionId: number) {
 
   // Calculate time elapsed since last calculation
   const now = new Date();
-  const lastCalc = new Date(position.lastRewardCalculation);
+  const lastCalc = new Date(position.lastRewardCalculation ?? now);
   const hoursElapsed = (now.getTime() - lastCalc.getTime()) / (1000 * 60 * 60);
 
-  // Calculate rewards: (amount * APY / 100 / 365 / 24) * hoursElapsed
-  const annualReward = (Number(position.amount) * Number(position.apy)) / 10000; // APY is in basis points (1200 = 12%)
+  const annualReward = (Number(position.amount) * Number(position.apy)) / 10000;
   const hourlyReward = annualReward / 365 / 24;
   const newRewards = Math.floor(hourlyReward * hoursElapsed);
 
@@ -97,7 +96,7 @@ export async function calculateRewards(positionId: number) {
   await db
     .update(stakingPositions)
     .set({
-      rewardsEarned: String(Number(position.rewardsEarned) + newRewards),
+      rewardsEarned: String(Number(position.rewardsEarned ?? "0") + newRewards),
       lastRewardCalculation: now,
       updatedAt: now,
     })
@@ -159,12 +158,10 @@ export async function withdrawStaking(positionId: number, userId: number) {
     .where(eq(stakingPositions.id, positionId));
 
   // Return total amount (principal + rewards)
-  const principal = Number(updatedPosition.amount);
-  const rewards = Number(updatedPosition.rewardsEarned);
   return {
-    principal,
-    rewards,
-    total: principal + rewards,
+    principal: updatedPosition.amount,
+    rewards: updatedPosition.rewardsEarned,
+    total: String(Number(updatedPosition.amount) + Number(updatedPosition.rewardsEarned ?? 0)),
   };
 }
 
@@ -190,7 +187,7 @@ export async function getUserStakingStats(userId: number) {
   const activePositions = positions.filter((p) => p.status === "active");
 
   const totalStaked = activePositions.reduce((sum, p) => sum + Number(p.amount), 0);
-  const totalRewards = positions.reduce((sum, p) => sum + Number(p.rewardsEarned), 0);
+  const totalRewards = positions.reduce((sum, p) => sum + Number(p.rewardsEarned ?? "0"), 0);
 
   return {
     totalStaked,
@@ -217,9 +214,9 @@ export async function createTransaction(data: {
 
   const transaction: InsertTransaction = {
     userId: data.userId,
-    type: data.type,
+    type: data.type as any,
     amount: String(data.amount),
-    status: data.status,
+    status: data.status as any,
     metadata: data.metadata,
   };
 

@@ -1,8 +1,9 @@
 {
   "include": [
     "client/src/**/*",
+    "server/**/*",
     "shared/**/*",
-    "server/**/*"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
@@ -26,6 +27,7 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "moduleResolution": "bundler",
+    "baseUrl": ".",
     "types": [
       "node",
       "vite/client"
@@ -36,10 +38,15 @@
       ],
       "@shared/*": [
         "./shared/*"
-      ],
-      "server/*": [
-        "./server/*"
       ]
-    }
+    },
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   }
 }

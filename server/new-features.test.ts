@@ -32,11 +32,11 @@ vi.mock("./db", async (importOriginal) => {
       values: (data: any) => {
         const id = store.nextId();
         store.bonuses.push({ ...data, id });
-        // Postgres-style: insert resolves to [] but supports .returning({ id })
-        const result: any = Promise.resolve([{ insertId: id }]);
-        result.returning = () => Promise.resolve([{ id }]);
-        return result;
+        return {
+          returning: (_shape?: any) => [{ id }],
+        };
       },
+      onConflictDoNothing: () => ({ returning: (_shape?: any) => [] }),
     }),
     update: () => ({ set: () => ({ where: () => undefined }) }),
   };
@@ -118,11 +118,10 @@ type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1, openId: "test-user-001", email: "test@authichain.com",
-    name: "Test User", loginMethod: "manus", role, stripeCustomerId: null,
-    walletAddress: null, avatarUrl: null, company: null, title: null,
-    phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,
-    createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
-    metadata: null,
+    name: "Test User", loginMethod: "manus", role, walletAddress: null,
+    avatarUrl: null, company: null, title: null, phone: null,
+    onboardingCompleted: 0, stripeCustomerId: null, paddleCustomerId: null,
+    points: 0, metadata: null, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
   };
   return {
     user,
@@ -452,7 +451,7 @@ describe("New Features", () => {
           body: "<p>Hello!</p>", prospectName: "Alice",
           prospectCompany: null, prospectTitle: null, industry: null,
           status: "pending", templateUsed: null, generatedBy: "ai_manager",
-          approvedBy: null, approvedAt: null, sentAt: null, notes: null, taskId: null, createdAt: new Date(),
+          taskId: null, approvedBy: null, approvedAt: null, sentAt: null, notes: null, createdAt: new Date(),
         }]);
         await appRouter.createCaller(createAuthContext()).emailDrafts.approve({ id: 42 });
         const { sendEmail } = await import("./email/smtp");

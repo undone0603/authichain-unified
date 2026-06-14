@@ -27,6 +27,8 @@ async function getPineconeIndex() {
     console.warn('[gov-engine] PINECONE_API_KEY not set — Pinecone disabled');
     return null;
   }
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore -- installed at runtime; type stubs provided by @pinecone-database/pinecone in package.json
   const { Pinecone } = await import('@pinecone-database/pinecone');
   const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
   _pineconeIndex = pinecone.index(process.env.PINECONE_INDEX || 'authichain-gov-leads');

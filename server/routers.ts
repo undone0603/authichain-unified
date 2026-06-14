@@ -27,26 +27,16 @@ import { bonusesRouter } from "./bonuses/router";
 import { marketplaceRouter } from "./marketplace/router";
 import { heygenRouter } from "./heygen/router";
 import { macrohardRouter } from "./macrohard/router";
+import { servicesRouter } from "./routers/services";
+import { schedulerRouter } from "./routers/scheduler";
 import { missionsRouter, tasksRouter } from "./missions/router";
-import { personalizationRouter } from "./personalization/router";
-import { stakingRouter } from "./staking/router";
-import { stripeConnectRouter } from "./stripe-connect-router";
 import { characterRouter } from "./character/router";
-import { analyticsRouter } from "./analytics/router";
-
-import { qronRouter } from "./qron/router";
+import { stakingRouter } from "./staking/router";
 import { govchainRouter } from "./govchain/router";
 import { salesRouter } from "./sales/router";
-import { devTeamRouter } from "./agents/dev-team/router";
-
-// Import routers from routers/ folder
-import { metrcRouter } from "./routers/metrc";
-import { productsRouter as industrialProductsRouter } from "./routers/products";
-import { schedulerRouter } from "./routers/scheduler";
-import { servicesRouter } from "./routers/services";
-import { pipelineRouter } from "./routers/pipeline";
-import { outcomesRouter } from "./routers/outcomes";
+import { autonomousRouter } from "./autonomous/router";
 import { payoutsRouter } from "./payouts/router";
+import { qronRouter } from "./qron/router";
 import { founderRouter } from "./founder/router";
 
 export const appRouter = router({
@@ -78,25 +68,17 @@ export const appRouter = router({
   marketplace: marketplaceRouter,
   heygen: heygenRouter,
   macrohard: macrohardRouter,
+  services: servicesRouter,
+  scheduler: schedulerRouter,
   missions: missionsRouter,
   tasks: tasksRouter,
-  stripeConnect: stripeConnectRouter,
-  subscriptions: subscriptionsRouter,
   character: characterRouter,
-  services: servicesRouter,
-  analytics: analyticsRouter,
-  scheduler: schedulerRouter,
   staking: stakingRouter,
-  personalization: personalizationRouter,
-  qron: qronRouter,
   govchain: govchainRouter,
   sales: salesRouter,
-  devTeam: devTeamRouter,
-  pipeline: pipelineRouter,
-  outcomes: outcomesRouter,
-  metrc: metrcRouter,
-  industrialProducts: industrialProductsRouter,
+  autonomous: autonomousRouter,
   payouts: payoutsRouter,
+  qron: qronRouter,
   founder: founderRouter,
 });
 

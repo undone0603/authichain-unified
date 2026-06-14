@@ -204,7 +204,7 @@ export async function executeApprovedPayouts(): Promise<ExecuteSummary> {
   const intents: PayoutIntent[] = approved.map(p => ({
     rail: p.rail as PayoutIntent["rail"],
     amount: Number(p.amount),
-    currency: p.currency,
+    currency: p.currency ?? "usd",
     destination: p.destination,
     referenceType: p.referenceType ?? "",
     referenceId: p.referenceId ?? String(p.id),
@@ -267,11 +267,11 @@ async function executeOne(p: typeof payouts.$inferSelect): Promise<string> {
       const transfer = await stripeClient().transfers.create(
         {
           amount: Math.round(Number(p.amount) * 100),
-          currency: p.currency.toLowerCase(),
+          currency: (p.currency ?? "usd").toLowerCase(),
           destination: p.destination,
           transfer_group: `payout_${p.id}`,
         },
-        { idempotencyKey: p.idempotencyKey },
+        { idempotencyKey: p.idempotencyKey ?? undefined },
       );
       return transfer.id;
     }

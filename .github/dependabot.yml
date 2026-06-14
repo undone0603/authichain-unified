@@ -36,8 +36,6 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-<<<<<<< HEAD
-=======
 
   - package-ecosystem: npm
     directory: "/workers/stripe-webhook"
@@ -86,4 +84,3 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
->>>>>>> 79c336f (Fix QRON dashboard routing and strengthen authichain bridge QRON escrow handling)

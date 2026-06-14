@@ -8,6 +8,14 @@ export default {
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>StrainChain — Cannabis Supply Chain on Blockchain</title>
 <meta name="description" content="End-to-end cannabis supply chain tracking: strain NFTs, compliance automation, 4-layer audit trail from seed to shelf.">
+<meta property="og:title" content="StrainChain — Cannabis Supply Chain on Blockchain">
+<meta property="og:description" content="Immutable strain NFTs, automated METRC/BioTrack compliance, and a 4-layer audit trail from seed to shelf. 38 legal markets.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://strainchain.io">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="StrainChain — Cannabis Supply Chain on Blockchain">
+<meta name="twitter:description" content="Seed-to-shelf tracking on Polygon. Strain NFTs, compliance automation, regulator dashboards.">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"StrainChain","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Blockchain-based cannabis supply chain compliance platform. Seed-to-shelf tracking, strain NFTs, METRC/BioTrack integration.","url":"https://strainchain.io","offers":[{"@type":"Offer","name":"Grower","price":"199","priceCurrency":"USD","priceSpecification":{"@type":"UnitPriceSpecification","billingDuration":"P1M"}},{"@type":"Offer","name":"Operator","price":"499","priceCurrency":"USD","priceSpecification":{"@type":"UnitPriceSpecification","billingDuration":"P1M"}},{"@type":"Offer","name":"Enterprise","price":"999","priceCurrency":"USD","priceSpecification":{"@type":"UnitPriceSpecification","billingDuration":"P1M"}}]}</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#030c04;--surface:#071209;--border:#0f2b12;--green:#10b981;--gold:#f59e0b;--text:#e2e8f0;--muted:#64748b}
@@ -171,17 +179,36 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
   <h2>Pricing</h2>
   <p class="section-sub">Per-location pricing. No per-transaction fees. Unlimited batches.</p>
   <div class="pricing-grid">
-    <div class="price-card"><h3>Grower</h3><div class="price-amount">$199</div><div class="price-period">per location / month</div><ul class="price-features"><li>Up to 500 strain NFTs/mo</li><li>METRC + BioTrack sync</li><li>4-layer audit trail</li><li>Basic compliance reports</li></ul><a href="https://authichain.com/dapp" class="btn btn-outline" style="width:100%;text-align:center">Start Free Trial</a></div>
-    <div class="price-card featured"><h3>Operator</h3><div class="price-amount">$499</div><div class="price-period">per location / month</div><ul class="price-features"><li>Unlimited strain NFTs</li><li>All compliance integrations</li><li>IoT sensor integration</li><li>Real-time regulator dashboard</li><li>API access</li></ul><a href="https://authichain.com/dapp" class="btn btn-primary" style="width:100%;text-align:center">Most Popular</a></div>
-    <div class="price-card"><h3>Enterprise</h3><div class="price-amount">$999</div><div class="price-period">per location / month</div><ul class="price-features"><li>Multi-state management</li><li>White-label portal</li><li>Custom compliance workflows</li><li>Dedicated compliance officer</li><li>SLA guarantee</li></ul><a href="https://authichain.com/dapp" class="btn btn-outline" style="width:100%;text-align:center">Contact Sales</a></div>
+    <div class="price-card"><h3>Grower</h3><div class="price-amount">$199</div><div class="price-period">per location / month</div><ul class="price-features"><li>Up to 500 strain NFTs/mo</li><li>METRC + BioTrack sync</li><li>4-layer audit trail</li><li>Basic compliance reports</li></ul><a href="https://buy.stripe.com/14A4gz9brgbQdOG4ba1Nu0w" class="btn btn-outline" style="width:100%;text-align:center">Start Free Trial</a></div>
+    <div class="price-card featured"><h3>Operator</h3><div class="price-amount">$499</div><div class="price-period">per location / month</div><ul class="price-features"><li>Unlimited strain NFTs</li><li>All compliance integrations</li><li>IoT sensor integration</li><li>Real-time regulator dashboard</li><li>API access</li></ul><a href="https://buy.stripe.com/8x28wP5Zf1gWcKC4ba1Nu0x" class="btn btn-primary" style="width:100%;text-align:center">Most Popular</a></div>
+    <div class="price-card"><h3>Enterprise</h3><div class="price-amount">$999</div><div class="price-period">per location / month</div><ul class="price-features"><li>Multi-state management</li><li>White-label portal</li><li>Custom compliance workflows</li><li>Dedicated compliance officer</li><li>SLA guarantee</li></ul><a href="https://buy.stripe.com/aFaaEX9br4t8dOG8rq1Nu0y" class="btn btn-outline" style="width:100%;text-align:center">Contact Sales</a></div>
   </div>
 </section>
 
 <div class="cta-section">
   <h2>Ready for Regulator-Proof Tracking?</h2>
   <p style="color:var(--muted);margin:1rem 0 2rem">Join 847+ cannabis operators using StrainChain across 38 legal markets.</p>
-  <a href="https://authichain.com/dapp" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Request Demo</a>
+  <form id="lead-form" style="max-width:440px;margin:0 auto 1.5rem;display:flex;gap:.5rem">
+    <input type="email" id="lead-email" placeholder="you@dispensary.com" required style="flex:1;padding:.75rem 1rem;border-radius:.5rem;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.95rem">
+    <button type="submit" class="btn btn-primary" style="white-space:nowrap">Request Demo</button>
+  </form>
+  <p id="lead-msg" style="color:var(--green);font-size:.9rem;display:none"></p>
 </div>
+<script>
+document.getElementById('lead-form').addEventListener('submit',async function(e){
+  e.preventDefault();
+  const email=document.getElementById('lead-email').value;
+  const msg=document.getElementById('lead-msg');
+  try{
+    const r=await fetch('https://api.authichain.com/api/v1/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,source:'strainchain.io'})});
+    const d=await r.json();
+    msg.textContent=d.message||'Thanks! We\\'ll be in touch.';
+    msg.style.display='block';
+    msg.style.color=r.ok?'var(--green)':'#ff6b6b';
+    if(r.ok)this.reset();
+  }catch{msg.textContent='Something went wrong. Try again.';msg.style.display='block';msg.style.color='#ff6b6b';}
+});
+</script>
 
 <footer>
   <p>© 2026 StrainChain · Powered by AuthiChain Protocol · <a href="https://authichain.com">authichain.com</a></p>

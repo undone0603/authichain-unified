@@ -35,7 +35,7 @@ async function checkStripe(): Promise<IntegrationCheckResult> {
   try {
     const { getStripe } = await import("../stripe-service");
     const stripe = getStripe();
-    const account = await (stripe.accounts.retrieve as any)();
+    const account = await (stripe.accounts as any).retrieve();
     return {
       configured: true,
       connected: true,
