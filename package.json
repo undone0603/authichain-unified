@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "tsx watch server/_core/index.ts",
     "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
