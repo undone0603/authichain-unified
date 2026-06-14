@@ -14,8 +14,8 @@ const FREE_TIER_MONTHLY_LIMIT = 50; // Assumed free tier cap for ProductDNA anal
  */
 async function isWithinB44FreeTier() {
   const now = new Date();
-  const usageCount = await db.getAutopilotDecisionCountByMonth(now.getFullYear(), now.getMonth() + 1);
-  return usageCount < FREE_TIER_MONTHLY_LIMIT;
+  const usageCount = await db.getAutopilotDecisionCountByMonth();
+  return usageCount.data < FREE_TIER_MONTHLY_LIMIT;
 }
 
 /**
