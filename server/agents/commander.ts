@@ -27,7 +27,7 @@ export async function processDirective(options: DirectiveOptions) {
   });
 
   // Basic Directive Classification Logic
-  let missionType: MissionType = "REVENUE_OPS";
+  let missionType: MissionType = "LAUNCH_AUTHICHAIN";
   let workflowId = "twitter_truth_shilling";
 
   if (text.toLowerCase().includes("grant")) {

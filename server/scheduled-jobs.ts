@@ -41,6 +41,7 @@ export async function executeJob(job: JobDefinition): Promise<void> {
 
   // Insert running record
   const [runRecord] = await db.insert(scheduledJobRuns).values({
+    id: Date.now(),
     jobName: job.name,
     status: "running",
     startedAt: new Date(),

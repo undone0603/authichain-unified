@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { SUBSCRIPTION_PLANS, ADDON_PRICING, INDUSTRY_SOLUTIONS, LICENSING_TIERS } from "@shared/subscriptionPlans";
+import { SUBSCRIPTION_PLANS, ADDON_PRICING, INDUSTRY_SOLUTIONS } from "@shared/subscriptionPlans";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
@@ -360,7 +360,7 @@ export default function Pricing() {
                       variant={plan.highlighted ? "default" : "outline"}
                       asChild
                     >
-                      <a href={(plan as any).paymentLink} target="_blank" rel="noopener noreferrer">
+                      <a href={(plan as { paymentLink?: string }).paymentLink} target="_blank" rel="noopener noreferrer">
                         {key === "enterprise" ? "Buy Enterprise" : "Buy Now"} <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
@@ -373,69 +373,6 @@ export default function Pricing() {
                 </Card>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* Licensing & White-Label */}
-      <section className="py-16 bg-muted/20">
-        <div className="container">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <Badge variant="outline" className="mb-3 text-primary border-primary/30">
-              <Lock className="h-3 w-3 mr-1" /> License the Truth Layer
-            </Badge>
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">Licensing & White-Label</h2>
-            <p className="text-muted-foreground">
-              Ship verifiable authenticity under your own brand. One-time setup, then monthly —
-              start instantly, no sales call required.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {LICENSING_TIERS.map((tier) => (
-              <Card
-                key={tier.key}
-                className={`relative ${tier.highlighted ? "border-primary shadow-lg shadow-primary/10 scale-105" : "border-border/50"}`}
-              >
-                {tier.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-primary text-primary-foreground whitespace-nowrap">{tier.badge}</Badge>
-                  </div>
-                )}
-                <CardHeader className="text-center pb-2">
-                  <CardTitle className="text-xl">{tier.name}</CardTitle>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold">${tier.setupPrice.toLocaleString()}</span>
-                    <span className="text-muted-foreground"> setup</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    then ${tier.monthlyPrice.toLocaleString()}/mo
-                  </p>
-                  <CardDescription className="mt-2">{tier.idealFor}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {tier.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter className="flex flex-col gap-2">
-                  <Button className="w-full" variant={tier.highlighted ? "default" : "outline"} asChild>
-                    <a href={tier.setupLink} target="_blank" rel="noopener noreferrer">
-                      Pay setup fee <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                  <Button className="w-full" variant="ghost" size="sm" asChild>
-                    <a href={tier.monthlyLink} target="_blank" rel="noopener noreferrer">
-                      Start ${tier.monthlyPrice.toLocaleString()}/mo subscription
-                    </a>
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
           </div>
         </div>
       </section>

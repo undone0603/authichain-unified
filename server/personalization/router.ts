@@ -113,7 +113,7 @@ export const personalizationRouter = router({
         },
         rules.map(r => ({
           id: r.id,
-          conditions: r.conditions ?? "",
+          conditions: typeof r.conditions === "string" ? r.conditions : JSON.stringify(r.conditions ?? {}),
           content: r.content,
           priority: r.priority,
         }))
@@ -404,7 +404,7 @@ export const personalizationRouter = router({
       const analysis = await analyzePersonalizationPerformance(
         rules.map(r => ({
           name: r.name,
-          conditions: r.conditions ?? "",
+          conditions: typeof r.conditions === "string" ? r.conditions : JSON.stringify(r.conditions ?? {}),
           views: r.views,
           conversions: r.conversions,
           conversionRate: r.conversionRate,

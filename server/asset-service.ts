@@ -56,7 +56,6 @@ export async function generateProductAssets(productId: number) {
       payload: { productId },
       error: error.message,
       status: "pending",
-      lastAttemptedAt: new Date()
     });
   }
 }
@@ -81,9 +80,8 @@ export async function retryFailedAssets() {
         .where(eq(deadLetterQueue.id, task.id));
     } catch (e) {
       await db.update(deadLetterQueue)
-        .set({ 
+        .set({
           retryCount: (task.retryCount || 0) + 1,
-          lastAttemptedAt: new Date() 
         })
         .where(eq(deadLetterQueue.id, task.id));
     }

@@ -109,16 +109,17 @@ temp/
 
 __pycache__/
 *.py[cod]
-node_modules
-node_modules
-node_modules
-node_modules
-node_modules
-node_modules
-node_modules/
-.env.autonomous\nall_used_envs.txt\nclean_envs.txt\n.env.local
 
-.env.autonomous
-all_used_envs.txt
-clean_envs.txt
+# Build output
 dist/
+.open-next/
+
+# Dependencies
+node_modules/
+
+# Sub-project workspaces (standalone repos, not tracked here)
+qron/
+qron-platform/
+govchain.us/
+maison-elite-ai-dropship/
+authichain_premium/

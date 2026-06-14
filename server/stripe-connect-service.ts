@@ -118,8 +118,8 @@ export async function attachBalancePaymentMethod(vendorAccountId: string) {
 
   const intent = await stripe.setupIntents.create({
     payment_method_types: ["stripe_balance" as any],
-    customer_account: vendorAccountId as any,
-  });
+    customer_account: vendorAccountId,
+  } as any); // newer Stripe API field not in installed typings
 
   return intent.payment_method as string;
 }
@@ -132,13 +132,13 @@ export async function subscribeVendorToPlatform(vendorAccountId: string, payment
   
   try {
     const subscription = await stripe.subscriptions.create({
-      customer_account: vendorAccountId as any,
+      customer_account: vendorAccountId,
       default_payment_method: paymentMethodId,
       items: [{ price: priceId, quantity: 1 }],
       payment_settings: {
         payment_method_types: ["stripe_balance" as any]
       }
-    }, {
+    } as any, { // newer Stripe API field not in installed typings
       idempotencyKey: generateIdempotencyKey("vendor-sub", vendorAccountId)
     });
 

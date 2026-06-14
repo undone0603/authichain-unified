@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { 
-  getConnectionStatus, 
-  uploadImageToIPFS, 
+import {
+  checkThirdwebConnection,
+  uploadImageToIPFS,
   uploadMetadataToIPFS,
   buildAuthCertificateMetadata,
   mintAuthenticationNFT
@@ -9,7 +9,7 @@ import {
 
 describe('Thirdweb Service', () => {
   it('should return connection status', async () => {
-    const status = await getConnectionStatus();
+    const status = await checkThirdwebConnection();
     expect(status).toHaveProperty('connected');
     expect(status).toHaveProperty('clientConfigured');
   });
