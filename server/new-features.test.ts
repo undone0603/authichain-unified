@@ -116,6 +116,8 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1, openId: "test-user-001", email: "test@authichain.com",
     name: "Test User", loginMethod: "manus", role, stripeCustomerId: null,
+    walletAddress: null, avatarUrl: null, company: null, title: null,
+    phone: null, onboardingCompleted: 0, paddleCustomerId: null, points: 0,
     createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
   };
   return {

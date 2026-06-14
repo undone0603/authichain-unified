@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { 
-  getConnectionStatus, 
-  uploadImageToIPFS, 
+import {
+  checkThirdwebConnection,
+  uploadImageToIPFS,
   uploadMetadataToIPFS,
   buildAuthCertificateMetadata,
   mintAuthenticationNFT
@@ -9,15 +9,16 @@ import {
 
 describe('Thirdweb Service', () => {
   it('should return connection status', async () => {
-    const status = await getConnectionStatus();
+    const status = await checkThirdwebConnection();
     expect(status).toHaveProperty('connected');
     expect(status).toHaveProperty('clientId');
   });
 
   it('should build auth certificate metadata correctly', () => {
     const data = {
+      productName: 'Test Product',
       certificateNumber: '123',
-      authenticatorId: 'auth1',
+      authenticatorId: 1,
       confidenceScore: 0.95,
       verificationDate: '2024-01-01'
     };
