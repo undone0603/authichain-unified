@@ -1,6 +1,6 @@
 # AgentZ orchestrator additions
 PyYAML>=6.0
-python-dotenv>=1.0
+python-dotenv>=1.2.2
 httpx>=0.27
 supabase>=2.4.0
 stripe>=11.0.0
