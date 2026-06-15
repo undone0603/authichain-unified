@@ -26,6 +26,27 @@ interface SupplyChainEvent {
   date: string;
 }
 
+interface StorymodeChapter {
+  title: string;
+  content: string;
+}
+
+function parseStorymodeChapters(
+  metadata: unknown
+): StorymodeChapter[] | null {
+  try {
+    if (!metadata || typeof metadata !== 'object') return null;
+    const pm = metadata as Record<string, unknown>;
+    const story = pm?.storymode;
+    if (!story || typeof story !== 'object') return null;
+    const sm = story as Record<string, unknown>;
+    if (!Array.isArray(sm.chapters) || sm.chapters.length === 0) return null;
+    return sm.chapters as StorymodeChapter[];
+  } catch {
+    return null;
+  }
+}
+
 export default async function CertificationPage({ params }: PageProps) {
   const { serial } = await params;
   const supabase = await createClient();
@@ -49,6 +70,8 @@ export default async function CertificationPage({ params }: PageProps) {
   const isValid = cert.status === 'approved';
   const isRevoked = cert.status === 'revoked';
   const isPending = cert.status === 'pending';
+
+  const storymodeChapters = parseStorymodeChapters(cert.products.metadata);
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
@@ -186,31 +209,26 @@ export default async function CertificationPage({ params }: PageProps) {
             </div>
 
             {/* Storymode Narrative */}
-            {(() => {
-              const pm = cert.products.metadata as Record<string, unknown> | null;
-              const story = pm?.storymode as { chapters: Array<{ title: string; content: string }> } | undefined;
-              if (!story?.chapters?.length) return null;
-              return (
-                <div className="protocol-card p-8 border-gold/10 bg-gold/5">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Sparkles className="w-5 h-5 text-gold" />
-                    <h3 className="text-sm font-black uppercase tracking-widest text-white">
-                      Brand Story
-                    </h3>
-                  </div>
-                  <div className="space-y-6">
-                    {story.chapters.map((ch, i) => (
-                      <div key={i} className="border-l-2 border-gold/20 pl-4">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-2">
-                          {ch.title}
-                        </h4>
-                        <p className="text-zinc-400 text-sm leading-relaxed">{ch.content}</p>
-                      </div>
-                    ))}
-                  </div>
+            {storymodeChapters && (
+              <div className="protocol-card p-8 border-gold/10 bg-gold/5">
+                <div className="flex items-center gap-3 mb-6">
+                  <Sparkles className="w-5 h-5 text-gold" />
+                  <h3 className="text-sm font-black uppercase tracking-widest text-white">
+                    Brand Story
+                  </h3>
                 </div>
-              );
-            })()}
+                <div className="space-y-6">
+                  {storymodeChapters.map((ch, i) => (
+                    <div key={i} className="border-l-2 border-gold/20 pl-4">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-2">
+                        {ch.title}
+                      </h4>
+                      <p className="text-zinc-400 text-sm leading-relaxed">{ch.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Digital Product Passport (DPP) Data */}
             {dpp && (
