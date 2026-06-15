@@ -1,5 +1,5 @@
 # AgentZ orchestrator additions
-PyYAML>=6.0
+PyYAML>=6.0.3
 python-dotenv>=1.2.2
 httpx>=0.27
 supabase>=2.4.0
