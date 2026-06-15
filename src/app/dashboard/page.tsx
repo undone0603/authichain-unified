@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 
+// Auth is handled by src/app/dashboard/layout.tsx — no need to duplicate here.
+// Remove conflicting revalidate (force-dynamic already opts out of caching).
 export const dynamic = 'force-dynamic';
-export const revalidate = 60;
 
 async function getStats() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -43,8 +44,8 @@ export default async function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total QR Codes', value: stats ? stats.totalQr.toLocaleString() : '—', color: 'text-blue-400' },
-          { label: 'Registered Users', value: stats ? stats.totalUsers.toLocaleString() : '—', color: 'text-green-400' },
+          { label: 'Total QR Codes', value: stats ? stats.totalQr.toLocaleString() : '\u2014', color: 'text-blue-400' },
+          { label: 'Registered Users', value: stats ? stats.totalUsers.toLocaleString() : '\u2014', color: 'text-green-400' },
           { label: 'Active Edge Nodes', value: '300+', color: 'text-purple-400' },
           { label: 'Uptime (30d)', value: '99.97%', color: 'text-emerald-400' },
         ].map(({ label, value, color }) => (
