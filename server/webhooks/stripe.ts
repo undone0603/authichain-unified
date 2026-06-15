@@ -28,13 +28,9 @@ import {
   setSubscriptionStatusByStripeId,
   getSubscriptionByStripeSubscriptionId,
   createSystemNotification,
-<<<<<<< HEAD
   hasWebhookEventProcessed,
-  getDb,
-=======
-  claimWebhookEvent,
   markWebhookEventProcessed,
->>>>>>> origin/add-agentz-editable
+  getDb,
 } from "../db";
 import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
 import { handleServiceOrderPayment } from "../services/order-payment-handler";
@@ -48,7 +44,7 @@ function getStripeClient(): Stripe {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error("[stripe-webhook] STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(key, { apiVersion: "2026-04-22.dahlia" as const });
+    _stripe = new Stripe(key, { apiVersion: "2026-05-27.dahlia" as const });
   }
   return _stripe;
 }
@@ -166,13 +162,8 @@ export async function handleStripeWebhook(
     return { received: true, type: event.type };
   }
 
-<<<<<<< HEAD
   // Idempotency — atomic INSERT into webhook_events; returns true if already processed
   if (await hasWebhookEventProcessed(event.id, event.type, "stripe")) {
-=======
-  const claimed = await claimWebhookEvent("stripe", event.id, event.type);
-  if (!claimed) {
->>>>>>> origin/add-agentz-editable
     console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
     return { received: true, type: event.type, duplicate: true };
   }
@@ -238,19 +229,11 @@ export async function handleStripeWebhook(
           billingCycle,
           stripeCustomerId: customerId ?? null,
           stripeSubscriptionId: sub.id,
-<<<<<<< HEAD
           currentPeriodStart: subAny.current_period_start
             ? new Date(subAny.current_period_start * 1000)
             : new Date(),
           currentPeriodEnd: subAny.current_period_end
             ? new Date(subAny.current_period_end * 1000)
-=======
-          currentPeriodStart: (sub as any).current_period_start
-            ? new Date((sub as any).current_period_start * 1000)
-            : new Date(),
-          currentPeriodEnd: (sub as any).current_period_end
-            ? new Date((sub as any).current_period_end * 1000)
->>>>>>> origin/add-agentz-editable
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
         });
@@ -383,20 +366,12 @@ export async function handleStripeWebhook(
     // ── Invoice payment succeeded ────────────────────────────────────────────
     case "invoice.payment_succeeded":
     case "invoice.paid": {
-<<<<<<< HEAD
       const inv = event.data.object as Stripe.Invoice;
       const invAny = inv as any;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
       const subscriptionId = typeof invAny.subscription === "string"
         ? invAny.subscription
         : invAny.subscription?.id ?? null;
-=======
-      const inv = event.data.object as any;
-      const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
-      const subscriptionId = typeof inv.subscription === "string"
-        ? inv.subscription
-        : inv.subscription?.id;
->>>>>>> origin/add-agentz-editable
 
       // Resolve userId — try subscription metadata first, then customer
       let userId: number | undefined;
@@ -412,13 +387,8 @@ export async function handleStripeWebhook(
       const amountUsd = amountCents / 100;
       const currency = (inv.currency ?? "usd").toUpperCase();
 
-<<<<<<< HEAD
       // Detect plan from invoice line items (price field removed from InvoiceLineItem in v22)
       const firstLine = invAny.lines?.data?.[0];
-=======
-      // Detect plan from invoice line items
-      const firstLine = inv.lines?.data?.[0] as any;
->>>>>>> origin/add-agentz-editable
       const priceId = firstLine?.price?.id ?? null;
       const invBillingCycle = firstLine?.price?.recurring?.interval === "year" ? "annual" : "monthly";
       const plan = detectPlan(priceId, amountCents, null, invBillingCycle);
@@ -461,20 +431,12 @@ export async function handleStripeWebhook(
 
     // ── Invoice payment failed ───────────────────────────────────────────────
     case "invoice.payment_failed": {
-<<<<<<< HEAD
       const inv = event.data.object as Stripe.Invoice;
       const invAny2 = inv as any;
       const customerId = typeof inv.customer === "string" ? inv.customer : (inv.customer as any)?.id;
       const subscriptionId = typeof invAny2.subscription === "string"
         ? invAny2.subscription
         : invAny2.subscription?.id ?? null;
-=======
-      const inv = event.data.object as any;
-      const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
-      const subscriptionId = typeof inv.subscription === "string"
-        ? inv.subscription
-        : inv.subscription?.id;
->>>>>>> origin/add-agentz-editable
 
       let userId: number | undefined;
       if (subscriptionId) {
@@ -523,7 +485,6 @@ export async function handleStripeWebhook(
       const customerId = typeof session.customer === "string" ? session.customer : undefined;
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : undefined;
 
-<<<<<<< HEAD
       // Fulfill service orders paid via one-time Stripe Checkout
       const { handleServiceOrderPayment } = await import("../services/order-payment-handler");
       const orderResult = await handleServiceOrderPayment({
@@ -565,74 +526,6 @@ export async function handleStripeWebhook(
         }
       }
 
-=======
-      // Record Revenue
-      if (amountUsd > 0) {
-        await recordRevenue({
-          source: "stripe",
-          amount: amountUsd.toFixed(2),
-          currency: (session.currency ?? "usd").toUpperCase(),
-          type: "subscription",
-          userId: userId ?? null,
-          metadata: {
-            eventId: event.id,
-            sessionId: session.id,
-            stripeSubscriptionId: subscriptionId ?? null,
-            stripeCustomerId: customerId ?? null,
-            brand: session.metadata?.brand ?? null,
-            contract: session.metadata?.contract === "true",
-            setupOrderId: session.metadata?.setup_order_id ?? null,
-          },
-        });
-
-        // 1. Mark service order as paid + notify customer
-        try {
-          await handleServiceOrderPayment(session);
-        } catch (orderErr) {
-          console.warn("[ServiceOrder] Mark-paid failed:", orderErr);
-        }
-
-        // 2. Trigger Physical Fulfillment Bridge (Security Seals)
-        try {
-          const { triggerFulfillmentFromPayment } = await import("../fulfillment-service");
-          await triggerFulfillmentFromPayment(session.id);
-        } catch (fillErr) {
-          console.warn("[Fulfillment] Trigger failed:", fillErr);
-        }
-
-        // 3. Send a payment-confirmation email
-        const confirmTo = session.customer_email
-          || session.metadata?.customer_email
-          || null;
-        if (confirmTo) {
-          try {
-            const customerName = session.metadata?.customer_name || "there";
-            const serviceKey = session.metadata?.service_key || session.metadata?.plan || "your purchase";
-            const amountStr = `$${amountUsd.toFixed(2)} ${(session.currency ?? "usd").toUpperCase()}`;
-            const body = [
-              `Hi ${customerName},`,
-              ``,
-              `Thanks — your payment of ${amountStr} for ${serviceKey} is confirmed.`,
-              ``,
-              `You can track this order anytime at https://authichain.com/orders.`,
-              ``,
-              `If you have any questions, just reply to this email.`,
-              ``,
-              `— The AuthiChain Team`,
-            ].join("\n");
-            await sendEmail({
-              to: confirmTo,
-              subject: `Payment confirmed — ${serviceKey}`,
-              body,
-            });
-          } catch (emailErr) {
-            console.warn("[Email] Payment confirmation send failed:", emailErr);
-          }
-        }
-      }
-
-
->>>>>>> origin/add-agentz-editable
       await logAutomationAudit(
         "billing_checkout_completed",
         {

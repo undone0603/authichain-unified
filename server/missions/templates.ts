@@ -74,22 +74,13 @@ export const missionTemplates: Record<MissionType, MissionTemplate> = {
   },
   MEDTECH_VIDEO_BRIEFING: {
     type: 'MEDTECH_VIDEO_BRIEFING',
-<<<<<<< HEAD
     title: 'MedTech Video Briefing – ISO 13485 Audit Automation',
-=======
-    title: 'MedTech Video Briefing – Personalized Outreach',
->>>>>>> origin/add-agentz-editable
     priority: 8,
   },
   MI_CRA_PARTNERSHIP: {
     type: 'MI_CRA_PARTNERSHIP',
-<<<<<<< HEAD
     title: 'Michigan CRA Partnership – Audit Integrity Shield',
     priority: 9,
-=======
-    title: 'Michigan CRA Partnership Outreach',
-    priority: 7,
->>>>>>> origin/add-agentz-editable
   },
 };
 

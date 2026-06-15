@@ -138,15 +138,9 @@ export async function runLeadFinder(task: Task): Promise<void> {
       }).onConflictDoNothing();
     }
 
-<<<<<<< HEAD
-    const MOONSHOT_SEGMENTS = new Set(['ENTERTAINMENT', 'SPORTS', 'CREATOR', 'COLLECTIBLES']);
-    const taskKind = MOONSHOT_SEGMENTS.has(segment) ? 'PITCH_MOONSHOT_DEAL' : 'DRAFT_OUTBOUND_EMAIL';
-    await enqueueTask(task.missionId, taskKind, {
-=======
-    // Research the lead's website before drafting the email so the browser
-    // agent can inject a personalised hook into the outbound copy.
+    // Route every lead through the browser-research step first; that agent
+    // gathers context before the outbound/moonshot drafting step is enqueued.
     await enqueueTask(task.missionId, 'BROWSE_RESEARCH_LEAD', {
->>>>>>> origin/add-agentz-editable
       segment,
       leadEmail: lead.email,
       leadName:  lead.name,

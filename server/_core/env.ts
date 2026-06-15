@@ -35,13 +35,13 @@ export const ENV = {
 
   // ── Gov / External APIs ───────────────────────────────────────────────────
   samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
-<<<<<<< HEAD
-  openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
   internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",
   autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
   requireDevApproval: process.env.REQUIRE_DEV_APPROVAL === "true",
   requireOutreachApproval: process.env.REQUIRE_OUTREACH_APPROVAL === "true",
+  paddleApiKey: process.env.PADDLE_API_KEY ?? "",
+  paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
   paddleBasicPriceId: process.env.PADDLE_BASIC_PRICE_ID ?? "",
   paddlePremiumPriceId: process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
   paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
@@ -64,18 +64,4 @@ export const ENV = {
   qronBurnAddress: process.env.QRON_BURN_ADDRESS ?? "",
   pineconeApiKey: process.env.PINECONE_API_KEY ?? "",
   ownerEmails: process.env.OWNER_EMAILS ?? "",
-=======
-
-  // ── Pipeline Flags ────────────────────────────────────────────────────────
-  autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
-  requireOutreachApproval:   process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
-  requireDevApproval:        process.env.REQUIRE_DEV_APPROVAL !== "false",
-
-  // ── Video / Media ─────────────────────────────────────────────────────────
-  heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
-  internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",
-  qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
-  makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
-  smsRecipient: process.env.SMS_RECIPIENT ?? "",
->>>>>>> origin/add-agentz-editable
 };

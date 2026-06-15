@@ -26,12 +26,7 @@ import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
   Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Video, Cpu,
-<<<<<<< HEAD
-  Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins, Zap,
-=======
-  Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins,
-  Leaf, Flag,
->>>>>>> origin/add-agentz-editable
+  Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins, Zap, Leaf,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";

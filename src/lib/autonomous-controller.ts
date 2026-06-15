@@ -102,10 +102,7 @@ export class AutonomousController {
       const results = await Promise.allSettled([
         this.processPendingLeads(),
         this.processHubSpotDeliverables(),
-<<<<<<< HEAD
         this.runClosedWonRevenueVerification(),
-=======
->>>>>>> origin/add-agentz-editable
         this.runDripSequencer(),
         this.runFederalDripSequencer(),
         this.runViralMarketingAgent(),
@@ -145,7 +142,6 @@ export class AutonomousController {
     }
   }
 
-<<<<<<< HEAD
   private async runClosedWonRevenueVerification() {
     const workflowName = 'agent_closed_won_revenue_verification';
     if (!process.env.HUBSPOT_ACCESS_TOKEN) {
@@ -217,8 +213,6 @@ export class AutonomousController {
     }
   }
 
-=======
->>>>>>> origin/add-agentz-editable
   /**
    * Manages multi-stage lead follow-ups autonomously.
    * Stage 1: Artifact Delivery, Stage 2: Nudge, Stage 3: Elite Offer.

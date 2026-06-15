@@ -66,10 +66,6 @@ router.get("/certificates/verify", async (req, res) => {
   try {
     const { certNumber } = req.query;
     if (!certNumber) return res.status(400).json({ error: "certNumber required" });
-<<<<<<< HEAD
-=======
-    if (String(certNumber).length > 64) return res.status(400).json({ error: "certNumber too long" });
->>>>>>> origin/add-agentz-editable
     const [cert] = await db.select().from(certificates).where(eq(certificates.certificateNumber, String(certNumber))).limit(1);
     if (!cert) return res.json({ valid: false, message: "Certificate not found" });
     return res.json({
@@ -92,15 +88,9 @@ router.post("/cannabis/verify", async (req, res) => {
     if (!batchId && !strainName) {
       return res.status(400).json({ error: "strainName or batchId required" });
     }
-<<<<<<< HEAD
     const product = strainName
       ? await db.select().from(products).where(eq(products.name, strainName)).limit(1).then(r => r[0])
       : null;
-=======
-    const [product] = strainName
-      ? await db.select().from(products).where(eq(products.name, strainName)).limit(1)
-      : [];
->>>>>>> origin/add-agentz-editable
     return res.json({
       verified: !!product,
       strainName: strainName || "Unknown",

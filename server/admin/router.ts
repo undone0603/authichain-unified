@@ -94,7 +94,6 @@ export const adminRouter = router({
     // return safe zeros until the staking feature is fully deployed.
     return { totalStaked: 0, activeStakers: 0, totalRewardsDistributed: 0, avgApy: 0 };
   }),
-<<<<<<< HEAD
 
   // Stage a GovChain sovereign-passport deal (consumed by the Gov onboarding page).
   createSovereignDeal: adminProcedure
@@ -102,21 +101,4 @@ export const adminRouter = router({
     .mutation(async (): Promise<{ success: boolean }> => {
       return { success: true };
     }),
-=======
-  createSovereignDeal: adminProcedure.input(z.object({
-    manufacturerName: z.string().min(1),
-    dealType: z.enum(['pilot', 'enterprise', 'government', 'partnership']),
-    value: z.number().min(0),
-    description: z.string().optional(),
-  })).mutation(async ({ ctx, input }) => {
-    await db.logActivity({
-      userId: ctx.user.id,
-      action: 'sovereign_deal_created',
-      entityType: 'deal',
-      entityId: 0,
-      details: input,
-    });
-    return { success: true, dealId: `SDeal-${Date.now()}`, ...input };
-  }),
->>>>>>> origin/add-agentz-editable
 });

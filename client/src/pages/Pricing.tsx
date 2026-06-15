@@ -360,15 +360,8 @@ export default function Pricing() {
                       variant={plan.highlighted ? "default" : "outline"}
                       asChild
                     >
-<<<<<<< HEAD
                       <a href={(plan as { paymentLink?: string }).paymentLink} target="_blank" rel="noopener noreferrer">
                         {key === "enterprise" ? "Buy Enterprise" : "Buy Now"} <ArrowRight className="ml-2 h-4 w-4" />
-=======
-                      <a href={plan.paymentLink} target="_blank" rel="noopener noreferrer">
-                        {key === "enterprise" || key === "medtech"
-                          ? "Contact Sales"
-                          : "Start Free Trial"} <ArrowRight className="ml-2 h-4 w-4" />
->>>>>>> origin/add-agentz-editable
                       </a>
                     </Button>
                     {(key === "starter" || key === "professional") && (

@@ -308,7 +308,6 @@ elif page == "Template Control & Cloud Sync":
             st.warning("Mass Blitz triggered via background worker.")
 
     st.divider()
-<<<<<<< HEAD
     st.subheader("Autonomous Business Launch")
     launch_mode = st.selectbox("Launch mode", ["auto", "confirm", "dry-run"], index=0)
     parallel = st.checkbox("Run agents in parallel", value=True)
@@ -338,8 +337,6 @@ elif page == "Template Control & Cloud Sync":
             st.error(f"Autonomous launch failed: {exc}")
 
     st.divider()
-=======
->>>>>>> origin/add-agentz-editable
     st.subheader("Active Knowledge Base")
     from agentz.core.templates import TEMPLATE_ROOT
     templates = list(TEMPLATE_ROOT.glob("**/*.*"))

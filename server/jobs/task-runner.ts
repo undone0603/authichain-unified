@@ -19,7 +19,6 @@ import {
   runGenerateProposal,
   runSendContract,
   runAutoReply,
-<<<<<<< HEAD
 } from '../agents/closer.js';
 import { runPitchMoonshotDeal, runMoonshotProposal } from '../agents/moonshot.js';
 import { runGenerateOutreachVideo } from '../agents/heygen-video.js';
@@ -28,22 +27,13 @@ import { runNewsjackingMonitor } from '../agents/news-pr.js';
 import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
 import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
 import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
-=======
-} from '../agents/closer';
-import { runGenerateOutreachVideo } from '../agents/heygen-video';
-import { runSecurityAudit } from '../agents/security';
-import { runNewsjackingMonitor } from '../agents/news-pr';
 import {
   runBrowseResearchLead,
   runBrowseCompetitorMonitor,
   runBrowseScrapeIndustryNews,
   runBrowseVerifyProductUrl,
-} from '../agents/browser';
-import { runVisionResearchLead, runVisionFreeform } from '../agents/browser-vision';
-import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer';
-import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager';
-import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner';
->>>>>>> origin/add-agentz-editable
+} from '../agents/browser.js';
+import { runVisionResearchLead, runVisionFreeform } from '../agents/browser-vision.js';
 
 export async function runTask(task: Task): Promise<{ ok: boolean }> {
   const claimed = await markTaskRunning(task.id);

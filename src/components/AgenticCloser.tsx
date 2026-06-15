@@ -78,24 +78,8 @@ export default function AgenticCloser() {
       </div>
       <form onSubmit={handleSubmit} className="p-3 border-t border-zinc-800 bg-zinc-900/30">
         <div className="relative flex items-center">
-<<<<<<< HEAD
           <input value={input} onChange={handleInputChange} placeholder="Ask about pricing, specs, or integration..." className="w-full bg-zinc-900 border border-zinc-700 rounded-lg pl-4 pr-12 py-3 text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-600" />
           <button type="submit" disabled={isLoading || !input} className="absolute right-2 p-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 text-white rounded-md transition-colors"><Send className="w-4 h-4" /></button>
-=======
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder="Ask about pricing, specs, or integration..."
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg pl-4 pr-12 py-3 text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-600"
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !input}
-            className="absolute right-2 p-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 text-white rounded-md transition-colors"
-          >
-            <Send className="w-4 h-4" />
-          </button>
->>>>>>> origin/add-agentz-editable
         </div>
       </form>
     </div>

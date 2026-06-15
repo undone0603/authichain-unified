@@ -441,18 +441,13 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
 
   // Unlock story mode on the QRON (Permanent table)
   const isNumeric = /^\d+$/.test(qronId);
-<<<<<<< HEAD
   await supabase
-=======
-  const { error: _qronError } = await supabase
->>>>>>> origin/add-agentz-editable
     .from('qrons')
     .update({
       story_enabled: true,
       story_tier: tier,
       story_unlocked_at: new Date().toISOString(),
     })
-<<<<<<< HEAD
     .eq('id', qronId);
 
   if (!isNumeric) {
@@ -465,9 +460,6 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
       })
       .eq('short_code', qronId);
   }
-=======
-    .eq(isNumeric ? 'id' : 'id', qronId); // Assuming id is what we get
->>>>>>> origin/add-agentz-editable
 
   // Also grant story_mode_enabled on user profile
   const userId = session.metadata?.userId;

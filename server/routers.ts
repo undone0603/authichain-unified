@@ -35,33 +35,21 @@ import { paymentsRouter } from "./payments/router";
 import { heygenRouter } from "./heygen/router";
 import { abTestingRouter } from "./ab-testing/router";
 import { macrohardRouter } from "./macrohard/router";
-import { servicesRouter } from "./routers/services";
-import { schedulerRouter } from "./routers/scheduler";
-import { missionsRouter, tasksRouter } from "./missions/router";
-import { characterRouter } from "./character/router";
-import { stakingRouter } from "./staking/router";
 import { govchainRouter } from "./govchain/router";
 import { salesRouter } from "./sales/router";
 import { autonomousRouter } from "./autonomous/router";
 import { payoutsRouter } from "./payouts/router";
 import { qronRouter } from "./qron/router";
 import { founderRouter } from "./founder/router";
-import { metrcRouter } from "./routers/metrc";
-import { analyticsRouter } from "./analytics/router";
-import { feedbackRouter } from "./feedback/router";
-import { personalizationRouter } from "./personalization/router";
 import { devTeamRouter } from "./agents/dev-team/router";
-import { pipelineRouter } from "./routers/pipeline";
-import { outcomesRouter } from "./routers/outcomes";
 
 // Import routers from routers/ folder
 import { metrcRouter } from "./routers/metrc";
 import { productsRouter as industrialProductsRouter } from "./routers/products";
 import { schedulerRouter } from "./routers/scheduler";
-import { govchainRouter } from "./govchain/router";
-import { salesRouter } from "./sales/router";
 import { servicesRouter } from "./services/router";
-import { devTeamRouter } from "./agents/dev-team/router";
+import { pipelineRouter } from "./routers/pipeline";
+import { outcomesRouter } from "./routers/outcomes";
 
 export const appRouter = router({
   system: systemRouter,
@@ -294,27 +282,12 @@ export const appRouter = router({
   heygen: heygenRouter,
   abTesting: abTestingRouter,
   macrohard: macrohardRouter,
-  services: servicesRouter,
-  scheduler: schedulerRouter,
-  missions: missionsRouter,
-  tasks: tasksRouter,
-  character: characterRouter,
-  staking: stakingRouter,
-  govchain: govchainRouter,
-  sales: salesRouter,
   autonomous: autonomousRouter,
   payouts: payoutsRouter,
   qron: qronRouter,
   founder: founderRouter,
-  // Restored: these routers were only mounted in the dead server/routers/index.ts
-  // duplicate, leaving them unreachable from the live API.
-  metrc: metrcRouter,
-  analytics: analyticsRouter,
-  feedback: feedbackRouter,
-  personalization: personalizationRouter,
-  // Restored: orphaned routers that the BuildLoop / Missions pages reach for
+  // Orphaned routers that the BuildLoop / Missions pages reach for
   // via `(trpc as any)` because they were never mounted on the live API.
-  devTeam: devTeamRouter,
   pipeline: pipelineRouter,
   outcomes: outcomesRouter,
 });

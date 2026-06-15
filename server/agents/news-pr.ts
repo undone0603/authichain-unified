@@ -2,16 +2,10 @@
  * Newsjacking PR Agent — AgentZ Global Authority Force
  * Monitors news and drafts automated technical PR responses.
  */
-<<<<<<< HEAD
-import { invokeLLM } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { logActivity, enqueueTask, getDb } from '../db.js';
 import { ENV } from '../_core/env.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
-=======
-import { invokeLLM, parseLLMContent } from '../_core/llm';
-import { logActivity, enqueueTask, getDb } from '../db';
-import type { MissionTask as Task } from '../../drizzle/schema';
->>>>>>> origin/add-agentz-editable
 
 /**
  * Fetch real news headlines for the given topics. Uses SerpAPI (Google News

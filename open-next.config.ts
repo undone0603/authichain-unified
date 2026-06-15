@@ -1,6 +1,5 @@
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 
-<<<<<<< HEAD
 export default {
   ...defineCloudflareConfig({}),
   // opennextjs-cloudflare build internally calls buildCommand to compile Next.js.
@@ -9,6 +8,3 @@ export default {
   // via node_modules/.bin to bypass pnpm/corepack entirely.
   buildCommand: "node_modules/.bin/next build",
 };
-=======
-export default defineCloudflareConfig();
->>>>>>> origin/add-agentz-editable

@@ -55,11 +55,7 @@ jobs:
       - name: Setup PNPM
         uses: pnpm/action-setup@v5
         with:
-<<<<<<< HEAD
           run_install: false
-=======
-          version: '10.30.3'
->>>>>>> origin/add-agentz-editable
 
       - name: Setup Node 22 (required for Wrangler + Miniflare)
         uses: actions/setup-node@v4
@@ -77,7 +73,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-<<<<<<< HEAD
       - name: Publish Worker + Assets
         uses: cloudflare/wrangler-action@v3
         with:
@@ -85,32 +80,3 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Dynamically target the specific worker's configuration file
           command: deploy --config workers/${{ matrix.worker }}/wrangler.toml
-=======
-      - name: Deploy authichain-verify-worker
-        run: npx wrangler deploy --config wrangler.toml
-        working-directory: workers/authichain-verify-worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Deploy authichain-scan-validate
-        run: npx wrangler deploy --config wrangler.toml
-        working-directory: workers/authichain-scan-validate
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Deploy govchain-us worker
-        run: npx wrangler deploy --config wrangler.toml
-        working-directory: workers/govchain-us
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Deploy strainchain-io worker
-        run: npx wrangler deploy --config wrangler.toml
-        working-directory: workers/strainchain-io
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
->>>>>>> origin/add-agentz-editable

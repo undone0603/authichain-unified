@@ -88,9 +88,4 @@ export const characterRouter = router({
       input.reasoning
     );
   }),
-
-  // Returns the caller's primary character agent (consumed by the Staking hub).
-  getAgent: protectedProcedure.query(async (): Promise<any> => {
-    return null;
-  }),
 });

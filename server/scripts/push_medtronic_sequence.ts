@@ -3,6 +3,12 @@ import { invokeLLM, parseLLMContent } from "../_core/llm";
 import { sendEmail } from "../email-service";
 import { bayesianPreamble, betaMean, betaCI, SEGMENT_PRIORS } from "../_core/bayesian";
 
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local?.[0] ?? ''}***@${domain}`;
+}
+
 async function pushMedtronicSequence() {
   console.log("🚀 Executing Medtronic High-Ticket Outreach...");
 

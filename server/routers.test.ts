@@ -42,7 +42,6 @@ vi.mock("./db", async (importOriginal) => {
       if (idx >= 0) store.notifications.splice(idx, 1);
     }),
     createLead: vi.fn(async (_data: any) => ({ id: store.nextLeadId() })),
-<<<<<<< HEAD
     // ── DB read stubs ─────────────────────────────────────────────────────────
     // This file-level vi.mock REPLACES the test-setup.ts mock for "./db", so the
     // stubs below must be repeated here or these procedures hit a real database.
@@ -81,44 +80,6 @@ vi.mock("./db", async (importOriginal) => {
     getSubscriptionAnalytics: vi.fn(async () => []),
     getRevenueAnalytics: vi.fn(async () => []),
     getWhiteLabelClients: vi.fn(async () => []),
-=======
-    // certificates
-    getCertificateByNumber: vi.fn(async () => null),
-    // nft
-    listNfts: vi.fn(async () => []),
-    listCollections: vi.fn(async () => []),
-    getActiveAuctions: vi.fn(async () => []),
-    // referral
-    getReferralByCode: vi.fn(async () => undefined),
-    getUserReferrals: vi.fn(async () => []),
-    // white-label
-    getWhiteLabelByApiKey: vi.fn(async () => null),
-    // subscriptions
-    getUserSubscription: vi.fn(async () => null),
-    // autopilot
-    getAutopilotConfig: vi.fn(async () => null),
-    getRecentDecisions: vi.fn(async () => []),
-    // email campaigns/drafts
-    getUserEmailCampaigns: vi.fn(async () => []),
-    getPendingDrafts: vi.fn(async () => []),
-    // affiliate
-    getAffiliateByUserId: vi.fn(async () => null),
-    // ab testing
-    getAllAbTests: vi.fn(async () => []),
-    // dashboard
-    getDashboardMetrics: vi.fn(async () => ({ totalProducts: 0, totalAuthentications: 0, totalCertificates: 0, totalNfts: 0 })),
-    // admin
-    getAdminDashboardMetrics: vi.fn(async () => ({ totalUsers: 0, totalProducts: 0, totalAuthentications: 0, totalRevenue: 0, totalLeads: 0, totalNfts: 0 })),
-    getAllUsers: vi.fn(async () => []),
-    getRevenueAnalytics: vi.fn(async () => []),
-    getSubscriptionAnalytics: vi.fn(async () => []),
-    getOpenFraudAlerts: vi.fn(async () => []),
-    getAllHealthScores: vi.fn(async () => []),
-    getRecentActivity: vi.fn(async () => []),
-    getWhiteLabelClients: vi.fn(async () => []),
-    // make getDb return null so character/scheduler null-guards activate
-    getDb: vi.fn(async () => null),
->>>>>>> origin/add-agentz-editable
   };
 });
 
