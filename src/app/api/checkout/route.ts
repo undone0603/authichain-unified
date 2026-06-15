@@ -1,64 +1,49 @@
 import { NextResponse } from 'next/server';
 import { PLANS } from '@/lib/plans';
 import { createClient } from '@/utils/supabase/server';
-import { logAutomation } from '@/lib/automation';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeSecretKey) {
+    return NextResponse.json({ error: 'Billing is not configured' }, { status: 503 });
+  }
+
+  let body: { planId?: string; email?: string };
   try {
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeSecretKey) {
-      return NextResponse.json(
-        { error: 'Stripe is not configured' },
-        { status: 500 }
-      );
-    }
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
 
-    let body: { planId?: string; email?: string };
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-    }
+  const { planId, email } = body;
+  if (!planId) {
+    return NextResponse.json({ error: 'planId is required' }, { status: 400 });
+  }
 
-    const { planId, email } = body;
-    if (!planId) {
-      return NextResponse.json({ error: 'planId is required' }, { status: 400 });
-    }
+  const plan = PLANS.find((p) => p.id === planId);
+  if (!plan) {
+    return NextResponse.json({ error: 'Unknown plan' }, { status: 400 });
+  }
+  if (!plan.stripe_price_id || !plan.stripe_mode) {
+    return NextResponse.json({ error: 'Free plan does not require checkout' }, { status: 400 });
+  }
 
-    const plan = PLANS.find((p) => p.id === planId);
-    if (!plan) {
-      return NextResponse.json({ error: 'Unknown plan' }, { status: 400 });
-    }
-    if (!plan.stripe_price_id || !plan.stripe_mode) {
-      return NextResponse.json(
-        { error: 'Free plan does not require checkout' },
-        { status: 400 }
-      );
-    }
+  let userId: string | null = null;
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    userId = user?.id ?? null;
+  } catch {
+    /* guest checkout — userId stays null */
+  }
 
-    // Capture authenticated user for post-payment upgrade
-    let userId: string | null = null;
-    if (
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ) {
-      try {
-        const supabase = await createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        userId = user?.id ?? null;
-      } catch {
-        /* guest checkout still works */
-      }
-    }
-
+  try {
     const Stripe = (await import('stripe')).default;
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-04-22.dahlia' as const });
 
-    const origin = request.headers.get('origin') || new URL(request.url).origin;
+    const origin = request.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://qron.space';
 
     const session = await stripe.checkout.sessions.create({
       mode: plan.stripe_mode,
@@ -69,42 +54,31 @@ export async function POST(request: Request) {
       ...(email ? { customer_email: email } : {}),
       metadata: {
         planId: plan.id,
-        ...(userId ? { userId } : {}),
+        ...(userId ? { user_id: userId } : {}),
       },
-      // For subscriptions, allow promo codes and show a cancel URL
-      ...(plan.stripe_mode === 'subscription'
-        ? {
-            allow_promotion_codes: true,
-            subscription_data: {
-              metadata: { planId: plan.id, ...(userId ? { userId } : {}) },
-            },
-          }
-        : {}),
+      ...(plan.stripe_mode === 'subscription' ? {
+        allow_promotion_codes: true,
+        subscription_data: {
+          metadata: { planId: plan.id, ...(userId ? { user_id: userId } : {}) },
+        },
+      } : {}),
     });
-return NextResponse.json({ url: session.url });
-} catch (error: unknown) {
-console.error('[checkout] Error:', error);
 
-const err = error as { type?: string; message?: string };
-await logAutomation('checkout_session_create', 'event', 'failure', null, `${err?.type || 'Error'}: ${err?.message || 'unknown'}`);
+    return NextResponse.json({ url: session.url });
+  } catch (error: unknown) {
+    console.error('[checkout] Stripe error:', error);
 
-if (
-  err?.type === 'StripeInvalidRequestError' &&
-  /payment.method/i.test(err?.message ?? '')
-) {
-  return NextResponse.json(
-    {
-      error:
-        'Card payments are not enabled on this Stripe account. Contact support.',
-      code: 'PAYMENT_METHOD_DISABLED',
-    },
-    { status: 503 }
-  );
-}
+    const err = error as { type?: string; code?: string };
 
-return NextResponse.json(
-  { error: 'Internal Server Error', detail: err?.message },
-  { status: 500 }
-);
-}
+    if (err?.type === 'StripeInvalidRequestError') {
+      // Surface a safe, user-facing message — never leak raw Stripe error messages
+      return NextResponse.json(
+        { error: 'Checkout configuration error. Please contact support.', code: err?.code },
+        { status: 503 }
+      );
+    }
+
+    // Generic fallback — do NOT include err.message in the response body
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
