@@ -48,6 +48,11 @@ const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
 const ScheduledTasks = lazy(() => import("./pages/ScheduledTasks"));
 const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
 const AutonomousControl = lazy(() => import("./pages/AutonomousControl"));
+const Missions = lazy(() => import("./pages/Missions"));
+const BuildLoop = lazy(() => import("./pages/BuildLoop"));
+const PhysicalAuth = lazy(() => import("./pages/PhysicalAuth"));
+const Staking = lazy(() => import("./pages/Staking"));
+const VideoStudio = lazy(() => import("./pages/VideoStudio"));
 
 function PageLoader() {
   return (
@@ -91,6 +96,11 @@ function DashboardRoutes() {
           <WRoute path="/scheduled-tasks" component={ScheduledTasks} />
           <WRoute path="/service-orders" component={ServiceOrders} />
           <WRoute path="/autonomous" component={AutonomousControl} />
+          <WRoute path="/missions" component={Missions} />
+          <WRoute path="/build-loop" component={BuildLoop} />
+          <WRoute path="/physical-auth" component={PhysicalAuth} />
+          <WRoute path="/staking" component={Staking} />
+          <WRoute path="/video-studio" component={VideoStudio} />
           <WRoute path="/services" component={Services} />
           <WRoute path="/storymode" component={Storymode} />
           <WRoute path="/regulatory-demo" component={RegulatoryDemo} />

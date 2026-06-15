@@ -720,20 +720,20 @@ registerJob({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// JOB 15: Cron Health Monitor (Runs every 15 minutes)
+// JOB 15: Analytics Snapshot (Runs daily at 10 PM UTC)
 // ═══════════════════════════════════════════════════════════════════════════
-// Watches scheduled_job_runs for consecutive failures and pings the owner via
-// notifyOwner. Dedups so an open incident does not re-alert; clears once the
-// job recovers. No external side effects beyond the notification fetch.
+// Read-only reporting: compiles admin metrics, revenue, funnel, and cohort
+// analytics to orchestration/analytics-latest.json and the activity log. Was
+// implemented but never registered, so the snapshot was never produced.
 registerJob({
-  name: "cron-health-monitor",
-  description: "Alert on cron job failure streaks; clear on recovery",
-  schedule: "*/15 * * * *",
+  name: "analytics-snapshot",
+  description: "Compile daily admin/revenue analytics snapshot to disk + activity log",
+  schedule: "0 22 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
-    const { runCronHealthMonitor } = await import("./jobs/cron-health-monitor");
-    const res = await runCronHealthMonitor();
-    return { itemsProcessed: res.alerts.length + res.recoveries.length, details: res };
+    const { runAnalyticsSnapshot } = await import("./jobs/analytics-snapshot");
+    const res = await runAnalyticsSnapshot();
+    return { itemsProcessed: 1, details: { outputPath: res.outputPath, generatedAt: res.timestamp } };
   },
 });
 
