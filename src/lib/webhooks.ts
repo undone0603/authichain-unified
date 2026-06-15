@@ -1,8 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { createHmac } from 'node:crypto';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let _client: ReturnType<typeof createClient<any>> | null = null;
+const DISPATCH_TIMEOUT_MS = 5_000;
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 500;
+
+let _client: ReturnType<typeof createClient> | null = null;
 function getClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -20,10 +23,40 @@ function signPayload(secret: string, body: string): string {
   return createHmac('sha256', secret).update(body).digest('hex');
 }
 
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function dispatchWithRetry(sub: WebhookSubscription, body: string): Promise<void> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (sub.secret) {
+    headers['X-AuthiChain-Signature'] = signPayload(sub.secret, body);
+  }
+
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) await sleep(RETRY_DELAY_MS * attempt);
+    try {
+      const res = await fetch(sub.url, {
+        method: 'POST',
+        headers,
+        body,
+        signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS),
+      });
+      // Consider 2xx a success; retry on 5xx
+      if (res.ok || res.status < 500) return;
+      lastErr = new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  console.warn(`[webhooks] dispatch to ${sub.url} failed after ${MAX_RETRIES + 1} attempts:`, lastErr);
+}
+
 /**
- * Fire-and-forget webhook dispatch. Looks up subscriptions for the user/event
- * in `webhook_subscriptions` and POSTs the payload to each registered URL.
- * Failures are logged but never thrown — callers are autonomous loops.
+ * Fire-and-forget webhook dispatch.
+ * Looks up subscriptions for the user/event in `webhook_subscriptions`
+ * and POSTs the signed payload to each registered URL with retries.
  */
 export async function dispatchWebhook(
   userId: string | null,
@@ -38,34 +71,4 @@ export async function dispatchWebhook(
     const { data, error } = await client
       .from('webhook_subscriptions')
       .select('url, secret')
-      .eq('user_id', userId)
-      .eq('event_type', event)
-      .eq('is_active', true);
-    if (error) {
-      console.warn('[webhooks] subscription lookup failed:', error.message);
-      return;
-    }
-    subs = (data ?? []) as WebhookSubscription[];
-  } catch (err) {
-    console.warn('[webhooks] subscription lookup threw:', err);
-    return;
-  }
-
-  if (subs.length === 0) return;
-
-  const body = JSON.stringify({ event, payload, timestamp: new Date().toISOString() });
-
-  await Promise.all(
-    subs.map(async (sub) => {
-      try {
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (sub.secret) {
-          headers['X-AuthiChain-Signature'] = signPayload(sub.secret, body);
-        }
-        await fetch(sub.url, { method: 'POST', headers, body });
-      } catch (err) {
-        console.warn(`[webhooks] dispatch to ${sub.url} failed:`, err);
-      }
-    }),
-  );
-}
+      .e

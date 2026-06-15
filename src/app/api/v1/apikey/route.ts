@@ -1,115 +1,137 @@
-export const runtime = "nodejs";
+export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { randomBytes } from 'crypto';
+import { requireSession } from '@/lib/api-auth-middleware';
+import { createClient } from '@supabase/supabase-js';
+import { randomBytes, createHash } from 'node:crypto';
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const user_id = searchParams.get('user_id');
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-  const api_keys = [
-    {
-      id: 'key_001',
-      user_id: 'user_001',
-      name: 'Production API Key',
-      key_prefix: 'qron_live_sk_',
-      key_preview: 'qron_live_sk_...a4f2',
-      scopes: ['qr:read', 'qr:write', 'scan:read', 'analytics:read'],
-      environment: 'production',
-      status: 'active',
-      rate_limit: 1000,
-      rate_limit_window: '1h',
-      total_requests: 45230,
-      last_used: new Date(Date.now() - 300000).toISOString(),
-      expires_at: null,
-      created_at: '2025-01-10T00:00:00Z'
-    },
-    {
-      id: 'key_002',
-      user_id: 'user_001',
-      name: 'Development API Key',
-      key_prefix: 'qron_test_sk_',
-      key_preview: 'qron_test_sk_...b8c3',
-      scopes: ['qr:read', 'qr:write', 'scan:read', 'analytics:read', 'webhook:write'],
-      environment: 'test',
-      status: 'active',
-      rate_limit: 100,
-      rate_limit_window: '1h',
-      total_requests: 1842,
-      last_used: new Date(Date.now() - 3600000).toISOString(),
-      expires_at: '2026-01-10T00:00:00Z',
-      created_at: '2025-01-10T00:00:00Z'
-    },
-    {
-      id: 'key_003',
-      user_id: 'user_001',
-      name: 'Zapier Integration Key',
-      key_prefix: 'qron_live_sk_',
-      key_preview: 'qron_live_sk_...d1e9',
-      scopes: ['qr:read', 'scan:read'],
-      environment: 'production',
-      status: 'revoked',
-      rate_limit: 500,
-      rate_limit_window: '1h',
-      total_requests: 892,
-      last_used: new Date(Date.now() - 30 * 86400000).toISOString(),
-      expires_at: null,
-      created_at: '2024-11-01T00:00:00Z',
-      revoked_at: new Date(Date.now() - 7 * 86400000).toISOString()
-    }
-  ];
+// Must match the prefix length used in verifyApiKey
+const PREFIX_LENGTH = 16;
 
-  let filtered = api_keys;
-  if (user_id) filtered = filtered.filter(k => k.user_id === user_id);
+export async function GET(req: NextRequest) {
+  // Session-only: API key management requires a browser session
+  const session = await requireSession(req);
+  if (session instanceof NextResponse) return session;
 
-  const available_scopes = [
+  const { data: keys, error } = await admin
+    .from('api_keys')
+    .select('id, name, key_prefix, scopes, environment, status, rate_limit, total_requests, last_used_at, expires_at, created_at, revoked_at')
+    .eq('user_id', session.id)
+    .order('created_at', { ascending: false });
+
+  if (error) return NextResponse.json({ error: 'Failed to retrieve API keys' }, { status: 500 });
+
+  const AVAILABLE_SCOPES = [
     'qr:read', 'qr:write', 'qr:delete',
     'scan:read', 'analytics:read',
     'campaign:read', 'campaign:write',
     'webhook:read', 'webhook:write',
-    'billing:read', 'user:read'
+    'billing:read', 'user:read',
   ];
 
   return NextResponse.json({
     success: true,
-    api_keys: filtered,
-    total: filtered.length,
-    active_count: filtered.filter(k => k.status === 'active').length,
-    available_scopes,
-    generated_at: new Date().toISOString()
+    api_keys: keys,
+    total: keys?.length ?? 0,
+    active_count: keys?.filter(k => k.status === 'active').length ?? 0,
+    available_scopes: AVAILABLE_SCOPES,
+    generated_at: new Date().toISOString(),
   });
 }
 
-export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { user_id, name, scopes, environment, expires_at } = body;
+export async function POST(req: NextRequest) {
+  const session = await requireSession(req);
+  if (session instanceof NextResponse) return session;
 
-  if (!user_id || !name || !scopes) {
-    return NextResponse.json({ success: false, error: 'user_id, name, and scopes are required' }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const prefix = environment === 'test' ? 'qron_test_sk_' : 'qron_live_sk_';
-  const raw_key = prefix + randomBytes(24).toString('hex');
+  const { name, scopes, environment, expires_at } = body as Record<string, unknown>;
 
-  return NextResponse.json({
-    success: true,
-    api_key: {
-      id: `key_${Date.now()}`,
-      user_id,
-      name,
-      key: raw_key,
-      key_preview: raw_key.substring(0, raw_key.length - 4) + '...' + raw_key.slice(-4),
+  if (typeof name !== 'string' || !name.trim()) {
+    return NextResponse.json({ error: 'name is required' }, { status: 400 });
+  }
+  if (!Array.isArray(scopes) || scopes.length === 0) {
+    return NextResponse.json({ error: 'scopes array is required' }, { status: 400 });
+  }
+
+  const prefix_type = environment === 'test' ? 'qron_test_sk_' : 'qron_live_sk_';
+  const raw_key = prefix_type + randomBytes(24).toString('hex');
+  const key_prefix = raw_key.substring(0, PREFIX_LENGTH);
+  const key_hash = createHash('sha256').update(raw_key).digest('hex');
+
+  const { data: newKey, error: insertErr } = await admin
+    .from('api_keys')
+    .insert({
+      user_id: session.id,
+      name: (name as string).trim().slice(0, 128),
+      key_prefix,
+      key_hash,
       scopes,
-      environment: environment || 'production',
+      environment: environment === 'test' ? 'test' : 'production',
       status: 'active',
       rate_limit: 1000,
       rate_limit_window: '1h',
       total_requests: 0,
-      last_used: null,
-      expires_at: expires_at || null,
-      created_at: new Date().toISOString()
+      expires_at: expires_at ?? null,
+      is_active: true,
+    })
+    .select('id, name, key_prefix, scopes, environment, status, created_at')
+    .single();
+
+  if (insertErr) {
+    console.error('[apikey] insert failed:', insertErr);
+    return NextResponse.json({ error: 'Failed to create API key' }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    success: true,
+    api_key: {
+      ...newKey,
+      key: raw_key, // shown once only
+      key_preview: `${key_prefix}...${raw_key.slice(-4)}`,
     },
     warning: 'Save this key securely. It will not be shown again.',
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
   }, { status: 201 });
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await requireSession(req);
+  if (session instanceof NextResponse) return session;
+
+  const { searchParams } = new URL(req.url);
+  const key_id = searchParams.get('id');
+
+  if (!key_id) {
+    return NextResponse.json({ error: 'id query parameter is required' }, { status: 400 });
+  }
+
+  // Verify ownership before revoking
+  const { data: existing, error: fetchErr } = await admin
+    .from('api_keys')
+    .select('id, user_id, status')
+    .eq('id', key_id)
+    .eq('user_id', session.id) // ownership check
+    .single();
+
+  if (fetchErr || !existing) {
+    return NextResponse.json({ error: 'API key not found' }, { status: 404 });
+  }
+
+  const { error: updateErr } = await admin
+    .from('api_keys')
+    .update({ status: 'revoked', is_active: false, revoked_at: new Date().toISOString() })
+    .eq('id', key_id);
+
+  if (updateErr) return NextResponse.json({ error: 'Failed to revoke key' }, { status: 500 });
+
+  return NextResponse.json({ success: true, message: 'API key revoked' });
 }
