@@ -1,118 +1,109 @@
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyApiKey } from '@/lib/auth-api';
-import { createClient } from '@supabase/supabase-js';
+import { requireApiKey } from '@/lib/api-auth-middleware';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { generateLivingQR } from '@/lib/hf-generation';
-import { logAutomation } from '@/lib/automation';
+import { assertSafeUrl } from '@/lib/ssrf-guard';
+import { createClient } from '@supabase/supabase-js';
 
 const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 'not_configured'
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-/**
- * POST /api/v1/generate
- * 
- * Programmatic QRON generation for Industrial/Enterprise users.
- * Requires X-API-Key header.
- */
 export async function POST(req: NextRequest) {
+  const userId = await requireApiKey(req);
+  if (userId instanceof NextResponse) return userId;
+
+  // Rate limit: 10 RPM per user
+  const rl = await checkRateLimit(userId, 10, 1);
+  if (!rl.ok) {
+    return NextResponse.json({ error: 'Rate limit exceeded. Max 10 requests/minute.' }, {
+      status: 429,
+      headers: { 'X-RateLimit-Remaining': '0' },
+    });
+  }
+
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const { url, prompt, mode, negative_prompt } = body as Record<string, unknown>;
+
+  if (typeof url !== 'string' || !url.startsWith('http')) {
+    return NextResponse.json({ error: 'url is required and must be an http/https URL' }, { status: 400 });
+  }
+
+  if (typeof prompt !== 'string' || !prompt.trim()) {
+    return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
+  }
+
+  const ALLOWED_MODES = new Set(['industrial', 'creative', 'enterprise']);
+  const resolvedMode = typeof mode === 'string' && ALLOWED_MODES.has(mode) ? mode : 'creative';
+
+  // SSRF guard — block private/loopback/metadata URLs before forwarding to HF
   try {
-    // 1. Auth via API Key
-    const apiKey = req.headers.get('X-API-Key');
-    if (!apiKey) {
-      return NextResponse.json({ error: 'X-API-Key header missing' }, { status: 401 });
+    await assertSafeUrl(url);
+  } catch (err: unknown) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+  }
+
+  // Check credits
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('generations_used, generation_limit')
+    .eq('user_id', userId)
+    .single();
+
+  if (profile && profile.generations_used >= profile.generation_limit) {
+    return NextResponse.json({ error: 'Generation limit reached for your plan' }, { status: 402 });
+  }
+
+  try {
+    const result = await generateLivingQR({
+      url,
+      prompt: prompt.trim(),
+      negative_prompt: typeof negative_prompt === 'string' ? negative_prompt : undefined,
+    });
+
+    if (!result.imageUrl) {
+      return NextResponse.json({ error: 'Generation failed: no image returned' }, { status: 502 });
     }
 
-    const userId = await verifyApiKey(apiKey);
-    if (!userId) {
-      return NextResponse.json({ error: 'Invalid or revoked API key' }, { status: 401 });
-    }
+    // Deduct credit only on success
+    admin
+      .from('profiles')
+      .update({ generations_used: (profile?.generations_used ?? 0) + 1 })
+      .eq('user_id', userId)
+      .then(undefined, (err) => console.error('[generate] credit update failed:', err));
 
-    // 2. Rate Limiting (10 requests per minute)
-    const { ok, remaining: _remaining } = await checkRateLimit(userId, 10, 1);
-    if (!ok) {
-      return NextResponse.json({ 
-        error: 'Too Many Requests', 
-        detail: 'Industrial rate limit exceeded (10 RPM)' 
-      }, { 
-        status: 429,
-        headers: { 'X-RateLimit-Limit': '10', 'X-RateLimit-Remaining': '0' }
-      });
-    }
-
-    // 3. Input Validation
-    const body = await req.json();
-    const { url, prompt, mode = 'industrial' } = body;
-
-    if (!url || !url.startsWith('http')) {
-      return NextResponse.json({ error: 'Valid URL is required' }, { status: 400 });
-    }
-
-    // 3. Trigger Generation (Phase 3: HF)
-    let imageUrl = '';
-    let scannable = false;
-    let attempts = 1;
-    try {
-      const hfResult = await generateLivingQR({
+    // Log to qrons table
+    admin
+      .from('qrons')
+      .insert({
+        user_id: userId,
         url,
-        prompt: prompt || 'Industrial tech aesthetic, metallic structure',
-      });
-      imageUrl = hfResult.imageUrl;
-      scannable = hfResult.scannable;
-      attempts = hfResult.attempts;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('[v1/generate] HF Generation failed:', err);
-      await logAutomation('v1_generate.hf', 'event', 'failure', { userId, mode }, msg);
-      return NextResponse.json({ error: 'Generation engine temporarily unavailable' }, { status: 502 });
-    }
-
-    if (!imageUrl) {
-      return NextResponse.json({ error: 'No image generated' }, { status: 502 });
-    }
-
-    // 4. Log and Track (Non-blocking)
-    admin.from('qrons').insert({
-      user_id: userId,
-      mode: mode,
-      target_url: url,
-      image_url: imageUrl,
-      prompt: prompt,
-      is_demo: false,
-      metadata: {
-        scannable,
-        attempts,
-        hf_model: 'controlnet-v1p-sd15',
-        api_version: 'v1'
-      }
-    }).then(undefined, (err) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('[v1/generate] Failed to insert qron record:', err);
-      void logAutomation('v1_generate.persist', 'event', 'failure', { userId, url }, msg);
-    });
-
-    // 5. Deduct Credits
-    admin.rpc('increment_generations_used', { user_id: userId }).then(undefined, (err) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('[v1/generate] Failed to increment generations_used:', err);
-      void logAutomation('v1_generate.credit_increment', 'event', 'failure', { userId }, msg);
-    });
+        prompt,
+        mode: resolvedMode,
+        image_url: result.imageUrl,
+        scannable: result.scannable,
+        attempts: result.attempts,
+        protocol: 'QRON',
+      })
+      .then(undefined, (err) => console.error('[generate] qron insert failed:', err));
 
     return NextResponse.json({
       success: true,
-      imageUrl,
-      url,
-      timestamp: new Date().toISOString()
+      image_url: result.imageUrl,
+      scannable: result.scannable,
+      attempts: result.attempts,
+      protocol: 'QRON',
     });
-
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[v1/generate] Error:', err);
-    await logAutomation('v1_generate', 'event', 'failure', null, msg);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const message = err instanceof Error ? err.message : 'Generation failed';
+    console.error('[generate] error:', err);
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

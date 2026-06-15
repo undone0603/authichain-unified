@@ -5,6 +5,7 @@ import { validateQRScannability } from './vision';
 const HF_TOKEN = process.env.HUGGINGFACE_TOKEN || process.env.HF_TOKEN;
 const HF_MODEL = 'DionTimmer/controlnet_qrcode-control_v1p_sd15';
 const HF_API_URL = `https://router.huggingface.co/hf-inference/models/${HF_MODEL}`;
+const HF_TIMEOUT_MS = 90_000;
 
 let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
 function getSupabaseAdmin() {
@@ -14,8 +15,7 @@ function getSupabaseAdmin() {
 
 /**
  * Generates a "Living QR" using Hugging Face Inference APIs.
- * Replaces fal.ai dependency for Phase 3.
- * Includes "Vision Guardrail" for scannability.
+ * Includes retry logic with parameter adjustment and a Vision Guardrail.
  */
 export async function generateLivingQR({
   url,
@@ -36,15 +36,11 @@ export async function generateLivingQR({
     throw new Error('HUGGINGFACE_TOKEN is missing');
   }
 
-  // 1. Generate high-res QR code buffer
   const qrBuffer = await QRCode.toBuffer(url, {
     errorCorrectionLevel: 'H',
     margin: 4,
     width: 768,
-    color: {
-      dark: '#000000',
-      light: '#ffffff',
-    },
+    color: { dark: '#000000', light: '#ffffff' },
   });
 
   const qrBase64 = qrBuffer.toString('base64');
@@ -56,11 +52,8 @@ export async function generateLivingQR({
   let isVerified = false;
 
   while (attempt <= max_retries && !isVerified) {
-    console.log(
-      `[HF-Gen] Attempt ${attempt + 1}: Weight=${currentQrWeight}, Start=${currentStartStep}`
-    );
+    console.log(`[HF-Gen] Attempt ${attempt + 1}: Weight=${currentQrWeight}, Start=${currentStartStep}`);
 
-    // 2. Call Hugging Face Inference API (ControlNet)
     const response = await fetch(HF_API_URL, {
       headers: {
         Authorization: `Bearer ${HF_TOKEN}`,
@@ -78,29 +71,25 @@ export async function generateLivingQR({
         },
         image: qrBase64,
       }),
+      // Timeout: diffusion models can take 60-90s; bail after 90s
+      signal: AbortSignal.timeout(HF_TIMEOUT_MS),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      // If service is loading, don't waste retries, just fail fast or wait
-      if (response.status === 503)
-        throw new Error('HF Model is currently loading');
+      if (response.status === 503) throw new Error('HF Model is currently loading');
       throw new Error(`HF API Error: ${response.status} - ${error}`);
     }
 
     const imageBlob = await response.blob();
     finalBuffer = Buffer.from(await imageBlob.arrayBuffer());
 
-    // 3. Vision Check (Guardrail)
     const validation = await validateQRScannability(finalBuffer);
     if (validation.isScannable) {
       isVerified = true;
       console.log(`[HF-Gen] Validation Passed on attempt ${attempt + 1}`);
     } else {
-      console.warn(
-        `[HF-Gen] Scannability Check Failed. Adjusting parameters...`
-      );
-      // Heuristic adjustment: more weight to the QR, start sooner
+      console.warn('[HF-Gen] Scannability Check Failed. Adjusting parameters...');
       currentQrWeight += 0.25;
       currentStartStep = Math.max(0, currentStartStep - 0.1);
       attempt++;
@@ -109,22 +98,19 @@ export async function generateLivingQR({
 
   if (!finalBuffer) throw new Error('Failed to generate image buffer');
 
-  // 4. Upload to Supabase Storage (Permanent Hosting)
   const fileName = `generated/${crypto.randomUUID()}.png`;
   const { data: uploadData, error: uploadError } = await getSupabaseAdmin().storage
     .from('qrons')
     .upload(fileName, finalBuffer, {
       contentType: 'image/png',
-      upsert: true,
+      upsert: false, // UUID filenames make collisions impossible; don't overwrite
     });
 
   if (uploadError) {
     throw new Error(`Failed to upload to Supabase: ${uploadError.message}`);
   }
 
-  const {
-    data: { publicUrl },
-  } = getSupabaseAdmin().storage.from('qrons').getPublicUrl(fileName);
+  const { data: { publicUrl } } = getSupabaseAdmin().storage.from('qrons').getPublicUrl(fileName);
 
   return {
     imageUrl: publicUrl,
