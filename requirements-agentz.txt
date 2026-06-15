@@ -7,7 +7,7 @@ stripe>=15.2.1
 web3>=6.0.0
 qrcode[pil]>=7.0.0
 tenacity>=8.0.0
-fastapi>=0.100.0
+fastapi>=0.137.1
 uvicorn>=0.22.0
 
 # LLM & Agent Stack
