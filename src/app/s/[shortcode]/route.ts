@@ -130,5 +130,6 @@ export async function GET(
     return NextResponse.redirect(revealUrl);
   }
 
-  return NextResponse.redirect(new URL(destination));
+  // Safe redirect: use request.url as base so relative paths resolve correctly
+  return NextResponse.redirect(new URL(destination, request.url));
 }
