@@ -1,76 +1,114 @@
-﻿export const runtime = 'nodejs';
+export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSession } from '@/lib/api-auth-middleware';
+import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
 
-const plans = [
-  { id: 'plan_starter', name: 'Starter', price: 0, interval: 'month', features: ['10 QR codes', 'Basic analytics', 'PNG export', 'Community support'], max_qr_codes: 10 },
-  { id: 'plan_pro', name: 'Pro', price: 29, interval: 'month', features: ['500 QR codes', 'Advanced analytics', 'All export formats', 'AI art styling', 'Priority support'], max_qr_codes: 500 },
-  { id: 'plan_business', name: 'Business', price: 79, interval: 'month', features: ['Unlimited QR codes', 'Full analytics', 'API access', 'Custom branding', 'Team management', 'Dedicated support'], max_qr_codes: -1 },
-  { id: 'plan_enterprise', name: 'Enterprise', price: 299, interval: 'month', features: ['Unlimited QR codes', 'Full analytics', 'API access', 'White-label', 'SLA', 'Custom integrations', 'Dedicated CSM'], max_qr_codes: -1 }
-];
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-const subscriptions = [
-  { id: 'sub_001', user_id: 'usr_001', plan: 'plan_pro', status: 'active', current_period_end: '2025-02-15T00:00:00Z', qr_codes_used: 127, qr_codes_limit: 500 },
-  { id: 'sub_002', user_id: 'usr_002', plan: 'plan_business', status: 'active', current_period_end: '2025-02-20T00:00:00Z', qr_codes_used: 1843, qr_codes_limit: -1 }
-];
-
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
+/**
+ * GET /api/subscription
+ *
+ * ?type=plans  — public plan catalog (no auth required)
+ * (default)    — authenticated user's own subscription(s)
+ */
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
   const type = searchParams.get('type');
-  const user_id = searchParams.get('user_id');
 
+  // Plans catalog is public — no auth needed
   if (type === 'plans') {
+    const { data: plans, error } = await admin
+      .from('plans')
+      .select('id, name, price, interval, features, max_qr_codes')
+      .eq('is_active', true)
+      .order('price', { ascending: true });
+
+    if (error) return NextResponse.json({ error: 'Failed to load plans' }, { status: 500 });
     return NextResponse.json({ success: true, plans, platform: 'QRON' });
   }
 
-  let filtered = subscriptions;
-  if (user_id) filtered = filtered.filter(s => s.user_id === user_id);
+  // All other queries require authentication
+  const session = await requireSession(req);
+  if (session instanceof NextResponse) return session;
+
+  const { data: subscriptions, error } = await admin
+    .from('subscriptions')
+    .select('id, plan_id, status, current_period_start, current_period_end, stripe_subscription_id, created_at')
+    .eq('user_id', session.id)
+    .order('created_at', { ascending: false });
+
+  if (error) return NextResponse.json({ error: 'Failed to load subscriptions' }, { status: 500 });
 
   return NextResponse.json({
     success: true,
-    endpoint: '/api/subscription',
-    subscriptions: filtered,
-    total: filtered.length,
-    active: filtered.filter(s => s.status === 'active').length,
-    platform: 'QRON'
+    subscriptions,
+    total: subscriptions?.length ?? 0,
+    active: subscriptions?.filter(s => s.status === 'active').length ?? 0,
+    platform: 'QRON',
   });
 }
 
-export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
-  const { user_id, plan_id } = body;
+/**
+ * POST /api/subscription
+ *
+ * Creates a Stripe checkout session for upgrading/subscribing.
+ * Never creates a subscription row directly — that is handled by
+ * the Stripe webhook (stripe/webhook/route.ts) after payment.
+ */
+export async function POST(req: NextRequest) {
+  const session = await requireSession(req);
+  if (session instanceof NextResponse) return session;
 
-  if (!user_id || !plan_id) {
-    return NextResponse.json({ error: 'user_id and plan_id are required' }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const plan = plans.find(p => p.id === plan_id);
-  if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
+  const { plan_id } = body as Record<string, unknown>;
 
-  return NextResponse.json({
-    success: true,
-    subscription: {
-      id: `sub_${Date.now()}`,
-      user_id, plan_id,
-      plan_name: plan.name,
-      status: 'active',
-      amount: plan.price,
-      current_period_start: new Date().toISOString(),
-      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      qr_codes_limit: plan.max_qr_codes,
-      platform: 'QRON'
-    },
-    platform: 'QRON'
-  });
-}
+  if (typeof plan_id !== 'string' || !plan_id.trim()) {
+    return NextResponse.json({ error: 'plan_id is required' }, { status: 400 });
+  }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeKey) {
+    return NextResponse.json({ error: 'Billing not configured' }, { status: 503 });
+  }
+
+  const { data: plan, error: planErr } = await admin
+    .from('plans')
+    .select('id, name, stripe_price_id, stripe_mode')
+    .eq('id', plan_id.trim())
+    .single();
+
+  if (planErr || !plan) {
+    return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
+  }
+
+  if (!plan.stripe_price_id) {
+    return NextResponse.json({ error: 'This plan does not require a payment' }, { status: 400 });
+  }
+
+  const stripe = new Stripe(stripeKey, { apiVersion: '2026-04-22.dahlia' as const });
+  const origin = req.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://qron.space';
+
+  const checkoutSession = await stripe.checkout.sessions.create({
+    mode: plan.stripe_mode ?? 'subscription',
+    payment_method_types: ['card'],
+    line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
+    success_url: `${origin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/pricing`,
+    metadata: { user_id: session.id, plan_id: plan.id },
+    ...(plan.stripe_mode === 'subscription' ? {
+      allow_promotion_codes: true,
+      subscription_data: { metadata: { user_id: session.id, plan_id: plan.id } },
+    } : {}),
   });
+
+  return NextResponse.json({ success: true, url: checkoutSession.url, session_id: checkoutSession.id });
 }

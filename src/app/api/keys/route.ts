@@ -1,91 +1,118 @@
-export const runtime = "nodejs";
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { logAutomation } from '@/lib/automation';
+import { randomBytes, createHash } from 'node:crypto';
 
-export const dynamic = 'force-dynamic';
+// Must match the PREFIX_LENGTH used in verifyApiKey (auth-api.ts)
+const PREFIX_LENGTH = 16;
 
 /**
  * POST /api/keys
- * 
- * Generates a new industrial API key for the authenticated user.
- * Returns the plain-text key (only once) and stores the hash.
+ * Generates a new API key for the authenticated user.
+ * Returns the plain-text key once — stores only the hash.
  */
 export async function POST() {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-    // 1. Generate a random 32-byte key
-    const randomBytes = new Uint8Array(32);
-    globalThis.crypto.getRandomValues(randomBytes);
-    const rawKey = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    const apiKey = `qron_${rawKey}`;
-    
-    const keyPrefix = apiKey.substring(0, 10); // 'qron_' + 5 chars
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    // 2. Hash the key for storage
-    const msgUint8 = new TextEncoder().encode(apiKey);
-    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', msgUint8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const keyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const rawKey = `qron_${randomBytes(32).toString('hex')}`;
+  const keyPrefix = rawKey.substring(0, PREFIX_LENGTH);
+  const keyHash = createHash('sha256').update(rawKey).digest('hex');
 
-    // 3. Store in DB
-    const { error } = await supabase
-      .from('api_keys')
-      .insert({
-        user_id: user.id,
-        name: 'Industrial Access Key',
-        key_prefix: keyPrefix,
-        key_hash: keyHash,
-        scopes: ['read', 'write', 'generate'],
-        is_active: true
-      });
+  const { error } = await supabase
+    .from('api_keys')
+    .insert({
+      user_id: user.id,
+      name: 'Industrial Access Key',
+      key_prefix: keyPrefix,
+      key_hash: keyHash,
+      scopes: ['read', 'write', 'generate'],
+      is_active: true,
+    });
 
-    if (error) throw error;
-
-    return NextResponse.json({ apiKey });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[api/keys] Error:', err);
-    await logAutomation('api_keys.create', 'event', 'failure', null, msg);
+  if (error) {
+    console.error('[api/keys] insert error:', error);
     return NextResponse.json({ error: 'Failed to generate key' }, { status: 500 });
   }
+
+  return NextResponse.json({
+    apiKey: rawKey,
+    warning: 'Save this key securely. It will not be shown again.',
+  });
 }
 
 /**
  * GET /api/keys
- * 
- * Returns the list of active key metadata (prefix, created_at, etc.)
+ * Returns key metadata (never the raw key or hash) for the authenticated user.
  */
 export async function GET() {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-    const { data, error } = await supabase
-      .from('api_keys')
-      .select('id, name, key_prefix, scopes, last_used_at, created_at')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    if (error) throw error;
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('id, name, key_prefix, scopes, last_used_at, created_at, is_active')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
 
-    return NextResponse.json({ keys: data });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[api/keys GET] Error:', err);
-    await logAutomation('api_keys.list', 'event', 'failure', null, msg);
+  if (error) {
+    console.error('[api/keys] GET error:', error);
     return NextResponse.json({ error: 'Failed to fetch keys' }, { status: 500 });
   }
+
+  return NextResponse.json({ keys: data });
+}
+
+/**
+ * DELETE /api/keys?id=<key_id>
+ * Revokes an API key belonging to the authenticated user.
+ */
+export async function DELETE(req: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const keyId = searchParams.get('id');
+
+  if (!keyId) {
+    return NextResponse.json({ error: 'id query parameter is required' }, { status: 400 });
+  }
+
+  // Verify ownership before revoking
+  const { data: existing } = await supabase
+    .from('api_keys')
+    .select('id, user_id')
+    .eq('id', keyId)
+    .eq('user_id', user.id) // ownership enforced by DB query, not app logic
+    .maybeSingle();
+
+  if (!existing) {
+    return NextResponse.json({ error: 'Key not found' }, { status: 404 });
+  }
+
+  const { error } = await supabase
+    .from('api_keys')
+    .update({ is_active: false, revoked_at: new Date().toISOString() })
+    .eq('id', keyId);
+
+  if (error) {
+    return NextResponse.json({ error: 'Failed to revoke key' }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, message: 'API key revoked' });
 }
