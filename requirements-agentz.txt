@@ -29,7 +29,7 @@ matplotlib>=3.8.0
 # Dashboard & Analytics
 pandas>=2.0.0
 matplotlib>=3.8.0
-streamlit>=1.30.0
+streamlit>=1.58.0
 
 # Local packages
 ./agentz
