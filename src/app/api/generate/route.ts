@@ -1,4 +1,4 @@
-﻿export const runtime = 'nodejs';
+export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
@@ -43,6 +43,19 @@ const PRESET_PROMPTS: Record<string, string> = {
     'Organic elemental motifs of leaves vines water and fire swirling around',
 };
 
+// Allowed URL schemes for targetUrl — prevents javascript: / data: SSRF vectors
+const ALLOWED_URL_SCHEMES = ['https:', 'http:'];
+
+function isValidTargetUrl(raw: unknown): raw is string {
+  if (typeof raw !== 'string' || raw.length > 2048) return false;
+  try {
+    const parsed = new URL(raw);
+    return ALLOWED_URL_SCHEMES.includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
 interface GenerateBody {
   targetUrl?: string;
   prompt?: string;
@@ -53,10 +66,14 @@ interface GenerateBody {
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
+
+    // SECURITY: getUser() performs a server-side JWT validation against Supabase Auth.
+    // The previous getSession() only decoded the local JWT without re-validating it,
+    // meaning a tampered or replayed token could bypass authentication.
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session)
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user)
       return NextResponse.json(
         { message: 'Authentication required.' },
         { status: 401 }
@@ -71,8 +88,8 @@ export async function POST(request: Request) {
 
     const { targetUrl, prompt, presetId, mode = 'static' } = body;
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Rate Limiting check Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    const rateLimit = await checkRateLimit(session.user.id, 5, 1);
+    // Rate limiting
+    const rateLimit = await checkRateLimit(user.id, 5, 1);
     if (!rateLimit.ok) {
       return NextResponse.json(
         { message: 'Too many requests. Please wait a minute.' },
@@ -80,19 +97,23 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!targetUrl)
+    // SECURITY: Validate targetUrl scheme to prevent SSRF / javascript: injection.
+    // Previously only checked truthiness — an attacker could pass javascript:alert(1)
+    // or a private IP range as the QR destination.
+    if (!isValidTargetUrl(targetUrl))
       return NextResponse.json(
-        { message: 'Destination URL is required.' },
+        { message: 'Destination URL is required and must be a valid http/https URL.' },
         { status: 400 }
       );
+
     if (!prompt && !presetId)
       return NextResponse.json(
         { message: 'A prompt or preset is required.' },
         { status: 400 }
       );
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Credit check / deduction Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    const creditResult = await deductCredit(session.user.id);
+    // Credit check / deduction
+    const creditResult = await deductCredit(user.id);
     if (!creditResult.ok) {
       return NextResponse.json(
         { message: creditResult.error, code: 'LIMIT_REACHED' },
@@ -100,18 +121,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Resolve prompt from preset or custom Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    // Resolve prompt from preset or custom
     let finalPrompt = prompt || '';
     const presetPrompt = presetId ? PRESET_PROMPTS[presetId] : null;
 
-    // Try DB-backed preset if not in static map
     if (presetId && !presetPrompt) {
       try {
-        const admin = createAdminClient(
+        const adminClient = createAdminClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.SUPABASE_SERVICE_ROLE_KEY!
         );
-        const { data: dbPreset } = await admin
+        const { data: dbPreset } = await adminClient
           .from('qron_presets')
           .select('prompt')
           .eq('id', presetId)
@@ -133,7 +153,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Generate via Hugging Face Inference API (Phase 3) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    // Generate via Hugging Face Inference API
     let imageUrl = '';
     let hfResult: Awaited<ReturnType<typeof generateLivingQR>> | null = null;
     try {
@@ -145,7 +165,7 @@ export async function POST(request: Request) {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error('[generate] HF Generation failed:', err);
-      await logAutomation('generate.hf', 'event', 'failure', { userId: session.user.id, presetId, mode }, msg);
+      await logAutomation('generate.hf', 'event', 'failure', { userId: user.id, presetId, mode }, msg);
       return NextResponse.json(
         { message: 'AI generation engine is temporarily unavailable. Try again in 60s.' },
         { status: 502 }
@@ -155,8 +175,8 @@ export async function POST(request: Request) {
     if (!imageUrl)
       return NextResponse.json({ message: 'No image returned' }, { status: 502 });
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Store generation in Supabase Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    const admin = createAdminClient(
+    // Store generation in Supabase
+    const adminClient = createAdminClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
@@ -165,18 +185,17 @@ export async function POST(request: Request) {
     const storableImageUrl = imageUrl.startsWith('data:')
       ? `generated:${qronId}`
       : imageUrl;
-    await admin
+    await adminClient
       .from('qron_generations')
       .insert({
         id: qronId,
-        user_id: session.user.id,
+        user_id: user.id,
         image_url: storableImageUrl,
         destination_url: targetUrl,
         prompt: finalPrompt,
         preset_id: presetId || null,
         mode,
         provider: 'huggingface',
-        // Log scannability data in a flexible field (mode or metadata)
         metadata: {
           scannable: hfResult?.scannable,
           attempts: hfResult?.attempts,
@@ -187,17 +206,17 @@ export async function POST(request: Request) {
         ({ error }) => {
           if (error) {
             console.warn('[generate] Supabase insert warning:', error.message);
-            void logAutomation('generate.persist', 'event', 'failure', { qronId, userId: session.user.id }, error.message);
+            void logAutomation('generate.persist', 'event', 'failure', { qronId, userId: user.id }, error.message);
           }
         },
         (err) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.error('[generate] Supabase insert failed (non-fatal):', err);
-          void logAutomation('generate.persist', 'event', 'failure', { qronId, userId: session.user.id }, msg);
+          void logAutomation('generate.persist', 'event', 'failure', { qronId, userId: user.id }, msg);
         }
       );
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Register provenance with AuthiChain Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    // Register provenance with AuthiChain
     let registrationId: string | null = null;
     const authichainUrl = process.env.AUTHICHAIN_API_URL;
     if (authichainUrl) {
@@ -209,7 +228,7 @@ export async function POST(request: Request) {
             'X-API-Key': process.env.AUTHICHAIN_API_SECRET || '',
           },
           body: JSON.stringify({
-            user_id: session.user.id,
+            user_id: user.id,
             asset_url: imageUrl,
             destination_url: targetUrl,
             prompt: finalPrompt,
@@ -228,7 +247,7 @@ export async function POST(request: Request) {
           '[generate] Provenance registration failed (non-fatal):',
           err
         );
-        await logAutomation('generate.provenance_register', 'event', 'failure', { qronId, userId: session.user.id }, msg);
+        await logAutomation('generate.provenance_register', 'event', 'failure', { qronId, userId: user.id }, msg);
       }
     }
 

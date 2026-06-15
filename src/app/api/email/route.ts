@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { timingSafeEqual } from 'crypto';
 import { sendEmail } from '@/lib/email';
 
 const admin = createClient(
@@ -16,14 +17,31 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://authichain.com';
 /**
  * POST /api/email
  * Internal transactional email dispatcher. Called by the Stripe webhook handler.
- * Protected by x-internal-secret header.
+ * Protected by x-internal-secret header (timing-safe comparison).
  *
  * Body: { type, user_id, email?, plan? }
  * Types: subscription_confirmed | payment_failed | trial_expiring
+ *
+ * Security hardening (2026-06-15):
+ *  - Replaced naive string equality with timingSafeEqual to prevent timing attacks
+ *    on the internal secret comparison.
  */
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-internal-secret');
-  if (!secret || secret !== process.env.INTERNAL_API_SECRET) {
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  const provided = req.headers.get('x-internal-secret');
+
+  // Guard: if either value is missing, deny immediately
+  if (!internalSecret || !provided) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Timing-safe comparison — prevents timing side-channel attacks
+  const secretBuf = Buffer.from(internalSecret, 'utf8');
+  const providedBuf = Buffer.from(provided, 'utf8');
+  if (
+    secretBuf.length !== providedBuf.length ||
+    !timingSafeEqual(secretBuf, providedBuf)
+  ) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
