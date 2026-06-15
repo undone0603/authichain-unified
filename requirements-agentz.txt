@@ -15,7 +15,7 @@ langchain-openai>=0.1.0
 langchain-google-genai>=1.0.0
 langchain-ollama>=0.1.0
 browser-use>=0.11.0
-playwright>=1.40.0
+playwright>=1.60.0
 
 # Testing
 pytest>=8.0.0
