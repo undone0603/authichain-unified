@@ -9,7 +9,6 @@ async function seed() {
   try {
     const DEMO_USER_ID = '00000000-0000-0000-0000-000000000000';
 
-    // 1. Fee Flows (Economic Burn) - user_id is nullable
     console.log('Seeding fee flows (Global stats)...');
     const feeFlows = [
       { burn_amount: 155.5, net_amount: 1500.0, flow_type: 'authentication_fee' },
@@ -25,7 +24,6 @@ async function seed() {
       `;
     }
 
-    // 2. Automation Logs
     console.log('Seeding automation logs...');
     const logs = [
       { workflow_name: 'Industrial Anchor', status: 'success', payload: { asset: 'CHRONOS-2026', tx: '0x123...' } },
@@ -42,7 +40,6 @@ async function seed() {
       `;
     }
 
-    // 3. Lead Captures
     console.log('Seeding lead captures...');
     const leads = [
       { email: 'executive@bmw.com', name: 'Mark Levinson', source: 'Industrial Scan', product_interest: 'Telemetry QRON', status: 'hot', score: 95 },
@@ -58,7 +55,6 @@ async function seed() {
       `;
     }
 
-    // 4. Products & Certifications (High Performance Demo)
     console.log('Seeding more high-value products...');
     const moreProducts = [
       { name: 'AuthiChain Ghost Series', manufacturer: 'AuthiChain Industrial', desc: 'Next-gen stealth authentication for high-security environments.', model: 'AC-GHOST-V1' },
@@ -71,14 +67,12 @@ async function seed() {
         VALUES (${p.name}, ${p.manufacturer}, ${p.desc}, ${p.model})
         RETURNING id
       `;
-
       await sql`
         INSERT INTO certifications (product_id, serial_number, name, status, approved_at, seal_svg_url)
         VALUES (${newP.id}, ${'SERIAL-' + Math.random().toString(36).substring(7).toUpperCase()}, ${p.name + ' Certification'}, 'approved', now(), '/media/samples/01_flux_qron_space.png')
       `;
     }
 
-    // 5. Seed a demo-user-scoped folder so the dashboard renders org metadata for this seed
     console.log('Seeding demo-user folder for "Full Potential" showcase...');
     await sql`
       INSERT INTO folders (user_id, name, created_at)
