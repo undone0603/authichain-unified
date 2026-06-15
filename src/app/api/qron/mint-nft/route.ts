@@ -8,13 +8,10 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth check
+    // BUG FIXED: getSession() → getUser() (server-side token re-validation)
     const supabase = await createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { recipient, imageUrl, destinationUrl, qronId, registration_id } =
       await req.json();
@@ -33,21 +30,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate imageUrl and destinationUrl schemes (SSRF prevention)
+    for (const [label, rawUrl] of [['imageUrl', imageUrl], ['destinationUrl', destinationUrl]]) {
+      try {
+        const parsed = new URL(rawUrl as string);
+        if (!['https:', 'http:'].includes(parsed.protocol)) {
+          return NextResponse.json({ error: `Invalid ${label} scheme` }, { status: 400 });
+        }
+      } catch {
+        return NextResponse.json({ error: `Invalid ${label}` }, { status: 400 });
+      }
+    }
+
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
     const contractAddress = process.env.QRON_NFT_CONTRACT_ADDRESS;
 
     if (!secretKey)
-      return NextResponse.json(
-        { error: 'THIRDWEB_SECRET_KEY not configured' },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: 'THIRDWEB_SECRET_KEY not configured' }, { status: 503 });
     if (!contractAddress)
-      return NextResponse.json(
-        { error: 'QRON_NFT_CONTRACT_ADDRESS not configured' },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: 'QRON_NFT_CONTRACT_ADDRESS not configured' }, { status: 503 });
 
-            // --- Scan validation gate (if provenance registration exists) ---
+    // Scan validation gate (if provenance registration exists)
     const authichainUrl = process.env.AUTHICHAIN_API_URL;
     if (registration_id && authichainUrl) {
       try {
@@ -62,29 +65,20 @@ export async function POST(req: NextRequest) {
           const scanData = (await scanRes.json()) as { scannable?: boolean };
           if (scanData.scannable === false) {
             return NextResponse.json(
-              {
-                error:
-                  'QR code is not scannable â€” cannot mint. Please regenerate.',
-              },
+              { error: 'QR code is not scannable — cannot mint. Please regenerate.' },
               { status: 400 }
             );
           }
         }
-        // If scan service unavailable, proceed (graceful degradation)
+        // If scan service is unavailable, proceed (graceful degradation)
       } catch {
         console.warn('[qron/mint-nft] Scan validation check failed (non-fatal)');
       }
     }
 
-    // â”€â”€ Business tier credit check (non-business users may need credits) â”€â”€â”€â”€â”€â”€
-    const isUnlimited = await hasUnlimitedPlan(session.user.id);
-    // For now, minting is free for all users with a valid QRON
-    // Future: charge mint credits for non-business users
+    const isUnlimited = await hasUnlimitedPlan(user.id);
 
-    // â”€â”€ thirdweb v5 server-side mint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const { createThirdwebClient, getContract, sendTransaction } = await import(
-      'thirdweb'
-    );
+    const { createThirdwebClient, getContract, sendTransaction } = await import('thirdweb');
     const { mintTo } = await import('thirdweb/extensions/erc721');
     const { privateKeyAccount } = await import('thirdweb/wallets');
     const { baseSepolia, base } = await import('thirdweb/chains');
@@ -99,7 +93,7 @@ export async function POST(req: NextRequest) {
 
     const metadata = {
       name: `QRON QR Code #${qronId ?? Date.now()}`,
-      description: `AI-generated QR code linking to ${destinationUrl}. Created with the QRON Creative Studio â€” part of the AuthiChain Protocol.`,
+      description: `AI-generated QR code linking to ${destinationUrl}. Created with the QRON Creative Studio — part of the AuthiChain Protocol.`,
       image: imageUrl,
       external_url: destinationUrl,
       attributes: [
@@ -111,40 +105,26 @@ export async function POST(req: NextRequest) {
       ],
     };
 
-    const minterKey =
-      process.env.THIRDWEB_MINTER_KEY || process.env.MINTER_PRIVATE_KEY;
+    const minterKey = process.env.THIRDWEB_MINTER_KEY || process.env.MINTER_PRIVATE_KEY;
     if (!minterKey)
-      return NextResponse.json(
-        { error: 'Minter private key not configured' },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: 'Minter private key not configured' }, { status: 503 });
 
     const minterAccount = privateKeyAccount({ client, privateKey: minterKey });
-
     const mintTx = mintTo({ contract, to: recipient, nft: metadata });
-    const receipt = await sendTransaction({
-      transaction: mintTx,
-      account: minterAccount,
-    });
+    const receipt = await sendTransaction({ transaction: mintTx, account: minterAccount });
 
-    console.log(
-      '[qron/mint-nft] Minted to',
-      recipient,
-      'txHash:',
-      receipt.transactionHash
-    );
+    console.log('[qron/mint-nft] Minted to', recipient, 'txHash:', receipt.transactionHash);
 
-    // â”€â”€ Persist to Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Persist to Supabase (non-fatal)
     try {
-      const { createClient: createSbClient } = await import(
-        '@supabase/supabase-js'
-      );
+      const { createClient: createSbClient } = await import('@supabase/supabase-js');
       const sbAdmin = createSbClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       await sbAdmin.from('qron_nft_mints').insert({
         qron_id: qronId,
+        user_id: user.id,
         recipient,
         image_url: imageUrl,
         destination_url: destinationUrl,
@@ -160,7 +140,7 @@ export async function POST(req: NextRequest) {
       await logAutomation('mint_nft.persist', 'event', 'failure', { recipient, txHash: receipt.transactionHash, qronId }, msg);
     }
 
-    // â”€â”€ Update AuthiChain provenance to 'minted' â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Update AuthiChain provenance to 'minted' (non-fatal)
     if (registration_id && authichainUrl) {
       try {
         await fetch(`${authichainUrl}/api/qron-register/mint`, {
@@ -171,7 +151,7 @@ export async function POST(req: NextRequest) {
           },
           body: JSON.stringify({
             registration_id,
-            token_id: receipt.transactionHash, // Use tx hash as on-chain reference
+            token_id: receipt.transactionHash,
             tx_hash: receipt.transactionHash,
             chain: chain.name,
             contract_address: contractAddress,
@@ -192,12 +172,10 @@ export async function POST(req: NextRequest) {
       registration_id,
     });
   } catch (err: unknown) {
+    // BUG FIXED: never leak raw error messages to the client
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[qron/mint-nft] Error:', err);
     await logAutomation('mint_nft', 'event', 'failure', null, msg);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Mint failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Mint failed. Please try again.' }, { status: 500 });
   }
 }
