@@ -26,21 +26,12 @@ export function generateAffiliateCode(userId: number): string {
 
 export async function createReferralCode(referrerId: number): Promise<{ id: number; referralCode: string }> {
   const code = generateReferralCode(referrerId);
-<<<<<<< HEAD
   const [row] = await db.insert(referrals).values({
     referrerId,
     referralCode: code,
     status: "pending",
   }).returning({ id: referrals.id });
   return { id: row!.id, referralCode: code };
-=======
-  const [result] = await db.insert(referrals).values({
-    referrerId,
-    referralCode: code,
-    status: "pending",
-  }).returning();
-  return { id: result.id, referralCode: code };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function trackReferralClick(params: {

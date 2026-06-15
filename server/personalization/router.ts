@@ -26,6 +26,7 @@ export const personalizationRouter = router({
       targetElement: z.string().optional().default("headline"),
     }))
     .query(async ({ input }) => {
+      try {
       const db = await getDb();
       if (!db) return null;
 
@@ -82,7 +83,7 @@ export const personalizationRouter = router({
           .update(visitorProfiles)
           .set({
             pageViews: profile.pageViews + 1,
-            lastSeenAt: new Date(),
+            lastSeen: new Date(),
           })
           .where(eq(visitorProfiles.id, profile.id));
       }
@@ -107,22 +108,13 @@ export const personalizationRouter = router({
           utmSource: profile.utmSource || undefined,
           utmMedium: profile.utmMedium || undefined,
           utmCampaign: profile.utmCampaign || undefined,
-<<<<<<< HEAD
           deviceType: (profile.deviceType as any) || undefined,
-=======
-          deviceType: profile.deviceType as "desktop" | "mobile" | "tablet" | undefined,
->>>>>>> origin/add-agentz-editable
           segment: profile.segment || undefined,
         },
         rules.map(r => ({
           id: r.id,
-<<<<<<< HEAD
           conditions: JSON.stringify(r.conditions),
           content: JSON.stringify(r.content),
-=======
-          conditions: JSON.stringify(r.conditions ?? {}),
-          content: JSON.stringify(r.content ?? {}),
->>>>>>> origin/add-agentz-editable
           priority: r.priority ?? 0,
         }))
       );
@@ -163,6 +155,10 @@ export const personalizationRouter = router({
       }
 
       return null;
+      } catch {
+        // Degrade gracefully if the database is unavailable.
+        return null;
+      }
     }),
 
   // Track conversion (public endpoint)
@@ -406,13 +402,8 @@ export const personalizationRouter = router({
 
       const analysis = await analyzePersonalizationPerformance(
         rules.map(r => ({
-<<<<<<< HEAD
           name: r.name ?? "",
           conditions: JSON.stringify(r.conditions),
-=======
-          name: r.name,
-          conditions: JSON.stringify(r.conditions ?? {}),
->>>>>>> origin/add-agentz-editable
           views: r.views,
           conversions: r.conversions,
           conversionRate: Number(r.conversionRate ?? 0),

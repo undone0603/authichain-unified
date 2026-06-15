@@ -12,15 +12,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-<<<<<<< HEAD
     "@cloudflare/workers-types": "^4.20260613.1",
     "typescript": "^6.0.3",
     "wrangler": "^4.100.0"
-=======
-    "@cloudflare/workers-types": "^4.20260527.1",
-    "typescript": "^6.0.3",
-    "wrangler": "^4.92.0"
->>>>>>> origin/add-agentz-editable
   },
   "pnpm": {
     "overrides": {

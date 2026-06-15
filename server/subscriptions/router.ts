@@ -96,11 +96,7 @@ export const subscriptionsRouter = router({
       duration: "forever",
       name: input.name || `AuthiChain ${input.percentOff}% Off`,
     });
-<<<<<<< HEAD
     const promo = await stripe.promotionCodes.create({
-=======
-    const promo = await (stripe.promotionCodes.create as any)({
->>>>>>> origin/add-agentz-editable
       coupon: coupon.id,
       code: input.code,
       active: true,

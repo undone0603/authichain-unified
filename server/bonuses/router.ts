@@ -37,12 +37,7 @@ export const bonusesRouter = router({
       tier: input.tier as any,
       status: "pending",
       deliveryMethod: input.deliveryMethod,
-<<<<<<< HEAD
     }).returning({ id: bonuses.id });
     return { id: row!.id };
-=======
-    }).returning();
-    return { id: row.id };
->>>>>>> origin/add-agentz-editable
   }),
 });

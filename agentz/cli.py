@@ -8,11 +8,8 @@ Usage:
     python -m agentz.cli probe <workflow_id>
     python -m agentz.cli run <workflow_id> [--mode auto|confirm|dry-run]
     python -m agentz.cli run --all [--mode dry-run|auto]
-<<<<<<< HEAD
     python -m agentz.cli run --all --revenue-only [--mode dry-run|auto]
     python -m agentz.cli power-launch [--mode auto|confirm|dry-run] [--no-parallel]
-=======
->>>>>>> origin/add-agentz-editable
     python -m agentz.cli setup {federal-pipeline}
     python -m agentz.cli health
     python -m agentz.cli list-agents
@@ -21,10 +18,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
-<<<<<<< HEAD
 import dataclasses
-=======
->>>>>>> origin/add-agentz-editable
 import io
 import json
 import sys
@@ -140,15 +134,10 @@ def cmd_run(args: argparse.Namespace) -> int:
     if getattr(args, "revenue_only", False):
         requested = [wf_id for wf_id in requested if reg[wf_id].blocks_revenue]
         if not requested:
-<<<<<<< HEAD
             if getattr(args, "all", False):
                 print("No revenue workflows found.", file=sys.stderr)
             else:
                 print(f"Workflow {wf_id} does not block revenue.", file=sys.stderr)
-=======
-            msg = "No revenue workflows found." if getattr(args, "all", False) else f"Workflow {wf_id} does not block revenue."
-            print(msg, file=sys.stderr)
->>>>>>> origin/add-agentz-editable
             return 1
 
     ordered = resolve_order(reg, requested)
@@ -172,22 +161,16 @@ def cmd_run(args: argparse.Namespace) -> int:
     print(f"\n  Summary: {ok} ok, {skip} skipped, {fail} failed/blocked")
 
     if getattr(args, "json_out", None):
-<<<<<<< HEAD
         serializable = [
             dataclasses.asdict(r) if dataclasses.is_dataclass(r) else r.__dict__
             for r in results
         ]
         with open(args.json_out, "w") as fh:
             json.dump(serializable, fh, indent=2)
-=======
-        with open(args.json_out, "w") as fh:
-            json.dump([r.__dict__ for r in results], fh, indent=2)
->>>>>>> origin/add-agentz-editable
         if not args.quiet:
             print(f"  Results written to {args.json_out}")
 
     return 0 if fail == 0 else 1
-<<<<<<< HEAD
 
 
 def cmd_power_launch(args: argparse.Namespace) -> int:
@@ -202,8 +185,6 @@ def cmd_power_launch(args: argparse.Namespace) -> int:
     fail_count = len(results) - ok_count
     print(f"\nPower launch completed: {ok_count} OK, {fail_count} failed")
     return 0 if fail_count == 0 else 1
-=======
->>>>>>> origin/add-agentz-editable
 
 
 def cmd_health(args: argparse.Namespace) -> int:
@@ -249,15 +230,12 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("health",      help="Check LM Studio connectivity")
     sub.add_parser("list-agents", help="List all registered agents")
 
-<<<<<<< HEAD
     # ── pulse ────────────────────────────────────────────────────────────────
     sub.add_parser("pulse", help="Print credential heartbeat")
 
     # ── list ─────────────────────────────────────────────────────────────────
     sub.add_parser("list", help="List all registered workflows")
 
-=======
->>>>>>> origin/add-agentz-editable
     creds_p = sub.add_parser("creds", help="Full credential audit")
     creds_p.add_argument("--json", action="store_true")
 
@@ -276,14 +254,11 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--quiet",  action="store_true")
     run_p.add_argument("--json-out", metavar="FILE", default=None)
 
-<<<<<<< HEAD
     power_p = sub.add_parser("power-launch", help="Launch all platform agents for autonomous business operations")
     power_p.add_argument("--mode", choices=["auto", "confirm", "dry-run"], default="auto")
     power_p.add_argument("--no-parallel", action="store_true", help="Run agents serially instead of in parallel")
     power_p.add_argument("--quiet",  action="store_true")
 
-=======
->>>>>>> origin/add-agentz-editable
     task_p = sub.add_parser("task", help="Run an ad-hoc browser task")
     task_p.add_argument("instruction", help="The browser instruction to carry out")
     task_p.add_argument("--mode", choices=["auto", "confirm", "dry-run"], default="auto")
@@ -291,7 +266,6 @@ def build_parser() -> argparse.ArgumentParser:
     return root
 
 
-<<<<<<< HEAD
 def _ensure_unicode_streams() -> None:
     """Ensure stdout/stderr can handle Unicode on Windows (CP1252 terminals)."""
     if hasattr(sys.stdout, "buffer"):
@@ -300,8 +274,6 @@ def _ensure_unicode_streams() -> None:
         sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 
-=======
->>>>>>> origin/add-agentz-editable
 def cmd_task(args: argparse.Namespace) -> int:
     import asyncio
     from .core.browser import run_browser_task
@@ -321,16 +293,7 @@ def cmd_task(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-<<<<<<< HEAD
     _ensure_unicode_streams()
-=======
-    # Ensure stdout/stderr can handle Unicode on Windows (CP1252 terminals)
-    if hasattr(sys.stdout, "buffer"):
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    if hasattr(sys.stderr, "buffer"):
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
-
->>>>>>> origin/add-agentz-editable
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -345,10 +308,7 @@ def main(argv: list[str] | None = None) -> int:
         "probe":       cmd_probe,
         "setup":       cmd_setup,
         "run":         cmd_run,
-<<<<<<< HEAD
         "power-launch": cmd_power_launch,
-=======
->>>>>>> origin/add-agentz-editable
         "task":        cmd_task,
         "health":      cmd_health,
         "list-agents": cmd_list_agents,

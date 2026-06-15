@@ -55,12 +55,7 @@ export const macrohardRouter = router({
   query: adminProcedure
     .input(
       z.object({
-<<<<<<< HEAD
         resource: z.string().min(1).max(100),
-=======
-        // Only allow simple alphanumeric/hyphen/underscore resource names — no path traversal
-        resource: z.string().min(1).max(100).regex(/^[\w\-]+$/, "Invalid resource name"),
->>>>>>> origin/add-agentz-editable
         params: z.record(z.string(), z.string()).optional(),
       })
     )

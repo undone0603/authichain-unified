@@ -24,7 +24,6 @@ type Bindings = {
   GITHUB_WEBHOOK_SECRET: string;
 };
 
-<<<<<<< HEAD
 async function verifyHmacSha256(secret: string, body: string, signature: string): Promise<boolean> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -70,60 +69,6 @@ body{background:#050505;color:#fff;font-family:-apple-system,BlinkMacSystemFont,
   <p class="tagline">The Truth Layer for the Global Economy</p>
   <a class="cta" href="https://authichain.com/app">Get Started</a>
 </div>
-=======
-const BRANDS = {
-  authichain: {
-    name: "AuthiChain",
-    tagline: "The Truth Layer for the Global Economy",
-    primary: "#d4af37",
-    primaryDim: "#b8952d",
-    secondary: "#1a1a1a",
-    bg: "#050505",
-    bg2: "#0d0d0d",
-    bg3: "#151515",
-    text: "#ffffff",
-    textDim: "#a0a0a0",
-    border: "rgba(212,175,55,0.15)",
-    borderDim: "rgba(212,175,55,0.12)",
-    glowRgba: "rgba(212,175,55,0.15)",
-    logoMark: "AC",
-    url: "https://authichain.com",
-  },
-} as const;
-
-function cssVars(brand: keyof typeof BRANDS) {
-  const b = BRANDS[brand];
-  return `:root {
-    --bg: ${b.bg};
-    --bg2: ${b.bg2};
-    --bg3: ${b.bg3};
-    --text: ${b.text};
-    --text-dim: ${b.textDim};
-    --primary: ${b.primary};
-    --primary-dim: ${b.primaryDim};
-    --secondary: ${b.secondary};
-    --border: ${b.border};
-    --border-dim: ${b.borderDim};
-    --primary-glow: ${b.glowRgba};
-    --mono: 'JetBrains Mono', monospace;
-    --display: 'Bebas Neue', cursive;
-    --body: 'Outfit', sans-serif;
-    --radius: 12px;
-  }`;
-}
-
-const MARKETING_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>AuthiChain — The Truth Layer for the Global Economy</title>
-  <meta http-equiv="refresh" content="0;url=https://authichain.com/">
-</head>
-<body>
-  <p>Redirecting…</p>
-  <script>window.location.replace("https://authichain.com/");</script>
->>>>>>> origin/add-agentz-editable
 </body>
 </html>`;
 
@@ -296,13 +241,8 @@ app.post("/webhook/github", async (c) => {
   if (!signature) return c.json({ error: "missing signature" }, 401);
 
   const body = await c.req.text();
-<<<<<<< HEAD
   const valid = await verifyHmacSha256(c.env.GITHUB_WEBHOOK_SECRET, body, signature);
   if (!valid) {
-=======
-
-  if (!signature || !(await verifyGithubSignature(c.env.GITHUB_WEBHOOK_SECRET, body, signature))) {
->>>>>>> origin/add-agentz-editable
     return c.json({ error: "invalid signature" }, 401);
   }
 

@@ -32,13 +32,9 @@ vi.mock("./db", async (importOriginal) => {
       values: (data: any) => {
         const id = store.nextId();
         store.bonuses.push({ ...data, id });
-<<<<<<< HEAD
         return {
           returning: (_shape?: any) => [{ id }],
         };
-=======
-        return { returning: () => [{ id }] };
->>>>>>> origin/add-agentz-editable
       },
       onConflictDoNothing: () => ({ returning: (_shape?: any) => [] }),
     }),
@@ -122,17 +118,11 @@ type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1, openId: "test-user-001", email: "test@authichain.com",
-<<<<<<< HEAD
     name: "Test User", loginMethod: "manus", role, walletAddress: null,
     avatarUrl: null, company: null, title: null, phone: null,
     onboardingCompleted: 0, stripeCustomerId: null, paddleCustomerId: null,
     points: 0, metadata: null, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
   };
-=======
-    name: "Test User", loginMethod: "manus", role, stripeCustomerId: null,
-    createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
-  } as any;
->>>>>>> origin/add-agentz-editable
   return {
     user,
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
@@ -461,11 +451,7 @@ describe("New Features", () => {
           body: "<p>Hello!</p>", prospectName: "Alice",
           prospectCompany: null, prospectTitle: null, industry: null,
           status: "pending", templateUsed: null, generatedBy: "ai_manager",
-<<<<<<< HEAD
           taskId: null, approvedBy: null, approvedAt: null, sentAt: null, notes: null, createdAt: new Date(),
-=======
-          approvedBy: null, approvedAt: null, sentAt: null, notes: null, taskId: null, createdAt: new Date(),
->>>>>>> origin/add-agentz-editable
         }]);
         await appRouter.createCaller(createAuthContext("admin")).emailDrafts.approve({ id: 42 });
         const { sendEmail } = await import("./email/smtp");

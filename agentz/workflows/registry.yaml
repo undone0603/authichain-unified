@@ -789,7 +789,6 @@ workflows:
     requires: [reddit_session] # twitter for simulation
     prerequisites: [gsc_setup_govchain, pinecone_trial_decision]
 
-<<<<<<< HEAD
   - id: scout
     title: "Autonomous Lead Scouting"
     priority: medium
@@ -803,18 +802,3 @@ workflows:
       Autonomous lead scouting using ref-based native browser automation.
       Uses recent Win Signals to prioritize prospects that match 
       high-conversion profiles.
-=======
-  - id: authichain_email_redirect
-    title: "Redirect Z@authichain.com -> authichain@gmail.com"
-    priority: high
-    blocks_revenue: false
-    handler: handlers.cloudflare_email_routing
-    type: browser
-    estimated_minutes: 5
-    requires: [cloudflare_api_token]
-    prerequisites: []
-    description: |
-      Autonomous browser task to configure Cloudflare Email Routing
-      for the authichain.com zone. Ensures all business mail to 'Z'
-      is forwarded to the primary Gmail recovery account.
->>>>>>> origin/add-agentz-editable

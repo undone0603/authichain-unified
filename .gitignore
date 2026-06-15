@@ -80,7 +80,6 @@ yarn.lock
 __pycache__/
 *.py[cod]
 
-<<<<<<< HEAD
 # Node
 node_modules/
 
@@ -95,9 +94,3 @@ qron-platform/
 qron/
 govchain.us/
 maison-elite-ai-dropship/
-=======
-# Authichain specifics
-AUTHENTICITY_INDEX.md
-SIGNATURE_MANIFEST.md
-SYSTEM_STATE.md
->>>>>>> origin/add-agentz-editable

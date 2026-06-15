@@ -9,7 +9,6 @@ import {
   authentications,
   certificates,
   qrCodes,
-  qrScanEvents,
   nftCollections,
   nfts,
   auctions,
@@ -45,11 +44,7 @@ import {
   missionTasks,
   stakingPositions,
   budgetConfig,
-<<<<<<< HEAD
-  webhookEvents,
   bayesianPriors,
-=======
->>>>>>> origin/add-agentz-editable
   proposals,
   type Product,
   type InsertProduct,
@@ -58,7 +53,6 @@ import {
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { SEGMENT_PRIORS } from './_core/bayesian';
-import { bayesianPriors } from '../drizzle/schema';
 
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
@@ -175,13 +169,8 @@ export async function getUserStakingPositions(userId: number) {
 export async function createStakingPosition(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(stakingPositions).values(data).returning({ id: stakingPositions.id });
   return { id: row!.id, ...data };
-=======
-  const [result] = await db.insert(stakingPositions).values(data).returning();
-  return { id: result.id, ...data };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function updateStakingPosition(id: number, userId: number, data: any) {
@@ -194,13 +183,8 @@ export async function updateStakingPosition(id: number, userId: number, data: an
 export async function createProduct(data: Omit<InsertProduct, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(products).values(data).returning({ id: products.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(products).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getRecentActivity(limit = 20) {
@@ -265,7 +249,6 @@ export async function getActiveMissionTypes(): Promise<string[]> {
 }
 
 export async function getAdaptivePriors(): Promise<Record<string, { alpha: number; beta: number }>> {
-<<<<<<< HEAD
   const d = await getDb();
   const rows = await d.select().from(bayesianPriors);
   const map: Record<string, { alpha: number; beta: number }> = {
@@ -310,28 +293,6 @@ export async function getRecentOutcomeSignals(sinceMs = 5 * 60 * 1000): Promise<
   return rows
     .map(r => ({ segment: (r.details as any)?.segment as string, signal: (r.details as any)?.signal as string }))
     .filter(r => r.segment && r.signal);
-=======
-  try {
-    const d = await getDb();
-    if (!d) return { ...SEGMENT_PRIORS };
-    const rows = await d.select({
-      segment: bayesianPriors.segment,
-      priorAlpha: bayesianPriors.priorAlpha,
-      priorBeta: bayesianPriors.priorBeta,
-    }).from(bayesianPriors).limit(200);
-    if (!rows.length) return { ...SEGMENT_PRIORS };
-    const map: Record<string, { alpha: number; beta: number }> = { ...SEGMENT_PRIORS };
-    for (const row of rows) {
-      map[row.segment] = {
-        alpha: parseFloat(row.priorAlpha ?? '2'),
-        beta: parseFloat(row.priorBeta ?? '18'),
-      };
-    }
-    return map;
-  } catch {
-    return { ...SEGMENT_PRIORS };
-  }
->>>>>>> origin/add-agentz-editable
 }
 
 export async function createLead(data: any) {
@@ -348,13 +309,8 @@ export async function createLead(data: any) {
     industry: data.industry ?? null,
     metadata: data.metadata ?? null,
   };
-<<<<<<< HEAD
   const [row] = await d.insert(leads).values(values).returning({ id: leads.id });
   return { id: row!.id, ...values };
-=======
-  const [result] = await d.insert(leads).values(values).returning();
-  return result;
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getLeadByEmail(email: string) {
@@ -381,6 +337,7 @@ export async function getAllLeads() {
 
 export async function incrementInteractionCount(id: number) {
   const d = await getDb();
+  if (!d) return;
   await d.update(leads).set({ interactionsCount: sql`coalesce(${leads.interactionsCount}, 0) + 1` }).where(eq(leads.id, id));
 }
 
@@ -409,38 +366,14 @@ export async function updateLeadStatus(id: number, status: string) {
   await d.update(leads).set({ status: status as any }).where(eq(leads.id, id));
 }
 
-export async function incrementInteractionCount(id: number) {
-  const d = await getDb();
-  if (!d) return;
-  await d.update(leads)
-    .set({ interactionsCount: sql`${leads.interactionsCount} + 1` })
-    .where(eq(leads.id, id));
-}
-
 // ─────────────────────────────────────────────────────────────
 // SERVICE ORDERS (used by service-orders router)
 // ─────────────────────────────────────────────────────────────
 
-export async function getServiceOrderById(id: number) {
-  const d = await getDb();
-  const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
-  return rows[0] ?? null;
-}
-
-export async function updateServiceOrderStatus(id: number, status: string, extra?: Record<string, any>) {
-  const d = await getDb();
-  await d.update(serviceOrders).set({ status, ...(extra ?? {}), updatedAt: new Date() }).where(eq(serviceOrders.id, id));
-}
-
 export async function createServiceOrder(data: any) {
   const d = await getDb();
-<<<<<<< HEAD
   const [row] = await d.insert(serviceOrders).values(data).returning({ id: serviceOrders.id });
   const id = row!.id;
-=======
-  const [result] = await d.insert(serviceOrders).values(data).returning();
-  const id = result.id;
->>>>>>> origin/add-agentz-editable
   return { id, ...data };
 }
 
@@ -467,7 +400,6 @@ export async function getAllServiceOrders() {
 
 export async function getServiceOrderBySessionId(sessionId: string) {
   const d = await getDb();
-<<<<<<< HEAD
   if (!d) return null;
   const rows = await d.select().from(serviceOrders).where(sql`(${serviceOrders.details}::jsonb)->>'sessionId' = ${sessionId}`).limit(1);
   return rows[0] ?? null;
@@ -481,42 +413,29 @@ export async function updateServiceOrderStatus(
   const d = await getDb();
   if (!d) return;
   const setValues: Record<string, unknown> = { status, updatedAt: new Date() };
-  if (updates?.stripePaymentIntentId) {
-    setValues.stripePaymentIntentId = updates.stripePaymentIntentId;
+  // Recognized columns are persisted directly; everything else is folded into
+  // the JSON `details` column so callers (e.g. fulfillment) don't lose data.
+  const columnKeys = new Set(["stripePaymentIntentId", "stripeSessionId", "priority", "amount", "currency", "serviceType"]);
+  const extraDetails: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(updates ?? {})) {
+    if (value === undefined) continue;
+    if (columnKeys.has(key)) {
+      setValues[key] = value;
+    } else {
+      extraDetails[key] = value;
+    }
+  }
+  if (Object.keys(extraDetails).length > 0) {
+    const existing = await d.select({ details: serviceOrders.details }).from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
+    const merged = { ...((existing[0]?.details as Record<string, unknown> | null) ?? {}), ...extraDetails };
+    setValues.details = merged;
   }
   await d.update(serviceOrders).set(setValues as any).where(eq(serviceOrders.id, id));
-=======
-  const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.stripeSessionId, sessionId)).limit(1);
-  return rows[0] ?? null;
-}
-
-export async function getServiceOrdersByUser(userId: number) {
-  const d = await getDb();
-  return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId)).orderBy(desc(serviceOrders.createdAt));
-}
-
-export async function getAllServiceOrders() {
-  const d = await getDb();
-  return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
->>>>>>> origin/add-agentz-editable
 }
 
 // ─────────────────────────────────────────────────────────────
 // BUDGET & TASKS
 // ─────────────────────────────────────────────────────────────
-
-<<<<<<< HEAD
-export async function getAcceptanceCriteriaStatus() {
-  return { total: 0, passed: 0, failed: 0, pending: 0 };
-}
-
-export async function getFunnelBySegmentAndChannel() {
-  return [];
-}
-
-export async function getLeadCohorts() {
-  return [];
-}
 
 export async function getBudgetStatus() {
   const d = await getDb();
@@ -535,24 +454,6 @@ export async function getBudgetStatus() {
       month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
       day: now.toISOString().slice(0, 10),
     },
-=======
-export async function getBudgetStatus(_asOf?: Date) {
-  const d = await getDb();
-  const rows = await d.select().from(budgetConfig).limit(1);
-  const row = rows[0] ?? { monthlyLimit: "1000.00", spent: "0.00", currency: "USD" };
-  const limit = parseFloat(row.monthlyLimit);
-  const spent = parseFloat(row.spent ?? "0");
-  const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
-  const now = _asOf ?? new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const dayKey = now.toISOString().slice(0, 10);
-  return {
-    ...row,
-    llm:        { pct, spent, limit },
-    ads:        { pct: 0, spent: 0, limit: 0 },
-    enrichment: { pct: 0, spent: 0, limit: 0 },
-    period:     { month: monthKey, day: dayKey },
->>>>>>> origin/add-agentz-editable
   };
 }
 
@@ -586,11 +487,7 @@ export async function enqueueTask(missionId: string, kind: string, payload: any,
     title: kind,
     status: "pending",
     payload,
-<<<<<<< HEAD
     scheduledAt: scheduledAt ?? null,
-=======
-    ...(scheduledAt ? { scheduledAt } : {}),
->>>>>>> origin/add-agentz-editable
   });
   return id;
 }
@@ -607,7 +504,6 @@ export async function createProposal(data: {
   content: string;
   paymentLink?: string;
   checkoutSessionId?: string;
-<<<<<<< HEAD
   pilotPriceUsd: number;
 }): Promise<string> {
   const d = await getDb();
@@ -624,13 +520,6 @@ export async function createProposal(data: {
     pilotPriceUsd: data.pilotPriceUsd,
     status: "SENT",
   });
-=======
-  pilotPriceUsd?: number;
-}): Promise<string> {
-  const d = await getDb();
-  const id = randomUUID();
-  await d.insert(proposals).values({ id, ...data });
->>>>>>> origin/add-agentz-editable
   return id;
 }
 
@@ -713,11 +602,7 @@ export async function hasDunningStepLogged(subscriptionId: number, step: string)
   const rows = await d.select().from(activityLog)
     .where(and(
       like(activityLog.action, `dunning:${step}:%`),
-<<<<<<< HEAD
       sql`(${activityLog.details}::jsonb)->>'text' LIKE ${'%sub:' + subscriptionId + '%'}`
-=======
-      sql`${activityLog.details}->>'text' LIKE ${'%sub:' + subscriptionId + '%'}`
->>>>>>> origin/add-agentz-editable
     )).limit(1);
   return rows.length > 0;
 }
@@ -835,13 +720,8 @@ export async function updateProduct(id: number, data: any) {
 export async function createAuthentication(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(authentications).values(data).returning({ id: authentications.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(authentications).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getUserAuthentications(userId: number) {
@@ -873,13 +753,8 @@ export async function incrementShareCount(id: number) {
 export async function createCertificate(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(certificates).values(data).returning({ id: certificates.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(certificates).values(data).returning();
-  return result;
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getCertificateByNumber(certNumber: string) {
@@ -899,13 +774,8 @@ export async function getUserCertificates(userId: number) {
 export async function createQrCode(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(qrCodes).values(data).returning({ id: qrCodes.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(qrCodes).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getProductQrCodes(productId: number) {
@@ -923,7 +793,14 @@ export async function incrementScanCount(id: number) {
 export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string }) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(qrScanEvents).values(data);
+  // No dedicated scan_events table in the current schema — scan events are
+  // recorded on the activity ledger keyed by product.
+  await db.insert(activityLog).values({
+    action: "qr_scan",
+    entityType: "product",
+    entityId: data.productId,
+    details: data,
+  });
 }
 
 export async function getRecentScanEvents(productId: number, limit = 20) {
@@ -931,9 +808,13 @@ export async function getRecentScanEvents(productId: number, limit = 20) {
   if (!db) return [];
   return await db
     .select()
-    .from(qrScanEvents)
-    .where(eq(qrScanEvents.productId, productId))
-    .orderBy(desc(qrScanEvents.scannedAt))
+    .from(activityLog)
+    .where(and(
+      eq(activityLog.action, "qr_scan"),
+      eq(activityLog.entityType, "product"),
+      eq(activityLog.entityId, productId),
+    ))
+    .orderBy(desc(activityLog.createdAt))
     .limit(limit);
 }
 
@@ -959,13 +840,8 @@ export async function getNftById(id: number) {
 export async function createNft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(nfts).values(data).returning({ id: nfts.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(nfts).values(data).returning();
-  return result;
->>>>>>> origin/add-agentz-editable
 }
 
 export async function listCollections() {
@@ -984,26 +860,16 @@ export async function getCollectionBySlug(slug: string) {
 export async function createCollection(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(nftCollections).values(data).returning({ id: nftCollections.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(nftCollections).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 // ─── Auction Helpers ─────────────────────────────────────────────────────────
 export async function createAuction(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(auctions).values(data).returning({ id: auctions.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(auctions).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getActiveAuctions() {
@@ -1047,13 +913,8 @@ export async function getUserSubscription(userId: number) {
 export async function createSubscription(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(subscriptions).values(data).returning({ id: subscriptions.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(subscriptions).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function updateSubscriptionUsage(userId: number, usedQuota: number) {
@@ -1091,13 +952,8 @@ export async function recordUsage(data: any) {
 export async function createInvoice(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(invoices).values(data).returning({ id: invoices.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(invoices).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getUserInvoices(userId: number) {
@@ -1110,13 +966,8 @@ export async function getUserInvoices(userId: number) {
 export async function createPayment(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(payments).values(data).returning({ id: payments.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(payments).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getUserPayments(userId: number) {
@@ -1135,13 +986,8 @@ export async function updatePaymentStatus(id: number, status: string) {
 export async function createEmailCampaign(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(emailCampaigns).values(data).returning({ id: emailCampaigns.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(emailCampaigns).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getUserEmailCampaigns(userId: number) {
@@ -1160,13 +1006,8 @@ export async function updateEmailCampaign(id: number, data: any) {
 export async function createEmailDraft(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(emailDrafts).values(data).returning({ id: emailDrafts.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(emailDrafts).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getPendingDrafts() {
@@ -1188,13 +1029,8 @@ export async function updateDraftStatus(id: number, status: string, approvedBy?:
 export async function createSupplyChainEvent(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(supplyChainEvents).values(data).returning({ id: supplyChainEvents.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(supplyChainEvents).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getProductSupplyChain(productId: number) {
@@ -1207,13 +1043,8 @@ export async function getProductSupplyChain(productId: number) {
 export async function createReferral(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(referrals).values(data).returning({ id: referrals.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(referrals).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getReferralByCode(code: string) {
@@ -1240,13 +1071,8 @@ export async function getAffiliateByUserId(userId: number) {
 export async function createAffiliate(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(affiliates).values(data).returning({ id: affiliates.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(affiliates).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getAffiliateCommissions(affiliateId: number) {
@@ -1278,7 +1104,6 @@ export async function upsertAutopilotConfig(data: any) {
 export async function createAutopilotDecision(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(autopilotDecisions).values(data).returning({ id: autopilotDecisions.id });
   return { id: row!.id };
 }
@@ -1292,35 +1117,14 @@ export async function getAutopilotDecisionCountByMonth(type: string): Promise<{ 
     .from(autopilotDecisions)
     .where(and(eq(autopilotDecisions.type, type), gte(autopilotDecisions.createdAt, start)));
   return { data: Number(rows[0]?.count ?? 0) };
-=======
-  const [result] = await db.insert(autopilotDecisions).values(data).returning();
-  return { id: result.id };
-}
-
-export async function getAutopilotDecisionCountByMonth(_type?: string): Promise<{ data: number }> {
-  const db = await getDb();
-  if (!db) return { data: 0 };
-  const firstOfMonth = new Date();
-  firstOfMonth.setDate(1);
-  firstOfMonth.setHours(0, 0, 0, 0);
-  const rows = await db.select({ count: sql<number>`count(*)` })
-    .from(autopilotDecisions)
-    .where(gte(autopilotDecisions.createdAt, firstOfMonth));
-  return { data: rows[0]?.count ?? 0 };
->>>>>>> origin/add-agentz-editable
 }
 
 // ─── A/B Test Helpers ────────────────────────────────────────────────────────
 export async function createAbTest(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(abTests).values(data).returning({ id: abTests.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(abTests).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getActiveAbTests() {
@@ -1339,13 +1143,8 @@ export async function getAllAbTests() {
 export async function createWhiteLabelClient(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(whiteLabelClients).values(data).returning({ id: whiteLabelClients.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(whiteLabelClients).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getWhiteLabelClients() {
@@ -1365,13 +1164,8 @@ export async function getWhiteLabelByApiKey(apiKey: string) {
 export async function createFraudAlert(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(fraudAlerts).values(data).returning({ id: fraudAlerts.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(fraudAlerts).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getOpenFraudAlerts() {
@@ -1461,13 +1255,8 @@ export async function getSubscriptionAnalytics() {
 export async function createNotification(data: Omit<InsertNotification, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-<<<<<<< HEAD
   const [row] = await db.insert(notifications).values(data).returning({ id: notifications.id });
   return { id: row!.id };
-=======
-  const [result] = await db.insert(notifications).values(data).returning();
-  return { id: result.id };
->>>>>>> origin/add-agentz-editable
 }
 
 export async function getUserNotifications(userId: number, limit = 50) {
@@ -1550,11 +1339,7 @@ export async function upsertLeadByEmail(input: {
     }).where(eq(leads.id, existing[0].id));
     return { id: existing[0].id, created: false };
   }
-<<<<<<< HEAD
   const [row] = await db.insert(leads).values({
-=======
-  const [result] = await db.insert(leads).values({
->>>>>>> origin/add-agentz-editable
     email: input.email,
     name: input.name,
     company: input.company,
@@ -1563,13 +1348,8 @@ export async function upsertLeadByEmail(input: {
     source: input.source || "website_form",
     industry: input.industry,
     metadata: input.metadata,
-<<<<<<< HEAD
   }).returning({ id: leads.id });
   return { id: row!.id, created: true };
-=======
-  }).returning();
-  return { id: result.id, created: true };
->>>>>>> origin/add-agentz-editable
 }
 
 export function computeLeadScore(signals: {
@@ -1644,6 +1424,51 @@ export async function upsertStripeSubscription(data: {
   }
 }
 
+// Restored from a6b4c38 (dropped by the add-agentz-editable merge): the Paddle
+// billing path used by server/paddle/webhook.ts.
+export async function upsertPaddleSubscription(data: {
+  userId: number;
+  plan: "starter" | "professional" | "enterprise";
+  status: "active" | "cancelled" | "past_due" | "trialing" | "paused";
+  monthlyQuota: number;
+  billingCycle: "monthly" | "annual";
+  paddleCustomerId: string | null;
+  paddleSubscriptionId: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(eq(subscriptions.paddleSubscriptionId, data.paddleSubscriptionId))
+    .limit(1);
+  if (existing[0]) {
+    await db.update(subscriptions).set({
+      plan: data.plan,
+      status: data.status,
+      monthlyQuota: data.monthlyQuota,
+      billingCycle: data.billingCycle,
+      paddleCustomerId: data.paddleCustomerId ?? undefined,
+      currentPeriodStart: data.currentPeriodStart,
+      currentPeriodEnd: data.currentPeriodEnd,
+    }).where(eq(subscriptions.id, existing[0].id));
+  } else {
+    await db.insert(subscriptions).values({
+      userId: data.userId,
+      plan: data.plan,
+      status: data.status,
+      monthlyQuota: data.monthlyQuota,
+      billingCycle: data.billingCycle,
+      paddleCustomerId: data.paddleCustomerId ?? undefined,
+      paddleSubscriptionId: data.paddleSubscriptionId,
+      currentPeriodStart: data.currentPeriodStart,
+      currentPeriodEnd: data.currentPeriodEnd,
+    });
+  }
+}
+
 export async function setSubscriptionStatusByStripeId(
   stripeSubscriptionId: string,
   status: "active" | "cancelled" | "past_due" | "trialing" | "paused",
@@ -1667,7 +1492,6 @@ export async function getSubscriptionByStripeSubscriptionId(stripeSubscriptionId
   return result[0];
 }
 
-<<<<<<< HEAD
 export async function hasWebhookEventProcessed(eventId: string, eventType = "unknown", provider = "stripe"): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
@@ -1678,20 +1502,6 @@ export async function hasWebhookEventProcessed(eventId: string, eventType = "unk
     .onConflictDoNothing()
     .returning({ id: webhookEvents.id });
   return result.length === 0;
-=======
-export async function claimWebhookEvent(
-  provider: string,
-  eventId: string,
-  eventType: string,
-): Promise<boolean> {
-  const db = await getDb();
-  if (!db) return true;
-  const inserted = await db.insert(webhookEvents)
-    .values({ provider, eventId, eventType })
-    .onConflictDoNothing({ target: [webhookEvents.provider, webhookEvents.eventId] })
-    .returning({ id: webhookEvents.id });
-  return inserted.length > 0;
->>>>>>> origin/add-agentz-editable
 }
 
 export async function markWebhookEventProcessed(provider: string, eventId: string): Promise<void> {

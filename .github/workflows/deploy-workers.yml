@@ -34,14 +34,10 @@ jobs:
           - authichain-api
           - authichain-api-gateway
           - authichain-automation
-<<<<<<< HEAD
           - authichain-autopilot
           - authichain-bridge
           - authichain-chain-data
           - authichain-com
-=======
-          - authichain-infra
->>>>>>> origin/add-agentz-editable
           - authichain-dashboard
           - authichain-gateway
           - authichain-license-issuer
@@ -55,7 +51,6 @@ jobs:
           - qron-image-gen
           - qron-outreach
           - qron-space
-<<<<<<< HEAD
           # govchain
           - govchain-us
           # shared infra
@@ -65,14 +60,6 @@ jobs:
           - strainchain-io
           - authichain-telegram
           - authichain-verify-worker
-=======
-          - resend-relay
-          - strainchain-io
-          - govchain-us
-          - bitcoin-auth
-          - outreach-queue
-
->>>>>>> origin/add-agentz-editable
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

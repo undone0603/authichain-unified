@@ -1,10 +1,14 @@
-import { router } from '../_core/trpc';
+import { COOKIE_NAME } from "@shared/const";
+import { getSessionCookieOptions } from '../_core/cookies';
+import { publicProcedure, protectedProcedure, router } from '../_core/trpc';
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import * as db from '../db';
 import { metrcRouter } from './metrc';
 import { productsRouter } from './products';
 import { schedulerRouter } from './scheduler';
-import { servicesRouter } from './services';
+import { servicesRouter } from '../services/router';
 import { aiRouter } from '../ai/router';
-import { authRouter } from '../auth/router';
 import { autopilotRouter } from '../autopilot/router';
 import { paymentsRouter } from '../payments/router';
 import { subscriptionsRouter } from '../subscriptions/router';
@@ -34,9 +38,34 @@ import { emailDraftsRouter } from '../email-drafts/router';
 import { emailCampaignsRouter } from '../email-campaigns/router';
 import { stakingRouter } from '../staking/router';
 import { supplyChainRouter } from '../supply-chain/router';
-import { certificatesRouter } from '../certificates/router';
 import { govchainRouter } from '../govchain/router';
 import { salesRouter } from '../sales/router';
+
+// Auth + certificate routers were consolidated into the live server/routers.ts
+// file; defined inline here so this (legacy duplicate) module still type-checks
+// and exposes the same mounts.
+const authRouter = router({
+  me: publicProcedure.query(opts => opts.ctx.user),
+  logout: publicProcedure.mutation(({ ctx }) => {
+    const cookieOptions = getSessionCookieOptions(ctx.req);
+    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    return { success: true } as const;
+  }),
+});
+
+const certificatesRouter = router({
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return await db.getUserCertificates(ctx.user.id);
+  }),
+  verify: publicProcedure.input(z.object({ certificateNumber: z.string() })).query(async ({ input }) => {
+    const cert = await db.getCertificateByNumber(input.certificateNumber);
+    if (!cert) return { valid: false, message: "Certificate not found" };
+    if (cert.status === "revoked") return { valid: false, message: "Certificate has been revoked" };
+    if (cert.expiresAt && cert.expiresAt < new Date()) return { valid: false, message: "Certificate has expired" };
+    const product = await db.getProductById(cert.productId);
+    return { valid: true, certificate: cert, product };
+  }),
+});
 
 /**
  * Root tRPC router — merges all 39 sub-routers.

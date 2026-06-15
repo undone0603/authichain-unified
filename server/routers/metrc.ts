@@ -32,31 +32,31 @@ export const metrcRouter = router({
     }),
 
   stats: publicProcedure.query(async () => {
-    const drizzleDb = await getDb();
+    const fallback = { activeLicenses: 0, manifestsReconciled: 0, taxIntegrityScore: 99.1, network: "METRC Michigan (LARA)" };
+    try {
+      const drizzleDb = await getDb();
+      if (!drizzleDb) return fallback;
 
-    if (!drizzleDb) {
-      return { activeLicenses: 0, manifestsReconciled: 0, taxIntegrityScore: 99.1, network: "METRC Michigan (LARA)" };
+      const [manifestRows, licenseRows] = await Promise.all([
+        drizzleDb
+          .select({ total: count() })
+          .from(activityLog)
+          .where(eq(activityLog.action, "metrc_manifest_synced")),
+        drizzleDb
+          .select({ total: count() })
+          .from(products)
+          .where(eq(products.category, "cannabis")),
+      ]);
+
+      return {
+        activeLicenses: licenseRows[0]?.total ?? 0,
+        manifestsReconciled: manifestRows[0]?.total ?? 0,
+        taxIntegrityScore: 99.1,
+        network: "METRC Michigan (LARA)",
+      };
+    } catch {
+      // Degrade gracefully if the database is unavailable.
+      return fallback;
     }
-
-    const [manifestRows, licenseRows] = await Promise.all([
-      drizzleDb
-        .select({ total: count() })
-        .from(activityLog)
-        .where(eq(activityLog.action, "metrc_manifest_synced")),
-      drizzleDb
-        .select({ total: count() })
-        .from(products)
-        .where(eq(products.category, "cannabis")),
-    ]);
-
-    const manifestsReconciled = manifestRows[0]?.total ?? 0;
-    const activeLicenses = licenseRows[0]?.total ?? 0;
-
-    return {
-      activeLicenses,
-      manifestsReconciled,
-      taxIntegrityScore: 99.1,
-      network: "METRC Michigan (LARA)",
-    };
   }),
 });

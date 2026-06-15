@@ -41,20 +41,14 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-<<<<<<< HEAD
   if (!db) return null;
-=======
->>>>>>> origin/add-agentz-editable
   const rows = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return rows[0] ?? null;
 }
 
 export async function getUserById(id: number) {
   const db = await getDb();
-<<<<<<< HEAD
   if (!db) return null;
-=======
->>>>>>> origin/add-agentz-editable
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return rows[0] ?? null;
 }

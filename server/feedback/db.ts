@@ -9,13 +9,8 @@ export async function createFeedback(data: InsertFeedback) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-<<<<<<< HEAD
   const [row] = await db.insert(feedback).values(data).returning({ id: feedback.id });
   return row!.id;
-=======
-  const [result] = await db.insert(feedback).values(data).returning();
-  return result.id;
->>>>>>> origin/add-agentz-editable
 }
 
 /**
