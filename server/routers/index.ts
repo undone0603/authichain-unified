@@ -2,7 +2,6 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from '../_core/cookies';
 import { publicProcedure, protectedProcedure, router } from '../_core/trpc';
 import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
 import * as db from '../db';
 import { metrcRouter } from './metrc';
 import { productsRouter } from './products';

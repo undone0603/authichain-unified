@@ -230,12 +230,6 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("health",      help="Check LM Studio connectivity")
     sub.add_parser("list-agents", help="List all registered agents")
 
-    # ── pulse ────────────────────────────────────────────────────────────────
-    sub.add_parser("pulse", help="Print credential heartbeat")
-
-    # ── list ─────────────────────────────────────────────────────────────────
-    sub.add_parser("list", help="List all registered workflows")
-
     creds_p = sub.add_parser("creds", help="Full credential audit")
     creds_p.add_argument("--json", action="store_true")
 
