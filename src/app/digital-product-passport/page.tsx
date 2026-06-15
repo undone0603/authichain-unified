@@ -42,7 +42,7 @@ export default function DPPPage() {
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-[0.2em] mb-8">
             <ShieldCheck className="w-4 h-4" />
-            StrainChain.io — Industrial Provenance
+            AuthiChain — Industrial Provenance
           </div>
           
           <h1 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter uppercase leading-[0.9]">
@@ -64,12 +64,12 @@ export default function DPPPage() {
             >
               {isSimulating ? 'Processing Compliance...' : 'Simulate BMW Battery Passport'}
             </button>
-            <Link href="/elite" className="btn-outline-gold px-12 py-5 font-black uppercase tracking-widest text-xs border-zinc-800">
-              Join Elite Waitlist
+            <Link href="/eu-dpp" className="btn-outline-gold px-12 py-5 font-black uppercase tracking-widest text-xs border-zinc-800">
+              Full DPP Compliance Guide
             </Link>
           </div>
 
-          {/* New Trust Row */}
+          {/* Trust Row */}
           <div className="mt-20 flex flex-col items-center">
              <div className="flex items-center gap-6 text-[9px] font-black uppercase tracking-[0.4em] text-zinc-700 mb-8">
                 <span>Polygon Anchored</span>
@@ -244,12 +244,12 @@ export default function DPPPage() {
       <footer className="py-12 px-6 border-t border-zinc-900 mt-20">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 opacity-40 hover:opacity-100 transition-opacity">
           <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-            &copy; 2026 AuthiChain Protocol ◆ Industrial Division
+            &copy; 2026 AuthiChain Protocol — Industrial Division
           </p>
           <div className="flex gap-6 flex-wrap justify-center">
-             <Link href="/compliance" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Compliance</Link>
-             <Link href="/hardware" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Hardware</Link>
-             <Link href="/partners" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Partners</Link>
+             <Link href="/digital-product-passport/compliance" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Compliance</Link>
+             <Link href="/digital-product-passport/hardware" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Hardware</Link>
+             <Link href="/digital-product-passport/partners" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Partners</Link>
              <span className="text-zinc-800">|</span>
              <Link href="/terms" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Terms</Link>
              <Link href="/privacy" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Privacy</Link>

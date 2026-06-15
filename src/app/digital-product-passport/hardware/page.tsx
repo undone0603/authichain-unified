@@ -8,18 +8,19 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Hardware Integration | StrainChain Protocol',
+  title: 'Hardware Integration | AuthiChain',
   description: 'Learn about the Elite Mobile App node and hardware integrations like NFC and RFID.',
+  alternates: { canonical: '/digital-product-passport/hardware' },
 };
 
-export default function StrainChainHardware() {
+export default function DPPHardware() {
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
       <div className="max-w-5xl mx-auto px-6 py-20">
         <header className="flex items-center justify-between mb-16 border-b border-zinc-900 pb-8">
-            <Link href="/" className="group flex items-center gap-2">
+            <Link href="/digital-product-passport" className="group flex items-center gap-2">
                 <ChevronLeft className="w-4 h-4 text-zinc-500 group-hover:text-gold transition-colors" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-white transition-colors">Home</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-white transition-colors">Digital Product Passport</span>
             </Link>
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest">
               <Smartphone className="w-3 h-3" />
@@ -47,7 +48,7 @@ export default function StrainChainHardware() {
               <Cpu className="w-8 h-8 text-blue-400 mb-6" />
               <h3 className="text-xl font-black uppercase tracking-tight mb-4">RFID & NFC Bridge</h3>
               <p className="text-zinc-500 text-sm leading-relaxed font-medium uppercase tracking-tighter">
-                StrainChain seamlessly bridges digital QRON artifacts with physical hardware. We support syncing with Metrc RFID tags for cannabis compliance, and encrypted NTAG424 DNA chips for luxury goods. The digital twin stays synchronized with the physical asset's telemetry in real-time.
+                AuthiChain seamlessly bridges digital QRON artifacts with physical hardware. We support syncing with Metrc RFID tags for cannabis compliance, and encrypted NTAG424 DNA chips for luxury goods. The digital twin stays synchronized with the physical asset&apos;s telemetry in real-time.
               </p>
             </div>
         </div>
