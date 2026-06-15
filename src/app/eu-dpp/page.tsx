@@ -113,11 +113,9 @@ const jsonLd = {
   },
 };
 
-// Deadline countdown — July 19, 2026 UTC
+// Deadline countdown — July 19, 2026 UTC — computed at request time (server component)
 const DEADLINE = new Date('2026-07-19T00:00:00Z');
-const now = new Date('2026-05-29T00:00:00Z');
-const msLeft = DEADLINE.getTime() - now.getTime();
-const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+const daysLeft = Math.max(0, Math.ceil((DEADLINE.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 
 export default function EuDppPage() {
   return (
@@ -146,7 +144,7 @@ export default function EuDppPage() {
           </h1>
 
           <p className="max-w-2xl mx-auto text-zinc-400 text-lg md:text-xl font-medium mb-4 leading-relaxed">
-            The EU Digital Product Passport mandate is 7 weeks away. AuthiChain generates
+            The EU Digital Product Passport mandate is live. AuthiChain generates
             blockchain-anchored, regulation-ready product passports from{' '}
             <strong className="text-white">$49</strong> — no enterprise contract required.
           </p>
@@ -630,7 +628,7 @@ export default function EuDppPage() {
               {[
                 'Unlimited product passports',
                 'Full REST API access',
-                'Bulk import &amp; batch generation',
+                'Bulk import & batch generation',
                 'Custom blockchain data fields',
                 'White-label QR code output',
                 'EU Central Registry API integration',
@@ -638,7 +636,7 @@ export default function EuDppPage() {
               ].map((f) => (
                 <li key={f} className="flex items-start gap-2">
                   <CheckCircle className="w-3.5 h-3.5 text-gold shrink-0 mt-0.5" />
-                  <span dangerouslySetInnerHTML={{ __html: f }} />
+                  {f}
                 </li>
               ))}
             </ul>
@@ -675,7 +673,7 @@ export default function EuDppPage() {
             {
               date: 'July 19, 2026',
               label: 'EU Central DPP Registry Opens',
-              sublabel: 'First products must be registered. Prepare now — 7 weeks away.',
+              sublabel: 'First products must be registered.',
               active: true,
             },
             {
@@ -686,7 +684,7 @@ export default function EuDppPage() {
             },
             {
               date: '2028',
-              label: 'Textiles &amp; Electronics',
+              label: 'Textiles & Electronics',
               sublabel: 'Digital product passport EU regulation extends to clothing and electronics sectors.',
               active: false,
             },
@@ -705,17 +703,15 @@ export default function EuDppPage() {
             >
               <div className="flex items-start gap-6 flex-1">
                 <span
-                  className={`text-sm font-black uppercase tracking-widest shrink-0 w-32 ${
+                  className={`text-sm font-black uppercase tracking-widest shrink-0 w-36 ${
                     item.active ? 'text-gold' : 'text-zinc-600'
                   }`}
                 >
                   {item.date}
                 </span>
                 <div>
-                  <p className="text-sm font-black text-white uppercase mb-1"
-                     dangerouslySetInnerHTML={{ __html: item.label }} />
-                  <p className="text-xs text-zinc-600"
-                     dangerouslySetInnerHTML={{ __html: item.sublabel }} />
+                  <p className="text-sm font-black text-white uppercase mb-1">{item.label}</p>
+                  <p className="text-xs text-zinc-600">{item.sublabel}</p>
                 </div>
               </div>
               {item.active && (
