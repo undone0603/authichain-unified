@@ -94,3 +94,14 @@ qron-platform/
 qron/
 govchain.us/
 maison-elite-ai-dropship/
+
+# Debug/lint output artifacts
+eslint_errors.txt
+*.errors.txt
+test-output.txt
+
+# Patch artifacts
+PATCH_EOF
+
+# Wrangler local cache
+.wrangler/
