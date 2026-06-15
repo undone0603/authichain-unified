@@ -430,8 +430,8 @@ importers:
         specifier: '>=7.3.2'
         version: 8.0.13(@types/node@25.9.1)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.16.9)(tsx@4.22.2)(yaml@2.9.0)
       vite-plugin-manus-runtime:
-        specifier: ^0.0.57
-        version: 0.0.57
+        specifier: ^0.0.58
+        version: 0.0.58
       vitest:
         specifier: ^4.1.6
         version: 4.1.8(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(vite@8.0.13(@types/node@25.9.1)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.16.9)(tsx@4.22.2)(yaml@2.9.0))
@@ -10964,8 +10964,8 @@ packages:
       typescript:
         optional: true
 
-  vite-plugin-manus-runtime@0.0.57:
-    resolution: {integrity: sha512-AqJm43Mq/zA3nFdwRxAzsyXYy+YPPHa0oUPlWSge0f+zUBxKoDQj3kUB/61I1yEUD0ap7YSkRxmk09FCaSErtw==}
+  vite-plugin-manus-runtime@0.0.58:
+    resolution: {integrity: sha512-1dtoSyqiqpFtRhth4ODu/cgoBF25IGs1yOpq5EGDefv7LQoQvAnQ4mhTgOrpSk7POfOxL+/Olxx+vo/LMNODXA==}
 
   vite@8.0.13:
     resolution: {integrity: sha512-MFtjBYgzmSxmgA4RAfjIyXWpGe1oALnjgUTzzV7QLx/TKxCzjtMH6Fd9/eVK+5Fg1qNoz5VAwsmMs/NofrmJvw==}
@@ -24395,7 +24395,7 @@ snapshots:
       - utf-8-validate
       - zod
 
-  vite-plugin-manus-runtime@0.0.57:
+  vite-plugin-manus-runtime@0.0.58:
     dependencies:
       '@medv/finder': 4.0.2
       clsx: 2.1.1
