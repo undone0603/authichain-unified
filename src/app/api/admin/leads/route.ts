@@ -1,30 +1,21 @@
-﻿export const runtime = 'nodejs';
-
-/**
- * @file route.ts
- * @project qron-platform
- * @author AuthiChain Ops
- * @copyright (c) 2026 AuthiChain Inc. All rights reserved.
- */
-
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/admin/leads
- * 
- * Fetches all ecosystem leads with filtering and search.
+ * GET  /api/admin/leads  — list leads with optional status/source filters
+ * PATCH /api/admin/leads  — update a lead's status or score
+ * Requires: authenticated session + admin role.
  */
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
+import { requireAdmin } from '@/utils/supabase/require-admin';
+
 export async function GET(request: NextRequest) {
+  const auth = await requireAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const supabase = await createClient();
-    
-    // Auth Check
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const source = searchParams.get('source');
@@ -39,27 +30,19 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await query;
     if (error) throw error;
-
     return NextResponse.json(data);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'An unknown error occurred';
+    const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-/**
- * PATCH /api/admin/leads
- * 
- * Updates a lead's status or score.
- */
 export async function PATCH(request: NextRequest) {
+  const auth = await requireAdmin();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const supabase = await createClient();
-    
-    // Auth Check
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const { id, status, score } = await request.json();
 
     const { data, error } = await supabase
@@ -70,10 +53,9 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error) throw error;
-
     return NextResponse.json(data);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'An unknown error occurred';
+    const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
