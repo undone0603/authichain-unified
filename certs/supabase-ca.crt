@@ -1,0 +1,3 @@
+# NOTE: The actual supabase-ca.crt content is preserved in git history.
+# This placeholder was created during root cleanup (June 2026).
+# Copy the original from git history: git show HEAD~1:supabase-ca.crt > certs/supabase-ca.crt
