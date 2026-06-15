@@ -137,11 +137,7 @@ async function seedFailedTask(
   if (tasks[0]) {
     await db
       .update(missionTasks)
-<<<<<<< HEAD
       .set({ status: 'failed', error: 'seeded failure for test', updatedAt: new Date() })
-=======
-      .set({ status: 'FAILED', error: 'seeded failure for test', updatedAt: new Date() })
->>>>>>> origin/add-agentz-editable
       .where(eq(missionTasks.id, tasks[0].id));
     return tasks[0].id;
   }

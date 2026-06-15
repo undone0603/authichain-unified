@@ -11,11 +11,7 @@ zone_name = "authichain.com"
 
 [[kv_namespaces]]
 binding = "AUTH_KV"
-<<<<<<< HEAD
 id = "02ae8193c85e42e68026b5faaf58420c"
-=======
-id = "e5ec419f517146fbab55c9e5b8307025"
->>>>>>> origin/add-agentz-editable
 
 [vars]
 BITCOIN_NETWORK = "mainnet"

@@ -9,14 +9,8 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
-<<<<<<< HEAD
     "@cloudflare/workers-types": "^4.20260613.1",
     "typescript": "^5.3.3",
     "wrangler": "^3.101.0"
-=======
-    "@cloudflare/workers-types": "^4.20250109.0",
-    "typescript": "^6.0.3",
-    "wrangler": "^4.95.0"
->>>>>>> origin/add-agentz-editable
   }
 }

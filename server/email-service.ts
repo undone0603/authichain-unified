@@ -113,45 +113,11 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const appPassword = ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
   const fromName = input.fromName || "AuthiChain";
 
-<<<<<<< HEAD
   const trackToken = input.trackLeadEmail
     ? toBase64Url(input.trackLeadEmail.trim().toLowerCase())
     : null;
 
   // ─── Method 1: SMTP via App Password (Reliable Fallback) ───────────────────
-=======
-  // ── Method 1: Try Resend first (if API key is configured) ─────────────────
-  if (ENV.resendApiKey) {
-    const resendFrom = ENV.resendFromEmail || process.env.RESEND_FROM_EMAIL || fromEmail || "outreach@authichain.com";
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${ENV.resendApiKey}`,
-        },
-        body: JSON.stringify({
-          from: `${fromName} <${resendFrom}>`,
-          to: [to],
-          subject: input.subject,
-          text: input.body,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json().catch(() => ({} as any));
-        return { status: "sent", provider: "resend", providerMessageId: data?.id };
-      }
-
-      const errTxt = await res.text().catch(() => "");
-      console.warn("[email] Resend failed, falling back:", res.status, errTxt.slice(0, 200));
-    } catch (resendErr: any) {
-      console.warn("[email] Resend error, falling back:", resendErr.message);
-    }
-  }
-
-  // ── Method 2: SMTP via App Password ─────────────────────────────────────
->>>>>>> origin/add-agentz-editable
   if (fromEmail && appPassword) {
     try {
       const transporter = nodemailer.createTransport({
@@ -222,7 +188,6 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     }
   }
 
-<<<<<<< HEAD
   const gmailAccessToken = await getGmailAccessToken();
   if (!gmailAccessToken) {
     return { status: "skipped", reason: "gmail_token_unavailable", provider: "gmail" };
@@ -275,16 +240,6 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     providerMessageId: data?.id,
     threadId: data?.threadId,
   };
-=======
-  const attempted = [
-    ENV.resendApiKey ? "resend" : null,
-    appPassword ? "gmail-smtp" : null,
-    gmailConfigured ? "gmail-oauth" : null,
-  ].filter(Boolean);
-  const reason = attempted.length ? `all_providers_failed:${attempted.join(",")}` : "no_email_provider_configured";
-  console.error("[email] All providers exhausted:", reason);
-  return { status: "skipped", reason };
->>>>>>> origin/add-agentz-editable
 }
 
 /** Check whether a Gmail thread has received a reply (any message NOT in SENT labels). */

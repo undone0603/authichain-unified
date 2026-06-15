@@ -18,6 +18,18 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Shield, Film, Bot, Globe, BookOpen, Building2,
 };
 
+interface ServiceCatalogItem {
+  key: string;
+  name: string;
+  tagline: string;
+  description: string;
+  displayPrice: string;
+  deliverables: string[];
+  deliveryTime: string;
+  icon: string;
+  featured?: boolean;
+}
+
 export default function Services() {
   const { brand } = useBrand();
   const { user } = useAuth();
@@ -98,7 +110,7 @@ export default function Services() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {catalog?.map((service) => {
+            {catalog?.map((service: ServiceCatalogItem) => {
               const Icon = ICON_MAP[service.icon] || Shield;
               return (
                 <Card
@@ -210,7 +222,7 @@ export default function Services() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {selectedService && catalog?.find((s) => s.key === selectedService)?.name}
+              {selectedService && catalog?.find((s: ServiceCatalogItem) => s.key === selectedService)?.name}
             </DialogTitle>
             <DialogDescription>
               Tell us about your business so we can tailor the deliverables.

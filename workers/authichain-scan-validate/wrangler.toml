@@ -12,17 +12,4 @@ NEXT_PUBLIC_SITE_URL = "https://authichain.com"
 binding = "DB"
 database_name = "authichain-db"
 database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
-<<<<<<< HEAD
 migrations_dir = "migrations"
-=======
-
-[[routes]]
-pattern = "authichain.com/api/qron/scan-validate*"
-zone_name = "authichain.com"
-
-[env.production]
-name = "authichain-scan-validate"
-
-[env.staging]
-name = "authichain-scan-validate-staging"
->>>>>>> origin/add-agentz-editable

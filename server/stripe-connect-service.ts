@@ -120,17 +120,10 @@ export async function createPlatformSubscriptionPlan(currency = 'usd') {
 export async function attachBalancePaymentMethod(vendorAccountId: string) {
   const stripe = getStripe();
 
-<<<<<<< HEAD
   const intent = await stripe.setupIntents.create({
     payment_method_types: ["stripe_balance" as any],
     customer_account: vendorAccountId,
   } as any); // newer Stripe API field not in installed typings
-=======
-  const intent = await (stripe.setupIntents.create as any)({
-    payment_method_types: ["stripe_balance"],
-    customer_account: vendorAccountId,
-  });
->>>>>>> origin/add-agentz-editable
 
   return intent.payment_method as string;
 }
@@ -142,11 +135,7 @@ export async function subscribeVendorToPlatform(vendorAccountId: string, payment
   const stripe = getStripe();
   
   try {
-<<<<<<< HEAD
     const subscription = await stripe.subscriptions.create({
-=======
-    const subscription = await (stripe.subscriptions.create as any)({
->>>>>>> origin/add-agentz-editable
       customer_account: vendorAccountId,
       default_payment_method: paymentMethodId,
       items: [{ price: priceId, quantity: 1 }],

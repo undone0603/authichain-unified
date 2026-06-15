@@ -680,7 +680,6 @@ registerJob({
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
     
-<<<<<<< HEAD
     // Simple logic: apply 12.5% APY / 365 to all active positions.
     // Idempotency: only positions not rewarded in the last ~23h are eligible,
     // so a re-run or process restart on the same day cannot double-distribute.
@@ -708,21 +707,6 @@ registerJob({
         .set({ lastRewardCalculation: now, updatedAt: now })
         .where(eq(stakingPositions.id, pos.id));
     }
-=======
-    const activePositions = await db.select().from(stakingPositions)
-      .where(eq(stakingPositions.status, "active"))
-      .limit(10000);
-    if (activePositions.length === 0) return { itemsProcessed: 0, details: { status: "no_active_positions" } };
-
-    const rewards = activePositions.map(pos => ({
-      agentId: pos.agentId || 0,
-      userId: pos.userId,
-      amount: ((Number(pos.amount) * 0.125) / 365).toFixed(9),
-      reason: "staking_reward" as const,
-      status: "pending" as const,
-    }));
-    await db.insert(qronRewardLedger).values(rewards);
->>>>>>> origin/add-agentz-editable
     return { itemsProcessed: activePositions.length, details: { status: "rewards_distributed" } };
   },
 });

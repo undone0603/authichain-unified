@@ -19,24 +19,14 @@ importers:
         version: 3.25.76
     devDependencies:
       '@cloudflare/workers-types':
-<<<<<<< HEAD
         specifier: ^4.20260613.1
         version: 4.20260613.1
-=======
-        specifier: ^4.20260527.1
-        version: 4.20260527.1
->>>>>>> origin/add-agentz-editable
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
       wrangler:
-<<<<<<< HEAD
         specifier: ^4.100.0
         version: 4.100.0(@cloudflare/workers-types@4.20260613.1)
-=======
-        specifier: ^4.92.0
-        version: 4.92.0(@cloudflare/workers-types@4.20260527.1)
->>>>>>> origin/add-agentz-editable
 
 packages:
 
@@ -83,13 +73,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-<<<<<<< HEAD
   '@cloudflare/workers-types@4.20260613.1':
     resolution: {integrity: sha512-1mrgjE6epolwBhroeGAp5ud5H6Vyi6tl1o/NP0T4rXJ8bmEjmhHnbCzAhHTDHV0PIeip43wcuzHKJarvaGTaUA==}
-=======
-  '@cloudflare/workers-types@4.20260527.1':
-    resolution: {integrity: sha512-GK+C05N4fGptp1uG+pbjC/7Udonz8EhMEYvYFnVKdLLnEGS9nsmVOFi/RLQr7tq9l/0UEzcWjudzeY2ssuqyIA==}
->>>>>>> origin/add-agentz-editable
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -912,11 +897,7 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20260611.1':
     optional: true
 
-<<<<<<< HEAD
   '@cloudflare/workers-types@4.20260613.1': {}
-=======
-  '@cloudflare/workers-types@4.20260527.1': {}
->>>>>>> origin/add-agentz-editable
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
@@ -1623,11 +1604,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20260611.1
       '@cloudflare/workerd-windows-64': 1.20260611.1
 
-<<<<<<< HEAD
   wrangler@4.100.0(@cloudflare/workers-types@4.20260613.1):
-=======
-  wrangler@4.92.0(@cloudflare/workers-types@4.20260527.1):
->>>>>>> origin/add-agentz-editable
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260611.1)
@@ -1638,11 +1615,7 @@ snapshots:
       unenv: 2.0.0-rc.24
       workerd: 1.20260611.1
     optionalDependencies:
-<<<<<<< HEAD
       '@cloudflare/workers-types': 4.20260613.1
-=======
-      '@cloudflare/workers-types': 4.20260527.1
->>>>>>> origin/add-agentz-editable
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil

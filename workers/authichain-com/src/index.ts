@@ -2511,31 +2511,14 @@ const HTML = `<!DOCTYPE html>
       ${svgLogo(BRAND)}
       <span class="nav-logo-text">AUTHI<span>CHAIN</span></span>
     </a>
-<<<<<<< HEAD
     <a class="btn btn-primary nav-cta" href="https://app.authichain.com">Launch App</a>
-=======
-    <div class="nav-links">
-      <a class="nav-link" href="#community">$QRON</a>
-      <a class="nav-link" href="#technology">Technology</a>
-      <a class="nav-link" href="/subscriptions">Pricing</a>
-      <a class="btn btn-primary btn-sm" href="/auth">Get Started</a>
-    </div>
->>>>>>> origin/add-agentz-editable
   </nav>
 
   <section class="hero" id="hero">
     <div class="hero-content">
       <h1 class="hero-title"><span>VERIFY</span><span class="accent">EVERYTHING.</span></h1>
-<<<<<<< HEAD
       <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets.</p>
       <a class="btn btn-primary" style="display:inline-block;width:auto" href="https://app.authichain.com">Launch App &rarr;</a>
-=======
-      <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets. ERC-721 NFTs · AI QR · 2.1-second verification.</p>
-      <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:40px">
-        <a class="btn btn-primary" style="width:auto; min-width:200px" href="/auth">Start Free Trial</a>
-        <a class="btn" style="width:auto; min-width:200px; background:transparent; border:1px solid var(--border); color:var(--text)" href="#community">Learn More</a>
-      </div>
->>>>>>> origin/add-agentz-editable
     </div>
   </section>
 

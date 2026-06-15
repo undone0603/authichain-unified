@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, jsonb, numeric, bigint, bigserial } from "drizzle-orm/pg-core";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
@@ -37,6 +36,7 @@ export const products = pgTable("products", {
   description: text("description"),
   imageUrl: text("imageUrl"),
   audioUrl: text("audioUrl"),
+  visionMarkers: json("visionMarkers"),
   serialNumber: varchar("serialNumber", { length: 256 }),
   batchNumber: varchar("batchNumber", { length: 256 }),
   manufacturingDate: timestamp("manufacturingDate"),
@@ -1036,7 +1036,3 @@ export const payouts = pgTable("payouts", {
 
 export type Payout = typeof payouts.$inferSelect;
 export type InsertPayout = typeof payouts.$inferInsert;
-=======
-// Single source of truth — all schema definitions live in src/db/schema.ts
-export * from '../src/db/schema';
->>>>>>> origin/add-agentz-editable

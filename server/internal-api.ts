@@ -7,7 +7,6 @@ function timingSafeStringEqual(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 import { Router, type Request, type Response } from "express";
-import { timingSafeEqual } from "node:crypto";
 import { getCertificateByNumber, getWhiteLabelByApiKey, createProduct, getDb } from "./db";
 import { computeTrustScore, generateProductQRON } from "./qron-service";
 import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
@@ -25,7 +24,6 @@ export function createInternalRouter(): Router {
   // Auth middleware — constant-time compare so the secret cannot be leaked
   // byte-by-byte through response-timing analysis.
   router.use((req: Request, res: Response, next) => {
-<<<<<<< HEAD
     const expected = ENV.internalApiSecret;
     if (!expected) return res.status(503).json({ error: "internal API not configured" });
     const provided = req.headers["x-internal-secret"];
@@ -33,10 +31,6 @@ export function createInternalRouter(): Router {
     const a = Buffer.from(provided);
     const b = Buffer.from(expected);
     if (a.length !== b.length || !timingSafeEqual(a, b)) {
-=======
-    const secret = req.headers["x-internal-secret"];
-    if (!secret || typeof secret !== "string" || !timingSafeStringEqual(secret, ENV.internalApiSecret)) {
->>>>>>> origin/add-agentz-editable
       return res.status(401).json({ error: "Unauthorized" });
     }
     next();

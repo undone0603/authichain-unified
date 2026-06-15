@@ -123,10 +123,7 @@ export const salesRouter = router({
    */
   getLeadStatus: protectedProcedure
     .query(async ({ ctx }) => {
-<<<<<<< HEAD
       // Assuming users can see their own lead status
-=======
->>>>>>> origin/add-agentz-editable
       return await db.getLeadByEmail(ctx.user.email ?? "");
     }),
 });

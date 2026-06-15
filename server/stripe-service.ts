@@ -13,7 +13,7 @@ export function getStripe(): Stripe {
   if (!_stripe) {
     const secretKey = ENV.stripeSecretKey;
     if (!secretKey) throw new Error("STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(secretKey, { apiVersion: "2026-04-22.dahlia" as const });
+    _stripe = new Stripe(secretKey, { apiVersion: "2026-05-27.dahlia" as const });
   }
   return _stripe;
 }
@@ -60,19 +60,12 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
     customer_email: params.stripeCustomerId ? undefined : params.userEmail,
     customer: params.stripeCustomerId || undefined,
     metadata: sharedMeta,
-    subscription_data: {
-      metadata: sharedMeta,
-      ...(params.trialDays ? { trial_period_days: params.trialDays } : {}),
-    },
     // Propagate user_id onto the Subscription object so lifecycle events
     // (created, updated, deleted, invoice.payment_failed) can resolve userId
     // without a separate customer lookup.
     subscription_data: {
-      metadata: {
-        user_id: params.userId.toString(),
-        plan: params.plan,
-        billing: params.billing,
-      },
+      metadata: sharedMeta,
+      ...(params.trialDays ? { trial_period_days: params.trialDays } : {}),
     },
     line_items: [
       {

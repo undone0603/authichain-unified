@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 export type MissionType =
   | 'GOV_PILOT'
   | 'RETAIL_PILOT'
@@ -14,7 +13,7 @@ export type MissionType =
   | 'TECH_SPRINT'
   | 'MEDTECH_VIDEO_BRIEFING'
   | 'MI_CRA_PARTNERSHIP';
-=======
+
 export const MISSION_TYPES = [
   'GOV_PILOT',
   'RETAIL_PILOT',
@@ -31,8 +30,6 @@ export const MISSION_TYPES = [
   'MEDTECH_VIDEO_BRIEFING',
   'MI_CRA_PARTNERSHIP',
 ] as const;
-export type MissionType = typeof MISSION_TYPES[number];
->>>>>>> origin/add-agentz-editable
 
 export const MISSION_STATUSES = ['PLANNED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED'] as const;
 

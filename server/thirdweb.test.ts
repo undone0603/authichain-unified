@@ -18,10 +18,6 @@ describe('Thirdweb Service', () => {
     const data = {
       productName: 'Test Product',
       certificateNumber: '123',
-<<<<<<< HEAD
-      productName: 'Test Product',
-=======
->>>>>>> origin/add-agentz-editable
       authenticatorId: 1,
       confidenceScore: 0.95,
       verificationDate: '2024-01-01'

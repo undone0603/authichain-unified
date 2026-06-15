@@ -1,29 +1,19 @@
-<<<<<<< HEAD
 name: Deploy Next.js to Vercel
-=======
-name: Deploy Vercel App (DISABLED — migrated to deploy-cf-pages.yml)
->>>>>>> origin/add-agentz-editable
 
 # Trigger manually only; push-to-main now handled by deploy-cf-pages.yml
 on:
-<<<<<<< HEAD
   push:
     branches:
       - main
-=======
->>>>>>> origin/add-agentz-editable
   workflow_dispatch:
 
 permissions:
   contents: read
-<<<<<<< HEAD
 
 # Ensures that only one deployment runs at a time
 concurrency:
   group: vercel-deploy
   cancel-in-progress: true
-=======
->>>>>>> origin/add-agentz-editable
 
 env:
   # Required by Vercel CLI to link the project
@@ -32,22 +22,11 @@ env:
   NODE_VERSION: '22'
 
 jobs:
-<<<<<<< HEAD
   deploy-production:
     name: Autonomous Vercel Production Deployment
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-=======
-  deploy-worker:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - workers/qron-automation
-    name: deploy (${{ matrix.project }})
->>>>>>> origin/add-agentz-editable
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -66,7 +45,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-<<<<<<< HEAD
       - name: Install Vercel CLI
         run: pnpm add -g vercel@latest
 
@@ -81,11 +59,3 @@ jobs:
       - name: Deploy to Vercel
         # Pushes the prebuilt artifacts to Vercel for immediate deployment
         run: vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }}
-=======
-      - name: Deploy Cloudflare Worker
-        run: npx wrangler deploy --minify --config wrangler.toml
-        working-directory: ${{ matrix.project }}
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
->>>>>>> origin/add-agentz-editable

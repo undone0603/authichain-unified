@@ -13,16 +13,6 @@ import {
   Package,
   Vote,
   ArrowRight,
-<<<<<<< HEAD
-=======
-  Palette,
-  Eye,
-  Activity,
-  ShieldCheck,
-  ScanLine,
-  Coins,
-  Terminal,
->>>>>>> origin/add-agentz-editable
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -34,10 +24,7 @@ import Image from 'next/image';
 import { FeaturedQRONs } from '@/components/FeaturedQRONs';
 import { LeadCapturePopup } from '@/components/LeadCapturePopup';
 import { SocialShareCTA } from '@/components/SocialShareCTA';
-<<<<<<< HEAD
 import { TrustAuditMagnet } from '@/components/TrustAuditMagnet';
-=======
->>>>>>> origin/add-agentz-editable
 
 const StaticImageGallery = dynamic(
   () =>
@@ -45,91 +32,6 @@ const StaticImageGallery = dynamic(
   { ssr: false }
 );
 
-<<<<<<< HEAD
-=======
-// --- NEW COMPONENT: Interactive 3D Hero & 5-Agent Visualizer ---
-function InteractiveHero() {
-  const [logIndex, setLogIndex] = useState(0);
-  const logs = [
-    "Agent 1 (Vision): Extracting physical traits...",
-    "Agent 2 (Provenance): Cross-referencing origin data...",
-    "Agent 3 (Material): Validating surface textures...",
-    "Agent 4 (Security): Hashing local entropy...",
-    "Agent 5 (Consensus): 99.8% match. Direct fetch initiated."
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setLogIndex((prev) => (prev < logs.length - 1 ? prev + 1 : prev));
-    }, 1500);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <section className="py-12 relative" id="scannable-identity">
-      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
-        {/* Copy & Value Prop */}
-        <div className="text-left">
-          <span className="text-gold font-mono text-sm tracking-widest uppercase mb-4 block">
-            03 / Scannable Identity
-          </span>
-          <h2 className="text-4xl md:text-5xl font-black text-white mb-6 leading-tight tracking-tight">
-            Interactive Art meets <br /> <span className="text-zinc-500">Immutable State.</span>
-          </h2>
-          <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
-            Beyond verification. Turn your products into interactive art. Our AI generates thematic, 3D-textured QR codes that blend seamlessly with your brand packaging while anchoring an immutable ERC-721 certificate.
-          </p>
-          
-          <div className="flex flex-wrap gap-4 mt-8">
-             <div className="px-6 py-2 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-               <Shield className="w-4 h-4 text-gold" /> Protocol Live
-             </div>
-             <div className="px-6 py-2 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-               <Zap className="w-4 h-4 text-gold" /> Edge Optimized
-             </div>
-          </div>
-        </div>
-
-        {/* WebGL Placeholder & 5-Agent Visualizer */}
-        <div className="protocol-card bg-zinc-950/50 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl relative">
-          {/* 3D Canvas Placeholder */}
-          <div className="h-72 w-full bg-[#050505] relative flex items-center justify-center overflow-hidden">
-             <div className="absolute inset-0 bg-gold/5 blur-3xl animate-pulse" />
-             <div className="relative z-10 w-40 h-40 border border-gold/20 bg-zinc-800/50 rounded-2xl flex items-center justify-center backdrop-blur-sm transform rotate-3 hover:rotate-0 transition-transform duration-700 shadow-[0_0_40px_rgba(201,162,39,0.15)]">
-                <Sparkles className="w-16 h-16 text-gold opacity-80 animate-pulse" />
-                <span className="absolute -bottom-8 text-xs text-gold font-mono uppercase tracking-widest text-center w-full">Interactive<br/>WebGL</span>
-             </div>
-          </div>
-          
-          {/* Simulated Terminal Feed */}
-          <div className="bg-black/90 p-5 border-t border-zinc-800 font-mono text-xs">
-            <div className="flex items-center gap-2 mb-4 text-zinc-500 font-bold uppercase tracking-widest">
-              <Terminal className="w-4 h-4 text-gold" />
-              <span>5-Agent Consensus Network</span>
-            </div>
-            <div className="space-y-2 h-32 flex flex-col justify-end">
-              {logs.slice(0, logIndex + 1).map((log, i) => (
-                <div key={i} className={`flex items-start gap-2 ${i === logs.length - 1 ? 'text-green-400' : 'text-zinc-400'}`}>
-                  <span className="text-zinc-600">{'>'}</span>
-                  <span>{log}</span>
-                </div>
-              ))}
-              {logIndex < logs.length - 1 && (
-                 <div className="flex items-start gap-2 text-zinc-600 animate-pulse">
-                   <span>{'>'}</span>
-                   <span className="w-2 h-3 bg-zinc-600 block mt-0.5" />
-                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-// --- END NEW COMPONENT ---
-
->>>>>>> origin/add-agentz-editable
 export default function Home() {
   const hasSupabaseEnv =
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
@@ -168,34 +70,6 @@ export default function Home() {
         url: 'https://rolex.com',
         prompt: 'Luxury gold watch mechanisms, intricate gear details, emerald green and gold hues',
         mode: 'holographic'
-<<<<<<< HEAD
-=======
-      },
-      Hermes: {
-        url: 'https://hermes.com',
-        prompt: 'Hermes Birkin leather texture, signature orange and brown tones, luxury equestrian aesthetic',
-        mode: 'living'
-      },
-      Chanel: {
-        url: 'https://chanel.com',
-        prompt: 'Chanel classic flap quilting, interlocking CC logo gold metal, black and white pearls',
-        mode: 'holographic'
-      },
-      Moderna: {
-        url: 'https://modernatx.com',
-        prompt: 'mRNA molecular structures, medical laboratory aesthetics, clean sterile blue and white',
-        mode: 'layered'
-      },
-      Gilmore: {
-        url: 'https://gilmorecarmuseum.org',
-        prompt: '1929 Duesenberg Model J at the Gilmore Car Museum. Elegant museum photography, soft studio lighting.',
-        mode: 'living'
-      },
-      Metrc: {
-        url: 'https://metrc.com',
-        prompt: 'StrainChain Bio Jungle AI QR. Organic forest textures, cannabis leaf veins, deep emerald green.',
-        mode: 'living'
->>>>>>> origin/add-agentz-editable
       }
     };
 
@@ -390,11 +264,7 @@ export default function Home() {
       return;
     }
     if (!plan.stripe_price_id) {
-<<<<<<< HEAD
       window.location.assign('mailto:Z@authichain.com');
-=======
-      setError('This plan requires manual onboarding. Email Z@authichain.com to get started.');
->>>>>>> origin/add-agentz-editable
       return;
     }
     try {
@@ -420,7 +290,6 @@ export default function Home() {
   return (
     <div className="min-h-screen protocol-bg text-white">
       <div className="container mx-auto px-4 py-12 max-w-6xl">
-<<<<<<< HEAD
         {/* Hero */}
         <div className="text-center mb-14">
           {/* Protocol badge */}
@@ -541,11 +410,6 @@ export default function Home() {
              </div>
           </div>
         </div>
-=======
-        
-        {/* NEW SCANNABLE IDENTITY HERO REPLACES STATIC HERO */}
-        <InteractiveHero />
->>>>>>> origin/add-agentz-editable
 
         <div className="gold-divider mb-12" />
 
@@ -562,11 +426,7 @@ export default function Home() {
                  {isMagicGenerating ? 'Synchronizing Brand Assets...' : 'Creating Cinematic QRON...'}
                </h3>
                <p className="text-zinc-500 text-xs font-bold uppercase tracking-[0.2em] max-w-xs leading-loose">
-<<<<<<< HEAD
                  Anchoring to AuthiChain Truth Network â€¢ AI Inference in progress â€¢ ~15s
-=======
-                 Anchoring to AuthiChain Truth Network • AI Inference in progress • ~15s
->>>>>>> origin/add-agentz-editable
                </p>
             </div>
           )}
@@ -995,11 +855,7 @@ export default function Home() {
                                         <Sparkles className="w-3 h-3 text-gold" /> StoryMode Narrative
                                     </h5>
                                     <p className="text-sm font-medium text-white leading-relaxed italic">
-<<<<<<< HEAD
                                         &quot;This artifact represents a fusion of peak industrial engineering and creative autonomous AI. Every module is a signature of truth, anchored forever on the Polygon network...&quot;
-=======
-                                        "This artifact represents a fusion of peak industrial engineering and creative autonomous AI. Every module is a signature of truth, anchored forever on the Polygon network..."
->>>>>>> origin/add-agentz-editable
                                     </p>
                                     <div className="mt-6 flex gap-3">
                                         <div className="flex-1 h-10 rounded-xl bg-gold flex items-center justify-center text-black text-xs font-black uppercase tracking-widest">Buy Now</div>
@@ -1097,104 +953,6 @@ export default function Home() {
           ))}
         </div>
 
-<<<<<<< HEAD
-=======
-        <div className="gold-divider my-12" />
-
-        {/* Elite Capabilities Section */}
-        <section className="mb-16">
-          <div className="text-center mb-12">
-            <span className="protocol-badge mb-4 inline-flex">
-              <Zap className="w-3 h-3" />
-              Elite / Theater 3 Capabilities
-            </span>
-            <h2 className="text-3xl md:text-5xl font-black mt-4 mb-4 uppercase tracking-tighter">
-              <span className="gold-text">Cryptographic Art Engine</span>
-            </h2>
-            <p className="text-base max-w-2xl mx-auto text-zinc-400 leading-relaxed">
-              QRON.space combines Hugging Face ControlNet pipelines with advanced quantitative imaging to create scannable, cryptographically anchored masterpieces.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* ControlNet & HF */}
-            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
-              <div className="w-10 h-10 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center mb-4">
-                <Palette className="w-5 h-5 text-gold" />
-              </div>
-              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">Hugging Face ControlNet</h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                Powered by SDXL and custom ControlNet models via the Hugging Face Inference API. Our pipeline perfectly balances QR scannability with hyper-realistic artistic generation.
-              </p>
-            </div>
-
-            {/* Magic Eye / Autostereography */}
-            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4">
-                <Eye className="w-5 h-5 text-purple-500" />
-              </div>
-              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">Magic Eye Autostereograms</h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                Pioneering autostereography techniques to embed scannable cryptographic payloads inside 3D stereogram patterns. Look past the image to see the underlying TrueMark.
-              </p>
-            </div>
-
-            {/* Quantitative Imaging & Colorimetry */}
-            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
-                <Activity className="w-5 h-5 text-blue-500" />
-              </div>
-              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">Quantitative Colorimetry</h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                Utilizing spectrophotometry principles and precise colorimetry to calculate structural contrast limits, guaranteeing the QR anchor remains functional in extreme light conditions.
-              </p>
-            </div>
-
-            {/* TrueMark Integration */}
-            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
-                <ShieldCheck className="w-5 h-5 text-emerald-500" />
-              </div>
-              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">TrueMark™ Anchor</h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                Every generated asset receives an immutable TrueMark ID. Scannable AI art acts as a physical-to-digital bridge, anchoring the item to Polygon and Base layer-2 networks.
-              </p>
-            </div>
-
-            {/* GPT Vision Validation */}
-            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4">
-                <ScanLine className="w-5 h-5 text-cyan-500" />
-              </div>
-              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">GPT-4o Vision Verification</h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                Pre-flight scans are executed autonomously by GPT-4o Vision agents to ensure error-correction integrity and aesthetic alignment before the QRON is delivered.
-              </p>
-            </div>
-
-            {/* Living Portals & $QRON */}
-            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left relative overflow-hidden">
-              <div className="absolute inset-0 bg-gold/5 blur-2xl rounded-full" />
-              <div className="relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-gold/20 border border-gold/40 flex items-center justify-center mb-4">
-                  <Coins className="w-5 h-5 text-gold" />
-                </div>
-                <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-gold">Living Portals & $QRON</h3>
-                <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-                  Generators create "Living Portals"—dynamic redirect hubs that update based on time, location, or user profile. Powered by the $QRON utility token for high-volume enterprise minting.
-                </p>
-                <div className="inline-flex items-center gap-2 bg-zinc-900 px-3 py-1 rounded text-[10px] font-mono border border-zinc-800">
-                  <span className="text-zinc-500">Contract:</span>
-                  <span className="text-gold">0xAebf...E437</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="gold-divider my-12" />
-
->>>>>>> origin/add-agentz-editable
         {/* Demo Gallery Preview */}
         <section className="mb-16" id="demo-gallery">
           <div className="text-center mb-10">
@@ -1271,7 +1029,6 @@ export default function Home() {
               </div>
             ))}
           </div>
-<<<<<<< HEAD
           <div className="text-center flex flex-col sm:flex-row justify-center items-center gap-4">
             <a
               href="/industries"
@@ -1287,16 +1044,6 @@ export default function Home() {
               Marketplace Demos →
             </a>
           </div>
-=======
-          <div className="text-center">
-            <a
-              href="/demo"
-              className="btn-gold px-8 py-3 rounded-xl inline-flex items-center gap-2 font-bold"
-            >
-              <Sparkles className="w-4 h-4" />
-              Browse Full Demo Gallery →
-            </a>
->>>>>>> origin/add-agentz-editable
             <p className="text-xs mt-3" style={{ color: '#6b6b6b' }}>
               20+ iconic brands · Order yours from $49 · Delivered in ~5 min
             </p>
@@ -1603,7 +1350,6 @@ export default function Home() {
           </a>
         </div>
 
-<<<<<<< HEAD
         {/* Lead Magnet Section */}
         <section className="mb-24 py-12 relative overflow-hidden">
            <div className="absolute inset-0 bg-gold/5 blur-[120px] rounded-full -translate-y-1/2" />
@@ -1612,8 +1358,6 @@ export default function Home() {
            </div>
         </section>
 
-=======
->>>>>>> origin/add-agentz-editable
         {/* FAQ */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold text-center mb-8">
@@ -1661,70 +1405,6 @@ export default function Home() {
           </div>
         </section>
 
-<<<<<<< HEAD
-=======
-        {/* YouTube Channel Section */}
-        <section className="mb-16 px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: '#c9a227' }}>@AuthiChain-Qronspace</p>
-            <h2 className="text-2xl font-bold mb-3"><span className="gold-text">See QRON in Action</span></h2>
-            <p className="text-sm mb-8" style={{ color: '#6b6b6b' }}>Watch how living QR codes power authentication across luxury, cannabis, food & pharma</p>
-
-            {/* Featured Video */}
-            <div className="mb-6 rounded-2xl overflow-hidden border border-zinc-800" style={{ background: '#0a0a0a' }}>
-              <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-                <iframe
-                  src="https://www.youtube.com/embed/mfckohgDrNk?rel=0&color=white&modestbranding=1"
-                  title="QRON Main Overview"
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  loading="lazy"
-                />
-              </div>
-            </div>
-
-            {/* Video Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-left">
-              {[
-                { id: 'PdCibPadCxE', label: 'Food & Beverage', title: 'Validating Origin with QRON' },
-                { id: '70KG5d2fFUo', label: 'Token Economy', title: 'The $QRON Token Economy' },
-                { id: 'bAI14tPQFF4', label: 'Ecosystem', title: 'Use Cases for Trust' },
-              ].map(({ id, label, title }) => (
-                <a key={id} href={`https://www.youtube.com/watch?v=${id}`} target="_blank" rel="noopener noreferrer"
-                   className="rounded-xl overflow-hidden border border-zinc-800 hover:border-yellow-600 transition-colors block"
-                   style={{ background: '#0a0a0a', textDecoration: 'none' }}>
-                  <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#050505' }}>
-                    <img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt={title}
-                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: 40, height: 40, background: 'rgba(220,38,38,0.9)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><polygon points="9.5,7.5 16.5,12 9.5,16.5"/></svg>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-3">
-                    <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#c9a227' }}>{label}</p>
-                    <p className="text-xs font-bold" style={{ color: '#c8c8c8' }}>{title}</p>
-                  </div>
-                </a>
-              ))}
-            </div>
-
-            {/* Channel CTA */}
-            <a href="https://www.youtube.com/@AuthiChain-Qronspace" target="_blank" rel="noopener noreferrer"
-               className="inline-flex items-center gap-3 font-black text-sm px-6 py-3 rounded-full transition-all"
-               style={{ background: '#dc2626', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(220,38,38,0.35)' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.5V8.5l6.25 3.5-6.25 3.5z"/>
-              </svg>
-              Subscribe on YouTube
-              <span className="text-[10px] opacity-75">26 Videos · @AuthiChain-Qronspace</span>
-            </a>
-          </div>
-        </section>
-
->>>>>>> origin/add-agentz-editable
         {/* Footer Navigation */}
         <footer className="text-center py-12 border-t border-zinc-900 mt-12">
           <div className="flex justify-center gap-6 mb-6">
@@ -1734,24 +1414,6 @@ export default function Home() {
              <Link href="/terms" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Terms</Link>
              <Link href="/privacy" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Privacy</Link>
           </div>
-<<<<<<< HEAD
-=======
-          {/* Ecosystem Cross-Sell */}
-          <div className="flex flex-wrap justify-center gap-4 mb-6">
-            {[
-              { name: 'AuthiChain', url: 'https://authichain.com', color: '#34d399', desc: 'Product Auth Protocol' },
-              { name: 'StrainChain', url: 'https://strainchain.io', color: '#22c55e', desc: 'Cannabis Provenance' },
-              { name: 'GovChain', url: 'https://govchain.us', color: '#60a5fa', desc: 'Gov Authentication' },
-            ].map(({ name, url, color, desc }) => (
-              <a key={name} href={url} target="_blank" rel="noopener noreferrer"
-                 className="px-4 py-2 rounded-xl border border-zinc-800 hover:border-zinc-600 transition-colors"
-                 style={{ textDecoration: 'none', background: '#0a0a0a' }}>
-                <span className="text-xs font-black block" style={{ color }}>{name}</span>
-                <span className="text-[9px]" style={{ color: '#6b6b6b' }}>{desc}</span>
-              </a>
-            ))}
-          </div>
->>>>>>> origin/add-agentz-editable
           <div className="space-y-2">
             <p className="text-xs" style={{ color: '#6b6b6b' }}>
               ◆ 100% scannable guarantee &nbsp;·&nbsp; Ed25519 cryptographic

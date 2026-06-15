@@ -62,12 +62,6 @@ function makeTask(kind: string): MissionTask {
     payload: {},
     status: 'PENDING',
     error: null,
-<<<<<<< HEAD
-=======
-    result: null,
-    priority: 0,
-    scheduledAt: null,
->>>>>>> origin/add-agentz-editable
     order: 0,
     priority: 0,
     result: null,
