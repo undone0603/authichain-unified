@@ -22,7 +22,22 @@
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "verify:integrations": "tsx scripts/verify-integrations.ts",
     "lint": "next lint",
-    "env:pull": "vercel pull --environment=development --yes"
+    "env:pull": "vercel pull --environment=development --yes",
+    "seed": "node scripts/seed-final.js",
+    "seed:gallery": "node scripts/seed-gallery.js",
+    "seed:schema": "node scripts/update-schema.js",
+    "stress:test": "node scripts/stress-test-stimulus.cjs",
+    "verify:activation": "node scripts/verify-activation.js",
+    "verify:affiliates": "node scripts/verify-affiliates.js",
+    "verify:anchoring": "node scripts/verify-anchoring.js",
+    "verify:columns": "node scripts/verify-columns.js",
+    "verify:gov": "node scripts/verify-gov.js",
+    "verify:logs": "node scripts/verify-logs.js",
+    "verify:nulls": "node scripts/verify-nulls.js",
+    "verify:profiles": "node scripts/verify-profiles.js",
+    "verify:subs": "node scripts/verify-subs.js",
+    "verify:tables": "node scripts/verify-tables.js",
+    "verify:user-profiles": "node scripts/verify-user-profiles.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.63",
