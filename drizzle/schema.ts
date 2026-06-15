@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, jsonb, numeric, bigint, bigserial } from "drizzle-orm/pg-core";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
@@ -1035,3 +1036,7 @@ export const payouts = pgTable("payouts", {
 
 export type Payout = typeof payouts.$inferSelect;
 export type InsertPayout = typeof payouts.$inferInsert;
+=======
+// Single source of truth — all schema definitions live in src/db/schema.ts
+export * from '../src/db/schema';
+>>>>>>> origin/add-agentz-editable

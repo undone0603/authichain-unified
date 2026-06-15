@@ -1,15 +1,62 @@
 'use client';
-import { useChat } from 'ai/react';
 import { Send, Terminal } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 export default function AgenticCloser() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    initialMessages: [{ id: 'system-init', role: 'assistant', content: "System Initialized. I am AgentZ, Integration Engineer for AuthiChain. How can I assist you with the Zapbox integration or our $199 Single-Project Pilot today?" }],
-  });
-
+  const [messages, setMessages] = useState<Message[]>([{
+    id: 'system-init',
+    role: 'assistant',
+    content: 'System Initialized. I am AgentZ, Integration Engineer for AuthiChain. How can I assist you with the Zapbox integration or our $199 Single-Project Pilot today?',
+  }]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: input };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })) }),
+      });
+
+      const assistantId = crypto.randomUUID();
+      setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '' }]);
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          setMessages(prev => prev.map(m =>
+            m.id === assistantId ? { ...m, content: m.content + chunk } : m
+          ));
+        }
+      }
+    } catch {
+      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: 'Connection error. Please try again.' }]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
     <div className="flex flex-col h-[500px] bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden shadow-2xl">
@@ -31,8 +78,24 @@ export default function AgenticCloser() {
       </div>
       <form onSubmit={handleSubmit} className="p-3 border-t border-zinc-800 bg-zinc-900/30">
         <div className="relative flex items-center">
+<<<<<<< HEAD
           <input value={input} onChange={handleInputChange} placeholder="Ask about pricing, specs, or integration..." className="w-full bg-zinc-900 border border-zinc-700 rounded-lg pl-4 pr-12 py-3 text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-600" />
           <button type="submit" disabled={isLoading || !input} className="absolute right-2 p-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 text-white rounded-md transition-colors"><Send className="w-4 h-4" /></button>
+=======
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="Ask about pricing, specs, or integration..."
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg pl-4 pr-12 py-3 text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-600"
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input}
+            className="absolute right-2 p-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 text-white rounded-md transition-colors"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+>>>>>>> origin/add-agentz-editable
         </div>
       </form>
     </div>

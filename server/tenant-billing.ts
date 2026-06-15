@@ -96,6 +96,7 @@ export async function reportUsageToStripe(tenantId: number, endpoint: string, qu
   // Record in our usage table
   const today = new Date();
   await db.insert(apiUsageDaily).values({
+<<<<<<< HEAD
     clientId: tenantId,
     date: today,
     calls: quantity,
@@ -103,6 +104,19 @@ export async function reportUsageToStripe(tenantId: number, endpoint: string, qu
     target: [apiUsageDaily.clientId, apiUsageDaily.date],
     set: {
       calls: quantity,
+=======
+    tenantId,
+    date: new Date(today),
+    endpoint,
+    callCount: quantity,
+    cost: (pricePerCall * quantity).toFixed(4),
+    clientId: tenantId,
+  }).onConflictDoUpdate({
+    target: apiUsageDaily.id,
+    set: {
+      callCount: quantity,
+      cost: (pricePerCall * quantity).toFixed(4),
+>>>>>>> origin/add-agentz-editable
     },
   });
 }
@@ -126,8 +140,14 @@ export async function getTenantBillingStatus(tenantId: number) {
       gte(apiUsageDaily.date, monthStartDate),
     ));
 
+<<<<<<< HEAD
   const totalCalls = usage.reduce((sum, u) => sum + (u.calls || 0), 0);
   const totalCost = 0;
+=======
+  const monthUsage = usage.filter(u => u.date >= new Date(monthStart));
+  const totalCalls = monthUsage.reduce((sum, u) => sum + (u.callCount || 0), 0);
+  const totalCost = monthUsage.reduce((sum, u) => sum + parseFloat(u.cost || "0"), 0);
+>>>>>>> origin/add-agentz-editable
 
   return {
     tenantId,
@@ -144,6 +164,6 @@ export async function getTenantBillingStatus(tenantId: number) {
 }
 
 // ─── Generate API Key ────────────────────────────────────────────────────────
-export function generateApiKey(prefix: "ac_live" | "ac_test" | "ac_gpt" = "ac_live"): string {
+export function generateApiKey(prefix: string = "ac_live"): string {
   return `${prefix}_${randomBytes(24).toString("hex")}`;
 }

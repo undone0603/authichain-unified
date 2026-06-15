@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 export type MissionType =
   | 'GOV_PILOT'
   | 'RETAIL_PILOT'
@@ -13,10 +14,32 @@ export type MissionType =
   | 'TECH_SPRINT'
   | 'MEDTECH_VIDEO_BRIEFING'
   | 'MI_CRA_PARTNERSHIP';
+=======
+export const MISSION_TYPES = [
+  'GOV_PILOT',
+  'RETAIL_PILOT',
+  'PRESS_LAUNCH',
+  'PARTNER_ONBOARDING',
+  'TECH_OS_LOCK',
+  'LAUNCH_AUTHICHAIN',
+  'LUXURY_OUTREACH',
+  'PHARMA_OUTREACH',
+  'MEDTECH_OUTREACH',
+  'TIMEPIECE_OUTREACH',
+  'NEWSJACKING_LAUNCH',
+  'TECH_SPRINT',
+  'MEDTECH_VIDEO_BRIEFING',
+  'MI_CRA_PARTNERSHIP',
+] as const;
+export type MissionType = typeof MISSION_TYPES[number];
+>>>>>>> origin/add-agentz-editable
 
-export type MissionStatus = 'PLANNED' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';
+export const MISSION_STATUSES = ['PLANNED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED'] as const;
 
-export type TaskStatus = 'PENDING' | 'RUNNING' | 'WAITING_HUMAN' | 'DONE' | 'FAILED';
+export type MissionStatus = typeof MISSION_STATUSES[number];
+
+export const TASK_STATUSES = ['PENDING', 'RUNNING', 'WAITING_HUMAN', 'DONE', 'FAILED'] as const;
+export type TaskStatus = typeof TASK_STATUSES[number];
 
 export type TaskKind =
   | 'FIND_GOV_LEADS'

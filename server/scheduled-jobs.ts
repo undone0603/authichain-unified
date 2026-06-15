@@ -1,3 +1,8 @@
+import { fileURLToPath } from "url"
+import { dirname } from "path"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 // server/scheduled-jobs.ts
 import { getDb } from "./db";
 import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger } from "../drizzle/schema";
@@ -102,7 +107,8 @@ registerJob({
         eq(subscriptions.status, "active"),
         lte(subscriptions.currentPeriodEnd, threeDaysFromNow),
         gte(subscriptions.currentPeriodEnd, now),
-      ));
+      ))
+      .limit(1000);
 
     for (const sub of expiringSubs) {
       await db.insert(notifications).values({
@@ -122,7 +128,8 @@ registerJob({
       .where(and(
         eq(subscriptions.status, "active"),
         lt(subscriptions.currentPeriodEnd, now),
-      ));
+      ))
+      .limit(1000);
 
     for (const sub of pastDueSubs) {
       await db.update(subscriptions)
@@ -168,7 +175,8 @@ registerJob({
         eq(certificates.status, "active"),
         lte(certificates.expiresAt, thirtyDaysFromNow),
         gte(certificates.expiresAt, now),
-      ));
+      ))
+      .limit(1000);
 
     for (const cert of expiringCerts) {
       await db.insert(notifications).values({
@@ -219,7 +227,8 @@ registerJob({
       .where(and(
         eq(leads.status, "new"),
         lt(leads.createdAt, sevenDaysAgo),
-      ));
+      ))
+      .limit(500);
 
     details.staleLeadsFound = staleLeads.length;
 
@@ -426,7 +435,8 @@ registerJob({
     // Get all active subscribers
     const activeSubs = await db.select()
       .from(subscriptions)
-      .where(eq(subscriptions.status, "active"));
+      .where(eq(subscriptions.status, "active"))
+      .limit(5000);
 
     for (const sub of activeSubs) {
       // Calculate score factors
@@ -670,6 +680,7 @@ registerJob({
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
     
+<<<<<<< HEAD
     // Simple logic: apply 12.5% APY / 365 to all active positions.
     // Idempotency: only positions not rewarded in the last ~23h are eligible,
     // so a re-run or process restart on the same day cannot double-distribute.
@@ -697,6 +708,21 @@ registerJob({
         .set({ lastRewardCalculation: now, updatedAt: now })
         .where(eq(stakingPositions.id, pos.id));
     }
+=======
+    const activePositions = await db.select().from(stakingPositions)
+      .where(eq(stakingPositions.status, "active"))
+      .limit(10000);
+    if (activePositions.length === 0) return { itemsProcessed: 0, details: { status: "no_active_positions" } };
+
+    const rewards = activePositions.map(pos => ({
+      agentId: pos.agentId || 0,
+      userId: pos.userId,
+      amount: ((Number(pos.amount) * 0.125) / 365).toFixed(9),
+      reason: "staking_reward" as const,
+      status: "pending" as const,
+    }));
+    await db.insert(qronRewardLedger).values(rewards);
+>>>>>>> origin/add-agentz-editable
     return { itemsProcessed: activePositions.length, details: { status: "rewards_distributed" } };
   },
 });
@@ -750,15 +776,15 @@ export function getSystemStatus() {
   };
 }
 
-export function toggleKillSwitch(active: boolean): boolean {
+export async function toggleKillSwitch(active: boolean): Promise<boolean> {
   if (_systemActive === active) return _systemActive;
-  
+
   _systemActive = active;
   console.log(`[System] Kill switch activated: ${!active}`);
 
   if (active) {
     console.log("[System] Resuming all automation routines...");
-    initializeScheduler();
+    await initializeScheduler();
   } else {
     console.log("[System] HALTING ALL AUTOMATION. Emergency stop triggered.");
     stopScheduler();

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 name = "authichain-com"
 main = "src/index.ts"
 compatibility_date = "2026-04-01"
@@ -70,3 +71,63 @@ zone_name = "authichain.com"
 
 
 
+=======
+name = "authichain-com"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = false
+
+# Apex root
+[[routes]]
+pattern = "authichain.com/"
+zone_name = "authichain.com"
+
+# www alias root
+[[routes]]
+pattern = "www.authichain.com/"
+zone_name = "authichain.com"
+
+# All paths under the apex — this is the critical wildcard that was MISSING.
+# Without this, requests to authichain.com/pricing, /dashboard, /verify/* etc.
+# fall through to the default Cloudflare Pages/Workers routing and 404.
+[[routes]]
+pattern = "authichain.com/*"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "www.authichain.com/*"
+zone_name = "authichain.com"
+
+# --- Static asset routes (explicit paths, no glob) ---
+# These overlap intentionally with the wildcard above but are listed
+# separately so they can be migrated to a CDN-only rule without
+# touching the application routes.
+[[routes]]
+pattern = "authichain.com/og-image.svg"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/og-image.png"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/favicon.svg"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/favicon.ico"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/favicon.png"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/apple-touch-icon.svg"
+zone_name = "authichain.com"
+
+[[routes]]
+pattern = "authichain.com/apple-touch-icon.png"
+zone_name = "authichain.com"
+>>>>>>> origin/add-agentz-editable

@@ -25,8 +25,13 @@ export async function createModel(data: {
   price: number;
   creatorId: number;
 }) {
+<<<<<<< HEAD
   const [row] = await db.insert(aiModels).values({ ...data, status: "draft" }).returning({ id: aiModels.id });
   return { id: row!.id };
+=======
+  const [result] = await db.insert(aiModels).values({ ...data, status: "draft" }).returning();
+  return { id: result.id };
+>>>>>>> origin/add-agentz-editable
 }
 
 export async function purchaseModel(data: {
@@ -36,11 +41,20 @@ export async function purchaseModel(data: {
   purchaseType: "purchase" | "subscription" | "rental";
   expiresAt?: Date;
 }) {
+<<<<<<< HEAD
   const [row] = await db.insert(modelPurchases).values({ ...data, status: "active" }).returning({ id: modelPurchases.id });
   await db.update(aiModels)
     .set({ downloads: sql`${aiModels.downloads} + 1` })
     .where(eq(aiModels.id, data.modelId));
   return { id: row!.id };
+=======
+  const [result] = await db.insert(modelPurchases).values({ ...data, status: "active" }).returning();
+  // Increment download count
+  await db.update(aiModels)
+    .set({ downloads: sql`${aiModels.downloads} + 1` })
+    .where(eq(aiModels.id, data.modelId));
+  return { id: result.id };
+>>>>>>> origin/add-agentz-editable
 }
 
 export async function getUserPurchases(userId: number) {
@@ -50,14 +64,23 @@ export async function getUserPurchases(userId: number) {
 }
 
 export async function addReview(data: { modelId: number; userId: number; rating: number; review?: string }) {
+<<<<<<< HEAD
   const [row] = await db.insert(modelReviews).values(data).returning({ id: modelReviews.id });
+=======
+  const [result] = await db.insert(modelReviews).values(data).returning();
+  // Update model rating average
+>>>>>>> origin/add-agentz-editable
   const [avg] = await db.select({ avg: sql<string>`AVG(rating)`, count: sql<number>`COUNT(*)` })
     .from(modelReviews)
     .where(eq(modelReviews.modelId, data.modelId));
   await db.update(aiModels)
     .set({ rating: avg.avg, reviewCount: avg.count })
     .where(eq(aiModels.id, data.modelId));
+<<<<<<< HEAD
   return { id: row!.id };
+=======
+  return { id: result.id };
+>>>>>>> origin/add-agentz-editable
 }
 
 export async function getModelReviews(modelId: number) {

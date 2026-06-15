@@ -1,127 +1,80 @@
-# AgentZ Workflow Orchestrator
+# QRON Platform & AuthiChain Unified Core
 
-A control-plane layer on top of the existing `browser-use-qron` agent at
-`C:\Users\Z\browser-use-qron`. Turns assumed/queued operational workflows
-into declarative, dependency-aware, mode-controlled executions.
+Welcome to the unified repository for the **QRON Platform** and the **AuthiChain Agentic Ecosystem**.
 
-## Why
+## 🚀 Overview
 
-Existing AgentZ stack handles *one* task per invocation — write a prompt,
-run the browser agent. This wrapper adds:
+This repository is the central hub for the QRON ecosystem, integrating a high-performance frontend with a sophisticated autonomous agent orchestration layer.
 
-- **Registry** — every assumed workflow declared in one YAML file
-- **Modes** — `dry-run` (describe), `confirm` (prompt per step), `auto` (run)
-- **Dependency resolution** — workflows declare prerequisites, runner orders them
-- **Credential preflight** — workflow blocks before launch if secrets missing
-- **Audit log** — every run appended to `agentz/logs/runs.jsonl`
-- **Filters** — `--priority critical,high`, `--revenue-only`, `--all`
+- **QRON Platform**: A Next.js 14 multi-domain architecture serving specialized brands (qron.space, authichain.com, govchain.us, strainchain.io) with Cloudflare Edge integration and Drizzle ORM.
+- **AuthiChain Unified Core (AgentZ)**: A Python-based workflow orchestrator that manages autonomous agents for infrastructure fixing, revenue operations, and high-entropy supply chain audits.
 
-## Install
+---
 
+## 🌐 1. QRON Platform (Frontend & Edge)
+
+A Next.js application with a Cloudflare Edge Worker and Drizzle ORM.
+
+### Ecosystem & Multi-Domain Architecture
+
+The QRON platform operates as a unified codebase serving four distinct branded experiences via Next.js Middleware.
+
+- **qron.space**: Creative Studio & AI QR Art Generator.
+- **authichain.com**: Enterprise Authentication Protocol & API Key Management.
+- **govchain.us**: Ecosystem Governance, $QRON Staking, and DAO Voting.
+- **strainchain.io**: Industrial Provenance & Digital Product Passports (DPP).
+
+### Routing Logic
+Traffic is routed based on the `Host` header. Shared application routes (like `/dashboard`, `/login`, and `/api`) remain unified across all domains, while the root path (`/`) serves the brand-specific landing page.
+
+### Tech Stack
+- **Framework**: [Next.js](https://nextjs.org) (App Router)
+- **Database**: [Drizzle ORM](https://orm.drizzle.team) with PostgreSQL
+- **Edge Runtime**: Cloudflare Workers
+- **Styling**: Tailwind CSS
+
+### Getting Started (Frontend)
+1. **Setup Environment**: `cp .env.example .env`
+2. **Install Dependencies**: `npm install`
+3. **Run Development Server**: `npm run dev`
+
+---
+
+## 🤖 2. AuthiChain Unified Core (AgentZ)
+
+The `agentz/` directory contains the control-plane layer for autonomous operational workflows, providing declarative, dependency-aware execution.
+
+### Key Features
+- **Workflow Registry**: Centralized declaration of operational tasks in YAML.
+- **Operational Modes**: `dry-run` (validation), `confirm` (interactive), and `auto` (autonomous).
+- **Dependency Resolution**: Automated ordering of prerequisite tasks.
+- **Audit Logging**: Comprehensive run history in `agentz/runs.jsonl`.
+
+### Usage (Python Agents)
 ```powershell
-cd C:\Users\Z\browser-use-qron
-# Drop the agentz/ folder here alongside your existing browser-use code
-.\venv\Scripts\activate
-pip install -r agentz\requirements-agentz.txt
-copy agentz\.env.template .env
-notepad .env   # fill in the values you want enabled
-```
-
-## Usage
-
-```powershell
-# Inspect what's registered
+# Inspect registered workflows
 python -m agentz.cli list
 
-# Show execution plan without running
-python -m agentz.cli plan --priority critical,high
-
-# Dry-run a single workflow (no side effects)
+# Run a specific workflow in dry-run mode
 python -m agentz.cli run vercel_fix_authichain_unified --mode dry-run
 
-# Confirm-mode: prompts before each step
-python -m agentz.cli run --priority critical --mode confirm
-
-# Full auto: run all revenue-blocking workflows unattended
+# Run all revenue-blocking workflows in auto mode
 python -m agentz.cli run --all --revenue-only --mode auto
 ```
 
-## Modes Explained
+---
 
-| Mode | Behavior |
-|------|----------|
-| `dry-run` | Prints `WOULD: <action>` for every step. Touches nothing. Default. |
-| `confirm` | Prints `NEXT: <action>`, waits for `y/N/skip-all`. Safe for first runs. |
-| `auto` | Executes everything. Workflows flagged `confirm_before_run: true` are still promoted to confirm mode for safety. |
+## 🛠️ Unified Database & Infrastructure
 
-## Pre-loaded Workflows
+- **ORM**: Drizzle is used for schema management.
+- **Migrations**: `npm run db:generate` and `npm run db:push`.
+- **Edge**: Managed via `wrangler.toml` in the root.
+- **Agents**: Python environment requires `pip install -r requirements-agentz.txt`.
 
-The registry currently knows about these (derived from your operational state):
+## ⚖️ Legal & Intellectual Property
 
-**Critical** (blocks downstream systems)
-- `pinecone_trial_decision` — handle ~May 2 trial expiry
+### Licensing
+This project is licensed under the **AuthiChain Proprietary License**. See `LICENSE.md` for full terms. Unauthorized reproduction, distribution, or reverse engineering of the AuthiChain Protocol or its multi-domain routing architecture is strictly prohibited.
 
-**High — Infrastructure**
-- `vercel_fix_authichain_unified` — preset Vite → Other
-- `gsc_setup_authichain` / `gsc_setup_qron` — Search Console verification
-- `stripe_mcp_reconnect` — restore Claude.ai Stripe connector
-- `n8n_activate_workflows` — flip 10 dormant blueprints live
-
-**High — Revenue**
-- `hubspot_drip_unstick` — release 29 stuck prospects
-- `hubspot_near_term_followups` — Cloud Cannabis, Oakley Signs, PufCreativ, Lettuce
-- `linkedin_strainchain_outreach` — Michigan cannabis decision-makers (capped 18/day)
-
-**Medium — Distribution**
-- `reddit_qron_post` — r/QRcode + r/generative
-- `polygon_grants_submit`
-
-**Low — Maintenance**
-- `revoke_temp_pat` — close access window after Vercel fix
-- `pipeline_health_report` — weekly snapshot
-
-## Adding a Workflow
-
-1. Add an entry to `agentz/workflows/registry.yaml`
-2. Create handler `agentz/workflows/handlers/<your_id>.py` exposing `def run(ctx) -> str`
-3. Wrap every side effect in `ctx.step("description", action=lambda: ...)` so all three modes work
-4. If new credentials are needed, add the env-var mapping to `agentz/core/credentials.py`
-
-## Architecture
-
-```
-agentz/
-├── cli.py                          ← entry point
-├── core/
-│   ├── runner.py                   ← registry loader, dep resolver, dispatcher
-│   ├── modes.py                    ← dry-run / confirm / auto wrappers
-│   └── credentials.py              ← .env-backed cred resolver
-├── workflows/
-│   ├── registry.yaml               ← all workflow declarations
-│   └── handlers/                   ← one .py per workflow id
-└── logs/
-    └── runs.jsonl                  ← append-only audit log
-```
-
-## Integration with Existing AgentZ
-
-Browser-type handlers (`vercel_fix_preset`, `linkedin_outreach`, `gsc_setup`,
-`reddit_post`, `polygon_grants`) instantiate `browser_use.Agent` with your
-existing `langchain_ollama.ChatOllama(model="llama3.2")` setup. No changes
-needed to your current `browser-use-qron` install — this layer sits on top.
-
-For higher-quality agent reasoning on complex flows, swap the LLM in any
-handler:
-
-```python
-from langchain_groq import ChatGroq
-llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=get("groq_api_key"))
-```
-
-## Safety Defaults
-
-- Default mode is `dry-run`. Auto-mode requires explicit `--mode auto`.
-- Workflows with `confirm_before_run: true` (LinkedIn outreach, Pinecone migration) **always** prompt regardless of mode flag.
-- Failures stop the chain unless `--continue-on-error`.
-- Credentials never logged — only env-var name on missing.
-- All runs appended to `logs/runs.jsonl` for audit / replay.
+### Copyright
+Copyright (c) 2026 AuthiChain Inc. All rights reserved. The QRON logo, AuthiChain Protocol branding, and "Living Portal" technology are trademarks of AuthiChain Inc.

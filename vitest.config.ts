@@ -14,10 +14,14 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+<<<<<<< HEAD
     include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
     setupFiles: ["server/test-setup.ts"],
     env: {
       DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/authichain_test",
     },
+=======
+    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "shared/**/*.test.ts"],
+>>>>>>> origin/add-agentz-editable
   },
 });

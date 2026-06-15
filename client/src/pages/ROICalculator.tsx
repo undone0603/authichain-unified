@@ -43,7 +43,7 @@ export default function ROICalculator() {
       toast.error("Please provide your business email for the full report.");
       return;
     }
-    calculateRoi.mutate(form);
+    calculateRoi.mutate(form as Parameters<typeof calculateRoi.mutate>[0]);
   };
 
   return (

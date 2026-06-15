@@ -2,6 +2,12 @@ import * as db from "../db";
 import { missions, missionTasks } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local?.[0] ?? ''}***@${domain}`;
+}
+
 /**
  * Scores all leads that haven't been scored yet or are due for re-scoring.
  * Called by the pipeline tick every 5 minutes.
@@ -62,7 +68,7 @@ export async function calculateLeadScore(leadId: number): Promise<number> {
 
   // Auto-trigger contract for hot leads
   if (finalScore >= 70 && !lead.contractSent) {
-    console.log(`[Sales Automation] HOT lead detected: ${lead.email}. Triggering contract...`);
+    console.log(`[Sales Automation] HOT lead detected: ${maskEmail(lead.email || '')}. Triggering contract...`);
     await triggerAutoContract(leadId);
   }
 

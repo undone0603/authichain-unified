@@ -16,8 +16,12 @@ describe('Thirdweb Service', () => {
 
   it('should build auth certificate metadata correctly', () => {
     const data = {
-      certificateNumber: '123',
       productName: 'Test Product',
+      certificateNumber: '123',
+<<<<<<< HEAD
+      productName: 'Test Product',
+=======
+>>>>>>> origin/add-agentz-editable
       authenticatorId: 1,
       confidenceScore: 0.95,
       verificationDate: '2024-01-01'

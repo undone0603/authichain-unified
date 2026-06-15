@@ -7,3 +7,21 @@ workers_dev = true
 
 [vars]
 NEXT_PUBLIC_SITE_URL = "https://authichain.com"
+<<<<<<< HEAD
+=======
+
+# Uncomment and set via wrangler secret put SUPABASE_URL etc.
+# [vars]
+# SUPABASE_URL = ""
+# SUPABASE_ANON_KEY = ""
+
+[[routes]]
+pattern = "authichain.com/api/verify*"
+zone_name = "authichain.com"
+
+[env.production]
+name = "authichain-verify-worker"
+
+[env.staging]
+name = "authichain-verify-worker-staging"
+>>>>>>> origin/add-agentz-editable

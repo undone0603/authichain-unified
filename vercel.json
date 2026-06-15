@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "framework": null,
   "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm vite build",
@@ -8,5 +9,11 @@
       "path": "/api/cron/pipeline",
       "schedule": "*/5 * * * *"
     }
+=======
+  "version": 2,
+  "framework": "nextjs",
+  "crons": [
+    { "path": "/api/automation/cron", "schedule": "0 6 * * *" }
+>>>>>>> origin/add-agentz-editable
   ]
 }

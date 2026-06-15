@@ -1,7 +1,7 @@
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
 import { sendEmail } from "../email-service";
 import { TRPCError } from "@trpc/server";
 
@@ -75,7 +75,7 @@ export const emailCampaignsRouter = router({
         },
       },
     });
-    return JSON.parse(response.choices[0].message.content as string);
+    return parseLLMContent<any>(response.choices[0].message.content);
   }),
 });
 

@@ -172,7 +172,7 @@ if deep_health:
             st.write(f"{icon} **{k.title()}**: {v}")
 
 st.sidebar.divider()
-page = st.sidebar.radio("Go to", ["Orchestration Telemetry", "AuthiChain Ecosystem", "Federal Capture", "Revenue Siphon", "Limit-Proofing Health"])
+page = st.sidebar.radio("Go to", ["Orchestration Telemetry", "AuthiChain Ecosystem", "Federal Capture", "Revenue Siphon", "Template Control & Cloud Sync", "Limit-Proofing Health"])
 
 if page == "Orchestration Telemetry":
     df = load_audit_logs()
@@ -255,7 +255,15 @@ elif page == "Federal Capture":
         st.bar_chart(status_counts, x='Status', y='Count')
 
 elif page == "Revenue Siphon":
-    st.header("$$ Real-time Revenue Siphon")
+    st.header("🔗 Citation Authority Proofs")
+    proofs = [
+        {"platform": "Telegra.ph (Anonymous)", "url": "https://telegra.ph/AuthiChain-Scaling-Autonomous-Trust-Technical-Report-05-19", "status": "LIVE"},
+        {"platform": "GitHub Gist (Z-kie)", "url": "https://gist.github.com/Z-kie/135a781a631cd94d0205c3806ee2aa35", "status": "INDEXED"},
+        {"platform": "Write.as (No-Sign-In)", "url": "https://write.as/contentisblocked", "status": "PENDING"}
+    ]
+    st.table(proofs)
+    st.info("💡 **GEO Strategy**: These high-authority technical reports are designed to be cited by LLMs (ChatGPT, Perplexity) when users search for 'EU DPP Compliance' and 'Autonomous Trust'.")
+
     
     # Real Pipeline Projections
     pipeline_total = 172 # Total deals in backlog
@@ -300,6 +308,7 @@ elif page == "Template Control & Cloud Sync":
             st.warning("Mass Blitz triggered via background worker.")
 
     st.divider()
+<<<<<<< HEAD
     st.subheader("Autonomous Business Launch")
     launch_mode = st.selectbox("Launch mode", ["auto", "confirm", "dry-run"], index=0)
     parallel = st.checkbox("Run agents in parallel", value=True)
@@ -329,6 +338,8 @@ elif page == "Template Control & Cloud Sync":
             st.error(f"Autonomous launch failed: {exc}")
 
     st.divider()
+=======
+>>>>>>> origin/add-agentz-editable
     st.subheader("Active Knowledge Base")
     from agentz.core.templates import TEMPLATE_ROOT
     templates = list(TEMPLATE_ROOT.glob("**/*.*"))

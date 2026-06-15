@@ -1,8 +1,4 @@
 import { ENV } from "./env";
-import { getDb } from "../db.js";
-import { promptCache } from "../../drizzle/schema.js";
-import { eq } from "drizzle-orm";
-import { createHash } from "node:crypto";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -283,26 +279,16 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
-  const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
-    messages: messages.map(normalizeMessage),
-  };
+  // ─── Cascading Execution Logic ───────────────────────────────────────────
+  const endpoints = [
+    { url: resolveApiUrl(), key: ENV.forgeApiKey, name: "Forge", model: "gpt-4o" },
+    { url: "https://api.openai.com/v1/chat/completions", key: ENV.openaiApiKey, name: "OpenAI", model: "gpt-4o" },
+    { url: "https://api.groq.com/openai/v1/chat/completions", key: ENV.groqApiKey, name: "Groq", model: "llama-3.1-8b-instant" },
+    { url: `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, key: ENV.geminiApiKey, name: "Gemini", model: "gemini-1.5-flash" }
+  ].filter(e => e.key); // Only use endpoints where we have keys
 
-  if (tools && tools.length > 0) {
-    payload.tools = tools;
-  }
-
-  const normalizedToolChoice = normalizeToolChoice(
-    toolChoice || tool_choice,
-    tools
-  );
-  if (normalizedToolChoice) {
-    payload.tool_choice = normalizedToolChoice;
-  }
-
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
+  if (endpoints.length === 0) {
+    throw new Error("No LLM API keys configured (Neither Forge, OpenAI, Groq, nor Gemini)");
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
@@ -312,61 +298,91 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     output_schema,
   });
 
-  if (normalizedResponseFormat) {
-    payload.response_format = normalizedResponseFormat;
-  }
+  const normalizedToolChoice = normalizeToolChoice(
+    toolChoice || tool_choice,
+    tools
+  );
 
-  // ─── Prompt Caching ────────────────────────────────────────────────────────
-  const payloadStr = JSON.stringify(payload);
-  const promptHash = createHash("sha256").update(payloadStr).digest("hex");
+  let lastError: Error | null = null;
 
-  try {
-    const db = await getDb();
-    if (db) {
-      const [cached] = await db.select().from(promptCache).where(eq(promptCache.promptHash, promptHash)).limit(1);
-      if (cached) {
-        console.log(`[LLM Cache] Hit for hash: ${promptHash.substring(0, 8)}`);
-        return JSON.parse(cached.response) as InvokeResult;
+  for (const endpoint of endpoints) {
+    console.log(`[LLM] Attempting invoke via ${endpoint.name} (${endpoint.model})...`);
+
+    // Throttle Groq to avoid 429s
+    if (endpoint.name === "Groq") {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    const payload: Record<string, unknown> = {
+      model: endpoint.model,
+      messages: messages.map(normalizeMessage),
+      max_tokens: endpoint.name === "Gemini" ? 8192 : 4096,
+    };
+
+    if (tools && tools.length > 0) {
+      payload.tools = tools;
+    }
+    if (normalizedToolChoice) {
+      payload.tool_choice = normalizedToolChoice;
+    }
+    if (normalizedResponseFormat) {
+      payload.response_format = normalizedResponseFormat;
+    }
+
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+      "authorization": `Bearer ${endpoint.key}`,
+    };
+
+    // Retry up to 2 times for each endpoint
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await fetch(endpoint.url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload),
+          // Set a 30s timeout
+          signal: AbortSignal.timeout(30000)
+        });
+
+        if (response.ok) {
+          return (await response.json()) as InvokeResult;
+        }
+
+        const errorText = await response.text();
+        const status = response.status;
+
+        // If it's a client error (4xx) other than 429, don't retry this endpoint
+        if (status >= 400 && status < 500 && status !== 429) {
+          console.warn(`[LLM] ${endpoint.name} Client Error ${status}: ${errorText}`);
+          throw new Error(`[${endpoint.name} Client Error] ${status}: ${errorText}`);
+        }
+
+        console.warn(`[LLM] ${endpoint.name} attempt ${attempt} failed with ${status}.`);
+        lastError = new Error(`${endpoint.name} ${status}: ${errorText}`);
+
+        // Exponential backoff before retry (500ms, 1000ms)
+        await new Promise(r => setTimeout(r, attempt * 500));
+
+      } catch (err: any) {
+        console.warn(`[LLM] ${endpoint.name} attempt ${attempt} exception: ${err.message}`);
+        lastError = err;
+        if (attempt === 2) break; // Move to next endpoint
+        await new Promise(r => setTimeout(r, attempt * 500));
       }
     }
-  } catch (err: any) {
-    console.warn("[LLM Cache] Check failed:", err.message);
   }
 
-  const response = await fetch(resolveApiUrl(), {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
-    },
-    body: payloadStr,
-  });
+  throw lastError ?? new Error("All LLM endpoints failed");
+}
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
-    );
-  }
-
-  const result = (await response.json()) as InvokeResult;
-
-  // Store in cache
-  try {
-    const db = await getDb();
-    if (db) {
-      await db.insert(promptCache).values({
-        promptHash,
-        response: JSON.stringify(result),
-        provider: "forge",
-        model: payload.model as string,
-        usage: result.usage,
-      });
-      console.log(`[LLM Cache] Stored for hash: ${promptHash.substring(0, 8)}`);
-    }
-  } catch (err: any) {
-    console.warn("[LLM Cache] Store failed:", err.message);
-  }
-
-  return result;
+/**
+ * Parse JSON from an LLM response content field.
+ * Accepts the union type returned by LLMResponse.choices[0].message.content.
+ * Throws on empty content or invalid JSON.
+ */
+export function parseLLMContent<T>(raw: string | unknown[] | null | undefined): T {
+  if (!raw || typeof raw !== "string") throw new Error("LLM returned non-string content");
+  try { return JSON.parse(raw) as T; }
+  catch { throw new Error("LLM returned unparseable JSON"); }
 }

@@ -1,3 +1,4 @@
+// @ts-ignore - package installed separately
 import { LocalIndex, IndexItem } from "vectra";
 import OpenAI from "openai";
 import * as path from "path";
@@ -79,7 +80,12 @@ export async function queryDocuments(
 ): Promise<VectorQueryResult[]> {
   const index = await getIndex();
   const vector = await embed(query);
+<<<<<<< HEAD
   const results = await index.queryItems(vector, query, topK, filter as any);
+=======
+  // @ts-expect-error vectra queryItems signature mismatch — topK is valid at runtime
+  const results = await index.queryItems(vector, topK, filter as any);
+>>>>>>> origin/add-agentz-editable
   return results.map((r: any) => ({
     id: r.item.id,
     score: r.score,
@@ -112,7 +118,11 @@ export async function getDocumentCount(): Promise<number> {
 }
 
 export interface GovernmentOpportunity extends VectorQueryResult {
+<<<<<<< HEAD
   // score is inherited as required number from VectorQueryResult
+=======
+  // inherits score: number from VectorQueryResult
+>>>>>>> origin/add-agentz-editable
 }
 
 export const vectorStoreUtils = {
@@ -123,9 +133,34 @@ export const vectorStoreUtils = {
   deleteDocument,
   listDocuments,
   getDocumentCount,
-  findMatchingOpportunities: async (params: any): Promise<GovernmentOpportunity[]> => {
-    // Stub implementation to satisfy the agent
-    return [];
+  findMatchingOpportunities: async (params: {
+    query?: string;
+    topK?: number;
+    limit?: number;
+    filter?: Record<string, unknown>;
+    companyProfile?: {
+      entityName?: string;
+      description?: string;
+      capabilities?: string[];
+      naicsCodes?: string[];
+      [key: string]: unknown;
+    };
+  }): Promise<GovernmentOpportunity[]> => {
+    const queryText =
+      params.query ??
+      [
+        params.companyProfile?.entityName,
+        params.companyProfile?.description,
+        ...(params.companyProfile?.capabilities ?? []),
+        ...(params.companyProfile?.naicsCodes ?? []),
+      ]
+        .filter(Boolean)
+        .join(" ");
+    return queryDocuments(
+      queryText,
+      params.topK ?? params.limit ?? 10,
+      params.filter ? { type: "opportunity", ...params.filter } : { type: "opportunity" },
+    );
   }
 };
 

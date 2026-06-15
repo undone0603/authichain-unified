@@ -25,9 +25,27 @@ export const metadata: Metadata = {
  */
 export default async function MarketplacePage() {
   const supabase = await createClient();
+<<<<<<< HEAD
   
   // 1. Fetch High-Value SVG Artifacts (Industrial & Premium)
   // These are assets stored in Supabase with .svg extensions or marked as premium
+=======
+
+  // Current user — for personal generations section
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // 0. Fetch this user's recent generations from qron_generations
+  const { data: myGenerations } = user
+    ? await supabase
+        .from('qron_generations')
+        .select('id, image_url, destination_url, prompt, mode, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(12)
+    : { data: null };
+
+  // 1. Fetch High-Value SVG Artifacts (Industrial & Premium)
+>>>>>>> origin/add-agentz-editable
   const { data: artifacts } = await supabase
     .from('qrons')
     .select('*')
@@ -73,7 +91,10 @@ export default async function MarketplacePage() {
                 </div>
             </div>
             <nav className="hidden md:flex items-center gap-8">
+<<<<<<< HEAD
                 <Link href="/industries" className="text-[10px] font-black uppercase tracking-widest text-gold hover:text-white transition-colors underline underline-offset-4 decoration-gold/50">Industry Showcase</Link>
+=======
+>>>>>>> origin/add-agentz-editable
                 <Link href="/explorers" className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-gold transition-colors">Network Status</Link>
                 <Link href="/governance" className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-gold transition-colors">DAO Registry</Link>
                 <div className="p-2 px-4 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
@@ -98,6 +119,40 @@ export default async function MarketplacePage() {
           </p>
         </div>
 
+<<<<<<< HEAD
+=======
+        {/* My QRONs — personal studio generations */}
+        {myGenerations && myGenerations.length > 0 && (
+          <section className="mb-20 pb-16 border-b border-zinc-900">
+            <div className="flex items-center gap-3 mb-8">
+              <Sparkles className="w-5 h-5 text-gold" />
+              <h2 className="text-xl font-black uppercase tracking-tight italic">My QRONs</h2>
+              <Link href="/studio" className="ml-auto text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-gold transition-colors">
+                + Create New
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {myGenerations.map((g) => (
+                <div key={g.id} className="protocol-card aspect-square overflow-hidden group cursor-pointer border-zinc-900/50 relative">
+                  <Image
+                    src={g.image_url.startsWith('generated:') ? '/placeholder-qron.png' : g.image_url}
+                    alt={g.prompt || 'My QRON'}
+                    width={200}
+                    height={200}
+                    className="object-cover transition-transform duration-500 group-hover:scale-110 w-full h-full"
+                  />
+                  {g.prompt && (
+                    <div className="absolute inset-x-0 bottom-0 bg-black/80 p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                      <p className="text-[9px] text-zinc-400 line-clamp-2">{g.prompt}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+>>>>>>> origin/add-agentz-editable
         {/* Featured Drop: Voyage Bloom x Myles High */}
         <section className="mb-32">
           <div className="flex items-center justify-between mb-12">

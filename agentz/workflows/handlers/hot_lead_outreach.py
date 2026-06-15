@@ -84,8 +84,11 @@ def run(ctx: ExecutionContext) -> str:
             twitter_session = get("twitter_session", required=False)
             if twitter_session:
                 ctx.step(f"Dispatch DM to {contact_name} at {name} via browser-automation...")
+                # In real implement: asyncio.run(post_dm(name, message))
             else:
-                ctx.step(f"Twitter session missing. Outreach for {name} logged as PENDING manual task.")
+                ctx.step(f"Twitter session missing. Outreach for {name} QUEUED in PENDING_DMS.")
+                from agentz.core.outreach import add_pending_dm
+                add_pending_dm(name, message, site_url)
             
             activated += 1
         except Exception as e:

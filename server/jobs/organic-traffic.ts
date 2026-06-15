@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
 import { logActivity } from "../db";
 
 type OrganicContentPlanItem = {
@@ -122,7 +122,7 @@ async function buildLlmPlan(): Promise<OrganicContentPlanItem[]> {
     },
   });
 
-  const parsed = JSON.parse(response.choices[0]?.message?.content as string);
+  const parsed = parseLLMContent<any>(response.choices[0]?.message?.content);
   const items = Array.isArray(parsed?.items) ? parsed.items : [];
   return items.map((item: any) => ({
     segment: String(item.segment || "unknown"),

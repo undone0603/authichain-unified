@@ -1,5 +1,7 @@
 import "dotenv/config";
-import { sendEmail } from "../email-service.js";
+import { sendEmail } from "../email-service";
+
+const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?.[0] ?? ''}***@${d}` : '***'; };
 
 async function pushEnterpriseOutreach() {
   const leads = [
@@ -27,7 +29,7 @@ async function pushEnterpriseOutreach() {
     const subject = `${lead.company} / AuthiChain: Automated ${lead.industry === "MEDTECH" ? "ISO 13485" : "DSCSA"} Compliance`;
     const body = `Hi ${lead.name},\n\n${lead.narrative}\n\nI’ve generated a preliminary ROI analysis for ${lead.company} showing significant Year 1 savings—you can view the breakdown here: authichain.com/roi-calculator\n\nBest regards,\nZ\nAuthiChain Protocol`;
 
-    console.log(`\n📤 Pushing to: ${lead.email}`);
+    console.log(`\n📤 Pushing to: ${maskEmail(lead.email)}`);
     const result = await sendEmail({ to: lead.email, subject, body });
 
     if (result.status === "sent") {

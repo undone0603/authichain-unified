@@ -1,9 +1,17 @@
+<<<<<<< HEAD
 import { invokeLLM } from '../_core/llm.js';
 import { logActivity, markTaskWaitingHuman } from '../db.js';
 import { postThread } from '../twitter-service.js';
 import { postLinkedInThread } from '../linkedin-service.js';
 import { ENV } from '../_core/env.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
+=======
+import { invokeLLM, parseLLMContent } from '../_core/llm';
+import { logActivity } from '../db';
+import { postThread } from '../twitter-service';
+import { postLinkedInThread } from '../linkedin-service';
+import type { MissionTask as Task } from '../../drizzle/schema';
+>>>>>>> origin/add-agentz-editable
 
 interface ContentPayload {
   audience?: string;
@@ -33,12 +41,7 @@ Return JSON: { "title": "...", "categories": [{ "name": "...", "items": [{ "task
     responseFormat: { type: 'json_object' },
   });
 
-  let checklist: unknown;
-  try {
-    checklist = JSON.parse(result.choices[0].message.content as string ?? '{}');
-  } catch {
-    throw new Error('Launch checklist LLM returned unparseable JSON');
-  }
+  const checklist = parseLLMContent<unknown>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'launch_checklist_generated', entityType: 'task', entityId: 0, details: { taskId: task.id,
     scope,
@@ -69,12 +72,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
     responseFormat: { type: 'json_object' },
   });
 
-  let email: { subject: string; body: string };
-  try {
-    email = JSON.parse(result.choices[0].message.content as string ?? '{}');
-  } catch {
-    throw new Error('Launch email LLM returned unparseable JSON');
-  }
+  const email = parseLLMContent<{ subject: string; body: string }>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'launch_email_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
     audience,
@@ -105,12 +103,7 @@ Return JSON: { "headline": "...", "subheadline": "...", "body": "...", "quote": 
     responseFormat: { type: 'json_object' },
   });
 
-  let pr: unknown;
-  try {
-    pr = JSON.parse(result.choices[0].message.content as string ?? '{}');
-  } catch {
-    throw new Error('Press release LLM returned unparseable JSON');
-  }
+  const pr = parseLLMContent<unknown>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'press_release_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
     missionId: task.missionId,
@@ -140,12 +133,7 @@ Return JSON: { "platforms": { "<platform>": [{ "day": 0, "copy": "...", "hashtag
     responseFormat: { type: 'json_object' },
   });
 
-  let calendar: { platforms?: Record<string, { day: number; copy: string; hashtags: string[] }[]> };
-  try {
-    calendar = JSON.parse(result.choices[0].message.content as string ?? '{}');
-  } catch {
-    throw new Error('Social posts LLM returned unparseable JSON');
-  }
+  const calendar = parseLLMContent<{ platforms?: Record<string, { day: number; copy: string; hashtags: string[] }[]> }>(result.choices[0].message.content);
 
   // ─── Approval gate ──────────────────────────────────────────────────────
   // Social posts publish to live accounts (Twitter, LinkedIn) — when the

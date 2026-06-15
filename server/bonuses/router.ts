@@ -14,9 +14,11 @@ export const bonusesRouter = router({
       .limit(1);
     if (!bonus) throw new Error("Bonus not found");
     if (bonus.status !== "pending") throw new Error("Bonus already claimed or delivered");
-    await db.update(bonuses)
+    const claimed = await db.update(bonuses)
       .set({ status: "claimed", claimedAt: new Date() })
-      .where(eq(bonuses.id, input.bonusId));
+      .where(and(eq(bonuses.id, input.bonusId), eq(bonuses.status, "pending")))
+      .returning({ id: bonuses.id });
+    if (claimed.length === 0) throw new Error("Bonus already claimed or delivered");
     return { success: true };
   }),
   createUserBonuses: adminProcedure.input(z.object({
@@ -35,7 +37,12 @@ export const bonusesRouter = router({
       tier: input.tier as any,
       status: "pending",
       deliveryMethod: input.deliveryMethod,
+<<<<<<< HEAD
     }).returning({ id: bonuses.id });
     return { id: row!.id };
+=======
+    }).returning();
+    return { id: row.id };
+>>>>>>> origin/add-agentz-editable
   }),
 });

@@ -26,6 +26,15 @@ export function getThirdwebClient() {
   return _client;
 }
 
+export async function getConnectionStatus() {
+  try {
+    const client = getThirdwebClient();
+    return { connected: !!client, clientId: ENV.thirdwebClientId };
+  } catch {
+    return { connected: false, clientId: "" };
+  }
+}
+
 // ─── Chain Configuration ────────────────────────────────────────────────────
 
 // Using Polygon for low-cost NFT minting (production)

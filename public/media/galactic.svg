@@ -1,0 +1,18 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="galaxy" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#ffffff">
+        <animate attributeName="stop-color" values="#ffffff;#88c7ff;#ffffff" dur="5s" repeatCount="indefinite" />
+      </stop>
+      <stop offset="100%" stop-color="#000033">
+        <animate attributeName="stop-color" values="#000033;#330066;#000033" dur="7s" repeatCount="indefinite" />
+      </stop>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#galaxy)">
+    <animateTransform attributeName="transform" type="rotate" from="0 100 100" to="360 100 100" dur="20s" repeatCount="indefinite" />
+  </rect>
+  <circle cx="100" cy="100" r="2" fill="#ffffff">
+    <animateTransform attributeName="transform" type="scale" values="1;1.5;1" dur="3s" repeatCount="indefinite"/>
+  </circle>
+</svg>

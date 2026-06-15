@@ -32,9 +32,13 @@ vi.mock("./db", async (importOriginal) => {
       values: (data: any) => {
         const id = store.nextId();
         store.bonuses.push({ ...data, id });
+<<<<<<< HEAD
         return {
           returning: (_shape?: any) => [{ id }],
         };
+=======
+        return { returning: () => [{ id }] };
+>>>>>>> origin/add-agentz-editable
       },
       onConflictDoNothing: () => ({ returning: (_shape?: any) => [] }),
     }),
@@ -56,7 +60,7 @@ vi.mock("./db", async (importOriginal) => {
     getPendingDrafts: vi.fn(async () => []),
     createEmailDraft: vi.fn(async () => ({ id: store.nextId() })),
     updateDraftStatus: vi.fn(async () => undefined),
-    // subscription helpers used by paddle checkout
+    // subscription helpers
     getUserSubscription: vi.fn(async () => null),
   };
 });
@@ -118,11 +122,17 @@ type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1, openId: "test-user-001", email: "test@authichain.com",
+<<<<<<< HEAD
     name: "Test User", loginMethod: "manus", role, walletAddress: null,
     avatarUrl: null, company: null, title: null, phone: null,
     onboardingCompleted: 0, stripeCustomerId: null, paddleCustomerId: null,
     points: 0, metadata: null, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
   };
+=======
+    name: "Test User", loginMethod: "manus", role, stripeCustomerId: null,
+    createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+  } as any;
+>>>>>>> origin/add-agentz-editable
   return {
     user,
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
@@ -411,7 +421,7 @@ describe("New Features", () => {
 
     describe("authenticated operations", () => {
       it("emailDrafts.listPending returns array", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).emailDrafts.listPending();
+        const result = await appRouter.createCaller(createAuthContext("admin")).emailDrafts.listPending();
         expect(Array.isArray(result)).toBe(true);
       });
 
@@ -427,19 +437,19 @@ describe("New Features", () => {
       });
 
       it("emailDrafts.reject returns success", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).emailDrafts.reject({ id: 1, notes: "Off-topic" });
+        const result = await appRouter.createCaller(createAuthContext("admin")).emailDrafts.reject({ id: 1, notes: "Off-topic" });
         expect(result).toEqual({ success: true });
       });
 
       it("emailDrafts.bulkApprove returns count matching input ids", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).emailDrafts.bulkApprove({ ids: [10, 11, 12] });
+        const result = await appRouter.createCaller(createAuthContext("admin")).emailDrafts.bulkApprove({ ids: [10, 11, 12] });
         expect(result.success).toBe(true);
         expect(result.count).toBe(3);
       });
 
       it("emailDrafts.approve does NOT send email when draft is not in pending list", async () => {
         // getPendingDrafts returns [] by default — draft 999 not found, no email sent
-        await appRouter.createCaller(createAuthContext()).emailDrafts.approve({ id: 999 });
+        await appRouter.createCaller(createAuthContext("admin")).emailDrafts.approve({ id: 999 });
         const { sendEmail } = await import("./email/smtp");
         expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
       });
@@ -451,9 +461,13 @@ describe("New Features", () => {
           body: "<p>Hello!</p>", prospectName: "Alice",
           prospectCompany: null, prospectTitle: null, industry: null,
           status: "pending", templateUsed: null, generatedBy: "ai_manager",
+<<<<<<< HEAD
           taskId: null, approvedBy: null, approvedAt: null, sentAt: null, notes: null, createdAt: new Date(),
+=======
+          approvedBy: null, approvedAt: null, sentAt: null, notes: null, taskId: null, createdAt: new Date(),
+>>>>>>> origin/add-agentz-editable
         }]);
-        await appRouter.createCaller(createAuthContext()).emailDrafts.approve({ id: 42 });
+        await appRouter.createCaller(createAuthContext("admin")).emailDrafts.approve({ id: 42 });
         const { sendEmail } = await import("./email/smtp");
         expect(vi.mocked(sendEmail)).toHaveBeenCalledOnce();
         expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(expect.objectContaining({
@@ -461,22 +475,6 @@ describe("New Features", () => {
           subject: "Our Partnership",
         }));
       });
-    });
-  });
-
-  // ── Paddle checkout ─────────────────────────────────────────────────────────
-  describe("subscription.createPaddleCheckout", () => {
-    it("requires auth", async () => {
-      await expect(appRouter.createCaller(createPublicContext()).subscription.createPaddleCheckout({
-        plan: "starter", successUrl: "https://app.authichain.com/success",
-      })).rejects.toThrow();
-    });
-
-    it("throws BAD_REQUEST when Paddle price env var not set", async () => {
-      // Paddle price env vars are not configured in test env
-      await expect(appRouter.createCaller(createAuthContext()).subscription.createPaddleCheckout({
-        plan: "starter", billing: "monthly", successUrl: "https://app.authichain.com/success",
-      })).rejects.toMatchObject({ code: "BAD_REQUEST" });
     });
   });
 

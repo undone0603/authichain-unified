@@ -17,6 +17,7 @@ vi.mock('./jobs/retention.js',         () => ({ runRetentionAutomation:         
 vi.mock('./jobs/weekly-digest.js',     () => ({ runWeeklyDigestDispatch:        vi.fn().mockResolvedValue({ executed: true }) }));
 vi.mock('./jobs/quarterly-value.js',   () => ({ runQuarterlyValueReportDispatch: vi.fn().mockResolvedValue({ executed: true }) }));
 vi.mock('./jobs/organic-traffic.js',   () => ({ runOrganicTrafficAutomation:    vi.fn().mockResolvedValue({ executed: true }) }));
+vi.mock('./jobs/browser-jobs.js',      () => ({ runBrowserAgentJobs:            vi.fn().mockResolvedValue({ competitorsChecked: 0, newsKeywordsScanned: 0, skipped: 0 }) }));
 vi.mock('./jobs/task-runner.js',       () => ({ runTask:                        vi.fn().mockResolvedValue({ ok: true }) }));
 
 // Drizzle-style chainable stub: every chain method returns the same object;
@@ -122,8 +123,13 @@ describe('runPipelineTick', () => {
     const { runTask } = await import('./jobs/task-runner.js');
 
     vi.mocked(getDueTasks).mockResolvedValueOnce([
+<<<<<<< HEAD
       { id: 't1', kind: 'FIND_GOV_LEADS',      missionId: 'm1', title: 't1', description: 'd1', payload: {}, status: 'PENDING', error: null, order: 0, priority: 0, result: null, scheduledAt: null, createdAt: new Date(), updatedAt: new Date() },
       { id: 't2', kind: 'DRAFT_PRESS_RELEASE', missionId: 'm1', title: 't2', description: 'd2', payload: {}, status: 'PENDING', error: null, order: 0, priority: 0, result: null, scheduledAt: null, createdAt: new Date(), updatedAt: new Date() },
+=======
+      { id: 't1', kind: 'FIND_GOV_LEADS',      missionId: 'm1', title: 't1', description: 'd1', payload: {}, status: 'PENDING', error: null, result: null, priority: 0, scheduledAt: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
+      { id: 't2', kind: 'DRAFT_PRESS_RELEASE', missionId: 'm1', title: 't2', description: 'd2', payload: {}, status: 'PENDING', error: null, result: null, priority: 0, scheduledAt: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
+>>>>>>> origin/add-agentz-editable
     ]);
 
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
@@ -140,8 +146,13 @@ describe('runPipelineTick', () => {
     const { runTask } = await import('./jobs/task-runner.js');
 
     vi.mocked(getDueTasks).mockResolvedValueOnce([
+<<<<<<< HEAD
       { id: 't1', kind: 'FIND_GOV_LEADS', missionId: 'm1', title: 't1', description: 'd1', payload: {}, status: 'PENDING', error: null, order: 0, priority: 0, result: null, scheduledAt: null, createdAt: new Date(), updatedAt: new Date() },
       { id: 't2', kind: 'CRM_UPDATE',     missionId: 'm1', title: 't2', description: 'd2', payload: {}, status: 'PENDING', error: null, order: 0, priority: 0, result: null, scheduledAt: null, createdAt: new Date(), updatedAt: new Date() },
+=======
+      { id: 't1', kind: 'FIND_GOV_LEADS', missionId: 'm1', title: 't1', description: 'd1', payload: {}, status: 'PENDING', error: null, result: null, priority: 0, scheduledAt: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
+      { id: 't2', kind: 'CRM_UPDATE',     missionId: 'm1', title: 't2', description: 'd2', payload: {}, status: 'PENDING', error: null, result: null, priority: 0, scheduledAt: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
+>>>>>>> origin/add-agentz-editable
     ]);
 
     vi.mocked(runTask)
@@ -171,7 +182,11 @@ describe('runPipelineTick', () => {
 
     // Task kind not in kindToSegment map — falls back to DEFAULT prior
     vi.mocked(getDueTasks).mockResolvedValueOnce([
+<<<<<<< HEAD
       { id: 't1', kind: 'UNKNOWN_FUTURE_KIND', missionId: 'm1', title: 't1', description: 'd1', payload: {}, status: 'PENDING', error: null, order: 0, priority: 0, result: null, scheduledAt: null, createdAt: new Date(), updatedAt: new Date() },
+=======
+      { id: 't1', kind: 'UNKNOWN_FUTURE_KIND', missionId: 'm1', title: 't1', description: 'd1', payload: {}, status: 'PENDING', error: null, result: null, priority: 0, scheduledAt: null, order: 0, createdAt: new Date(), updatedAt: new Date() },
+>>>>>>> origin/add-agentz-editable
     ]);
 
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
