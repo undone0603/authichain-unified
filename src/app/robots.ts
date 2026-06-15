@@ -1,29 +1,27 @@
 import { headers } from 'next/headers';
 import type { MetadataRoute } from 'next';
-
-const BRAND_BASE: Record<string, string> = {
-  'qron.space':         'https://qron.space',
-  'www.qron.space':     'https://qron.space',
-  'qron.io':            'https://qron.space',
-  'authichain.com':     'https://authichain.com',
-  'www.authichain.com': 'https://authichain.com',
-  'strainchain.io':     'https://strainchain.io',
-  'www.strainchain.io': 'https://strainchain.io',
-  'govchain.us':        'https://govchain.us',
-  'www.govchain.us':    'https://govchain.us',
-};
+import { BRAND_BASE, PRIMARY_DOMAIN } from '@/lib/brand-domains';
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const headersList = await headers();
   const host = (headersList.get('host') ?? '').toLowerCase().split(':')[0];
-  const base = BRAND_BASE[host] ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://qron.space';
+  const base =
+    BRAND_BASE[host] ?? process.env.NEXT_PUBLIC_APP_URL ?? PRIMARY_DOMAIN;
 
   return {
     rules: [
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/admin', '/dashboard', '/login', '/sandbox', '/success', '/verify'],
+        disallow: [
+          '/api/',
+          '/admin',
+          '/dashboard',
+          '/login',
+          '/sandbox',
+          '/success',
+          '/verify',
+        ],
       },
     ],
     sitemap: `${base}/sitemap.xml`,
