@@ -279,8 +279,6 @@ elif page == "Revenue Siphon":
     
     st.info("💡 **Revenue Blitz Tip**: 100 lead-microsites are currently live. Transitioning to 'Auto-Closer' loop will issue 5 DocuSign agreements this week.")
 
-<<<<<<< HEAD
-=======
 elif page == "Template Control & Cloud Sync":
     st.header("🛠️ Template-First Engine Control")
     
@@ -349,7 +347,6 @@ elif page == "Template Control & Cloud Sync":
         res = fill_template(test_tpl, test_ctx)
         st.code(res)
 
->>>>>>> 79c336f (Fix QRON dashboard routing and strengthen authichain bridge QRON escrow handling)
 elif page == "Limit-Proofing Health":
     st.header("🛡️ Limit-Proofing: Provider Health")
     health = check_provider_health()
