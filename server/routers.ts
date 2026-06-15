@@ -38,6 +38,13 @@ import { autonomousRouter } from "./autonomous/router";
 import { payoutsRouter } from "./payouts/router";
 import { qronRouter } from "./qron/router";
 import { founderRouter } from "./founder/router";
+import { metrcRouter } from "./routers/metrc";
+import { analyticsRouter } from "./analytics/router";
+import { feedbackRouter } from "./feedback/router";
+import { personalizationRouter } from "./personalization/router";
+import { devTeamRouter } from "./agents/dev-team/router";
+import { pipelineRouter } from "./routers/pipeline";
+import { outcomesRouter } from "./routers/outcomes";
 
 export const appRouter = router({
   system: systemRouter,
@@ -80,6 +87,17 @@ export const appRouter = router({
   payouts: payoutsRouter,
   qron: qronRouter,
   founder: founderRouter,
+  // Restored: these routers were only mounted in the dead server/routers/index.ts
+  // duplicate, leaving them unreachable from the live API.
+  metrc: metrcRouter,
+  analytics: analyticsRouter,
+  feedback: feedbackRouter,
+  personalization: personalizationRouter,
+  // Restored: orphaned routers that the BuildLoop / Missions pages reach for
+  // via `(trpc as any)` because they were never mounted on the live API.
+  devTeam: devTeamRouter,
+  pipeline: pipelineRouter,
+  outcomes: outcomesRouter,
 });
 
 export type AppRouter = typeof appRouter;
