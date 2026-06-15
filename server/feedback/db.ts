@@ -9,8 +9,13 @@ export async function createFeedback(data: InsertFeedback) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+<<<<<<< HEAD
   const [row] = await db.insert(feedback).values(data).returning({ id: feedback.id });
   return row!.id;
+=======
+  const [result] = await db.insert(feedback).values(data).returning();
+  return result.id;
+>>>>>>> origin/add-agentz-editable
 }
 
 /**
@@ -25,7 +30,6 @@ export async function getAllFeedback() {
       id: feedback.id,
       userId: feedback.userId,
       userName: users.name,
-      userEmail: users.email,
       type: feedback.type,
       title: feedback.title,
       description: feedback.description,
@@ -38,7 +42,8 @@ export async function getAllFeedback() {
     })
     .from(feedback)
     .leftJoin(users, eq(feedback.userId, users.id))
-    .orderBy(desc(feedback.votes), desc(feedback.createdAt));
+    .orderBy(desc(feedback.votes), desc(feedback.createdAt))
+    .limit(500);
 
   return results;
 }
@@ -55,7 +60,6 @@ export async function getFeedbackById(id: number) {
       id: feedback.id,
       userId: feedback.userId,
       userName: users.name,
-      userEmail: users.email,
       type: feedback.type,
       title: feedback.title,
       description: feedback.description,

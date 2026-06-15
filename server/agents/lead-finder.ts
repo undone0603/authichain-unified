@@ -1,10 +1,10 @@
-import { invokeLLM } from '../_core/llm.js';
-import { logActivity, enqueueTask, getAdaptivePriors, getDb } from '../db.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
-import { leads } from '../../drizzle/schema.js';
-import { SEGMENT_REVENUE, betaMean, betaCI } from '../_core/bayesian.js';
-import { apolloSearchLeads, type ApolloLead } from '../apollo-service.js';
-import { invokeLLM as _llm } from '../_core/llm.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm';
+import { logActivity, enqueueTask, getAdaptivePriors, getDb } from '../db';
+import type { MissionTask as Task } from '../../drizzle/schema';
+import { leads } from '../../drizzle/schema';
+import { SEGMENT_REVENUE, betaMean, betaCI } from '../_core/bayesian';
+import { apolloSearchLeads, type ApolloLead } from '../apollo-service';
+import { invokeLLM as _llm } from '../_core/llm';
 
 interface LeadFinderPayload {
   count?: number;
@@ -56,8 +56,7 @@ Return JSON array (same order, same indices):
       messages: [{ role: 'user', content: prompt }],
       responseFormat: { type: 'json_object' },
     });
-    const content = result.choices[0].message.content as string;
-    const parsed = JSON.parse(content ?? '[]');
+    const parsed = parseLLMContent<any>(result.choices[0].message.content);
     const scores: Array<{ index: number; fitProbability: number; fitNotes: string }> =
       Array.isArray(parsed) ? parsed : (parsed.leads ?? parsed.scores ?? []);
 
@@ -139,16 +138,21 @@ export async function runLeadFinder(task: Task): Promise<void> {
       }).onConflictDoNothing();
     }
 
+<<<<<<< HEAD
     const MOONSHOT_SEGMENTS = new Set(['ENTERTAINMENT', 'SPORTS', 'CREATOR', 'COLLECTIBLES']);
     const taskKind = MOONSHOT_SEGMENTS.has(segment) ? 'PITCH_MOONSHOT_DEAL' : 'DRAFT_OUTBOUND_EMAIL';
     await enqueueTask(task.missionId, taskKind, {
+=======
+    // Research the lead's website before drafting the email so the browser
+    // agent can inject a personalised hook into the outbound copy.
+    await enqueueTask(task.missionId, 'BROWSE_RESEARCH_LEAD', {
+>>>>>>> origin/add-agentz-editable
       segment,
-      sequence: 1,
-      leadEmail:  lead.email,
-      leadName:   lead.name,
-      leadOrg:    lead.org,
-      leadTitle:  lead.title,
-      linkedinUrl: lead.linkedinUrl,
+      leadEmail: lead.email,
+      leadName:  lead.name,
+      leadOrg:   lead.org,
+      leadTitle: lead.title,
+      domain:    lead.linkedinUrl ? undefined : undefined, // browser agent infers from org name
     });
 
     inserted++;

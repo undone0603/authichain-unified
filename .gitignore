@@ -1,8 +1,20 @@
-# Secrets — NEVER commit
+# Dependencies
+node_modules/
+/dist
+/build
+
+# Next.js
+/.next/
+/out/
+
+# Secrets & Env
 .env
-.env.local
+.env.*
+!.env.example
+!.env.template
 *.pem
 *.key
+supabase/key.txt
 
 # Python
 __pycache__/
@@ -11,105 +23,64 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+.python-version
 
-# Operational data (continuously generated)
+# Logs & Debug
 logs/
-agentz/logs/
-
-# Editor / OS noise
-.DS_Store
-.idea/
-.vscode/
-Thumbs.db
-
-# Logs
-logs
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
+agentz/logs/
+agentz/runs.jsonl
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-*.bak
+# OS & Editors
+.DS_Store
+.vscode/
+.idea/
+.claude/
+Thumbs.db
 
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# nyc test coverage
-.nyc_output
-
-# Dependency directories
-jspm_packages/
-
-# TypeScript cache
+# TypeScript
 *.tsbuildinfo
+next-env.d.ts
 
-# npm lockfile — this project uses pnpm exclusively
-package-lock.json
+# Vercel & Wrangler
+.vercel
+.wrangler/
+/worker-dist/
 
-# Optional npm cache directory
-.npm
+# Testing
+/coverage
+/.nyc_output
 
-# Optional eslint cache
-.eslintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-
-# Gatsby files
-.cache/
-
-# Storybook build outputs
-.out
-.storybook-out
-
-# Temporary folders
+# Temporary
 tmp/
 temp/
+.cache/
+.parcel-cache/
+
+# Lockfiles
+package-lock.json
+yarn.lock
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
+/drizzle/migrations
 
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
 
 # Vercel CLI link
 .vercel
+.env*.local
 
 __pycache__/
 *.py[cod]
 
+<<<<<<< HEAD
 # Node
 node_modules/
 
@@ -124,3 +95,9 @@ qron-platform/
 qron/
 govchain.us/
 maison-elite-ai-dropship/
+=======
+# Authichain specifics
+AUTHENTICITY_INDEX.md
+SIGNATURE_MANIFEST.md
+SYSTEM_STATE.md
+>>>>>>> origin/add-agentz-editable

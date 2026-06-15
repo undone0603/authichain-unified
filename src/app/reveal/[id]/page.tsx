@@ -1,5 +1,6 @@
 'use client';
 
+<<<<<<< HEAD
 import { useEffect, useState } from 'react';
 import { Shield, Sparkles } from 'lucide-react';
 import Image from 'next/image';
@@ -21,6 +22,32 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
       setProgress((prev) => {
         if (prev >= 100) {
           window.clearInterval(timer);
+=======
+import { useEffect, useState, use } from 'react';
+import { Shield, Loader2, Sparkles, ArrowRight } from 'lucide-react';
+import Image from 'next/image';
+import { startAuthentication } from '@simplewebauthn/browser';
+
+interface RevealPageProps {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ dest?: string }>;
+}
+
+export default function RevealPage({ params, searchParams }: RevealPageProps) {
+  const { id } = use(params);
+  const { dest } = use(searchParams);
+  const [progress, setProgress] = useState(0);
+  const [isReady, setIsReady] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+
+  useEffect(() => {
+    // Cinematic countdown/loading
+    const timer = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(timer);
+>>>>>>> origin/add-agentz-editable
           setIsReady(true);
           return 100;
         }
@@ -28,6 +55,7 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
       });
     }, 30);
 
+<<<<<<< HEAD
     return () => window.clearInterval(timer);
   }, []);
 
@@ -40,6 +68,43 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
       return () => window.clearTimeout(redirectTimer);
     }
   }, [isReady, dest, redirectQueued]);
+=======
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleVerify = async () => {
+    setIsVerifying(true);
+    try {
+      const challengeResp = await fetch('https://api.authichain.com/generate-challenge');
+      const options = await challengeResp.json();
+      
+      const authResp = await startAuthentication(options);
+      
+      const verifyResp = await fetch('https://api.authichain.com/verify-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authResp),
+      });
+
+      if (verifyResp.ok) {
+        setIsVerified(true);
+      }
+    } catch (err) {
+      console.error('Verification failed', err);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isReady && dest && isVerified) {
+      const redirectTimer = setTimeout(() => {
+        window.location.assign(dest);
+      }, 1500);
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [isReady, dest, isVerified]);
+>>>>>>> origin/add-agentz-editable
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center relative overflow-hidden">
@@ -85,6 +150,7 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Story Mode Status */}
         <div className="space-y-4">
           {isReady ? (
@@ -115,6 +181,40 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
             </div>
           )}
         </div>
+=======
+        {/* Action Button */}
+        {isReady && !isVerified && (
+          <button 
+            onClick={handleVerify}
+            disabled={isVerifying}
+            className="group relative w-full py-4 bg-gold text-black font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 disabled:opacity-50"
+          >
+            <div className="flex items-center justify-center gap-3">
+              {isVerifying ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Scanning...</span>
+                </>
+              ) : (
+                <>
+                  <span>Verify Authenticity</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </div>
+          </button>
+        )}
+
+        {isVerified && (
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2 text-gold font-bold">
+              <Shield className="w-5 h-5" />
+              Authenticity Anchored
+            </div>
+            <p className="text-zinc-500 text-xs">Redirecting to verified destination...</p>
+          </div>
+        )}
+>>>>>>> origin/add-agentz-editable
 
         <div className="mt-12 flex items-center gap-6 opacity-30 grayscale">
           <Image src="/media/logo-white.svg" alt="Authichain" width={80} height={20} />

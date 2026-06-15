@@ -26,12 +26,21 @@ export function generateAffiliateCode(userId: number): string {
 
 export async function createReferralCode(referrerId: number): Promise<{ id: number; referralCode: string }> {
   const code = generateReferralCode(referrerId);
+<<<<<<< HEAD
   const [row] = await db.insert(referrals).values({
     referrerId,
     referralCode: code,
     status: "pending",
   }).returning({ id: referrals.id });
   return { id: row!.id, referralCode: code };
+=======
+  const [result] = await db.insert(referrals).values({
+    referrerId,
+    referralCode: code,
+    status: "pending",
+  }).returning();
+  return { id: result.id, referralCode: code };
+>>>>>>> origin/add-agentz-editable
 }
 
 export async function trackReferralClick(params: {
@@ -50,8 +59,16 @@ export async function completeReferral(params: {
   referredEmail: string;
   tier: string;
 }): Promise<void> {
-  const rate = COMMISSION_RATES[params.tier] || COMMISSION_RATES.starter;
-  await db.update(referrals)
+  const [existing] = await db.select()
+    .from(referrals)
+    .where(eq(referrals.referralCode, params.referralCode))
+    .limit(1);
+
+  if (!existing) throw new Error("Referral code not found");
+  if (existing.status !== "pending") throw new Error("Referral code already used");
+  if (existing.referrerId === params.referredId) throw new Error("Cannot use your own referral code");
+
+  const updated = await db.update(referrals)
     .set({
       referredId: params.referredId,
       referredEmail: params.referredEmail,
@@ -59,7 +76,10 @@ export async function completeReferral(params: {
       tier: params.tier as any,
       convertedAt: new Date(),
     })
-    .where(eq(referrals.referralCode, params.referralCode));
+    .where(and(eq(referrals.referralCode, params.referralCode), eq(referrals.status, "pending")))
+    .returning({ id: referrals.id });
+
+  if (updated.length === 0) throw new Error("Referral code already used");
 }
 
 export async function getReferralStats(referrerId: number) {

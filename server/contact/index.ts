@@ -3,6 +3,10 @@ import nodemailer from 'nodemailer';
 
 const router = Router();
 
+function esc(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // POST /api/contact - Handle contact form submissions
 router.post('/', async (req: Request, res: Response) => {
   try {
@@ -15,14 +19,21 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Validate email format - Optimized to prevent ReDoS
+    const emailRegex = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid email address',
       });
     }
+
+    // Escape inputs unconditionally before use in HTML
+    const safeName = esc(name);
+    const safeEmail = esc(email);
+    const safeCompany = esc(company || 'N/A');
+    const safeMessage = esc(message);
+    const safeSubject = subject ? esc(subject) : `Contact form: ${safeName}`;
 
     // Send email via nodemailer if SMTP is configured
     const smtpHost = process.env.SMTP_HOST;
@@ -39,12 +50,12 @@ router.post('/', async (req: Request, res: Response) => {
       });
 
       await transporter.sendMail({
-        from: `"${name}" <${smtpUser}>`,
-        replyTo: email,
+        from: `"${safeName}" <${smtpUser}>`,
+        replyTo: safeEmail,
         to: toEmail,
-        subject: subject || `Contact form: ${name}`,
-        text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || 'N/A'}\n\nMessage:\n${message}`,
-        html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${company || 'N/A'}</p><p><strong>Message:</strong></p><p>${message}</p>`,
+        subject: safeSubject,
+        text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || 'N/A'}\nMessage:\n${message}`,
+        html: `<p><strong>Name:</strong> ${safeName}</p><p><strong>Email:</strong> ${safeEmail}</p><p><strong>Company:</strong> ${safeCompany}</p><p><strong>Message:</strong></p><p>${safeMessage}</p>`,
       });
     }
 

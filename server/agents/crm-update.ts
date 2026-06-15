@@ -1,8 +1,8 @@
-import { syncLeadToHubSpot, isHubSpotConfigured } from '../hubspot-service.js';
-import { logActivity, getDb } from '../db.js';
-import { leads } from '../../drizzle/schema.js';
+import { syncLeadToHubSpot, isHubSpotConfigured } from '../hubspot-service';
+import { logActivity, getDb } from '../db';
+import { leads } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import type { MissionTask as Task } from '../../drizzle/schema';
 
 interface CrmUpdatePayload {
   segment?: string;

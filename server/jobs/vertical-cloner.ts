@@ -1,6 +1,7 @@
 import { getDb } from "../db";
 import { missions, activityLog } from "../../drizzle/schema";
 import { classifyIndustry } from "../../shared/industries";
+import { eq } from "drizzle-orm";
 
 /**
  * Vertical Cloner — Autonomous Expansion Engine
@@ -20,12 +21,19 @@ export async function runVerticalCloning() {
 
   for (const target of targets) {
     const industry = classifyIndustry(target.name, target.desc);
-    
-    // Create an autonomous mission to "Lock the Vertical"
+    const title = `DEAL STAGED: ${industry.name} Protocol Activation`;
+
+    // Idempotent — skip if a mission for this vertical already exists
+    const existing = await db.select({ id: missions.id })
+      .from(missions)
+      .where(eq(missions.title, title))
+      .limit(1);
+    if (existing.length > 0) continue;
+
     await db.insert(missions).values({
       id: crypto.randomUUID(),
       type: "TECH_SPRINT",
-      title: `DEAL STAGED: ${industry.name} Protocol Activation`,
+      title,
       description: `Autonomous vertical expansion into ${industry.name} for ${target.name}`,
       status: "planned",
     });

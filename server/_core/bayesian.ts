@@ -125,6 +125,7 @@ export const SEGMENT_PRIORS: Record<string, BetaPrior> = {
 
 /** Revenue proxy per segment (USD, conservative pilot value) */
 export const SEGMENT_REVENUE: Record<string, number> = {
+<<<<<<< HEAD
   GOV:           120_000,
   RETAIL:         18_000,
   LUXURY:         45_000,
@@ -137,6 +138,16 @@ export const SEGMENT_REVENUE: Record<string, number> = {
   SPORTS:         50_000,
   CREATOR:        10_000,
   COLLECTIBLES:  100_000,
+=======
+  GOV:     120_000,
+  RETAIL:   18_000,
+  LUXURY:   45_000,
+  PHARMA:   90_000,
+  MEDTECH: 100_000,
+  TIMEPIECE: 75_000,
+  PRESS:     5_000, // brand value, not direct revenue
+  PARTNER:  40_000,
+>>>>>>> origin/add-agentz-editable
   DEFAULT:  10_000,
 };
 

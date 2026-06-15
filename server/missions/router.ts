@@ -1,4 +1,4 @@
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import {
   getMissions,
@@ -8,30 +8,30 @@ import {
   getTasksByMission,
   retryTask,
 } from "./missions.db";
-import type { MissionType, MissionStatus } from "./types";
+import { MISSION_TYPES, MISSION_STATUSES } from "./types";
 
 export const missionsRouter = router({
-  list: protectedProcedure
-    .input(z.object({ status: z.string().optional() }))
+  list: adminProcedure
+    .input(z.object({ status: z.enum(MISSION_STATUSES).optional() }))
     .query(async ({ input }) => {
       return getMissions(input.status);
     }),
 
   create: protectedProcedure
-    .input(z.object({ type: z.custom<MissionType>() }))
+    .input(z.object({ type: z.enum(MISSION_TYPES) }))
     .mutation(async ({ input }) => {
       const id = await createMission(input.type);
       return { id };
     }),
 
-  get: protectedProcedure
+  get: adminProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
       return getMissionById(input.id);
     }),
 
   updateStatus: protectedProcedure
-    .input(z.object({ id: z.string(), status: z.custom<MissionStatus>() }))
+    .input(z.object({ id: z.string(), status: z.enum(MISSION_STATUSES) }))
     .mutation(async ({ input }) => {
       await updateMissionStatus(input.id, input.status);
       return { ok: true };
@@ -39,13 +39,13 @@ export const missionsRouter = router({
 });
 
 export const tasksRouter = router({
-  list: protectedProcedure
+  list: adminProcedure
     .input(z.object({ missionId: z.string() }))
     .query(async ({ input }) => {
       return getTasksByMission(input.missionId);
     }),
 
-  retry: protectedProcedure
+  retry: adminProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input }) => {
       await retryTask(input.id);

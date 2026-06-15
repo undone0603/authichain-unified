@@ -51,6 +51,7 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
     return Response.json({ error: 'Invalid or expired nonce' }, { status: 401 });
   }
 
+<<<<<<< HEAD
   const challenge: ChallengePayload = JSON.parse(stored);
   if (challenge.address !== address) {
     return Response.json({ error: 'Address does not match challenge' }, { status: 401 });
@@ -70,6 +71,12 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
   if (!validFormat) {
     return Response.json({ error: 'Invalid signature format' }, { status: 401 });
   }
+=======
+  // Bitcoin message signature verification requires bitcoinjs-message or WASM secp256k1.
+  // Until that dependency is wired in, reject all verification attempts so this
+  // endpoint cannot be exploited to claim arbitrary Bitcoin addresses.
+  return Response.json({ error: 'Bitcoin signature verification not yet implemented' }, { status: 501 });
+>>>>>>> origin/add-agentz-editable
 
   await env.AUTH_KV.delete(`nonce:${nonce}`);
 

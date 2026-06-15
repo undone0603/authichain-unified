@@ -4,8 +4,6 @@ compatibility_date = "2026-04-01"
 account_id = "4c1869b90f13f86940aa3747839bf420"
 workers_dev = false
 
-# OUTBOUND SAFETY (2026-06-10): cron removed so the cold-email queue can
-# never auto-fire. Manual sends remain possible via authed /send-next.
-# Do NOT re-add a cron without an explicit owner decision on outreach.
-[triggers]
-crons = []
+# crons paused — 73% bounce rate on prior wave; re-enable after list scrub
+# [triggers]
+# crons = ["0 */4 * * *"]

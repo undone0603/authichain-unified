@@ -3,12 +3,19 @@ import postgres from "postgres";
 
 async function triggerLuxuryMission() {
   const targetUrl = process.env.DATABASE_URL;
+<<<<<<< HEAD
   if (!targetUrl) {
     console.error("DATABASE_URL is not set. Refusing to run.");
     process.exit(2);
+=======
+
+  if (!targetUrl) {
+    console.error("DATABASE_URL env var is required.");
+    return;
+>>>>>>> origin/add-agentz-editable
   }
 
-  console.log(`🚀 Connecting to: ${targetUrl.split('@')[1]}...`);
+  console.log(`Connecting to: ${targetUrl.split('@')[1]}...`);
   const sql = postgres(targetUrl);
 
   try {

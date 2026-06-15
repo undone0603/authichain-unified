@@ -1,12 +1,41 @@
-// scripts/generate-proposals.ts
+import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
+
+// Load from qron-platform/.env.local since it has the real keys
+const qronEnvPath = path.join(process.cwd(), "..", "qron-platform", ".env.local");
+if (fs.existsSync(qronEnvPath)) {
+  const envContent = fs.readFileSync(qronEnvPath, "utf-8");
+  envContent.split("\n").forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return;
+    const [key, ...valueParts] = trimmed.split("=");
+    if (key && valueParts.length > 0) {
+      const k = key.trim();
+      const v = valueParts.join("=").trim();
+      if (!process.env[k]) process.env[k] = v;
+    }
+  });
+}
+
 import { createClient } from '@supabase/supabase-js';
-import { chat } from './lib/llm.ts';
 
 const isDryRun = process.env.DRY_RUN === 'true';
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("FATAL: SUPABASE_URL and SUPABASE_SERVICE_KEY must be set.");
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 const GOVCHAIN = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
 async function generateProposals(): Promise<{ generated: number; failed: number; total: number }> {
+  // Dynamically import llm so it picks up the manually injected env keys
+  const { chat } = await import('./lib/llm.ts');
+
   const { data: opps, error } = await supabase
     .from('gov_opportunities')
     .select('*')
@@ -75,8 +104,7 @@ AI Reasoning: ${opp.ai_reasoning}
       // Per-opportunity failure: log and continue. Opp stays at status='scored'
       // so it's picked up again on the next cron run.
       failed++;
-      const shortMsg = (err?.message || String(err)).split('\n')[0].slice(0, 200);
-      console.warn(`  ⚠️  skipped ${opp.notice_id} (${opp.title?.slice(0, 40)}): ${shortMsg}`);
+      console.warn(`  ⚠️  skipped ${opp.notice_id} (${opp.title?.slice(0, 40)}): ${err.message || String(err)}`);
     }
   }
 

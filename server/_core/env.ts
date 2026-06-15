@@ -13,16 +13,29 @@ export const ENV = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
   apolloApiKey: process.env.APOLLO_API_KEY ?? "",
-  gmailClientId: process.env.GMAIL_CLIENT_ID ?? "",
-  gmailClientSecret: process.env.GMAIL_CLIENT_SECRET ?? "",
-  gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN ?? "",
-  gmailFromEmail: process.env.GMAIL_FROM_EMAIL ?? "",
-  gmailAppPassword: process.env.GMAIL_APP_PASSWORD ?? "",
-  suppressionList: process.env.SUPPRESSION_LIST ?? "",
-  paddleApiKey: process.env.PADDLE_API_KEY ?? "",
-  paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
+
+  // ── Email ─────────────────────────────────────────────────────────────────
+  resendApiKey:         process.env.RESEND_API_KEY ?? "",
+  resendFromEmail:      process.env.RESEND_FROM_EMAIL ?? "noreply@authichain.com",
+  gmailFromEmail:       process.env.GMAIL_FROM_EMAIL ?? "",
+  gmailClientId:        process.env.GMAIL_CLIENT_ID ?? "",
+  gmailClientSecret:    process.env.GMAIL_CLIENT_SECRET ?? "",
+  gmailRefreshToken:    process.env.GMAIL_REFRESH_TOKEN ?? "",
+  gmailAppPassword:     process.env.GMAIL_APP_PASSWORD ?? "",
+  suppressionList:      process.env.SUPPRESSION_LIST ?? "",
+
+  // ── AI / LLM ──────────────────────────────────────────────────────────────
+  openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
+  groqApiKey:       process.env.GROQ_API_KEY ?? "",
+  openaiApiKey:     process.env.OPENAI_API_KEY ?? "",
+  geminiApiKey:     process.env.GEMINI_API_KEY ?? "",
+
+  // ── Blockchain / Wallet ───────────────────────────────────────────────────
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
+
+  // ── Gov / External APIs ───────────────────────────────────────────────────
   samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
+<<<<<<< HEAD
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
   internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",
@@ -51,4 +64,18 @@ export const ENV = {
   qronBurnAddress: process.env.QRON_BURN_ADDRESS ?? "",
   pineconeApiKey: process.env.PINECONE_API_KEY ?? "",
   ownerEmails: process.env.OWNER_EMAILS ?? "",
+=======
+
+  // ── Pipeline Flags ────────────────────────────────────────────────────────
+  autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
+  requireOutreachApproval:   process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
+  requireDevApproval:        process.env.REQUIRE_DEV_APPROVAL !== "false",
+
+  // ── Video / Media ─────────────────────────────────────────────────────────
+  heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
+  internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",
+  qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
+  makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
+  smsRecipient: process.env.SMS_RECIPIENT ?? "",
+>>>>>>> origin/add-agentz-editable
 };

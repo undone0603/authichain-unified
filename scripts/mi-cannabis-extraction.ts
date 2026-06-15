@@ -46,8 +46,8 @@ if (!supabaseUrl || !supabaseKey) {
 async function supabaseRest(table: string, method: string, body?: any, query?: string) {
   const url = `${supabaseUrl}/rest/v1/${table}${query ? `?${query}` : ''}`;
   const headers: Record<string, string> = {
-    'apikey': supabaseKey,
-    'Authorization': `Bearer ${supabaseKey}`,
+    'apikey': supabaseKey!,
+    'Authorization': `Bearer ${supabaseKey!}`,
     'Content-Type': 'application/json',
     'Prefer': 'return=representation'
   };

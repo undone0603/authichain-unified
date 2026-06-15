@@ -39,10 +39,22 @@ interface MintUpdateRequest {
   contract_address?: string
 }
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const encoder = new TextEncoder();
+  const ab = encoder.encode(a);
+  const bb = encoder.encode(b);
+  // XOR every byte; pad the shorter buffer to avoid early-exit length leak
+  const len = Math.max(ab.length, bb.length);
+  let diff = ab.length ^ bb.length; // non-zero if lengths differ
+  for (let i = 0; i < len; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
+  return diff === 0;
+}
+
 function validateApiKey(request: Request, env: Env): boolean {
-  if (!env.AUTHICHAIN_API_SECRET) return true // No secret configured = open
-  const key = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '')
-  return key === env.AUTHICHAIN_API_SECRET
+  // Fail-closed: if the secret is not configured, deny all requests
+  if (!env.AUTHICHAIN_API_SECRET) return false;
+  const key = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '') || '';
+  return timingSafeEqual(key, env.AUTHICHAIN_API_SECRET);
 }
 
 async function handleRegister(request: Request, env: Env): Promise<Response> {

@@ -1,4 +1,5 @@
 name: Deploy Workers (workers/*)
+
 on:
   push:
     branches: [main]
@@ -11,16 +12,20 @@ on:
         description: 'Specific worker dir to deploy (e.g. authichain-api). Leave blank for all.'
         required: false
         type: string
+
 permissions:
   contents: read
   id-token: write
   deployments: write
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     name: Deploy ${{ matrix.worker }}
     runs-on: ubuntu-latest
+    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
@@ -29,10 +34,14 @@ jobs:
           - authichain-api
           - authichain-api-gateway
           - authichain-automation
+<<<<<<< HEAD
           - authichain-autopilot
           - authichain-bridge
           - authichain-chain-data
           - authichain-com
+=======
+          - authichain-infra
+>>>>>>> origin/add-agentz-editable
           - authichain-dashboard
           - authichain-gateway
           - authichain-license-issuer
@@ -46,6 +55,7 @@ jobs:
           - qron-image-gen
           - qron-outreach
           - qron-space
+<<<<<<< HEAD
           # govchain
           - govchain-us
           # shared infra
@@ -55,24 +65,34 @@ jobs:
           - strainchain-io
           - authichain-telegram
           - authichain-verify-worker
+=======
+          - resend-relay
+          - strainchain-io
+          - govchain-us
+          - bitcoin-auth
+          - outreach-queue
+
+>>>>>>> origin/add-agentz-editable
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
         with:
-          version: '10.28.2'
+          version: '10.30.3'
+
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
+
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-        working-directory: workers/${{ matrix.worker }}
-      - name: Deploy ${{ matrix.worker }}
-        if: inputs.worker == '' || inputs.worker == matrix.worker
-        run: npx wrangler deploy --minify
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy Worker
+        run: npx wrangler deploy --minify --config wrangler.toml
         working-directory: workers/${{ matrix.worker }}
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

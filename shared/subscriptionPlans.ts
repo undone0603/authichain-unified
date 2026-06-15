@@ -75,6 +75,7 @@ export const HIGH_TICKET_PLANS = {
     annualPrice: 150000,
     monthlyQuota: 50000,
     perAuthCost: "0.25",
+    paymentLink: "https://buy.stripe.com/bJe00jfzP6Bg5iagXW1Nv2H",
     features: [
       "50,000 authentications/month",
       "ISO 13485 Compliance Module",

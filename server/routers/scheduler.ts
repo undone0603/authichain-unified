@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { adminProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -23,6 +24,7 @@ export const schedulerRouter = router({
     jobName: z.string(),
   })).mutation(async ({ input }) => {
     const success = await runJobManually(input.jobName);
+<<<<<<< HEAD
     if (!success) {
       throw new TRPCError({
         code: "NOT_FOUND",
@@ -33,18 +35,22 @@ export const schedulerRouter = router({
       success,
       message: `Job "${input.jobName}" started successfully`,
     };
+=======
+    if (!success) throw new TRPCError({ code: "NOT_FOUND", message: `Job "${input.jobName}" not found` });
+    return { success, message: `Job "${input.jobName}" started successfully` };
+>>>>>>> origin/add-agentz-editable
   }),
   getSystemStatus: adminProcedure.query(() => {
     return getSystemStatus();
   }),
   toggleSystemState: adminProcedure.input(z.object({
     active: z.boolean(),
-  })).mutation(({ input }) => {
-    const isActive = toggleKillSwitch(input.active);
-    return { 
-      success: true, 
-      isActive, 
-      message: `System ${isActive ? "activated" : "deactivated"} successfully` 
+  })).mutation(async ({ input }) => {
+    const isActive = await toggleKillSwitch(input.active);
+    return {
+      success: true,
+      isActive,
+      message: `System ${isActive ? "activated" : "deactivated"} successfully`,
     };
   }),
 });

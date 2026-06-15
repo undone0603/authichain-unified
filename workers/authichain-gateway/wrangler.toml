@@ -7,6 +7,7 @@ workers_dev = true
 
 [[kv_namespaces]]
 binding = "RATE_LIMITS"
+<<<<<<< HEAD
 id = "a887e667586b44f295dd10de41de919f"
 
 [[kv_namespaces]]
@@ -16,6 +17,17 @@ id = "c3e2e895739445acb68870fa938bd32a"
 [[kv_namespaces]]
 binding = "USAGE_BUFFER"
 id = "6d148fb5083c4c72a85571be154de0e0"
+=======
+id = "412b3dad203a4a4581f503c7f0a922cc"
+
+[[kv_namespaces]]
+binding = "TENANT_CACHE"
+id = "8e81690a90eb426da747e969d35c52af"
+
+[[kv_namespaces]]
+binding = "USAGE_BUFFER"
+id = "1d3cbcfaa1fc40e9834dd585c7362a0c"
+>>>>>>> origin/add-agentz-editable
 
 [vars]
 BACKEND_URL = "https://authichain-unified.vercel.app"

@@ -45,7 +45,8 @@ function ChartContainer({
   >["children"];
 }) {
   const uniqueId = React.useId();
-  const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
+  const safeId = (id || uniqueId).replace(/[^a-zA-Z0-9_-]/g, "");
+  const chartId = `chart-${safeId}`;
 
   return (
     <ChartContext.Provider value={{ config }}>

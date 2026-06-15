@@ -1,5 +1,11 @@
 import sgMail from '@sendgrid/mail';
 
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local?.[0] ?? ''}***@${domain}`;
+}
+
 /**
  * SendGrid Email Service
  * Handles automated email delivery for certificates and notifications
@@ -81,7 +87,7 @@ export async function sendCertificateEmail(params: {
   // If SendGrid is not configured, log to console
   if (!config) {
     console.log('[Email] Would send certificate email:');
-    console.log(`To: ${to}`);
+    console.log(`To: ${maskEmail(to)}`);
     console.log(`Subject: ${subject}`);
     console.log(`Certificate URL: ${certificateUrl}`);
     console.log('---');
@@ -100,7 +106,7 @@ export async function sendCertificateEmail(params: {
       html,
     });
 
-    console.log(`[Email] Certificate email sent successfully to ${to}`);
+    console.log(`[Email] Certificate email sent successfully to ${maskEmail(to)}`);
     return true;
 
   } catch (error: any) {

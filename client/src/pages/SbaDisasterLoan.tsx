@@ -35,12 +35,8 @@ export default function SbaDisasterLoan() {
       const response = await chatMutation.mutateAsync({
         messages: [
           {
-            role: "system",
-            content: "You are an SBA Disaster Loan Specialist. Your goal is to help the user prepare a professional 'Economic Injury Statement' and a 'Dossier' for their SBA Natural Disaster Loan application. Focus on EIDL and Physical Damage loans. Use professional, clinical language that emphasizes the impact of the disaster on business operations and revenue."
-          },
-          {
             role: "user",
-            content: `Generate a comprehensive SBA Disaster Loan Application Dossier for:
+            content: `As an SBA Disaster Loan Specialist, generate a comprehensive SBA Disaster Loan Application Dossier for:
             Business: ${formData.businessName}
             Industry: ${formData.industry}
             Disaster Type: ${formData.disasterType}

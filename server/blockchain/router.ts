@@ -3,6 +3,13 @@ import * as db from "../db";
 import * as thirdweb from "../thirdweb";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { ENV } from "../_core/env";
+
+function getServerPrivateKey(): string {
+  const key = (ENV as any).blockchainPrivateKey || process.env.BLOCKCHAIN_PRIVATE_KEY || ENV.walletPrivateKey;
+  if (!key) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Blockchain signing key not configured on server" });
+  return key;
+}
 
 export const blockchainRouter = router({
   status: publicProcedure.query(async () => {
@@ -27,13 +34,13 @@ export const blockchainRouter = router({
     certificateNumber: z.string(),
     walletAddress: z.string(),
     contractAddress: z.string(),
-    privateKey: z.string(),
     chainId: z.number().optional(),
   })).mutation(async ({ ctx, input }) => {
     const product = await db.getProductById(input.productId);
     if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    if (product.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
     const cert = await db.getCertificateByNumber(input.certificateNumber);
-    if (!cert) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
+    if (!cert || cert.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Certificate not found" });
     const metadata = thirdweb.buildAuthCertificateMetadata({
       productName: product.name,
       productBrand: product.brand || undefined,
@@ -48,22 +55,50 @@ export const blockchainRouter = router({
       contractAddress: input.contractAddress,
       recipientAddress: input.walletAddress,
       metadata,
-      privateKey: input.privateKey,
+      privateKey: getServerPrivateKey(),
       chainId: input.chainId,
     });
     await db.logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "certificate", entityId: cert.id });
     return { transactionHash: result.transactionHash, metadataUri: result.metadataUri, chain: result.chain };
   }),
+
+  anchorToBitcoin: protectedProcedure.input(z.object({
+    productId: z.number(),
+    truemarkId: z.string(),
+  })).mutation(async ({ ctx, input }) => {
+    const { prepareOrdinalEnvelope, linkOrdinalToProduct } = await import("../ordinals-service");
+    const { getProductById } = await import("../db");
+    const product = await getProductById(input.productId);
+    if (!product || product.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+
+    // Prepare the forensic metadata for inscription
+    const metadata = {
+      p: "auth",
+      v: "1.0",
+      id: input.truemarkId,
+      name: product?.name,
+      ts: new Date().toISOString()
+    };
+
+    const envelope = await prepareOrdinalEnvelope(product?.imageUrl || "", metadata);
+    // In production, this would trigger the actual BTC inscription via a bridge/node
+    const result = await linkOrdinalToProduct(input.productId, "btc_ins_pending_" + Date.now());
+
+    return { success: true, status: "ANCHORING_INITIATED", details: "BTC Inscription staged for witness." };
+  }),
+
+
   mintNFT: protectedProcedure.input(z.object({
     name: z.string(),
     description: z.string().optional(),
     imageUrl: z.string().optional(),
     walletAddress: z.string(),
     contractAddress: z.string(),
-    privateKey: z.string(),
     chainId: z.number().optional(),
     attributes: z.array(z.object({ trait_type: z.string(), value: z.union([z.string(), z.number()]) })).optional(),
   })).mutation(async ({ ctx, input }) => {
+    const privateKey = ENV.walletPrivateKey;
+    if (!privateKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Minting not configured" });
     const result = await thirdweb.mintAuthenticationNFT({
       contractAddress: input.contractAddress,
       recipientAddress: input.walletAddress,
@@ -73,7 +108,7 @@ export const blockchainRouter = router({
         image: input.imageUrl,
         attributes: input.attributes,
       },
-      privateKey: input.privateKey,
+      privateKey: getServerPrivateKey(),
       chainId: input.chainId,
     });
     await db.logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "nft" });

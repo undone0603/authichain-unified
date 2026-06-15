@@ -10,8 +10,8 @@ import {
   updateLead, 
   logActivity,
   createSystemNotification 
-} from "../db.js";
-import { calculateLeadScore } from "../sales/scoring-service.js";
+} from "../db";
+import { calculateLeadScore } from "../sales/scoring-service";
 
 export async function handleDocuSignWebhook(payload: any) {
   const { event: eventType, recipientEmail, envelopeId } = payload;

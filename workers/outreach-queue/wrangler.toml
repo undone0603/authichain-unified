@@ -1,0 +1,17 @@
+name = "outreach-queue"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = false
+
+[[queues.consumers]]
+queue = "outreach-jobs"
+max_batch_size = 25
+max_batch_timeout = 10
+
+[[kv_namespaces]]
+binding = "OUTREACH_KV"
+id = "0dbdce2318f14984b0a9c56bf2db83e7"
+
+[vars]
+OUTREACH_FROM_EMAIL = "noreply@qron.space"

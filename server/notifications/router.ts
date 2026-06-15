@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const notificationsRouter = router({
   list: protectedProcedure.input(z.object({
-    limit: z.number().optional().default(50),
+    limit: z.number().min(1).max(200).optional().default(50),
   }).optional()).query(async ({ ctx, input }) => {
     return await db.getUserNotifications(ctx.user.id, input?.limit ?? 50);
   }),

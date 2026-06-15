@@ -16,7 +16,7 @@ import {
 } from "../drizzle/schema";
 import { eq, desc, sql, and, count } from "drizzle-orm";
 import { generateImage } from "./_core/imageGeneration";
-import { invokeLLM } from "./_core/llm";
+import { invokeLLM, parseLLMContent } from "./_core/llm";
 import { storagePut } from "./storage";
 import crypto from "crypto";
 
@@ -344,8 +344,7 @@ Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`,
     });
 
     const content = result.choices[0]?.message?.content;
-    const scoreText = typeof content === "string" ? content : "";
-    const scores = JSON.parse(scoreText);
+    const scores = parseLLMContent<any>(content);
 
     // Calculate weighted total (out of 10)
     const totalScore = (

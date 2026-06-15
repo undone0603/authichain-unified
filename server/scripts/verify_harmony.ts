@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { calculateHarmony } from "../sales/harmony-service.js";
+import { calculateHarmony } from "../sales/harmony-service";
 
 async function verifyHarmony() {
   console.log("📐 Calculating Protocol Harmony (H)...");

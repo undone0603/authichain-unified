@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { createMission, enqueueTask } from "../db.js";
+import { createMission, enqueueTask } from "../db";
 
 async function launchMedTech() {
   console.log("🚀 Launching MedTech Outreach Mission via Native DB Bridge...");

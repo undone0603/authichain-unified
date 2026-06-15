@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getDb } from "../db.js";
+import { getDb } from "../db";
 
 async function debugDb() {
   console.log("🔍 Debugging Database Connection...");

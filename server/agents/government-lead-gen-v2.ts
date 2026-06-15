@@ -53,7 +53,11 @@ async function getPineconeIndex() {
     console.warn('[gov-engine] PINECONE_API_KEY not set — Pinecone disabled');
     return null;
   }
+<<<<<<< HEAD:server/agents/government-lead-gen-v2.ts
   // @ts-ignore — optional peer dependency, may not be installed
+=======
+  // @ts-ignore - package installed separately
+>>>>>>> origin/add-agentz-editable:src/agents/government-lead-gen-v2.ts
   const { Pinecone } = await import('@pinecone-database/pinecone');
   const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
   _pineconeIndex = pinecone.index(process.env.PINECONE_INDEX || 'authichain-gov-leads');

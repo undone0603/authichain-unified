@@ -1,7 +1,7 @@
 import "dotenv/config";
-import { invokeLLM } from "../_core/llm.js";
-import { sendEmail } from "../email-service.js";
-import { bayesianPreamble, betaMean, betaCI, SEGMENT_PRIORS } from "../_core/bayesian.js";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
+import { sendEmail } from "../email-service";
+import { bayesianPreamble, betaMean, betaCI, SEGMENT_PRIORS } from "../_core/bayesian";
 
 async function pushMedtronicSequence() {
   console.log("🚀 Executing Medtronic High-Ticket Outreach...");
@@ -48,7 +48,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
       messages: [{ role: "user", content: prompt }],
       responseFormat: { type: "json_object" },
     });
-    content = JSON.parse(result.choices[0].message.content as string);
+    content = parseLLMContent<any>(result.choices[0].message.content);
   } catch (err: any) {
     console.warn("⚠️ LLM Generation failed. Using high-fidelity hardcoded fallback sequence.");
     content = {
@@ -69,7 +69,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
   });
 
   if (sendResult.status === "sent") {
-    console.log(`\n✅ SUCCESS: First MedTech sequence sent to ${lead.email}.`);
+    console.log(`\n✅ SUCCESS: First MedTech sequence sent to ${maskEmail(lead.email)}.`);
     console.log(`Revenue Opportunity: $150,000 / Expected Value: $15,000`);
     console.log("AgentZ is now monitoring for replies.");
   } else {

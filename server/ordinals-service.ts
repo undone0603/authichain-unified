@@ -1,3 +1,7 @@
+import { eq } from "drizzle-orm";
+import { getDb } from "./db";
+import { products } from "../drizzle/schema";
+
 /**
  * BTC Ordinals Inscription Service
  * Prepares and tracks QRON Artistic QR codes on Bitcoin via Ordinals protocol.
@@ -32,8 +36,12 @@ export async function prepareOrdinalEnvelope(imageUrl: string, metadata: any) {
 /**
  * Tracks the status of an inscription on-chain.
  */
+const INSCRIPTION_ID_RE = /^[0-9a-f]{64}i\d+$/i;
+
 export async function getInscriptionStatus(inscriptionId: string) {
-  // Integration with BTC indexers (Hiro, UniSat, etc.)
+  if (!INSCRIPTION_ID_RE.test(inscriptionId)) {
+    return { status: "invalid", error: "Invalid inscription ID format" };
+  }
   const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions/${inscriptionId}`);
   if (!res.ok) return { status: "pending" };
   return await res.json();
@@ -43,14 +51,11 @@ export async function getInscriptionStatus(inscriptionId: string) {
  * Links a QronCode to its BTC Ordinal counterpart and existing Polygon NFT.
  */
 export async function linkOrdinalToProduct(productId: number, inscriptionId: string) {
-  const { getDb } = await import("./db");
-  const { products } = await import("../drizzle/schema");
-  const { eq } = await import("drizzle-orm");
   const d = await getDb();
-  
-  // Update product with ordinal reference
+  if (!d) throw new Error("Database not available");
+
   await d.update(products)
-    .set({ blockchainTxHash: inscriptionId }) // Use existing field or add new one
+    .set({ blockchainTxHash: inscriptionId })
     .where(eq(products.id, productId));
 
   console.log(`[Ordinals] Linked Product ${productId} to BTC Inscription ${inscriptionId}`);

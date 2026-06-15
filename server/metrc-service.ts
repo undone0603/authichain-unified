@@ -5,11 +5,13 @@
  */
 import { ENV } from "./_core/env";
 import * as db from "./db";
+import { broadcastSocialProof } from "./social-service";
 
 interface MetrcAuth {
   vendorKey: string;
   userKey: string;
   licenseNumber: string;
+  userId: number;
 }
 
 /**
@@ -55,7 +57,7 @@ export async function syncMetrcTransfers(auth: MetrcAuth) {
           for (const transfer of transfers) {
             if (transfer.status === 'Shipped' || transfer.status === 'Received') {
               await db.logActivity({
-                userId: 1, action: 'metrc_manifest_synced',
+                userId: auth.userId, action: 'metrc_manifest_synced',
                 entityType: 'manifest', entityId: transfer.id,
                 details: { 
                   manifestNumber: transfer.manifestNumber,
@@ -84,36 +86,48 @@ export async function syncMetrcTransfers(auth: MetrcAuth) {
 }
 
 /**
- * Anchors a METRC package to a Bitcoin Inscription.
- * This turns a state compliance record into a permanent brand asset.
+ * Anchors a METRC package to a Bitcoin Inscription via the qron-ordinal-worker.
+ * Triggers social proof broadcast on success.
  */
 export async function anchorPackageToTruthLayer(packageTag: string, manifestId: string) {
-  // 1. Verify manifest existence in DB
-  // 2. Trigger Inscription via qron-ordinal-worker
-  // 3. Update AuthiChain certificate status
-  
-  console.log(`🔗 Anchoring METRC Package ${packageTag} to Bitcoin L1...`);
-  
-  // Logic to call your existing inscription worker
-  const inscriptionUrl = "https://qron.space/api/ordinals/inscribe";
-  
-  // 4. Trigger Social Proof Bridge
+  const inscriptionUrl = process.env.ORDINAL_WORKER_URL || "https://qron.space/api/ordinals/inscribe";
+
+  const res = await fetch(inscriptionUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(process.env.INTERNAL_API_SECRET
+        ? { "x-internal-secret": process.env.INTERNAL_API_SECRET }
+        : {}),
+    },
+    body: JSON.stringify({ packageTag, manifestId }),
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    console.error(`[METRC] Inscription worker rejected ${packageTag}: ${res.status} ${errText.slice(0, 200)}`);
+    throw new Error(`Inscription failed: ${res.status}`);
+  }
+
+  const data = await res.json().catch(() => ({} as any));
+  const txId: string = data.txId ?? data.inscriptionId ?? "";
+
   try {
-    const { broadcastSocialProof } = await import("./social-service");
     await broadcastSocialProof({
-      type: 'inscription',
-      brandName: "Michigan Processor", // Dynamically resolve brand name from DB in real scenario
+      type: "inscription",
+      brandName: "Michigan Processor",
       productName: `Package ${packageTag}`,
       imageUrl: "https://authichain.com/images/bitcoin-proof-badge.png",
-      verifyUrl: `https://govchain.us/verify/${packageTag}`
+      verifyUrl: `https://govchain.us/verify/${packageTag}`,
     });
   } catch (socialErr) {
     console.warn("[Social Bridge] Trigger failed during anchoring:", socialErr);
   }
-  
+
   return {
     success: true,
-    txId: "btc_pending_hash_...",
-    truthLayerUrl: `https://govchain.us/verify/${packageTag}`
+    txId,
+    truthLayerUrl: `https://govchain.us/verify/${packageTag}`,
   };
 }

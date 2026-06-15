@@ -1,4 +1,4 @@
-import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
+import { router, publicProcedure, adminProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
 import { visitorProfiles, personalizationRules, personalizationEvents } from "../../drizzle/schema";
@@ -61,7 +61,6 @@ export const personalizationRouter = router({
           ipAddress: input.ipAddress,
           country: geo.country,
           city: geo.city,
-          region: geo.region,
           trafficSource,
           referrer: input.referrer,
           utmSource: utmParams.utmSource,
@@ -83,7 +82,7 @@ export const personalizationRouter = router({
           .update(visitorProfiles)
           .set({
             pageViews: profile.pageViews + 1,
-            lastSeen: new Date(),
+            lastSeenAt: new Date(),
           })
           .where(eq(visitorProfiles.id, profile.id));
       }
@@ -108,13 +107,22 @@ export const personalizationRouter = router({
           utmSource: profile.utmSource || undefined,
           utmMedium: profile.utmMedium || undefined,
           utmCampaign: profile.utmCampaign || undefined,
+<<<<<<< HEAD
           deviceType: (profile.deviceType as any) || undefined,
+=======
+          deviceType: profile.deviceType as "desktop" | "mobile" | "tablet" | undefined,
+>>>>>>> origin/add-agentz-editable
           segment: profile.segment || undefined,
         },
         rules.map(r => ({
           id: r.id,
+<<<<<<< HEAD
           conditions: JSON.stringify(r.conditions),
           content: JSON.stringify(r.content),
+=======
+          conditions: JSON.stringify(r.conditions ?? {}),
+          content: JSON.stringify(r.content ?? {}),
+>>>>>>> origin/add-agentz-editable
           priority: r.priority ?? 0,
         }))
       );
@@ -213,7 +221,7 @@ export const personalizationRouter = router({
     }),
 
   // Create personalization rule
-  createRule: protectedProcedure
+  createRule: adminProcedure
     .input(z.object({
       name: z.string(),
       description: z.string().optional(),
@@ -239,7 +247,7 @@ export const personalizationRouter = router({
     }),
 
   // Generate personalization rules using AI
-  generateRules: protectedProcedure
+  generateRules: adminProcedure
     .input(z.object({
       targetElement: z.string(),
       baseContent: z.string(),
@@ -270,7 +278,7 @@ export const personalizationRouter = router({
     }),
 
   // List all rules
-  listRules: protectedProcedure
+  listRules: adminProcedure
     .input(z.object({
       status: z.enum(["active", "paused", "draft"]).optional(),
     }).optional())
@@ -288,7 +296,7 @@ export const personalizationRouter = router({
     }),
 
   // Get rule details
-  getRule: protectedProcedure
+  getRule: adminProcedure
     .input(z.object({
       ruleId: z.number(),
     }))
@@ -306,7 +314,7 @@ export const personalizationRouter = router({
     }),
 
   // Activate rule
-  activateRule: protectedProcedure
+  activateRule: adminProcedure
     .input(z.object({
       ruleId: z.number(),
     }))
@@ -325,7 +333,7 @@ export const personalizationRouter = router({
     }),
 
   // Pause rule
-  pauseRule: protectedProcedure
+  pauseRule: adminProcedure
     .input(z.object({
       ruleId: z.number(),
     }))
@@ -344,7 +352,7 @@ export const personalizationRouter = router({
     }),
 
   // Get visitor segments analytics
-  getSegmentAnalytics: protectedProcedure
+  getSegmentAnalytics: adminProcedure
     .query(async () => {
       const db = await getDb();
       if (!db) return [];
@@ -384,7 +392,7 @@ export const personalizationRouter = router({
     }),
 
   // Get personalization performance analytics
-  getPerformanceAnalytics: protectedProcedure
+  getPerformanceAnalytics: adminProcedure
     .query(async () => {
       const db = await getDb();
       if (!db) return null;
@@ -398,8 +406,13 @@ export const personalizationRouter = router({
 
       const analysis = await analyzePersonalizationPerformance(
         rules.map(r => ({
+<<<<<<< HEAD
           name: r.name ?? "",
           conditions: JSON.stringify(r.conditions),
+=======
+          name: r.name,
+          conditions: JSON.stringify(r.conditions ?? {}),
+>>>>>>> origin/add-agentz-editable
           views: r.views,
           conversions: r.conversions,
           conversionRate: Number(r.conversionRate ?? 0),

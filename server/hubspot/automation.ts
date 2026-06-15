@@ -1,5 +1,12 @@
+import { eq } from "drizzle-orm";
 import { syncPaymentToHubSpot, createDeal, isHubSpotConfigured } from "../hubspot-service";
 import * as db from "../db";
+import { protocolAgents } from "../../drizzle/schema";
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  return `${local?.[0] ?? ''}***@${domain ?? '***'}`;
+}
 
 const SCAN_THRESHOLD = 50;
 const XP_THRESHOLD = 500;
@@ -28,12 +35,14 @@ export async function checkUserMilestones(userId: number) {
           dealstage: "appointmentscheduled",
         });
         await db.logActivity({ userId, action: "hubspot_milestone_scans", details: { count: metrics.totalAuthentications } });
-        console.log(`[HubSpot Automation] High-activity deal created for ${user.email}`);
+        console.log(`[HubSpot Automation] High-activity deal created for ${maskEmail(user.email || '')}`);
       }
     }
 
     // 2. Check Reputation/XP Threshold (from Protocol Agent)
-    const [agent] = await (await db.getDb()).select().from((await import("../../drizzle/schema")).protocolAgents).where((await import("drizzle-orm")).eq((await import("../../drizzle/schema")).protocolAgents.userId, userId)).limit(1);
+    const dbInstance = await db.getDb();
+    if (!dbInstance) return;
+    const [agent] = await dbInstance.select().from(protocolAgents).where(eq(protocolAgents.userId, userId)).limit(1);
     if (agent && (agent.xp || 0) >= XP_THRESHOLD) {
       const alreadyLogged = await db.hasUserActionLogged(userId, "hubspot_milestone_reputation");
       if (!alreadyLogged) {
@@ -43,7 +52,7 @@ export async function checkUserMilestones(userId: number) {
           dealstage: "appointmentscheduled",
         });
         await db.logActivity({ userId, action: "hubspot_milestone_reputation", details: { xp: agent.xp } });
-        console.log(`[HubSpot Automation] Power agent deal created for ${user.email}`);
+        console.log(`[HubSpot Automation] Power agent deal created for ${maskEmail(user.email || '')}`);
       }
     }
   } catch (error) {

@@ -16,7 +16,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
 
     // Documentation page
-    if (path === '/' || path === '/docs') return new Response(DOCS_HTML, { headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8' } });
+    if (path === '/' || path === '/docs') return new Response(DOCS_HTML, { headers: { ...cors, ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
 
     // Health check
     if (path === '/health') return json({ status: 'ok', mode: 'demo', version: '1.0.0', timestamp: new Date().toISOString(), notice: 'Demo mode — returns simulated responses' }, cors);
@@ -79,6 +79,13 @@ export default {
       }
       await env.RATE_LIMITS.put(limitKey, (currentUsage + 1).toString(), { expirationTtl: 3600 });
     }
+
+    // Derive tier info from the API key for demo responses
+    const keyData = {
+      name: apiKey.includes('demo') ? 'Free' : 'Pro',
+      plan: apiKey.includes('demo') ? 'free' : 'pro',
+      limit: apiKey.includes('demo') ? 10 : 5000,
+    };
 
     // Route handling
     try {
@@ -244,6 +251,7 @@ function json(data: any, cors: any, status = 200) {
   });
 }
 
+<<<<<<< HEAD
 function generateApiKey(plan: string): string {
   const prefix = plan === 'free' ? 'ac_free' : plan === 'starter' ? 'ac_starter' : 'ac_pro';
   const rand = Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -484,13 +492,29 @@ async function handleKeyStatus(apiKey: string, env: any, cors: any): Promise<Res
     active: data.active,
     createdAt: data.createdAt,
   }, cors);
+=======
+const HTML_SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+};
+
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a), bb = enc.encode(b);
+  const len = Math.max(ab.length, bb.length);
+  let diff = ab.length ^ bb.length;
+  for (let i = 0; i < len; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
+  return diff === 0;
+>>>>>>> origin/add-agentz-editable
 }
 
 // ── Stripe Accounts v2 (admin-gated) ────────────────────
 
 async function handleV2(request: Request, path: string, url: URL, env: any, cors: any) {
-  const adminKey = request.headers.get('X-Admin-Key');
-  if (!env.ADMIN_SECRET || adminKey !== env.ADMIN_SECRET) {
+  const adminKey = request.headers.get('X-Admin-Key') ?? '';
+  if (!env.ADMIN_SECRET || !timingSafeEqual(adminKey, env.ADMIN_SECRET)) {
     return json({ error: 'Forbidden. Admin key required for v2 endpoints.' }, cors, 403);
   }
 

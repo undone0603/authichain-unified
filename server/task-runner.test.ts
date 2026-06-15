@@ -30,11 +30,21 @@ vi.mock('./agents/content.js',       () => ({
   runDraftPressRelease:       vi.fn().mockResolvedValue(undefined),
   runScheduleSocialPosts:     vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('./agents/browser.js',        () => ({
+  runBrowseResearchLead:        vi.fn().mockResolvedValue(undefined),
+  runBrowseCompetitorMonitor:   vi.fn().mockResolvedValue(undefined),
+  runBrowseScrapeIndustryNews:  vi.fn().mockResolvedValue(undefined),
+  runBrowseVerifyProductUrl:    vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('./agents/browser-vision.js', () => ({
+  runVisionResearchLead: vi.fn().mockResolvedValue(undefined),
+  runVisionFreeform:     vi.fn().mockResolvedValue(undefined),
+}));
 
 // ─── Mock db lifecycle functions ──────────────────────────────────────────────
 
 vi.mock('./db.js', () => ({
-  markTaskRunning:  vi.fn().mockResolvedValue(undefined),
+  markTaskRunning:  vi.fn().mockResolvedValue(true),
   markTaskDone:     vi.fn().mockResolvedValue(undefined),
   markTaskFailed:   vi.fn().mockResolvedValue(undefined),
   logActivity:      vi.fn().mockResolvedValue(undefined),
@@ -52,6 +62,12 @@ function makeTask(kind: string): MissionTask {
     payload: {},
     status: 'PENDING',
     error: null,
+<<<<<<< HEAD
+=======
+    result: null,
+    priority: 0,
+    scheduledAt: null,
+>>>>>>> origin/add-agentz-editable
     order: 0,
     priority: 0,
     result: null,
@@ -82,7 +98,13 @@ describe('runTask — routing', () => {
     { kind: 'GENERATE_LAUNCH_CHECKLIST', module: './agents/content.js',        fn: 'runGenerateLaunchChecklist'},
     { kind: 'DRAFT_LAUNCH_EMAIL',        module: './agents/content.js',        fn: 'runDraftLaunchEmail'     },
     { kind: 'DRAFT_PRESS_RELEASE',       module: './agents/content.js',        fn: 'runDraftPressRelease'    },
-    { kind: 'SCHEDULE_SOCIAL_POSTS',     module: './agents/content.js',        fn: 'runScheduleSocialPosts'  },
+    { kind: 'SCHEDULE_SOCIAL_POSTS',          module: './agents/content.js',         fn: 'runScheduleSocialPosts'       },
+    { kind: 'BROWSE_RESEARCH_LEAD',           module: './agents/browser.js',         fn: 'runBrowseResearchLead'        },
+    { kind: 'BROWSE_COMPETITOR_MONITOR',      module: './agents/browser.js',         fn: 'runBrowseCompetitorMonitor'   },
+    { kind: 'BROWSE_SCRAPE_INDUSTRY_NEWS',    module: './agents/browser.js',         fn: 'runBrowseScrapeIndustryNews'  },
+    { kind: 'BROWSE_VERIFY_PRODUCT_URL',      module: './agents/browser.js',         fn: 'runBrowseVerifyProductUrl'    },
+    { kind: 'BROWSE_VISION_RESEARCH_LEAD',    module: './agents/browser-vision.js',  fn: 'runVisionResearchLead'        },
+    { kind: 'BROWSE_VISION_FREEFORM',         module: './agents/browser-vision.js',  fn: 'runVisionFreeform'            },
   ];
 
   for (const { kind, module: mod, fn } of routingCases) {
@@ -105,7 +127,7 @@ describe('runTask — lifecycle', () => {
     const callOrder: string[] = [];
     const { markTaskRunning } = await import('./db.js');
     const { runLeadFinder } = await import('./agents/lead-finder.js');
-    vi.mocked(markTaskRunning).mockImplementation(async () => { callOrder.push('running'); });
+    vi.mocked(markTaskRunning).mockImplementation(async () => { callOrder.push('running'); return true; });
     vi.mocked(runLeadFinder).mockImplementation(async () => { callOrder.push('agent'); });
 
     const { runTask } = await import('./jobs/task-runner.js');
