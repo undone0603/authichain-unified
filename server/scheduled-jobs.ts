@@ -719,6 +719,24 @@ registerJob({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 15: Analytics Snapshot (Runs daily at 10 PM UTC)
+// ═══════════════════════════════════════════════════════════════════════════
+// Read-only reporting: compiles admin metrics, revenue, funnel, and cohort
+// analytics to orchestration/analytics-latest.json and the activity log. Was
+// implemented but never registered, so the snapshot was never produced.
+registerJob({
+  name: "analytics-snapshot",
+  description: "Compile daily admin/revenue analytics snapshot to disk + activity log",
+  schedule: "0 22 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runAnalyticsSnapshot } = await import("./jobs/analytics-snapshot");
+    const res = await runAnalyticsSnapshot();
+    return { itemsProcessed: 1, details: { outputPath: res.outputPath, generatedAt: res.timestamp } };
+  },
+});
+
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
 
 let _systemActive = true;
