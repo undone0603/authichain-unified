@@ -76,16 +76,24 @@ def cmd_plan(args, registry: dict[str, Workflow]) -> int:
     return 0
 
 
+# ... (Keep all existing imports and functions up to cmd_run) ...
+
 def cmd_run(args, registry: dict[str, Workflow]) -> int:
+    from agentz import di  # <-- Import the new DI container
+
     mode = parse_mode(args.mode)
     ids = _filter(registry, args)
     ordered = resolve_order(registry, ids)
+
+    # 1. Initialize the dependency graph based on execution mode
+    injected_deps = di.init(args.mode)
 
     print(f"\nRunning {len(ordered)} workflows in {mode.value} mode\n")
     results = []
     for wf in ordered:
         try:
-            result = execute(wf, mode, verbose=not args.quiet)
+            # 2. Pass the dependencies safely down into the runner
+            result = execute(wf, mode, verbose=not args.quiet, deps=injected_deps)
         except KeyboardInterrupt:
             print("\nAborted by user.")
             break
@@ -113,41 +121,4 @@ def cmd_run(args, registry: dict[str, Workflow]) -> int:
 
     return 0 if counts.get("failed", 0) == 0 else 1
 
-
-def main() -> int:
-    p = argparse.ArgumentParser(prog="agentz", description="AgentZ workflow orchestrator")
-    sub = p.add_subparsers(dest="command", required=True)
-
-    sub.add_parser("list", help="list all registered workflows")
-
-    plan = sub.add_parser("plan", help="show execution plan without running")
-    _add_filter_args(plan)
-
-    run = sub.add_parser("run", help="execute workflows")
-    _add_filter_args(run)
-    run.add_argument("--mode", default="dry-run",
-                     help="dry-run | confirm | auto (default: dry-run)")
-    run.add_argument("--quiet", action="store_true")
-    run.add_argument("--continue-on-error", action="store_true",
-                     help="don't stop the chain when a workflow fails")
-
-    args = p.parse_args()
-    registry = load_registry()
-
-    return {
-        "list": cmd_list,
-        "plan": cmd_plan,
-        "run":  cmd_run,
-    }[args.command](args, registry)
-
-
-def _add_filter_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("workflow_ids", nargs="*", help="specific workflow IDs")
-    parser.add_argument("--all", action="store_true", help="all registered workflows")
-    parser.add_argument("--priority", help="comma-separated: critical,high,medium,low")
-    parser.add_argument("--revenue-only", action="store_true",
-                        help="filter to workflows with blocks_revenue=true")
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+# ... (Keep main() and _add_filter_args exactly as they are) ...
