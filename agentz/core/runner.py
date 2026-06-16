@@ -7,6 +7,7 @@ records run state to Supabase audit table.
 from __future__ import annotations
 
 import importlib
+import inspect
 import json
 import time
 import traceback
@@ -107,10 +108,17 @@ def resolve_order(
 
 
 def execute(
-    wf: Workflow, mode: Mode, verbose: bool = True, audit_log_path: Path = DEFAULT_AUDIT_LOG
+    wf: Workflow, 
+    mode: Mode, 
+    verbose: bool = True, 
+    audit_log_path: Path = DEFAULT_AUDIT_LOG,
+    deps: dict[str, Any] | None = None
 ) -> RunResult:
     started = time.time()
     started_iso = datetime.now(timezone.utc).isoformat()
+
+    def _get_duration() -> float:
+        return time.time() - started
 
     # 1. Rate limit check
     if wf.max_runs_per_day is not None and audit_log_path.exists():
@@ -122,7 +130,7 @@ def execute(
                 status="blocked",
                 started_at=started_iso,
                 finished_at=datetime.now(timezone.utc).isoformat(),
-                duration_s=duration,
+                duration_s=_get_duration(),
                 notes=msg,
             )
 
@@ -135,7 +143,7 @@ def execute(
             status="blocked",
             started_at=started_iso,
             finished_at=datetime.now(timezone.utc).isoformat(),
-            duration_s=duration,
+            duration_s=_get_duration(),
             notes=msg,
         )
     if missing and mode == Mode.DRY_RUN and verbose:
@@ -171,7 +179,7 @@ def execute(
             status="failed",
             started_at=started_iso,
             finished_at=datetime.now(timezone.utc).isoformat(),
-            duration_s=duration,
+            duration_s=_get_duration(),
             error=f"handler import failed: {e}",
         )
 
@@ -181,35 +189,44 @@ def execute(
             status="failed",
             started_at=started_iso,
             finished_at=datetime.now(timezone.utc).isoformat(),
-            duration_s=duration,
+            duration_s=_get_duration(),
             error=f"handler {wf.handler} has no run(ctx) function",
         )
 
     attempts = 0
     max_attempts = wf.max_retries + 1
     
+    # 4. Intelligently inspect the handler signature
+    run_sig = inspect.signature(module.run)
+    wants_deps = "deps" in run_sig.parameters
+    
     while attempts < max_attempts:
         attempts += 1
         try:
-            notes = module.run(ctx) or ""
-        duration = time.time() - started
-        status = "ok" if effective_mode != Mode.DRY_RUN else "skipped"
-        if status == "ok":
-            ctx.record_success_signal({"duration_s": duration, "notes": notes})
-            token_usage, cost_usd = ctx.get_usage()
-            res = RunResult(
-                workflow_id=wf.id,
-                status,
-                started_at=started_iso,
-                finished_at=datetime.now(timezone.utc).isoformat(),
-                duration_s=duration,
-                notes=notes,
-                token_usage=token_usage,
-                cost_usd=cost_usd,
-            )
-            if res.status == "ok":
-                _trigger_notifications(wf, "Completed", f"Workflow {wf.id} finished successfully.\nNotes: {notes}")
-            return res
+            if wants_deps:
+                notes = module.run(ctx, deps=deps) or ""
+            else:
+                notes = module.run(ctx) or ""
+                
+            duration = _get_duration()
+            status = "ok" if effective_mode != Mode.DRY_RUN else "skipped"
+            
+            if status == "ok":
+                ctx.record_success_signal({"duration_s": duration, "notes": notes})
+                token_usage, cost_usd = ctx.get_usage()
+                res = RunResult(
+                    workflow_id=wf.id,
+                    status=status,
+                    started_at=started_iso,
+                    finished_at=datetime.now(timezone.utc).isoformat(),
+                    duration_s=duration,
+                    notes=notes,
+                    token_usage=token_usage,
+                    cost_usd=cost_usd,
+                )
+                if res.status == "ok":
+                    _trigger_notifications(wf, "Completed", f"Workflow {wf.id} finished successfully.\nNotes: {notes}")
+                return res
         except KeyboardInterrupt:
             raise
         except Exception as e:
@@ -223,7 +240,7 @@ def execute(
                 status="failed",
                 started_at=started_iso,
                 finished_at=datetime.now(timezone.utc).isoformat(),
-                duration_s=duration,
+                duration_s=_get_duration(),
                 error=f"{type(e).__name__}: {e}\n{traceback.format_exc()}",
             )
             _trigger_notifications(wf, "Failed", f"Workflow {wf.id} failed.\nError: {e}")
