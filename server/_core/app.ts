@@ -146,7 +146,7 @@ export function createApp() {
     app.use("/api/gpt", gptRouter);
 
   // ─── Email Open / Click Tracking ─────────────────────────────────────────
-  app.get("/api/track/open/:token", async (req, res) => {
+  app.get("/api/track/open/:token", async (req, res) {
     try {
       const email = Buffer.from(
         req.params.token.replace(/-/g, "+").replace(/_/g, "/"),
