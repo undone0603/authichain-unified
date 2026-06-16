@@ -802,3 +802,15 @@ workflows:
       Autonomous lead scouting using ref-based native browser automation.
       Uses recent Win Signals to prioritize prospects that match 
       high-conversion profiles.
+- id: revenue_pipeline_sync
+    title: "Revenue Pipeline Synchronization"
+    priority: high
+    blocks_revenue: true
+    handler: revenue_pipeline_sync
+    type: api
+    estimated_minutes: 5
+    requires: []
+    prerequisites: []
+    description: |
+      Synchronizes usage and processes metered billing via Stripe DI container.
+      Relies on dependency injection rather than global secrets.
