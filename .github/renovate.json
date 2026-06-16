@@ -1,0 +1,58 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommits"],
+  "schedule": ["before 4am on Sunday"],
+  "timezone": "UTC",
+  "prHourlyLimit": 5,
+  "prConcurrentLimit": 10,
+  "automerge": true,
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "labels": ["dependencies", "automated"],
+  "packageRules": [
+    {
+      "description": "Auto-merge minor and patch updates",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "Group all non-major Next.js/React updates",
+      "matchPackageNames": ["next", "react", "react-dom"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Next.js and React (non-major)"
+    },
+    {
+      "description": "Group Drizzle ORM updates",
+      "matchPackagePatterns": ["drizzle-.*"],
+      "groupName": "Drizzle ORM"
+    },
+    {
+      "description": "Group tRPC updates",
+      "matchPackagePatterns": ["@trpc/.*"],
+      "groupName": "tRPC"
+    },
+    {
+      "description": "Group Thirdweb updates",
+      "matchPackagePatterns": ["thirdweb", "@thirdweb-dev/.*"],
+      "groupName": "Thirdweb SDK"
+    },
+    {
+      "description": "Require PR approval for major updates",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "major-update", "requires-review"]
+    },
+    {
+      "description": "Pin GitHub Actions to exact SHAs",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "automerge": true,
+    "labels": ["security", "automated"]
+  },
+  "osvVulnerabilityAlerts": true,
+  "dependencyDashboardAutoclose": true
+}
