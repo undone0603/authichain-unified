@@ -142,11 +142,11 @@ export function createApp() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerOAuthRoutes(app);
   registerGmailOAuthRoutes(app); // Gmail: /api/gmail/connect + /api/gmail/callback
-    app.use("/api/contact", contactRouter);
-    app.use("/api/gpt", gptRouter);
+  app.use("/api/contact", contactRouter);
+  app.use("/api/gpt", gptRouter);
 
   // ─── Email Open / Click Tracking ─────────────────────────────────────────
-  app.get("/api/track/open/:token", async (req, res) {
+  app.get("/api/track/open/:token", async (req, res) => {
     try {
       const email = Buffer.from(
         req.params.token.replace(/-/g, "+").replace(/_/g, "/"),
