@@ -14,6 +14,17 @@ export type MissionType =
   | 'MEDTECH_VIDEO_BRIEFING'
   | 'MI_CRA_PARTNERSHIP';
 
+// Contract implemented by server/missions/db-repository.ts (DbMissionsRepository).
+export interface IMissionsRepository {
+  getMissions(statusFilter?: string): Promise<any[]>;
+  getMissionById(id: string): Promise<any>;
+  createMission(type: MissionType): Promise<string>;
+  createTask(data: any): Promise<string>;
+  updateMissionStatus(id: string, status: MissionStatus): Promise<void>;
+  getTasksByMission(missionId: string): Promise<any[]>;
+  retryTask(id: string): Promise<void>;
+}
+
 export const MISSION_TYPES = [
   'GOV_PILOT',
   'RETAIL_PILOT',
