@@ -17,11 +17,23 @@ const nextConfig: NextConfig = {
     const stub = path.resolve(__dirname, 'src/stubs/empty.js');
     const cfCompatStub = path.resolve(__dirname, 'src/stubs/cf-compat.mjs');
     config.resolve.fallback = { ...config.resolve.fallback, net: false, tls: false, crypto: false };
+    // Server modules use TS ESM-style `.js` import specifiers (e.g. '../_core/llm.js').
+    // tsc/tsx map those to .ts; webpack needs extensionAlias to do the same.
+    (config.resolve as { extensionAlias?: Record<string, string[]> }).extensionAlias = {
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+      '.mjs': ['.mts', '.mjs'],
+      '.cjs': ['.cts', '.cjs'],
+    };
     // Stub packages that cannot run on CF Workers so esbuild never sees require() calls for them.
     // Packages with ESM named/default imports need cf-compat.mjs (proper export declarations);
     // plain CJS-only packages can use empty.js.
     config.resolve.alias = {
       ...config.resolve.alias,
+      // The Next.js app lives in src/, but the root tsconfig maps @/* to the
+      // Vite app (client/src). Scope the @/ alias to src/ for the Next build so
+      // src/app imports resolve, without disturbing the Vite client. Only @/…
+      // is affected; scoped npm packages like @ai-sdk/openai are not.
+      '@': path.resolve(__dirname, 'src'),
       ioredis: stub,
       redis: stub,
       'playwright-core': stub,
