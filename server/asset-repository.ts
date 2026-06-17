@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { products, deadLetterQueue } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { IAssetRepository } from "./asset-types";
 
 export class DbAssetRepository implements IAssetRepository {
@@ -30,6 +30,6 @@ export class DbAssetRepository implements IAssetRepository {
     // This requires reading the task first, which is not efficient.
     // For now, simplify and just assume increment or update is enough if we had the object.
     // Given the complexity of the original code, let's just make sure this fulfills the interface.
-    await db.update(deadLetterQueue).set({ lastAttemptedAt: new Date() }).where(eq(deadLetterQueue.id, id));
+    await db.update(deadLetterQueue).set({ retries: sql`${deadLetterQueue.retries} + 1`, updatedAt: new Date() }).where(eq(deadLetterQueue.id, id));
   }
 }
