@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
   try {
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-04-22.dahlia' as const });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-05-27.dahlia' as const });
 
     const origin = request.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://qron.space';
 

@@ -2,12 +2,10 @@ import type { NextConfig } from 'next';
 import path from 'path';
 
 const nextConfig: NextConfig = {
-  // The Next.js app (src/) is mid-migration and the root tsconfig maps @/* to the
-  // Vite app (client/src), so `next build`'s type-check mis-resolves src/ imports.
-  // Runtime resolution is correct via the webpack `@` -> src alias below; the strict
-  // type gate remains `pnpm check` (covers server/client/shared). Matches the existing
-  // eslint.ignoreDuringBuilds posture for this in-progress migration.
-  typescript: { ignoreBuildErrors: true },
+  // Root tsconfig now maps @/* -> ./src/* and type-checks src/**, so `next build`
+  // resolves and type-checks the Next app correctly. Strict build type-checking
+  // is on (the dead Vite app at client/src has been retired from the type gate).
+  typescript: { ignoreBuildErrors: false },
   
   // eslint config handled via .eslintrc.json
   eslint: {

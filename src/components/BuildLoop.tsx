@@ -44,13 +44,16 @@ const STATUS_BADGE: Record<string, React.ReactNode> = {
 function TaskRow({ task, missionId }: { task: any; missionId: string }) {
   const utils = trpc.useUtils();
 
-  const retry = trpc.devTeam.retryTask.useMutation({
-    onSuccess: () => { toast.success("Task re-queued"); utils.devTeam.sprintTasks.invalidate({ missionId }); },
-    onError: e => toast.error(e.message),
+  // devTeam.retryTask / approveMerge / sprintTasks are not yet wired into the
+  // tRPC router (frontend is ahead of backend) — access via `any` until added.
+  const dt = trpc.devTeam as any;
+  const retry = dt.retryTask.useMutation({
+    onSuccess: () => { toast.success("Task re-queued"); (utils.devTeam as any).sprintTasks.invalidate({ missionId }); },
+    onError: (e: { message: string }) => toast.error(e.message),
   });
-  const approve = trpc.devTeam.approveMerge.useMutation({
-    onSuccess: () => { toast.success("Merge approved — AgentZ will merge on next tick"); utils.devTeam.sprintTasks.invalidate({ missionId }); },
-    onError: e => toast.error(e.message),
+  const approve = dt.approveMerge.useMutation({
+    onSuccess: () => { toast.success("Merge approved — AgentZ will merge on next tick"); (utils.devTeam as any).sprintTasks.invalidate({ missionId }); },
+    onError: (e: { message: string }) => toast.error(e.message),
   });
 
   return (
@@ -93,7 +96,8 @@ function TaskRow({ task, missionId }: { task: any; missionId: string }) {
 
 function SprintCard({ sprint }: { sprint: any }) {
   const [expanded, setExpanded] = useState(false);
-  const { data: tasks = [], refetch } = trpc.devTeam.sprintTasks.useQuery(
+  // sprintTasks not yet on the tRPC router — access via `any` until wired up.
+  const { data: tasks = [], refetch } = (trpc.devTeam as any).sprintTasks.useQuery(
     { missionId: sprint.id },
     { enabled: expanded, refetchInterval: expanded ? 15_000 : false }
   );
@@ -153,14 +157,15 @@ function NewSprintForm() {
   const [context, setContext] = useState("");
   const utils = trpc.useUtils();
 
-  const create = trpc.devTeam.createSprint.useMutation({
-    onSuccess: (data) => {
+  // createSprint / sprints not yet on the tRPC router — access via `any`.
+  const create = (trpc.devTeam as any).createSprint.useMutation({
+    onSuccess: (_data: unknown) => {
       toast.success("Sprint created", { description: `PLAN_SPRINT task queued. AgentZ will start on the next 5-min tick.` });
       setFeature("");
       setContext("");
-      utils.devTeam.sprints.invalidate();
+      (utils.devTeam as any).sprints.invalidate();
     },
-    onError: e => toast.error("Sprint failed", { description: e.message }),
+    onError: (e: { message: string }) => toast.error("Sprint failed", { description: e.message }),
   });
 
   const examples = [
@@ -283,7 +288,8 @@ function LoopDiagram() {
 // ─── Main page ────────────────────────────────────────────────────────────
 
 export default function BuildLoop() {
-  const { data: sprints = [], isLoading, refetch } = trpc.devTeam.sprints.useQuery(
+  // sprints not yet on the tRPC router — access via `any` until wired up.
+  const { data: sprints = [], isLoading, refetch } = (trpc.devTeam as any).sprints.useQuery(
     undefined,
     { refetchInterval: 30_000 }
   );

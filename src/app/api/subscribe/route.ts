@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     if (!stripeKey) return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
 
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(stripeKey, { apiVersion: '2026-04-22.dahlia' as const });
+    const stripe = new Stripe(stripeKey, { apiVersion: '2026-05-27.dahlia' as const });
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
