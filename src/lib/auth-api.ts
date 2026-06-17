@@ -1,16 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error(
-    '[auth-api] Missing required env vars: NEXT_PUBLIC_SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY. ' +
-    'Server cannot start without these credentials.'
-  );
+// Lazily create the admin client at REQUEST time. Creating it (or throwing on
+// missing env) at module scope crashed the Cloudflare Workers build during
+// Next.js page-data collection for every route that transitively imports this.
+let _admin: ReturnType<typeof createClient> | null = null;
+function getAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      '[auth-api] Missing required env vars: NEXT_PUBLIC_SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY. ' +
+      'Server cannot serve authenticated requests without these credentials.'
+    );
+  }
+  if (!_admin) _admin = createClient(url, key);
+  return _admin;
 }
-
-const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 /**
  * Verify an industrial API key.
@@ -18,6 +23,8 @@ const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
  */
 export async function verifyApiKey(apiKey: string): Promise<string | null> {
   if (!apiKey || !apiKey.startsWith('qron_')) return null;
+
+  const admin = getAdmin();
 
   // Use 16-char prefix for lower collision probability
   const prefix = apiKey.substring(0, 16);

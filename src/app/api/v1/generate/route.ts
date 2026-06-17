@@ -5,14 +5,13 @@ import { requireApiKey } from '@/lib/api-auth-middleware';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { generateLivingQR } from '@/lib/hf-generation';
 import { assertSafeUrl } from '@/lib/ssrf-guard';
-import { createClient } from '@supabase/supabase-js';
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const userId = await requireApiKey(req);
   if (userId instanceof NextResponse) return userId;
 

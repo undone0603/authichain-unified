@@ -1,12 +1,6 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 'not_configured'
-);
 
 function periodCutoff(period: string): string | null {
   if (period === 'all') return null;
@@ -19,6 +13,12 @@ export async function GET(request: NextRequest) {
   const period = searchParams.get('period') || '30d';
   const metric = searchParams.get('metric') || 'scans';
   const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 50);
+
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || 'not_configured'
+  );
 
   try {
     const cutoff = periodCutoff(period);

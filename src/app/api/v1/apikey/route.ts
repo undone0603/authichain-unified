@@ -2,18 +2,17 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/api-auth-middleware';
-import { createClient } from '@supabase/supabase-js';
 import { randomBytes, createHash } from 'node:crypto';
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 // Must match the prefix length used in verifyApiKey
 const PREFIX_LENGTH = 16;
 
 export async function GET(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   // Session-only: API key management requires a browser session
   const session = await requireSession(req);
   if (session instanceof NextResponse) return session;
@@ -45,6 +44,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const session = await requireSession(req);
   if (session instanceof NextResponse) return session;
 
@@ -104,6 +108,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const session = await requireSession(req);
   if (session instanceof NextResponse) return session;
 
