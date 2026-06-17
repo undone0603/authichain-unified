@@ -11,7 +11,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-export const runtime = 'edge';
+// OpenNext-Cloudflare bundles nodejs routes in the default server function;
+// edge-runtime routes must be separate functions, which this app doesn't use.
+export const runtime = 'nodejs';
 
 // ---------------------------------------------------------------------------
 // Lightweight in-memory rate limiter (edge-compatible, resets per cold start)

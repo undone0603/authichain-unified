@@ -2,12 +2,6 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/api-auth-middleware';
-import { createClient } from '@supabase/supabase-js';
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 const ALLOWED_UPDATE_FIELDS = new Set(['name', 'company', 'timezone', 'avatar']);
 
@@ -17,6 +11,11 @@ const ALLOWED_UPDATE_FIELDS = new Set(['name', 'company', 'timezone', 'avatar'])
  * Never returns other users — caller identity comes from the session only.
  */
 export async function GET(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const session = await requireSession(req);
   if (session instanceof NextResponse) return session;
 
@@ -39,6 +38,11 @@ export async function GET(req: NextRequest) {
  * Ignores any field not in the ALLOWED_UPDATE_FIELDS allowlist.
  */
 export async function PATCH(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const session = await requireSession(req);
   if (session instanceof NextResponse) return session;
 
