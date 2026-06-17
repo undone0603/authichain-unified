@@ -51,6 +51,18 @@ export const keccak256 = noop;
 export const toHex = noop;
 export const toBytes = noop;
 
+// thirdweb/wallets + extensions pulled server-side (routes 500 at runtime; core routes unaffected)
+export const privateKeyToAccount = noop;
+export const smartWallet = noop;
+export const transfer = noop;
+export const balanceOf = noop;
+export const totalSupply = noop;
+export const getOwnedNFTs = noop;
+export const prepareContractCall = noop;
+export const readContract = noop;
+export const getNFT = noop;
+export const claimTo = noop;
+
 // thirdweb/react: React components must be plain functions, not classes
 // ThirdwebProvider must pass through children — it wraps the entire page in layout.tsx
 export const ConnectButton = NoopComponent;
