@@ -50,6 +50,12 @@ jobs:
       - name: Run JavaScript tests
         run: pnpm test
 
+      # Gate on the full production build (next build + OpenNext/Cloudflare bundle)
+      # so build breakage — page-data collection, prerender, edge-runtime, and
+      # OpenNext esbuild externals — is caught on PRs before merge, not after.
+      - name: Build (Next.js + Cloudflare Workers)
+        run: pnpm build
+
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
