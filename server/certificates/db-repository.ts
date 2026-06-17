@@ -11,8 +11,8 @@ export class DbCertificatesRepository implements ICertificatesRepository {
   async getProductById(productId: number): Promise<any> {
     return await db.getProductById(productId);
   }
-  async updateAuthenticationSharing(id: number, isPublic: boolean, shareToken: string): Promise<void> {
-    return await db.updateAuthenticationSharing(id, isPublic, shareToken);
+  async updateAuthenticationSharing(id: number, userId: number, isPublic: boolean, shareToken: string): Promise<void> {
+    return await db.updateAuthenticationSharing(id, userId, isPublic, shareToken);
   }
   async getAuthenticationByShareToken(shareToken: string): Promise<any> {
     return await db.getAuthenticationByShareToken(shareToken);

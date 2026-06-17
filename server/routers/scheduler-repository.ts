@@ -18,7 +18,7 @@ export class DbSchedulerRepository implements ISchedulerRepository {
     return scheduler.getSystemStatus();
   }
 
-  toggleKillSwitch(active: boolean): boolean {
-    return scheduler.toggleKillSwitch(active);
+  async toggleKillSwitch(active: boolean): Promise<boolean> {
+    return await scheduler.toggleKillSwitch(active);
   }
 }

@@ -27,6 +27,7 @@ export class DbMarketingRepository implements IMarketingRepository {
         { role: "user", content: `Create ${input.type} content about: ${input.topic}. Target: ${input.targetAudience || "enterprise decision makers"}` },
       ],
     });
-    return { content: response.choices[0].message.content };
+    const raw = response.choices[0].message.content;
+    return { content: typeof raw === "string" ? raw : "" };
   }
 }
