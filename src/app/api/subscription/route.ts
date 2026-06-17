@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'This plan does not require a payment' }, { status: 400 });
   }
 
-  const stripe = new Stripe(stripeKey, { apiVersion: '2026-04-22.dahlia' as const });
+  const stripe = new Stripe(stripeKey, { apiVersion: '2026-05-27.dahlia' as const });
   const origin = req.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://qron.space';
 
   const checkoutSession = await stripe.checkout.sessions.create({
