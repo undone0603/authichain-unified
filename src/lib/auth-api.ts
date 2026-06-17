@@ -29,11 +29,15 @@ export async function verifyApiKey(apiKey: string): Promise<string | null> {
   // Use 16-char prefix for lower collision probability
   const prefix = apiKey.substring(0, 16);
 
-  const { data: keys, error } = await admin
+  // The admin client is created without DB generics, so the query builder
+  // infers row types as `never`. Type the selected columns explicitly.
+  const { data: keysData, error } = await admin
     .from('api_keys')
     .select('user_id, key_hash, is_active')
     .eq('key_prefix', prefix)
     .eq('is_active', true);
+
+  const keys = keysData as Array<{ user_id: string; key_hash: string; is_active: boolean }> | null;
 
   if (error || !keys || keys.length === 0) return null;
 
@@ -58,7 +62,8 @@ export async function verifyApiKey(apiKey: string): Promise<string | null> {
 
   admin
     .from('api_keys')
-    .update({ last_used_at: new Date().toISOString() })
+    // Update payload typed as `never` without DB generics; cast to the row shape.
+    .update({ last_used_at: new Date().toISOString() } as never)
     .eq('key_hash', incomingHash)
     .then(undefined, (err) => {
       console.error('[auth-api] Failed to update api_keys.last_used_at:', err);
