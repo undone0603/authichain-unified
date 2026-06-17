@@ -2,13 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/api-auth-middleware';
-import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 /**
  * GET /api/subscription
@@ -17,6 +11,11 @@ const admin = createClient(
  * (default)    — authenticated user's own subscription(s)
  */
 export async function GET(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const { searchParams } = new URL(req.url);
   const type = searchParams.get('type');
 
@@ -61,6 +60,11 @@ export async function GET(req: NextRequest) {
  * the Stripe webhook (stripe/webhook/route.ts) after payment.
  */
 export async function POST(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const session = await requireSession(req);
   if (session instanceof NextResponse) return session;
 

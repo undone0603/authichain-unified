@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { PLANS } from '@/lib/plans';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 'not_configured'
-);
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
+      process.env.SUPABASE_SERVICE_ROLE_KEY || 'not_configured'
+    );
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
 

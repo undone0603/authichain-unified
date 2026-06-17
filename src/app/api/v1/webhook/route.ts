@@ -2,13 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth-middleware';
-import { createClient } from '@supabase/supabase-js';
 import { assertSafeUrl } from '@/lib/ssrf-guard';
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 const AVAILABLE_EVENTS = [
   'qr.created', 'qr.updated', 'qr.deleted',
@@ -18,6 +12,11 @@ const AVAILABLE_EVENTS = [
 ];
 
 export async function GET(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const auth = await requireAuth(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -46,6 +45,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const auth = await requireAuth(req);
   if (auth instanceof NextResponse) return auth;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -54,9 +54,6 @@ export default function Home() {
   const [isMagicGenerating, setIsMagicGenerating] = useState(false);
   const [showScanTest, setShowScanTest] = useState(false);
 
-  // FIX #3: use a ref so the setTimeout callback always reads the latest user value
-  const userRef = useRef<User | null>(null);
-
   const handleMagicTry = async (brandName: string) => {
     const examples: Record<string, { url: string; prompt: string; mode: string }> = {
       Tesla: {
@@ -83,11 +80,12 @@ export default function Home() {
     if (mode) setSelectedMode(mode);
     
     setIsMagicGenerating(true);
+    // Auto-scroll to generator
     document.getElementById('generator-section')?.scrollIntoView({ behavior: 'smooth' });
     
-    // FIX #3: read from ref — never stale
+    // Simulate thinking/auto-start
     setTimeout(() => {
-      if (userRef.current) handleGenerate();
+      if (user) handleGenerate();
       else handleGuestGenerate();
       setIsMagicGenerating(false);
     }, 1500);
@@ -96,16 +94,24 @@ export default function Home() {
   const saveGuestEmail = async () => {
     if (!captureEmail || !captureEmail.includes('@')) return;
     try {
-      // FIX #4: route through internal API instead of calling Supabase REST directly
-      await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: captureEmail,
-          source: 'guest_generate',
-          metadata: { style: selectedMode?.id },
-        }),
-      });
+      await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/email_leads`,
+        {
+          method: 'POST',
+          headers: {
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            Authorization:
+              'Bearer ' + (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''),
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            email: captureEmail,
+            source: 'guest_generate',
+            metadata: { style: selectedMode?.id },
+          }),
+        }
+      );
       setEmailSaved(true);
       setTimeout(() => setShowEmailCapture(false), 1500);
     } catch {}
@@ -170,8 +176,6 @@ export default function Home() {
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
-      // FIX #3: keep ref in sync alongside state
-      userRef.current = authUser;
       setUser(authUser);
       if (authUser) {
         const { data: profile, error: profileError } = await supabase
@@ -199,7 +203,7 @@ export default function Home() {
           }
         }
       } catch {
-        // silently fail — presets will be empty
+                // silently fail — presets will be empty
       }
     };
 
@@ -260,7 +264,7 @@ export default function Home() {
       return;
     }
     if (!plan.stripe_price_id) {
-      window.location.assign('mailto:hello@authichain.com');
+      window.location.assign('mailto:Z@authichain.com');
       return;
     }
     try {
@@ -421,9 +425,8 @@ export default function Home() {
                <h3 className="text-xl font-black uppercase tracking-tighter gold-text mb-2">
                  {isMagicGenerating ? 'Synchronizing Brand Assets...' : 'Creating Cinematic QRON...'}
                </h3>
-               {/* FIX #8: replaced mojibake â€¢ with proper bullet • */}
                <p className="text-zinc-500 text-xs font-bold uppercase tracking-[0.2em] max-w-xs leading-loose">
-                 Anchoring to AuthiChain Truth Network &bull; AI Inference in progress &bull; ~15s
+                 Anchoring to AuthiChain Truth Network â€¢ AI Inference in progress â€¢ ~15s
                </p>
             </div>
           )}
@@ -1032,15 +1035,14 @@ export default function Home() {
               className="btn-gold px-8 py-3 rounded-xl inline-flex items-center gap-2 font-bold shadow-gold"
             >
               <Sparkles className="w-4 h-4" />
-              Industry Showcase (Model A) &rarr;
+              Industry Showcase (Model A) →
             </a>
             <a
               href="/demo"
               className="btn-outline-gold px-8 py-3 rounded-xl inline-flex items-center gap-2 font-bold border-zinc-800"
             >
-              Marketplace Demos &rarr;
+              Marketplace Demos →
             </a>
-          </div>
             <p className="text-xs mt-3" style={{ color: '#6b6b6b' }}>
               20+ iconic brands · Order yours from $49 · Delivered in ~5 min
             </p>
@@ -1069,7 +1071,7 @@ export default function Home() {
                 rel="noreferrer"
                 style={{ color: '#c9a227', textDecoration: 'none' }}
               >
-                Enterprise operations &rarr;
+                Enterprise operations →
               </a>
             </p>
           </div>
@@ -1219,15 +1221,9 @@ export default function Home() {
                         <p className="text-sm text-zinc-500 leading-relaxed mb-8">
                             {p.desc}
                         </p>
-                        {/* FIX #5: external URLs must use <a>, not Next.js <Link> */}
-                        <a
-                          href={p.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-2 text-[10px] font-black uppercase text-zinc-600 group-hover:text-gold tracking-widest"
-                        >
+                        <Link href={p.link} className="flex items-center gap-2 text-[10px] font-black uppercase text-zinc-600 group-hover:text-gold tracking-widest">
                             Explore Pillar <ArrowRight className="w-3 h-3" />
-                        </a>
+                        </Link>
                     </div>
                 ))}
             </div>
@@ -1349,7 +1345,7 @@ export default function Home() {
             className="btn-gold inline-flex items-center gap-2 px-8 py-3 rounded-xl no-underline"
           >
             <Shield className="w-4 h-4" />
-            Visit AuthiChain Enterprise &rarr;
+            Visit AuthiChain Enterprise →
           </a>
         </div>
 
@@ -1390,7 +1386,7 @@ export default function Home() {
               },
               {
                 q: 'Is there a refund policy?',
-                a: 'If your generated QR is not scannable, we regenerate it free. For billing issues, contact hello@authichain.com.',
+                a: 'If your generated QR is not scannable, we regenerate it free. For billing issues, contact authichain@gmail.com.',
               },
             ].map(({ q, a }) => (
               <div key={q} className="protocol-card p-5">
@@ -1419,8 +1415,8 @@ export default function Home() {
           </div>
           <div className="space-y-2">
             <p className="text-xs" style={{ color: '#6b6b6b' }}>
-              ◆ 100% scannable guarantee &nbsp;&middot;&nbsp; Ed25519 cryptographic
-              signing &nbsp;&middot;&nbsp; AuthiChain blockchain anchoring
+              ◆ 100% scannable guarantee &nbsp;·&nbsp; Ed25519 cryptographic
+              signing &nbsp;·&nbsp; AuthiChain blockchain anchoring
             </p>
             <p className="text-[10px] font-bold text-zinc-800 uppercase tracking-widest">
               Powered by Hugging Face · Supabase · Stripe · AuthiChain Protocol

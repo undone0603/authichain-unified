@@ -2,12 +2,6 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/api-auth-middleware';
-import { createClient } from '@supabase/supabase-js';
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 /**
  * GET /api/v1/users
@@ -15,6 +9,11 @@ const admin = createClient(
  * Admin-level user listing is handled by /api/admin/stats.
  */
 export async function GET(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const session = await requireSession(req);
   if (session instanceof NextResponse) return session;
 

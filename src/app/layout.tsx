@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { TRPCProvider } from '@/components/TRPCProvider';
 
 export const metadata: Metadata = {
   title: {
@@ -33,7 +34,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>{children}</body>
+      <body>
+        <TRPCProvider>{children}</TRPCProvider>
+      </body>
     </html>
   );
 }

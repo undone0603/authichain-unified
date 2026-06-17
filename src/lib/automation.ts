@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 export type AutomationStatus = 'success' | 'failure';
-export type AutomationKind = 'cron' | 'webhook' | 'manual' | 'api';
+export type AutomationKind = 'cron' | 'webhook' | 'manual' | 'api' | 'event';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _client: ReturnType<typeof createClient<any>> | null = null;
@@ -56,4 +56,30 @@ export async function logAutomation(
   } catch (err) {
     console.warn('[automation] failed to persist log:', err);
   }
+}
+
+/**
+ * Lightweight lead-automation hook invoked by the /api/leads/capture edge route.
+ * Records the trigger; the substantive outreach (HubSpot / Make / email) runs in
+ * the server pipeline (server/agents/*, scheduled-jobs), not in the edge runtime.
+ */
+export async function handleLeadAutomation(lead: {
+  email: string;
+  name?: string;
+  source?: string;
+}): Promise<void> {
+  try {
+    await logAutomation('lead_automation', 'event', 'success', lead);
+  } catch (err) {
+    await logAutomation('lead_automation', 'event', 'failure', lead, formatErr(err));
+  }
+}
+
+/**
+ * Daily-maintenance marker invoked by the /api/automation/cron edge route.
+ * The substantive maintenance jobs run via the server scheduler
+ * (server/scheduled-jobs.ts); this records that the edge cron fired.
+ */
+export async function runDailyMaintenance(): Promise<void> {
+  await logAutomation('daily_maintenance', 'cron', 'success');
 }

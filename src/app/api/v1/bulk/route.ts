@@ -4,16 +4,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth-middleware';
 import { assertSafeUrl } from '@/lib/ssrf-guard';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { createClient } from '@supabase/supabase-js';
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 const ALLOWED_TYPES = new Set(['url', 'text', 'email', 'phone', 'wifi']);
 
 export async function POST(req: NextRequest) {
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const auth = await requireAuth(req);
   if (auth instanceof NextResponse) return auth;
 

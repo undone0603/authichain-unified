@@ -2,12 +2,6 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth-middleware';
-import { createClient } from '@supabase/supabase-js';
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 const SUPPORTED_FORMATS = ['json', 'csv'] as const;
 const SUPPORTED_TYPES = ['codes', 'analytics', 'scans', 'campaigns'] as const;
@@ -17,6 +11,11 @@ type ExportType = typeof SUPPORTED_TYPES[number];
 export async function GET(req: NextRequest) {
   // Auth required — user_id is ALWAYS derived from the verified session/key,
   // never accepted from query params.
+  const { createClient } = await import('@supabase/supabase-js');
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   const auth = await requireAuth(req);
   if (auth instanceof NextResponse) return auth;
 

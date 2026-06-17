@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { Shield, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 
 interface RevealPageProps {
-  params: { id: string };
-  searchParams: { dest?: string };
+  // Next.js 15: route params/searchParams are async (Promises).
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ dest?: string }>;
 }
 
 export default function RevealPage({ params, searchParams }: RevealPageProps) {
-  const { id } = params;
-  const { dest } = searchParams;
+  const { id } = use(params);
+  const { dest } = use(searchParams);
   const [progress, setProgress] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [redirectQueued, setRedirectQueued] = useState(false);
