@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+// @ts-expect-error pg-mem is optional test-infra, not yet installed/wired (this file is not in setupFiles)
 import { newDb } from 'pg-mem';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from '../drizzle/schema';
