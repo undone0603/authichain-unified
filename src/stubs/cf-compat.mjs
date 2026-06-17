@@ -38,6 +38,19 @@ export const ethereum = {};
 export const mainnet = {};
 export const sepolia = {};
 
+// viem named exports pulled by thirdweb internals (server-stubbed; routes 500 at runtime)
+export const toEventHash = noop;
+export const encodeEventTopics = noop;
+export const decodeAbiParameters = noop;
+export const encodeAbiParameters = noop;
+export const decodeEventLog = noop;
+export const parseAbi = noop;
+export const getAddress = noop;
+export const isAddress = noop;
+export const keccak256 = noop;
+export const toHex = noop;
+export const toBytes = noop;
+
 // thirdweb/react: React components must be plain functions, not classes
 // ThirdwebProvider must pass through children — it wraps the entire page in layout.tsx
 export const ConnectButton = NoopComponent;

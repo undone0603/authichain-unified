@@ -70,7 +70,12 @@ const nextConfig: NextConfig = {
         'thirdweb/react':          cfCompatStub,
         'thirdweb/wallets':        cfCompatStub,
         'thirdweb/extensions/erc721': cfCompatStub,
+        'thirdweb/extensions/erc20': cfCompatStub,
         viem:                      cfCompatStub,
+        // viem is aliased to a single stub file, so its subpaths must be stubbed too
+        'viem/chains':             cfCompatStub,
+        'viem/utils':              cfCompatStub,
+        'viem/accounts':           cfCompatStub,
         '@walletconnect/sign-client': stub,
         isows:                     stub,
         '@coinbase/cdp-sdk':       cfCompatStub,
