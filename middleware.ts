@@ -11,15 +11,16 @@ const BRAND_MAP: Record<string, string> = {
   'strainchain.io': 'strainchain', 'www.strainchain.io': 'strainchain',
   'govchain.us': 'govchain', 'www.govchain.us': 'govchain',
   'authichain.com': 'authichain', 'www.authichain.com': 'authichain',
+  'app.authichain.com': 'authichain',
 };
 
 export function middleware(req: NextRequest) {
   const host = req.headers.get('host') ?? req.nextUrl.hostname;
   const pathname = req.nextUrl.pathname;
-
   const h = host.toLowerCase().split(':')[0];
+
   let brand = BRAND_MAP[h] ?? 'authichain';
-  if (brand === 'authichain') {
+  if (!BRAND_MAP[h]) {
     for (const [k, v] of Object.entries(BRAND_MAP)) {
       if (h.endsWith('.' + k) || h.includes(v)) { brand = v; break; }
     }
@@ -28,8 +29,7 @@ export function middleware(req: NextRequest) {
   const reqHeaders = new Headers(req.headers);
   reqHeaders.set('x-brand', brand);
 
-  // Rewrite root to brand-specific homepage on production domains only
-  if (pathname === '/' && brand !== 'qron' && !!BRAND_MAP[h]) {
+  if (pathname === '/' && !!BRAND_MAP[h]) {
     const url = req.nextUrl.clone();
     url.pathname = `/brand/${brand}`;
     return NextResponse.rewrite(url, { request: { headers: reqHeaders } });
