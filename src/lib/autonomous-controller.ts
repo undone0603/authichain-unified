@@ -214,11 +214,65 @@ export class AutonomousController {
   }
 
   /**
+   * Builds the stage-appropriate drip email. Returns null for unknown stages so
+   * the caller can close out the sequence rather than send nothing.
+   * Stage 1: Artifact Delivery, Stage 2: Day-3 Nudge, Stage 3: Elite Offer.
+   */
+  private buildDripEmail(stage: number, name?: string | null): { subject: string; html: string } | null {
+    const greeting = name ? `Hi ${name},` : 'Hi there,';
+    const wrap = (inner: string) =>
+      `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#222;line-height:1.6;">` +
+      `<p>${greeting}</p>${inner}` +
+      `<p style="color:#888;font-size:12px;margin-top:24px;">AuthiChain — verifiable provenance for everything. ` +
+      `<a href="https://authichain.com">authichain.com</a></p></div>`;
+
+    switch (stage) {
+      case 1:
+        return {
+          subject: 'Your AuthiChain verification sample is ready',
+          html: wrap(
+            `<p>Thanks for your interest in AuthiChain. We've prepared a sample of how cryptographic ` +
+            `provenance looks for your products — a tamper-evident QR seal backed by an on-chain certificate.</p>` +
+            `<p><a href="https://authichain.com/demo" style="background:#c9a227;color:#000;padding:10px 18px;` +
+            `border-radius:6px;text-decoration:none;font-weight:bold;">View your sample seal →</a></p>`
+          ),
+        };
+      case 2:
+        return {
+          subject: 'Quick question about your verification rollout',
+          html: wrap(
+            `<p>Following up on the verification sample we sent. Most teams go live in under a day — ` +
+            `we generate the seals, you print or apply them, and every scan is logged immutably.</p>` +
+            `<p>Want a 15-minute walkthrough tailored to your line? ` +
+            `<a href="https://authichain.com/demo">Book a slot here.</a></p>`
+          ),
+        };
+      case 3:
+        return {
+          subject: 'Last note — Elite verification + mobile field scanning',
+          html: wrap(
+            `<p>Closing the loop: our Elite tier adds mobile field scanning, multi-tenant brand routing, ` +
+            `and automated certificate minting — the full autonomous provenance stack.</p>` +
+            `<p><a href="https://authichain.com/subscriptions" style="background:#c9a227;color:#000;padding:10px 18px;` +
+            `border-radius:6px;text-decoration:none;font-weight:bold;">See Elite plans →</a></p>`
+          ),
+        };
+      default:
+        return null;
+    }
+  }
+
+  /**
    * Manages multi-stage lead follow-ups autonomously.
-   * Stage 1: Artifact Delivery, Stage 2: Nudge, Stage 3: Elite Offer.
+   * Resolves each active sequence's lead, sends the stage-appropriate email via
+   * SMTP, then advances the stage (+3 days) on success. Mirrors the delivery
+   * semantics of runFederalDripSequencer: failures back off a day and retry
+   * without advancing; leads with no email are closed so they aren't re-processed.
+   * Stage 1: Artifact Delivery, Stage 2: Day-3 Nudge, Stage 3: Elite Offer.
    */
   private async runDripSequencer() {
-    const workflowName = '[stub]_lead_drip_sequencer';
+    const workflowName = 'lead_drip_sequencer';
+    const DRIP_FROM = 'AuthiChain <growth@authichain.com>';
     try {
       const now = new Date().toISOString();
       const { data: sequences } = await admin
@@ -230,29 +284,66 @@ export class AutonomousController {
 
       if (!sequences || sequences.length === 0) return;
 
-      console.log(`[autonomous] Processing ${sequences.length} pending drip actions...`);
+      let sent = 0;
+      let failed = 0;
+      let skipped = 0;
+      let completed = 0;
+      let lastError: string | undefined;
 
       for (const seq of sequences) {
-        // Execute Action based on current stage
-        switch (seq.current_stage) {
-          case 1:
-            // Artifact Delivery is primarily handled by the HubSpot Agent for deals,
-            // but for generic leads, we could generate a sample here.
-            console.log(`[autonomous] Stage 1: Artifact sent to lead ${seq.lead_id}`);
-            break;
-          case 2:
-            console.log(`[autonomous] Stage 2: Sending Day 3 Nudge to lead ${seq.lead_id}`);
-            break;
-          case 3:
-            console.log(`[autonomous] Stage 3: Promoting Elite mobile app to lead ${seq.lead_id}`);
-            break;
+        // Resolve the lead's contact info for this sequence.
+        const { data: lead } = await admin
+          .from('lead_captures')
+          .select('email, name')
+          .eq('id', seq.lead_id)
+          .maybeSingle();
+
+        if (!lead?.email) {
+          // No deliverable address — close the sequence so it isn't retried forever.
+          skipped++;
+          await admin
+            .from('lead_sequences')
+            .update({ status: 'completed', last_action_at: now, next_action_at: null, updated_at: now })
+            .eq('id', seq.id);
+          continue;
         }
 
-        // Progress to next stage
+        const email = this.buildDripEmail(seq.current_stage, lead.name);
+        if (!email) {
+          // Unknown/past-final stage — mark complete.
+          completed++;
+          await admin
+            .from('lead_sequences')
+            .update({ status: 'completed', last_action_at: now, next_action_at: null, updated_at: now })
+            .eq('id', seq.id);
+          continue;
+        }
+
+        const result = await sendEmail({
+          from: DRIP_FROM,
+          to: lead.email,
+          subject: email.subject,
+          html: email.html,
+        });
+
+        if (!result.ok) {
+          failed++;
+          lastError = `${result.provider}: ${result.error}`;
+          console.warn(`[autonomous] drip stage ${seq.current_stage} failed for ${lead.email}: ${lastError}`);
+          // Back off a day and retry without advancing the stage.
+          const retryAt = new Date();
+          retryAt.setDate(retryAt.getDate() + 1);
+          await admin
+            .from('lead_sequences')
+            .update({ next_action_at: retryAt.toISOString(), updated_at: now })
+            .eq('id', seq.id);
+          continue;
+        }
+
+        sent++;
         const nextStage = seq.current_stage + 1;
         const isComplete = nextStage > 3;
-
-        // Schedule next action (+3 days)
+        if (isComplete) completed++;
         const nextAction = new Date();
         nextAction.setDate(nextAction.getDate() + 3);
 
@@ -263,12 +354,20 @@ export class AutonomousController {
             status: isComplete ? 'completed' : 'active',
             last_action_at: now,
             next_action_at: isComplete ? null : nextAction.toISOString(),
-            updated_at: now
+            updated_at: now,
           })
           .eq('id', seq.id);
       }
 
-      await logAutomation(workflowName, 'cron', 'success', { actions_executed: sequences.length });
+      const status = failed > 0 ? 'failure' : 'success';
+      const errMsg = failed > 0 ? `${failed}/${sequences.length} drip sends failed: ${lastError}` : undefined;
+      await logAutomation(
+        workflowName,
+        'cron',
+        status,
+        { sequences: sequences.length, sent, failed, skipped, completed },
+        errMsg
+      );
     } catch (err: unknown) {
       await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
@@ -802,10 +901,37 @@ export class AutonomousController {
   }
 
   /**
-   * Stub: would trigger desktop AgentZ for outreach via webhook/GH Action.
-   * Currently records intent only.
+   * Triggers the desktop AgentZ growth outreach run via a configured webhook
+   * (e.g. a Make.com scenario or a GitHub Actions repository_dispatch relay).
+   * No-ops gracefully when DESKTOP_GROWTH_WEBHOOK_URL is unset.
    */
   private async triggerGrowthEngine() {
-    await logAutomation('[stub]_desktop_growth_outreach', 'cron', 'success', { stub: true });
+    const workflowName = 'desktop_growth_outreach';
+    try {
+      const webhook = process.env.DESKTOP_GROWTH_WEBHOOK_URL;
+      if (!webhook) {
+        await logAutomation(workflowName, 'cron', 'success', { skipped: 'DESKTOP_GROWTH_WEBHOOK_URL not set' });
+        return;
+      }
+
+      const res = await fetch(webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'desktop_growth_tick',
+          source: 'autonomous-controller',
+          triggered_at: new Date().toISOString(),
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`Desktop growth webhook failed: ${res.status} ${res.statusText} ${body.slice(0, 200)}`);
+      }
+
+      await logAutomation(workflowName, 'cron', 'success', { dispatched: true });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
+    }
   }
 }
