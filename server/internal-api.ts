@@ -101,7 +101,8 @@ export function createInternalRouter(): Router {
   // ─── GET /api/internal/certificates/verify ─────────────────────────────────
   router.get("/certificates/verify", async (req: Request, res: Response) => {
     try {
-      const number = (req.query.certNumber || req.query.number) as string;
+      const raw = req.query.certNumber || req.query.number;
+      const number = Array.isArray(raw) ? raw[0] as string : raw as string;
       if (!number) return res.status(400).json({ error: "certNumber query param required" });
 
       const cert = await getCertificateByNumber(number);
@@ -250,7 +251,8 @@ export function createInternalRouter(): Router {
   // ─── GET /api/internal/tenant ──────────────────────────────────────────────
   router.get("/tenant", async (req: Request, res: Response) => {
     try {
-      const apiKey = req.query.apiKey as string;
+      const rawApiKey = req.query.apiKey;
+      const apiKey = Array.isArray(rawApiKey) ? rawApiKey[0] as string : rawApiKey as string;
       if (!apiKey) return res.status(400).json({ error: "apiKey query param required" });
 
       const tenant = await getWhiteLabelByApiKey(apiKey);

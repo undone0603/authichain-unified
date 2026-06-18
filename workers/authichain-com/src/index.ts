@@ -1,4 +1,12 @@
 // Inlined Authichain Theme Module for Cloudflare Worker compatibility
+
+const HTML_SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+};
+
 const BRANDS = {
   authichain: {
     name: 'AuthiChain',
@@ -2188,11 +2196,6 @@ nav {
   color: var(--text);
 }
 .nav-logo-text span { color: var(--primary); }
-.nav-cta {
-  width: auto;
-  padding: 10px 20px;
-  font-size: 11px;
-}
 .hero {
   position: relative;
   z-index: 1;
@@ -2271,6 +2274,68 @@ footer {
 @media (min-width: 1024px) {
   .footer-grid { grid-template-columns: 2fr 1fr 1fr 1fr; }
 }
+.accent { color: var(--primary); }
+.section-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 12px;
+}
+.web3-section { background: var(--bg2); }
+.nav-links { display: flex; align-items: center; gap: 24px; }
+.nav-link {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-link:hover { color: var(--primary); }
+.btn-sm {
+  font-size: 11px;
+  padding: 10px 20px;
+  width: auto;
+}
+.footer-links { list-style: none; }
+.footer-links li { margin-bottom: 10px; }
+.footer-links a {
+  font-size: 14px;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--primary); }
+.footer-heading {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+}
+/* Push anchored sections below the fixed nav (nav ≈ 64px) */
+section[id] { scroll-margin-top: 80px; }
+/* Hide nav links on small screens to prevent overflow */
+@media (max-width: 767px) {
+  .nav-links { display: none; }
+}
+h2 {
+  font-family: var(--display);
+  font-size: clamp(28px, 6vw, 52px);
+  letter-spacing: 2px;
+  color: var(--text);
+  margin-bottom: 16px;
+  line-height: 1.1;
+}
+.card:hover {
+  border-color: var(--border);
+  box-shadow: 0 0 24px var(--primary-glow);
+  transform: translateY(-2px);
+}
 `;
 
 function communityHub(brand) {
@@ -2316,14 +2381,25 @@ function foundersVision() {
 
 function techStack() {
   return `
-<section style="padding: 80px 24px; border-top: 1px solid var(--border-dim)">
+<section id="technology" style="padding: 80px 24px; border-top: 1px solid var(--border-dim)">
   <div class="hero-content" style="max-width: 1100px">
     <div class="section-tag">Core Technology</div>
     <h2>THE <span class="accent">QRONCODE</span> STACK</h2>
     <div class="grid" style="margin-top:48px; text-align:left">
       <div class="card glass">
         <div style="font-family: var(--mono); font-size: 11px; color: var(--primary); margin-bottom: 8px">01 / TRUMARK</div>
-        <p style="font-size:14px; color:var(--text-dim)">Cryptographic digital seal anchored to the blockchain.</p>
+        <h3 style="font-family:var(--display); font-size:22px; margin-bottom:10px">TruMark Seal</h3>
+        <p style="font-size:14px; color:var(--text-dim)">Cryptographic digital seal anchored to the blockchain. Every seal is an ERC-721 NFT on Polygon — tamper-proof and permanently verifiable.</p>
+      </div>
+      <div class="card glass">
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--primary); margin-bottom: 8px">02 / AI VISION</div>
+        <h3 style="font-family:var(--display); font-size:22px; margin-bottom:10px">5-Agent Consensus</h3>
+        <p style="font-size:14px; color:var(--text-dim)">Guardian, Archivist, Sentinel, Scout, and Arbiter reach weighted consensus in 2.1 seconds. Any single compromised reading is overridden by the collective.</p>
+      </div>
+      <div class="card glass">
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--primary); margin-bottom: 8px">03 / COMPLIANCE</div>
+        <h3 style="font-family:var(--display); font-size:22px; margin-bottom:10px">EU DPP Ready</h3>
+        <p style="font-size:14px; color:var(--text-dim)">Audit-ready exports for EU CSRD, FDA DSCSA, EUDR, and the Digital Product Passport launching July 2026. One integration covers every major standard.</p>
       </div>
     </div>
   </div>
@@ -2339,8 +2415,37 @@ function ecosystemFooter() {
         ${svgLogo('authichain', 28)}
         <span class="nav-logo-text">AUTHI<span>CHAIN</span></span>
       </div>
-      <p style="font-size:14px; color:var(--text-dim)">The Truth Layer for the Global Economy.</p>
+      <p style="font-size:14px; color:var(--text-dim); max-width:260px">The Truth Layer for the Global Economy. ERC-721 provenance for every physical product.</p>
     </div>
+    <div>
+      <div class="footer-heading">Platform</div>
+      <ul class="footer-links">
+        <li><a href="https://authichain-unified.vercel.app/auth">Get Started</a></li>
+        <li><a href="https://authichain-unified.vercel.app/subscriptions">Pricing</a></li>
+        <li><a href="https://authichain-unified.vercel.app/dashboard">Dashboard</a></li>
+        <li><a href="https://authichain-unified.vercel.app/onboard">Brand Onboarding</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-heading">Ecosystem</div>
+      <ul class="footer-links">
+        <li><a href="#community">$QRON Token</a></li>
+        <li><a href="https://qron.app">QRON Platform</a></li>
+        <li><a href="https://govchain.us">GovChain US</a></li>
+        <li><a href="https://strainchain.io">StrainChain</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-heading">Company</div>
+      <ul class="footer-links">
+        <li><a href="mailto:hello@authichain.com">Contact</a></li>
+        <li><a href="https://authichain-unified.vercel.app/auth">Sign In</a></li>
+      </ul>
+    </div>
+  </div>
+  <div style="max-width:1200px; margin:40px auto 0; padding-top:32px; border-top:1px solid var(--border-dim); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px">
+    <p style="font-size:12px; color:var(--text-dim)">© ${new Date().getFullYear()} AuthiChain. All rights reserved.</p>
+    <p style="font-family:var(--mono); font-size:11px; color:var(--text-dim)">Polygon · ERC-721 · IPFS · BTC Ordinals</p>
   </div>
 </footer>`;
 }
@@ -2367,14 +2472,22 @@ const HTML = `<!DOCTYPE html>
       ${svgLogo(BRAND)}
       <span class="nav-logo-text">AUTHI<span>CHAIN</span></span>
     </a>
-    <a class="btn btn-primary nav-cta" href="https://app.authichain.com">Launch App</a>
+    <div class="nav-links">
+      <a class="nav-link" href="#community">$QRON</a>
+      <a class="nav-link" href="#technology">Technology</a>
+      <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
+      <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/auth">Get Started</a>
+    </div>
   </nav>
 
-  <section class="hero">
+  <section class="hero" id="hero">
     <div class="hero-content">
-      <h1 class="hero-title"><span>VERIFY</span><span class="accent">EVERYTHING.</span></h1>
-      <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets.</p>
-      <a class="btn btn-primary" style="display:inline-block;width:auto" href="https://app.authichain.com">Launch App &rarr;</a>
+      <h1 class="hero-title"><span>VERIFY </span><span class="accent">EVERYTHING.</span></h1>
+      <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets. ERC-721 NFTs · AI QR · 2.1-second verification.</p>
+      <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:40px">
+        <a class="btn btn-primary" style="width:auto; min-width:200px" href="https://authichain-unified.vercel.app/auth">Start Free Trial</a>
+        <a class="btn" style="width:auto; min-width:200px; background:transparent; border:1px solid var(--border); color:var(--text)" href="#community">Learn More</a>
+      </div>
     </div>
   </section>
 
@@ -2401,15 +2514,31 @@ export default {
     if (p === '/apple-touch-icon.svg' || p === '/apple-touch-icon.png' || p === '/apple-touch-icon-precomposed.png') {
       return assetResponse(FAVICON_SVG);
     }
-    if (p === '/login' || p === '/signin' || p === '/app' || p.startsWith('/app/')) {
-      return Response.redirect('https://app.authichain.com/', 302);
-    }
     if (p === '/dapp' || p.startsWith('/dapp/')) {
-      return Response.redirect('https://authichain.com/dashboard', 302);
+      return Response.redirect('https://authichain-unified.vercel.app/dashboard', 302);
     }
     if (p === '/demo' || p.startsWith('/demo/')) {
-      return Response.redirect('https://authichain.com/subscriptions', 302);
+      return Response.redirect('https://authichain-unified.vercel.app/subscriptions', 302);
     }
-    return new Response(HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    // Proxy app routes to the Vercel deployment instead of serving marketing HTML.
+    // Prefixes must NOT have a trailing slash so the startsWith check works correctly
+    // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).
+    const APP_PREFIXES = ['/dashboard', '/api', '/verify', '/auth', '/login', '/logout',
+      '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin'];
+    if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
+      const target = new URL(request.url);
+      target.hostname = 'authichain-unified.vercel.app';
+      target.protocol = 'https:';
+      // Replace the Host header so Vercel routes to the correct project
+      const headers = new Headers(request.headers);
+      headers.set('Host', 'authichain-unified.vercel.app');
+      return fetch(new Request(target.toString(), {
+        method: request.method,
+        headers,
+        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+        redirect: 'follow',
+      }));
+    }
+    return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
   }
 };

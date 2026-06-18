@@ -3,6 +3,10 @@ import nodemailer from 'nodemailer';
 
 const router = Router();
 
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // POST /api/contact - Handle contact form submissions
 router.post('/', async (req: Request, res: Response) => {
   try {
@@ -44,7 +48,7 @@ router.post('/', async (req: Request, res: Response) => {
         to: toEmail,
         subject: subject || `Contact form: ${name}`,
         text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || 'N/A'}\n\nMessage:\n${message}`,
-        html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${company || 'N/A'}</p><p><strong>Message:</strong></p><p>${message}</p>`,
+        html: `<p><strong>Name:</strong> ${esc(name)}</p><p><strong>Email:</strong> ${esc(email)}</p><p><strong>Company:</strong> ${esc(company || 'N/A')}</p><p><strong>Message:</strong></p><p>${esc(message)}</p>`,
       });
     }
 
