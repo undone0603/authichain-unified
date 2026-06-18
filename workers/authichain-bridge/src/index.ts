@@ -1,12 +1,59 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import jwt from '@tsndr/cloudflare-worker-jwt';
 
 type Bindings = {
   JWT_SECRET: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   RAPIDAPI_KEY: string;
+}
+
+// Self-contained HS256 JWT verification via Web Crypto — no external dependency
+// (workers here are kept self-contained; the package was never declared, which
+// broke the deploy). Mirrors the default behaviour we relied on: HS256 only,
+// signature check plus exp/nbf claim validation, returning a boolean.
+function b64urlToBytes(s: string): Uint8Array {
+  const b64 = s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=');
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function verifyJwtHS256(token: string, secret: string): Promise<boolean> {
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  const [headerB64, payloadB64, sigB64] = parts;
+
+  let header: { alg?: string };
+  try {
+    header = JSON.parse(new TextDecoder().decode(b64urlToBytes(headerB64)));
+  } catch {
+    return false;
+  }
+  if (header?.alg !== 'HS256') return false;
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['verify'],
+  );
+  const signed = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+  const validSig = await crypto.subtle.verify('HMAC', key, b64urlToBytes(sigB64), signed);
+  if (!validSig) return false;
+
+  let payload: { exp?: number; nbf?: number };
+  try {
+    payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(payloadB64)));
+  } catch {
+    return false;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof payload?.exp === 'number' && now >= payload.exp) return false;
+  if (typeof payload?.nbf === 'number' && now < payload.nbf) return false;
+  return true;
 }
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -40,7 +87,7 @@ app.post('/bridge', async (c) => {
   }
 
   try {
-    const verified = await jwt.verify(token, secret);
+    const verified = await verifyJwtHS256(token, secret);
     if (!verified) {
       return c.json({ error: 'Unauthorized', details: 'Invalid token' }, 401);
     }
