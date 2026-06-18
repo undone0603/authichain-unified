@@ -23,8 +23,6 @@ jobs:
       # previous `npm ci` step had no lockfile to honor and was failing.
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Use Node
         uses: actions/setup-node@v4
