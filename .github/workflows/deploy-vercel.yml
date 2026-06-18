@@ -1,6 +1,6 @@
 name: Deploy Next.js to Vercel
 
-# Trigger manually only; push-to-main now handled by deploy-cf-pages.yml
+# Vercel is the production host for the Next.js app. Runs on every push to main.
 on:
   push:
     branches:
