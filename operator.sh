@@ -86,6 +86,28 @@ cmd_deploy() {
 
 cmd_secrets() { $WRANGLER secret list </dev/null 2>/dev/null || warn "need Cloudflare auth (export CLOUDFLARE_API_TOKEN)"; }
 
+# One source of truth (.env) -> everywhere. Enter each secret ONCE in .env (or
+# pull it from Vercel), then fan it out to all core Cloudflare workers and all
+# Vercel projects in a single command. No more per-target re-entry.
+cmd_sync() {
+  if [ ! -f .env ]; then
+    warn "no .env found — that's your single source of truth."
+    echo "  Populate it once, e.g. pull everything you already set in Vercel:"
+    echo "      VERCEL_TOKEN=<token> bash scripts/pull-env.sh"
+    echo "  then re-run: bash operator.sh sync"
+    exit 1
+  fi
+  printf '\033[1m== sync .env -> Cloudflare workers ==\033[0m\n'
+  bash scripts/push-secrets-to-cloudflare.sh || warn "some Cloudflare pushes failed (see above)"
+  if [ -n "${VERCEL_TOKEN:-}" ]; then
+    printf '\n\033[1m== sync .env -> Vercel projects ==\033[0m\n'
+    bash scripts/push-env-to-vercel.sh || warn "some Vercel upserts failed (see above)"
+  else
+    warn "VERCEL_TOKEN not set — skipped Vercel sync (export VERCEL_TOKEN to include it)"
+  fi
+  ok "sync complete — edit .env and re-run 'operator.sh sync' anytime"
+}
+
 case "${1:-}" in
   status)   cmd_status;;
   protect)  cmd_protect;;
@@ -93,6 +115,7 @@ case "${1:-}" in
   payouts)  shift; cmd_payouts "${@:-}";;
   deploy)   shift; cmd_deploy "${@:-}";;
   secrets)  cmd_secrets;;
+  sync)     cmd_sync;;
   *) cat <<'EOF'
 operator.sh — AuthiChain autonomous operator control surface
 
@@ -102,6 +125,7 @@ operator.sh — AuthiChain autonomous operator control surface
   payouts  on|off   toggle PAYOUTS_ENABLED (on requires typed confirm)
   deploy [worker]   dispatch a deploy (all, or one worker dir e.g. authichain-com)
   secrets           list configured worker secret names
+  sync              push .env (single source of truth) to all CF workers + Vercel
 
 See OPERATOR.md for the operating model, approval gates, and the delegation
 matrix for routine vs. agent-delegable vs. human-only tasks.
