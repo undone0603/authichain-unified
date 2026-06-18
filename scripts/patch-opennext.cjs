@@ -103,6 +103,21 @@ if (fs.existsSync(workerEntry)) {
   }
 }
 
+// ── 4b. Tell the OpenNext *Workers* deploy to ignore the Pages-only worker ───
+// `opennextjs-cloudflare deploy` treats .open-next/assets as public static
+// files and refuses to upload a _worker.js sitting there ("could expose your
+// private server-side code"). The real worker is deployed from
+// .open-next/worker.js, not from assets, so we add an .assetsignore listing the
+// Pages-only artifacts. (Cloudflare Pages ignores .assetsignore, so the dist/
+// Pages path is unaffected.)
+{
+  const assetsDir = path.join(OPEN_NEXT_DIR, 'assets');
+  if (fs.existsSync(assetsDir)) {
+    fs.writeFileSync(path.join(assetsDir, '.assetsignore'), '_worker.js\n_routes.json\n');
+    console.log('  created: .open-next/assets/.assetsignore (_worker.js, _routes.json)');
+  }
+}
+
 // ── 5. Build dist/ for CF Pages output directory ────────────────────────────
 // CF Pages (wrangler 3.x) finds _worker.js in the output dir and bundles it,
 // resolving all relative imports from the same directory. The opennext worker
