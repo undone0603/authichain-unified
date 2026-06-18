@@ -80,13 +80,6 @@ export default {
       await env.RATE_LIMITS.put(limitKey, (currentUsage + 1).toString(), { expirationTtl: 3600 });
     }
 
-    // Derive tier info from the API key for demo responses
-    const keyData = {
-      name: apiKey.includes('demo') ? 'Free' : 'Pro',
-      plan: apiKey.includes('demo') ? 'free' : 'pro',
-      limit: apiKey.includes('demo') ? 10 : 5000,
-    };
-
     // Route handling
     try {
       if (path === '/api/v1/classify' && request.method === 'POST') {

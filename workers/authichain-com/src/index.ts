@@ -2527,7 +2527,6 @@ const HTML = `<!DOCTYPE html>
   ${foundersVision()}
   ${techStack()}
   ${communityHub(BRAND)}
-  ${pricing()}
   ${ecosystemFooter()}
 </body>
 </html>`;
