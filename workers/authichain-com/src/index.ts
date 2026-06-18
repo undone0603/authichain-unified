@@ -2146,6 +2146,8 @@ function cssVars(brand) {
 const BASE_CSS = `
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
+/* Keep anchored section headings clear of the fixed nav when jumping via #links. */
+section[id] { scroll-margin-top: 80px; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -2516,7 +2518,7 @@ const HTML = `<!DOCTYPE html>
 
   <section class="hero" id="hero">
     <div class="hero-content">
-      <h1 class="hero-title"><span>VERIFY</span><span class="accent">EVERYTHING.</span></h1>
+      <h1 class="hero-title"><span>VERIFY </span><span class="accent">EVERYTHING.</span></h1>
       <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets.</p>
       <a class="btn btn-primary" style="display:inline-block;width:auto" href="https://app.authichain.com">Launch App &rarr;</a>
     </div>
