@@ -1,17 +1,33 @@
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-
 type Bindings = {
   JWT_SECRET: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   RAPIDAPI_KEY: string;
+};
+
+// Self-contained worker — no framework/library imports, so it bundles with no
+// node_modules resolution. The workers here are not a pnpm workspace and the
+// deploy installs only root deps, so `hono` (a root pnpm override, not an
+// installed dependency) and `@tsndr/cloudflare-worker-jwt` could not resolve.
+// Routing, CORS, and JWT verification are therefore handled directly below.
+
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+  'Access-Control-Max-Age': '600',
+};
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+  });
 }
 
-// Self-contained HS256 JWT verification via Web Crypto — no external dependency
-// (workers here are kept self-contained; the package was never declared, which
-// broke the deploy). Mirrors the default behaviour we relied on: HS256 only,
-// signature check plus exp/nbf claim validation, returning a boolean.
+// --- Self-contained HS256 JWT verification via Web Crypto ---
+// Mirrors the default behaviour we relied on: HS256 only, signature check plus
+// exp/nbf claim validation, returning a boolean.
 function b64urlToBytes(s: string): Uint8Array {
   const b64 = s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=');
   const bin = atob(b64);
@@ -56,94 +72,93 @@ async function verifyJwtHS256(token: string, secret: string): Promise<boolean> {
   return true;
 }
 
-const app = new Hono<{ Bindings: Bindings }>();
+export default {
+  async fetch(request: Request, env: Bindings): Promise<Response> {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const method = request.method;
 
-// CORS + security headers (negligible CPU)
-app.use('*', cors({
-  origin: '*', // Allow all origins for the bridge, or specify your domain
-  allowHeaders: ['Authorization', 'Content-Type'],
-  maxAge: 600,
-}));
-
-// Health check – instant response (0 subrequests)
-app.get('/health', (c) => c.json({ status: 'ok', limits: '10ms-safe' }));
-
-// Main auth + bridge endpoint (max 2 subrequests total)
-app.post('/bridge', async (c) => {
-  const start = Date.now();
-
-  // 1. Ultra-fast JWT validation (CPU < 1 ms)
-  const authHeader = c.req.header('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return c.json({ error: 'Unauthorized', details: 'Missing or malformed Authorization header' }, 401);
-  }
-  
-  const token = authHeader.split(' ')[1];
-  const secret = c.env.JWT_SECRET;
-  
-  if (!secret) {
-    console.error('JWT_SECRET not configured');
-    return c.json({ error: 'Internal Server Error', details: 'JWT_SECRET not configured' }, 500);
-  }
-
-  try {
-    const verified = await verifyJwtHS256(token, secret);
-    if (!verified) {
-      return c.json({ error: 'Unauthorized', details: 'Invalid token' }, 401);
+    // CORS preflight (0 subrequests)
+    if (method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
-  } catch (err: any) {
-    return c.json({ error: 'Unauthorized', details: 'Token verification failed: ' + err.message }, 401);
-  }
 
-  // 2. Single subrequest: Supabase bridge (QronSpace/StrainChain data)
-  const supabaseUrl = c.env.SUPABASE_URL;
-  const supabaseKey = c.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Health check — instant response (0 subrequests)
+    if (method === 'GET' && path === '/health') {
+      return json({ status: 'ok', limits: '10ms-safe' });
+    }
 
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('Supabase credentials not configured');
-    return c.json({ error: 'Internal Server Error', details: 'Supabase credentials not configured' }, 500);
-  }
+    // Main auth + bridge endpoint (max 1 subrequest)
+    if (method === 'POST' && path === '/bridge') {
+      const start = Date.now();
 
-  try {
-    const bridgePayload = await c.req.json().catch(() => ({})); 
+      // 1. Ultra-fast JWT validation (CPU < 1 ms)
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return json({ error: 'Unauthorized', details: 'Missing or malformed Authorization header' }, 401);
+      }
+      const token = authHeader.split(' ')[1];
+      const secret = env.JWT_SECRET;
+      if (!secret) {
+        console.error('JWT_SECRET not configured');
+        return json({ error: 'Internal Server Error', details: 'JWT_SECRET not configured' }, 500);
+      }
+      try {
+        const verified = await verifyJwtHS256(token, secret);
+        if (!verified) {
+          return json({ error: 'Unauthorized', details: 'Invalid token' }, 401);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return json({ error: 'Unauthorized', details: 'Token verification failed: ' + msg }, 401);
+      }
 
-    const res = await fetch(`${supabaseUrl}/functions/v1/strain-bridge`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(bridgePayload),
-    });
+      // 2. Single subrequest: Supabase bridge (QronSpace/StrainChain data)
+      const supabaseUrl = env.SUPABASE_URL;
+      const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('Supabase credentials not configured');
+        return json({ error: 'Internal Server Error', details: 'Supabase credentials not configured' }, 500);
+      }
+      try {
+        const bridgePayload = await request.json().catch(() => ({}));
+        const res = await fetch(`${supabaseUrl}/functions/v1/strain-bridge`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(bridgePayload),
+        });
+        const data = await res.json();
+        const duration = Date.now() - start;
+        console.log(`Worker CPU: ${duration}ms`);
+        return json({ success: true, data, cpuMs: duration });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Bridge failure:', msg);
+        return json({ error: 'Bridge failure', details: msg }, 500);
+      }
+    }
 
-    const data = await res.json();
-    const duration = Date.now() - start;
-    console.log(`Worker CPU: ${duration}ms`); 
+    // RapidAPI passthrough (optional, 1 subrequest max)
+    if (method === 'GET' && path.startsWith('/rapid/')) {
+      const endpoint = path.slice('/rapid/'.length);
+      const rapidKey = env.RAPIDAPI_KEY;
+      if (!rapidKey) {
+        return json({ error: 'Internal Server Error', details: 'RAPIDAPI_KEY not configured' }, 500);
+      }
+      try {
+        const rapidRes = await fetch(`https://api.rapidapi.com/${endpoint}`, {
+          headers: { 'X-RapidAPI-Key': rapidKey },
+        });
+        return json(await rapidRes.json());
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return json({ error: 'RapidAPI failure', details: msg }, 500);
+      }
+    }
 
-    return c.json({ success: true, data, cpuMs: duration });
-  } catch (err: any) {
-    console.error('Bridge failure:', err.message);
-    return c.json({ error: 'Bridge failure', details: err.message }, 500);
-  }
-});
-
-// RapidAPI passthrough (optional, 1 subrequest max – only if needed)
-app.get('/rapid/:endpoint', async (c) => {
-  const endpoint = c.req.param('endpoint');
-  const rapidKey = c.env.RAPIDAPI_KEY;
-
-  if (!rapidKey) {
-    return c.json({ error: 'Internal Server Error', details: 'RAPIDAPI_KEY not configured' }, 500);
-  }
-
-  try {
-    const rapidRes = await fetch(`https://api.rapidapi.com/${endpoint}`, {
-      headers: { 'X-RapidAPI-Key': rapidKey },
-    });
-    return c.json(await rapidRes.json());
-  } catch (err: any) {
-    return c.json({ error: 'RapidAPI failure', details: err.message }, 500);
-  }
-});
-
-export default app;
+    return json({ error: 'Not Found' }, 404);
+  },
+};
