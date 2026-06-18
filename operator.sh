@@ -17,6 +17,11 @@ set -euo pipefail
 REPO="undone0603/authichain-unified"
 WRANGLER="npx --yes wrangler"
 
+# Force wrangler non-interactive so it never blocks on onboarding prompts
+# (e.g. "install Cloudflare skills? [Y/n]") when invoked from this script.
+export CI="${CI:-true}"
+export WRANGLER_SEND_METRICS="${WRANGLER_SEND_METRICS:-false}"
+
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$1"; }
 warn() { printf '\033[33m! %s\033[0m\n' "$1"; }
 need_gh() { command -v gh >/dev/null 2>&1 || { warn "gh CLI required and not found"; exit 1; }; }
@@ -28,7 +33,11 @@ cmd_status() {
   printf '\n\033[1m== open PRs ==\033[0m\n'
   gh pr list --repo "$REPO" --state open --limit 30 2>/dev/null || warn "could not read PRs"
   printf '\n\033[1m== worker secret names (values never shown) ==\033[0m\n'
-  $WRANGLER secret list 2>/dev/null || warn "need Cloudflare auth (export CLOUDFLARE_API_TOKEN) to list secrets"
+  if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+    $WRANGLER secret list </dev/null 2>/dev/null || warn "could not list secrets (check Cloudflare auth / run from a worker dir)"
+  else
+    warn "set CLOUDFLARE_API_TOKEN to list worker secrets (skipped)"
+  fi
 }
 
 cmd_protect() {
@@ -75,7 +84,7 @@ cmd_deploy() {
   fi
 }
 
-cmd_secrets() { $WRANGLER secret list 2>/dev/null || warn "need Cloudflare auth (export CLOUDFLARE_API_TOKEN)"; }
+cmd_secrets() { $WRANGLER secret list </dev/null 2>/dev/null || warn "need Cloudflare auth (export CLOUDFLARE_API_TOKEN)"; }
 
 case "${1:-}" in
   status)   cmd_status;;
