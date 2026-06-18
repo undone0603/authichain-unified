@@ -1,9 +1,11 @@
 name: Deploy Next.js to Cloudflare Workers (OpenNext)
 
+# Manual-only. The Next.js app is hosted on Vercel (see deploy-vercel.yml); this
+# OpenNext -> Cloudflare Workers path is kept for reference but does NOT run on
+# push, because the bundle exceeds Cloudflare's 3 MiB free-plan Worker size limit
+# (code 10027). Re-enable the push trigger only after upgrading to Workers Paid
+# (10 MiB). Cloudflare otherwise hosts just the edge + brand workers.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
