@@ -10,6 +10,11 @@
 
 set -euo pipefail
 
+# Force wrangler non-interactive so it never blocks on onboarding prompts
+# (e.g. "install Cloudflare skills? [Y/n]") when piping secrets in a loop.
+export CI="${CI:-true}"
+export WRANGLER_SEND_METRICS="${WRANGLER_SEND_METRICS:-false}"
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${REPO_ROOT}/.env"
 
