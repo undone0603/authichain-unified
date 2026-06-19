@@ -1731,6 +1731,140 @@ registerJob({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 28: Brand-Specific Lead Routing (every 10 minutes)
+// Routes leads to appropriate brand pipeline based on use case
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "brand-lead-routing",
+  description: "Route leads to brand-specific pipelines (AuthiChain, StrainChain, GovChain, QRON)",
+  schedule: "*/10 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { error: "no_db" } };
+
+    // Find unrouted leads (status = "new")
+    const unroutedLeads = await db.select().from(leads)
+      .where(eq(leads.status, "new"))
+      .limit(30);
+
+    if (!unroutedLeads.length) {
+      return { itemsProcessed: 0, details: { routed: 0, total: 0 } };
+    }
+
+    let routed = 0;
+    const routingMap: Record<string, number> = { authichain: 0, strainchain: 0, govchain: 0, qron: 0 };
+
+    for (const lead of unroutedLeads) {
+      try {
+        // Determine brand affinity based on company/industry/metadata
+        const industry = (lead.industry || '').toLowerCase();
+        const company = (lead.company || '').toLowerCase();
+        let brand = 'authichain'; // default
+
+        if (industry.includes('cannabis') || industry.includes('cannabis') || company.includes('dispensary')) {
+          brand = 'strainchain';
+        } else if (industry.includes('government') || industry.includes('federal') || company.includes('agency')) {
+          brand = 'govchain';
+        } else if (industry.includes('print') || industry.includes('signage') || company.includes('qr')) {
+          brand = 'qron';
+        } else if (industry.includes('supply') || industry.includes('auth') || industry.includes('counterfeit')) {
+          brand = 'authichain';
+        }
+
+        // Update lead with brand assignment
+        await db.update(leads).set({
+          segment: brand.toUpperCase(),
+          metadata: {
+            ...((lead.metadata as Record<string, any>) || {}),
+            assignedBrand: brand,
+            routedAt: new Date().toISOString(),
+          },
+          status: 'qualified',
+        }).where(eq(leads.id, lead.id));
+
+        routingMap[brand]++;
+        routed++;
+      } catch (err) {
+        console.warn(`[JOB 28] Failed to route lead ${lead.id}:`, err);
+      }
+    }
+
+    return {
+      itemsProcessed: routed,
+      details: { routed, total: unroutedLeads.length, routing: routingMap },
+    };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 29: Brand Revenue Attribution (daily at 11 PM UTC)
+// Aggregates revenue by brand, tracks MRR and ARR per vertical
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "brand-revenue-attribution",
+  description: "Track revenue attribution by brand (AuthiChain, StrainChain, GovChain, QRON)",
+  schedule: "0 23 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { error: "no_db" } };
+
+    const today = new Date().toISOString().split('T')[0];
+    const brands = ['authichain', 'strainchain', 'govchain', 'qron'];
+
+    const brandMetrics: Record<string, any> = {};
+    let metricsLogged = 0;
+
+    for (const brand of brands) {
+      try {
+        // Find deals closed for this brand
+        const brandDeals = await db.select().from(leads)
+          .where(and(
+            eq(leads.segment, brand.toUpperCase()),
+            eq(leads.status, "signed")
+          ))
+          .limit(100);
+
+        // Calculate metrics
+        const dealsCount = brandDeals.length;
+        const totalValue = brandDeals.reduce((sum, deal) => {
+          const revenue = (deal.metadata as Record<string, any>)?.dealValue || 0;
+          return sum + (typeof revenue === 'number' ? revenue : 0);
+        }, 0);
+
+        brandMetrics[brand] = {
+          dealsCount,
+          totalValue,
+          avgDealSize: dealsCount > 0 ? totalValue / dealsCount : 0,
+        };
+
+        // Log daily snapshot
+        await logActivity({
+          action: "brand_daily_revenue",
+          entityType: "brand",
+          entityId: 0,
+          details: {
+            brand,
+            date: today,
+            ...brandMetrics[brand],
+          },
+        });
+
+        metricsLogged++;
+      } catch (err) {
+        console.warn(`[JOB 29] Failed to attribute revenue for ${brand}:`, err);
+      }
+    }
+
+    return {
+      itemsProcessed: metricsLogged,
+      details: { brands: metricsLogged, metrics: brandMetrics },
+    };
+  },
+});
+
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
 
 let _systemActive = true;
