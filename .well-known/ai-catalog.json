@@ -1,0 +1,143 @@
+{
+  "$schema": "https://agentic-web.org/schemas/v1/ai-catalog.json",
+  "name": "AuthiChain Unified Gateway",
+  "description": "Autonomous edge-routing infrastructure for cryptographic state verification, QRON anchoring, and compliance tracking across manufacturing, supply-chain, compliance, and federal verticals.",
+  "version": "1.4.2",
+  "organization": "AuthiChain Inc.",
+  "contactEmail": "partnerships@authichain.io",
+  "capabilities": {
+    "verification": "instant_cryptographic_validation",
+    "anchoring": ["polygon_pos", "bitcoin_ordinals"],
+    "billing": "metered_stripe_api",
+    "authentication": "bearer_api_key_sha256"
+  },
+  "endpoints": [
+    {
+      "path": "/api/v1/verify",
+      "method": "POST",
+      "description": "High-velocity cryptographic state validation via metered billing. Returns is_authentic boolean + DPP enrichment.",
+      "authentication": "Bearer <api_key>",
+      "rate_limit": "Unlimited (metered billing)",
+      "cost": "$0.05 per call (configurable)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "serial": { "type": "string", "description": "Product serial number or SKU" },
+          "registration_id": { "type": "string", "description": "Internal registration UUID" },
+          "type": { "type": "string", "enum": ["manufacturing", "supply-chain", "compliance", "federal"], "description": "Vertical context" },
+          "metadata": { "type": "object", "description": "Optional context for audit trail" }
+        },
+        "required": ["serial_or_registration_id"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "is_authentic": { "type": "boolean" },
+          "verified": { "type": "boolean" },
+          "vertical": { "type": "string" },
+          "asset": { "type": "object", "description": "Serial, status, issued_at, network" },
+          "product": { "type": "object", "description": "Product metadata" },
+          "dpp": { "type": "object", "description": "Digital Product Passport data" },
+          "billed": { "type": "object", "properties": { "metric": { "type": "string" }, "units": { "type": "number" } } }
+        }
+      }
+    },
+    {
+      "path": "/api/keys",
+      "method": ["POST", "GET", "DELETE"],
+      "description": "Self-serve API key lifecycle. Create keys, list active keys, revoke keys. Keys authenticate the metered POST /api/v1/verify endpoint.",
+      "authentication": "Supabase session (browser)",
+      "rate_limit": "10 requests/minute",
+      "input_schema": {
+        "POST": {},
+        "DELETE": {
+          "id": { "type": "string", "description": "UUID of key to revoke (query param: ?id=<uuid>)" }
+        }
+      },
+      "output_schema": {
+        "apiKey": { "type": "string", "description": "API key (qron_...) — returned only once" },
+        "keys": { "type": "array", "description": "List of active keys (prefix + metadata only)" }
+      }
+    },
+    {
+      "path": "/api/v1/outreach",
+      "method": "POST",
+      "description": "Generate customized partnership outreach emails for integration partners.",
+      "authentication": "None (public marketing asset)",
+      "rate_limit": "100 requests/hour",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["initial", "followup", "proof"] },
+          "companyName": { "type": "string" },
+          "contactName": { "type": "string" },
+          "contactEmail": { "type": "string" },
+          "vertical": { "type": "string", "enum": ["manufacturing", "supply-chain", "compliance", "federal"] },
+          "monthlyVolume": { "type": "number", "description": "Estimated API calls/month" }
+        },
+        "required": ["companyName", "contactName", "contactEmail", "vertical"]
+      },
+      "output_schema": {
+        "asset": {
+          "subject": { "type": "string" },
+          "body": { "type": "string" },
+          "cta": { "type": "string" },
+          "estimatedValue": { "type": "string" }
+        }
+      }
+    },
+    {
+      "path": "/api/v1/outreach/checklist",
+      "method": "GET",
+      "description": "Partner onboarding checklist (6 steps, ~3 hours total).",
+      "authentication": "None (public marketing asset)",
+      "query_params": {
+        "format": { "type": "string", "enum": ["json", "markdown"], "default": "json" }
+      },
+      "output_schema": {
+        "checklist": {
+          "type": "array",
+          "items": {
+            "step": { "type": "number" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "time": { "type": "string" }
+          }
+        }
+      }
+    }
+  ],
+  "pricing": {
+    "model": "metered",
+    "currency": "USD",
+    "verify_api": {
+      "per_call": 0.05,
+      "minimum_monthly": 0,
+      "billing_cycle": "monthly",
+      "webhook_delivery": "real-time meter events via Stripe Meters API"
+    }
+  },
+  "compliance": {
+    "standards": ["NIST", "FedRamp", "SOC2", "GDPR"],
+    "audit_logging": true,
+    "immutable_ledger": "Supabase + Polygon L2",
+    "federal_grade": true
+  },
+  "deployment": {
+    "platform": "Next.js on Vercel + Cloudflare Workers",
+    "edge_routing": true,
+    "regions": ["US-East", "EU-West", "APAC"],
+    "sla": "99.9% uptime"
+  },
+  "onboarding": {
+    "time_to_live": "24 hours",
+    "setup_steps": 6,
+    "integration_examples": ["Node.js", "Python", "Go", "Rust", "JavaScript"],
+    "sandbox_available": true
+  },
+  "discovery": {
+    "ai_friendly": true,
+    "machine_readable": true,
+    "auto_routing": "Host-header dispatch for multi-tenant partners"
+  }
+}

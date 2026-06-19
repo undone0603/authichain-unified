@@ -1,0 +1,43 @@
+name = "authichain-gateway"
+type = "javascript"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Environment variables for edge routing
+[vars]
+NEXT_PUBLIC_APP_URL = "authichain.io"
+
+# KV namespace bindings for rate limiting & caching
+[[kv_namespaces]]
+binding = "RATE_LIMIT_BUCKET"
+id = "authichain_ratelimit"
+preview_id = "authichain_ratelimit_preview"
+
+[[kv_namespaces]]
+binding = "VERIFY_CACHE"
+id = "authichain_verify_cache"
+preview_id = "authichain_verify_cache_preview"
+
+# Development configuration
+[env.development]
+routes = [
+  { pattern = "localhost:*", zone_name = "localhost" }
+]
+vars = { NEXT_PUBLIC_APP_URL = "http://localhost:3000" }
+
+# Production configuration
+[env.production]
+routes = [
+  { pattern = "*.authichain.io", zone_name = "authichain.io" },
+  { pattern = "authichain.io", zone_name = "authichain.io" },
+  { pattern = "*.qron.space", zone_name = "qron.space" },
+  { pattern = "qron.space", zone_name = "qron.space" }
+]
+vars = { NEXT_PUBLIC_APP_URL = "https://authichain.io" }
+
+# Build configuration
+[build]
+command = "npm install && npm run build"
+cwd = "../../"
+main = "src/index.ts"

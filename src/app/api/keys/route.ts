@@ -107,7 +107,7 @@ export async function DELETE(req: Request) {
 
   const { error } = await supabase
     .from('api_keys')
-    .update({ is_active: false, revoked_at: new Date().toISOString() })
+    .update({ is_active: false, updated_at: new Date().toISOString() })
     .eq('id', keyId);
 
   if (error) {
