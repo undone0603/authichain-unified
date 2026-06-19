@@ -30,6 +30,9 @@
       "vite/client"
     ],
     "paths": {
+      "@/server/*": [
+        "./server/*"
+      ],
       "@/*": [
         "./src/*"
       ],
