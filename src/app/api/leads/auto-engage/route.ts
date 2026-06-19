@@ -9,11 +9,13 @@ const admin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+type DomainType = 'qron' | 'authichain' | 'govchain' | 'strainchain';
+
 interface LeadData {
   email: string;
   name?: string;
   company?: string;
-  domain: 'qron' | 'authichain' | 'govchain' | 'strainchain';
+  domain: DomainType;
   source?: string;
   metadata?: Record<string, any>;
 }
@@ -45,7 +47,7 @@ function calculateLeadScore(lead: LeadData): number {
   let score = 0;
 
   if (lead.company) score += 20;
-  if (lead.name?.split(' ').length > 1) score += 10;
+  if ((lead.name?.split(' ') ?? []).length > 1) score += 10;
   if (lead.source === 'organic') score += 15;
   if (lead.source === 'inbound') score += 25;
   if (lead.metadata?.from_webinar) score += 30;
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email and domain required' }, { status: 400 });
     }
 
-    if (!Object.keys(DOMAIN_CONFIG).includes(domain)) {
+    if (!(['qron', 'authichain', 'govchain', 'strainchain'] as const).includes(domain)) {
       return NextResponse.json({ error: 'Invalid domain' }, { status: 400 });
     }
 
@@ -87,6 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     const config = DOMAIN_CONFIG[domain];
+
     const { data: lead, error } = await admin
       .from('lead_captures')
       .insert({

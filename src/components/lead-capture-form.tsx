@@ -81,7 +81,7 @@ export function LeadCaptureForm({
 
       if (!res.ok) throw new Error('Failed to submit');
 
-      const data = await res.json();
+      await res.json();
       setStatus('success');
       setMessage(`Welcome! You'll hear from us within 2 hours.`);
       setEmail('');
