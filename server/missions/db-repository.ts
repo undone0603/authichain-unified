@@ -1,10 +1,11 @@
-import { 
-  getMissions, 
-  getMissionById, 
-  createMission, 
-  updateMissionStatus, 
-  getTasksByMission, 
-  retryTask 
+import {
+  getMissions,
+  getMissionById,
+  createMission,
+  updateMissionStatus,
+  getTasksByMission,
+  retryTask,
+  createTask
 } from "./missions.db";
 import { IMissionsRepository, MissionType, MissionStatus } from "./types";
 
@@ -22,7 +23,7 @@ export class DbMissionsRepository implements IMissionsRepository {
   }
 
   async createTask(data: any): Promise<string> {
-    throw new Error("createTask not implemented in DbMissionsRepository");
+    return createTask(data);
   }
 
   async updateMissionStatus(id: string, status: MissionStatus): Promise<void> {
