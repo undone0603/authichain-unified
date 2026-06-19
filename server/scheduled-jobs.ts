@@ -5,7 +5,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 // server/scheduled-jobs.ts
 import { getDb } from "./db";
-import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger } from "../drizzle/schema";
+import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger, emailDrafts } from "../drizzle/schema";
 import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
@@ -843,6 +843,137 @@ registerJob({
     const { runAnalyticsSnapshot } = await import("./jobs/analytics-snapshot");
     const res = await runAnalyticsSnapshot();
     return { itemsProcessed: 1, details: { outputPath: res.outputPath, generatedAt: res.timestamp } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 16: Lead Capture → CRM Sync (every 15 minutes)
+// Syncs new leads from lead_captures (Supabase/frontend) into the Drizzle leads table
+// so the autonomous agents, pipeline-tick, and email system can process them.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "lead-capture-sync",
+  description: "Sync lead_captures (frontend forms) into the CRM leads table for autonomous processing",
+  schedule: "*/15 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { skipped: true } };
+
+    const existingEmails = await db.select({ email: leads.email }).from(leads);
+    const existingSet = new Set(existingEmails.map(e => e.email));
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) return { itemsProcessed: 0, details: { skipped: true, reason: "no_supabase_config" } };
+
+    const admin = createClient(supabaseUrl, supabaseKey);
+    const { data: captures } = await admin
+      .from("lead_captures")
+      .select("email, name, source, product_interest, score, status, metadata, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (!captures || captures.length === 0) return { itemsProcessed: 0, details: { noNewCaptures: true } };
+
+    let synced = 0;
+    for (const cap of captures) {
+      if (existingSet.has(cap.email)) continue;
+
+      await db.insert(leads).values({
+        email: cap.email,
+        name: cap.name || "Prospect",
+        source: cap.source || "landing_form",
+        score: cap.score || 0,
+        leadScore: cap.score || 0,
+        status: cap.status || "new",
+        industry: cap.product_interest || undefined,
+        segment: (cap.product_interest || "").toUpperCase(),
+        metadata: {
+          synced_from: "lead_captures",
+          product_interest: cap.product_interest,
+          original_metadata: cap.metadata,
+          synced_at: new Date().toISOString(),
+        },
+      });
+      existingSet.add(cap.email);
+      synced++;
+    }
+
+    return { itemsProcessed: synced, details: { totalCaptures: captures.length, synced } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 17: Auto-Nurture Email Draft Creator (every hour)
+// For qualified leads that haven't been contacted, creates email drafts
+// in the email_drafts table for approval/sending via the existing workflow.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "auto-nurture-drafts",
+  description: "Create email drafts for qualified leads awaiting first contact",
+  schedule: "0 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { skipped: true } };
+
+    const qualifiedLeads = await db.select().from(leads)
+      .where(and(
+        eq(leads.status, "new"),
+        gte(leads.score, 50),
+        isNull(leads.lastContactedAt)
+      ))
+      .limit(20);
+
+    let draftsCreated = 0;
+
+    const segmentTemplates: Record<string, { subject: string; body: string }> = {
+      QRON: {
+        subject: "QRON.space — AI-Powered QR Codes for Your Business",
+        body: "Hi {{name}},\n\nThanks for your interest in QRON.space! We create QR codes that are actually beautiful — powered by AI vision markers.\n\nYour business gets:\n- AI-generated art that converts scans 3x better\n- Detailed scan analytics & heatmaps\n- Dynamic linking (update URLs without reprinting)\n\nWould love to show you a quick demo. Reply to pick a time.\n\nBest,\nThe QRON Team",
+      },
+      AUTHICHAIN: {
+        subject: "AuthiChain — Digital Credentials for Your Organization",
+        body: "Hi {{name}},\n\nAuthiChain secures your digital credentials end-to-end with blockchain verification.\n\nUse cases:\n- Employee certifications\n- Product authenticity proofs\n- Blockchain-verified documents\n\nWant to see how it works? Reply and we'll set up a walkthrough.\n\nBest,\nAuthiChain Team",
+      },
+      GOVCHAIN: {
+        subject: "GovChain.us — Governance Infrastructure for DAOs",
+        body: "Hi {{name}},\n\nBuild sustainable DAOs with GovChain governance infrastructure.\n\nFeatures:\n- Multi-sig voting with delegation\n- Staking rewards ($QRON yields 12.4%)\n- Proposal management & archival\n\nInterested in a technical walkthrough? Just reply.\n\nBest,\nGovChain Partnerships",
+      },
+      STRAINCHAIN: {
+        subject: "StrainChain.io — Full Supply Chain Visibility",
+        body: "Hi {{name}},\n\nStrainChain gives you complete supply chain transparency.\n\nTrack:\n- GPS locations in real-time\n- Temperature & humidity compliance\n- Immutable blockchain audit trail\n\nWant to see it in action? Reply to schedule a demo.\n\nBest,\nStrainChain Team",
+      },
+    };
+
+    for (const lead of qualifiedLeads) {
+      const segment = (lead.segment || "QRON").toUpperCase();
+      const template = segmentTemplates[segment] || segmentTemplates.QRON;
+      const body = template.body.replace(/\{\{name\}\}/g, lead.name || "there");
+
+      await db.insert(emailDrafts).values({
+        prospectEmail: lead.email,
+        prospectName: lead.name || "Prospect",
+        prospectCompany: lead.company || undefined,
+        industry: lead.industry || undefined,
+        subject: template.subject,
+        body,
+        templateUsed: `auto_nurture_${segment.toLowerCase()}`,
+        status: "pending",
+        generatedBy: "dreamdash_auto_nurture",
+      });
+
+      await db.update(leads).set({
+        status: "contacted",
+        lastContactedAt: new Date(),
+      }).where(eq(leads.id, lead.id));
+
+      draftsCreated++;
+    }
+
+    return { itemsProcessed: draftsCreated, details: { leadsChecked: qualifiedLeads.length, draftsCreated } };
   },
 });
 
