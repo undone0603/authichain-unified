@@ -75,6 +75,16 @@ export default async function Dashboard() {
         ))}
       </div>
 
+      {/* Additional Tools */}
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <Link href="/dashboard/folders"
+          className="block p-6 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-800 text-white hover:opacity-90 transition-opacity"
+          style={{ textDecoration: 'none' }}>
+          <p className="font-black text-lg mb-1">Folder Manager</p>
+          <p className="text-sm opacity-80">Organize QRONs & assets</p>
+        </Link>
+      </div>
+
       {/* YouTube Channel */}
       <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 mb-8">
         <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500 mb-2">@AuthiChain-Qronspace</p>

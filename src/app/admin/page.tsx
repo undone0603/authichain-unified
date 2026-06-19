@@ -2,21 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
-  Shield, 
-  Target, 
-  Activity, 
-  BarChart3, 
-  Users, 
-  Package, 
-  ShieldCheck, 
-  Zap, 
+import {
+  Shield,
+  Target,
+  Activity,
+  BarChart3,
+  Users,
+  Package,
+  ShieldCheck,
+  Zap,
   Flame,
   ChevronRight,
   Loader2,
   ArrowUpRight,
-  TrendingUp
+  TrendingUp,
+  Wrench,
+  Zap as ZapIcon
 } from 'lucide-react';
+import { DomainForge } from '@/components/DomainForge';
+import BuildLoop from '@/components/BuildLoop';
 
 interface AdminStats {
   creative: { total_qrons: number; total_scans: number };
@@ -257,6 +261,28 @@ export default function AdminDashboard() {
                     )}
                 </div>
             </section>
+          </div>
+        </div>
+
+        {/* Developer Tools Section */}
+        <div className="mt-16 pt-12 border-t border-zinc-900">
+          <div className="mb-8">
+            <h2 className="text-2xl font-black uppercase tracking-tight mb-2">
+              Developer <span className="gold-text">Tools</span>
+            </h2>
+            <p className="text-zinc-500 text-sm uppercase tracking-widest">Forge new verticals and manage dev sprints</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Domain Forge */}
+            <div className="lg:col-span-1">
+              <DomainForge />
+            </div>
+
+            {/* Build Loop */}
+            <div className="lg:col-span-1">
+              <BuildLoop />
+            </div>
           </div>
         </div>
       </div>
