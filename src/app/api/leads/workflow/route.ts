@@ -166,6 +166,54 @@ async function runScoreAll() {
   }
 }
 
+async function runSendFollowups() {
+  try {
+    const { data: contactedLeads } = await getAdmin()
+      .from('lead_captures')
+      .select('*')
+      .eq('status', 'contacted')
+      .gt('score', 40)
+      .limit(30);
+
+    if (!contactedLeads || contactedLeads.length === 0) return { processed: 0 };
+
+    let followed = 0;
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+
+    for (const lead of contactedLeads) {
+      if (lead.updated_at && lead.updated_at < threeDaysAgo) {
+        await getAdmin().from('automation_logs').insert({
+          workflow_name: 'auto_followup',
+          status: 'completed',
+          payload: {
+            lead_id: lead.id,
+            email: lead.email,
+            score: lead.score,
+            days_since_contact: 3,
+          },
+        });
+
+        try {
+          await getAdmin().from('lead_activity_logs').insert({
+            lead_id: lead.id,
+            email: lead.email,
+            activity_type: 'email_sent',
+            description: `Follow-up triggered (score: ${lead.score}, 3+ days since last contact)`,
+            details: { followup_reason: 'stale_contact', score: lead.score },
+          });
+        } catch { /* activity log is best-effort */ }
+
+        followed++;
+      }
+    }
+
+    return { processed: followed, checked: contactedLeads.length };
+  } catch (err) {
+    console.error('Send followups error:', err);
+    return { error: String(err) };
+  }
+}
+
 async function runAdvanceQualified() {
   try {
     const { data: qualified } = await getAdmin()
@@ -220,6 +268,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'advance_qualified':
         result = await runAdvanceQualified();
+        break;
+      case 'send_followups':
+        result = await runSendFollowups();
         break;
       default:
         return NextResponse.json({ error: 'Unknown workflow type' }, { status: 400 });

@@ -50,6 +50,8 @@ interface DashboardData {
   autonomous_health?: {
     actions_24h: number;
     workflow_breakdown: Record<string, number>;
+    email_drafts_pending?: number;
+    emails_sent_24h?: number;
   };
   recent_events: Array<{
     workflow: string;
@@ -341,9 +343,16 @@ export default function FoundersDashboard() {
               <Zap className="w-5 h-5 text-gold" />
               <h2 className="text-sm font-black uppercase tracking-widest">Autonomous Heartbeat</h2>
               {data.autonomous_health && (
-                <span className="ml-auto text-[10px] font-black text-gold bg-gold/10 px-3 py-1 rounded-full border border-gold/20">
-                  {data.autonomous_health.actions_24h} actions / 24h
-                </span>
+                <div className="ml-auto flex gap-2">
+                  <span className="text-[10px] font-black text-gold bg-gold/10 px-3 py-1 rounded-full border border-gold/20">
+                    {data.autonomous_health.actions_24h} actions / 24h
+                  </span>
+                  {(data.autonomous_health.email_drafts_pending ?? 0) > 0 && (
+                    <span className="text-[10px] font-black text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">
+                      {data.autonomous_health.email_drafts_pending} drafts pending
+                    </span>
+                  )}
+                </div>
               )}
             </div>
 
