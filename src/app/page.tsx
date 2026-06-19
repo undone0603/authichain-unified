@@ -25,6 +25,7 @@ import { FeaturedQRONs } from '@/components/FeaturedQRONs';
 import { LeadCapturePopup } from '@/components/LeadCapturePopup';
 import { SocialShareCTA } from '@/components/SocialShareCTA';
 import { TrustAuditMagnet } from '@/components/TrustAuditMagnet';
+import { Star } from 'lucide-react';
 
 const StaticImageGallery = dynamic(
   () =>
@@ -162,6 +163,8 @@ export default function Home() {
       setLoading(false);
     }
   };
+  const [testimonials, setTestimonials] = useState<Array<{id: string; name: string; role: string; company: string; avatar_initials: string; rating: number; text: string}>>([]);
+  const [socialProof, setSocialProof] = useState<{stats?: {total_users: number; total_qrons: number; total_scans: number; countries_served: number}; trust_badges?: Array<{label: string}>} | null>(null);
   const [generationsUsed, setGenerationsUsed] = useState(0);
   const [generationsLimit, setGenerationsLimit] = useState(10);
   const [user, setUser] = useState<User | null>(null);
@@ -209,6 +212,14 @@ export default function Home() {
 
     fetchUserData();
     fetchPresets();
+
+    fetch('/api/testimonials?limit=4').then(r => r.json()).then(d => {
+      if (d.testimonials) setTestimonials(d.testimonials);
+    }).catch(() => {});
+
+    fetch('/api/social-proof').then(r => r.json()).then(d => {
+      if (d.stats) setSocialProof(d);
+    }).catch(() => {});
   }, [supabase]);
 
   const isTierSufficient = (requiredTier: string) => {
@@ -1357,6 +1368,78 @@ export default function Home() {
            </div>
         </section>
 
+        {/* Social Proof Stats */}
+        {socialProof?.stats && (
+          <section className="mb-16">
+            <div className="text-center mb-8">
+              <span className="protocol-badge mb-4 inline-flex">
+                <Shield className="w-3 h-3" />
+                Trusted Worldwide
+              </span>
+              <h2 className="text-3xl font-bold mt-4">
+                <span className="gold-text">Platform at Scale</span>
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { stat: socialProof.stats.total_users.toLocaleString(), label: 'Users' },
+                { stat: socialProof.stats.total_qrons.toLocaleString(), label: 'QRONs Created' },
+                { stat: socialProof.stats.total_scans.toLocaleString(), label: 'Total Scans' },
+                { stat: `${socialProof.stats.countries_served}+`, label: 'Countries Served' },
+              ].map(({ stat, label }) => (
+                <div key={label} className="protocol-card p-6 text-center">
+                  <div className="text-3xl font-black gold-text mb-1">{stat}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{label}</div>
+                </div>
+              ))}
+            </div>
+            {socialProof.trust_badges && (
+              <div className="flex flex-wrap justify-center gap-4 mt-6">
+                {socialProof.trust_badges.map(b => (
+                  <span key={b.label} className="text-[9px] font-black uppercase tracking-widest text-zinc-500 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">
+                    {b.label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Testimonials */}
+        {testimonials.length > 0 && (
+          <section className="mb-16">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold">
+                <span className="gold-text">What Our Users Say</span>
+              </h2>
+              <p className="text-sm mt-2" style={{ color: '#6b6b6b' }}>Real feedback from verified QRON creators</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              {testimonials.map(t => (
+                <div key={t.id} className="protocol-card p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-black text-gold">
+                      {t.avatar_initials}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">{t.name}</p>
+                      <p className="text-[10px] text-zinc-500">{t.role} · {t.company}</p>
+                    </div>
+                    <div className="ml-auto flex gap-0.5">
+                      {Array.from({ length: t.rating }).map((_, i) => (
+                        <Star key={i} className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: '#9e9e9e' }}>&ldquo;{t.text}&rdquo;</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="gold-divider my-12" />
+
         {/* FAQ */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold text-center mb-8">
@@ -1406,9 +1489,12 @@ export default function Home() {
 
         {/* Footer Navigation */}
         <footer className="text-center py-12 border-t border-zinc-900 mt-12">
-          <div className="flex justify-center gap-6 mb-6">
+          <div className="flex flex-wrap justify-center gap-6 mb-4">
              <Link href="/about" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">About</Link>
              <Link href="/creators" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Creators</Link>
+             <Link href="/affiliate" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Affiliates</Link>
+             <Link href="/ftc-shield" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">FTC Shield</Link>
+             <Link href="/explorers" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Explorers</Link>
              <span className="text-zinc-800">|</span>
              <Link href="/terms" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Terms</Link>
              <Link href="/privacy" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Privacy</Link>

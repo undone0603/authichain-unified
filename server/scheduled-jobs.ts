@@ -5,7 +5,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 // server/scheduled-jobs.ts
 import { getDb } from "./db";
-import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger } from "../drizzle/schema";
+import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger, emailDrafts } from "../drizzle/schema";
 import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
@@ -546,6 +546,105 @@ registerJob({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// JOB 9a: Founders DreamDash — Lead Scoring Refresh (every 30 minutes)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "dreamdash-lead-scoring",
+  description: "Recalculate lead scores based on engagement signals across all four domains",
+  schedule: "*/30 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { skipped: true } };
+
+    const allLeads = await db.select().from(leads)
+      .where(sql`${leads.status} IN ('new', 'contacted', 'qualified')`)
+      .limit(500);
+
+    let updated = 0;
+    for (const lead of allLeads) {
+      let score = lead.score || 0;
+      if (lead.emailOpened) score = Math.min(score + 15, 100);
+      if (lead.emailClicked) score = Math.min(score + 25, 100);
+      if (lead.demoStarted) score = Math.min(score + 40, 100);
+      if (lead.contractSent) score = Math.min(score + 50, 100);
+      if (lead.contractSigned) score = 100;
+      if (lead.isVip) score = Math.min(score + 30, 100);
+
+      if (score !== (lead.score || 0)) {
+        await db.update(leads).set({ score }).where(eq(leads.id, lead.id));
+        updated++;
+      }
+    }
+
+    return { itemsProcessed: updated, details: { totalEvaluated: allLeads.length, updated } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 9b: Founders DreamDash — Auto Stage Advancement (every 2 hours)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "dreamdash-stage-advance",
+  description: "Auto-advance high-scoring leads through the deal pipeline",
+  schedule: "0 */2 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { skipped: true } };
+
+    let advanced = 0;
+
+    // Advance new leads with score >= 50 to contacted
+    const newHighScore = await db.select().from(leads)
+      .where(and(eq(leads.status, 'new'), gte(leads.score, 50)))
+      .limit(100);
+    for (const lead of newHighScore) {
+      await db.update(leads).set({ status: 'contacted' }).where(eq(leads.id, lead.id));
+      advanced++;
+    }
+
+    // Advance contacted leads with score >= 70 to qualified
+    const contactedHigh = await db.select().from(leads)
+      .where(and(eq(leads.status, 'contacted'), gte(leads.score, 70)))
+      .limit(100);
+    for (const lead of contactedHigh) {
+      await db.update(leads).set({ status: 'qualified' }).where(eq(leads.id, lead.id));
+      advanced++;
+    }
+
+    // Advance qualified leads with demo started to demoed
+    const qualifiedDemoed = await db.select().from(leads)
+      .where(and(eq(leads.status, 'qualified'), eq(leads.demoStarted, true)))
+      .limit(100);
+    for (const lead of qualifiedDemoed) {
+      await db.update(leads).set({ status: 'demoed' }).where(eq(leads.id, lead.id));
+      advanced++;
+    }
+
+    // Advance demoed leads with contract sent to contracted
+    const demoedContract = await db.select().from(leads)
+      .where(and(eq(leads.status, 'demoed'), eq(leads.contractSent, true)))
+      .limit(100);
+    for (const lead of demoedContract) {
+      await db.update(leads).set({ status: 'contracted' }).where(eq(leads.id, lead.id));
+      advanced++;
+    }
+
+    // Advance contracted leads with contract signed to signed
+    const contractedSigned = await db.select().from(leads)
+      .where(and(eq(leads.status, 'contracted'), eq(leads.contractSigned, true)))
+      .limit(100);
+    for (const lead of contractedSigned) {
+      await db.update(leads).set({ status: 'signed' }).where(eq(leads.id, lead.id));
+      advanced++;
+    }
+
+    return { itemsProcessed: advanced, details: { newToContacted: newHighScore.length, contactedToQualified: contactedHigh.length, qualifiedToDemo: qualifiedDemoed.length, demoToContract: demoedContract.length, contractToSigned: contractedSigned.length } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // JOB 9: Autonomous Revenue Pipeline Tick (every 2 minutes - ACCELERATED)
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
@@ -744,6 +843,297 @@ registerJob({
     const { runAnalyticsSnapshot } = await import("./jobs/analytics-snapshot");
     const res = await runAnalyticsSnapshot();
     return { itemsProcessed: 1, details: { outputPath: res.outputPath, generatedAt: res.timestamp } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 18: GovChain Opportunity → Lead Pipeline (daily at 6 AM UTC)
+// Converts high-fit government opportunities into CRM leads for outreach.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "govchain-opp-to-leads",
+  description: "Convert high-fit gov opportunities into CRM leads for GovChain outreach",
+  schedule: "0 6 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { skipped: true } };
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) return { itemsProcessed: 0, details: { skipped: true, reason: "no_supabase_config" } };
+
+    const admin = createClient(supabaseUrl, supabaseKey);
+    const { data: opps } = await admin
+      .from("gov_opportunities")
+      .select("notice_id, title, agency, fit_score, deadline, status")
+      .gte("fit_score", 65)
+      .in("status", ["new", "scored"])
+      .order("fit_score", { ascending: false })
+      .limit(25);
+
+    if (!opps || opps.length === 0) return { itemsProcessed: 0, details: { noOpportunities: true } };
+
+    let created = 0;
+    for (const opp of opps) {
+      const agencyEmail = `procurement@${opp.agency?.split(".")[0]?.toLowerCase().replace(/[^a-z]/g, "")}.gov`;
+      const existingLeads = await db.select({ id: leads.id }).from(leads).where(eq(leads.email, agencyEmail)).limit(1);
+
+      if (existingLeads.length === 0) {
+        await db.insert(leads).values({
+          email: agencyEmail,
+          name: opp.agency?.split(".").slice(0, 2).join(" - ") || "Government Agency",
+          company: opp.agency?.split(".")[0] || "US Government",
+          source: "govchain_sam",
+          score: opp.fit_score || 50,
+          leadScore: opp.fit_score || 50,
+          status: "qualified",
+          industry: "government",
+          segment: "GOVCHAIN",
+          metadata: {
+            notice_id: opp.notice_id,
+            title: opp.title,
+            deadline: opp.deadline,
+            fit_score: opp.fit_score,
+            source: "gov_pursue_list",
+          },
+        });
+        created++;
+      }
+    }
+
+    return { itemsProcessed: created, details: { opportunitiesChecked: opps.length, leadsCreated: created } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Syncs new leads from lead_captures (Supabase/frontend) into the Drizzle leads table
+// so the autonomous agents, pipeline-tick, and email system can process them.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "lead-capture-sync",
+  description: "Sync lead_captures (frontend forms) into the CRM leads table for autonomous processing",
+  schedule: "*/15 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { skipped: true } };
+
+    const existingEmails = await db.select({ email: leads.email }).from(leads);
+    const existingSet = new Set(existingEmails.map(e => e.email));
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) return { itemsProcessed: 0, details: { skipped: true, reason: "no_supabase_config" } };
+
+    const admin = createClient(supabaseUrl, supabaseKey);
+    const { data: captures } = await admin
+      .from("lead_captures")
+      .select("email, name, source, product_interest, score, status, metadata, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (!captures || captures.length === 0) return { itemsProcessed: 0, details: { noNewCaptures: true } };
+
+    let synced = 0;
+    for (const cap of captures) {
+      if (existingSet.has(cap.email)) continue;
+
+      await db.insert(leads).values({
+        email: cap.email,
+        name: cap.name || "Prospect",
+        source: cap.source || "landing_form",
+        score: cap.score || 0,
+        leadScore: cap.score || 0,
+        status: cap.status || "new",
+        industry: cap.product_interest || undefined,
+        segment: (cap.product_interest || "").toUpperCase(),
+        metadata: {
+          synced_from: "lead_captures",
+          product_interest: cap.product_interest,
+          original_metadata: cap.metadata,
+          synced_at: new Date().toISOString(),
+        },
+      });
+      existingSet.add(cap.email);
+      synced++;
+    }
+
+    return { itemsProcessed: synced, details: { totalCaptures: captures.length, synced } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 17: Auto-Nurture Email Draft Creator (every hour)
+// For qualified leads that haven't been contacted, creates email drafts
+// in the email_drafts table for approval/sending via the existing workflow.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "auto-nurture-drafts",
+  description: "Create email drafts for qualified leads awaiting first contact",
+  schedule: "0 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { skipped: true } };
+
+    const qualifiedLeads = await db.select().from(leads)
+      .where(and(
+        eq(leads.status, "new"),
+        gte(leads.score, 50),
+        isNull(leads.lastContactedAt)
+      ))
+      .limit(20);
+
+    let draftsCreated = 0;
+
+    const segmentTemplates: Record<string, { subject: string; body: string }> = {
+      QRON: {
+        subject: "QRON.space — AI-Powered QR Codes for Your Business",
+        body: "Hi {{name}},\n\nThanks for your interest in QRON.space! We create QR codes that are actually beautiful — powered by AI vision markers.\n\nYour business gets:\n- AI-generated art that converts scans 3x better\n- Detailed scan analytics & heatmaps\n- Dynamic linking (update URLs without reprinting)\n\nWould love to show you a quick demo. Reply to pick a time.\n\nBest,\nThe QRON Team",
+      },
+      AUTHICHAIN: {
+        subject: "AuthiChain — Digital Credentials for Your Organization",
+        body: "Hi {{name}},\n\nAuthiChain secures your digital credentials end-to-end with blockchain verification.\n\nUse cases:\n- Employee certifications\n- Product authenticity proofs\n- Blockchain-verified documents\n\nWant to see how it works? Reply and we'll set up a walkthrough.\n\nBest,\nAuthiChain Team",
+      },
+      GOVCHAIN: {
+        subject: "GovChain.us — Governance Infrastructure for DAOs",
+        body: "Hi {{name}},\n\nBuild sustainable DAOs with GovChain governance infrastructure.\n\nFeatures:\n- Multi-sig voting with delegation\n- Staking rewards ($QRON yields 12.4%)\n- Proposal management & archival\n\nInterested in a technical walkthrough? Just reply.\n\nBest,\nGovChain Partnerships",
+      },
+      STRAINCHAIN: {
+        subject: "StrainChain.io — Full Supply Chain Visibility",
+        body: "Hi {{name}},\n\nStrainChain gives you complete supply chain transparency.\n\nTrack:\n- GPS locations in real-time\n- Temperature & humidity compliance\n- Immutable blockchain audit trail\n\nWant to see it in action? Reply to schedule a demo.\n\nBest,\nStrainChain Team",
+      },
+    };
+
+    for (const lead of qualifiedLeads) {
+      const segment = (lead.segment || "QRON").toUpperCase();
+      const template = segmentTemplates[segment] || segmentTemplates.QRON;
+      const body = template.body.replace(/\{\{name\}\}/g, lead.name || "there");
+
+      await db.insert(emailDrafts).values({
+        prospectEmail: lead.email,
+        prospectName: lead.name || "Prospect",
+        prospectCompany: lead.company || undefined,
+        industry: lead.industry || undefined,
+        subject: template.subject,
+        body,
+        templateUsed: `auto_nurture_${segment.toLowerCase()}`,
+        status: "pending",
+        generatedBy: "dreamdash_auto_nurture",
+      });
+
+      await db.update(leads).set({
+        status: "contacted",
+        lastContactedAt: new Date(),
+      }).where(eq(leads.id, lead.id));
+
+      draftsCreated++;
+    }
+
+    return { itemsProcessed: draftsCreated, details: { leadsChecked: qualifiedLeads.length, draftsCreated } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 19: Send Leadership Digest (daily at 8 AM UTC)
+// Sends a Slack digest with daily automation metrics and top opportunities
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "send-leadership-digest",
+  description: "Send daily Slack digest with pipeline metrics and top GovChain opportunities",
+  schedule: "0 8 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    // Skip gracefully if Slack isn't configured
+    if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_CHANNEL_ID) {
+      return { itemsProcessed: 0, details: { skipped: true, reason: "slack_not_configured" } };
+    }
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) return { itemsProcessed: 0, details: { skipped: true, reason: "no_supabase_config" } };
+
+    const admin = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch top opportunities and counts
+    const { data: topOpps } = await admin
+      .from("gov_opportunities")
+      .select("notice_id, title, agency, deadline, fit_score, sam_url")
+      .gte("fit_score", 65)
+      .order("fit_score", { ascending: false })
+      .limit(5);
+
+    const { count: totalIngested } = await admin
+      .from("gov_opportunities")
+      .select("id", { count: "exact", head: true })
+      .gte("ingested_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    const { count: emailsSent } = await admin
+      .from("automation_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("workflow_name", "email_sent")
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    const oppLines = (topOpps ?? [])
+      .map((o, i) => `>${i + 1}. *[${o.fit_score}/100]* <${o.sam_url}|${o.title?.slice(0, 55)}> — ${o.agency?.slice(0, 30)} | Deadline: ${o.deadline ?? "TBD"}`)
+      .join("\n");
+
+    const payload = {
+      channel: process.env.SLACK_CHANNEL_ID,
+      text: "📡 Daily Automation Digest",
+      blocks: [
+        {
+          type: "header",
+          text: { type: "plain_text", text: "📡 Daily Automation Digest", emoji: true },
+        },
+        {
+          type: "section",
+          fields: [
+            { type: "mrkdwn", text: `*Opportunities Ingested (24h)*\n${totalIngested ?? 0}` },
+            { type: "mrkdwn", text: `*Emails Sent (24h)*\n${emailsSent ?? 0}` },
+          ],
+        },
+        { type: "divider" },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*🏆 Top GovChain Opportunities*\n${oppLines || "_No high-fit opportunities today._"}`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: { type: "plain_text", text: "📊 View Dashboard", emoji: true },
+              url: "https://authichain-unified.vercel.app/founders",
+              style: "primary",
+            },
+          ],
+        },
+      ],
+    };
+
+    const res = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json();
+    if (!json.ok) {
+      return { itemsProcessed: 0, details: { error: json.error } };
+    }
+
+    return { itemsProcessed: 1, details: { status: "digest_sent", emailsSent, opportunitiesIngested: totalIngested } };
   },
 });
 

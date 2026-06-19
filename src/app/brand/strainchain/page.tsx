@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LeadCaptureForm } from '@/components/lead-capture-form';
 import {
   Leaf, Shield, Package, MapPin, Activity, Zap,
   ArrowRight, CheckCircle, Dna, AlertTriangle, Lock,
@@ -261,6 +262,16 @@ export default function StrainChainHome() {
           </div>
         </section>
 
+        {/* Lead Capture */}
+        <section className="mb-24">
+          <LeadCaptureForm
+            domain="strainchain"
+            headline="Track Your Supply Chain"
+            subheadline="Complete provenance tracking with GPS, compliance, and blockchain audit trail."
+            cta="Start Free"
+          />
+        </section>
+
         {/* CTA */}
         <section className="mb-24 rounded-3xl text-center py-20 px-8 relative overflow-hidden border" style={{ borderColor: `${GREEN}20`, background: 'linear-gradient(135deg, #020f08 0%, #0a0a0a 50%, #020f08 100%)' }}>
           <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, ${GREEN}08 0%, transparent 60%)` }} />
@@ -298,7 +309,7 @@ export default function StrainChainHome() {
 
         <footer className="text-center py-10 border-t border-zinc-900">
           <div className="flex justify-center gap-6 mb-4">
-            {[['Terms', '/terms'], ['Privacy', '/privacy'], ['Compliance', '/digital-product-passport/compliance'], ['Status', '/status']].map(([label, href]) => (
+            {[['Terms', '/terms'], ['Privacy', '/privacy'], ['Compliance', '/digital-product-passport/compliance'], ['Affiliates', '/affiliate'], ['Status', '/status']].map(([label, href]) => (
               <Link key={label} href={href} className="text-[10px] font-black uppercase tracking-widest text-zinc-700 hover:text-zinc-400 transition-colors">{label}</Link>
             ))}
           </div>
