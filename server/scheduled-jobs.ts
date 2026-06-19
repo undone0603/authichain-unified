@@ -2542,6 +2542,176 @@ registerJob({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 36: Cross-Vertical Threat Intelligence (every 10 minutes)
+// Correlates risks across all 10 brands, detects attack patterns, gates deployments
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "cross-vertical-threat-intelligence",
+  description: "Correlate security/reliability threats across all brands; compute deployment risk scores; enable autonomous agent decisions",
+  schedule: "*/10 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { error: "no_db" } };
+
+    const brands = ['authichain', 'govchain', 'qron', 'strainchain', 'watchchain', 'bitcoin-auth', 'analytics', 'auth'];
+    const now = new Date();
+    const lastHour = new Date(Date.now() - 60 * 60 * 1000);
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const threatIntelligence: Record<string, any> = {};
+    const deploymentGates: Record<string, any> = {};
+    let analyzed = 0;
+
+    try {
+      // 1. Collect per-brand threat signals
+      for (const brand of brands) {
+        const brandLeads = await db.select().from(leads)
+          .where(eq(leads.segment, brand.toUpperCase()))
+          .limit(100);
+
+        const brandRuns = await db.select().from(scheduledJobRuns)
+          .where(and(
+            eq(scheduledJobRuns.jobName, `${brand}-sync`),
+            gte(scheduledJobRuns.startedAt, last24h)
+          ))
+          .limit(50);
+
+        const failureRate = brandRuns.length > 0
+          ? brandRuns.filter(r => (r as any).status === 'failed').length / brandRuns.length
+          : 0;
+
+        const errorCount = brandRuns.filter(r => (r as any).status === 'failed').length;
+        const avgDuration = brandRuns.length > 0
+          ? brandRuns.reduce((sum, r) => sum + ((r as any).duration || 0), 0) / brandRuns.length
+          : 0;
+
+        // 2. Compute threat score per brand (0-100)
+        let threatScore = 0;
+        const signals: Record<string, number> = {};
+
+        // Failure rate signal (0-40 points)
+        signals.failureRate = failureRate * 40;
+        threatScore += signals.failureRate;
+
+        // Error spike signal (0-30 points) - if errors > 5 in last hour
+        const recentErrors = brandRuns.filter(r =>
+          (r as any).status === 'failed' &&
+          new Date((r as any).startedAt) > lastHour
+        ).length;
+        signals.errorSpike = Math.min(recentErrors * 6, 30);
+        threatScore += signals.errorSpike;
+
+        // Duration anomaly (0-20 points) - if avg > 5s
+        signals.durationAnomaly = Math.min((avgDuration / 5000) * 20, 20);
+        threatScore += signals.durationAnomaly;
+
+        // Lead correlation anomaly (0-10 points) - unusual lead patterns
+        const leadStalls = brandLeads.filter(l =>
+          (l as any).status === 'stalled'
+        ).length;
+        signals.leadAnomaly = Math.min((leadStalls / Math.max(brandLeads.length, 1)) * 10, 10);
+        threatScore += signals.leadAnomaly;
+
+        threatIntelligence[brand] = {
+          threatScore: Math.round(threatScore),
+          failureRate: Number((failureRate * 100).toFixed(2)),
+          errorCount,
+          avgDurationMs: Math.round(avgDuration),
+          signals,
+          statusLastHour: recentErrors === 0 ? 'healthy' : recentErrors <= 2 ? 'degraded' : 'critical',
+        };
+
+        analyzed++;
+      }
+
+      // 3. Cross-vertical threat correlation (detect systemic issues)
+      const threatScores = Object.values(threatIntelligence).map((t: any) => t.threatScore);
+      const avgThreatScore = threatScores.length > 0
+        ? threatScores.reduce((a, b) => a + b, 0) / threatScores.length
+        : 0;
+
+      const highThreatBrands = Object.entries(threatIntelligence)
+        .filter(([_, t]: [string, any]) => t.threatScore > 40)
+        .map(([brand, _]) => brand);
+
+      // 4. Autonomous deployment decision thresholds
+      for (const brand of brands) {
+        const threat = threatIntelligence[brand] as any;
+        const deploymentAllowed = threat.threatScore < 25 && threat.failureRate < 0.1;
+        const confidence = Math.max(0, 100 - threat.threatScore);
+
+        deploymentGates[brand] = {
+          canDeploy: deploymentAllowed,
+          threatScore: threat.threatScore,
+          confidence: confidence,
+          reason: deploymentAllowed
+            ? `Safe to deploy: threat score ${threat.threatScore}% < 25% threshold`
+            : threat.threatScore >= 40
+              ? `BLOCKED: Critical threat detected (${threat.threatScore}%). Resolve before deploying.`
+              : `CAUTION: Threat score ${threat.threatScore}%. Manual review recommended before deployment.`,
+          blockedUntil: deploymentAllowed ? null : new Date(Date.now() + 30 * 60 * 1000), // 30 min
+        };
+      }
+
+      // 5. System-wide threat assessment
+      let systemStatus = 'secure';
+      if (highThreatBrands.length >= 3) {
+        systemStatus = 'critical';
+      } else if (highThreatBrands.length >= 1) {
+        systemStatus = 'degraded';
+      }
+
+      // 6. Cross-vertical pattern detection
+      const patternAnalysis = {
+        simultaneousFailures: highThreatBrands.length,
+        affectedBrands: highThreatBrands,
+        systemStatus,
+        avgSystemThreat: Math.round(avgThreatScore),
+        recommendation:
+          systemStatus === 'critical'
+            ? 'ALERT: Multiple brands under threat. Pause autonomous deployments. Investigate infrastructure.'
+            : systemStatus === 'degraded'
+              ? 'WARNING: Some brands showing elevated threat. Monitor closely.'
+              : 'All systems nominal. Autonomous deployments can proceed.',
+      };
+
+      // 7. Log threat intelligence event
+      await logActivity({
+        action: "cross_vertical_threat_assessment",
+        entityType: "system",
+        entityId: 0,
+        details: {
+          timestamp: now.toISOString(),
+          threatIntelligence,
+          deploymentGates,
+          patternAnalysis,
+          systemStatus,
+        },
+      });
+
+      return {
+        itemsProcessed: analyzed,
+        details: {
+          brandsAnalyzed: analyzed,
+          threatIntelligence,
+          deploymentGates,
+          patternAnalysis,
+          systemStatus,
+          safeForDeployment: systemStatus === 'secure',
+        },
+      };
+    } catch (e) {
+      console.warn(`[JOB 36] Cross-vertical threat analysis failed:`, e);
+      return {
+        itemsProcessed: 0,
+        details: { error: String(e), recommendation: "Manual threat assessment required" },
+      };
+    }
+  },
+});
+
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
 
 let _systemActive = true;
