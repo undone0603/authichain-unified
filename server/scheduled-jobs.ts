@@ -847,7 +847,67 @@ registerJob({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// JOB 16: Lead Capture → CRM Sync (every 15 minutes)
+// JOB 18: GovChain Opportunity → Lead Pipeline (daily at 6 AM UTC)
+// Converts high-fit government opportunities into CRM leads for outreach.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "govchain-opp-to-leads",
+  description: "Convert high-fit gov opportunities into CRM leads for GovChain outreach",
+  schedule: "0 6 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { skipped: true } };
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) return { itemsProcessed: 0, details: { skipped: true, reason: "no_supabase_config" } };
+
+    const admin = createClient(supabaseUrl, supabaseKey);
+    const { data: opps } = await admin
+      .from("gov_opportunities")
+      .select("notice_id, title, agency, fit_score, deadline, status")
+      .gte("fit_score", 65)
+      .in("status", ["new", "scored"])
+      .order("fit_score", { ascending: false })
+      .limit(25);
+
+    if (!opps || opps.length === 0) return { itemsProcessed: 0, details: { noOpportunities: true } };
+
+    let created = 0;
+    for (const opp of opps) {
+      const agencyEmail = `procurement@${opp.agency?.split(".")[0]?.toLowerCase().replace(/[^a-z]/g, "")}.gov`;
+      const existingLeads = await db.select({ id: leads.id }).from(leads).where(eq(leads.email, agencyEmail)).limit(1);
+
+      if (existingLeads.length === 0) {
+        await db.insert(leads).values({
+          email: agencyEmail,
+          name: opp.agency?.split(".").slice(0, 2).join(" - ") || "Government Agency",
+          company: opp.agency?.split(".")[0] || "US Government",
+          source: "govchain_sam",
+          score: opp.fit_score || 50,
+          leadScore: opp.fit_score || 50,
+          status: "qualified",
+          industry: "government",
+          segment: "GOVCHAIN",
+          metadata: {
+            notice_id: opp.notice_id,
+            title: opp.title,
+            deadline: opp.deadline,
+            fit_score: opp.fit_score,
+            source: "gov_pursue_list",
+          },
+        });
+        created++;
+      }
+    }
+
+    return { itemsProcessed: created, details: { opportunitiesChecked: opps.length, leadsCreated: created } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Syncs new leads from lead_captures (Supabase/frontend) into the Drizzle leads table
 // so the autonomous agents, pipeline-tick, and email system can process them.
 // ═══════════════════════════════════════════════════════════════════════════
