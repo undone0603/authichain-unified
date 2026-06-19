@@ -55,7 +55,7 @@ export default function GovChainHome() {
           <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 border border-zinc-800 px-2 py-0.5 rounded">.us</span>
         </div>
         <div className="hidden md:flex items-center gap-8">
-          {[['Proposals', '/governance/proposals'], ['Tokenomics', '/governance/tokenomics'], ['Docs', '/docs'], ['Verify', '/verify']].map(([label, href]) => (
+          {[['Datalog', '/brand/govchain/datalog'], ['Proposals', '/governance/proposals'], ['Tokenomics', '/governance/tokenomics'], ['Docs', '/docs'], ['Verify', '/verify']].map(([label, href]) => (
             <Link key={label} href={href} className="text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-blue-400 transition-colors">{label}</Link>
           ))}
         </div>
