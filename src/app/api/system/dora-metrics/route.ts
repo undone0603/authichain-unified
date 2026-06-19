@@ -21,7 +21,6 @@ export async function GET(request: Request) {
     }
 
     const jobRuns = healthHistory as any[];
-    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
     // 1. Deployment Frequency: deployments per year
     const deployments = jobRuns.filter(r => r.status === 'completed').length;

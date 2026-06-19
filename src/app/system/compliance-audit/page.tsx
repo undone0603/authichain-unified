@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import {
-  Shield, CheckCircle, AlertTriangle, TrendingUp, BarChart3,
+  Shield, CheckCircle, AlertTriangle, BarChart3,
   Lock, RefreshCw, AlertCircle,
 } from 'lucide-react';
 
