@@ -1036,3 +1036,27 @@ export const payouts = pgTable("payouts", {
 
 export type Payout = typeof payouts.$inferSelect;
 export type InsertPayout = typeof payouts.$inferInsert;
+
+// ─── Agent XP / Reputation ──────────────────────────────────────────────────
+export const agentXp = pgTable("agent_xp", {
+  id: serial("id").primaryKey(),
+  agentId: varchar("agentId", { length: 128 }).notNull(),
+  agentName: varchar("agentName", { length: 256 }).notNull(),
+  taskKind: varchar("taskKind", { length: 64 }).notNull(),
+  xp: integer("xp").default(0).notNull(),
+  level: integer("level").default(1).notNull(),
+  totalTasksCompleted: integer("totalTasksCompleted").default(0).notNull(),
+  successRate: numeric("successRate", { precision: 5, scale: 2 }).default("0").notNull(),
+  dealsClosedCount: integer("dealsClosedCount").default(0).notNull(),
+  revenueGeneratedUsd: numeric("revenueGeneratedUsd", { precision: 12, scale: 2 }).default("0").notNull(),
+  lastTaskCompletedAt: timestamp("lastTaskCompletedAt"),
+  lastLevelUpAt: timestamp("lastLevelUpAt"),
+  season: integer("season").default(1).notNull(),
+  seasonXp: integer("seasonXp").default(0).notNull(),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type AgentXp = typeof agentXp.$inferSelect;
+export type InsertAgentXp = typeof agentXp.$inferInsert;

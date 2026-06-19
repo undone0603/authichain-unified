@@ -34,6 +34,7 @@ import {
   runBrowseVerifyProductUrl,
 } from '../agents/browser.js';
 import { runVisionResearchLead, runVisionFreeform } from '../agents/browser-vision.js';
+import { awardXp } from '../agent-xp-service';
 
 export async function runTask(task: Task): Promise<{ ok: boolean }> {
   const claimed = await markTaskRunning(task.id);
@@ -218,10 +219,22 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
     // markTaskDone guards with WHERE status='RUNNING', so WAITING_HUMAN is preserved if the agent set it
     await markTaskDone(task.id);
+
+    // Award XP to the autonomous agent for completing the task
+    await awardXp("autonomous-agent", "Autonomous AgentZ", task.kind, {
+      success: true,
+    });
+
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await markTaskFailed(task.id, message);
+
+    // Award partial XP for attempted task
+    await awardXp("autonomous-agent", "Autonomous AgentZ", task.kind, {
+      success: false,
+    });
+
     await logActivity({ userId: null, action: 'task_failed', entityType: 'task', entityId: 0, details: { taskId: task.id,
       kind: task.kind,
       missionId: task.missionId,
