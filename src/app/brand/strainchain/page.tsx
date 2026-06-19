@@ -72,7 +72,7 @@ export default function StrainChainHome() {
           <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 border border-zinc-800 px-2 py-0.5 rounded">.io</span>
         </div>
         <div className="hidden md:flex items-center gap-8">
-          {[['How It Works', '#how-it-works'], ['Features', '#features'], ['Pricing', '#pricing'], ['Demo', '/demo/strainchain']].map(([label, href]) => (
+          {[['Compliance Tracker', '/brand/strainchain/compliance-tracker'], ['How It Works', '#how-it-works'], ['Features', '#features'], ['Pricing', '#pricing'], ['Demo', '/demo/strainchain']].map(([label, href]) => (
             <a key={label} href={href} className="text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-emerald-400 transition-colors">{label}</a>
           ))}
         </div>
