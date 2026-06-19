@@ -32,13 +32,8 @@ export default function AutonomousReport() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [healthRes, gatesRes] = await Promise.all([
-          fetch('/api/system/health'),
-          fetch('/api/system/deployment-gates'),
-        ]);
-
+        const healthRes = await fetch('/api/system/health');
         const health = await healthRes.json();
-        const gates = await gatesRes.json();
 
         // Calculate metrics from job history
         const successRate = health.system?.healthScore || 0;

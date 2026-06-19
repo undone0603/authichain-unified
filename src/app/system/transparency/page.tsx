@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  Eye, CheckCircle, AlertTriangle, TrendingUp, BarChart3, Shield,
+  Eye, TrendingUp, BarChart3, Shield,
   Zap, RefreshCw, Lock, Globe,
 } from 'lucide-react';
 
