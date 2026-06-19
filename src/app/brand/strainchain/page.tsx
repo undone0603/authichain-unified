@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LeadCaptureForm } from '@/components/lead-capture-form';
 import {
   Leaf, Shield, Package, MapPin, Activity, Zap,
   ArrowRight, CheckCircle, Dna, AlertTriangle, Lock,
@@ -259,6 +260,16 @@ export default function StrainChainHome() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Lead Capture */}
+        <section className="mb-24">
+          <LeadCaptureForm
+            domain="strainchain"
+            headline="Track Your Supply Chain"
+            subheadline="Complete provenance tracking with GPS, compliance, and blockchain audit trail."
+            cta="Start Free"
+          />
         </section>
 
         {/* CTA */}

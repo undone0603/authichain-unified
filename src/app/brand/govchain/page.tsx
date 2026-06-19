@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LeadCaptureForm } from '@/components/lead-capture-form';
 import { useState } from 'react';
 import {
   Vote, Shield, Zap, Lock, Users, TrendingUp,
@@ -227,6 +228,16 @@ export default function GovChainHome() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Lead Capture */}
+        <section className="mb-24">
+          <LeadCaptureForm
+            domain="govchain"
+            headline="Build Sustainable DAOs"
+            subheadline="Governance infrastructure with multi-sig voting and staking rewards."
+            cta="Enter the DAO"
+          />
         </section>
 
         {/* CTA */}

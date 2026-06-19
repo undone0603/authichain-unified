@@ -29,6 +29,7 @@ interface DashboardData {
     conversion_rate: string;
     estimated_revenue: string;
     avg_lead_score: string;
+    leads_last_7d?: number;
   };
   pipeline: {
     new: number;
@@ -46,10 +47,15 @@ interface DashboardData {
     conversion_rate: string;
     avg_score: string;
   }>;
+  autonomous_health?: {
+    actions_24h: number;
+    workflow_breakdown: Record<string, number>;
+  };
   recent_events: Array<{
     workflow: string;
     status: string;
     timestamp: string;
+    payload?: Record<string, unknown>;
   }>;
   high_intent_leads: Array<{
     email: string;
@@ -168,12 +174,13 @@ export default function FoundersDashboard() {
         </header>
 
         {/* Executive KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           {[
             { label: 'Total Leads Captured', value: data.summary.total_leads, icon: Users, color: 'text-blue-400' },
             { label: 'Closed Deals', value: data.summary.total_converted, icon: CheckCircle2, color: 'text-green-400' },
             { label: 'Conversion Rate', value: data.summary.conversion_rate, icon: TrendingUp, color: 'text-gold' },
             { label: 'Est. Revenue', value: data.summary.estimated_revenue, icon: DollarSign, color: 'text-emerald-400' },
+            { label: 'New Leads (7d)', value: data.summary.leads_last_7d ?? 0, icon: Activity, color: 'text-cyan-400' },
           ].map((kpi) => (
             <div
               key={kpi.label}
@@ -333,7 +340,26 @@ export default function FoundersDashboard() {
             <div className="flex items-center gap-3 mb-6">
               <Zap className="w-5 h-5 text-gold" />
               <h2 className="text-sm font-black uppercase tracking-widest">Autonomous Heartbeat</h2>
+              {data.autonomous_health && (
+                <span className="ml-auto text-[10px] font-black text-gold bg-gold/10 px-3 py-1 rounded-full border border-gold/20">
+                  {data.autonomous_health.actions_24h} actions / 24h
+                </span>
+              )}
             </div>
+
+            {data.autonomous_health && Object.keys(data.autonomous_health.workflow_breakdown).length > 0 && (
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {Object.entries(data.autonomous_health.workflow_breakdown)
+                  .sort(([, a], [, b]) => b - a)
+                  .slice(0, 6)
+                  .map(([name, count]) => (
+                    <div key={name} className="p-2 rounded-lg bg-zinc-900/50 border border-zinc-800">
+                      <p className="text-[8px] font-black text-zinc-500 uppercase tracking-tight truncate">{name.replace(/_/g, ' ')}</p>
+                      <p className="text-sm font-black text-white">{count}</p>
+                    </div>
+                  ))}
+              </div>
+            )}
 
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {data.recent_events.length > 0 ? (
