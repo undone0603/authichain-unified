@@ -4,10 +4,12 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 interface ActivityLog {
   lead_id?: string;
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Email parameter required' }, { status: 400 });
     }
 
-    const { data: logs, error } = await admin
+    const { data: logs, error } = await getAdmin()
       .from('lead_activity_logs')
       .select('*')
       .eq('email', email)
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let query = admin.from('lead_captures').select('id, email');
+    let query = getAdmin().from('lead_captures').select('id, email');
 
     if (lead_id) {
       query = query.eq('id', lead_id);
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
-    const { data: log, error: logError } = await admin
+    const { data: log, error: logError } = await getAdmin()
       .from('lead_activity_logs')
       .insert({
         lead_id: lead.id,
@@ -92,17 +94,17 @@ export async function POST(request: NextRequest) {
     if (logError) throw logError;
 
     if (activity_type === 'email_opened') {
-      await admin
+      await getAdmin()
         .from('lead_captures')
         .update({ emailOpened: true })
         .eq('id', lead.id);
     } else if (activity_type === 'email_clicked') {
-      await admin
+      await getAdmin()
         .from('lead_captures')
         .update({ emailClicked: true })
         .eq('id', lead.id);
     } else if (activity_type === 'demo_sent') {
-      await admin
+      await getAdmin()
         .from('lead_captures')
         .update({ demoStarted: true })
         .eq('id', lead.id);

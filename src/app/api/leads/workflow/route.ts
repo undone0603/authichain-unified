@@ -4,10 +4,12 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 interface WorkflowTrigger {
   type: 'auto_nurture' | 'score_all' | 'advance_qualified' | 'send_followups';
@@ -90,7 +92,7 @@ StrainChain Team`,
 
 async function runAutoNurture() {
   try {
-    const { data: newLeads } = await admin
+    const { data: newLeads } = await getAdmin()
       .from('lead_captures')
       .select('*')
       .eq('status', 'new')
@@ -101,14 +103,14 @@ async function runAutoNurture() {
 
     for (const lead of newLeads) {
       if ((lead.score || 0) >= 50) {
-        await admin
+        await getAdmin()
           .from('lead_captures')
           .update({ status: 'contacted' })
           .eq('id', lead.id);
 
         const templateKey = `intro_${(lead.product_interest || 'qron').toLowerCase()}` as keyof typeof EMAIL_TEMPLATES;
 
-        await admin.from('automation_logs').insert({
+        await getAdmin().from('automation_logs').insert({
           workflow_name: 'auto_nurture_email',
           status: 'completed',
           payload: {
@@ -129,7 +131,7 @@ async function runAutoNurture() {
 
 async function runScoreAll() {
   try {
-    const { data: allLeads } = await admin
+    const { data: allLeads } = await getAdmin()
       .from('lead_captures')
       .select('*')
       .in('status', ['new', 'contacted']);
@@ -150,7 +152,7 @@ async function runScoreAll() {
       score = Math.min(score, 100);
 
       if (score !== lead.score) {
-        await admin
+        await getAdmin()
           .from('lead_captures')
           .update({ score })
           .eq('id', lead.id);
@@ -166,7 +168,7 @@ async function runScoreAll() {
 
 async function runAdvanceQualified() {
   try {
-    const { data: qualified } = await admin
+    const { data: qualified } = await getAdmin()
       .from('lead_captures')
       .select('*')
       .eq('status', 'qualified')
@@ -176,12 +178,12 @@ async function runAdvanceQualified() {
     if (!qualified) return { processed: 0 };
 
     for (const lead of qualified) {
-      await admin
+      await getAdmin()
         .from('lead_captures')
         .update({ status: 'demoed' })
         .eq('id', lead.id);
 
-      await admin.from('automation_logs').insert({
+      await getAdmin().from('automation_logs').insert({
         workflow_name: 'auto_advance_to_demo',
         status: 'completed',
         payload: {
@@ -223,7 +225,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Unknown workflow type' }, { status: 400 });
     }
 
-    await admin.from('automation_logs').insert({
+    await getAdmin().from('automation_logs').insert({
       workflow_name: `workflow_${type}`,
       status: 'completed',
       payload: result,
