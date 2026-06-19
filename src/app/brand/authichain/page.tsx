@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LeadCaptureForm } from '@/components/lead-capture-form';
 import {
   Shield, Zap, Lock, Package, Globe, Activity,
   ArrowRight, CheckCircle, Code2, Building2, Pill,
@@ -207,6 +208,16 @@ export default function AuthiChainHome() {
 }`}</pre>
             </div>
           </div>
+        </section>
+
+        {/* Lead Capture */}
+        <section className="mb-24">
+          <LeadCaptureForm
+            domain="authichain"
+            headline="Secure Your Digital Credentials"
+            subheadline="Enterprise-grade authentication powered by blockchain. Talk to our team."
+            cta="Request Access"
+          />
         </section>
 
         {/* CTA */}

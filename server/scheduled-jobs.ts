@@ -546,6 +546,106 @@ registerJob({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// JOB 9a: Founders DreamDash — Lead Scoring Refresh (every 30 minutes)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "dreamdash-lead-scoring",
+  description: "Recalculate lead scores based on engagement signals across all four domains",
+  schedule: "*/30 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { skipped: true } };
+
+    const allLeads = await db.select().from(leads)
+      .where(sql`${leads.status} IN ('new', 'contacted', 'qualified')`)
+      .limit(500);
+
+    let updated = 0;
+    for (const lead of allLeads) {
+      let score = lead.score || 0;
+      if (lead.emailOpened) score = Math.min(score + 15, 100);
+      if (lead.emailClicked) score = Math.min(score + 25, 100);
+      if (lead.demoStarted) score = Math.min(score + 40, 100);
+      if (lead.contractSent) score = Math.min(score + 50, 100);
+      if (lead.contractSigned) score = 100;
+      if (lead.isVip) score = Math.min(score + 30, 100);
+
+      if (score !== (lead.score || 0)) {
+        await db.update(leads).set({ score }).where(eq(leads.id, lead.id));
+        updated++;
+      }
+    }
+
+    return { itemsProcessed: updated, details: { totalEvaluated: allLeads.length, updated } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 9b: Founders DreamDash — Auto Stage Advancement (every 2 hours)
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "dreamdash-stage-advance",
+  description: "Auto-advance high-scoring leads through the deal pipeline",
+  schedule: "0 */2 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { skipped: true } };
+
+    const stageFlow = ['new', 'contacted', 'qualified', 'demoed', 'contracted', 'signed', 'converted'];
+    let advanced = 0;
+
+    // Advance new leads with score >= 50 to contacted
+    const newHighScore = await db.select().from(leads)
+      .where(and(eq(leads.status, 'new'), gte(leads.score, 50)))
+      .limit(100);
+    for (const lead of newHighScore) {
+      await db.update(leads).set({ status: 'contacted' }).where(eq(leads.id, lead.id));
+      advanced++;
+    }
+
+    // Advance contacted leads with score >= 70 to qualified
+    const contactedHigh = await db.select().from(leads)
+      .where(and(eq(leads.status, 'contacted'), gte(leads.score, 70)))
+      .limit(100);
+    for (const lead of contactedHigh) {
+      await db.update(leads).set({ status: 'qualified' }).where(eq(leads.id, lead.id));
+      advanced++;
+    }
+
+    // Advance qualified leads with demo started to demoed
+    const qualifiedDemoed = await db.select().from(leads)
+      .where(and(eq(leads.status, 'qualified'), eq(leads.demoStarted, true)))
+      .limit(100);
+    for (const lead of qualifiedDemoed) {
+      await db.update(leads).set({ status: 'demoed' }).where(eq(leads.id, lead.id));
+      advanced++;
+    }
+
+    // Advance demoed leads with contract sent to contracted
+    const demoedContract = await db.select().from(leads)
+      .where(and(eq(leads.status, 'demoed'), eq(leads.contractSent, true)))
+      .limit(100);
+    for (const lead of demoedContract) {
+      await db.update(leads).set({ status: 'contracted' }).where(eq(leads.id, lead.id));
+      advanced++;
+    }
+
+    // Advance contracted leads with contract signed to signed
+    const contractedSigned = await db.select().from(leads)
+      .where(and(eq(leads.status, 'contracted'), eq(leads.contractSigned, true)))
+      .limit(100);
+    for (const lead of contractedSigned) {
+      await db.update(leads).set({ status: 'signed' }).where(eq(leads.id, lead.id));
+      advanced++;
+    }
+
+    return { itemsProcessed: advanced, details: { newToContacted: newHighScore.length, contactedToQualified: contactedHigh.length, qualifiedToDemo: qualifiedDemoed.length, demoToContract: demoedContract.length, contractToSigned: contractedSigned.length } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // JOB 9: Autonomous Revenue Pipeline Tick (every 2 minutes - ACCELERATED)
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
