@@ -52,14 +52,25 @@ export async function POST(request: Request) {
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/#pricing`,
       ...(email ? { customer_email: email } : {}),
+      // Emit every metadata key variant the webhook handlers read. The credit-
+      // granting handler (/api/webhook) reads `planId`/`userId`; the
+      // status handler (/api/stripe/webhook) reads `plan`/`user_id`. Emitting
+      // both keeps fulfillment correct regardless of which endpoint Stripe is
+      // configured to call. Without `userId`, fulfillPlan() early-returns and a
+      // paying customer receives no credits or tier upgrade.
       metadata: {
         planId: plan.id,
-        ...(userId ? { user_id: userId } : {}),
+        plan: plan.id,
+        ...(userId ? { user_id: userId, userId } : {}),
       },
       ...(plan.stripe_mode === 'subscription' ? {
         allow_promotion_codes: true,
         subscription_data: {
-          metadata: { planId: plan.id, ...(userId ? { user_id: userId } : {}) },
+          metadata: {
+            planId: plan.id,
+            plan: plan.id,
+            ...(userId ? { user_id: userId, userId } : {}),
+          },
         },
       } : {}),
     });
