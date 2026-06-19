@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LeadCaptureForm } from '@/components/lead-capture-form';
 import { useState } from 'react';
 import {
   Vote, Shield, Zap, Lock, Users, TrendingUp,
@@ -229,6 +230,16 @@ export default function GovChainHome() {
           </div>
         </section>
 
+        {/* Lead Capture */}
+        <section className="mb-24">
+          <LeadCaptureForm
+            domain="govchain"
+            headline="Build Sustainable DAOs"
+            subheadline="Governance infrastructure with multi-sig voting and staking rewards."
+            cta="Enter the DAO"
+          />
+        </section>
+
         {/* CTA */}
         <section className="mb-24 rounded-3xl text-center py-20 px-8 relative overflow-hidden border" style={{ borderColor: `${BLUE}20`, background: 'linear-gradient(135deg, #040a18 0%, #0a0a0a 50%, #04081a 100%)' }}>
           <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, ${BLUE}08 0%, transparent 60%)` }} />
@@ -264,7 +275,7 @@ export default function GovChainHome() {
 
         <footer className="text-center py-10 border-t border-zinc-900">
           <div className="flex justify-center gap-6 mb-4">
-            {[['Terms', '/terms'], ['Privacy', '/privacy'], ['Tokenomics', '/governance/tokenomics'], ['Status', '/status']].map(([label, href]) => (
+            {[['Terms', '/terms'], ['Privacy', '/privacy'], ['Tokenomics', '/governance/tokenomics'], ['Affiliates', '/affiliate'], ['Status', '/status']].map(([label, href]) => (
               <Link key={label} href={href} className="text-[10px] font-black uppercase tracking-widest text-zinc-700 hover:text-zinc-400 transition-colors">{label}</Link>
             ))}
           </div>

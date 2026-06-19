@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LeadCaptureForm } from '@/components/lead-capture-form';
 import {
   Shield, Zap, Lock, Package, Globe, Activity,
   ArrowRight, CheckCircle, Code2, Building2, Pill,
@@ -209,6 +210,16 @@ export default function AuthiChainHome() {
           </div>
         </section>
 
+        {/* Lead Capture */}
+        <section className="mb-24">
+          <LeadCaptureForm
+            domain="authichain"
+            headline="Secure Your Digital Credentials"
+            subheadline="Enterprise-grade authentication powered by blockchain. Talk to our team."
+            cta="Request Access"
+          />
+        </section>
+
         {/* CTA */}
         <section className="mb-24 rounded-3xl text-center py-20 px-8 relative overflow-hidden border border-[#c9a227]/20" style={{ background: 'linear-gradient(135deg, #111100 0%, #0d0d0d 50%, #110d00 100%)' }}>
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(201,162,39,0.08)_0%,transparent_60%)]" />
@@ -245,7 +256,7 @@ export default function AuthiChainHome() {
 
         <footer className="text-center py-10 border-t border-zinc-900">
           <div className="flex justify-center gap-6 mb-4">
-            {[['Terms', '/terms'], ['Privacy', '/privacy'], ['Docs', '/docs'], ['Status', '/status']].map(([label, href]) => (
+            {[['Terms', '/terms'], ['Privacy', '/privacy'], ['Docs', '/docs'], ['Affiliates', '/affiliate'], ['Status', '/status']].map(([label, href]) => (
               <Link key={label} href={href} className="text-[10px] font-black uppercase tracking-widest text-zinc-700 hover:text-zinc-400 transition-colors">{label}</Link>
             ))}
           </div>
