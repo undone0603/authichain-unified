@@ -94,6 +94,18 @@ export async function GET() {
       workflowCounts[row.workflow_name] = (workflowCounts[row.workflow_name] || 0) + 1;
     }
 
+    // Email draft pipeline stats
+    const { count: pendingDrafts } = await admin
+      .from('email_drafts')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+
+    const { count: sentDrafts24h } = await admin
+      .from('email_drafts')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'sent')
+      .gte('sentAt', oneDayAgo);
+
     // Pipeline velocity — leads created in last 7 days
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const newLeads7d = leads.filter(l => l.created_at && l.created_at >= sevenDaysAgo).length;
@@ -113,6 +125,8 @@ export async function GET() {
       autonomous_health: {
         actions_24h: automationCount24h || 0,
         workflow_breakdown: workflowCounts,
+        email_drafts_pending: pendingDrafts || 0,
+        emails_sent_24h: sentDrafts24h || 0,
       },
       recent_events: logs?.map(l => ({
         workflow: l.workflow_name,

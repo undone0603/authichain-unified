@@ -115,17 +115,30 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    if (lead && score >= 70) {
+    if (lead) {
       await admin.from('automation_logs').insert({
-        workflow_name: 'lead_capture_high_score',
+        workflow_name: score >= 70 ? 'lead_capture_high_score' : 'lead_capture_new',
         status: 'completed',
         payload: {
           lead_id: lead.id,
           email,
           score,
           domain,
+          source,
         },
       });
+
+      if (score >= 70) {
+        try {
+          await admin.from('lead_activity_logs').insert({
+            lead_id: lead.id,
+            email,
+            activity_type: 'note_added',
+            description: `High-score lead captured (${score}/100) via ${source} for ${config.name}`,
+            details: { score, domain, source, auto_qualified: true },
+          });
+        } catch { /* activity log is best-effort */ }
+      }
     }
 
     return NextResponse.json({
