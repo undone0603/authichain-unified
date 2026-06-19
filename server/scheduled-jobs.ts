@@ -6,7 +6,7 @@ const __dirname = dirname(__filename)
 // server/scheduled-jobs.ts
 import { getDb, logActivity } from "./db";
 import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger, emailDrafts, missions } from "../drizzle/schema";
-import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
+import { eq, lt, and, or, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
 import { ENV } from "./_core/env";
@@ -1520,6 +1520,155 @@ registerJob({
     return {
       itemsProcessed: processed,
       details: { processed, total: nmipTargets.length, campaign: "NMIP-2026-V1" },
+    };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 26: Real-Time Deal Monitor (every 5 minutes)
+// Monitors high-intent deals, escalates stalled pipelines, triggers closing workflows
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "deal-monitor-realtime",
+  description: "Monitor deal pipeline health, escalate stalled deals, trigger closing workflows",
+  schedule: "*/5 * * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { error: "no_db" } };
+
+    // Find deals in "qualified" or "demoed" status with no activity > 2 days
+    const now = new Date();
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
+    try {
+      const stalledDeals = await db.select().from(leads)
+        .where(and(
+          or(
+            eq(leads.status, "qualified"),
+            eq(leads.status, "demoed")
+          ),
+          lte(leads.lastContactedAt, twoDaysAgo)
+        ))
+        .limit(20);
+
+      let escalated = 0;
+
+      for (const deal of stalledDeals) {
+        try {
+          // Mark as stalled and escalate
+          await db.update(leads).set({
+            status: "stalled",
+            metadata: {
+              ...((deal.metadata as Record<string, any>) || {}),
+              stalledAt: now.toISOString(),
+              escalatedAt: now.toISOString(),
+              escalationReason: "No contact for 2+ days",
+            },
+          }).where(eq(leads.id, deal.id));
+
+          // Log escalation
+          await logActivity({
+            action: "deal_escalated",
+            entityType: "lead",
+            entityId: 0,
+            details: {
+              leadId: deal.id,
+              company: deal.company,
+              lastContact: deal.lastContactedAt,
+              reason: "Stalled for 2+ days",
+            },
+          });
+
+          escalated++;
+        } catch (err) {
+          console.warn(`[JOB 26] Failed to escalate deal ${deal.id}:`, err);
+        }
+      }
+
+      return {
+        itemsProcessed: escalated,
+        details: { escalated, total: stalledDeals.length, timeframe: "2+ days" },
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { itemsProcessed: 0, details: { error: msg } };
+    }
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 27: Auto-Contract Generation (triggered on deal stage change)
+// Generates contracts when deals move to "contracted" status
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "auto-contract-generator",
+  description: "Auto-generate contracts for deals ready to sign",
+  schedule: "0 */2 * * *",
+  enabled: !!process.env.OPENAI_API_KEY,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { error: "no_db" } };
+
+    const { invokeLLM } = await import("./_core/llm");
+
+    // Find deals ready for contract (status = "contracted")
+    const dealsReadyForContract = await db.select().from(leads)
+      .where(eq(leads.status, "contracted"))
+      .limit(10);
+
+    let generated = 0;
+
+    for (const deal of dealsReadyForContract) {
+      try {
+        // Generate contract terms using LLM
+        const prompt = `Generate a professional software/service contract for:
+Company: ${deal.company}
+Contact: ${deal.name}
+Email: ${deal.email}
+
+Include: Term (1 year), auto-renewal clause, payment terms (net 30), IP protection.
+Format: Professional legal document in Markdown.`;
+
+        const response = await invokeLLM({
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 2000,
+        });
+
+        const contractContent = typeof response.choices?.[0]?.message?.content === 'string'
+          ? response.choices[0].message.content
+          : String(response.choices?.[0]?.message?.content || '');
+
+        // Update deal with contract
+        await db.update(leads).set({
+          contractSent: true,
+          metadata: {
+            ...((deal.metadata as Record<string, any>) || {}),
+            contractGeneratedAt: new Date().toISOString(),
+            contractHash: Buffer.from(contractContent).toString('base64').slice(0, 16),
+          },
+        }).where(eq(leads.id, deal.id));
+
+        await logActivity({
+          action: "contract_generated",
+          entityType: "lead",
+          entityId: 0,
+          details: {
+            company: deal.company,
+            leadId: deal.id,
+            contractLength: contractContent.length,
+          },
+        });
+
+        generated++;
+      } catch (err) {
+        console.warn(`[JOB 27] Failed to generate contract for ${deal.company}:`, err);
+      }
+    }
+
+    return {
+      itemsProcessed: generated,
+      details: { generated, total: dealsReadyForContract.length },
     };
   },
 });
