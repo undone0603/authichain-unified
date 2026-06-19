@@ -44,10 +44,15 @@ vi.mock('./agents/browser-vision.js', () => ({
 // ─── Mock db lifecycle functions ──────────────────────────────────────────────
 
 vi.mock('./db.js', () => ({
+  getDb:            vi.fn().mockResolvedValue(null),
   markTaskRunning:  vi.fn().mockResolvedValue(true),
   markTaskDone:     vi.fn().mockResolvedValue(undefined),
   markTaskFailed:   vi.fn().mockResolvedValue(undefined),
   logActivity:      vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('./agent-xp-service.js', () => ({
+  awardXp: vi.fn().mockResolvedValue(null),
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
