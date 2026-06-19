@@ -309,7 +309,7 @@ export default function StrainChainHome() {
 
         <footer className="text-center py-10 border-t border-zinc-900">
           <div className="flex justify-center gap-6 mb-4">
-            {[['Terms', '/terms'], ['Privacy', '/privacy'], ['Compliance', '/digital-product-passport/compliance'], ['Status', '/status']].map(([label, href]) => (
+            {[['Terms', '/terms'], ['Privacy', '/privacy'], ['Compliance', '/digital-product-passport/compliance'], ['Affiliates', '/affiliate'], ['Status', '/status']].map(([label, href]) => (
               <Link key={label} href={href} className="text-[10px] font-black uppercase tracking-widest text-zinc-700 hover:text-zinc-400 transition-colors">{label}</Link>
             ))}
           </div>

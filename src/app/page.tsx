@@ -1406,9 +1406,12 @@ export default function Home() {
 
         {/* Footer Navigation */}
         <footer className="text-center py-12 border-t border-zinc-900 mt-12">
-          <div className="flex justify-center gap-6 mb-6">
+          <div className="flex flex-wrap justify-center gap-6 mb-4">
              <Link href="/about" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">About</Link>
              <Link href="/creators" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Creators</Link>
+             <Link href="/affiliate" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Affiliates</Link>
+             <Link href="/ftc-shield" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">FTC Shield</Link>
+             <Link href="/explorers" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Explorers</Link>
              <span className="text-zinc-800">|</span>
              <Link href="/terms" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Terms</Link>
              <Link href="/privacy" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Privacy</Link>
