@@ -107,7 +107,6 @@ async function runAutoNurture() {
           .eq('id', lead.id);
 
         const templateKey = `intro_${(lead.product_interest || 'qron').toLowerCase()}` as keyof typeof EMAIL_TEMPLATES;
-        const template = EMAIL_TEMPLATES[templateKey] || EMAIL_TEMPLATES.intro_qron;
 
         await admin.from('automation_logs').insert({
           workflow_name: 'auto_nurture_email',
@@ -202,7 +201,7 @@ async function runAdvanceQualified() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { type, limit } = (await request.json()) as WorkflowTrigger;
+    const { type } = (await request.json()) as WorkflowTrigger;
 
     if (!type) {
       return NextResponse.json({ error: 'Workflow type required' }, { status: 400 });
