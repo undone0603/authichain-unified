@@ -145,3 +145,27 @@ export async function updateTaskStatus(
   const d = await getDb();
   await d.update(missionTasks).set({ status }).where(eq(missionTasks.id, id));
 }
+
+export async function createTask(data: {
+  missionId: string;
+  kind: string;
+  title?: string;
+  description?: string;
+  payload?: unknown;
+  order?: number;
+}): Promise<string> {
+  const d = await getDb();
+  const id = randomUUID();
+
+  await d.insert(missionTasks).values({
+    id,
+    missionId: data.missionId,
+    kind: data.kind,
+    title: data.title ?? data.kind,
+    description: data.description ?? JSON.stringify(data.payload ?? {}),
+    status: "pending",
+    order: data.order ?? 1,
+  });
+
+  return id;
+}
