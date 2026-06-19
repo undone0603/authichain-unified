@@ -63,7 +63,7 @@ export default async function Dashboard() {
           { href: '/dashboard/products', label: 'Products & QR Codes', desc: 'Manage products and tamper-evident QR codes', color: 'from-emerald-600 to-teal-800' },
           { href: '/gallery', label: 'Browse Gallery', desc: 'View all generated QRONs', color: 'from-purple-600 to-purple-800' },
           { href: '/dashboard/autonomous', label: 'Autonomous Ops', desc: 'AgentZ pipeline, scheduled jobs, control panel', color: 'from-yellow-600 to-orange-700' },
-          { href: '/dashboard/video', label: 'Video Studio', desc: 'AI cinematic product reveals', color: 'from-pink-600 to-rose-800' },
+          { href: '/dashboard/agent-xp', label: 'Agent XP', desc: 'Autonomous agent reputation & leaderboard', color: 'from-cyan-600 to-blue-700' },
           { href: '/founders', label: 'DreamDash', desc: 'Real-time deal pipeline & revenue', color: 'from-amber-600 to-amber-800' },
         ].map(({ href, label, desc, color }) => (
           <Link key={href} href={href}
@@ -73,6 +73,16 @@ export default async function Dashboard() {
             <p className="text-sm opacity-80">{desc}</p>
           </Link>
         ))}
+      </div>
+
+      {/* Additional Tools */}
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <Link href="/dashboard/folders"
+          className="block p-6 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-800 text-white hover:opacity-90 transition-opacity"
+          style={{ textDecoration: 'none' }}>
+          <p className="font-black text-lg mb-1">Folder Manager</p>
+          <p className="text-sm opacity-80">Organize QRONs & assets</p>
+        </Link>
       </div>
 
       {/* YouTube Channel */}

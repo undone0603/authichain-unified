@@ -33,6 +33,7 @@ import { analyticsRouter } from "./analytics/router";
 import { feedbackRouter } from "./feedback/router";
 import { paymentsRouter } from "./payments/router";
 import { heygenRouter } from "./heygen/router";
+import { agentXpRouter } from "./agent-xp/router";
 import { abTestingRouter } from "./ab-testing/router";
 import { macrohardRouter } from "./macrohard/router";
 import { govchainRouter } from "./govchain/router";
@@ -280,6 +281,7 @@ export const appRouter = router({
   feedback: feedbackRouter,
   payments: paymentsRouter,
   heygen: heygenRouter,
+  agentXp: agentXpRouter,
   abTesting: abTestingRouter,
   macrohard: macrohardRouter,
   autonomous: autonomousRouter,

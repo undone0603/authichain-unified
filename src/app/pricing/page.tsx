@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import { PLANS } from '@/lib/plans';
 import { CheckoutModal } from './pricing-client';
-import { 
-  Check, 
+import {
+  Check,
   Coins
 } from 'lucide-react';
 import Link from 'next/link';
+import MonetizationArchitecture from '@/components/MonetizationArchitecture';
 
 export const metadata: Metadata = {
   title: 'Pricing | QRON Protocol',
@@ -147,6 +148,11 @@ export default function PricingPage() {
                 </div>
             ))}
         </div>
+      </section>
+
+      {/* Ecosystem Monetization */}
+      <section className="max-w-7xl mx-auto px-6 py-24 border-t border-zinc-900">
+        <MonetizationArchitecture />
       </section>
 
       {/* Enterprise Support */}
