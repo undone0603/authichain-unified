@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const jobName = url.searchParams.get('jobName');
 
     // Fetch all job runs in the period
-    const allRuns = await getJobHistory(jobName, days * 100);
+    const allRuns = await getJobHistory(jobName ?? undefined, days * 100);
 
     if (!allRuns || allRuns.length === 0) {
       return Response.json({
@@ -134,7 +134,7 @@ export async function GET(request: Request) {
         },
         evidence: {
           recentDecisions: decisions.slice(0, 50), // Last 50 decisions as evidence
-          policyCompletion: Object.entries(policyChecks || {})
+          policyCompletion: Object.entries(decisions[0]?.policyChecks || {})
             .reduce((stats, [policy, _]) => {
               stats[policy] = {
                 passed: decisions.filter(d => d.policyChecks[policy]).length,
