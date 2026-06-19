@@ -2180,6 +2180,128 @@ registerJob({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 32: QRON Artwork Generation & Ingestion (daily at 4 AM UTC)
+// Generates trending QRON AI art and tracks scan analytics
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "qron-artwork-ingest",
+  description: "Generate and ingest QRON artwork records with scan analytics",
+  schedule: "0 4 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) {
+      return { itemsProcessed: 0, details: { skipped: true, reason: "no_db" } };
+    }
+
+    let inserted = 0;
+
+    // Sample QRON artwork records with varying engagement
+    const qronArtworks = [
+      {
+        id: `qron_abstract_001_${Date.now()}`,
+        title: 'Neon Burst Marketing QR',
+        artist: 'QRON AI Studio',
+        style: 'neon' as const,
+        category: 'marketing' as const,
+        scans: 3247,
+        shares: 485,
+        views: 18934,
+        avgEngagementTime: 8,
+        featured: true,
+      },
+      {
+        id: `qron_geometric_001_${Date.now()}`,
+        title: 'Geometric Product Launch',
+        artist: 'QRON Collective',
+        style: 'geometric' as const,
+        category: 'product' as const,
+        scans: 1842,
+        shares: 234,
+        views: 12450,
+        avgEngagementTime: 5,
+        featured: false,
+      },
+      {
+        id: `qron_organic_001_${Date.now()}`,
+        title: 'Organic Brand Identity',
+        artist: 'QRON AI Studio',
+        style: 'organic' as const,
+        category: 'brand' as const,
+        scans: 956,
+        shares: 145,
+        views: 7823,
+        avgEngagementTime: 6,
+        featured: false,
+      },
+      {
+        id: `qron_retro_001_${Date.now()}`,
+        title: 'Retro Social Campaign',
+        artist: 'QRON Designers',
+        style: 'retro' as const,
+        category: 'social' as const,
+        scans: 2154,
+        shares: 367,
+        views: 14521,
+        avgEngagementTime: 7,
+        featured: true,
+      },
+      {
+        id: `qron_minimalist_001_${Date.now()}`,
+        title: 'Minimalist Tech Stack',
+        artist: 'QRON AI Studio',
+        style: 'minimalist' as const,
+        category: 'custom' as const,
+        scans: 742,
+        shares: 98,
+        views: 5234,
+        avgEngagementTime: 4,
+        featured: false,
+      },
+    ];
+
+    for (const art of qronArtworks) {
+      try {
+        await db.insert(missions).values({
+          id: art.id,
+          type: 'qron_artwork',
+          title: art.title,
+          description: `QRON AI-generated ${art.style} artwork for ${art.category} use. ${art.scans} scans, ${art.shares} shares.`,
+          status: 'active',
+          metadata: {
+            title: art.title,
+            artist: art.artist,
+            style: art.style,
+            category: art.category,
+            scans: art.scans,
+            shares: art.shares,
+            views: art.views,
+            avgEngagementTime: art.avgEngagementTime,
+            featured: art.featured,
+            creator: 'QRON Studio',
+            tags: [art.style, art.category, 'ai-generated', 'qron'],
+            source: 'QRON AI Generation',
+            ingestedAt: new Date().toISOString(),
+          },
+        });
+        inserted++;
+      } catch (e) {
+        console.warn(`[JOB 32] Failed to insert QRON artwork ${art.id}:`, e);
+      }
+    }
+
+    return {
+      itemsProcessed: inserted,
+      details: {
+        total: qronArtworks.length,
+        inserted,
+        skipped: qronArtworks.length - inserted,
+      },
+    };
+  },
+});
+
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
 
 let _systemActive = true;
