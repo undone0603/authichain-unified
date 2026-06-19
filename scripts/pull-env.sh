@@ -8,13 +8,14 @@ PROJECT="undone0603-authichain-unified"
 
 echo "Pulling env vars from Vercel project: $PROJECT"
 
-# vercel env pull merges into .env (production environment)
-vercel env pull .env \
+# vercel env pull merges into .env (production environment).
+# Use npx so it works without a global `vercel` install (Codespaces has none).
+npx --yes vercel env pull .env \
   --environment=production \
   --token "$VERCEL_TOKEN" \
   --scope "$TEAM_ID" \
   --yes 2>/dev/null || \
-vercel env pull .env --yes
+npx --yes vercel env pull .env --yes
 
 echo "Done. .env updated with production credentials."
 echo ""
