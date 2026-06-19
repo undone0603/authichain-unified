@@ -20,8 +20,6 @@ export async function POST() {
     const csvPath = join(process.cwd(), 'gov_pursue_list.csv');
     const raw = readFileSync(csvPath, 'utf-8');
     const lines = raw.split('\n').filter(l => l.trim());
-    const header = lines[0].split(',');
-
     let imported = 0;
     let skipped = 0;
 

@@ -1037,6 +1037,106 @@ registerJob({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 19: Send Leadership Digest (daily at 8 AM UTC)
+// Sends a Slack digest with daily automation metrics and top opportunities
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "send-leadership-digest",
+  description: "Send daily Slack digest with pipeline metrics and top GovChain opportunities",
+  schedule: "0 8 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    // Skip gracefully if Slack isn't configured
+    if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_CHANNEL_ID) {
+      return { itemsProcessed: 0, details: { skipped: true, reason: "slack_not_configured" } };
+    }
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) return { itemsProcessed: 0, details: { skipped: true, reason: "no_supabase_config" } };
+
+    const admin = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch top opportunities and counts
+    const { data: topOpps } = await admin
+      .from("gov_opportunities")
+      .select("notice_id, title, agency, deadline, fit_score, sam_url")
+      .gte("fit_score", 65)
+      .order("fit_score", { ascending: false })
+      .limit(5);
+
+    const { count: totalIngested } = await admin
+      .from("gov_opportunities")
+      .select("id", { count: "exact", head: true })
+      .gte("ingested_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    const { count: emailsSent } = await admin
+      .from("automation_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("workflow_name", "email_sent")
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    const oppLines = (topOpps ?? [])
+      .map((o, i) => `>${i + 1}. *[${o.fit_score}/100]* <${o.sam_url}|${o.title?.slice(0, 55)}> — ${o.agency?.slice(0, 30)} | Deadline: ${o.deadline ?? "TBD"}`)
+      .join("\n");
+
+    const payload = {
+      channel: process.env.SLACK_CHANNEL_ID,
+      text: "📡 Daily Automation Digest",
+      blocks: [
+        {
+          type: "header",
+          text: { type: "plain_text", text: "📡 Daily Automation Digest", emoji: true },
+        },
+        {
+          type: "section",
+          fields: [
+            { type: "mrkdwn", text: `*Opportunities Ingested (24h)*\n${totalIngested ?? 0}` },
+            { type: "mrkdwn", text: `*Emails Sent (24h)*\n${emailsSent ?? 0}` },
+          ],
+        },
+        { type: "divider" },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*🏆 Top GovChain Opportunities*\n${oppLines || "_No high-fit opportunities today._"}`,
+          },
+        },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: { type: "plain_text", text: "📊 View Dashboard", emoji: true },
+              url: "https://authichain-unified.vercel.app/founders",
+              style: "primary",
+            },
+          ],
+        },
+      ],
+    };
+
+    const res = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json();
+    if (!json.ok) {
+      return { itemsProcessed: 0, details: { error: json.error } };
+    }
+
+    return { itemsProcessed: 1, details: { status: "digest_sent", emailsSent, opportunitiesIngested: totalIngested } };
+  },
+});
+
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
 
 let _systemActive = true;
