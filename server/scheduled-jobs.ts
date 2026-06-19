@@ -593,7 +593,6 @@ registerJob({
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { skipped: true } };
 
-    const stageFlow = ['new', 'contacted', 'qualified', 'demoed', 'contracted', 'signed', 'converted'];
     let advanced = 0;
 
     // Advance new leads with score >= 50 to contacted
