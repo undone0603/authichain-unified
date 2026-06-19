@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Lightbulb,
 } from 'lucide-react';
+import AgenticCloser from '@/components/AgenticCloser';
 
 interface DashboardData {
   timestamp: string;
@@ -398,6 +399,23 @@ export default function FoundersDashboard() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Agent-Assisted Closing */}
+        <div className="mt-12 p-8 rounded-2xl bg-gradient-to-br from-zinc-900/50 to-zinc-950/50 border border-zinc-800">
+          <div className="flex items-center gap-3 mb-6">
+            <Target className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-sm font-black uppercase tracking-widest">Agent-Assisted Closing</h2>
+            <div className="ml-auto">
+              <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                AI-Powered Sales Copilot
+              </span>
+            </div>
+          </div>
+          <p className="text-zinc-400 text-sm mb-6">
+            AgentZ integration coach. Ask about pricing, specs, pilot programs, or custom integrations.
+          </p>
+          <AgenticCloser />
         </div>
 
         {/* CTA Section */}
