@@ -83,37 +83,23 @@ Content-Type: application/json
 ---
 
 ### 2. API Key Provisioning (Self-Serve)
-Endpoint: **POST `/api/v1/api-keys`**
-
-**Headers:**
-```
-Authorization: Bearer <supabase_session_token>
-Content-Type: application/json
-```
-
-**Request Body:**
-```json
-{
-  "name": "Production Verifier"
-}
-```
+Endpoint: **POST `/api/keys`** (requires an authenticated Supabase browser session)
 
 **Response:**
 ```json
 {
-  "success": true,
-  "key": "qron_live_<64_hex_chars>",
-  "name": "Production Verifier",
-  "created_at": "2026-06-19T21:45:30Z",
-  "note": "Store this key securely. It will not be shown again."
+  "apiKey": "qron_<64_hex_chars>",
+  "warning": "Save this key securely. It will not be shown again."
 }
 ```
 
-**Side Effects:**
-- Creates Stripe customer (if not exists)
-- Auto-provisions metered subscription
-- Hashes key with SHA-256, stores prefix for fast lookup
-- Key is 74 chars total (10 prefix + 64 random hex)
+**Notes:**
+- Hashes key with SHA-256, stores a 16-char prefix for fast lookup
+- The returned key authenticates the metered POST /api/v1/verify endpoint
+- Metered billing is provisioned separately via Stripe Checkout (POST /api/checkout
+  with the verify metered plan), which sets the Stripe customer + subscription that
+  reportAgentUsage() emits meter events against
+- List keys: GET /api/keys · Revoke: DELETE /api/keys?id=<uuid>
 
 ---
 
@@ -179,7 +165,7 @@ const results = await Promise.all([
 Cache verify results for 24 hours per serial number. AuthiChain doesn't update status retroactively.
 
 ### Error Handling
-- **401**: Invalid/expired API key → regenerate key via POST /api/v1/api-keys
+- **401**: Invalid/expired API key → regenerate key via POST /api/keys
 - **400**: Malformed request → check serial/registration_id format
 - **500**: Transient error → retry with exponential backoff (2s, 4s, 8s)
 - **503**: Billing not configured → contact partnerships@authichain.io
@@ -252,7 +238,7 @@ INTERNAL_API_SECRET=<for email webhook auth>
 
 ### Vercel (Next.js API Routes)
 - POST /api/v1/verify
-- POST /api/v1/api-keys, GET, DELETE
+- POST /api/keys, GET, DELETE
 - POST /api/v1/outreach, GET /checklist
 - POST /api/checkout, GET (upgrade link conversion)
 - POST /api/upgrade (self-serve tier upgrade)

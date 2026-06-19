@@ -43,23 +43,20 @@
       }
     },
     {
-      "path": "/api/v1/api-keys",
+      "path": "/api/keys",
       "method": ["POST", "GET", "DELETE"],
-      "description": "Self-serve API key provisioning. Create keys, list active keys, revoke compromised keys.",
-      "authentication": "Bearer <session_token>",
+      "description": "Self-serve API key lifecycle. Create keys, list active keys, revoke keys. Keys authenticate the metered POST /api/v1/verify endpoint.",
+      "authentication": "Supabase session (browser)",
       "rate_limit": "10 requests/minute",
       "input_schema": {
-        "POST": {
-          "name": { "type": "string", "description": "Human-readable key name (e.g., 'Production Verifier')" }
-        },
+        "POST": {},
         "DELETE": {
-          "key_id": { "type": "string", "description": "UUID of key to revoke" }
+          "id": { "type": "string", "description": "UUID of key to revoke (query param: ?id=<uuid>)" }
         }
       },
       "output_schema": {
-        "success": { "type": "boolean" },
-        "key": { "type": "string", "description": "API key (qron_live_...) — returned only once" },
-        "keys": { "type": "array", "description": "List of active keys (masked)" }
+        "apiKey": { "type": "string", "description": "API key (qron_...) — returned only once" },
+        "keys": { "type": "array", "description": "List of active keys (prefix + metadata only)" }
       }
     },
     {

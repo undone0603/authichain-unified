@@ -10,6 +10,7 @@
  */
 
 export interface Env {
+  NEXT_PUBLIC_APP_URL: string;
   NEXT_PUBLIC_SUPABASE_URL: string;
   NEXT_PUBLIC_SUPABASE_KEY: string;
   STRIPE_SECRET_KEY: string;
@@ -100,7 +101,7 @@ async function checkRateLimit(
     return { allowed: false, remaining: 0 };
   }
 
-  await kv.put(key, count + 1, {
+  await kv.put(key, String(count + 1), {
     expirationTtl: 60, // 1 minute bucket
   });
 
@@ -183,7 +184,6 @@ export default {
     // 3. Agentic Transaction Router — Verify Endpoint
     if (method === 'POST' && url.pathname === '/api/v1/verify') {
       try {
-        const authHeader = request.headers.get('authorization') || '';
         const vertical = url.searchParams.get('vertical') || 'manufacturing';
 
         // Rate limiting by vertical
@@ -242,9 +242,10 @@ export default {
           );
         }
 
-        // Proxy to origin (Vercel Next.js backend)
+        // Proxy to origin (Vercel Next.js backend). The origin host comes from
+        // the Worker env binding — Workers have no process.env at runtime.
         const originUrl = new URL(request.url);
-        originUrl.host = process.env.NEXT_PUBLIC_APP_URL || 'authichain.io';
+        originUrl.host = env.NEXT_PUBLIC_APP_URL || 'authichain.io';
         originUrl.protocol = 'https:';
 
         const originRequest = new Request(originUrl, {
@@ -254,7 +255,7 @@ export default {
         });
 
         const response = await fetch(originRequest);
-        const verifyResult = await response.json();
+        const verifyResult = (await response.json()) as Record<string, unknown>;
 
         // Cache result
         if (response.ok) {
@@ -271,9 +272,10 @@ export default {
           },
         });
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        // Log internally; never leak error/stack details to the caller.
+        console.error('[gateway] verify proxy error:', err);
         return new Response(
-          JSON.stringify({ error: 'Internal error', details: msg }),
+          JSON.stringify({ error: 'Internal error' }),
           {
             status: 500,
             headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },

@@ -112,8 +112,6 @@ partnerships@authichain.io`;
  * Generate a follow-up email for partners who viewed the initial pitch.
  */
 export function generateFollowUpEmail(ctx: OutreachContext, daysAgo: number = 3): OutreachAsset {
-  const verticalInfo = VERTICALS[ctx.vertical];
-
   const subject = `Quick follow-up: Autonomous ${ctx.vertical} verification for ${ctx.companyName}`;
 
   const body = `Hi ${ctx.contactName},
@@ -153,8 +151,6 @@ partnerships@authichain.io`;
  * Generate a case study / social-proof email for warm prospects.
  */
 export function generateProofEmail(ctx: OutreachContext): OutreachAsset {
-  const verticalInfo = VERTICALS[ctx.vertical];
-
   const subject = `Case Study: How [Customer] scaled ${ctx.vertical} verification 10x`;
 
   const body = `Hi ${ctx.contactName},
