@@ -210,7 +210,7 @@ importers:
         version: 17.4.2
       drizzle-orm:
         specifier: '>=0.45.2'
-        version: 0.45.2(@cloudflare/workers-types@4.20260603.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(@upstash/redis@1.38.0)(mysql2@3.15.1)(pg@8.21.0)(postgres@3.4.9)
+        version: 0.45.2(@cloudflare/workers-types@4.20260615.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(@upstash/redis@1.38.0)(mysql2@3.15.1)(pg@8.21.0)(postgres@3.4.9)
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@19.2.7)
@@ -330,11 +330,11 @@ importers:
         version: 4.4.3
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: ^4.20260517.1
-        version: 4.20260603.1
+        specifier: ^4.20260615.1
+        version: 4.20260615.1
       '@opennextjs/cloudflare':
         specifier: ^1.19.11
-        version: 1.19.11(next@15.5.18(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.97.0(@cloudflare/workers-types@4.20260603.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        version: 1.19.11(next@15.5.18(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.97.0(@cloudflare/workers-types@4.20260615.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@tailwindcss/postcss':
         specifier: ^4.3.1
         version: 4.3.1
@@ -445,7 +445,7 @@ importers:
         version: 4.1.9(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(vite@8.0.13(@types/node@25.9.1)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.16.9)(tsx@4.22.2)(yaml@2.9.0))
       wrangler:
         specifier: ^4.92.0
-        version: 4.97.0(@cloudflare/workers-types@4.20260603.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+        version: 4.97.0(@cloudflare/workers-types@4.20260615.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
 packages:
 
@@ -954,8 +954,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@cloudflare/workers-types@4.20260603.1':
-    resolution: {integrity: sha512-TLeVHoBbcYv35S5TdRWUoj3IJ56BhHtrsuci+O7ithU8yz7ttNdCk6rAl1QUSGNVEWSIp54bWOuV/xmX1zu79g==}
+  '@cloudflare/workers-types@4.20260615.1':
+    resolution: {integrity: sha512-fGOiTwoLj/8bU8mj3VAfa1EULx4ceZhDwnjvY+afDBlSXI9pvY7PE9t62rGEhJjbAOGd7i5WUDun0eZCWBDrzg==}
 
   '@coinbase/cdp-sdk@1.49.2':
     resolution: {integrity: sha512-QojjrkLG2mgo5Lq2ybu+k8Rk1NtklKQrroPG/1VCvMM62kGnF59B5re4B3XySY4etrzu60oqCnPuLSRcwuhI1g==}
@@ -12505,7 +12505,7 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20260601.1':
     optional: true
 
-  '@cloudflare/workers-types@4.20260603.1': {}
+  '@cloudflare/workers-types@4.20260615.1': {}
 
   '@coinbase/cdp-sdk@1.49.2(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
@@ -13972,7 +13972,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@opennextjs/cloudflare@1.19.11(next@15.5.18(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.97.0(@cloudflare/workers-types@4.20260603.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
+  '@opennextjs/cloudflare@1.19.11(next@15.5.18(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.97.0(@cloudflare/workers-types@4.20260615.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@dotenvx/dotenvx': 1.31.0
@@ -13984,7 +13984,7 @@ snapshots:
       glob: 12.0.0
       next: 15.5.18(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       ts-tqdm: 0.8.6
-      wrangler: 4.97.0(@cloudflare/workers-types@4.20260603.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      wrangler: 4.97.0(@cloudflare/workers-types@4.20260615.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       yargs: 18.0.0
     transitivePeerDependencies:
       - encoding
@@ -19612,9 +19612,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.22.2
 
-  drizzle-orm@0.45.2(@cloudflare/workers-types@4.20260603.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(@upstash/redis@1.38.0)(mysql2@3.15.1)(pg@8.21.0)(postgres@3.4.9):
+  drizzle-orm@0.45.2(@cloudflare/workers-types@4.20260615.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(@upstash/redis@1.38.0)(mysql2@3.15.1)(pg@8.21.0)(postgres@3.4.9):
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20260603.1
+      '@cloudflare/workers-types': 4.20260615.1
       '@opentelemetry/api': 1.9.1
       '@types/pg': 8.20.0
       '@upstash/redis': 1.38.0
@@ -24816,7 +24816,7 @@ snapshots:
       regexparam: 3.0.0
       use-sync-external-store: 1.6.0(react@19.2.7)
 
-  wrangler@4.97.0(@cloudflare/workers-types@4.20260603.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10):
+  wrangler@4.97.0(@cloudflare/workers-types@4.20260615.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260601.1)
@@ -24827,7 +24827,7 @@ snapshots:
       unenv: 2.0.0-rc.24
       workerd: 1.20260601.1
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20260603.1
+      '@cloudflare/workers-types': 4.20260615.1
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil
