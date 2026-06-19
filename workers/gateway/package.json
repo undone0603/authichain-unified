@@ -1,0 +1,15 @@
+{
+  "name": "authichain-gateway",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AuthiChain Unified Edge Gateway - AI agent discovery & request optimization",
+  "scripts": {
+    "dev": "npx wrangler dev",
+    "deploy": "npx wrangler deploy --env production"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^4.97.0"
+  }
+}
