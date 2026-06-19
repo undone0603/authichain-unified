@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       contactName: contactName!,
       contactEmail: contactEmail!,
       vertical: vertical! as OutreachContext['vertical'],
-      useCase: useCase instanceof String ? useCase : undefined,
+      useCase: typeof useCase === 'string' ? useCase : undefined,
       monthlyVolume: typeof monthlyVolume === 'number' ? monthlyVolume : undefined,
       currentChallenges: Array.isArray(currentChallenges) ? currentChallenges : undefined,
     };
