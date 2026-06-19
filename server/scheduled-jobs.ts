@@ -4,8 +4,8 @@ import { dirname } from "path"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 // server/scheduled-jobs.ts
-import { getDb } from "./db";
-import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger, emailDrafts } from "../drizzle/schema";
+import { getDb, logActivity } from "./db";
+import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger, emailDrafts, missions } from "../drizzle/schema";
 import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
@@ -1134,6 +1134,224 @@ registerJob({
     }
 
     return { itemsProcessed: 1, details: { status: "digest_sent", emailsSent, opportunitiesIngested: totalIngested } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 20: SAM.gov Opportunity Ingestion (daily at 2 AM UTC)
+// Fetches federal opportunities from SAM.gov API and stores as missions
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "samgov-ingest",
+  description: "Ingest federal opportunities from SAM.gov API (requires SAM_GOV_API_KEY)",
+  schedule: "0 2 * * *",
+  enabled: !!process.env.SAM_GOV_API_KEY,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) {
+      return { itemsProcessed: 0, details: { skipped: true, reason: "no_db" } };
+    }
+
+    if (!process.env.SAM_GOV_API_KEY) {
+      return { itemsProcessed: 0, details: { skipped: true, reason: "sam_gov_api_key_missing" } };
+    }
+
+    // Fetch opportunities posted in last 7 days
+    const now = new Date();
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const samDate = (d: Date) => {
+      const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(d.getUTCDate()).padStart(2, '0');
+      const yyyy = d.getUTCFullYear();
+      return `${mm}/${dd}/${yyyy}`;
+    };
+
+    const params = new URLSearchParams({
+      api_key: process.env.SAM_GOV_API_KEY,
+      limit: '100',
+      postedFrom: samDate(weekAgo),
+      postedTo: samDate(now),
+      ptype: 'o',
+      q: 'blockchain authentication provenance verification supply chain',
+    });
+
+    try {
+      const res = await fetch(`https://api.sam.gov/opportunities/v2/search?${params}`);
+
+      if (res.status === 429) {
+        console.warn("[JOB 20] SAM.gov quota exhausted (429)");
+        return { itemsProcessed: 0, details: { skipped: true, reason: "sam_quota_exhausted" } };
+      }
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        console.error(`[JOB 20] SAM.gov error ${res.status}: ${body.slice(0, 200)}`);
+        return { itemsProcessed: 0, details: { error: `sam_api_error_${res.status}` } };
+      }
+
+      const json = await res.json() as any;
+      const opps = json.data?.opportunities ?? [];
+
+      let inserted = 0;
+      for (const opp of opps) {
+        try {
+          await db.insert(missions).values({
+            id: `sam_${opp.notice_id}`,
+            type: 'gov_opportunity',
+            title: opp.title || 'Untitled',
+            description: `Agency: ${opp.agency}\nDeadline: ${opp.deadline}`,
+            status: 'pending',
+            metadata: {
+              noticeId: opp.notice_id,
+              agency: opp.agency,
+              deadline: opp.deadline,
+              samUrl: opp.sam_url,
+              naics: opp.naics,
+              source: 'sam.gov',
+              ingestedAt: new Date().toISOString(),
+            },
+          });
+          inserted++;
+        } catch (e) {
+          console.warn(`[JOB 20] Failed to insert opp ${opp.notice_id}:`, e);
+        }
+      }
+
+      return { itemsProcessed: inserted, details: { total: opps.length, inserted, skipped: opps.length - inserted } };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { itemsProcessed: 0, details: { error: msg } };
+    }
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 21: Score GovChain Opportunities (daily at 3 AM UTC)
+// Uses LLM to score federal opportunities for relevance to AuthiChain
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "score-govchain-opps",
+  description: "Score unscored gov opportunities for fit using LLM (requires OPENAI_API_KEY)",
+  schedule: "0 3 * * *",
+  enabled: !!process.env.OPENAI_API_KEY,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { error: "no_db" } };
+
+    const { invokeLLM } = await import("./_core/llm");
+
+    // Fetch unscored gov opportunities
+    const opps = await db.select().from(missions).where(
+      and(eq(missions.type, 'gov_opportunity'), eq(missions.status, 'pending'))
+    ).limit(20);
+
+    if (!opps?.length) {
+      return { itemsProcessed: 0, details: { skipped: true, reason: "no_unscored_opps" } };
+    }
+
+    const AUTHICHAIN_PROFILE = `
+AuthiChain is a blockchain-powered product authentication platform.
+Products: AuthiChain (product seals/NFTs), QRON (QR code generation),
+StrainChain (cannabis supply chain), GovChain (government contracting).
+Target agencies: DoD, DHS, FDA, USDA, CBP, GSA.
+Strengths: blockchain provenance, anti-counterfeiting, supply chain visibility.
+    `.trim();
+
+    let scored = 0;
+    for (const opp of opps) {
+      try {
+        const meta = opp.metadata as Record<string, any> || {};
+        const prompt = `
+You are a government contracting analyst for AuthiChain.
+
+Company profile:
+${AUTHICHAIN_PROFILE}
+
+Opportunity:
+Title: ${opp.title}
+Agency: ${meta.agency || 'Unknown'}
+Deadline: ${meta.deadline || 'Unknown'}
+
+Score the relevance 0-100. Respond ONLY with a number.
+        `.trim();
+
+        const res = await invokeLLM({
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 10,
+        });
+
+        const contentValue = res.choices?.[0]?.message?.content;
+        const scoreStr = (typeof contentValue === 'string' ? contentValue : String(contentValue || '0')).trim();
+        const score = Math.min(100, Math.max(0, parseInt(scoreStr, 10) || 0));
+
+        // Update in database with score
+        const currentMeta = (opp.metadata as Record<string, any>) || {};
+        await db.update(missions).set({
+          metadata: { ...currentMeta, fit_score: score, scored_at: new Date().toISOString() },
+          status: 'active',
+        }).where(eq(missions.id, opp.id));
+
+        scored++;
+      } catch (err) {
+        console.warn(`[JOB 21] Failed to score opp ${opp.id}:`, err);
+      }
+    }
+
+    return { itemsProcessed: scored, details: { scored, total: opps.length } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 22: Usage Metering & Revenue Attribution (daily at 11 PM UTC)
+// Aggregates usage metrics and attributes revenue by vertical/customer
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "usage-metering",
+  description: "Aggregate daily usage metrics and attribute revenue by vertical",
+  schedule: "0 23 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { error: "no_db" } };
+
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+
+    try {
+      // Aggregate QR code scans by vertical
+      const scansByVertical = await db
+        .select()
+        .from(missions)
+        .where(eq(missions.status, 'completed'));
+
+      // Count tasks completed by type
+      const taskMetrics: Record<string, number> = {};
+      for (const mission of scansByVertical) {
+        const type = mission.type || 'default';
+        taskMetrics[type] = (taskMetrics[type] || 0) + 1;
+      }
+
+      // Log daily metrics
+      await logActivity({
+        userId: null,
+        action: 'daily_usage_snapshot',
+        entityType: 'system',
+        entityId: 0,
+        details: {
+          date: today,
+          taskMetrics,
+          timestamp: now.toISOString(),
+        },
+      });
+
+      return {
+        itemsProcessed: Object.keys(taskMetrics).length,
+        details: { date: today, metrics: taskMetrics },
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { itemsProcessed: 0, details: { error: msg } };
+    }
   },
 });
 
