@@ -65,13 +65,66 @@ export const STRIPE_PRODUCTS = {
       "Full API & Webhook Integration",
     ],
   },
+  verify_api: {
+    name: "Verify API License",
+    description: "REST API for product authentication verification. Ideal for SMBs and single-site sellers wanting authentication checks.",
+    setupFee: 250000, // $2,500.00 in cents
+    priceMonthly: 49900, // $499.00/month
+    features: [
+      "REST verification API",
+      "5,000 verifications/month included",
+      "Metered overage charges after quota",
+      "Polygon-anchored certificate of authenticity",
+      "Email support",
+    ],
+  },
+  white_label: {
+    name: "White-Label Trust Portal",
+    description: "Fully rebrandable verification portal for mid-market brands and marketplaces. Your domain, your logo, your revenue.",
+    setupFee: 1000000, // $10,000.00 in cents
+    priceMonthly: 250000, // $2,500.00/month
+    features: [
+      "Fully rebrandable verification portal",
+      "Custom domain & white-label branding",
+      "NFT / ERC-721 certificate minting under your brand",
+      "Customer-facing scan + story-mode provenance pages",
+      "50,000 verifications/month included",
+      "Polygon blockchain anchoring",
+      "Priority support",
+    ],
+  },
+  vertical: {
+    name: "Enterprise Vertical License",
+    description: "Dedicated white-label vertical deployment for enterprises, government agencies, and category operators (luxury, cannabis, pharma).",
+    setupFee: 2500000, // $25,000.00 in cents
+    priceMonthly: 750000, // $7,500.00/month
+    features: [
+      "Dedicated white-label vertical deployment",
+      "Unlimited verifications + SLA",
+      "Custom AutoFlow classification for your category",
+      "Dedicated account manager",
+      "Quarterly business review",
+      "Annual revenue audit rights",
+      "35% revenue-share option available",
+      "24/7 technical support",
+    ],
+  },
 } as const;
 
 export type PlanKey = keyof typeof STRIPE_PRODUCTS;
 
 export function getPlanPrice(plan: PlanKey, billing: "monthly" | "annual"): number {
   const product = STRIPE_PRODUCTS[plan];
+  // For licensing tiers with setup fees, return monthly price (setup handled separately)
+  if ("setupFee" in product) {
+    return product.priceMonthly;
+  }
   return billing === "annual" ? product.priceAnnual : product.priceMonthly;
+}
+
+export function getPlanSetupFee(plan: PlanKey): number | undefined {
+  const product = STRIPE_PRODUCTS[plan];
+  return ("setupFee" in product) ? product.setupFee : undefined;
 }
 
 export function getPlanQuota(plan: PlanKey): number {
@@ -80,5 +133,9 @@ export function getPlanQuota(plan: PlanKey): number {
     case "professional": return 5000;
     case "enterprise": return 999999;
     case "medtech": return 50000;
+    case "verify_api": return 5000;
+    case "white_label": return 50000;
+    case "vertical": return 999999;
   }
+  return 0;
 }

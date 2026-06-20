@@ -36,7 +36,9 @@ export interface CreateCheckoutParams {
 export async function createSubscriptionCheckout(params: CreateCheckoutParams): Promise<string> {
   const stripe = getStripe();
   const product = STRIPE_PRODUCTS[params.plan];
-  const priceAmount = params.billing === "annual"
+  // White-label products (setupFee) don't support annual billing
+  const isLicensed = "setupFee" in product;
+  const priceAmount = !isLicensed && params.billing === "annual"
     ? product.priceAnnual
     : product.priceMonthly;
 
