@@ -802,7 +802,7 @@ workflows:
       Autonomous lead scouting using ref-based native browser automation.
       Uses recent Win Signals to prioritize prospects that match 
       high-conversion profiles.
-- id: revenue_pipeline_sync
+  - id: revenue_pipeline_sync
     title: "Revenue Pipeline Synchronization"
     priority: high
     blocks_revenue: true
