@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { PLAN_CREDITS, PLAN_TIER, type PlanId } from '@/lib/plans';
+import { grantCheckoutEntitlements } from '@/lib/fulfillment';
 import { generateLivingQR } from '@/lib/hf-generation';
 import { logAutomation } from '@/lib/automation';
 import { sendEmail } from '@/lib/email';
@@ -112,29 +113,6 @@ async function downgradeUser(stripeCustomerId: string) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[webhook] downgradeUser error (non-fatal):', err);
     await logAutomation('stripe_webhook.downgradeUser', 'event', 'failure', { stripeCustomerId }, msg);
-  }
-}
-
-// â”€â”€â”€ Save Stripe customer ID to profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-async function saveCustomerId(
-  userId: string | null | undefined,
-  customerId: string | null
-) {
-  if (!userId || !customerId) return;
-  try {
-    const supabase = await getServiceClient();
-    await supabase
-      .from('profiles')
-      .update({
-        stripe_customer_id: customerId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[webhook] saveCustomerId error (non-fatal):', err);
-    await logAutomation('stripe_webhook.saveCustomerId', 'event', 'failure', { userId, customerId }, msg);
   }
 }
 
@@ -572,11 +550,18 @@ export async function POST(request: Request) {
         const customerId =
           typeof session.customer === 'string' ? session.customer : null;
 
-        // Persist Stripe customer ID
-        await saveCustomerId(userId, customerId);
-
-        // Grant credits / upgrade tier
-        await fulfillPlan(userId, planId);
+        // Persist Stripe customer ID + grant credits/tier — idempotently, via
+        // the shared fulfillment library. The same guarded call is made by the
+        // success-page backstop (/api/checkout/verify); whichever runs first
+        // wins, so the customer is fulfilled exactly once even if this webhook
+        // is delayed or never arrives.
+        await grantCheckoutEntitlements({
+          sessionId: session.id,
+          userId,
+          planId,
+          customerId,
+          source: 'webhook',
+        });
 
         // Trigger Tokenomics (Fee split + Burn)
         const amount = session.amount_total ? session.amount_total / 100 : 0;
