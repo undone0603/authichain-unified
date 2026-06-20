@@ -1,8 +1,7 @@
 {
-  "framework": null,
+  "framework": "nextjs",
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm vite build",
-  "outputDirectory": "dist/public",
+  "buildCommand": "next build",
   "crons": [
     {
       "path": "/api/cron/pipeline",

@@ -35,8 +35,8 @@ jobs:
 
       - name: Activate economy
         env:
-          # Set as a repo / environment secret in GitHub Settings → Secrets and
-          # variables → Actions. The script refuses to run without it (no more
+          # Set as a repo / environment secret in GitHub Settings -> Secrets and
+          # variables -> Actions. The script refuses to run without it (no more
           # hardcoded URL in the source).
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: node activate-economy.cjs
+        run: node scripts/activate-economy.js
