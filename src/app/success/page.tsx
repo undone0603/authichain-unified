@@ -29,35 +29,57 @@ function SuccessContent() {
     const t1 = setTimeout(() => setStep(1), 1000);
     const t2 = setTimeout(() => setStep(2), 2500);
     const t3 = setTimeout(() => setStep(3), 4000);
-    // Wait for webhook to fulfill credits before fetching balance
-    const t4 = setTimeout(async () => {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('generations_used, generations_limit, tier')
-          .eq('user_id', user.id)
-          .single();
-        if (profile) {
-          setBalance({
-            remaining: Math.max(0, profile.generations_limit - profile.generations_used),
-            limit: profile.generations_limit,
-            tier: profile.tier || 'pro',
+
+    const timers: ReturnType<typeof setTimeout>[] = [t1, t2, t3];
+
+    // Fulfillment backstop: don't rely solely on the Stripe webhook landing in
+    // time (or at all). Actively ask the server to verify the session against
+    // Stripe and grant entitlements idempotently, THEN read the fresh balance.
+    (async () => {
+      if (sessionId) {
+        try {
+          await fetch('/api/checkout/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId }),
           });
+        } catch {
+          // best-effort — the webhook is still the primary path
         }
-      } catch {
-        // balance display is optional — never block the success page
       }
-    }, 6000);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-    };
-  }, []);
+
+      const loadBalance = async () => {
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return false;
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('generations_used, generations_limit, tier')
+            .eq('user_id', user.id)
+            .single();
+          if (profile) {
+            setBalance({
+              remaining: Math.max(0, profile.generations_limit - profile.generations_used),
+              limit: profile.generations_limit,
+              tier: profile.tier || 'pro',
+            });
+            return true;
+          }
+        } catch {
+          // balance display is optional — never block the success page
+        }
+        return false;
+      };
+
+      // Read once now; retry shortly in case a subscription's first invoice is
+      // still settling on Stripe's side.
+      const ok = await loadBalance();
+      if (!ok) timers.push(setTimeout(loadBalance, 4000));
+    })();
+
+    return () => timers.forEach(clearTimeout);
+  }, [sessionId]);
 
   const steps = [
     { icon: <Sparkles className="w-5 h-5" />, label: 'Crafting AI QR Art' },
