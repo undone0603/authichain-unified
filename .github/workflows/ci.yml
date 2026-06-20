@@ -17,10 +17,10 @@ jobs:
   test:
     name: Test suite
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         node-version: [22.x]
-        python-version: [3.12]
 
     steps:
       - uses: actions/checkout@v4
@@ -28,10 +28,10 @@ jobs:
       # pnpm must be installed BEFORE setup-node so that `cache: pnpm` can find it.
       # No `version:` here — action-setup reads packageManager (pnpm@10.28.2) from package.json.
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
@@ -39,7 +39,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.12'
 
       - name: Install pnpm dependencies
         run: pnpm install --frozen-lockfile
