@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable
+from datetime import datetime, timezone
 
 CHECKPOINT_DIR = Path(__file__).resolve().parents[1] / "logs" / "checkpoints"
 TRAINING_LOG = Path(__file__).resolve().parents[1] / "logs" / "training_data.jsonl"
