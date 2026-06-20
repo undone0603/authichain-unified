@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { requireAdmin } from '@/utils/supabase/require-admin';
+import { PLANS } from '@/lib/plans';
 
 export async function GET() {
   const auth = await requireAdmin();
@@ -45,8 +46,60 @@ export async function GET() {
       return acc;
     }, {});
 
+    // --- Founder FIAT income (actual dollars, not QRON tokenomics) ---
+    // The block above tracks the internal QRON token economy. Founder income is
+    // real money: recurring revenue from active subscriptions, plus the actual
+    // cash sitting in the Stripe balance awaiting payout to the founder's bank.
+    let fiat: Record<string, unknown> = { configured: false };
+    try {
+      // MRR from active subscriptions, exact for our own plan catalogue.
+      const monthlyPriceByPlan: Record<string, number> = {};
+      for (const p of PLANS) {
+        if (p.stripe_mode === 'subscription' && p.price_suffix === '/month') {
+          monthlyPriceByPlan[p.id] = p.price;
+        }
+      }
+      const { data: subs } = await admin
+        .from('profiles')
+        .select('subscription_plan, subscription_status');
+      let mrr = 0;
+      let activeSubscribers = 0;
+      for (const row of subs || []) {
+        const price = monthlyPriceByPlan[row.subscription_plan as string];
+        if (row.subscription_status === 'active' && price != null) {
+          mrr += price;
+          activeSubscribers++;
+        }
+      }
+
+      fiat = {
+        configured: true,
+        currency: 'usd',
+        mrr_usd: mrr.toFixed(2),
+        arr_usd: (mrr * 12).toFixed(2),
+        active_subscribers: activeSubscribers,
+      };
+
+      // Authoritative cash position — what's actually collected and payable.
+      const stripeKey = process.env.STRIPE_SECRET_KEY;
+      if (stripeKey) {
+        const Stripe = (await import('stripe')).default;
+        const stripe = new Stripe(stripeKey, { apiVersion: '2026-05-27.dahlia' as const });
+        const balance = await stripe.balance.retrieve();
+        const sumUsd = (arr: { amount: number; currency: string }[] | undefined) =>
+          (arr || []).filter((b) => b.currency === 'usd').reduce((a, b) => a + b.amount, 0) / 100;
+        fiat.stripe_balance_available_usd = sumUsd(balance.available).toFixed(2);
+        fiat.stripe_balance_pending_usd = sumUsd(balance.pending).toFixed(2);
+      } else {
+        fiat.stripe_balance_note = 'STRIPE_SECRET_KEY not set — cash balance unavailable';
+      }
+    } catch (e) {
+      fiat = { configured: false, error: e instanceof Error ? e.message : 'fiat fetch failed' };
+    }
+
     return NextResponse.json({
       infrastructure: { database: 'Connected (D1 Mirror)', workers: '21 Active', stripeConnect: 'v2 Enabled' },
+      fiat,
       revenue: {
         gross_qron:          totals.gross.toFixed(4),
         net_qron:            totals.net.toFixed(4),
