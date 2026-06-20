@@ -25,6 +25,7 @@ jobs:
   deploy:
     name: Deploy ${{ matrix.worker }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -81,7 +82,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Skip if worker directory missing
+        id: check-dir
+        run: |
+          if [ ! -d "workers/${{ matrix.worker }}" ]; then
+            echo "⚠ workers/${{ matrix.worker }} not found — skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy Worker
+        if: steps.check-dir.outputs.skip != 'true'
         run: npx wrangler deploy --minify --config wrangler.toml
         working-directory: workers/${{ matrix.worker }}
         env:

@@ -25,23 +25,25 @@ jobs:
 
       - name: Generate matrix from workers/ directory
         id: set-matrix
-        # This scans the "workers/" folder, finds all subdirectories containing
-        # a "wrangler.toml", and outputs them as a JSON array for the next job.
+        # Scans workers/ and finds all subdirectories containing a wrangler.toml.
+        # Uses printf for safe GitHub Actions output (avoids echo -n issues).
         run: |
-          node -e "
+          MATRIX=$(node -e "
             const fs = require('fs');
             const dirs = fs.readdirSync('workers').filter(f => {
               const isDir = fs.statSync('workers/'+f).isDirectory();
               const hasToml = fs.existsSync('workers/'+f+'/wrangler.toml');
               return isDir && hasToml;
             });
-            console.log('matrix=' + JSON.stringify(dirs));
-          " >> "$GITHUB_OUTPUT"
+            process.stdout.write(JSON.stringify(dirs));
+          ")
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   # ── Job 2: Deploy Matrix ────────────────────────────────────────────────────
   deploy:
     name: Deploy ${{ matrix.worker }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: setup-matrix
     strategy:
       fail-fast: false # Prevents one failed worker from cancelling the rest
@@ -52,12 +54,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup PNPM
+      - name: Setup pnpm
         uses: pnpm/action-setup@v5
         with:
           run_install: false
 
-      - name: Setup Node 22 (required for Wrangler + Miniflare)
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -66,17 +68,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Publish Worker + Assets (dashboard.authichain.com)
-        run: npx wrangler deploy --config wrangler.toml
-        working-directory: workers/authichain-dashboard
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Publish Worker + Assets
+      - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # Dynamically target the specific worker's configuration file
           command: deploy --config workers/${{ matrix.worker }}/wrangler.toml
