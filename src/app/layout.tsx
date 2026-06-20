@@ -2,6 +2,26 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { TRPCProvider } from "@/components/TRPCProvider";
 
+// Resolve metadataBase defensively. NEXT_PUBLIC_APP_URL can be misconfigured in
+// the deploy env (e.g. set to the literal string '""', or a bare host with no
+// protocol). A truthy-but-invalid value slips past `|| fallback` and makes
+// `new URL()` throw ERR_INVALID_URL at build time — which fails `next build`
+// while collecting page data for every route. Strip quotes/whitespace, add a
+// protocol if missing, and fall back to a known-good URL on any failure.
+function resolveMetadataBase(): URL {
+  const fallback = "https://qron.space";
+  let raw = (process.env.NEXT_PUBLIC_APP_URL ?? "")
+    .trim()
+    .replace(/^["']+|["']+$/g, "")
+    .trim();
+  if (raw && !/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
+  try {
+    return new URL(raw || fallback);
+  } catch {
+    return new URL(fallback);
+  }
+}
+
 export const metadata: Metadata = {
   title: {
     default: "QRON — AI-Powered Authenticated QR Art",
@@ -9,9 +29,7 @@ export const metadata: Metadata = {
   },
   description:
     "Create cryptographically verified, Ed25519-signed QR art with the AuthiChain Protocol. Blockchain-anchored, publicly verifiable, ~100% scan rate.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "https://qron.space"
-  ),
+  metadataBase: resolveMetadataBase(),
   openGraph: {
     siteName: "QRON",
     type: "website",
