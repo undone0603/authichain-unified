@@ -806,7 +806,7 @@ workflows:
     title: "Revenue Pipeline Synchronization"
     priority: high
     blocks_revenue: true
-    handler: revenue_pipeline_sync
+    handler: handlers.revenue_pipeline_sync
     type: api
     estimated_minutes: 5
     requires: []
