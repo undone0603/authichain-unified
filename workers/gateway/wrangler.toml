@@ -1,5 +1,4 @@
 name = "authichain-gateway"
-type = "javascript"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
@@ -11,13 +10,13 @@ NEXT_PUBLIC_APP_URL = "authichain.io"
 # KV namespace bindings for rate limiting & caching
 [[kv_namespaces]]
 binding = "RATE_LIMIT_BUCKET"
-id = "authichain_ratelimit"
-preview_id = "authichain_ratelimit_preview"
+id = "a887e667586b44f295dd10de41de919f"
+preview_id = "a887e667586b44f295dd10de41de919f"
 
 [[kv_namespaces]]
 binding = "VERIFY_CACHE"
-id = "authichain_verify_cache"
-preview_id = "authichain_verify_cache_preview"
+id = "c3e2e895739445acb68870fa938bd32a"
+preview_id = "c3e2e895739445acb68870fa938bd32a"
 
 # Development configuration
 [env.development]
@@ -35,9 +34,3 @@ routes = [
   { pattern = "qron.space", zone_name = "qron.space" }
 ]
 vars = { NEXT_PUBLIC_APP_URL = "https://authichain.io" }
-
-# Build configuration
-[build]
-command = "npm install && npm run build"
-cwd = "../../"
-main = "src/index.ts"

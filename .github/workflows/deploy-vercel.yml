@@ -25,37 +25,26 @@ jobs:
   deploy-production:
     name: Autonomous Vercel Production Deployment
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
         with:
           run_install: false
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
-
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-
       - name: Install Vercel CLI
         run: pnpm add -g vercel@latest
-
       - name: Pull Vercel Environment Information
-        # Fetches the linked project's production environment variables
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
       - name: Build Project Artifacts
-        # Uses Next.js to compile the production build locally in the runner
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
       - name: Deploy to Vercel
-        # Pushes the prebuilt artifacts to Vercel for immediate deployment
         run: vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }}
