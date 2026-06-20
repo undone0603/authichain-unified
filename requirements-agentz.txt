@@ -14,7 +14,7 @@ uvicorn>=0.22.0
 langchain-openai>=0.1.0
 langchain-google-genai>=4.2.5
 langchain-ollama>=0.1.0
-browser-use>=0.11.0
+browser-use>=0.13.1
 playwright>=1.60.0
 
 # Testing

@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "AuthiChain autonomous agent orchestrator backed by LM Studio"
 requires-python = ">=3.11"
 dependencies = [
-  "browser-use==0.12.7",
+  "browser-use==0.13.1",
   "pydantic>=2.13.4,<3.0",
   "pytest>=7.0",
 ]
