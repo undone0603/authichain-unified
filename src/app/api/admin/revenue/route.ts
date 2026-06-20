@@ -50,7 +50,7 @@ export async function GET() {
     // The block above tracks the internal QRON token economy. Founder income is
     // real money: recurring revenue from active subscriptions, plus the actual
     // cash sitting in the Stripe balance awaiting payout to the founder's bank.
-    let fiat: Record<string, unknown> = { configured: false };
+    let fiat: Record<string, unknown>;
     try {
       // MRR from active subscriptions, exact for our own plan catalogue.
       const monthlyPriceByPlan: Record<string, number> = {};
