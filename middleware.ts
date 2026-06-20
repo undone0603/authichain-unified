@@ -15,25 +15,26 @@ const BRAND_MAP: Record<string, string> = {
 };
 
 export function middleware(req: NextRequest) {
-  const host = req.headers.get('host') ?? req.nextUrl.hostname;
-  const pathname = req.nextUrl.pathname;
-  const h = host.toLowerCase().split(':')[0];
-
-  let brand = BRAND_MAP[h] ?? 'authichain';
-  if (!BRAND_MAP[h]) {
-    for (const [k, v] of Object.entries(BRAND_MAP)) {
-      if (h.endsWith('.' + k) || h.includes(v)) { brand = v; break; }
+  try {
+    const host = req.headers.get('host') ?? req.nextUrl.hostname;
+    const pathname = req.nextUrl.pathname;
+    const h = (host ?? '').toLowerCase().split(':')[0];
+    let brand = BRAND_MAP[h] ?? 'authichain';
+    if (!BRAND_MAP[h]) {
+      for (const [k, v] of Object.entries(BRAND_MAP)) {
+        if (h.endsWith('.' + k) || h.includes(v)) { brand = v; break; }
+      }
     }
+    const reqHeaders = new Headers(req.headers);
+    reqHeaders.set('x-brand', brand);
+    if (pathname === '/' && !!BRAND_MAP[h]) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/brand/${brand}`;
+      return NextResponse.rewrite(url, { request: { headers: reqHeaders } });
+    }
+    return NextResponse.next({ request: { headers: reqHeaders } });
+  } catch {
+    // Graceful degradation: if middleware fails, pass request through unchanged
+    return NextResponse.next();
   }
-
-  const reqHeaders = new Headers(req.headers);
-  reqHeaders.set('x-brand', brand);
-
-  if (pathname === '/' && !!BRAND_MAP[h]) {
-    const url = req.nextUrl.clone();
-    url.pathname = `/brand/${brand}`;
-    return NextResponse.rewrite(url, { request: { headers: reqHeaders } });
-  }
-
-  return NextResponse.next({ request: { headers: reqHeaders } });
 }
