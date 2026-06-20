@@ -40,26 +40,31 @@ jobs:
           - authichain-com
           - authichain-dashboard
           - authichain-gateway
+          - authichain-infra
           - authichain-license-issuer
           - authichain-qron-provenance
           - authichain-scan-validate
           - authichain-telegram
           - authichain-verify-worker
           # qron cluster
-          - govchain-us
           - qron-automation
+          - qron-edge
           - qron-image-gen
           - qron-outreach
           - qron-space
-          # govchain
+          # brand sites
           - govchain-us
-          # shared infra
+          - strainchain-io
+          - watchchain-io
+          # shared / platform
+          - ai-classification
+          - analytics
+          - auth
           - bitcoin-auth
+          - blockchain
+          - gateway
           - outreach-queue
           - resend-relay
-          - strainchain-io
-          - authichain-telegram
-          - authichain-verify-worker
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
