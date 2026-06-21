@@ -185,29 +185,35 @@ export class AutonomousController {
           continue;
         }
 
+        // A HubSpot "closed won" deal stage is a PIPELINE signal, not cash
+        // received. Recording it as confirmed revenue is how the system used to
+        // report money it never collected. Persist it as unconfirmed pipeline so
+        // it is NEVER counted as real revenue; only a matched Stripe payment
+        // (see payments table) represents money actually received.
         const insertResult = await admin.from('fee_flows').insert({
           user_id: null,
-          flow_type: 'closed_won',
+          flow_type: 'pipeline_closed_won',
           net_amount: amount.toString(),
           burn_amount: 0,
-          status: 'confirmed',
+          status: 'pipeline',
           metadata: {
             hubspotDealId: deal.id,
             dealname: deal.properties.dealname,
             closedate: deal.properties.closedate,
             pipeline: deal.properties.pipeline,
+            note: 'HubSpot pipeline signal — NOT confirmed cash. Excluded from revenue.',
           },
         });
 
         if (insertResult.error) {
-          console.warn('[autonomous] Failed to insert closed-won revenue flow:', insertResult.error);
+          console.warn('[autonomous] Failed to insert pipeline closed-won flow:', insertResult.error);
           continue;
         }
 
         captured++;
       }
 
-      await logAutomation(workflowName, 'cron', 'success', { deals: deals.length, captured });
+      await logAutomation(workflowName, 'cron', 'success', { deals: deals.length, pipeline_captured: captured });
     } catch (err: unknown) {
       await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
@@ -427,14 +433,19 @@ export class AutonomousController {
   private async runRevenueRecyclingAgent() {
     const workflowName = 'agent_revenue_recycling';
     try {
-      // 1. Fetch 24h revenue
+      // 1. Fetch 24h revenue — REAL CASH ONLY. Revenue means money actually
+      // received via Stripe (payments table), never HubSpot pipeline rows or
+      // other unconfirmed fee_flows. Without this guard the agent manufactured
+      // buyback/burn activity from revenue that never arrived.
       const past24h = new Date(Date.now() - 86400000).toISOString();
-      const { data: flows } = await admin
-        .from('fee_flows')
-        .select('net_amount')
+      const { data: paid } = await admin
+        .from('payments')
+        .select('amount')
+        .in('status', ['succeeded', 'paid', 'confirmed'])
+        .not('stripe_payment_id', 'is', null)
         .gte('created_at', past24h);
 
-      const totalRevenue = (flows || []).reduce((sum, f) => sum + parseFloat(f.net_amount || '0'), 0);
+      const totalRevenue = (paid || []).reduce((sum, p) => sum + parseFloat(p.amount || '0'), 0);
       if (totalRevenue <= 0) return;
 
       // 2. Calculate Buyback (20% of net revenue)
@@ -581,17 +592,19 @@ export class AutonomousController {
   }
 
   /**
-   * Stub: real strainchain.io audit not yet implemented.
+   * Not implemented. Logged as a failure (not success) so it surfaces honestly
+   * in the digest instead of inflating the "tasks succeeded" count.
    */
   private async runStrainChainAudit() {
-    await logAutomation('[stub]_strainchain_audit', 'cron', 'success', { stub: true });
+    await logAutomation('strainchain_audit', 'cron', 'failure', { implemented: false }, 'Not implemented — no audit performed');
   }
 
   /**
-   * Stub: real govchain.us sync not yet implemented.
+   * Not implemented. Logged as a failure (not success) so it surfaces honestly
+   * in the digest instead of inflating the "tasks succeeded" count.
    */
   private async runGovChainSync() {
-    await logAutomation('[stub]_govchain_sync', 'cron', 'success', { stub: true });
+    await logAutomation('govchain_sync', 'cron', 'failure', { implemented: false }, 'Not implemented — no sync performed');
   }
 
   /**
@@ -748,6 +761,23 @@ export class AutonomousController {
       .select('*', { count: 'exact', head: true })
       .gte('created_at', past24h);
 
+    // REAL revenue + paying customers — money actually received via Stripe only.
+    // This is the truth the digest must lead with; everything else is activity,
+    // not income.
+    const { data: paid24h } = await admin
+      .from('payments')
+      .select('amount, user_id')
+      .in('status', ['succeeded', 'paid', 'confirmed'])
+      .not('stripe_payment_id', 'is', null)
+      .gte('created_at', past24h);
+    const revenue24h = (paid24h || []).reduce((s, p) => s + parseFloat(p.amount || '0'), 0);
+
+    const { count: payingCustomers } = await admin
+      .from('payments')
+      .select('user_id', { count: 'exact', head: true })
+      .in('status', ['succeeded', 'paid', 'confirmed'])
+      .not('stripe_payment_id', 'is', null);
+
     // Fetch failed workflows in last 24h, grouped by name
     const { data: failureRows } = await admin
       .from('automation_logs')
@@ -789,6 +819,13 @@ export class AutonomousController {
         <h1 style="color: #c9a227;">Daily Executive Digest</h1>
         <p style="color: #9e9e9e;">QRON Platform Autonomous Operations</p>
         <hr style="border: none; border-top: 1px solid #333; margin: 24px 0;" />
+        <div style="background: ${revenue24h > 0 ? '#0c1a0c' : '#1a0808'}; border: 1px solid ${revenue24h > 0 ? '#4caf50' : '#ef5350'}; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 16px;">
+          <div style="font-size: 32px; font-weight: bold; color: ${revenue24h > 0 ? '#4caf50' : '#ef5350'};">$${revenue24h.toFixed(2)}</div>
+          <div style="font-size: 12px; color: #888; letter-spacing: 1px;">REAL REVENUE (24h, Stripe cash)</div>
+          ${revenue24h === 0 && (payingCustomers || 0) === 0
+            ? `<div style="font-size: 12px; color: #ef9a9a; margin-top: 8px;">No real payment has ever been received. Activity below is effort, not income.</div>`
+            : `<div style="font-size: 12px; color: #888; margin-top: 8px;">${payingCustomers || 0} paying customer${(payingCustomers || 0) === 1 ? '' : 's'} all-time.</div>`}
+        </div>
         <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 16px;">
           <div style="background: #111; padding: 16px; border-radius: 8px; text-align: center;">
             <div style="font-size: 24px; font-weight: bold; color: #c9a227;">${newLeads || 0}</div>
@@ -820,7 +857,7 @@ export class AutonomousController {
       'executive_report',
       'cron',
       result.ok ? 'success' : 'failure',
-      { provider: result.provider, newLeads: newLeads || 0, gens: gens || 0 },
+      { provider: result.provider, newLeads: newLeads || 0, gens: gens || 0, revenue24h, payingCustomers: payingCustomers || 0 },
       result.ok ? undefined : `${result.provider}: ${result.error}`
     );
   }
@@ -910,7 +947,9 @@ export class AutonomousController {
     try {
       const webhook = process.env.DESKTOP_GROWTH_WEBHOOK_URL;
       if (!webhook) {
-        await logAutomation(workflowName, 'cron', 'success', { skipped: 'DESKTOP_GROWTH_WEBHOOK_URL not set' });
+        // Not configured = no outreach dispatched. Log as failure, not success,
+        // so the digest doesn't imply growth work happened when it didn't.
+        await logAutomation(workflowName, 'cron', 'failure', { dispatched: false }, 'DESKTOP_GROWTH_WEBHOOK_URL not set — no outreach dispatched');
         return;
       }
 

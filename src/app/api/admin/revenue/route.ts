@@ -25,7 +25,11 @@ export async function GET() {
 
   try {
     const { data: fees } = await admin.from('fee_flows').select('*');
-    const totals = (fees || []).reduce(
+    // Only confirmed flows count toward the token economy. Unconfirmed
+    // 'pipeline' rows (e.g. HubSpot closed-won signals) are NOT money and must
+    // never be summed as revenue.
+    const confirmedFees = (fees || []).filter((f) => f.status !== 'pipeline');
+    const totals = confirmedFees.reduce(
       (acc, f) => ({
         gross:    acc.gross    + parseFloat(f.gross_amount),
         net:      acc.net      + parseFloat(f.net_amount),
