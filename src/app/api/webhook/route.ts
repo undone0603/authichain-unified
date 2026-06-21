@@ -104,7 +104,7 @@ async function downgradeUser(stripeCustomerId: string) {
       .from('profiles')
       .update({
         tier: 'free',
-        generations_limit: 10,
+        generations_limit: 0,
         updated_at: new Date().toISOString(),
       })
       .eq('stripe_customer_id', stripeCustomerId);

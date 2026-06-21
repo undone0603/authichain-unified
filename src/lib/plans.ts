@@ -25,18 +25,18 @@ export const PLANS: Plan[] = [
     id: 'free',
     name: 'Free',
     price: 0,
-    description: 'Get started with AI QR codes',
-    generations: 10,
+    description: 'Create an account and explore the platform',
+    generations: 0,
     stripe_price_id: null,
     stripe_mode: null,
     tier: 'free',
     features: [
-      '10 generations / month',
+      'Browse the gallery & presets',
       'Static & Stereographic modes',
       'Basic styles',
-      'Download as PNG',
+      'Buy a pack to start generating',
     ],
-    cta: 'Get Started Free',
+    cta: 'Create Account',
   },
   {
     id: 'starter',
@@ -159,7 +159,7 @@ export const PLANS: Plan[] = [
 
 // Credit grants per plan (added to generations_limit on purchase)
 export const PLAN_CREDITS: Record<PlanId, number> = {
-  free: 0,
+  free: 0, // no complimentary generations — credits are granted only on purchase
   starter: 100,
   creator: 500,
   studio: 2000,

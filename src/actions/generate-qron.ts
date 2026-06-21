@@ -3,8 +3,14 @@
 // @ts-ignore - package installed separately
 import { HfInference } from '@huggingface/inference';
 
-// Initialize with the verified token from your .env.local
-const hf = new HfInference(process.env.HUGGINGFACE_TOKEN);
+// Resolve the HF token under any of the names used across the codebase / deploy
+// pipeline (HF_TOKEN / HF_API_KEY / HUGGINGFACE_API_KEY / HUGGINGFACE_TOKEN).
+const hf = new HfInference(
+  process.env.HF_TOKEN ||
+    process.env.HUGGINGFACE_TOKEN ||
+    process.env.HUGGINGFACE_API_KEY ||
+    process.env.HF_API_KEY,
+);
 
 export async function generateAutomotiveQRON(vendorName: string, destinationUrl: string) {
   console.log(`🎨 Initiating QRON Generation for: ${vendorName}`);
