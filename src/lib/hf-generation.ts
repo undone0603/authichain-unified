@@ -2,9 +2,20 @@ import QRCode from 'qrcode';
 import { createClient } from '@supabase/supabase-js';
 import { validateQRScannability } from './vision';
 
-const HF_TOKEN = process.env.HUGGINGFACE_TOKEN || process.env.HF_TOKEN;
-const HF_MODEL = 'DionTimmer/controlnet_qrcode-control_v1p_sd15';
-const HF_API_URL = `https://router.huggingface.co/hf-inference/models/${HF_MODEL}`;
+// Accept any of the token names this codebase / deploy pipeline uses. The Vercel
+// sync (scripts/push-env-to-vercel.sh) ships HF_TOKEN / HF_API_KEY /
+// HUGGINGFACE_API_KEY, while older code paths read HUGGINGFACE_TOKEN — resolve
+// all of them so a key set under any single name still connects.
+const HF_TOKEN =
+  process.env.HF_TOKEN ||
+  process.env.HUGGINGFACE_TOKEN ||
+  process.env.HUGGINGFACE_API_KEY ||
+  process.env.HF_API_KEY;
+// Router base + model are overridable via env so the endpoint can be repointed
+// (e.g. to a different inference provider) without a code change.
+const HF_ROUTER_BASE = (process.env.HF_ROUTER_BASE || 'https://router.huggingface.co/hf-inference/models').replace(/\/$/, '');
+const HF_MODEL = process.env.HF_QR_MODEL || 'DionTimmer/controlnet_qrcode-control_v1p_sd15';
+const HF_API_URL = `${HF_ROUTER_BASE}/${HF_MODEL}`;
 const HF_TIMEOUT_MS = 90_000;
 
 let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
@@ -33,7 +44,7 @@ export async function generateLivingQR({
   max_retries?: number;
 }) {
   if (!HF_TOKEN) {
-    throw new Error('HUGGINGFACE_TOKEN is missing');
+    throw new Error('Hugging Face token is missing — set HF_TOKEN (or HUGGINGFACE_API_KEY)');
   }
 
   const qrBuffer = await QRCode.toBuffer(url, {
@@ -58,6 +69,10 @@ export async function generateLivingQR({
       headers: {
         Authorization: `Bearer ${HF_TOKEN}`,
         'Content-Type': 'application/json',
+        // Block until the model is warm instead of getting a cold-start 503.
+        // Without this, the first request after idle fails and the whole
+        // connection appears broken.
+        'x-wait-for-model': 'true',
       },
       method: 'POST',
       body: JSON.stringify({

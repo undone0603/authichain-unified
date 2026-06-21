@@ -65,10 +65,12 @@ describe("runClosedWonRevenueVerification", () => {
 
     expect(insertSpy).toHaveBeenCalledTimes(1);
     const row = insertSpy.mock.calls[0][0];
-    expect(row).toMatchObject({ flow_type: "closed_won", net_amount: "1000", status: "confirmed" });
+    // A HubSpot closed-won deal is pipeline, NOT received cash — it must be
+    // recorded as unconfirmed pipeline so it's never counted as real revenue.
+    expect(row).toMatchObject({ flow_type: "pipeline_closed_won", net_amount: "1000", status: "pipeline" });
     expect(row.metadata).toMatchObject({ hubspotDealId: "deal_1", dealname: "Acme" });
     expect(logAutomation).toHaveBeenCalledWith(
-      "agent_closed_won_revenue_verification", "cron", "success", expect.objectContaining({ deals: 1, captured: 1 }),
+      "agent_closed_won_revenue_verification", "cron", "success", expect.objectContaining({ deals: 1, pipeline_captured: 1 }),
     );
   });
 
@@ -82,7 +84,7 @@ describe("runClosedWonRevenueVerification", () => {
 
     expect(insertSpy).not.toHaveBeenCalled();
     expect(logAutomation).toHaveBeenCalledWith(
-      "agent_closed_won_revenue_verification", "cron", "success", expect.objectContaining({ captured: 0 }),
+      "agent_closed_won_revenue_verification", "cron", "success", expect.objectContaining({ pipeline_captured: 0 }),
     );
   });
 

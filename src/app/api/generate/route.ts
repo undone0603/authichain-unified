@@ -153,7 +153,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
 
-    // Generate via Hugging Face Inference API
+    // Generate via Hugging Face ControlNet. A paying customer must receive a
+    // *scannable* QR code — that's the promise. If the model is unavailable,
+    // we refund the credit and fail the request. No non-scannable fallback.
     let imageUrl = '';
     let hfResult: Awaited<ReturnType<typeof generateLivingQR>> | null = null;
     try {
@@ -164,10 +166,25 @@ export async function POST(request: Request) {
       imageUrl = hfResult.imageUrl;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error('[generate] HF Generation failed:', err);
+      console.error('[generate] HF ControlNet generation failed:', err);
       await logAutomation('generate.hf', 'event', 'failure', { userId: user.id, presetId, mode }, msg);
+      // Refund the credit so a customer isn't charged for a generation they
+      // didn't receive. Unlimited plans (remaining === Infinity) weren't
+      // deducted, so skip the refund.
+      if (creditResult.remaining !== Infinity) {
+        try {
+          const refundClient = createAdminClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+          );
+          await refundClient.rpc('add_generation_credits', { user_uuid: user.id, amount: 1 });
+        } catch (refundErr) {
+          console.error('[generate] Credit refund failed (manual review needed):', refundErr);
+          await logAutomation('generate.refund', 'event', 'failure', { userId: user.id }, refundErr instanceof Error ? refundErr.message : String(refundErr));
+        }
+      }
       return NextResponse.json(
-        { message: 'AI generation engine is temporarily unavailable. Try again in 60s.' },
+        { message: 'AI generation engine is temporarily unavailable. Your credit was not used — try again in 60s.' },
         { status: 502 }
       );
     }
