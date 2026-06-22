@@ -4,6 +4,8 @@ import { dispatchWebhook } from './webhooks';
 import { HubSpotDeliverableAgent } from './industrial/hubspot';
 import { sendEmail } from './email';
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://authichain.com';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const admin = createClient(supabaseUrl, serviceKey);
@@ -103,6 +105,8 @@ export class AutonomousController {
         this.runGovChainSync(),
         this.runQronStorySync(),
         this.processAffiliatePayouts(),
+        this.triggerAffiliatePayoutProcessor(),
+        this.runDunningEscalation(),
         this.triggerGrowthEngine(),
         this.sendExecutiveReport(),
       ]);
@@ -132,44 +136,94 @@ export class AutonomousController {
 
   /**
    * Manages multi-stage lead follow-ups autonomously.
-   * Stage 1: Artifact Delivery, Stage 2: Nudge, Stage 3: Elite Offer.
+   * Stage 1 (day 0): Artifact Delivery — send sample QR + compliance PDF link.
+   * Stage 2 (day 3): Nudge — ask about blockers, offer a 15-min call.
+   * Stage 3 (day 6): Elite Offer — limited-time discount CTA.
    */
   private async runDripSequencer() {
-    const workflowName = '[stub]_lead_drip_sequencer';
+    const workflowName = 'lead_drip_sequencer';
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
     try {
       const now = new Date().toISOString();
       const { data: sequences } = await admin
         .from('lead_sequences')
-        .select('*')
+        .select(`
+          *,
+          lead:lead_id (email, name, product_interest)
+        `)
         .eq('status', 'active')
         .lte('next_action_at', now)
         .limit(20);
 
       if (!sequences || sequences.length === 0) return;
 
-      console.log(`[autonomous] Processing ${sequences.length} pending drip actions...`);
+      let sent = 0;
+      let failed = 0;
 
       for (const seq of sequences) {
-        // Execute Action based on current stage
+        const lead = seq.lead as { email?: string; name?: string; product_interest?: string } | null;
+        const email = lead?.email;
+        if (!email) { failed++; continue; }
+
+        const firstName = lead?.name?.split(' ')[0] || 'there';
+        let result;
+
         switch (seq.current_stage) {
-          case 1:
-            // Artifact Delivery is primarily handled by the HubSpot Agent for deals,
-            // but for generic leads, we could generate a sample here.
-            console.log(`[autonomous] Stage 1: Artifact sent to lead ${seq.lead_id}`);
+          case 1: {
+            result = await sendEmail({
+              from: 'AuthiChain <hello@qron.space>',
+              to: email,
+              subject: `Your sample: AI-certified QR code for ${firstName}`,
+              html: `<div style="font-family:sans-serif;max-width:580px;margin:0 auto;background:#0a0a0a;color:#fff;padding:32px;border-radius:12px;border:1px solid #c9a227">
+                <h1 style="color:#c9a227">Here's your sample</h1>
+                <p>Hi ${firstName}, as promised — here's a live demo QR code cryptographically anchored on AuthiChain.</p>
+                <p>Every scan is logged on-chain. Your brand, your provenance. <strong>Nothing faked.</strong></p>
+                <a href="${APP_URL}/demo" style="display:inline-block;background:#c9a227;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">View Live Demo</a>
+                <p style="color:#9e9e9e;font-size:13px">I'll follow up in a few days to see if it fits your workflow.</p>
+              </div>`,
+              text: `Hi ${firstName}, here's your AuthiChain demo: ${APP_URL}/demo`,
+            });
             break;
-          case 2:
-            console.log(`[autonomous] Stage 2: Sending Day 3 Nudge to lead ${seq.lead_id}`);
+          }
+          case 2: {
+            result = await sendEmail({
+              from: 'AuthiChain <hello@qron.space>',
+              to: email,
+              subject: `Quick question, ${firstName}`,
+              html: `<div style="font-family:sans-serif;max-width:580px;margin:0 auto;background:#0a0a0a;color:#fff;padding:32px;border-radius:12px;border:1px solid #333">
+                <p>Hi ${firstName},</p>
+                <p>Did the demo make sense for your use case? Happy to walk through it live — takes about 15 minutes.</p>
+                <a href="${APP_URL}/call" style="display:inline-block;background:#c9a227;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">Book a 15-min call</a>
+                <p style="color:#9e9e9e;font-size:13px">Or just reply here with any questions.</p>
+              </div>`,
+              text: `Hi ${firstName}, want to do a quick walk-through? Book here: ${APP_URL}/call`,
+            });
             break;
-          case 3:
-            console.log(`[autonomous] Stage 3: Promoting Elite mobile app to lead ${seq.lead_id}`);
+          }
+          case 3: {
+            result = await sendEmail({
+              from: 'AuthiChain <hello@qron.space>',
+              to: email,
+              subject: `Last one, ${firstName} — 20% off this week only`,
+              html: `<div style="font-family:sans-serif;max-width:580px;margin:0 auto;background:#0a0a0a;color:#fff;padding:32px;border-radius:12px;border:1px solid #c9a227">
+                <h1 style="color:#c9a227">Limited offer</h1>
+                <p>Hi ${firstName}, I don't do this often — use code <strong style="color:#c9a227">LAUNCH20</strong> for 20% off any paid plan, valid through this week.</p>
+                <a href="${APP_URL}/#pricing" style="display:inline-block;background:#c9a227;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">Claim 20% Off</a>
+                <p style="color:#9e9e9e;font-size:13px">After that, we'll stop bugging you — promise.</p>
+              </div>`,
+              text: `Hi ${firstName}, use LAUNCH20 for 20% off this week: ${APP_URL}/#pricing`,
+            });
             break;
+          }
+          default:
+            result = { ok: true };
         }
 
-        // Progress to next stage
+        if (!result || !result.ok) { failed++; continue; }
+        sent++;
+
         const nextStage = seq.current_stage + 1;
         const isComplete = nextStage > 3;
-
-        // Schedule next action (+3 days)
         const nextAction = new Date();
         nextAction.setDate(nextAction.getDate() + 3);
 
@@ -180,12 +234,13 @@ export class AutonomousController {
             status: isComplete ? 'completed' : 'active',
             last_action_at: now,
             next_action_at: isComplete ? null : nextAction.toISOString(),
-            updated_at: now
+            updated_at: now,
           })
           .eq('id', seq.id);
       }
 
-      await logAutomation(workflowName, 'cron', 'success', { actions_executed: sequences.length });
+      const status = failed > 0 && sent === 0 ? 'failure' : 'success';
+      await logAutomation(workflowName, 'cron', status, { actions_executed: sequences.length, sent, failed });
     } catch (err: unknown) {
       await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
@@ -399,17 +454,122 @@ export class AutonomousController {
   }
 
   /**
-   * Stub: real strainchain.io audit not yet implemented.
+   * StrainChain Compliance Audit
+   * Flags checkpoint batches that are stuck in pending > 2h, or failed,
+   * and alerts the security webhook. Also surfaces overdue COA anomalies.
    */
   private async runStrainChainAudit() {
-    await logAutomation('[stub]_strainchain_audit', 'cron', 'success', { stub: true });
+    const workflowName = 'strainchain_compliance_audit';
+    try {
+      const twoHoursAgo = new Date(Date.now() - 2 * 3_600_000).toISOString();
+
+      // 1. Find stuck/failed checkpoint batches
+      const { data: stuck } = await admin
+        .from('checkpoint_batches')
+        .select('id, batchType, itemCount, status, createdAt')
+        .or(`status.eq.failed,and(status.eq.pending,createdAt.lte.${twoHoursAgo})`)
+        .limit(20);
+
+      // 2. Find scan anomalies in the last 24h (failed anchors)
+      const past24h = new Date(Date.now() - 86_400_000).toISOString();
+      const { data: failedAnchors } = await admin
+        .from('protocol_anomalies')
+        .select('id, type, severity, description, created_at')
+        .eq('type', 'anchor_failure')
+        .gte('created_at', past24h)
+        .limit(20);
+
+      const issueCount = (stuck?.length ?? 0) + (failedAnchors?.length ?? 0);
+
+      if (issueCount > 0) {
+        const securityWebhook = process.env.SECURITY_ALERTS_WEBHOOK_URL;
+        if (securityWebhook) {
+          const lines = [
+            `🌿 **STRAINCHAIN AUDIT ALERT** — ${issueCount} issue(s) detected`,
+            ...(stuck ?? []).map(b =>
+              `• Batch #${b.id} (${b.batchType}) — status: ${b.status}, items: ${b.itemCount}`),
+            ...(failedAnchors ?? []).map(a =>
+              `• Anchor failure: ${a.description?.slice(0, 120) ?? a.id}`),
+          ];
+          await fetch(securityWebhook, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: lines.join('\n') }),
+          });
+        }
+      }
+
+      await logAutomation(workflowName, 'cron', 'success', {
+        stuck_batches: stuck?.length ?? 0,
+        anchor_failures: failedAnchors?.length ?? 0,
+        issues: issueCount,
+      });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
+    }
   }
 
   /**
-   * Stub: real govchain.us sync not yet implemented.
+   * GovChain Sync
+   * Surfaces new high-fit government opportunities (score ≥ 70, not yet pursued)
+   * and flags proposals with deadlines within 48h.
    */
   private async runGovChainSync() {
-    await logAutomation('[stub]_govchain_sync', 'cron', 'success', { stub: true });
+    const workflowName = 'govchain_sync';
+    try {
+      const tomorrow48h = new Date(Date.now() + 48 * 3_600_000).toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10);
+
+      // 1. High-fit unacted opportunities
+      const { data: hotOpps } = await admin
+        .from('gov_opportunities')
+        .select('notice_id, title, agency, deadline, fit_score, recommended_action')
+        .gte('fit_score', 70)
+        .eq('status', 'scored')
+        .limit(10);
+
+      // 2. Proposals with imminent deadlines
+      const { data: urgentProposals } = await admin
+        .from('gov_proposals')
+        .select('notice_id, title, agency, deadline, fit_score, status')
+        .in('status', ['draft', 'reviewed'])
+        .gte('deadline', today)
+        .lte('deadline', tomorrow48h)
+        .limit(10);
+
+      const daoWebhook = process.env.DAO_COMMUNITY_WEBHOOK_URL;
+      if (daoWebhook && ((hotOpps?.length ?? 0) > 0 || (urgentProposals?.length ?? 0) > 0)) {
+        const lines = ['🏛️ **GOVCHAIN DAILY SYNC**'];
+
+        if (hotOpps && hotOpps.length > 0) {
+          lines.push(`\n**${hotOpps.length} High-Fit Opportunity(ies) Await Action:**`);
+          for (const o of hotOpps) {
+            lines.push(`• [Score ${o.fit_score}] ${o.title} — ${o.agency} (deadline: ${o.deadline ?? 'TBD'})`);
+          }
+          lines.push(`\nReview at ${APP_URL}/dashboard/govchain`);
+        }
+
+        if (urgentProposals && urgentProposals.length > 0) {
+          lines.push(`\n⚠️ **${urgentProposals.length} Proposal(s) Due Within 48h:**`);
+          for (const p of urgentProposals) {
+            lines.push(`• ${p.title} — ${p.agency} (deadline: ${p.deadline})`);
+          }
+        }
+
+        await fetch(daoWebhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: lines.join('\n') }),
+        });
+      }
+
+      await logAutomation(workflowName, 'cron', 'success', {
+        hot_opportunities: hotOpps?.length ?? 0,
+        urgent_proposals: urgentProposals?.length ?? 0,
+      });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
+    }
   }
 
   /**
@@ -682,36 +842,46 @@ export class AutonomousController {
   }
 
   /**
-   * 5. Affiliate Payout Processing: Validate referrals and queue payouts.
+   * 5. Affiliate Payout Processing: Validate referrals after 30-day hold and queue payouts.
+   * Only referrals tracked > 30 days ago are eligible to prevent charge-back fraud.
    */
   private async processAffiliatePayouts() {
     try {
+      const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
       const { data: pendingReferrals } = await admin
         .from('referrals')
         .select('*')
-        .eq('status', 'tracked');
+        .eq('status', 'tracked')
+        .lte('created_at', cutoff);
 
       if (!pendingReferrals || pendingReferrals.length === 0) return;
 
-      // Logic to move 'tracked' to 'validated' after 30-day cookie window
-      // For now, we simulate validation and queue for payout
+      let queued = 0;
+      let skipped = 0;
       for (const ref of pendingReferrals) {
-        await admin
+        if (!ref.affiliateId || !ref.commissionEarned) { skipped++; continue; }
+
+        const { error } = await admin
           .from('affiliate_payouts')
           .insert({
             affiliate_id: ref.affiliateId,
             amount: ref.commissionEarned,
             status: 'pending',
+            metadata: { referral_id: ref.id, validated_at: new Date().toISOString() },
           });
-        
+
+        if (error) { skipped++; continue; }
+
         await admin
           .from('referrals')
-          .update({ status: 'validated' })
+          .update({ status: 'validated', updated_at: new Date().toISOString() })
           .eq('id', ref.id);
+
+        queued++;
       }
 
       await logAutomation('affiliate_payout_cycle', 'cron', 'success', {
-        count: pendingReferrals.length,
+        eligible: pendingReferrals.length, queued, skipped,
       });
     } catch (err: unknown) {
       await logAutomation('affiliate_payout_cycle', 'cron', 'failure', null, formatErr(err));
@@ -719,10 +889,112 @@ export class AutonomousController {
   }
 
   /**
-   * Stub: would trigger desktop AgentZ for outreach via webhook/GH Action.
-   * Currently records intent only.
+   * Dunning escalation: sends day-3, day-7, day-14 billing reminders to
+   * past-due subscribers, de-duplicating via the activity log.
+   */
+  private async runDunningEscalation() {
+    const workflowName = 'dunning_escalation';
+    try {
+      const apiUrl = `${APP_URL}/api/cron/dunning`;
+      const internalSecret = process.env.INTERNAL_API_SECRET;
+      if (!internalSecret) {
+        await logAutomation(workflowName, 'cron', 'failure', null, 'INTERNAL_API_SECRET not set');
+        return;
+      }
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'x-internal-secret': internalSecret, 'Content-Type': 'application/json' },
+      });
+      const data = res.ok ? await res.json() as { checked?: number; remindersSent?: number } : null;
+      await logAutomation(workflowName, 'cron', res.ok ? 'success' : 'failure', data ?? { status: res.status });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
+    }
+  }
+
+  /**
+   * Triggers the affiliate payout processor via the internal API.
+   * Processes pending affiliate_payouts rows via Stripe Connect transfers.
+   */
+  private async triggerAffiliatePayoutProcessor() {
+    const workflowName = 'affiliate_payout_processor';
+    try {
+      const internalSecret = process.env.INTERNAL_API_SECRET;
+      if (!internalSecret) return;
+      const res = await fetch(`${APP_URL}/api/affiliate/payout`, {
+        method: 'POST',
+        headers: { 'x-internal-secret': internalSecret, 'Content-Type': 'application/json' },
+      });
+      const data = res.ok ? await res.json() as { processed?: number; succeeded?: number; failed?: number } : null;
+      await logAutomation(workflowName, 'cron', res.ok ? 'success' : 'failure', data ?? { status: res.status });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
+    }
+  }
+
+  /**
+   * Re-engagement engine: emails lapsed free-tier users (active 7–30 days ago,
+   * not converted) and pings a growth webhook for high-score prospects.
    */
   private async triggerGrowthEngine() {
-    await logAutomation('[stub]_desktop_growth_outreach', 'cron', 'success', { stub: true });
+    const workflowName = 'growth_reengagement_engine';
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
+    try {
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 86_400_000).toISOString();
+      const sevenDaysAgo  = new Date(now.getTime() -  7 * 86_400_000).toISOString();
+
+      // Free-tier users who haven't converted, last seen 7–30 days ago
+      const { data: lapsed } = await admin
+        .from('profiles')
+        .select('id, email, full_name, subscription_plan, last_sign_in_at')
+        .eq('subscription_plan', 'free')
+        .lte('last_sign_in_at', sevenDaysAgo)
+        .gte('last_sign_in_at', thirtyDaysAgo)
+        .limit(25);
+
+      if (!lapsed || lapsed.length === 0) {
+        await logAutomation(workflowName, 'cron', 'success', { lapsed: 0 });
+        return;
+      }
+
+      let sent = 0;
+      let failed = 0;
+      for (const user of lapsed) {
+        const email = (user as { email?: string }).email;
+        if (!email) { failed++; continue; }
+        const firstName = ((user as { full_name?: string }).full_name || '').split(' ')[0] || 'there';
+
+        const result = await sendEmail({
+          from: 'QRON <hello@qron.space>',
+          to: email,
+          subject: `${firstName}, your QRON codes are waiting`,
+          html: `<div style="font-family:sans-serif;max-width:580px;margin:0 auto;background:#0a0a0a;color:#fff;padding:32px;border-radius:12px;border:1px solid #333">
+            <p>Hi ${firstName},</p>
+            <p>You signed up for QRON but haven't been back in a while. Your free generations are still there.</p>
+            <p>If you need more or want AI-certified QR codes that actually track, the Creator Pack is just $99 one-time — no subscription.</p>
+            <a href="${APP_URL}/#pricing" style="display:inline-block;background:#c9a227;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">See Plans</a>
+            <p style="color:#555;font-size:12px">Unsubscribe any time — reply with "stop".</p>
+          </div>`,
+          text: `Hi ${firstName}, your QRON generations are waiting. See plans: ${APP_URL}/#pricing`,
+        });
+
+        if (result.ok) sent++; else failed++;
+      }
+
+      // Fire growth webhook (e.g. n8n, Zapier) for high-score prospects
+      const growthWebhook = process.env.GROWTH_ENGINE_WEBHOOK_URL;
+      if (growthWebhook) {
+        await fetch(growthWebhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event: 'reengagement_batch', sent, failed, ts: now.toISOString() }),
+        }).catch(() => {});
+      }
+
+      await logAutomation(workflowName, 'cron', 'success', { lapsed: lapsed.length, sent, failed });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
+    }
   }
 }

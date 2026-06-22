@@ -33,6 +33,7 @@ export const qronRouter = router({
       const [record] = await db.createQron({
         id: qron.qronId,
         productId: input.productId,
+        userId: ctx.user.id,
         productName: input.productName,
         brand: input.brand,
         category: input.category,
@@ -43,7 +44,7 @@ export const qronRouter = router({
         fingerprintHash: qron.fingerprintHash,
         nftTokenId: qron.nftTokenId,
         openartUrl: qron.openartUrl,
-        trustScore: 100, // Initial trust score for genuine generation
+        trustScore: 100,
       });
 
       return record;
