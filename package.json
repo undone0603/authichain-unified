@@ -28,7 +28,7 @@
     "@lucia-auth/adapter-drizzle": "^1.1.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@paddle/paddle-node-sdk": "^3.8.0",
-    "@paralleldrive/cuid2": "^2.3.0",
+    "@paralleldrive/cuid2": "^3.3.0",
     "@sendgrid/mail": "^8.1.6",
     "@simplewebauthn/browser": "^13.3.0",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
