@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     // 3. Trigger Generation (Phase 3: HF)
     let imageUrl = '';
     let scannable = false;
-    let attempts = 1;
+    let attempts: number;
     try {
       const hfResult = await generateLivingQR({
         url,

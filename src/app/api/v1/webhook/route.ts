@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       url,
       event_types,
       status: 'active',
-      secret: `whsec_${Math.random().toString(36).substring(2, 18)}`,
+      secret: `whsec_${Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString('hex')}`,
       created_at: new Date().toISOString(),
       last_triggered: null,
       success_count: 0,

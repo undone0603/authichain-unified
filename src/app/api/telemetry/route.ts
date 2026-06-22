@@ -117,8 +117,9 @@ export async function POST(req: Request) {
     let txHash: string | null = null;
 
     if (!isCompliant) {
+      const safeTag = String(data.metrcTag).replace(/[\r\n\t]/g, ' ');
       console.log(
-        `🚨 COMPLIANCE BREACH DETECTED: ${data.metrcTag}. Initiating Web3 Anchor...`
+        `🚨 COMPLIANCE BREACH DETECTED: ${safeTag}. Initiating Web3 Anchor...`
       );
 
       const anchorResult = await anchorToPolygon(
