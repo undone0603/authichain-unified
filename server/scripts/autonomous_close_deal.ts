@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getDb, createLead, updateLead, logActivity } from "../db.js";
+import { getDb, createLead, updateLead } from "../db.js";
 import { calculateLeadScore } from "../sales/scoring-service.js";
 import { sendDocuSignContract } from "../sales/docusign-service.js";
 import { revenueRecords } from "../../drizzle/schema.js";

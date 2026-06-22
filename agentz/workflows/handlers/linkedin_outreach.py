@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from agentz.core.credentials import get_or_placeholder
+from agentz.core.credentials import get
 from agentz.core.modes import ExecutionContext, Mode
 
 DAILY_INVITE_CAP = 18

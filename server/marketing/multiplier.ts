@@ -34,8 +34,17 @@ Return JSON:
     return parseLLMContent<any>(result.choices[0].message.content);
   } catch (err: any) {
     console.warn("⚠️ LLM Generation failed. Using vertical-aware traffic bundle.");
-    
-    if (announcement.toLowerCase().includes("qron.space")) {
+
+    // Parse the first URL found in the announcement text; compare hostname exactly
+    // to avoid partial-domain false positives (e.g. "evil-qron.space").
+    let announcedHost = "";
+    try {
+      const m = announcement.match(/https?:\/\/[^\s/]+/i);
+      if (m) announcedHost = new URL(m[0]).hostname.toLowerCase().replace(/^www\./, "");
+    } catch { /* no valid URL in text */ }
+    const isHost = (d: string) => announcedHost === d || announcedHost.endsWith(`.${d}`);
+
+    if (isHost("qron.space")) {
       return {
         linkedin: "🚀 QRON.space officially launches 'Dimensional Gateways'—the future of product engagement.\n\nOur AI-powered gateways drive 78% higher scan rates vs standard QR codes. Every gateway is cryptographically signed and anchored to the AuthiChain Protocol. Turn your physical product into a cinematic digital portal today.\n\nExplore the studio: qron.space\n\n#QRON #AIArt #ProductIdentity #Blockchain",
         reddit: {
@@ -50,7 +59,7 @@ Return JSON:
       };
     }
 
-    if (announcement.toLowerCase().includes("strainchain.io")) {
+    if (isHost("strainchain.io")) {
       return {
         linkedin: "🌿 StrainChain.io is now the automated 'Truth Layer' for Michigan cannabis.\n\nOur new background job automatically anchors METRC manifests to Bitcoin L1. Cultivators now receive an immutable 'Proof of Purity' certificate for every package tag, eliminating 80% of manual audit labor.\n\nVerify your provenance: strainchain.io\n\n#StrainChain #CannabisCompliance #BitcoinL1 #METRC",
         reddit: {
@@ -65,7 +74,7 @@ Return JSON:
       };
     }
 
-    if (announcement.includes("GovChain.us")) {
+    if (isHost("govchain.us")) {
       return {
         linkedin: "🏛️ GovChain.us achieves 'Sovereign Document' status (CAGE 1PUJ6).\n\nWe are now deploying W3C Verifiable Credentials for federal and defense supply chains. Secure your credentials with FIPS 140-2 HSM-grade cryptographic truth and prevent state-level forgery in under 2 seconds.\n\nView the Sovereign Protocol: govchain.us\n\n#GovChain #FederalSecurity #W3C #VerifiableCredentials #CAGE1PUJ6",
         reddit: {

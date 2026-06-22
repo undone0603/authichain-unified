@@ -82,12 +82,7 @@ def run(ctx: ExecutionContext) -> str:
             
         # Draft and send email (using LLM)
         ctx.step(f"Drafting follow-up for {email}...")
-        
-        _email_body = _draft_followup(name, company, subject)
-        
-        # Send via SMTP (using credentials from env)
-        # Note: In a real run, we'd use the sendEmail utility.
-        # For now, we'll simulate or use a mock if not fully integrated.
+        # In a real run: sendEmail(_draft_followup(name, company, subject))
         
         # MARK TASK AS COMPLETED
         ctx.step(f"Marking task {tid} as COMPLETED...")

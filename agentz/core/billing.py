@@ -39,10 +39,5 @@ async def log_api_call(supabase, api_key_id: str, endpoint: str):
     """
     Logs an API call in Supabase for audit and billing reconciliation.
     """
-    _payload = {
-        "api_key_id": api_key_id,
-        "endpoint": endpoint,
-        "timestamp": "now()",
-    }
-    # In production: await supabase.table("api_usage").insert(_payload).execute()
+    # In production: await supabase.table("api_usage").insert({...}).execute()
     return True

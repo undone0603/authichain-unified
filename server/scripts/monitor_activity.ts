@@ -1,5 +1,4 @@
 import "dotenv/config";
-import { checkThreadReplies } from "../email-service.js";
 
 const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?.[0] ?? ''}***@${d}` : '***'; };
 import { getDb } from "../db.js";
