@@ -19,6 +19,7 @@
 import open from "open";
 import { createServer } from "http";
 import { execFileSync } from "child_process";
+import { randomBytes } from "crypto";
 
 const CLIENT_ID     = process.env.LINKEDIN_CLIENT_ID     || "";
 const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || "";
@@ -66,7 +67,7 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
 // ─── Step 1: Build LinkedIn OAuth URL ────────────────────────────────────────
 
 // Generate a random state for CSRF protection
-const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+const state = randomBytes(32).toString("hex");
 
 const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization");
 authUrl.searchParams.set("response_type", "code");

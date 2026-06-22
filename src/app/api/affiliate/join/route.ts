@@ -23,7 +23,7 @@ export async function POST(_request: Request) {
 
     // 1. Generate unique affiliate ID (e.g., first part of email + random)
     const base = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    const random = Math.random().toString(36).substring(2, 6);
+    const random = Buffer.from(crypto.getRandomValues(new Uint8Array(2))).toString('hex');
     const affiliateId = `${base}-${random}`;
 
     // 2. Update profile

@@ -12,7 +12,9 @@ export async function POST(request: NextRequest) {
     const { product_id, metadata, dpp_data, nfc_uid } = await request.json();
 
     // Manual serial generation: QRON-XXXX-XXXX
-    const serial = `QRON-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const a = Buffer.from(crypto.getRandomValues(new Uint8Array(3))).toString('hex').slice(0, 4).toUpperCase();
+    const b = Buffer.from(crypto.getRandomValues(new Uint8Array(3))).toString('hex').slice(0, 4).toUpperCase();
+    const serial = `QRON-${a}-${b}`;
 
     // 1. Create Certification
     const { data: cert, error: certError } = await supabase

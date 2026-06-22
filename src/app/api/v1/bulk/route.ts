@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         id: `qr_bulk_${Date.now()}_${index}`,
         name: code.name,
         url: code.url,
-        short_url: `https://qron.space/r/${Math.random().toString(36).slice(2, 8)}`,
+        short_url: `https://qron.space/r/${Buffer.from(crypto.getRandomValues(new Uint8Array(5))).toString('hex').slice(0, 8)}`,
         type: code.type || 'url',
         campaign_id: code.campaign_id || null,
         style: code.style || { foreground: '#000000', background: '#ffffff', logo: false },
