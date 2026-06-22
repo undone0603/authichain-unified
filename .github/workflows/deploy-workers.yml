@@ -43,6 +43,19 @@ jobs:
           - govchain-us
           - bitcoin-auth
           - outreach-queue
+          - ai-classification
+          - analytics
+          - auth
+          - authichain-autopilot
+          - authichain-bridge
+          - authichain-chain-data
+          - authichain-gateway
+          - authichain-license-issuer
+          - authichain-qron-provenance
+          - authichain-scan-validate
+          - authichain-telegram
+          - authichain-verify-worker
+          - stripe-webhook
 
     steps:
       - name: Checkout repository

@@ -4,6 +4,8 @@ import { dispatchWebhook } from './webhooks';
 import { HubSpotDeliverableAgent } from './industrial/hubspot';
 import { sendEmail } from './email';
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://authichain.com';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const admin = createClient(supabaseUrl, serviceKey);
@@ -103,6 +105,8 @@ export class AutonomousController {
         this.runGovChainSync(),
         this.runQronStorySync(),
         this.processAffiliatePayouts(),
+        this.triggerAffiliatePayoutProcessor(),
+        this.runDunningEscalation(),
         this.triggerGrowthEngine(),
         this.sendExecutiveReport(),
       ]);
@@ -450,17 +454,122 @@ export class AutonomousController {
   }
 
   /**
-   * Stub: real strainchain.io audit not yet implemented.
+   * StrainChain Compliance Audit
+   * Flags checkpoint batches that are stuck in pending > 2h, or failed,
+   * and alerts the security webhook. Also surfaces overdue COA anomalies.
    */
   private async runStrainChainAudit() {
-    await logAutomation('[stub]_strainchain_audit', 'cron', 'success', { stub: true });
+    const workflowName = 'strainchain_compliance_audit';
+    try {
+      const twoHoursAgo = new Date(Date.now() - 2 * 3_600_000).toISOString();
+
+      // 1. Find stuck/failed checkpoint batches
+      const { data: stuck } = await admin
+        .from('checkpoint_batches')
+        .select('id, batchType, itemCount, status, createdAt')
+        .or(`status.eq.failed,and(status.eq.pending,createdAt.lte.${twoHoursAgo})`)
+        .limit(20);
+
+      // 2. Find scan anomalies in the last 24h (failed anchors)
+      const past24h = new Date(Date.now() - 86_400_000).toISOString();
+      const { data: failedAnchors } = await admin
+        .from('protocol_anomalies')
+        .select('id, type, severity, description, created_at')
+        .eq('type', 'anchor_failure')
+        .gte('created_at', past24h)
+        .limit(20);
+
+      const issueCount = (stuck?.length ?? 0) + (failedAnchors?.length ?? 0);
+
+      if (issueCount > 0) {
+        const securityWebhook = process.env.SECURITY_ALERTS_WEBHOOK_URL;
+        if (securityWebhook) {
+          const lines = [
+            `🌿 **STRAINCHAIN AUDIT ALERT** — ${issueCount} issue(s) detected`,
+            ...(stuck ?? []).map(b =>
+              `• Batch #${b.id} (${b.batchType}) — status: ${b.status}, items: ${b.itemCount}`),
+            ...(failedAnchors ?? []).map(a =>
+              `• Anchor failure: ${a.description?.slice(0, 120) ?? a.id}`),
+          ];
+          await fetch(securityWebhook, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: lines.join('\n') }),
+          });
+        }
+      }
+
+      await logAutomation(workflowName, 'cron', 'success', {
+        stuck_batches: stuck?.length ?? 0,
+        anchor_failures: failedAnchors?.length ?? 0,
+        issues: issueCount,
+      });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
+    }
   }
 
   /**
-   * Stub: real govchain.us sync not yet implemented.
+   * GovChain Sync
+   * Surfaces new high-fit government opportunities (score ≥ 70, not yet pursued)
+   * and flags proposals with deadlines within 48h.
    */
   private async runGovChainSync() {
-    await logAutomation('[stub]_govchain_sync', 'cron', 'success', { stub: true });
+    const workflowName = 'govchain_sync';
+    try {
+      const tomorrow48h = new Date(Date.now() + 48 * 3_600_000).toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10);
+
+      // 1. High-fit unacted opportunities
+      const { data: hotOpps } = await admin
+        .from('gov_opportunities')
+        .select('notice_id, title, agency, deadline, fit_score, recommended_action')
+        .gte('fit_score', 70)
+        .eq('status', 'scored')
+        .limit(10);
+
+      // 2. Proposals with imminent deadlines
+      const { data: urgentProposals } = await admin
+        .from('gov_proposals')
+        .select('notice_id, title, agency, deadline, fit_score, status')
+        .in('status', ['draft', 'reviewed'])
+        .gte('deadline', today)
+        .lte('deadline', tomorrow48h)
+        .limit(10);
+
+      const daoWebhook = process.env.DAO_COMMUNITY_WEBHOOK_URL;
+      if (daoWebhook && ((hotOpps?.length ?? 0) > 0 || (urgentProposals?.length ?? 0) > 0)) {
+        const lines = ['🏛️ **GOVCHAIN DAILY SYNC**'];
+
+        if (hotOpps && hotOpps.length > 0) {
+          lines.push(`\n**${hotOpps.length} High-Fit Opportunity(ies) Await Action:**`);
+          for (const o of hotOpps) {
+            lines.push(`• [Score ${o.fit_score}] ${o.title} — ${o.agency} (deadline: ${o.deadline ?? 'TBD'})`);
+          }
+          lines.push(`\nReview at ${APP_URL}/dashboard/govchain`);
+        }
+
+        if (urgentProposals && urgentProposals.length > 0) {
+          lines.push(`\n⚠️ **${urgentProposals.length} Proposal(s) Due Within 48h:**`);
+          for (const p of urgentProposals) {
+            lines.push(`• ${p.title} — ${p.agency} (deadline: ${p.deadline})`);
+          }
+        }
+
+        await fetch(daoWebhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: lines.join('\n') }),
+        });
+      }
+
+      await logAutomation(workflowName, 'cron', 'success', {
+        hot_opportunities: hotOpps?.length ?? 0,
+        urgent_proposals: urgentProposals?.length ?? 0,
+      });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
+    }
   }
 
   /**
@@ -776,6 +885,50 @@ export class AutonomousController {
       });
     } catch (err: unknown) {
       await logAutomation('affiliate_payout_cycle', 'cron', 'failure', null, formatErr(err));
+    }
+  }
+
+  /**
+   * Dunning escalation: sends day-3, day-7, day-14 billing reminders to
+   * past-due subscribers, de-duplicating via the activity log.
+   */
+  private async runDunningEscalation() {
+    const workflowName = 'dunning_escalation';
+    try {
+      const apiUrl = `${APP_URL}/api/cron/dunning`;
+      const internalSecret = process.env.INTERNAL_API_SECRET;
+      if (!internalSecret) {
+        await logAutomation(workflowName, 'cron', 'failure', null, 'INTERNAL_API_SECRET not set');
+        return;
+      }
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'x-internal-secret': internalSecret, 'Content-Type': 'application/json' },
+      });
+      const data = res.ok ? await res.json() as { checked?: number; remindersSent?: number } : null;
+      await logAutomation(workflowName, 'cron', res.ok ? 'success' : 'failure', data ?? { status: res.status });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
+    }
+  }
+
+  /**
+   * Triggers the affiliate payout processor via the internal API.
+   * Processes pending affiliate_payouts rows via Stripe Connect transfers.
+   */
+  private async triggerAffiliatePayoutProcessor() {
+    const workflowName = 'affiliate_payout_processor';
+    try {
+      const internalSecret = process.env.INTERNAL_API_SECRET;
+      if (!internalSecret) return;
+      const res = await fetch(`${APP_URL}/api/affiliate/payout`, {
+        method: 'POST',
+        headers: { 'x-internal-secret': internalSecret, 'Content-Type': 'application/json' },
+      });
+      const data = res.ok ? await res.json() as { processed?: number; succeeded?: number; failed?: number } : null;
+      await logAutomation(workflowName, 'cron', res.ok ? 'success' : 'failure', data ?? { status: res.status });
+    } catch (err: unknown) {
+      await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
   }
 
