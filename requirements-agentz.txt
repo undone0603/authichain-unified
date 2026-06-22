@@ -6,7 +6,7 @@ supabase>=2.31.0
 stripe>=15.2.1
 web3>=6.0.0
 qrcode[pil]>=7.0.0
-tenacity>=8.0.0
+tenacity>=9.1.4
 fastapi>=0.137.1
 uvicorn>=0.22.0
 
