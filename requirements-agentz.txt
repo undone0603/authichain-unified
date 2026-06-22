@@ -11,7 +11,7 @@ fastapi>=0.137.1
 uvicorn>=0.22.0
 
 # LLM & Agent Stack
-langchain-openai>=0.1.0
+langchain-openai>=1.3.2
 langchain-google-genai>=4.2.5
 langchain-ollama>=0.1.0
 browser-use>=0.11.0
