@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'CRM not configured' }, { status: 503 });
     }
 
-    console.log(`[CRM-Sync] Syncing high-value lead to HubSpot: ${email} (Score: ${lead_score})`);
+    console.log('[CRM-Sync] Syncing lead to HubSpot');
 
     // 1. Prepare HubSpot CRM Payload
     const payload = {

@@ -73,8 +73,6 @@ def run(ctx: ExecutionContext) -> str:
         r_contact.raise_for_status()
         contact_props = r_contact.json()["properties"]
         email = contact_props.get("email")
-        name = contact_props.get("firstname", "there")
-        company = contact_props.get("company", "your organization")
         
         if not email:
             ctx.step(f"No email for contact {contact_id}. Skipping.")
