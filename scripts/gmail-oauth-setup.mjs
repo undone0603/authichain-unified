@@ -13,7 +13,7 @@
 import { google } from "googleapis";
 import open from "open";
 import { createServer } from "http";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import "dotenv/config";
 
 const CLIENT_ID     = process.env.GMAIL_CLIENT_ID     || "";
@@ -122,16 +122,13 @@ console.log(`GMAIL_CLIENT_SECRET = ${CLIENT_SECRET.slice(0, 6)}...`);
 console.log(`GMAIL_REFRESH_TOKEN = ${refreshToken.slice(0, 12)}...`);
 console.log(`GMAIL_FROM_EMAIL    = ${FROM_EMAIL}\n`);
 
-execSync(
-  [
-    "gh workflow run set-worker-secrets.yml",
-    `--repo ${REPO}`,
-    `--field GMAIL_CLIENT_ID="${CLIENT_ID}"`,
-    `--field GMAIL_CLIENT_SECRET="${CLIENT_SECRET}"`,
-    `--field GMAIL_REFRESH_TOKEN="${refreshToken}"`,
-  ].join(" "),
-  { stdio: "inherit" }
-);
+execFileSync("gh", [
+  "workflow", "run", "set-worker-secrets.yml",
+  "--repo", REPO,
+  "--field", `GMAIL_CLIENT_ID=${CLIENT_ID}`,
+  "--field", `GMAIL_CLIENT_SECRET=${CLIENT_SECRET}`,
+  "--field", `GMAIL_REFRESH_TOKEN=${refreshToken}`,
+], { stdio: "inherit" });
 
 console.log(`\n✓ Workflow dispatched!`);
 console.log(`  Progress: https://github.com/${REPO}/actions/workflows/set-worker-secrets.yml`);

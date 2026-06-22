@@ -9,8 +9,8 @@
         try:
             if isinstance(raw_result, AgentOutput):
                 return raw_result
-        except Exception:  # noqa: BLE001 — raw_result is not AgentOutput, fall through to next check
-            pass
+        except Exception:  # noqa: BLE001
+            pass  # isinstance() won't raise; fall through to str/dict checks below
 
         if isinstance(raw_result, str):
             return AgentOutput.model_validate_json(raw_result)

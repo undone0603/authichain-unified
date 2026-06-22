@@ -95,9 +95,6 @@ export async function anchorPackageToTruthLayer(packageTag: string, manifestId: 
   
   console.log(`🔗 Anchoring METRC Package ${packageTag} to Bitcoin L1...`);
   
-  // Logic to call your existing inscription worker
-  const _inscriptionUrl = "https://qron.space/api/ordinals/inscribe";
-  
   // 4. Trigger Social Proof Bridge
   try {
     await broadcastSocialProof({

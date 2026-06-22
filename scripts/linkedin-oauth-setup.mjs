@@ -18,7 +18,7 @@
 
 import open from "open";
 import { createServer } from "http";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const CLIENT_ID     = process.env.LINKEDIN_CLIENT_ID     || "";
 const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || "";
@@ -126,8 +126,9 @@ const { accessToken, refreshToken, personUrn } = await new Promise((resolve, rej
 
     if (!tokenRes.ok) {
       const errText = await tokenRes.text();
+      const safeErr = String(errText).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       res.writeHead(500, { "Content-Type": "text/html" });
-      res.end(`<h2 style="color:red">Token exchange failed: ${errText}</h2>`);
+      res.end(`<h2 style="color:red">Token exchange failed: ${safeErr}</h2>`);
       server.close(() => reject(new Error(`Token exchange failed: ${errText}`)));
       return;
     }
@@ -168,10 +169,11 @@ const { accessToken, refreshToken, personUrn } = await new Promise((resolve, rej
       console.warn("[linkedin-oauth] Could not fetch profile URN:", e.message);
     }
 
+    const safeUrn = String(personUrn).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     res.writeHead(200, { "Content-Type": "text/html" });
     res.end(`
       <h2 style="color:green;font-family:sans-serif">✓ LinkedIn Authorized!</h2>
-      <p>Person URN: <code>${personUrn}</code></p>
+      <p>Person URN: <code>${safeUrn}</code></p>
       <p>You can close this tab and check your terminal.</p>
     `);
     server.close();
@@ -193,18 +195,15 @@ console.log(`LINKEDIN_ACCESS_TOKEN  = ${accessToken.slice(0, 12)}...`);
 console.log(`LINKEDIN_REFRESH_TOKEN = ${refreshToken ? refreshToken.slice(0, 12) + "..." : "(none — token is long-lived 60 days)"}`);
 console.log(`LINKEDIN_PERSON_URN    = ${personUrn}\n`);
 
-const fields = [
-  `--field LINKEDIN_CLIENT_ID="${CLIENT_ID}"`,
-  `--field LINKEDIN_CLIENT_SECRET="${CLIENT_SECRET}"`,
-  `--field LINKEDIN_ACCESS_TOKEN="${accessToken}"`,
-  `--field LINKEDIN_PERSON_URN="${personUrn}"`,
-  ...(refreshToken ? [`--field LINKEDIN_REFRESH_TOKEN="${refreshToken}"`] : []),
-].join(" ");
-
-execSync(
-  `gh workflow run set-social-secrets.yml --repo ${REPO} ${fields}`,
-  { stdio: "inherit" }
-);
+execFileSync("gh", [
+  "workflow", "run", "set-social-secrets.yml",
+  "--repo", REPO,
+  "--field", `LINKEDIN_CLIENT_ID=${CLIENT_ID}`,
+  "--field", `LINKEDIN_CLIENT_SECRET=${CLIENT_SECRET}`,
+  "--field", `LINKEDIN_ACCESS_TOKEN=${accessToken}`,
+  "--field", `LINKEDIN_PERSON_URN=${personUrn}`,
+  ...(refreshToken ? ["--field", `LINKEDIN_REFRESH_TOKEN=${refreshToken}`] : []),
+], { stdio: "inherit" });
 
 console.log(`\n✓ Workflow dispatched!`);
 console.log(`  Progress: https://github.com/${REPO}/actions/workflows/set-social-secrets.yml`);

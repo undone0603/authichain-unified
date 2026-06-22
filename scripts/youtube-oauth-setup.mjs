@@ -112,8 +112,9 @@ const { refreshToken, channelId } = await new Promise((resolve, reject) => {
       const result = await oAuth2Client.getToken(code);
       tokens = result.tokens;
     } catch (e) {
+      const safeMsg = String(e.message).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       res.writeHead(500, { "Content-Type": "text/html" });
-      res.end(`<h2 style="color:red">Token exchange failed: ${e.message}</h2>`);
+      res.end(`<h2 style="color:red">Token exchange failed: ${safeMsg}</h2>`);
       server.close(() => reject(e));
       return;
     }
@@ -144,10 +145,11 @@ const { refreshToken, channelId } = await new Promise((resolve, reject) => {
       console.warn("[youtube-oauth] Could not fetch channel ID:", e.message);
     }
 
+    const safeChannelId = String(channelId).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     res.writeHead(200, { "Content-Type": "text/html" });
     res.end(`
       <h2 style="color:green;font-family:sans-serif">✓ ${label} YouTube Authorized!</h2>
-      <p>Channel ID: <code>${channelId}</code></p>
+      <p>Channel ID: <code>${safeChannelId}</code></p>
       <p>You can close this tab and check your terminal.</p>
     `);
     server.close();
