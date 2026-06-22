@@ -1,0 +1,247 @@
+name: Autonomous Marketing Pipeline
+
+on:
+  schedule:
+    - cron: '0 14 * * 1'   # every Monday at 14:00 UTC (LinkedIn/Reddit peak)
+    - cron: '0 16 * * 3'   # every Wednesday at 16:00 UTC (Twitter peak)
+    - cron: '0 9 * * 5'    # every Friday at 09:00 UTC (SEO sitemap refresh)
+  workflow_dispatch:
+    inputs:
+      strategy:
+        description: 'Which strategy to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - seo_only
+          - linkedin_only
+          - reddit_only
+          - content_drafts
+      dry_run:
+        description: 'Dry run (no live posts)'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: marketing-pipeline
+  cancel-in-progress: false
+
+jobs:
+  seo-refresh:
+    name: SEO — Sitemap refresh + IndexNow ping
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'seo_only') ||
+      github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ping IndexNow for all domains
+        run: |
+          KEY="authichain2026indexnow"
+          for DOMAIN in authichain.com qron.space strainchain.io govchain.us; do
+            echo "Pinging IndexNow for $DOMAIN..."
+            curl -s -o /dev/null -w "%{http_code}" \
+              "https://api.indexnow.org/indexnow?url=https://${DOMAIN}/sitemap.xml&key=${KEY}" \
+              -H "Content-Type: application/x-www-form-urlencoded" || true
+          done
+
+      - name: Submit sitemaps to Google Search Console
+        env:
+          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$GSC_SERVICE_ACCOUNT_JSON" ]; then
+            echo "GSC_SERVICE_ACCOUNT_JSON not set — skipping GSC ping"
+            exit 0
+          fi
+          pip install --quiet google-auth requests 2>/dev/null
+          python3 - <<'EOF'
+          import json, os
+          from google.oauth2 import service_account
+          import google.auth.transport.requests
+          import requests
+
+          creds_json = os.environ["GSC_SERVICE_ACCOUNT_JSON"]
+          creds = service_account.Credentials.from_service_account_info(
+              json.loads(creds_json),
+              scopes=["https://www.googleapis.com/auth/webmasters"]
+          )
+          auth_req = google.auth.transport.requests.Request()
+          creds.refresh(auth_req)
+          token = creds.token
+
+          sitemaps = [
+              ("https://authichain.com", "/sitemap.xml"),
+              ("https://qron.space", "/sitemap.xml"),
+              ("https://strainchain.io", "/sitemap.xml"),
+              ("https://govchain.us", "/sitemap.xml"),
+          ]
+          for site, path in sitemaps:
+              url = f"https://www.googleapis.com/webmasters/v3/sites/{requests.utils.quote(site + '/', safe='')}/sitemaps/{requests.utils.quote(site + path, safe='')}"
+              r = requests.put(url, headers={"Authorization": f"Bearer {token}"})
+              print(f"{site}{path}: {r.status_code}")
+          EOF
+
+  linkedin-post:
+    name: LinkedIn — Scheduled post
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'linkedin_only')) ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 14 * * 1')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Post to LinkedIn
+        env:
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          if [ -z "$LINKEDIN_ACCESS_TOKEN" ] || [ -z "$LINKEDIN_PERSON_URN" ]; then
+            echo "LinkedIn credentials not configured. Run scripts/linkedin-oauth-setup.mjs to set LINKEDIN_ACCESS_TOKEN + LINKEDIN_PERSON_URN secrets."
+            exit 0
+          fi
+
+          # Pick post based on week number (rotate through content)
+          WEEK=$(date +%W)
+          POSTS=(
+            "The global counterfeit market hit \$4.5 trillion in 2025.\n\nMost brands respond with paper holograms. We built a 5-agent AI consensus system instead.\n\nAuthiChain produces a cryptographic authenticity certificate for every physical product:\n→ Minted as ERC-721 NFT on Polygon\n→ EU Digital Product Passport compliant\n→ Backed by Bitcoin Ordinal inscription\n\nStarting at \$299/mo → authichain.com\n\n#blockchain #supplychain #authentication"
+            "AI QR codes have been around for 18 months. Most still break scanners.\n\nWe solved that.\n\nQRON uses FLUX.1 + ControlNet conditioning to generate QR art that's:\n✓ Aesthetically stunning (10+ artistic styles)\n✓ 100% scannable under real-world conditions\n\nEvery code is cryptographically signed and anchored on-chain.\n\nFirst 3 custom codes free → qron.space\n\n#branding #design #ai #qrcode"
+            "Government documents are verified with paper stamps in 2026.\n\nGovChain puts document provenance on Bitcoin L1.\n\nVerification = QR scan. 2 seconds. No central server.\n\nIn active conversations with 3 Michigan agencies. SBIR/SVIP eligible.\n\n→ govchain.us\n\n#govtech #blockchain #compliance"
+            "Cannabis operators: tired of METRC compliance paperwork?\n\nStrainChain integrates with METRC and anchors lab results to Bitcoin Ordinals.\n\nAuditors verify in 10 seconds via QR scan. Dispensaries show verified lab results at POS.\n\nOnboarding Michigan operators now. First 10 get 6 months free.\n\n→ strainchain.io\n\n#cannabis #compliance #blockchain"
+          )
+          IDX=$((WEEK % 4))
+          BODY="${POSTS[$IDX]}"
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "DRY RUN — would post to LinkedIn:"
+            printf "%b\n" "$BODY"
+            exit 0
+          fi
+
+          python3 - <<PYEOF
+          import os, json, requests, sys
+          token = os.environ["LINKEDIN_ACCESS_TOKEN"]
+          urn   = os.environ["LINKEDIN_PERSON_URN"]
+          body  = os.environ.get("POST_BODY", "")
+
+          payload = {
+              "author": urn,
+              "lifecycleState": "PUBLISHED",
+              "specificContent": {
+                  "com.linkedin.ugc.ShareContent": {
+                      "shareCommentary": {"text": body.replace("\\n", "\n")},
+                      "shareMediaCategory": "NONE"
+                  }
+              },
+              "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
+          }
+          r = requests.post(
+              "https://api.linkedin.com/v2/ugcPosts",
+              headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "X-Restli-Protocol-Version": "2.0.0"},
+              json=payload,
+              timeout=15
+          )
+          print(f"LinkedIn API status: {r.status_code}")
+          if not r.ok:
+              print(r.text, file=sys.stderr)
+              sys.exit(1)
+          print("Posted successfully:", r.headers.get("x-restli-id", ""))
+          PYEOF
+        env:
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          POST_BODY: ${{ env.BODY }}
+
+  content-drafts:
+    name: Content — Generate weekly drafts
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'content_drafts')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate content files exist
+        run: |
+          echo "Content files:"
+          ls -la content/launch/ 2>/dev/null || echo "No content/launch/ directory"
+          echo ""
+          echo "Sitemaps:"
+          ls -la public/sitemap*.xml 2>/dev/null || echo "No sitemaps"
+
+      - name: Show this week's scheduled posts
+        run: |
+          WEEK=$(date +%W)
+          DAY=$(date +%u)
+          echo "Week $WEEK, Day $DAY"
+          echo ""
+          echo "== Reddit posts ready to copy-paste =="
+          cat content/launch/qron_reddit_v3.md
+          echo ""
+          echo "== LinkedIn posts =="
+          cat content/launch/authichain_linkedin.md
+          echo ""
+          echo "== Twitter threads =="
+          cat content/launch/govchain_twitter.md
+
+  reddit-draft:
+    name: Reddit — Stage posts for r/QRcode + r/cannabis
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'reddit_only')) ||
+      (github.event_name == 'schedule' && github.event.schedule == '0 14 * * 1')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Post to Reddit via API
+        env:
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          if [ -z "$REDDIT_CLIENT_ID" ] || [ -z "$REDDIT_CLIENT_SECRET" ]; then
+            echo "Reddit API credentials not configured."
+            echo "Set REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USERNAME, REDDIT_PASSWORD as GitHub secrets."
+            echo ""
+            echo "=== Posts ready to submit manually ==="
+            cat content/launch/qron_reddit_v3.md
+            exit 0
+          fi
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "DRY RUN — would submit posts from content/launch/qron_reddit_v3.md"
+            exit 0
+          fi
+
+          pip install --quiet praw 2>/dev/null
+          python3 - <<PYEOF
+          import os, praw, sys
+
+          reddit = praw.Reddit(
+              client_id=os.environ["REDDIT_CLIENT_ID"],
+              client_secret=os.environ["REDDIT_CLIENT_SECRET"],
+              username=os.environ["REDDIT_USERNAME"],
+              password=os.environ["REDDIT_PASSWORD"],
+              user_agent="AuthiChain Marketing Bot v1.0"
+          )
+
+          posts = [
+              {
+                  "subreddit": "QRcode",
+                  "title": "We built a Cryptographic Art Engine that generates scannable QR codes using ControlNet + Magic Eye",
+                  "text": """Hey r/QRcode,\n\nTraditional QR codes are ugly. Standard AI QR codes are unreliable and break under varied lighting.\n\nWe built **QRON** (qron.space) — a "Living Portal" generator that uses Hugging Face ControlNet combined with Quantitative Colorimetry to ensure 100% scannability without sacrificing the artistic aesthetic.\n\nEvery QRON is cryptographically signed via Ed25519 and anchored to Polygon.\n\nWe've pushed error-correction to L4 across artistic styles (Cyber Neon, Technical Blueprint, Watercolor, Steampunk, Mandala) — curious what thresholds this community thinks are realistic.\n\nLive Demo: https://qron.space"""
+              }
+          ]
+
+          for p in posts:
+              try:
+                  submission = reddit.subreddit(p["subreddit"]).submit(p["title"], selftext=p["text"])
+                  print(f"Posted to r/{p['subreddit']}: {submission.shortlink}")
+              except Exception as e:
+                  print(f"Failed r/{p['subreddit']}: {e}", file=sys.stderr)
+          PYEOF
