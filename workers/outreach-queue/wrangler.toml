@@ -11,7 +11,7 @@ max_batch_timeout = 10
 
 [[kv_namespaces]]
 binding = "OUTREACH_KV"
-id = "0dbdce2318f14984b0a9c56bf2db83e7"
+id = "OUTREACH_KV_ID_REPLACE_ME"
 
 [vars]
 OUTREACH_FROM_EMAIL = "noreply@qron.space"

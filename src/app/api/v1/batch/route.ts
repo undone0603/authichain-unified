@@ -1,5 +1,3 @@
-export const runtime = "nodejs";
-
 import { NextResponse } from 'next/server';
 
 // POST /api/v1/batch - Bulk create QR codes

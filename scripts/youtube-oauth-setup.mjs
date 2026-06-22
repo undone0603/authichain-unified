@@ -3,133 +3,201 @@
  *
  * Usage:
  *   node scripts/youtube-oauth-setup.mjs
- *     -> prints instructions to create OAuth credentials
+ *     → prints instructions to create OAuth credentials
  *
  *   YOUTUBE_CLIENT_ID=xxx YOUTUBE_CLIENT_SECRET=yyy node scripts/youtube-oauth-setup.mjs
- *     -> starts local server on port 9002, opens Google consent,
- *        exchanges code for tokens, then pushes all secrets to
- *        Cloudflare via GitHub Actions automatically
+ *     → starts local server on port 9002, opens Google consent,
+ *       exchanges code for tokens, then pushes all secrets to
+ *       Cloudflare via GitHub Actions automatically
  *
  *   YOUTUBE_CLIENT_ID=xxx YOUTUBE_CLIENT_SECRET=yyy YOUTUBE_CHANNEL=qron node scripts/youtube-oauth-setup.mjs
- *     -> same flow but pushes YOUTUBE_QRON_* secrets (for the QRON channel)
+ *     → same flow but pushes YOUTUBE_QRON_* secrets (for the QRON channel)
  */
 
 import { google } from "googleapis";
 import open from "open";
 import { createServer } from "http";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const CLIENT_ID     = process.env.YOUTUBE_CLIENT_ID     || "";
 const CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET || "";
 const CHANNEL       = (process.env.YOUTUBE_CHANNEL || "authichain").toLowerCase(); // "authichain" | "qron"
 const REDIRECT_URI  = "http://localhost:9002/callback";
+const REPO          = "undone0603/authichain-unified";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/youtube.upload",
-  "https://www.googleapis.com/auth/youtube",
+  "https://www.googleapis.com/auth/youtube.readonly",
 ];
 
-// HTML escape helper to prevent XSS in OAuth callback responses
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
-}
+// ─── Step 0: No credentials yet ──────────────────────────────────────────────
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.log(`
-==============================================================
-  YOUTUBE OAUTH SETUP - AuthiChain
-==============================================================
+╔══════════════════════════════════════════════════════════════════╗
+║        YouTube OAuth Setup — Step 1: Create Credentials         ║
+╚══════════════════════════════════════════════════════════════════╝
 
-Step 1: Create OAuth 2.0 credentials in Google Cloud Console
-  -> https://console.cloud.google.com/apis/credentials
-  -> Application type: Web application
-  -> Authorized redirect URIs: http://localhost:9002/callback
+1. Enable the YouTube Data API v3:
+   https://console.cloud.google.com/apis/library/youtube.googleapis.com
 
-Step 2: Enable YouTube Data API v3
-  -> https://console.cloud.google.com/apis/library/youtube.googleapis.com
+2. Create an OAuth 2.0 Client ID:
+   https://console.cloud.google.com/apis/credentials/oauthclient
 
-Step 3: Run this script with your credentials:
-  YOUTUBE_CLIENT_ID=<your-id> YOUTUBE_CLIENT_SECRET=<your-secret> node scripts/youtube-oauth-setup.mjs
+   • Application type : Web application
+   • Name             : AuthiChain YouTube
+   • Redirect URI     : http://localhost:9002/callback
 
-Optional: Specify channel (default: authichain)
-  YOUTUBE_CHANNEL=qron YOUTUBE_CLIENT_ID=<id> YOUTUBE_CLIENT_SECRET=<secret> node scripts/youtube-oauth-setup.mjs
-==============================================================
+3. Configure the OAuth consent screen:
+   • Scopes: youtube.upload, youtube.readonly
+   • Test users: add the YouTube account email
+
+4. Click CREATE → copy the Client ID + Client Secret.
+
+5. Re-run with your credentials:
+
+   YOUTUBE_CLIENT_ID=<id> YOUTUBE_CLIENT_SECRET=<secret> node scripts/youtube-oauth-setup.mjs
+
+   For the QRON channel (same client, different account):
+   YOUTUBE_CLIENT_ID=<id> YOUTUBE_CLIENT_SECRET=<secret> YOUTUBE_CHANNEL=qron node scripts/youtube-oauth-setup.mjs
 `);
   process.exit(0);
 }
 
-const auth = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-const authUrl = auth.generateAuthUrl({ access_type: "offline", scope: SCOPES, prompt: "consent" });
+// ─── Step 1: Build auth URL via googleapis ────────────────────────────────────
 
-console.log("\n Opening browser for Google OAuth consent...");
-console.log(`Auth URL: ${authUrl}\n`);
+const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 
-const server = createServer(async (req, res) => {
-  const url = new URL(req.url, `http://localhost:9002`);
-  if (url.pathname !== "/callback") {
-    res.writeHead(404);
-    res.end("Not found");
-    return;
-  }
+const authUrl = oAuth2Client.generateAuthUrl({
+  access_type: "offline",
+  prompt:      "consent",     // force re-consent to always get a refresh_token
+  scope:       SCOPES,
+});
 
-  const code  = url.searchParams.get("code");
-  const error = url.searchParams.get("error");
+const label = CHANNEL === "qron" ? "QRON" : "AuthiChain";
+console.log(`\n[youtube-oauth] Setting up ${label} channel. Opening Google consent page...`);
+console.log(`  ${authUrl}\n`);
+if (CHANNEL === "qron") {
+  console.log("[youtube-oauth] Sign in with the QRON YouTube account (not your personal account).\n");
+} else {
+  console.log("[youtube-oauth] Sign in with the AuthiChain YouTube account.\n");
+}
 
-  if (error || !code) {
-    res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
-    // Sanitize error message to prevent reflected XSS
-    const safeError = escapeHtml(error || "no code returned");
-    res.end(`<h2 style="color:red">Error: ${safeError}</h2>`);
-    server.close(() => reject(new Error(error || "no code returned")));
-    return;
-  }
+await open(authUrl);
 
-  try {
-    const { tokens } = await auth.getToken(code);
-    auth.setCredentials(tokens);
+// ─── Step 2: Local HTTP server to catch callback ──────────────────────────────
 
-    const prefix = CHANNEL === "qron" ? "YOUTUBE_QRON" : "YOUTUBE";
+console.log("[youtube-oauth] Waiting for Google to redirect to http://localhost:9002/callback ...\n");
 
-    const secrets = {
-      [`${prefix}_CLIENT_ID`]:           CLIENT_ID,
-      [`${prefix}_CLIENT_SECRET`]:       CLIENT_SECRET,
-      [`${prefix}_ACCESS_TOKEN`]:        tokens.access_token,
-      [`${prefix}_REFRESH_TOKEN`]:       tokens.refresh_token,
-      [`${prefix}_TOKEN_EXPIRY`]:        String(tokens.expiry_date),
-    };
+const { refreshToken, channelId } = await new Promise((resolve, reject) => {
+  const server = createServer(async (req, res) => {
+    const url = new URL(req.url, "http://localhost:9002");
+    if (url.pathname !== "/callback") { res.writeHead(404); res.end(); return; }
 
-    console.log("\n Tokens received. Pushing secrets to GitHub Actions...");
+    const code  = url.searchParams.get("code");
+    const error = url.searchParams.get("error");
 
-    const repoSlug = execSync("gh repo view --json nameWithOwner -q .nameWithOwner").toString().trim();
-
-    for (const [key, value] of Object.entries(secrets)) {
-      if (!value) { console.warn(`  Skipping ${key} (empty)`); continue; }
-      execSync(`gh secret set ${key} --body "${value}" --repo ${repoSlug}`, { stdio: "inherit" });
-      console.log(`  Set ${key}`);
+    if (error || !code) {
+      const safe = String(error || "no code").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      res.writeHead(400, { "Content-Type": "text/html" });
+      res.end(`<h2 style="color:red">Error: ${safe}</h2>`);
+      server.close(() => reject(new Error(error || "no code returned")));
+      return;
     }
 
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(`<h2 style="color:green">Success! Secrets pushed to GitHub. You can close this tab.</h2>`);
-    server.close(() => resolve(tokens));
-  } catch (err) {
-    res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(`<h2 style="color:red">Internal error. Check console.</h2>`);
-    server.close(() => reject(err));
-  }
-});
+    console.log("[youtube-oauth] Authorization code received. Exchanging for tokens...");
 
-const tokens = await new Promise((resolve, reject) => {
-  server.listen(9002, () => {
-    console.log(" Listening on http://localhost:9002/callback");
-    open(authUrl);
+    let tokens;
+    try {
+      const result = await oAuth2Client.getToken(code);
+      tokens = result.tokens;
+    } catch (e) {
+      const safeMsg = String(e.message).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      res.writeHead(500, { "Content-Type": "text/html" });
+      res.end(`<h2 style="color:red">Token exchange failed: ${safeMsg}</h2>`);
+      server.close(() => reject(e));
+      return;
+    }
+
+    if (!tokens.refresh_token) {
+      res.writeHead(400, { "Content-Type": "text/html" });
+      res.end(`
+        <h2 style="color:orange;font-family:sans-serif">No refresh token returned</h2>
+        <p>Revoke app access at <a href="https://myaccount.google.com/permissions">Google Account Permissions</a>
+        and re-run this script to force a new consent prompt.</p>
+      `);
+      server.close(() => reject(new Error(
+        "No refresh_token returned. Revoke at https://myaccount.google.com/permissions and re-run."
+      )));
+      return;
+    }
+
+    // Fetch channel ID
+    oAuth2Client.setCredentials(tokens);
+    const yt = google.youtube({ version: "v3", auth: oAuth2Client });
+    let channelId = "";
+    try {
+      const chRes = await yt.channels.list({ part: ["id", "snippet"], mine: true });
+      channelId = chRes.data.items?.[0]?.id ?? "";
+      const title = chRes.data.items?.[0]?.snippet?.title ?? "";
+      console.log(`[youtube-oauth] Channel: ${title} (${channelId})`);
+    } catch (e) {
+      console.warn("[youtube-oauth] Could not fetch channel ID:", e.message);
+    }
+
+    const safeChannelId = String(channelId).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    res.writeHead(200, { "Content-Type": "text/html" });
+    res.end(`
+      <h2 style="color:green;font-family:sans-serif">✓ ${label} YouTube Authorized!</h2>
+      <p>Channel ID: <code>${safeChannelId}</code></p>
+      <p>You can close this tab and check your terminal.</p>
+    `);
+    server.close();
+    resolve({ refreshToken: tokens.refresh_token, channelId });
   });
+
+  server.listen(9002);
+  server.on("error", reject);
 });
 
-console.log("\n YouTube OAuth setup complete!");
-console.log(`Channel: ${CHANNEL}`);
-console.log("Tokens:", tokens);
+// ─── Step 3: Push secrets to Cloudflare via GitHub Actions ───────────────────
+
+console.log("\n╔══════════════════════════════════════════════════════════════╗");
+console.log(`║   ✓ Tokens obtained (${label}). Pushing to Cloudflare...   ║`);
+console.log("╚══════════════════════════════════════════════════════════════╝\n");
+console.log(`YOUTUBE_CLIENT_ID      = ${CLIENT_ID}`);
+console.log(`YOUTUBE_CLIENT_SECRET  = ${CLIENT_SECRET.slice(0, 6)}...`);
+
+let fieldPairs;
+if (CHANNEL === "qron") {
+  console.log(`YOUTUBE_QRON_REFRESH_TOKEN = ${refreshToken.slice(0, 12)}...`);
+  console.log(`YOUTUBE_QRON_CHANNEL_ID    = ${channelId}\n`);
+  fieldPairs = [
+    ["YOUTUBE_CLIENT_ID", CLIENT_ID],
+    ["YOUTUBE_CLIENT_SECRET", CLIENT_SECRET],
+    ["YOUTUBE_QRON_REFRESH_TOKEN", refreshToken],
+    ["YOUTUBE_QRON_CHANNEL_ID", channelId],
+  ];
+} else {
+  console.log(`YOUTUBE_REFRESH_TOKEN  = ${refreshToken.slice(0, 12)}...`);
+  console.log(`YOUTUBE_CHANNEL_ID     = ${channelId}\n`);
+  fieldPairs = [
+    ["YOUTUBE_CLIENT_ID", CLIENT_ID],
+    ["YOUTUBE_CLIENT_SECRET", CLIENT_SECRET],
+    ["YOUTUBE_REFRESH_TOKEN", refreshToken],
+    ["YOUTUBE_CHANNEL_ID", channelId],
+  ];
+}
+
+const ghArgs = ["workflow", "run", "set-social-secrets.yml", "--repo", REPO];
+for (const [k, v] of fieldPairs) ghArgs.push("--field", `${k}=${v}`);
+execFileSync("gh", ghArgs, { stdio: "inherit" });
+
+console.log(`\n✓ Workflow dispatched!`);
+console.log(`  Progress: https://github.com/${REPO}/actions/workflows/set-social-secrets.yml`);
+console.log(`\nYouTube uploads are now configured for the ${label} channel (${channelId}).\n`);
+
+if (CHANNEL !== "qron") {
+  console.log(`To set up the QRON channel, run:`);
+  console.log(`  YOUTUBE_CLIENT_ID=${CLIENT_ID} YOUTUBE_CLIENT_SECRET=<secret> YOUTUBE_CHANNEL=qron node scripts/youtube-oauth-setup.mjs\n`);
+}

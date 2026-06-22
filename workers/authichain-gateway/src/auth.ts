@@ -16,74 +16,60 @@ export interface TenantContext {
   };
 }
 
-const CACHE_TTL = 300;
+const CACHE_TTL = 300; // 5 minutes
 
-function normalizeBaseUrl(value: string | undefined | null): string | null {
-  if (!value) return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  try {
-    return new URL(trimmed).toString().replace(/\/$/, "");
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * Resolve tenant from API key or Bearer token.
+ * Check KV cache first (5min TTL), fallback to backend lookup.
+ */
 export async function resolveTenant(request: Request, env: Env): Promise<TenantContext | null> {
   const apiKey = extractApiKey(request);
   if (!apiKey) return null;
 
+  // Check KV cache
   const cacheKey = `tenant:${apiKey}`;
   const cached = await env.TENANT_CACHE.get(cacheKey, "json");
   if (cached) return cached as TenantContext;
 
+  // Fetch from backend
   const tenant = await fetchTenantFromBackend(apiKey, env);
   if (!tenant) return null;
 
+  // Cache the result
   await env.TENANT_CACHE.put(cacheKey, JSON.stringify(tenant), { expirationTtl: CACHE_TTL });
+
   return tenant;
 }
 
 function extractApiKey(request: Request): string | null {
+  // Check X-API-Key header
   const apiKeyHeader = request.headers.get("X-API-Key");
   if (apiKeyHeader) return apiKeyHeader;
 
+  // Check Authorization: Bearer <token>
   const auth = request.headers.get("Authorization");
   if (auth?.startsWith("Bearer ")) {
-    return auth.slice(7).trim() || null;
+    return auth.slice(7);
   }
 
-  try {
-    const url = new URL(request.url);
-    const queryKey = url.searchParams.get("api_key");
-    if (queryKey) return queryKey;
-  } catch {
-    return null;
-  }
+  // Check query parameter (for OpenAPI/GPT Actions compatibility)
+  const url = new URL(request.url);
+  const queryKey = url.searchParams.get("api_key");
+  if (queryKey) return queryKey;
 
   return null;
 }
 
 async function fetchTenantFromBackend(apiKey: string, env: Env): Promise<TenantContext | null> {
-  const backendUrl = normalizeBaseUrl((env as any).BACKEND_URL);
-
-  if (!backendUrl) {
-    console.error("BACKEND_URL is missing or invalid");
-    return null;
-  }
-
   try {
-    const requestUrl = new URL("/api/internal/tenant", backendUrl);
-    requestUrl.searchParams.set("apiKey", apiKey);
-
-    const res = await fetch(requestUrl.toString(), {
-      headers: { "X-Internal-Secret": (env as any).INTERNAL_SECRET },
+    const res = await fetch(`${env.BACKEND_URL}/api/internal/tenant?apiKey=${encodeURIComponent(apiKey)}`, {
+      headers: { "X-Internal-Secret": env.INTERNAL_SECRET },
     });
 
     if (!res.ok) return null;
 
     const data = (await res.json()) as any;
-    if (!data?.id) return null;
+    if (!data.id) return null;
 
     const features = data.features || {};
     const plan = features.pricing_tier || "free";
@@ -110,8 +96,7 @@ async function fetchTenantFromBackend(apiKey: string, env: Env): Promise<TenantC
         canAccessCannabis: features.canAccessCannabis || false,
       },
     };
-  } catch (err) {
-    console.error("fetchTenantFromBackend failed:", err);
+  } catch {
     return null;
   }
 }

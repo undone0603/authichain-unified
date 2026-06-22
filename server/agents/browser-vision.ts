@@ -10,16 +10,12 @@
  *   - PLAYWRIGHT_EXECUTABLE_PATH env var, or Chromium found on PATH
  */
 
-// playwright-core is an optional runtime dep (not installed in CF Worker / CI builds).
-// Types are erased at compile time; the value import is loaded lazily in launchBrowser()
-// so merely importing this module never requires the package to be present.
-// @ts-expect-error optional dependency, types only
-import type { Browser, Page } from 'playwright-core';
-import { invokeLLM, parseLLMContent, type Message, type Tool } from '../_core/llm';
-import { logActivity, getDb, enqueueTask } from '../db';
-import { leads } from '../../drizzle/schema';
+import { chromium, type Browser, type Page } from 'playwright-core';
+import { invokeLLM, parseLLMContent, type Message, type Tool } from '../_core/llm.js';
+import { logActivity, getDb, enqueueTask } from '../db.js';
+import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
-import type { MissionTask as Task } from '../../drizzle/schema';
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 const VIEWPORT   = { width: 1280, height: 800 };
@@ -107,8 +103,6 @@ const VISION_TOOLS: Tool[] = [
 
 // ── Browser lifecycle helpers ────────────────────────────────────────────────
 async function launchBrowser(): Promise<Browser> {
-  // @ts-expect-error optional runtime dependency, loaded only when a browser run is invoked
-  const { chromium } = await import('playwright-core');
   return chromium.launch({
     headless: true,
     executablePath: EXEC_PATH,
@@ -185,7 +179,7 @@ async function visionLoop(page: Page, objective: string): Promise<string> {
 
         case 'scroll': {
           const px = args.pixels ?? 600;
-          await page.evaluate((y: number) => window.scrollBy(0, y), args.direction === 'down' ? px : -px);
+          await page.evaluate((y) => window.scrollBy(0, y), args.direction === 'down' ? px : -px);
           await page.waitForTimeout(400);
           break;
         }

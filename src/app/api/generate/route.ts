@@ -1,5 +1,3 @@
-export const runtime = 'nodejs';
-
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
@@ -43,19 +41,6 @@ const PRESET_PROMPTS: Record<string, string> = {
     'Organic elemental motifs of leaves vines water and fire swirling around',
 };
 
-// Allowed URL schemes for targetUrl — prevents javascript: / data: SSRF vectors
-const ALLOWED_URL_SCHEMES = ['https:', 'http:'];
-
-function isValidTargetUrl(raw: unknown): raw is string {
-  if (typeof raw !== 'string' || raw.length > 2048) return false;
-  try {
-    const parsed = new URL(raw);
-    return ALLOWED_URL_SCHEMES.includes(parsed.protocol);
-  } catch {
-    return false;
-  }
-}
-
 interface GenerateBody {
   targetUrl?: string;
   prompt?: string;
@@ -66,14 +51,10 @@ interface GenerateBody {
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
-
-    // SECURITY: getUser() performs a server-side JWT validation against Supabase Auth.
-    // The previous getSession() only decoded the local JWT without re-validating it,
-    // meaning a tampered or replayed token could bypass authentication.
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user)
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session)
       return NextResponse.json(
         { message: 'Authentication required.' },
         { status: 401 }
@@ -88,8 +69,8 @@ export async function POST(request: Request) {
 
     const { targetUrl, prompt, presetId, mode = 'static' } = body;
 
-    // Rate limiting
-    const rateLimit = await checkRateLimit(user.id, 5, 1);
+    // â”€â”€ Rate Limiting check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const rateLimit = await checkRateLimit(session.user.id, 5, 1);
     if (!rateLimit.ok) {
       return NextResponse.json(
         { message: 'Too many requests. Please wait a minute.' },
@@ -97,23 +78,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // SECURITY: Validate targetUrl scheme to prevent SSRF / javascript: injection.
-    // Previously only checked truthiness — an attacker could pass javascript:alert(1)
-    // or a private IP range as the QR destination.
-    if (!isValidTargetUrl(targetUrl))
+    if (!targetUrl)
       return NextResponse.json(
-        { message: 'Destination URL is required and must be a valid http/https URL.' },
+        { message: 'Destination URL is required.' },
         { status: 400 }
       );
-
     if (!prompt && !presetId)
       return NextResponse.json(
         { message: 'A prompt or preset is required.' },
         { status: 400 }
       );
 
-    // Credit check / deduction
-    const creditResult = await deductCredit(user.id);
+    // â”€â”€ Credit check / deduction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const creditResult = await deductCredit(session.user.id);
     if (!creditResult.ok) {
       return NextResponse.json(
         { message: creditResult.error, code: 'LIMIT_REACHED' },
@@ -121,17 +98,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Resolve prompt from preset or custom
+    // â”€â”€ Resolve prompt from preset or custom â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let finalPrompt = prompt || '';
     const presetPrompt = presetId ? PRESET_PROMPTS[presetId] : null;
 
+    // Try DB-backed preset if not in static map
     if (presetId && !presetPrompt) {
       try {
-        const adminClient = createAdminClient(
+        const admin = createAdminClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.SUPABASE_SERVICE_ROLE_KEY!
         );
-        const { data: dbPreset } = await adminClient
+        const { data: dbPreset } = await admin
           .from('qron_presets')
           .select('prompt')
           .eq('id', presetId)
@@ -153,9 +131,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
 
-    // Generate via Hugging Face ControlNet. A paying customer must receive a
-    // *scannable* QR code — that's the promise. If the model is unavailable,
-    // we refund the credit and fail the request. No non-scannable fallback.
+    // â”€â”€ Generate via Hugging Face Inference API (Phase 3) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let imageUrl = '';
     let hfResult: Awaited<ReturnType<typeof generateLivingQR>> | null = null;
     try {
@@ -166,25 +142,10 @@ export async function POST(request: Request) {
       imageUrl = hfResult.imageUrl;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error('[generate] HF ControlNet generation failed:', err);
-      await logAutomation('generate.hf', 'event', 'failure', { userId: user.id, presetId, mode }, msg);
-      // Refund the credit so a customer isn't charged for a generation they
-      // didn't receive. Unlimited plans (remaining === Infinity) weren't
-      // deducted, so skip the refund.
-      if (creditResult.remaining !== Infinity) {
-        try {
-          const refundClient = createAdminClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-          );
-          await refundClient.rpc('add_generation_credits', { user_uuid: user.id, amount: 1 });
-        } catch (refundErr) {
-          console.error('[generate] Credit refund failed (manual review needed):', refundErr);
-          await logAutomation('generate.refund', 'event', 'failure', { userId: user.id }, refundErr instanceof Error ? refundErr.message : String(refundErr));
-        }
-      }
+      console.error('[generate] HF Generation failed:', err);
+      await logAutomation('generate.hf', 'event', 'failure', { userId: session.user.id, presetId, mode }, msg);
       return NextResponse.json(
-        { message: 'AI generation engine is temporarily unavailable. Your credit was not used — try again in 60s.' },
+        { message: 'AI generation engine is temporarily unavailable. Try again in 60s.' },
         { status: 502 }
       );
     }
@@ -192,8 +153,8 @@ export async function POST(request: Request) {
     if (!imageUrl)
       return NextResponse.json({ message: 'No image returned' }, { status: 502 });
 
-    // Store generation in Supabase
-    const adminClient = createAdminClient(
+    // â”€â”€ Store generation in Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const admin = createAdminClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
@@ -202,17 +163,18 @@ export async function POST(request: Request) {
     const storableImageUrl = imageUrl.startsWith('data:')
       ? `generated:${qronId}`
       : imageUrl;
-    await adminClient
+    await admin
       .from('qron_generations')
       .insert({
         id: qronId,
-        user_id: user.id,
+        user_id: session.user.id,
         image_url: storableImageUrl,
         destination_url: targetUrl,
         prompt: finalPrompt,
         preset_id: presetId || null,
         mode,
         provider: 'huggingface',
+        // Log scannability data in a flexible field (mode or metadata)
         metadata: {
           scannable: hfResult?.scannable,
           attempts: hfResult?.attempts,
@@ -223,17 +185,17 @@ export async function POST(request: Request) {
         ({ error }) => {
           if (error) {
             console.warn('[generate] Supabase insert warning:', error.message);
-            void logAutomation('generate.persist', 'event', 'failure', { qronId, userId: user.id }, error.message);
+            void logAutomation('generate.persist', 'event', 'failure', { qronId, userId: session.user.id }, error.message);
           }
         },
         (err) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.error('[generate] Supabase insert failed (non-fatal):', err);
-          void logAutomation('generate.persist', 'event', 'failure', { qronId, userId: user.id }, msg);
+          void logAutomation('generate.persist', 'event', 'failure', { qronId, userId: session.user.id }, msg);
         }
       );
 
-    // Register provenance with AuthiChain
+    // â”€â”€ Register provenance with AuthiChain â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let registrationId: string | null = null;
     const authichainUrl = process.env.AUTHICHAIN_API_URL;
     if (authichainUrl) {
@@ -245,7 +207,7 @@ export async function POST(request: Request) {
             'X-API-Key': process.env.AUTHICHAIN_API_SECRET || '',
           },
           body: JSON.stringify({
-            user_id: user.id,
+            user_id: session.user.id,
             asset_url: imageUrl,
             destination_url: targetUrl,
             prompt: finalPrompt,
@@ -264,7 +226,7 @@ export async function POST(request: Request) {
           '[generate] Provenance registration failed (non-fatal):',
           err
         );
-        await logAutomation('generate.provenance_register', 'event', 'failure', { qronId, userId: user.id }, msg);
+        await logAutomation('generate.provenance_register', 'event', 'failure', { qronId, userId: session.user.id }, msg);
       }
     }
 

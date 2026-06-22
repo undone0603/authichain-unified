@@ -1,4 +1,4 @@
-import { runSocialMultiplier } from "./multiplier";
+import { runSocialMultiplier } from "./multiplier.js";
 
 async function generateAllEcosystemBundles() {
   console.log("🌌 Generating Social Multiplier Bundles for the Ecosystem...");

@@ -9,10 +9,10 @@
  *   pnpm tsx server/missions/seed.ts        (env loaded from .env automatically by tsx)
  */
 
-import { createMission, getMissions, getDb } from '../db';
-import { leads, missionTasks } from '../../drizzle/schema';
+import { createMission, getMissions, getDb } from '../db.js';
+import { leads, missionTasks } from '../../drizzle/schema.js';
 import { eq, and } from 'drizzle-orm';
-import type { MissionType } from './types';
+import type { MissionType } from './types.js';
 
 const ALL_TYPES: MissionType[] = [
   'GOV_PILOT',
@@ -89,14 +89,8 @@ async function seedLeads(db: NonNullable<Awaited<ReturnType<typeof getDb>>>) {
 
     if (existing.length === 0) {
       await db.insert(leads).values({
-        email: lead.email,
-        name: (lead as any).name ?? null,
-        company: (lead as any).company ?? null,
-        title: (lead as any).title ?? null,
-        source: (lead as any).source ?? null,
-        status: (lead as any).status ?? "new",
-        industry: (lead as any).industry ?? null,
-        metadata: (lead as any).metadata ?? null,
+        ...lead,
+        nextActionAt: (lead as any).nextActionAt ?? null,
       });
       inserted++;
     }
@@ -137,7 +131,7 @@ async function seedFailedTask(
   if (tasks[0]) {
     await db
       .update(missionTasks)
-      .set({ status: 'failed', error: 'seeded failure for test', updatedAt: new Date() })
+      .set({ status: 'FAILED', error: 'seeded failure for test', updatedAt: new Date() })
       .where(eq(missionTasks.id, tasks[0].id));
     return tasks[0].id;
   }

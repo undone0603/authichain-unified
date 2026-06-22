@@ -44,15 +44,10 @@ vi.mock('./agents/browser-vision.js', () => ({
 // ─── Mock db lifecycle functions ──────────────────────────────────────────────
 
 vi.mock('./db.js', () => ({
-  getDb:            vi.fn().mockResolvedValue(null),
   markTaskRunning:  vi.fn().mockResolvedValue(true),
   markTaskDone:     vi.fn().mockResolvedValue(undefined),
   markTaskFailed:   vi.fn().mockResolvedValue(undefined),
   logActivity:      vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('./agent-xp-service.js', () => ({
-  awardXp: vi.fn().mockResolvedValue(null),
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -67,10 +62,10 @@ function makeTask(kind: string): MissionTask {
     payload: {},
     status: 'PENDING',
     error: null,
-    order: 0,
-    priority: 0,
     result: null,
+    priority: 0,
     scheduledAt: null,
+    order: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

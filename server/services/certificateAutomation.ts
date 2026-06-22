@@ -31,7 +31,7 @@ interface CertificateData {
 
 /**
  * Generate certificate automatically after payment
- * Called by the Stripe webhook handler after checkout.session.completed
+ * This is called by the Paddle webhook handler
  */
 export async function generateCertificateAfterPayment(certificateId: number): Promise<void> {
   const db = await getDb();
@@ -341,41 +341,21 @@ async function sendCertificateEmail(
     return;
   }
 
-  // Send email via the unified provider chain (Resend → SMTP → Gmail OAuth2).
-  const { sendEmail } = await import('../email-service');
-  const customerName = (user as any).name || 'there';
-  const isAuthentic = certificateData.isAuthentic === 1;
-  const verdict = isAuthentic
-    ? 'AUTHENTIC ✅'
-    : 'COUNTERFEIT ❌';
-
-  const body = [
-    `Hi ${customerName},`,
-    ``,
-    `Your AuthiChain ${certificateData.tier?.toUpperCase?.() || 'authentication'} certificate is ready.`,
-    ``,
-    `Product:        ${certificateData.productName}`,
-    `Certificate #:  ${certificateData.certificateNumber}`,
-    `Result:         ${verdict}`,
-    `Confidence:     ${certificateData.confidenceScore}%`,
-    `NFT Token:      ${nftData.tokenId}`,
-    ``,
-    `View certificate: ${certificateUrl}`,
-    ``,
-    `Your certificate is permanently stored on the blockchain and can be verified anytime.`,
-    ``,
-    `— The AuthiChain Team`,
-  ].join('\n');
-
-  const result = await sendEmail({
+  const emailSent = await sendCrispCertificateEmail({
     to: customerEmail,
-    subject: `Your AuthiChain Certificate — ${certificateData.productName}`,
-    body,
+    customerName: user.name || undefined,
+    certificateNumber: certificateData.certificateNumber,
+    productName: certificateData.productName,
+    tier: certificateData.tier,
+    isAuthentic: certificateData.isAuthentic === 1,
+    confidenceScore: certificateData.confidenceScore,
+    certificateUrl,
+    nftTokenId: nftData.tokenId,
   });
 
-  if (result.status === 'sent') {
-    console.log(`[Email] Certificate email sent to ${maskEmail(customerEmail)} via ${result.provider}`);
+  if (emailSent) {
+    console.log(`[Email] Certificate email sent successfully to ${maskEmail(customerEmail)}`);
   } else {
-    console.error(`[Email] Certificate email ${result.status}: ${result.reason ?? 'unknown'}`);
+    console.error(`[Email] Failed to send certificate email to ${maskEmail(customerEmail)}`);
   }
 }

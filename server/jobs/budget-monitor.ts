@@ -29,10 +29,7 @@ async function notifyAdmins(title: string, message: string, details: any) {
 }
 
 export async function runBudgetMonitor() {
-  // NOTE: getBudgetStatus() returns the budget_config row; this monitor expects a
-  // computed per-category status ({ llm, ads, enrichment, period }). Typed loosely
-  // here to unblock the build — see smoke-test follow-up to implement the real shape.
-  const status = await getBudgetStatus() as any;
+  const status = await getBudgetStatus();
   let alerts = 0;
   let recipients = 0;
 

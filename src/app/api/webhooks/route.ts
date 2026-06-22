@@ -1,5 +1,3 @@
-﻿export const runtime = 'nodejs';
-
 /**
  * @file route.ts
  * @project qron-platform

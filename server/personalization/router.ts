@@ -26,7 +26,6 @@ export const personalizationRouter = router({
       targetElement: z.string().optional().default("headline"),
     }))
     .query(async ({ input }) => {
-      try {
       const db = await getDb();
       if (!db) return null;
 
@@ -83,7 +82,7 @@ export const personalizationRouter = router({
           .update(visitorProfiles)
           .set({
             pageViews: profile.pageViews + 1,
-            lastSeen: new Date(),
+            lastSeenAt: new Date(),
           })
           .where(eq(visitorProfiles.id, profile.id));
       }
@@ -108,13 +107,13 @@ export const personalizationRouter = router({
           utmSource: profile.utmSource || undefined,
           utmMedium: profile.utmMedium || undefined,
           utmCampaign: profile.utmCampaign || undefined,
-          deviceType: (profile.deviceType as any) || undefined,
+          deviceType: profile.deviceType as "desktop" | "mobile" | "tablet" | undefined,
           segment: profile.segment || undefined,
         },
         rules.map(r => ({
           id: r.id,
-          conditions: JSON.stringify(r.conditions),
-          content: JSON.stringify(r.content),
+          conditions: JSON.stringify(r.conditions ?? {}),
+          content: JSON.stringify(r.content ?? {}),
           priority: r.priority ?? 0,
         }))
       );
@@ -142,7 +141,7 @@ export const personalizationRouter = router({
           await db
             .update(personalizationRules)
             .set({
-              conversionRate: String(newRate),
+              conversionRate: newRate,
             })
             .where(eq(personalizationRules.id, matchedRule.id));
         }
@@ -155,10 +154,6 @@ export const personalizationRouter = router({
       }
 
       return null;
-      } catch {
-        // Degrade gracefully if the database is unavailable.
-        return null;
-      }
     }),
 
   // Track conversion (public endpoint)
@@ -207,7 +202,7 @@ export const personalizationRouter = router({
           await db
             .update(personalizationRules)
             .set({
-              conversionRate: String(newRate),
+              conversionRate: newRate,
             })
             .where(eq(personalizationRules.id, input.ruleId));
         }
@@ -232,11 +227,14 @@ export const personalizationRouter = router({
 
       await db.insert(personalizationRules).values({
         name: input.name,
+        description: input.description,
         targetElement: input.targetElement,
-        conditions: input.conditions,
+        conditions: JSON.stringify(input.conditions),
         content: input.content,
         priority: input.priority,
         status: "draft",
+        aiGenerated: 0,
+        createdBy: ctx.user.id,
       });
 
       return { success: true };
@@ -263,10 +261,12 @@ export const personalizationRouter = router({
         await db.insert(personalizationRules).values({
           name: rule.name,
           targetElement: input.targetElement,
-          conditions: rule.conditions,
+          conditions: JSON.stringify(rule.conditions),
           content: rule.content,
           priority: 0,
           status: "draft",
+          aiGenerated: 1,
+          createdBy: ctx.user.id,
         });
       }
 
@@ -402,11 +402,11 @@ export const personalizationRouter = router({
 
       const analysis = await analyzePersonalizationPerformance(
         rules.map(r => ({
-          name: r.name ?? "",
-          conditions: JSON.stringify(r.conditions),
+          name: r.name,
+          conditions: JSON.stringify(r.conditions ?? {}),
           views: r.views,
           conversions: r.conversions,
-          conversionRate: Number(r.conversionRate ?? 0),
+          conversionRate: r.conversionRate,
         }))
       );
 
@@ -414,7 +414,7 @@ export const personalizationRouter = router({
         totalRules: rules.length,
         totalViews: rules.reduce((sum, r) => sum + r.views, 0),
         totalConversions: rules.reduce((sum, r) => sum + r.conversions, 0),
-        avgConversionRate: rules.reduce((sum, r) => sum + Number(r.conversionRate ?? 0), 0) / rules.length,
+        avgConversionRate: rules.reduce((sum, r) => sum + r.conversionRate, 0) / rules.length,
         topPerformers: analysis.topPerformers,
         insights: analysis.insights,
         recommendations: analysis.recommendations,

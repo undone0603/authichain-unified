@@ -28,7 +28,6 @@ vi.mock("../db.js", () => ({
   getSubscriptionByStripeSubscriptionId: vi.fn().mockResolvedValue(null),
   createSystemNotification: vi.fn().mockResolvedValue(undefined),
   hasWebhookEventProcessed: vi.fn().mockResolvedValue(false),
-  markWebhookEventProcessed: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../stripe-products.js", () => ({
@@ -45,7 +44,7 @@ vi.mock("../email-service.js", () => ({
 }));
 
 vi.mock("../services/order-payment-handler.js", () => ({
-  handleServiceOrderPayment: vi.fn().mockResolvedValue({ handled: true, orderId: 1 }),
+  handleServiceOrderPayment: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

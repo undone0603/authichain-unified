@@ -6,7 +6,6 @@
 import { createThirdwebClient, getContract, defineChain } from "thirdweb";
 import { privateKeyToAccount } from "thirdweb/wallets";
 import { mintTo, balanceOf, totalSupply, getOwnedNFTs } from "thirdweb/extensions/erc721";
-import { transfer as erc20Transfer } from "thirdweb/extensions/erc20";
 import { upload } from "thirdweb/storage";
 import { sendTransaction, readContract } from "thirdweb";
 import { ENV } from "./_core/env";
@@ -150,126 +149,6 @@ export async function mintAuthenticationNFT(params: MintNFTParams) {
   };
 }
 
-// ─── AuthiChain Seal (SBT) ──────────────────────────────────────────────────
-
-export async function mintSecuritySeal(params: {
-  contractAddress: string;
-  recipientAddress: string;
-  tokenId: number;
-  uri: string;
-  privateKey: string;
-  chainId?: number;
-}) {
-  const client = getThirdwebClient();
-  const chain = params.chainId ? defineChain(params.chainId) : getDefaultChain();
-  const contract = getContract({ client, chain, address: params.contractAddress });
-  const account = privateKeyToAccount({ client, privateKey: params.privateKey as `0x${string}` });
-
-  const transaction = {
-    contract,
-    method: "function safeMint(address to, uint256 tokenId, string memory uri)",
-    params: [params.recipientAddress, BigInt(params.tokenId), params.uri],
-  } as any;
-
-  const result = await sendTransaction({ transaction, account });
-  return { transactionHash: result.transactionHash };
-}
-
-export async function voidSecuritySeal(params: {
-  contractAddress: string;
-  tokenId: number;
-  privateKey: string;
-  chainId?: number;
-}) {
-  const client = getThirdwebClient();
-  const chain = params.chainId ? defineChain(params.chainId) : getDefaultChain();
-  const contract = getContract({ client, chain, address: params.contractAddress });
-  const account = privateKeyToAccount({ client, privateKey: params.privateKey as `0x${string}` });
-
-  const transaction = {
-    contract,
-    method: "function voidSeal(uint256 tokenId)",
-    params: [BigInt(params.tokenId)],
-  } as any;
-
-  const result = await sendTransaction({ transaction, account });
-  return { transactionHash: result.transactionHash };
-}
-
-// ─── Counterfeit Bounty ─────────────────────────────────────────────────────
-
-export async function lockCounterfeitBounty(params: {
-  contractAddress: string;
-  certificateNumber: string;
-  tokenAddress: string;
-  amount: string;
-  durationDays: number;
-  privateKey: string;
-  chainId?: number;
-}) {
-  const client = getThirdwebClient();
-  const chain = params.chainId ? defineChain(params.chainId) : getDefaultChain();
-  const contract = getContract({ client, chain, address: params.contractAddress });
-  const account = privateKeyToAccount({ client, privateKey: params.privateKey as `0x${string}` });
-
-  const transaction = {
-    contract,
-    method: "function lockBounty(string _certificateNumber, address _token, uint256 _amount, uint256 _durationDays)",
-    params: [params.certificateNumber, params.tokenAddress, BigInt(params.amount), BigInt(params.durationDays)],
-  } as any;
-
-  const result = await sendTransaction({ transaction, account });
-  return { transactionHash: result.transactionHash };
-}
-
-// ─── ERC-20 ($QRON) Transfers ───────────────────────────────────────────────
-
-export interface Erc20TransferParams {
-  /** ERC-20 token contract address. Defaults to ENV.qronTokenAddress. */
-  tokenAddress?: string;
-  /** Recipient wallet address. */
-  to: string;
-  /** Human-readable token amount (e.g. "12.5"), converted by the extension. */
-  amount: string | number;
-  /** Treasury signer private key. Defaults to ENV.blockchainPrivateKey. */
-  privateKey?: string;
-  chainId?: number;
-}
-
-/**
- * Send ERC-20 tokens from the treasury wallet. Refuses to act unless both a
- * token address and a signing key are configured — never guesses a contract.
- */
-export async function transferErc20(params: Erc20TransferParams) {
-  const tokenAddress = params.tokenAddress || ENV.qronTokenAddress;
-  const privateKey = params.privateKey || ENV.blockchainPrivateKey;
-  if (!tokenAddress) throw new Error("transferErc20: no token address configured (QRON_TOKEN_ADDRESS)");
-  if (!privateKey) throw new Error("transferErc20: no treasury private key configured (BLOCKCHAIN_PRIVATE_KEY)");
-
-  const client = getThirdwebClient();
-  const chain = params.chainId ? defineChain(params.chainId) : getDefaultChain();
-  const contract = getContract({ client, chain, address: tokenAddress });
-  const account = privateKeyToAccount({ client, privateKey: privateKey as `0x${string}` });
-
-  const transaction = erc20Transfer({ contract, to: params.to, amount: String(params.amount) });
-  const result = await sendTransaction({ transaction, account });
-  return { transactionHash: result.transactionHash, chain: chain.id };
-}
-
-/**
- * Buyback/burn: send tokens to the burn sink (ENV.qronBurnAddress, default
- * the standard dead address). Same guards as transferErc20.
- */
-export async function burnErc20(params: { tokenAddress?: string; amount: string | number; privateKey?: string; chainId?: number }) {
-  return transferErc20({
-    tokenAddress: params.tokenAddress,
-    to: ENV.qronBurnAddress,
-    amount: params.amount,
-    privateKey: params.privateKey,
-    chainId: params.chainId,
-  });
-}
-
 // ─── Read Operations ────────────────────────────────────────────────────────
 
 export async function getNFTBalance(contractAddress: string, walletAddress: string, chainId?: number) {
@@ -307,7 +186,6 @@ export interface AuthCertificateNFTData {
   certificateNumber: string;
   imageUrl?: string;
   authenticatorId: number;
-  result?: unknown;
 }
 
 export function buildAuthCertificateMetadata(data: AuthCertificateNFTData): NFTMetadata {
@@ -367,7 +245,6 @@ export function buildSupplyChainMetadata(data: SupplyChainNFTData): NFTMetadata 
 
 export async function checkThirdwebConnection(): Promise<{
   connected: boolean;
-  clientConfigured: boolean;
   clientId: string;
   chain: string;
   error?: string;
@@ -377,14 +254,12 @@ export async function checkThirdwebConnection(): Promise<{
     const chain = getDefaultChain();
     return {
       connected: true,
-      clientConfigured: !!ENV.thirdwebClientId,
       clientId: ENV.thirdwebClientId || "configured",
       chain: ENV.isProduction ? "Polygon Mainnet (137)" : "Polygon Amoy Testnet (80002)",
     };
   } catch (error: any) {
     return {
       connected: false,
-      clientConfigured: !!ENV.thirdwebClientId,
       clientId: "",
       chain: "",
       error: error.message,

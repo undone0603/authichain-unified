@@ -20,22 +20,17 @@ interface VerifyPayload {
   signature: string;
 }
 
-async function handleChallenge(request: Request, env: Env): Promise<Response> {
-  const body = await request.json<{ address: string }>();
-  if (!body.address) {
-    return Response.json({ error: 'address is required' }, { status: 400 });
-  }
-
+async function handleChallenge(env: Env): Promise<Response> {
   const nonce = crypto.randomUUID();
   const timestamp = Date.now();
-  const message = `Sign this nonce to authenticate with AuthiChain: ${nonce}`;
-  const challenge: ChallengePayload = { address: body.address, nonce, timestamp };
+  const challenge: ChallengePayload = { address: '', nonce, timestamp };
 
+  // Store nonce with 10-minute TTL
   await env.AUTH_KV.put(`nonce:${nonce}`, JSON.stringify(challenge), {
     expirationTtl: 600,
   });
 
-  return Response.json({ nonce, timestamp, message });
+  return Response.json({ nonce, timestamp, message: `Sign this nonce to authenticate: ${nonce}` });
 }
 
 async function handleVerify(request: Request, env: Env): Promise<Response> {
@@ -51,25 +46,10 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
     return Response.json({ error: 'Invalid or expired nonce' }, { status: 401 });
   }
 
-  const challenge: ChallengePayload = JSON.parse(stored);
-  if (challenge.address !== address) {
-    return Response.json({ error: 'Address does not match challenge' }, { status: 401 });
-  }
-
-  // Nonce expiry: 10 minutes
-  if (Date.now() - challenge.timestamp > 600_000) {
-    await env.AUTH_KV.delete(`nonce:${nonce}`);
-    return Response.json({ error: 'Challenge expired' }, { status: 401 });
-  }
-
-  // Bitcoin signature verification requires secp256k1 (bitcoinjs-message WASM).
-  // Until integrated, validate signature format (base64, 88 chars for Bitcoin
-  // signed messages) and reject obviously invalid inputs. This is NOT a full
-  // cryptographic check — deploy bitcoinjs-message WASM before production.
-  const validFormat = /^[A-Za-z0-9+/=]{80,100}$/.test(signature);
-  if (!validFormat) {
-    return Response.json({ error: 'Invalid signature format' }, { status: 401 });
-  }
+  // Bitcoin message signature verification requires bitcoinjs-message or WASM secp256k1.
+  // Until that dependency is wired in, reject all verification attempts so this
+  // endpoint cannot be exploited to claim arbitrary Bitcoin addresses.
+  return Response.json({ error: 'Bitcoin signature verification not yet implemented' }, { status: 501 });
 
   await env.AUTH_KV.delete(`nonce:${nonce}`);
 
@@ -94,6 +74,7 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const { pathname, method } = Object.assign(url, { method: request.method });
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
@@ -107,10 +88,8 @@ export default {
 
     let response: Response;
 
-    if (request.method === 'GET' && url.pathname === '/health') {
-      response = Response.json({ status: 'ok', service: 'bitcoin-auth', ts: Date.now() });
-    } else if (request.method === 'POST' && url.pathname === '/auth/challenge') {
-      response = await handleChallenge(request, env);
+    if (request.method === 'POST' && url.pathname === '/auth/challenge') {
+      response = await handleChallenge(env);
     } else if (request.method === 'POST' && url.pathname === '/auth/verify') {
       response = await handleVerify(request, env);
     } else if (request.method === 'GET' && url.pathname === '/auth/status') {

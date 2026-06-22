@@ -7,7 +7,6 @@ import {
   hasActionLogged,
   logActivity,
 } from "../db";
-import { sendEmail } from "../email-service";
 
 export async function runWeeklyDigestDispatch() {
   const now = new Date();
@@ -36,16 +35,6 @@ export async function runWeeklyDigestDispatch() {
   let delivered = 0;
   for (const admin of admins) {
     await createSystemNotification(admin.id, "Weekly KPI Digest", message, "system", "/admin");
-    try {
-      if (admin.email) {
-        await sendEmail({
-          to: admin.email,
-          subject: `AuthiChain Weekly KPI — ${periodKey}`,
-          body: `Weekly KPI Digest\n\n${message.replace(/ \| /g, "\n")}\n\nFull dashboard: https://authichain.com/admin`,
-          fromName: "AuthiChain Analytics",
-        });
-      }
-    } catch { /* email failure must not block activity log */ }
     await logActivity({
       userId: admin.id,
       action: periodAction,

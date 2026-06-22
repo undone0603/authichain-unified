@@ -1,6 +1,6 @@
 import "dotenv/config";
-import { runLiveSystemsCheck } from "./live-systems-check";
-import * as db from "../db";
+import { runLiveSystemsCheck } from "./live-systems-check.js";
+import * as db from "../db.js";
 
 async function runSmokeTest() {
   console.log("🔥 Starting AuthiChain Production Smoke Test...");

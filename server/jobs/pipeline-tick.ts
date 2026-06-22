@@ -8,43 +8,23 @@ import { runRetentionAutomation } from "./retention";
 import { runWeeklyDigestDispatch } from "./weekly-digest";
 import { runQuarterlyValueReportDispatch } from "./quarterly-value";
 import { runOrganicTrafficAutomation } from "./organic-traffic";
-import { runLeadScoring } from "../sales/scoring-service";
-import {
-  getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes,
-  updateBayesianPrior, getRecentOutcomeSignals, enqueueTask, getDb,
-} from "../db";
-import { missions } from "../../drizzle/schema";
-import { eq as drizzleEq } from "drizzle-orm";
+import { runBrowserAgentJobs } from "./browser-jobs";
+import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
 import { runTask } from "./task-runner";
-import { ucb1Score, betaMean, updatePrior, SEGMENT_PRIORS } from "../_core/bayesian";
-import { withRetry } from "../_core/retry";
-import { getCircuitBreaker } from "../_core/circuit-breaker";
-
-async function safeRun<T>(name: string, fn: () => Promise<T>): Promise<T | null> {
-  const cb = getCircuitBreaker(name, { failureThreshold: 3, timeoutMs: 5 * 60_000 });
-  try {
-    return await cb.exec(() => withRetry(fn, { maxAttempts: 2, baseDelayMs: 1000 }));
-  } catch (err) {
-    console.warn(`[pipeline-tick] ${name} failed:`, err);
-    return null;
-  }
-}
+import { ucb1Score, betaMean } from "../_core/bayesian";
 
 export async function runPipelineTick(options?: { force?: boolean }) {
   if (!ENV.autonomousPipelineEnabled && !options?.force) {
     return { enabled: false, skipped: true, reason: "AUTONOMOUS_PIPELINE_ENABLED=false" };
   }
 
-  const [budgetMonitor, dunning, retention, weeklyDigest, quarterlyValue, organicTraffic, leadScoring] =
-    await Promise.all([
-      safeRun("budgetMonitor",   runBudgetMonitor),
-      safeRun("dunning",         runDunningEscalation),
-      safeRun("retention",       runRetentionAutomation),
-      safeRun("weeklyDigest",    runWeeklyDigestDispatch),
-      safeRun("quarterlyValue",  runQuarterlyValueReportDispatch),
-      safeRun("organicTraffic",  runOrganicTrafficAutomation),
-      safeRun("leadScoring",     runLeadScoring),
-    ]);
+  const budgetMonitor = await runBudgetMonitor();
+  const dunning = await runDunningEscalation();
+  const retention = await runRetentionAutomation();
+  const weeklyDigest = await runWeeklyDigestDispatch();
+  const quarterlyValue = await runQuarterlyValueReportDispatch();
+  const organicTraffic = await runOrganicTrafficAutomation();
+  const browserJobs = await runBrowserAgentJobs();
 
   // Mission task orchestration — UCB1 prioritisation
   // Score each task's kind by: E[conversion] + exploration bonus.
@@ -59,20 +39,24 @@ export async function runPipelineTick(options?: { force?: boolean }) {
   const totalTasks = Math.max(runCount, 1);
 
   const kindToSegment: Record<string, string> = {
-    FIND_GOV_LEADS:           'GOV',
-    FIND_RETAIL_LEADS:        'RETAIL',
-    FIND_ENTERTAINMENT_LEADS: 'ENTERTAINMENT',
-    FIND_SPORTS_LEADS:        'SPORTS',
-    FIND_CREATOR_LEADS:       'CREATOR',
-    FIND_COLLECTIBLES_LEADS:  'COLLECTIBLES',
-    DRAFT_OUTBOUND_EMAIL:     'GOV',
-    FOLLOWUP_SEQUENCE:        'GOV',
-    PITCH_MOONSHOT_DEAL:      'ENTERTAINMENT',
-    MOONSHOT_PROPOSAL:        'ENTERTAINMENT',
-    BUILD_PILOT_PACKET:       'PARTNER',
-    DRAFT_INTEL_DOSSIER:      'PRESS',
-    CRM_UPDATE:               'PARTNER',
-    DRAFT_PRESS_RELEASE:      'PRESS',
+    FIND_GOV_LEADS:              'GOV',
+    FIND_RETAIL_LEADS:           'RETAIL',
+    FIND_LUXURY_LEADS:           'LUXURY',
+    FIND_PHARMA_LEADS:           'PHARMA',
+    FIND_TIMEPIECE_LEADS:        'TIMEPIECE',
+    DRAFT_OUTBOUND_EMAIL:        'GOV',
+    FOLLOWUP_SEQUENCE:           'GOV',
+    BUILD_PILOT_PACKET:          'PARTNER',
+    DRAFT_INTEL_DOSSIER:         'PRESS',
+    CRM_UPDATE:                  'PARTNER',
+    DRAFT_PRESS_RELEASE:         'PRESS',
+    // Browser agent tasks inherit segment from the lead they serve
+    BROWSE_RESEARCH_LEAD:        'DEFAULT',
+    BROWSE_COMPETITOR_MONITOR:   'DEFAULT',
+    BROWSE_SCRAPE_INDUSTRY_NEWS: 'DEFAULT',
+    BROWSE_VERIFY_PRODUCT_URL:     'DEFAULT',
+    BROWSE_VISION_RESEARCH_LEAD:   'DEFAULT',
+    BROWSE_VISION_FREEFORM:        'DEFAULT',
   };
 
   const scored = dueTasks.map(task => {
@@ -96,13 +80,8 @@ export async function runPipelineTick(options?: { force?: boolean }) {
   // ── PMF auto-scale: if a segment's posterior mean exceeds threshold AND
   //    no active mission of that type exists, create one automatically. ──────
   const PMF_THRESHOLDS: Record<string, { missionType: string; threshold: number }> = {
-    GOV:      { missionType: 'GOV_PILOT',        threshold: 0.05 },
-    RETAIL:   { missionType: 'RETAIL_PILOT',      threshold: 0.04 },
-    LUXURY:   { missionType: 'LUXURY_BLITZ',      threshold: 0.03 },
-    PHARMA:   { missionType: 'PHARMA_AUDIT',      threshold: 0.03 },
-    // Cannabis is the warmest vertical — 9+ named chains in HubSpot pipeline.
-    // Low threshold so missions auto-spawn as soon as any prior data exists.
-    CANNABIS: { missionType: 'STRAINCHAIN_BLITZ', threshold: 0.02 },
+    GOV:    { missionType: 'GOV_PILOT',    threshold: 0.12 },
+    RETAIL: { missionType: 'RETAIL_PILOT', threshold: 0.10 },
   };
   const activeMissionTypes = await getActiveMissionTypes();
   const pmfCreated: string[] = [];
@@ -116,57 +95,6 @@ export async function runPipelineTick(options?: { force?: boolean }) {
     }
   }
 
-  // ── Bayesian prior write-back from outcome signals ─────────────────────────
-  // Read signals logged in the last tick window and update the priors table so
-  // UCB1 actually learns over time instead of using static seeded values.
-  const SIGNAL_DELTAS: Record<string, { a: number; b: number }> = {
-    email_replied:    { a: 5,  b: 0 },
-    email_opened:     { a: 1,  b: 0 },
-    email_clicked:    { a: 2,  b: 0 },
-    converted:        { a: 12, b: 0 },
-    no_response:      { a: 0,  b: 1 },
-    unsubscribed:     { a: 0,  b: 4 },
-  };
-  const recentSignals = await getRecentOutcomeSignals(6 * 60 * 1000); // last 6 min
-  const priorUpdates: string[] = [];
-  for (const { segment, signal } of recentSignals) {
-    const delta = SIGNAL_DELTAS[signal];
-    if (!delta || !segment) continue;
-    await updateBayesianPrior(segment, delta.a, delta.b).catch(() => {});
-    priorUpdates.push(`${segment}:${signal}`);
-  }
-
-  // ── Lead task seeding — ensure top-of-funnel never runs dry ───────────────
-  // If no FIND_GOV_LEADS or FIND_RETAIL_LEADS tasks are pending, create them
-  // so Apollo.io keeps discovering fresh prospects every cycle.
-  const pendingKinds = new Set(dueTasks.map(t => t.kind));
-  const leadSeedCreated: string[] = [];
-  const LEAD_TASKS: Array<{ kind: string; missionType: string; segment: string }> = [
-    { kind: "FIND_GOV_LEADS",            missionType: "GOV_PILOT",           segment: "GOV" },
-    { kind: "FIND_RETAIL_LEADS",         missionType: "RETAIL_PILOT",        segment: "RETAIL" },
-    { kind: "FIND_ENTERTAINMENT_LEADS",  missionType: "ENTERTAINMENT_PILOT", segment: "ENTERTAINMENT" },
-    { kind: "FIND_SPORTS_LEADS",         missionType: "SPORTS_PILOT",        segment: "SPORTS" },
-    { kind: "FIND_CREATOR_LEADS",        missionType: "CREATOR_PILOT",       segment: "CREATOR" },
-    { kind: "FIND_COLLECTIBLES_LEADS",   missionType: "COLLECTIBLES_PILOT",  segment: "COLLECTIBLES" },
-  ];
-  for (const { kind, missionType, segment } of LEAD_TASKS) {
-    if (!pendingKinds.has(kind)) {
-      let missionId: string | undefined;
-      const activeMissions = await getActiveMissionTypes();
-      if (!activeMissions.includes(missionType)) {
-        missionId = await createMission(missionType as any);
-      } else {
-        const db = await getDb();
-        const rows = await db.select().from(missions).where(drizzleEq(missions.title, missionType)).limit(1);
-        missionId = rows[0]?.id;
-      }
-      if (missionId) {
-        await enqueueTask(missionId, kind, { segment, count: 10 });
-        leadSeedCreated.push(kind);
-      }
-    }
-  }
-
   const summary = {
     enabled: true,
     budgetMonitor,
@@ -175,11 +103,9 @@ export async function runPipelineTick(options?: { force?: boolean }) {
     weeklyDigest,
     quarterlyValue,
     organicTraffic,
-    leadScoring,
+    browserJobs,
     missionTasks: taskResults,
     pmfCreated,
-    priorUpdates,
-    leadSeedCreated,
   };
 
   await logActivity({

@@ -2,7 +2,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, parseLLMContent } from "../_core/llm";
 import { nanoid } from "nanoid";
 import { triggerMacrohardEvent } from "../macrohard/service";
 import { rewardAgentForVerification } from "../character-service";
@@ -10,12 +10,14 @@ import { rewardAgentForVerification } from "../character-service";
 export const authenticateRouter = router({
   analyze: protectedProcedure.input(z.object({
     productId: z.number(),
-    imageUrl: z.string(),
+    imageUrl: z.string().url().refine(u => u.startsWith("https://"), { message: "imageUrl must use HTTPS" }),
   })).mutation(async ({ ctx, input }) => {
+    const quotaResult = await db.consumeSubscriptionQuota(ctx.user.id);
+    if (quotaResult === "exceeded") throw new TRPCError({ code: "FORBIDDEN", message: "Monthly quota exceeded. Please upgrade your plan." });
     const sub = await db.getUserSubscription(ctx.user.id);
-    if (sub && (sub.usedQuota ?? 0) >= sub.monthlyQuota) throw new TRPCError({ code: "FORBIDDEN", message: "Monthly quota exceeded. Please upgrade your plan." });
     const product = await db.getProductById(input.productId);
     if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+    if (product.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
     const response = await invokeLLM({
       messages: [
         { role: "system", content: "You are an expert luxury product authenticator with blockchain verification capabilities. Analyze the provided product image and determine if it is authentic or counterfeit. Provide detailed reasoning, a confidence score (0-100), red flags, and authentic markers." },
@@ -45,7 +47,14 @@ export const authenticateRouter = router({
         }
       }
     });
-    const aiResult = JSON.parse(response.choices[0].message.content as string);
+    const aiResult = parseLLMContent<{
+      result: "authentic" | "counterfeit" | "uncertain";
+      confidence: number;
+      analysis: string;
+      redFlags: string[];
+      authenticMarkers: string[];
+      recommendation: string;
+    }>(response.choices[0].message.content);
     const authResult = await db.createAuthentication({
       productId: input.productId, userId: ctx.user.id, aiAnalysis: aiResult,
       confidenceScore: aiResult.confidence, result: aiResult.result, imageUrl: input.imageUrl,
@@ -73,12 +82,11 @@ export const authenticateRouter = router({
       // Trigger MACROHARD Webhook: certificate_issued
       await triggerMacrohardEvent("certificate_issued", {
         certificateId: cert.id,
-        certificateNumber: certNumber,
+        certificateNumber: cert.certificateNumber,
         productId: input.productId,
         userId: ctx.user.id
       });
     }
-    if (sub) await db.updateSubscriptionUsage(ctx.user.id, (sub.usedQuota || 0) + 1);
     await db.recordUsage({ userId: ctx.user.id, subscriptionId: sub?.id, type: "authentication", quantity: 1 });
     await db.logActivity({ userId: ctx.user.id, action: "product_authenticated", entityType: "authentication", entityId: authResult.id });
     try {

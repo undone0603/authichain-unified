@@ -1,17 +1,11 @@
-export const runtime = 'nodejs';
-
 import { NextResponse } from 'next/server';
-import type { GilmoreArtRequest } from '@/lib/industrial/gilmore-pipeline';
-
-// Heavy deps (gilmore pipeline, supabase server client) are imported lazily inside
-// the handler so the Cloudflare Workers build can collect this route without
-// evaluating the incompatible graph at build time.
+import { generateGilmoreArt, GilmoreArtRequest } from '@/lib/industrial/gilmore-pipeline';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
   try {
-    const { createClient } = await import('@/utils/supabase/server');
     const supabase = await createClient();
-    await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
 
     // In a real scenario, we might want to restrict this to Theater 3/Enterprise users
     // For the demo, we'll allow authenticated users.
@@ -23,7 +17,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
 
-    const { generateGilmoreArt } = await import('@/lib/industrial/gilmore-pipeline');
     const result = await generateGilmoreArt(body);
 
     return NextResponse.json({
@@ -33,8 +26,8 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Gilmore Pipeline Error:', error);
-    return NextResponse.json({
-      message: error.message || 'Error generating automotive art'
+    return NextResponse.json({ 
+      message: error.message || 'Error generating automotive art' 
     }, { status: 500 });
   }
 }

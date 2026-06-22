@@ -8,10 +8,6 @@ import type { Env } from "./index";
  * Exposes AuthiChain verification tools via Streamable HTTP transport.
  */
 
-function mcpError(e: unknown) {
-  return { content: [{ type: "text" as const, text: `Error: ${e instanceof Error ? e.message : String(e)}` }] };
-}
-
 function createMcpServer(env: Env): McpServer {
   const server = new McpServer({
     name: "AuthiChain",
@@ -29,16 +25,13 @@ function createMcpServer(env: Env): McpServer {
       metadata: z.record(z.string()).optional().describe("Additional product metadata"),
     },
     async ({ productId, imageUrl, barcode, metadata }) => {
-      try {
-        const res = await fetch(`${env.BACKEND_URL}/api/internal/verify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Internal-Secret": env.INTERNAL_SECRET },
-          body: JSON.stringify({ productId, imageUrl, barcode, metadata }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) { return mcpError(e); }
+      const res = await fetch(`${env.BACKEND_URL}/api/internal/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Internal-Secret": env.INTERNAL_SECRET },
+        body: JSON.stringify({ productId, imageUrl, barcode, metadata }),
+      });
+      const data = await res.json();
+      return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
     },
   );
 
@@ -56,16 +49,13 @@ function createMcpServer(env: Env): McpServer {
       prompt: z.string().optional().describe("Custom art prompt for the QR background"),
     },
     async ({ data, style, prompt }) => {
-      try {
-        const res = await fetch(`${env.BACKEND_URL}/api/internal/qr/generate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Internal-Secret": env.INTERNAL_SECRET },
-          body: JSON.stringify({ data, style: style || "cosmic_nebula", prompt }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const result = await res.json();
-        return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
-      } catch (e) { return mcpError(e); }
+      const res = await fetch(`${env.BACKEND_URL}/api/internal/qr/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Internal-Secret": env.INTERNAL_SECRET },
+        body: JSON.stringify({ data, style: style || "cosmic_nebula", prompt }),
+      });
+      const result = await res.json();
+      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     },
   );
 
@@ -77,15 +67,16 @@ function createMcpServer(env: Env): McpServer {
       certificateNumber: z.string().describe("Certificate number (e.g., AC-2026-XXXX)"),
     },
     async ({ certificateNumber }) => {
-      try {
-        const res = await fetch(
-          `${env.BACKEND_URL}/api/internal/certificates/verify?certNumber=${encodeURIComponent(certificateNumber)}`,
-          { headers: { "X-Internal-Secret": env.INTERNAL_SECRET } },
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) { return mcpError(e); }
+      const res = await fetch(
+        `${env.BACKEND_URL}/api/internal/certificates/verify`,
+        {
+          method: "POST",
+          headers: { "X-Internal-Secret": env.INTERNAL_SECRET, "Content-Type": "application/json" },
+          body: JSON.stringify({ certNumber: certificateNumber }),
+        },
+      );
+      const data = await res.json();
+      return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
     },
   );
 
@@ -101,16 +92,13 @@ function createMcpServer(env: Env): McpServer {
       cbdPercent: z.number().optional().describe("Claimed CBD percentage"),
     },
     async ({ strainName, batchId, labCertHash, thcPercent, cbdPercent }) => {
-      try {
-        const res = await fetch(`${env.BACKEND_URL}/api/internal/cannabis/verify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Internal-Secret": env.INTERNAL_SECRET },
-          body: JSON.stringify({ strainName, batchId, labCertHash, thcPercent, cbdPercent }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) { return mcpError(e); }
+      const res = await fetch(`${env.BACKEND_URL}/api/internal/cannabis/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Internal-Secret": env.INTERNAL_SECRET },
+        body: JSON.stringify({ strainName, batchId, labCertHash, thcPercent, cbdPercent }),
+      });
+      const data = await res.json();
+      return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
     },
   );
 
@@ -126,16 +114,13 @@ function createMcpServer(env: Env): McpServer {
       geoFenceOk: z.boolean().optional().describe("Whether scan location is within expected geo-fence"),
     },
     async ({ qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk }) => {
-      try {
-        const res = await fetch(`${env.BACKEND_URL}/api/internal/trust-score`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Internal-Secret": env.INTERNAL_SECRET },
-          body: JSON.stringify({ qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) { return mcpError(e); }
+      const res = await fetch(`${env.BACKEND_URL}/api/internal/trust-score`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Internal-Secret": env.INTERNAL_SECRET },
+        body: JSON.stringify({ qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk }),
+      });
+      const data = await res.json();
+      return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
     },
   );
 
@@ -151,16 +136,13 @@ function createMcpServer(env: Env): McpServer {
       metadata: z.record(z.string()).optional().describe("Additional product metadata"),
     },
     async ({ name, manufacturer, serialNumber, category, metadata }) => {
-      try {
-        const res = await fetch(`${env.BACKEND_URL}/api/internal/products/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Internal-Secret": env.INTERNAL_SECRET },
-          body: JSON.stringify({ name, manufacturer, serialNumber, category, metadata }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) { return mcpError(e); }
+      const res = await fetch(`${env.BACKEND_URL}/api/internal/products/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Internal-Secret": env.INTERNAL_SECRET },
+        body: JSON.stringify({ name, manufacturer, serialNumber, category, metadata }),
+      });
+      const data = await res.json();
+      return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
     },
   );
 
@@ -173,18 +155,15 @@ function createMcpServer(env: Env): McpServer {
       productId: z.string().optional().describe("Filter by specific product ID"),
     },
     async ({ period, productId }) => {
-      try {
-        const params = new URLSearchParams();
-        if (period) params.set("period", period);
-        if (productId) params.set("productId", productId);
-        const res = await fetch(
-          `${env.BACKEND_URL}/api/internal/analytics?${params.toString()}`,
-          { headers: { "X-Internal-Secret": env.INTERNAL_SECRET } },
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) { return mcpError(e); }
+      const params = new URLSearchParams();
+      if (period) params.set("period", period);
+      if (productId) params.set("productId", productId);
+      const res = await fetch(
+        `${env.BACKEND_URL}/api/internal/analytics?${params.toString()}`,
+        { headers: { "X-Internal-Secret": env.INTERNAL_SECRET } },
+      );
+      const data = await res.json();
+      return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
     },
   );
 

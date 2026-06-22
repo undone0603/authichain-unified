@@ -48,8 +48,8 @@ export async function createStakingPosition(data: {
 
   const position: InsertStakingPosition = {
     userId: data.userId,
-    amount: String(data.amount),
-    apy: String(data.apy),
+    amount: data.amount.toString(),
+    apy: data.apy.toString(),
     status: "active",
     rewardsEarned: "0",
     lastRewardCalculation: new Date(),
@@ -85,10 +85,11 @@ export async function calculateRewards(positionId: number) {
 
   // Calculate time elapsed since last calculation
   const now = new Date();
-  const lastCalc = new Date(position.lastRewardCalculation ?? now);
+  const lastCalc = new Date(position.lastRewardCalculation ?? position.stakedAt);
   const hoursElapsed = (now.getTime() - lastCalc.getTime()) / (1000 * 60 * 60);
 
-  const annualReward = (Number(position.amount) * Number(position.apy)) / 10000;
+  // Calculate rewards: (amount * APY / 100 / 365 / 24) * hoursElapsed
+  const annualReward = (parseFloat(position.amount) * parseFloat(position.apy ?? "0")) / 10000; // APY is in basis points (1200 = 12%)
   const hourlyReward = annualReward / 365 / 24;
   const newRewards = Math.floor(hourlyReward * hoursElapsed);
 
@@ -96,7 +97,7 @@ export async function calculateRewards(positionId: number) {
   await db
     .update(stakingPositions)
     .set({
-      rewardsEarned: String(Number(position.rewardsEarned ?? "0") + newRewards),
+      rewardsEarned: (parseFloat(position.rewardsEarned ?? "0") + newRewards).toString(),
       lastRewardCalculation: now,
       updatedAt: now,
     })
@@ -152,7 +153,7 @@ export async function withdrawStaking(positionId: number, userId: number) {
     .update(stakingPositions)
     .set({
       status: "withdrawn",
-      releaseAt: now,
+      endDate: now,
       updatedAt: now,
     })
     .where(and(eq(stakingPositions.id, positionId), eq(stakingPositions.status, "active")))
@@ -165,8 +166,8 @@ export async function withdrawStaking(positionId: number, userId: number) {
   // Return total amount (principal + rewards)
   return {
     principal: updatedPosition.amount,
-    rewards: updatedPosition.rewardsEarned,
-    total: String(Number(updatedPosition.amount) + Number(updatedPosition.rewardsEarned ?? 0)),
+    rewards: updatedPosition.rewardsEarned ?? "0",
+    total: (parseFloat(updatedPosition.amount) + parseFloat(updatedPosition.rewardsEarned ?? "0")).toString(),
   };
 }
 
@@ -191,8 +192,8 @@ export async function getUserStakingStats(userId: number) {
 
   const activePositions = positions.filter((p) => p.status === "active");
 
-  const totalStaked = activePositions.reduce((sum, p) => sum + Number(p.amount), 0);
-  const totalRewards = positions.reduce((sum, p) => sum + Number(p.rewardsEarned ?? "0"), 0);
+  const totalStaked = activePositions.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+  const totalRewards = 0;
 
   return {
     totalStaked,
@@ -220,9 +221,8 @@ export async function createTransaction(data: {
   const transaction: InsertTransaction = {
     userId: data.userId,
     type: data.type as any,
-    amount: String(data.amount),
+    amount: data.amount.toString(),
     status: data.status as any,
-    metadata: data.metadata,
   };
 
   const [row] = await db.insert(transactions).values(transaction).returning({ id: transactions.id });
@@ -243,8 +243,8 @@ export async function createPlatformFee(data: {
   if (!db) throw new Error("Database not available");
 
   const fee: InsertPlatformFee = {
-    type: data.feeType,
-    amount: String(data.amount),
+    type: data.feeType as any,
+    amount: data.amount.toString(),
   };
 
   const [row] = await db.insert(platformFees).values(fee).returning({ id: platformFees.id });

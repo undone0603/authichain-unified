@@ -3,9 +3,10 @@ import postgres from "postgres";
 
 async function triggerLuxuryMission() {
   const targetUrl = process.env.DATABASE_URL;
+
   if (!targetUrl) {
-    console.error("DATABASE_URL is not set. Refusing to run.");
-    process.exit(2);
+    console.error("DATABASE_URL env var is required.");
+    return;
   }
 
   console.log(`Connecting to: ${targetUrl.split('@')[1]}...`);

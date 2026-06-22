@@ -10,11 +10,7 @@ import agentz.core.credentials as creds
 @pytest.mark.asyncio
 async def test_hubspot_auto_heals_on_401(monkeypatch):
     # 1. Setup mock credentials and environment
-    # hubspot.py does `from agentz.core.credentials import get`, so the name must
-    # be patched in the hubspot module namespace (patching creds.get has no effect).
-    mock_get = lambda k, **kw: "old_token" if k == "hubspot_token" else "mock_val"
-    monkeypatch.setattr(creds, "get", mock_get)
-    monkeypatch.setattr(hubspot, "get", mock_get)
+    monkeypatch.setattr(creds, "get", lambda k, **kw: "old_token" if k == "hubspot_token" else "mock_val")
     
     updates = []
     def mock_update(key, value):

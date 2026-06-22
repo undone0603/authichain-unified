@@ -1,5 +1,3 @@
-﻿export const runtime = 'nodejs';
-
 /**
  * @file route.ts
  * @project qron-platform
@@ -27,7 +25,7 @@ export async function GET() {
     },
     servers: [
       {
-        url: "https://authichain.com",
+        url: "https://qron.space",
         description: "Production Environment"
       }
     ],

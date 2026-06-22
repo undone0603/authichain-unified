@@ -232,7 +232,7 @@ const HTML = `<!DOCTYPE html>
       <h1 class="hero-title"><span>PUBLIC</span><span class="accent">TRUST.</span></h1>
       <p class="hero-sub">GovChain is the government associated blockchain authentication vertical, providing a truth layer for official manufacturers and state records.</p>
       <div class="hero-actions">
-        <a href="https://authichain.com/onboard" class="btn btn-primary">Manufacturer Onboarding</a>
+        <a href="https://authichain-unified.vercel.app/onboard" class="btn btn-primary">Manufacturer Onboarding</a>
         <a href="#sectors" class="btn btn-secondary">Explore Sectors</a>
       </div>
     </div>

@@ -1,10 +1,10 @@
-import { logActivity, hasActionLogged } from '../db';
+import { logActivity, hasActionLogged } from '../db.js';
 import {
   runBrowseCompetitorMonitor,
   runBrowseScrapeIndustryNews,
   type BrowseCompetitorPayload,
   type BrowseNewsPayload,
-} from '../agents/browser';
+} from '../agents/browser.js';
 
 // Competitors to monitor weekly
 const COMPETITORS: BrowseCompetitorPayload[] = [

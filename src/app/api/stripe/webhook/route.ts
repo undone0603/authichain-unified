@@ -1,8 +1,9 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // Lazy singletons — avoid build-time throw when env vars are absent.
 let _stripe: Stripe | null = null;
@@ -10,12 +11,11 @@ function getStripe(): Stripe {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error('STRIPE_SECRET_KEY not configured');
-    _stripe = new Stripe(key, { apiVersion: '2026-05-27.dahlia' as const });
+    _stripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' as const });
   }
   return _stripe;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _supabase: ReturnType<typeof createClient> | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getSupabase(): any {
@@ -40,40 +40,13 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get('stripe-signature')!;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let event: any;
   try {
-    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('Stripe webhook signature verification failed:', msg);
-    return NextResponse.json({ error: `Webhook Error: ${msg}` }, { status: 400 });
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+  } catch (err: any) {
+    console.error('Stripe webhook signature verification failed:', err.message);
+    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
-
-  // SECURITY: Idempotency guard — check if this Stripe event ID has already been
-  // processed before taking any action. Stripe can deliver the same event multiple
-  // times (retries on non-2xx responses), so without this guard a payment-failed
-  // event could flip a user's subscription to past_due more than once, or a
-  // checkout.session.completed could grant subscription access multiple times.
-  const { data: existingEvent } = await getSupabase()
-    .from('stripe_events')
-    .select('event_id')
-    .eq('event_id', event.id)
-    .maybeSingle();
-
-  if (existingEvent) {
-    // Already processed — acknowledge to Stripe without re-running business logic
-    console.log(`[stripe/webhook] Duplicate event skipped: ${event.id}`);
-    return NextResponse.json({ received: true, duplicate: true, type: event.type });
-  }
-
-  // Log the event FIRST (before processing) so that if processing throws, a
-  // retry from Stripe will hit the idempotency guard above and not double-process.
-  await getSupabase().from('stripe_events').insert({
-    event_id: event.id,
-    event_type: event.type,
-    processed_at: new Date().toISOString(),
-  });
 
   try {
     switch (event.type) {
@@ -91,11 +64,12 @@ export async function POST(req: NextRequest) {
             subscription_plan: plan,
             subscription_status: 'active',
             subscribed_at: new Date().toISOString(),
-          }).eq('user_id', userId);
+          }).eq('id', userId);
 
           await getSupabase().from('checkout_sessions').update({ status: 'completed' })
             .eq('session_id', session.id);
 
+          // Trigger welcome/confirmation email
           await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/email`, {
             method: 'POST',
             headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET || '', 'Content-Type': 'application/json' },
@@ -144,7 +118,6 @@ export async function POST(req: NextRequest) {
           .from('profiles')
           .select('id')
           .eq('stripe_customer_id', customerId)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .single() as any;
 
         if (profile) {
@@ -209,10 +182,16 @@ export async function POST(req: NextRequest) {
         console.log(`Unhandled Stripe event: ${event.type}`);
     }
 
+    // Log all events
+    await getSupabase().from('stripe_events').insert({
+      event_id: event.id,
+      event_type: event.type,
+      processed_at: new Date().toISOString(),
+    }).select();
+
     return NextResponse.json({ received: true, type: event.type });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('Webhook processing error:', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch (err: any) {
+    console.error('Webhook processing error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -21,21 +21,6 @@ export default {
     // Health check
     if (path === '/health') return json({ status: 'ok', mode: 'demo', version: '1.0.0', timestamp: new Date().toISOString(), notice: 'Demo mode — returns simulated responses' }, cors);
 
-    // Stripe webhook — no API key required
-    if (path === '/webhook/stripe' && request.method === 'POST') {
-      return handleStripeWebhook(request, env, cors);
-    }
-
-    // Checkout success page — no API key required
-    if (path === '/checkout/success') {
-      return handleCheckoutSuccess(request, env, cors);
-    }
-
-    // Lead capture — no API key required
-    if (path === '/api/v1/leads' && request.method === 'POST') {
-      return handleLeadCapture(request, env, cors);
-    }
-
     // v2 endpoints use X-Admin-Key, not demo API keys — handle before API key gate
     if (path.startsWith('/api/v2/')) {
       return handleV2(request, path, url, env, cors);
@@ -43,42 +28,26 @@ export default {
 
     // API key validation
     const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!apiKey) return json({ error: 'Missing API key. Get one at https://api.authichain.com/docs' }, cors, 401);
+    if (!apiKey) return json({ error: 'Missing API key.' }, cors, 401);
 
-    // Key status endpoint
-    if (path === '/api/v1/key/status') {
-      return handleKeyStatus(apiKey, env, cors);
-    }
-
-    // Resolve key data: check KV for provisioned keys, fall back to demo
-    let keyData: { name: string; plan: string; limit: number };
-    const isDemo = apiKey === 'demo_test_key_2026';
-
-    if (isDemo) {
-      keyData = { name: 'Free', plan: 'free', limit: 10 };
-    } else if (env.API_KEYS) {
-      const raw = await env.API_KEYS.get(`key:${apiKey}`);
-      if (raw) {
-        const stored = JSON.parse(raw);
-        if (!stored.active) return json({ error: 'API key has been deactivated.' }, cors, 403);
-        keyData = { name: stored.name, plan: stored.plan, limit: stored.limit };
-      } else {
-        return json({ error: 'Invalid API key. Get one at https://api.authichain.com/docs', validDemo: 'demo_test_key_2026' }, cors, 401);
-      }
-    } else {
-      keyData = { name: 'Free', plan: 'free', limit: 10 };
-    }
-
-    // Rate Limiting (KV-backed)
+    // Rate Limiting Logic (KV-backed)
     if (env.RATE_LIMITS) {
       const limitKey = `usage:${apiKey}:${new Date().getUTCHours()}`;
-      const currentUsage = parseInt(await env.RATE_LIMITS.get(limitKey) || '0');
+      const currentUsage = await env.RATE_LIMITS.get(limitKey) || "0";
+      const limit = apiKey.includes("demo") ? 10 : 5000;
 
-      if (currentUsage >= keyData.limit) {
-        return json({ error: 'Rate limit exceeded for this hour.', plan: keyData.name, limit: keyData.limit, upgrade: 'https://api.authichain.com/docs#pricing' }, cors, 429);
+      if (parseInt(currentUsage) >= limit) {
+        return json({ error: 'Rate limit exceeded for this hour.', tier: apiKey.includes("demo") ? 'Free' : 'Pro' }, cors, 429);
       }
-      await env.RATE_LIMITS.put(limitKey, (currentUsage + 1).toString(), { expirationTtl: 3600 });
+      await env.RATE_LIMITS.put(limitKey, (parseInt(currentUsage) + 1).toString(), { expirationTtl: 3600 });
     }
+
+    // Derive tier info from the API key for demo responses
+    const keyData = {
+      name: apiKey.includes('demo') ? 'Free' : 'Pro',
+      plan: apiKey.includes('demo') ? 'free' : 'pro',
+      limit: apiKey.includes('demo') ? 10 : 5000,
+    };
 
     // Route handling
     try {
@@ -143,7 +112,7 @@ export default {
           mode: 'demo',
           forensicStatus: hasForensicPattern ? 'MATCH' : 'NOT_FOUND',
           depthShiftScore: hasForensicPattern ? 0.94 : 0,
-          authenticity: hasForensicPattern ? 'CONFIRMED_ARTIFACT' : 'UNVERIFIED_COPY',
+          authenticity: hasForensicPattern ? 'CONFIRMED_ARTIFIACT' : 'UNVERIFIED_COPY',
           notice: 'Magic Eye technology detected the underlying cryptographic depth map.'
         }, cors);
       }
@@ -230,7 +199,7 @@ export default {
         }, cors);
       }
 
-      return json({ error: 'Not found', endpoints: ['/api/v1/classify', '/api/v1/verify', '/api/v1/mint-nft', '/api/v1/industries', '/api/v1/pricing', '/api/v1/leads (POST)', '/checkout/success', '/api/v2/accounts (POST)', '/api/v2/accounts/:id (GET)'], mode: 'demo', notice: 'Demo mode — returns simulated responses' }, cors, 404);
+      return json({ error: 'Not found', endpoints: ['/api/v1/classify', '/api/v1/verify', '/api/v1/mint-nft', '/api/v1/industries', '/api/v1/pricing', '/api/v2/accounts (POST)', '/api/v2/accounts/:id (GET)'], mode: 'demo', notice: 'Demo mode — returns simulated responses' }, cors, 404);
     } catch (e: any) {
       return json({ error: 'Internal error', message: e.message, mode: 'demo', notice: 'Demo mode — returns simulated responses' }, cors, 500);
     }
@@ -244,246 +213,20 @@ function json(data: any, cors: any, status = 200) {
   });
 }
 
-function generateApiKey(plan: string): string {
-  const prefix = plan === 'free' ? 'ac_free' : plan === 'starter' ? 'ac_starter' : 'ac_pro';
-  const rand = Array.from(crypto.getRandomValues(new Uint8Array(16)))
-    .map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 24);
-  return `${prefix}_${rand}`;
-}
-
-async function verifyStripeSignature(body: string, sigHeader: string, secret: string): Promise<boolean> {
-  const parts = Object.fromEntries(sigHeader.split(',').map(p => { const [k, v] = p.split('='); return [k, v]; }));
-  const timestamp = parts['t'];
-  const v1 = parts['v1'];
-  if (!timestamp || !v1) return false;
-
-  const payload = `${timestamp}.${body}`;
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
-  const expected = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
-  return expected === v1;
-}
-
-const STATIC_PLAN_MAP: Record<string, { plan: string; limit: number; name: string }> = {
-  'price_strainchain_basic': { plan: 'starter', limit: 1000, name: 'StrainChain Basic' },
-  'price_strainchain_pro': { plan: 'pro', limit: 10000, name: 'StrainChain Pro' },
-  'price_strainchain_enterprise': { plan: 'enterprise', limit: 100000, name: 'StrainChain Enterprise' },
-  'price_qron_single': { plan: 'starter', limit: 100, name: 'QRON Single' },
-  'price_qron_brand': { plan: 'pro', limit: 5000, name: 'QRON Brand Pack' },
-  'price_qron_enterprise': { plan: 'enterprise', limit: 100000, name: 'QRON Enterprise' },
+const HTML_SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
 };
 
-function buildPlanMap(env: any): Record<string, { plan: string; limit: number; name: string }> {
-  const map = { ...STATIC_PLAN_MAP };
-  if (env.STRIPE_AGENT_BROWSER_PRO_PRICE_ID)
-    map[env.STRIPE_AGENT_BROWSER_PRO_PRICE_ID] = { plan: 'pro', limit: 10000, name: 'Agent Browser Pro' };
-  if (env.STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID)
-    map[env.STRIPE_AGENT_BROWSER_ENTERPRISE_PRICE_ID] = { plan: 'enterprise', limit: 100000, name: 'Agent Browser Enterprise' };
-  if (env.STRIPE_STRAINCHAIN_BASIC_PRICE_ID)
-    map[env.STRIPE_STRAINCHAIN_BASIC_PRICE_ID] = { plan: 'starter', limit: 1000, name: 'StrainChain Basic' };
-  if (env.STRIPE_STRAINCHAIN_PRO_PRICE_ID)
-    map[env.STRIPE_STRAINCHAIN_PRO_PRICE_ID] = { plan: 'pro', limit: 10000, name: 'StrainChain Pro' };
-  if (env.STRIPE_STRAINCHAIN_ENTERPRISE_PRICE_ID)
-    map[env.STRIPE_STRAINCHAIN_ENTERPRISE_PRICE_ID] = { plan: 'enterprise', limit: 100000, name: 'StrainChain Enterprise' };
-  if (env.STRIPE_QRON_ENTERPRISE_PRICE_ID)
-    map[env.STRIPE_QRON_ENTERPRISE_PRICE_ID] = { plan: 'enterprise', limit: 100000, name: 'QRON Enterprise' };
-  return map;
-}
-
-async function fetchStripeSession(sessionId: string, stripeKey: string): Promise<any> {
-  try {
-    const res = await fetch(
-      `https://api.stripe.com/v1/checkout/sessions/${sessionId}?expand[]=line_items`,
-      { headers: { Authorization: `Bearer ${stripeKey}` } }
-    );
-    if (res.ok) return res.json();
-  } catch {}
-  return null;
-}
-
-// ── Stripe Webhook — provisions API keys on checkout ────────────────────
-
-async function handleStripeWebhook(request: Request, env: any, cors: any): Promise<Response> {
-  const body = await request.text();
-  const sig = request.headers.get('Stripe-Signature');
-
-  if (!sig || !env.STRIPE_WEBHOOK_SECRET) {
-    return json({ error: 'Missing signature or webhook secret' }, cors, 400);
-  }
-
-  const valid = await verifyStripeSignature(body, sig, env.STRIPE_WEBHOOK_SECRET);
-  if (!valid) {
-    return json({ error: 'Invalid signature' }, cors, 401);
-  }
-
-  const event = JSON.parse(body);
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const email = session.customer_email || session.customer_details?.email;
-
-    // Resolve plan: metadata.plan (set by stripe-service.ts) takes precedence;
-    // fall back to price ID lookup against plan map via expanded line_items.
-    const metadataPlan = session.metadata?.plan as string | undefined;
-    let priceId: string = session.metadata?.priceId || session.metadata?.price_id || 'unknown';
-    if (priceId === 'unknown' && env.STRIPE_SECRET_KEY) {
-      const expanded = await fetchStripeSession(session.id, env.STRIPE_SECRET_KEY);
-      priceId = expanded?.line_items?.data?.[0]?.price?.id || priceId;
-    }
-
-    const METADATA_PLAN_LIMITS: Record<string, { plan: string; limit: number; name: string }> = {
-      starter: { plan: 'starter', limit: 1000, name: 'AuthiChain Starter' },
-      professional: { plan: 'professional', limit: 10000, name: 'AuthiChain Professional' },
-      pro: { plan: 'pro', limit: 10000, name: 'AuthiChain Pro' },
-      enterprise: { plan: 'enterprise', limit: 100000, name: 'AuthiChain Enterprise' },
-    };
-    const planMap = buildPlanMap(env);
-    const planInfo = (metadataPlan && METADATA_PLAN_LIMITS[metadataPlan])
-      ? METADATA_PLAN_LIMITS[metadataPlan]
-      : (planMap[priceId] || { plan: 'starter', limit: 1000, name: 'AuthiChain Starter' });
-
-    const apiKey = generateApiKey(planInfo.plan);
-    const keyData = {
-      key: apiKey,
-      email,
-      plan: planInfo.plan,
-      name: planInfo.name,
-      limit: planInfo.limit,
-      priceId,
-      stripeSessionId: session.id,
-      stripeCustomerId: session.customer,
-      createdAt: new Date().toISOString(),
-      active: true,
-    };
-
-    if (env.API_KEYS) {
-      await env.API_KEYS.put(`key:${apiKey}`, JSON.stringify(keyData));
-      await env.API_KEYS.put(`session:${session.id}`, JSON.stringify(keyData), { expirationTtl: 86400 });
-      if (email) {
-        await env.API_KEYS.put(`email:${email}`, JSON.stringify(keyData));
-      }
-    }
-
-    return json({ received: true, apiKey, plan: planInfo.name, priceId }, cors);
-  }
-
-  return json({ received: true }, cors);
-}
-
-// ── Checkout Success Page ───────────────────────────────────────────────
-
-async function handleCheckoutSuccess(request: Request, env: any, cors: any): Promise<Response> {
-  const url = new URL(request.url);
-  const sessionId = url.searchParams.get('session_id');
-
-  let apiKey = '';
-  let planName = '';
-  let email = '';
-
-  if (sessionId && env.API_KEYS) {
-    const raw = await env.API_KEYS.get(`session:${sessionId}`);
-    if (raw) {
-      const data = JSON.parse(raw);
-      apiKey = data.key;
-      planName = data.name;
-      email = data.email || '';
-    }
-  }
-
-  const html = `<!DOCTYPE html><html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Welcome to AuthiChain</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#08080a;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
-.card{max-width:520px;width:100%;background:#0d0d10;border:1px solid #1a1a1a;border-radius:16px;padding:48px 40px;text-align:center}
-.check{font-size:64px;margin-bottom:16px}
-h1{font-size:28px;font-weight:700;margin-bottom:8px;background:linear-gradient(135deg,#d4af37,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.plan{color:#8b5cf6;font-size:14px;margin-bottom:32px}
-.key-box{background:#08080a;border:2px solid #d4af37;border-radius:8px;padding:16px;margin:24px 0;font-family:monospace;font-size:15px;color:#d4af37;word-break:break-all;cursor:pointer;position:relative}
-.key-box:hover::after{content:'Click to copy';position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:4px 12px;border-radius:4px;font-size:11px;font-family:sans-serif}
-.label{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:#666;margin-bottom:8px}
-.next{margin-top:32px;color:#888;font-size:14px;line-height:1.8}
-.next code{background:#1a1a1a;padding:2px 8px;border-radius:4px;color:#d4af37;font-size:13px}
-a.btn{display:inline-block;margin-top:24px;padding:12px 32px;background:linear-gradient(135deg,#d4af37,#b8941f);color:#000;font-weight:700;border-radius:6px;text-decoration:none;font-size:14px}
-.nokey{color:#ff6b6b;margin:24px 0}
-</style></head><body>
-<div class="card">
-  <div class="check">${apiKey ? '&#10003;' : '&#9888;'}</div>
-  <h1>${apiKey ? 'You\'re In' : 'Almost There'}</h1>
-  ${planName ? `<div class="plan">${planName}</div>` : ''}
-  ${apiKey ? `
-    <div class="label">Your API Key</div>
-    <div class="key-box" onclick="navigator.clipboard.writeText('${apiKey}')">${apiKey}</div>
-    <div class="next">
-      <strong>Quick start:</strong><br>
-      <code>curl -H "X-API-Key: ${apiKey}" https://api.authichain.com/api/v1/industries</code>
-    </div>
-    <a class="btn" href="/docs">View API Docs</a>
-  ` : `
-    <div class="nokey">Your API key is being provisioned. Check your email${email ? ` (${email})` : ''} or refresh this page in a moment.</div>
-    <a class="btn" href="/docs">View API Docs</a>
-  `}
-</div>
-</body></html>`;
-
-  return new Response(html, { headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8' } });
-}
-
-// ── Lead Capture ────────────────────────────────────────────────────────
-
-async function handleLeadCapture(request: Request, env: any, cors: any): Promise<Response> {
-  const body: any = await request.json().catch(() => ({}));
-  const { email, name, company, source } = body;
-
-  if (!email || !email.includes('@')) {
-    return json({ error: 'Valid email is required' }, cors, 400);
-  }
-
-  const lead = {
-    email,
-    name: name || '',
-    company: company || '',
-    source: source || 'api-gateway',
-    createdAt: new Date().toISOString(),
-  };
-
-  if (env.LEADS) {
-    await env.LEADS.put(`lead:${email}`, JSON.stringify(lead));
-    const countRaw = await env.LEADS.get('meta:count');
-    const count = parseInt(countRaw || '0') + 1;
-    await env.LEADS.put('meta:count', count.toString());
-  }
-
-  return json({ success: true, message: 'Thanks! We\'ll be in touch.' }, cors, 201);
-}
-
-// ── Key Status ──────────────────────────────────────────────────────────
-
-async function handleKeyStatus(apiKey: string, env: any, cors: any): Promise<Response> {
-  if (apiKey === 'demo_test_key_2026') {
-    const usage = env.RATE_LIMITS ? parseInt(await env.RATE_LIMITS.get(`usage:${apiKey}:${new Date().getUTCHours()}`) || '0') : 0;
-    return json({ plan: 'Free', limit: 10, used: usage, remaining: Math.max(0, 10 - usage), active: true }, cors);
-  }
-
-  if (!env.API_KEYS) return json({ error: 'Key store unavailable' }, cors, 503);
-
-  const raw = await env.API_KEYS.get(`key:${apiKey}`);
-  if (!raw) return json({ error: 'Invalid API key' }, cors, 401);
-
-  const data = JSON.parse(raw);
-  const usage = env.RATE_LIMITS ? parseInt(await env.RATE_LIMITS.get(`usage:${apiKey}:${new Date().getUTCHours()}`) || '0') : 0;
-
-  return json({
-    plan: data.name,
-    email: data.email,
-    limit: data.limit,
-    used: usage,
-    remaining: Math.max(0, data.limit - usage),
-    active: data.active,
-    createdAt: data.createdAt,
-  }, cors);
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a), bb = enc.encode(b);
+  const len = Math.max(ab.length, bb.length);
+  let diff = ab.length ^ bb.length;
+  for (let i = 0; i < len; i++) diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
+  return diff === 0;
 }
 
 // ── Stripe Accounts v2 (admin-gated) ────────────────────
@@ -559,12 +302,6 @@ const DOCS_HTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AuthiChain API — Product Authentication as a Service</title>
 <meta name="description" content="AuthiChain B2B API for product authentication. AI classification, verification, and certificate generation. 10 industries, demo mode.">
-<meta property="og:title" content="AuthiChain API — Product Authentication as a Service">
-<meta property="og:description" content="AI-powered product classification, verification, and certificate generation across 10 industries.">
-<meta property="og:type" content="website">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="AuthiChain API">
-<meta name="twitter:description" content="B2B product authentication API. AI classification, blockchain verification, 10 industries.">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#08080a;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;line-height:1.6}
@@ -630,13 +367,9 @@ td{padding:12px;border-bottom:1px solid #111}
 </div>
 
 <div style="margin-bottom:48px">
-  <form id="key-form" style="display:inline-flex;gap:8px;margin-right:12px;vertical-align:middle">
-    <input type="email" id="key-email" placeholder="you@company.com" required style="padding:12px 16px;border-radius:4px;border:1px solid #333;background:#0d0d10;color:#e0e0e0;font-size:14px;width:240px">
-    <button type="submit" class="cta" style="border:none;cursor:pointer">Get API Key</button>
-  </form>
+  <a href="mailto:authichain@gmail.com?subject=API%20Key%20Request" class="cta">Get API Key</a>
   <a href="https://strainchain.io" class="cta outline">StrainChain</a>
   <a href="https://qron-portfolio.undone-k.workers.dev/" class="cta outline">QRON Portfolio</a>
-  <p id="key-msg" style="color:#3ddc60;font-size:13px;margin-top:8px;display:none"></p>
 </div>
 
 <h2>Authentication</h2>
@@ -734,8 +467,8 @@ console.log(data.result);  <span style="color:#555">// "authentic"</span></pre>
 
 <div style="margin:48px 0;padding:32px;background:#0d0d10;border:1px solid #1a1a1a;border-radius:8px;text-align:center">
   <h3 style="margin-bottom:8px">Ready to integrate?</h3>
-  <p>Use the demo key above to test, or get a production key:</p>
-  <a href="#" onclick="document.getElementById('key-email').focus();return false" class="cta">Get Production Key</a>
+  <p>Get your API key and start exploring the demo endpoints.</p>
+  <a href="mailto:authichain@gmail.com?subject=API%20Key%20Request" class="cta">Request API Key</a>
 </div>
 
 <div class="footer-eco">
@@ -752,20 +485,5 @@ console.log(data.result);  <span style="color:#555">// "authentic"</span></pre>
 </div>
 
 </div>
-<script>
-document.getElementById('key-form').addEventListener('submit',async function(e){
-  e.preventDefault();
-  const email=document.getElementById('key-email').value;
-  const msg=document.getElementById('key-msg');
-  try{
-    const r=await fetch('/api/v1/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,source:'api-docs'})});
-    const d=await r.json();
-    msg.textContent=r.ok?'Check your email — we will send your API key within 24 hours.':d.error;
-    msg.style.display='block';
-    msg.style.color=r.ok?'#3ddc60':'#ff6b6b';
-    if(r.ok)this.reset();
-  }catch(err){msg.textContent='Something went wrong.';msg.style.display='block';msg.style.color='#ff6b6b';}
-});
-</script>
 </body>
 </html>`;

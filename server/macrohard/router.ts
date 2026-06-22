@@ -55,8 +55,9 @@ export const macrohardRouter = router({
   query: adminProcedure
     .input(
       z.object({
-        resource: z.string().min(1).max(100),
-        params: z.record(z.string(), z.string()).optional(),
+        // Only allow simple alphanumeric/hyphen/underscore resource names — no path traversal
+        resource: z.string().min(1).max(100).regex(/^[\w\-]+$/, "Invalid resource name"),
+        params: z.record(z.string()).optional(),
       })
     )
     .query(async ({ input }) => {
@@ -72,7 +73,7 @@ export const macrohardRouter = router({
     .input(
       z.object({
         eventType: z.enum(["product_authenticated", "certificate_issued", "nft_minted"]),
-        payload: z.record(z.string(), z.unknown()),
+        payload: z.record(z.unknown()),
       })
     )
     .mutation(async ({ input }) => {

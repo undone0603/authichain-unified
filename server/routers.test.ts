@@ -42,44 +42,42 @@ vi.mock("./db", async (importOriginal) => {
       if (idx >= 0) store.notifications.splice(idx, 1);
     }),
     createLead: vi.fn(async (_data: any) => ({ id: store.nextLeadId() })),
-    // ── DB read stubs ─────────────────────────────────────────────────────────
-    // This file-level vi.mock REPLACES the test-setup.ts mock for "./db", so the
-    // stubs below must be repeated here or these procedures hit a real database.
+    // certificates
     getCertificateByNumber: vi.fn(async () => null),
+    // nft
     listNfts: vi.fn(async () => []),
     listCollections: vi.fn(async () => []),
     getActiveAuctions: vi.fn(async () => []),
-    getReferralByCode: vi.fn(async () => null),
+    // referral
+    getReferralByCode: vi.fn(async () => undefined),
+    getUserReferrals: vi.fn(async () => []),
+    // white-label
     getWhiteLabelByApiKey: vi.fn(async () => null),
+    // subscriptions
     getUserSubscription: vi.fn(async () => null),
+    // autopilot
     getAutopilotConfig: vi.fn(async () => null),
     getRecentDecisions: vi.fn(async () => []),
+    // email campaigns/drafts
     getUserEmailCampaigns: vi.fn(async () => []),
     getPendingDrafts: vi.fn(async () => []),
-    getUserReferrals: vi.fn(async () => []),
+    // affiliate
     getAffiliateByUserId: vi.fn(async () => null),
+    // ab testing
     getAllAbTests: vi.fn(async () => []),
-    getDashboardMetrics: vi.fn(async () => ({
-      totalProducts: 0,
-      totalAuthentications: 0,
-      totalCertificates: 0,
-      subscription: null,
-    })),
-    getAdminDashboardMetrics: vi.fn(async () => ({
-      totalUsers: 0,
-      totalProducts: 0,
-      totalAuthentications: 0,
-      totalRevenue: 0,
-      totalLeads: 0,
-      totalNfts: 0,
-    })),
+    // dashboard
+    getDashboardMetrics: vi.fn(async () => ({ totalProducts: 0, totalAuthentications: 0, totalCertificates: 0, totalNfts: 0 })),
+    // admin
+    getAdminDashboardMetrics: vi.fn(async () => ({ totalUsers: 0, totalProducts: 0, totalAuthentications: 0, totalRevenue: 0, totalLeads: 0, totalNfts: 0 })),
     getAllUsers: vi.fn(async () => []),
+    getRevenueAnalytics: vi.fn(async () => []),
+    getSubscriptionAnalytics: vi.fn(async () => []),
     getOpenFraudAlerts: vi.fn(async () => []),
     getAllHealthScores: vi.fn(async () => []),
     getRecentActivity: vi.fn(async () => []),
-    getSubscriptionAnalytics: vi.fn(async () => []),
-    getRevenueAnalytics: vi.fn(async () => []),
     getWhiteLabelClients: vi.fn(async () => []),
+    // make getDb return null so character/scheduler null-guards activate
+    getDb: vi.fn(async () => null),
   };
 });
 
@@ -93,16 +91,7 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     name: "Test User",
     loginMethod: "manus",
     role,
-    walletAddress: null,
-    avatarUrl: null,
-    company: null,
-    title: null,
-    phone: null,
-    onboardingCompleted: 0,
     stripeCustomerId: null,
-    paddleCustomerId: null,
-    points: 0,
-    metadata: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
@@ -956,9 +945,9 @@ describe("AuthiChain Unified Platform Routers", () => {
       const caller = appRouter.createCaller(createPublicContext());
       await expect(caller.qrcode.generate({ productId: 1 })).rejects.toThrow();
     });
-    it("listForProduct requires auth", async () => {
+    it("generateStorymode requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.qrcode.listForProduct({ productId: 1 })).rejects.toThrow();
+      await expect(caller.qrcode.generateStorymode({ productId: 1 })).rejects.toThrow();
     });
   });
 

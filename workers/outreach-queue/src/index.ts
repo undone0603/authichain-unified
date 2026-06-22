@@ -128,17 +128,35 @@ export default {
   },
 
   async queue(batch: MessageBatch<OutreachJob>, env: Env): Promise<void> {
-    // PAUSED: drain queue without sending — 73% bounce rate on prior wave
-    // damaged domain reputation. Re-enable processJob() only after list is
-    // scrubbed and verified addresses are confirmed via Resend delivery API.
     for (const message of batch.messages as QueueMessage<OutreachJob>[]) {
       const job = message.body;
-      await env.OUTREACH_KV.put(
-        `job:${job.id}`,
-        JSON.stringify({ ...job, status: 'drained', drainedAt: Date.now() }),
-        { expirationTtl: 86400 * 7 }
-      );
-      message.ack();
+      const success = await processJob(job, env);
+
+      if (success) {
+        await env.OUTREACH_KV.put(
+          `job:${job.id}`,
+          JSON.stringify({ ...job, status: 'sent', sentAt: Date.now() }),
+          { expirationTtl: 86400 * 7 }
+        );
+        message.ack();
+      } else {
+        const retryCount = (job.retryCount ?? 0) + 1;
+        if (retryCount >= 3) {
+          await env.OUTREACH_KV.put(
+            `job:${job.id}`,
+            JSON.stringify({ ...job, status: 'failed', retryCount }),
+            { expirationTtl: 86400 * 7 }
+          );
+          message.ack(); // Exhaust retries — mark as failed
+        } else {
+          await env.OUTREACH_KV.put(
+            `job:${job.id}`,
+            JSON.stringify({ ...job, status: 'retrying', retryCount }),
+            { expirationTtl: 86400 * 7 }
+          );
+          message.retry();
+        }
+      }
     }
   },
 };

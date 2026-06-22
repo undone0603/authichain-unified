@@ -11,9 +11,3 @@ zone_name = "qron.space"
 [[routes]]
 pattern = "www.qron.space/*"
 zone_name = "qron.space"
-
-
-
-
-
-

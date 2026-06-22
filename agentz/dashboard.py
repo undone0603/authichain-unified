@@ -8,8 +8,6 @@ if str(root_path) not in sys.path:
 
 import json
 import time
-import urllib.request
-from urllib.error import HTTPError, URLError
 import pandas as pd
 import streamlit as st
 import asyncio
@@ -63,27 +61,7 @@ def load_authichain_data():
         st.error(f"Failed to load AuthiChain data: {e}")
         return pd.DataFrame(), pd.DataFrame()
 
-def trigger_power_launch_via_api(api_url: str, mode: str, parallel: bool, token: str) -> dict:
-    url = f"{api_url.rstrip('/')}/launch?mode={mode}&parallel={str(parallel).lower()}"
-    req = urllib.request.Request(
-        url,
-        method="POST",
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="ignore")
-        raise RuntimeError(f"Launch API responded {exc.code}: {body}")
-    except URLError as exc:
-        raise RuntimeError(f"Failed to reach launch API: {exc.reason}") from exc
-
-
+@st.cache_data(ttl=60)
 def check_provider_health():
     """Checks the status of LLM providers and circuit breaker state."""
     keys = {
@@ -172,7 +150,7 @@ if deep_health:
             st.write(f"{icon} **{k.title()}**: {v}")
 
 st.sidebar.divider()
-page = st.sidebar.radio("Go to", ["Orchestration Telemetry", "AuthiChain Ecosystem", "Federal Capture", "Revenue Siphon", "Template Control & Cloud Sync", "Limit-Proofing Health"])
+page = st.sidebar.radio("Go to", ["Orchestration Telemetry", "AuthiChain Ecosystem", "Federal Capture", "Revenue Siphon", "Limit-Proofing Health"])
 
 if page == "Orchestration Telemetry":
     df = load_audit_logs()
@@ -255,15 +233,7 @@ elif page == "Federal Capture":
         st.bar_chart(status_counts, x='Status', y='Count')
 
 elif page == "Revenue Siphon":
-    st.header("🔗 Citation Authority Proofs")
-    proofs = [
-        {"platform": "Telegra.ph (Anonymous)", "url": "https://telegra.ph/AuthiChain-Scaling-Autonomous-Trust-Technical-Report-05-19", "status": "LIVE"},
-        {"platform": "GitHub Gist (Z-kie)", "url": "https://gist.github.com/Z-kie/135a781a631cd94d0205c3806ee2aa35", "status": "INDEXED"},
-        {"platform": "Write.as (No-Sign-In)", "url": "https://write.as/contentisblocked", "status": "PENDING"}
-    ]
-    st.table(proofs)
-    st.info("💡 **GEO Strategy**: These high-authority technical reports are designed to be cited by LLMs (ChatGPT, Perplexity) when users search for 'EU DPP Compliance' and 'Autonomous Trust'.")
-
+    st.header("$$ Real-time Revenue Siphon")
     
     # Real Pipeline Projections
     pipeline_total = 172 # Total deals in backlog
@@ -286,74 +256,6 @@ elif page == "Revenue Siphon":
     st.bar_chart(chart_data, x="Stage", y="Count")
     
     st.info("💡 **Revenue Blitz Tip**: 100 lead-microsites are currently live. Transitioning to 'Auto-Closer' loop will issue 5 DocuSign agreements this week.")
-
-elif page == "Template Control & Cloud Sync":
-    st.header("🛠️ Template-First Engine Control")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("☁️ Sync with Cloudflare R2"):
-            from agentz.core.templates import sync_with_cloud
-            with st.spinner("Synchronizing master template set..."):
-                success = asyncio.run(sync_with_cloud())
-                if success:
-                    st.success("Master templates synchronized from R2.")
-                else:
-                    st.error("R2 Synchronization failed. Check credentials.")
-                    
-    with col2:
-        if st.button("🚀 Trigger Master Content Blitz"):
-            st.info("Initiating zero-latency content production for 172 deals...")
-            # In a real dashboard, this would trigger the CLI command
-            st.warning("Mass Blitz triggered via background worker.")
-
-    st.divider()
-    st.subheader("Autonomous Business Launch")
-    launch_mode = st.selectbox("Launch mode", ["auto", "confirm", "dry-run"], index=0)
-    parallel = st.checkbox("Run agents in parallel", value=True)
-    api_url = get("agentz_api_url", required=False) or "http://localhost:8000"
-    api_token = get("agent_secret", required=False) or "authichain-secret"
-
-    st.write(f"Launch API: `{api_url.rstrip('/')}/launch`")
-    if not get("agent_secret", required=False):
-        st.warning("No agent_secret configured; using fallback token for local development.")
-
-    if st.button("🛡️ Trigger Autonomous Power Launch"):
-        st.info(f"Launching AgentZ in {launch_mode} mode with parallel={parallel}...")
-        try:
-            with st.spinner("Starting launch sequence..."):
-                results = trigger_power_launch_via_api(api_url, launch_mode, parallel, api_token)
-            summary = results.get("summary", {})
-            st.success(f"Launch complete: {summary.get('ok', 0)} OK, {summary.get('failed', 0)} failed")
-            if results.get("results"):
-                df = pd.DataFrame([{
-                    "agent": item.get("name"),
-                    "status": "OK" if item.get("ok") else "FAIL",
-                    "duration_ms": item.get("duration_ms"),
-                    "error": item.get("error"),
-                } for item in results["results"]])
-                st.dataframe(df, use_container_width=True)
-        except Exception as exc:
-            st.error(f"Autonomous launch failed: {exc}")
-
-    st.divider()
-    st.subheader("Active Knowledge Base")
-    from agentz.core.templates import TEMPLATE_ROOT
-    templates = list(TEMPLATE_ROOT.glob("**/*.*"))
-    if templates:
-        t_data = [{"Category": p.parent.name, "Template": p.name, "Size": f"{p.stat().st_size} bytes"} for p in templates]
-        st.table(t_data)
-    else:
-        st.info("No local templates found. Use 'Sync with Cloud' to populate.")
-    
-    st.divider()
-    st.subheader("Logic-Aware Template Test")
-    test_tpl = st.text_area("Template Code", "{{IF brand}}\n🔥 Launching {{brand}}! #{{vertical}}\n{{ENDIF}}")
-    test_ctx = {"brand": "Detroit Artisan Brews", "vertical": "Brewery"}
-    if st.button("Verify Logic"):
-        from agentz.core.templates import fill_template
-        res = fill_template(test_tpl, test_ctx)
-        st.code(res)
 
 elif page == "Limit-Proofing Health":
     st.header("🛡️ Limit-Proofing: Provider Health")

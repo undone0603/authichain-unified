@@ -18,7 +18,7 @@ import { toast } from "sonner";
 
 export default function StakingHub() {
   const { data: positions, refetch } = trpc.staking.list.useQuery();
-  const { data: agent } = trpc.character.myAgent.useQuery();
+  const { data: agent } = trpc.character.getAgent.useQuery();
   
   const stake = trpc.staking.stake.useMutation({
     onSuccess: () => {

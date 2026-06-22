@@ -1,9 +1,0 @@
-name = "qron-edge"
-main = "src/index.ts"
-compatibility_date = "2024-04-29"
-
-[vars]
-NEXT_PUBLIC_SUPABASE_URL = "https://nhdnkzhtadfkkluiulhs.supabase.co"
-
-# Binding for the redirect engine
-custom_domain = false

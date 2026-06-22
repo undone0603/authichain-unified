@@ -1,35 +1,14 @@
-import { invokeLLM, parseLLMContent } from "../_core/llm";
-import { logActivity } from "../db";
+import { invokeLLM, parseLLMContent } from "../_core/llm.js";
 
 /**
- * Social Multiplier Service - Ported from legacy traffic strategies.
+ * Social Multiplier Service — Ported from legacy traffic strategies.
  * Generates 1 core announcement into 10 multi-platform micro-content pieces.
  */
-
-// Brand keyword allowlist - use exact string matching to avoid substring spoofing
-const BRAND_KEYWORDS = [
-  'QRON.space',
-  'AuthiChain.com',
-  'GovChain.us',
-  'StrainChain.io',
-  'StrainChain.us',
-] as const;
-
-type BrandKeyword = typeof BRAND_KEYWORDS[number];
-
-function containsBrandKeyword(text: string, keyword: BrandKeyword): boolean {
-  // Use word-boundary regex to prevent substring-in-domain spoofing
-  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`(?<![a-zA-Z0-9.-])${escaped}(?![a-zA-Z0-9-])`, 'i');
-  // keyword is always a hardcoded BrandKeyword constant, not user-controlled
-  return pattern.test(text);
-}
-
 export async function runSocialMultiplier(announcement: string) {
-  console.log("\uD83D\uDCE3 Activating Social Multiplier...");
+  console.log("📢 Activating Social Multiplier...");
 
   const prompt = `You are a high-performance growth marketer for AuthiChain.
-Take the following core announcement and transform it into optimized social posts for 3 platforms:
+Take the following core announcement and transform it into optimized social posts for 3 platforms.
 
 Announcement: ${announcement}
 
@@ -43,7 +22,8 @@ Return JSON:
   "linkedin": "...",
   "reddit": { "title": "...", "body": "..." },
   "twitter": ["tweet 1", "tweet 2", "tweet 3"]
-}`;
+}
+  `;
 
   try {
     const result = await invokeLLM({
@@ -53,50 +33,73 @@ Return JSON:
 
     return parseLLMContent<any>(result.choices[0].message.content);
   } catch (err: any) {
-    console.warn("\u26A0\uFE0F LLM Generation failed. Using vertical-aware traffic bundle.");
+    console.warn("⚠️ LLM Generation failed. Using vertical-aware traffic bundle.");
 
-    if (containsBrandKeyword(announcement, 'QRON.space')) {
+    // Parse the first URL found in the announcement text; compare hostname exactly
+    // to avoid partial-domain false positives (e.g. "evil-qron.space").
+    let announcedHost = "";
+    try {
+      const m = announcement.match(/https?:\/\/[^\s/]+/i);
+      if (m) announcedHost = new URL(m[0]).hostname.toLowerCase().replace(/^www\./, "");
+    } catch { /* no valid URL in text */ }
+    const isHost = (d: string) => announcedHost === d || announcedHost.endsWith(`.${d}`);
+
+    if (isHost("qron.space")) {
       return {
-        linkedin: "\uD83D\uDE80 QRON.space officially launches 'Dimensional Gateways'\u2014the future of product verification is visual. Our AI-generated QR art is cryptographically tied to blockchain provenance records. For brands serious about anti-counterfeiting in 2026.",
+        linkedin: "🚀 QRON.space officially launches 'Dimensional Gateways'—the future of product engagement.\n\nOur AI-powered gateways drive 78% higher scan rates vs standard QR codes. Every gateway is cryptographically signed and anchored to the AuthiChain Protocol. Turn your physical product into a cinematic digital portal today.\n\nExplore the studio: qron.space\n\n#QRON #AIArt #ProductIdentity #Blockchain",
         reddit: {
-          title: "QRON.space - AI-generated QR codes now on-chain. Thoughts?",
-          body: "I've been building a studio that replaces flat QR codes with AI-generated cinema-quality art. Each piece is cryptographically signed and blockchain-verified. Still early but curious what the community thinks about visual authentication.",
+          title: "Increasing QR scan rates by 78% with AI-generated 'Dimensional Gateways'",
+          body: "I've been building a studio that replaces flat QR codes with AI-generated cinematic gateways. Data shows consumers engage significantly more when the code is part of the product's visual story. Every code is cryptographically signed using Ed25519. Check out the generator: qron.space"
         },
         twitter: [
-          "1/ Tired of ugly QR codes? \uD83D\uDCF8 QRON.space generates AI art that IS your verification link. Cryptographically signed. Blockchain anchored. @AuthiChain",
-          "2/ Every QRON piece contains hidden cryptographic proof of authenticity. Scan it. Verify it. Own it. This is what Web3 product auth looks like.",
-          "3/ Early access open now. If you're a brand, luxury house, or collector\u2014DM me. qron.space \u26A1",
-        ],
+          "1/ Standard QR codes are dead. Consumers ignore them.",
+          "2/ QRON just launched 'Dimensional Gateways'—AI art that drives 78% higher engagement.",
+          "3/ Every gateway is cryptographically signed and anchored to AuthiChain. Build your portal: qron.space 🌌"
+        ]
       };
     }
 
-    if (containsBrandKeyword(announcement, 'StrainChain.io') || containsBrandKeyword(announcement, 'StrainChain.us')) {
+    if (isHost("strainchain.io")) {
       return {
-        linkedin: "\uD83C\uDF3F StrainChain.io is now the automated 'Truth Layer' for Michigan cannabis.\n\nOur METRC-native compliance engine auto-generates Certificates of Analysis, tracks chain-of-custody from seed to sale, and creates immutable QR verification at the point of packaging.",
+        linkedin: "🌿 StrainChain.io is now the automated 'Truth Layer' for Michigan cannabis.\n\nOur new background job automatically anchors METRC manifests to Bitcoin L1. Cultivators now receive an immutable 'Proof of Purity' certificate for every package tag, eliminating 80% of manual audit labor.\n\nVerify your provenance: strainchain.io\n\n#StrainChain #CannabisCompliance #BitcoinL1 #METRC",
         reddit: {
-          title: "StrainChain - Blockchain compliance for cannabis. Would dispensaries actually use this?",
-          body: "Building a METRC-integrated compliance tool that auto-generates CoAs and creates blockchain-verified QR codes for cannabis products. Trying to understand if dispensaries would pay for automated compliance vs manual processes.",
+          title: "Automating METRC audits with Bitcoin L1 anchoring (StrainChain)",
+          body: "We just launched a background job that pulls Michigan METRC manifests and anchors them to Bitcoin L1 in real-time. This creates a permanent 'Proof of Purity' for every batch that regulators can verify in seconds. Would love to hear from other MSOs on the legal implications: strainchain.io"
         },
         twitter: [
-          "1/ Michigan cannabis brands: Are you manually filing METRC reports? StrainChain automates your entire compliance workflow. Seed to sale. Blockchain-verified.",
-          "2/ Every StrainChain product gets a QR code that proves: - Tested \u2713 - METRC compliant \u2713 - Chain of custody \u2713 Customers can verify before they buy.",
-          "3/ We're onboarding Michigan dispensaries now. strainchain.io \uD83C\uDF3F",
-        ],
+          "1/ Manual METRC audits take hundreds of hours per quarter. Not anymore.",
+          "2/ StrainChain now automatically anchors Michigan cannabis manifests to Bitcoin L1.",
+          "3/ Get your 'Proof of Purity' certificate and automate your CRA reporting: strainchain.io 🌿"
+        ]
       };
     }
 
-    // Default AuthiChain fallback
+    if (isHost("govchain.us")) {
+      return {
+        linkedin: "🏛️ GovChain.us achieves 'Sovereign Document' status (CAGE 1PUJ6).\n\nWe are now deploying W3C Verifiable Credentials for federal and defense supply chains. Secure your credentials with FIPS 140-2 HSM-grade cryptographic truth and prevent state-level forgery in under 2 seconds.\n\nView the Sovereign Protocol: govchain.us\n\n#GovChain #FederalSecurity #W3C #VerifiableCredentials #CAGE1PUJ6",
+        reddit: {
+          title: "Deploying FIPS-grade W3C Verifiable Credentials for federal supply chains",
+          body: "Our protocol (CAGE 1PUJ6) just finalized its W3C VC implementation for sovereign documents. We use Ed25519 signatures and FIPS 140-2 compliance to secure credentials against state-level forgery. High-performance field verification in <2 seconds. Documentation: govchain.us"
+        },
+        twitter: [
+          "1/ Federal supply chains are vulnerable to credential forgery. GovChain just fixed it.",
+          "2/ Using W3C Verifiable Credentials and FIPS 140-2 HSM security to anchor sovereign truth.",
+          "3/ Verified by CAGE Code 1PUJ6. Secure your federal document pipeline: govchain.us 🏛️"
+        ]
+      };
+    }
+
     return {
-      linkedin: "\uD83D\uDD10 AuthiChain is redefining product authentication for the enterprise.\n\nOur blockchain-native verification protocol creates cryptographic proof of authenticity at the point of manufacture\u2014not after the fact.",
+      linkedin: `🚀 AuthiChain is officially launching the MedTech Compliance Vertical.\n\nMedical device manufacturers can now automate ISO 13485 audit trails on-chain, reducing manual compliance labor by 80%. Stop managing recalls with spreadsheets—switch to cryptographic finality.\n\nQuantify your Year 1 savings here: authichain.com/roi-calculator\n\n#MedTech #Blockchain #Compliance #ISO13485`,
       reddit: {
-        title: "AuthiChain - Blockchain product authentication. What would make you trust a QR verification system?",
-        body: "Building an enterprise authentication protocol using blockchain and QR codes. Trying to understand what signals would make a consumer or B2B buyer actually trust a product verification system.",
+        title: "Automating ISO 13485 compliance with blockchain provenance",
+        body: "I've been working on a protocol that anchors device SKUs to Bitcoin L1 to eliminate audit overhead. Just launched a dedicated ROI calculator for medical device manufacturers to see if it actually makes sense for their scale. Would love the community's feedback on the cryptographic approach: authichain.com/roi-calculator"
       },
       twitter: [
-        "1/ Product fakes cost brands $500B/year. AuthiChain creates cryptographic proof of authenticity at manufacture. Impossible to fake. Instant to verify.",
-        "2/ Our protocol: Manufacturer registers product \u2192 Blockchain anchors proof \u2192 QR generated \u2192 Consumer scans \u2192 Instant verification. No middleman.",
-        "3/ We're in closed beta with enterprise brands. authichain.com \uD83D\uDD10",
-      ],
+        "1/ MedTech manufacturers: Recalls cost $200B+ annually. Manual audits are the bottleneck.",
+        "2/ AuthiChain just launched a high-ticket vertical to automate ISO 13485 provenance on-chain.",
+        "3/ Quantify your Year 1 savings in <2 mins using our new ROI calculator: authichain.com/roi-calculator 🚀"
+      ]
     };
   }
 }

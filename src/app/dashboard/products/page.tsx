@@ -364,9 +364,7 @@ export default function ProductsPage() {
 
                 <div className="space-y-3">
                   {qrCodesQuery.data?.map(qr => {
-                    // The qr_codes row type has no `metadata` column; read it
-                    // defensively in case the runtime row carries extra json.
-                    const meta = (qr as { metadata?: Record<string, unknown> | null }).metadata ?? null;
+                    const meta = qr.metadata as Record<string, unknown> | null;
                     const hasHash = !!meta?.hash;
                     const verifyUrl = qr.qrData;
 
@@ -466,39 +464,34 @@ export default function ProductsPage() {
                 )}
 
                 <div className="space-y-2">
-                  {scanHistoryQuery.data?.map(event => {
-                    // Scan events are activity-ledger rows; authenticity is stored
-                    // inside the loosely-typed `details` json and the timestamp is `createdAt`.
-                    const isAuthentic = (event.details as { isAuthentic?: boolean } | null)?.isAuthentic ?? null;
-                    return (
+                  {scanHistoryQuery.data?.map(event => (
                     <div key={event.id} className="flex items-center justify-between text-xs py-1.5 border-b border-zinc-900 last:border-0">
                       <div className="flex items-center gap-2">
-                        {isAuthentic === true && (
+                        {event.isAuthentic === true && (
                           <ShieldCheck className="w-3 h-3 text-green-400 shrink-0" />
                         )}
-                        {isAuthentic === false && (
+                        {event.isAuthentic === false && (
                           <span className="w-3 h-3 text-red-400 shrink-0 font-black text-[10px]">✗</span>
                         )}
-                        {isAuthentic === null && (
+                        {event.isAuthentic === null && (
                           <ScanLine className="w-3 h-3 text-zinc-600 shrink-0" />
                         )}
                         <span className="text-zinc-500 font-mono">
-                          {new Date(event.createdAt).toLocaleString(undefined, {
+                          {new Date(event.scannedAt).toLocaleString(undefined, {
                             month: 'short', day: 'numeric',
                             hour: '2-digit', minute: '2-digit',
                           })}
                         </span>
                       </div>
                       <span className={`text-[9px] font-black uppercase tracking-widest ${
-                        isAuthentic === true ? 'text-green-400' :
-                        isAuthentic === false ? 'text-red-400' :
+                        event.isAuthentic === true ? 'text-green-400' :
+                        event.isAuthentic === false ? 'text-red-400' :
                         'text-zinc-600'
                       }`}>
-                        {isAuthentic === true ? 'Authentic' : isAuthentic === false ? 'Invalid' : 'No hash'}
+                        {event.isAuthentic === true ? 'Authentic' : event.isAuthentic === false ? 'Invalid' : 'No hash'}
                       </span>
                     </div>
-                    );
-                  })}
+                  ))}
                 </div>
               </div>
             </>

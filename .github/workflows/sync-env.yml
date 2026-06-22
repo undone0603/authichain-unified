@@ -1,5 +1,7 @@
 name: Sync Env to Vercel
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:

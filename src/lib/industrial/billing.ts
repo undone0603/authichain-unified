@@ -1,12 +1,17 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
+// Lazy singletons — avoid build-time throw when env vars are absent.
 let _stripe: Stripe | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getStripe(): Stripe {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error('STRIPE_SECRET_KEY not set');
-    _stripe = new Stripe(key, { apiVersion: '2026-05-27.dahlia' as const });
+    // Pinned to legacy API version because subscriptionItems.createUsageRecord
+    // is only available on pre-meterEvents Stripe API versions.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    _stripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' as const });
   }
   return _stripe;
 }
@@ -22,6 +27,10 @@ function getAdmin(): ReturnType<typeof createClient> {
   return _admin;
 }
 
+/**
+ * BILLING CONFIGURATION
+ * Defines the metered pricing for AI agent tool calls.
+ */
 export const METERED_PRICING = {
   verify_product: 1,      // 1 unit = $0.05
   register_product: 10,   // 10 units = $0.50
@@ -29,19 +38,10 @@ export const METERED_PRICING = {
   mint_certificate: 20,   // 20 units = $1.00
 };
 
-// Meter identifiers for Stripe Meters API (unique names per product).
-const METER_IDS: Record<keyof typeof METERED_PRICING, string> = {
-  verify_product: 'verify_product_calls',
-  register_product: 'register_product_calls',
-  check_eu_dpp: 'check_eu_dpp_calls',
-  mint_certificate: 'mint_certificate_calls',
-};
-
 /**
- * Reports usage to Stripe via the Meters API.
- * Emits a meter event that gets aggregated into the next billing period.
- * Non-blocking by design — failures are logged but don't halt the main flow.
- *
+ * Reports usage to Stripe Metered Billing.
+ * Part of the "Stripe for AI Agents" autonomous revenue stream.
+ * 
  * @param userId The ID of the user/agency owning the agent
  * @param toolName The tool that was called
  */
@@ -49,61 +49,71 @@ export async function reportAgentUsage(userId: string, toolName: keyof typeof ME
   try {
     console.log(`[Billing] Reporting usage for ${userId}: ${toolName}`);
 
-    // 1. Get the user's Stripe customer ID from profile
+    // 1. Get the user's active metered subscription item
     const { data: profileRow } = await getAdmin()
       .from('profiles')
-      .select('stripe_customer_id, tier')
+      .select('stripe_subscription_id, tier')
       .eq('user_id', userId)
       .single();
-    const profile = profileRow as { stripe_customer_id: string | null; tier: string } | null;
+    const profile = profileRow as { stripe_subscription_id: string | null; tier: string } | null;
 
-    if (!profile || !profile.stripe_customer_id) {
-      console.warn(`[Billing] No Stripe customer for ${userId} - skipping meter event`);
+    if (!profile || !profile.stripe_subscription_id) {
+      console.warn(`[Billing] No active subscription for ${userId} - skipping reporting`);
       return;
     }
 
-    // Skip free tier
+    // Skip reporting for free tier or if not enterprise (unless we want to bill everyone)
     if (profile.tier === 'free') return;
 
-    // 2. Emit meter event via Stripe Meters API
-    const meterId = METER_IDS[toolName];
-    const quantity = METERED_PRICING[toolName];
+    // 2. Find the metered subscription item
+    const subscription = await getStripe().subscriptions.retrieve(profile.stripe_subscription_id);
+    const meteredItem = subscription.items.data.find(item => 
+      item.price.recurring?.usage_type === 'metered'
+    );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const meterResponse = await (getStripe() as any).billing.meterEvents.create({
-      event_name: meterId,
-      customer: profile.stripe_customer_id,
-      value: quantity,
+    if (!meteredItem) {
+      console.error(`[Billing] No metered item found in subscription ${profile.stripe_subscription_id}`);
+      return;
+    }
+
+    // 3. Report usage units based on tool value
+    const quantity = METERED_PRICING[toolName] || 1;
+
+    const legacyStripe = getStripe() as unknown as {
+      subscriptionItems: {
+        createUsageRecord: (
+          id: string,
+          params: { quantity: number; timestamp: number; action: 'increment' | 'set' }
+        ) => Promise<unknown>;
+      };
+    };
+
+    await legacyStripe.subscriptionItems.createUsageRecord(meteredItem.id, {
+      quantity,
       timestamp: Math.floor(Date.now() / 1000),
+      action: 'increment',
     });
 
-    // 3. Log to DB for internal analytics
+    // 4. Log to DB for internal analytics
     await (getAdmin().from('automation_logs') as any).insert({
       workflow_name: 'metered_usage_reported',
       trigger_type: 'event',
       status: 'success',
-      payload: JSON.stringify({
-        userId,
-        toolName,
-        quantity,
-        customerId: profile.stripe_customer_id,
-        meterEventId: meterResponse.id,
-      })
+      payload: JSON.stringify({ userId, toolName, quantity, subscriptionId: subscription.id })
     });
 
-    console.log(`[Billing] Meter event emitted: ${meterId} for ${profile.stripe_customer_id}`);
+    console.log(`[Billing] Successfully reported ${quantity} units for ${toolName}`);
 
   } catch (err) {
-    console.error('[Billing] Meter event emission failed:', err);
-    try {
-      await (getAdmin().from('automation_logs') as any).insert({
-        workflow_name: 'metered_usage_reported',
-        trigger_type: 'event',
-        status: 'failure',
-        error_message: err instanceof Error ? err.message : String(err),
-      });
-    } catch (logErr) {
+    console.error('[Billing] Reporting failed:', err);
+    // Non-blocking log
+    (getAdmin().from('automation_logs') as any).insert({
+      workflow_name: 'metered_usage_reported',
+      trigger_type: 'event',
+      status: 'failure',
+      error_message: err instanceof Error ? err.message : String(err)
+    }).then(undefined, (logErr: unknown) => {
       console.error('[Billing] Failed to write failure log:', logErr);
-    }
+    });
   }
 }

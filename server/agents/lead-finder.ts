@@ -1,10 +1,10 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm';
-import { logActivity, enqueueTask, getAdaptivePriors, getDb } from '../db';
-import type { MissionTask as Task } from '../../drizzle/schema';
-import { leads } from '../../drizzle/schema';
-import { SEGMENT_REVENUE, betaMean, betaCI } from '../_core/bayesian';
-import { apolloSearchLeads, type ApolloLead } from '../apollo-service';
-import { invokeLLM as _llm } from '../_core/llm';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
+import { logActivity, enqueueTask, getAdaptivePriors, getDb } from '../db.js';
+import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { leads } from '../../drizzle/schema.js';
+import { SEGMENT_REVENUE, betaMean, betaCI } from '../_core/bayesian.js';
+import { apolloSearchLeads, type ApolloLead } from '../apollo-service.js';
+import { invokeLLM as _llm } from '../_core/llm.js';
 
 interface LeadFinderPayload {
   count?: number;
@@ -76,31 +76,20 @@ Return JSON array (same order, same indices):
 
 export async function runLeadFinder(task: Task): Promise<void> {
   const payload = task.payload as LeadFinderPayload;
-  const KIND_TO_SEGMENT: Record<string, string> = {
-    FIND_GOV_LEADS:          'GOV',
-    FIND_RETAIL_LEADS:       'RETAIL',
-    FIND_LUXURY_LEADS:       'LUXURY',
-    FIND_PHARMA_LEADS:       'PHARMA',
-    FIND_TIMEPIECE_LEADS:    'TIMEPIECE',
-    FIND_ENTERTAINMENT_LEADS:'ENTERTAINMENT',
-    FIND_SPORTS_LEADS:       'SPORTS',
-    FIND_CREATOR_LEADS:      'CREATOR',
-    FIND_COLLECTIBLES_LEADS: 'COLLECTIBLES',
-  };
-  const segment = payload.segment ?? KIND_TO_SEGMENT[task.kind] ?? 'RETAIL';
-
+  const segment = payload.segment ?? 
+    (task.kind === 'FIND_GOV_LEADS' ? 'GOV' : 
+     task.kind === 'FIND_LUXURY_LEADS' ? 'LUXURY' :
+     task.kind === 'FIND_PHARMA_LEADS' ? 'PHARMA' : 
+     task.kind === 'FIND_TIMEPIECE_LEADS' ? 'TIMEPIECE' : 'RETAIL');
+  
   const count = payload.count ?? 10;
-  const ICP_MAP: Record<string, string> = {
-    GOV:           'government agency procurement and supply chain officer',
-    LUXURY:        'Head of Brand Protection at luxury fashion house',
-    PHARMA:        'Chief Compliance Officer at pharmaceutical manufacturer',
-    TIMEPIECE:     'CEO or Founder of independent luxury watch brand',
-    ENTERTAINMENT: 'VP of Merchandise or Director of Licensing at a music label, film studio, or live events company',
-    SPORTS:        'VP of Licensing or Director of Memorabilia Authentication at a professional sports team or league',
-    CREATOR:       'Founder or Head of Brand at a creator-economy company with a physical merchandise line',
-    COLLECTIBLES:  'CEO or Head of Authentication at a collectibles marketplace or grading company',
-  };
-  const icp = payload.icp ?? ICP_MAP[segment] ?? 'retail cannabis dispensary owner or manager';
+  const icp = payload.icp ?? (
+    segment === 'GOV' ? 'government agency procurement and supply chain officer' :
+    segment === 'LUXURY' ? 'Head of Brand Protection at luxury fashion house' :
+    segment === 'PHARMA' ? 'Chief Compliance Officer at pharmaceutical manufacturer' :
+    segment === 'TIMEPIECE' ? 'CEO or Founder of independent luxury watch brand' :
+    'retail cannabis dispensary owner or manager'
+  );
 
   // ── Bayesian context ───────────────────────────────────────────────────────
   const adaptivePriors = await getAdaptivePriors();
@@ -138,8 +127,8 @@ export async function runLeadFinder(task: Task): Promise<void> {
       }).onConflictDoNothing();
     }
 
-    // Route every lead through the browser-research step first; that agent
-    // gathers context before the outbound/moonshot drafting step is enqueued.
+    // Research the lead's website before drafting the email so the browser
+    // agent can inject a personalised hook into the outbound copy.
     await enqueueTask(task.missionId, 'BROWSE_RESEARCH_LEAD', {
       segment,
       leadEmail: lead.email,

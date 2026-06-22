@@ -10,52 +10,9 @@ from typing import Dict, Any, List, Optional
 from agentz.core.llm import get_llm
 from agentz.core.modes import ExecutionContext
 
-import hashlib
-import time
-from agentz.core.credentials import get
-
 logger = logging.getLogger("agentz.partnership")
 
-# --- Referral & Revenue Logic ---
-
-def generate_partner_code(brand_name: str) -> str:
-    """Generates a unique referral code for a partner."""
-    seed = f"{brand_name}{time.time()}"
-    return hashlib.md5(seed.encode()).hexdigest()[:8].upper()
-
-def calculate_commissions(setup_fee: float, is_founding: bool = False) -> Dict[str, float]:
-    """
-    Calculates partner payouts based on the 'Partner Siphon' model.
-    """
-    return {
-        "referral_commission": setup_fee * 0.20, # 20% standard
-        "founder_income_share": setup_fee * 0.03 if is_founding else 0.0, # 3% for first sign-ons
-        "total_payout": (setup_fee * 0.20) + (setup_fee * 0.03 if is_founding else 0.0)
-    }
-
-async def register_partner(supabase, brand: str, is_founding: bool = False) -> Dict[str, Any]:
-    """
-    Registers a new partner in the ecosystem and generates their unique code.
-    """
-    code = generate_partner_code(brand)
-    partner_data = {
-        "brand": brand,
-        "referral_code": code,
-        "is_founding": is_founding,
-        "status": "active",
-        "created_at": "now()"
-    }
-    
-    # try:
-    #     supabase.table("partners").insert(partner_data).execute()
-    # except Exception as e:
-    #     logger.error(f"Failed to register partner {brand}: {e}")
-        
-    return partner_data
-
-# --- Strategic Scouting (Original Logic) ---
-
-async def scout_strategic_partners(vertical: str = "luxury", ctx: Optional[ExecutionContext] = None) -> List[Dict[str, str]]:
+async def scout_strategic_partners(vertical: str, ctx: Optional[ExecutionContext] = None) -> List[Dict[str, str]]:
     """
     Uses browser-use to find high-value logistics/insurance partners.
     """

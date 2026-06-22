@@ -1,9 +1,9 @@
 /**
  * Security Audit Agent — Checks for vulnerabilities and compliance.
  */
-import { invokeLLM, parseLLMContent } from '../_core/llm';
-import { logActivity, createSystemNotification } from '../db';
-import type { MissionTask as Task } from '../../drizzle/schema';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
+import { logActivity, createSystemNotification } from '../db.js';
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 export async function runSecurityAudit(task: Task): Promise<void> {
   const p = task.payload as {

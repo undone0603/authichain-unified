@@ -1,30 +1,3 @@
-export type MissionType =
-  | 'GOV_PILOT'
-  | 'RETAIL_PILOT'
-  | 'PRESS_LAUNCH'
-  | 'PARTNER_ONBOARDING'
-  | 'TECH_OS_LOCK'
-  | 'LAUNCH_AUTHICHAIN'
-  | 'LUXURY_OUTREACH'
-  | 'PHARMA_OUTREACH'
-  | 'MEDTECH_OUTREACH'
-  | 'TIMEPIECE_OUTREACH'
-  | 'NEWSJACKING_LAUNCH'
-  | 'TECH_SPRINT'
-  | 'MEDTECH_VIDEO_BRIEFING'
-  | 'MI_CRA_PARTNERSHIP';
-
-// Contract implemented by server/missions/db-repository.ts (DbMissionsRepository).
-export interface IMissionsRepository {
-  getMissions(statusFilter?: string): Promise<any[]>;
-  getMissionById(id: string): Promise<any>;
-  createMission(type: MissionType): Promise<string>;
-  createTask(data: any): Promise<string>;
-  updateMissionStatus(id: string, status: MissionStatus): Promise<void>;
-  getTasksByMission(missionId: string): Promise<any[]>;
-  retryTask(id: string): Promise<void>;
-}
-
 export const MISSION_TYPES = [
   'GOV_PILOT',
   'RETAIL_PILOT',
@@ -41,6 +14,7 @@ export const MISSION_TYPES = [
   'MEDTECH_VIDEO_BRIEFING',
   'MI_CRA_PARTNERSHIP',
 ] as const;
+export type MissionType = typeof MISSION_TYPES[number];
 
 export const MISSION_STATUSES = ['PLANNED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED'] as const;
 

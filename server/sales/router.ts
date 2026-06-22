@@ -63,7 +63,7 @@ export const salesRouter = router({
             email: input.userEmail,
             industry: input.industry,
             source: "roi_calculator"
-          }) as any;
+          });
         }
 
         await db.updateLead(lead.id, {
@@ -123,7 +123,6 @@ export const salesRouter = router({
    */
   getLeadStatus: protectedProcedure
     .query(async ({ ctx }) => {
-      // Assuming users can see their own lead status
       return await db.getLeadByEmail(ctx.user.email ?? "");
     }),
 });

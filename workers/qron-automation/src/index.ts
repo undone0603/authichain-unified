@@ -104,15 +104,27 @@ export default {
 
   // Cron trigger handler
   async scheduled(event: any, env: any, ctx: any) {
-    // Consolidated to a single */30 cron (account 5-cron-trigger limit). Dispatch
-    // by wall-clock so the 6h SEO ping and daily digest still fire at their original
-    // times without consuming extra cron slots.
-    const now = new Date();
-    const h = now.getUTCHours();
-    const m = now.getUTCMinutes();
-    ctx.waitUntil(runUptimeCheck(env));                          // every 30 min
-    if (m === 0 && h % 6 === 0) ctx.waitUntil(runSEOPing(env));  // was 0 */6 * * *
-    if (m === 0 && h === 12) ctx.waitUntil(runDailyDigest(env)); // was 0 12 * * *
+    const trigger = event.cron;
+
+    switch (trigger) {
+      // Every 30 minutes: Uptime monitoring
+      case '*/30 * * * *':
+        ctx.waitUntil(runUptimeCheck(env));
+        break;
+
+      // Every 6 hours: SEO ping (keep pages warm + indexed)
+      case '0 */6 * * *':
+        ctx.waitUntil(runSEOPing(env));
+        break;
+
+      // Daily at 8am ET (12:00 UTC): Morning digest
+      case '0 12 * * *':
+        ctx.waitUntil(runDailyDigest(env));
+        break;
+
+      default:
+        console.log(`Unknown cron: ${trigger}`);
+    }
   }
 };
 

@@ -37,7 +37,7 @@ export const bonusesRouter = router({
       tier: input.tier as any,
       status: "pending",
       deliveryMethod: input.deliveryMethod,
-    }).returning({ id: bonuses.id });
-    return { id: row!.id };
+    }).returning();
+    return { id: row.id };
   }),
 });

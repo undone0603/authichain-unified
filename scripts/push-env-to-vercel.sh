@@ -124,7 +124,7 @@ declare -A EXISTING_IDS   # KEY -> envId, scoped per project call
 
 fetch_existing() {
   local project_id="$1"
-  unset EXISTING_IDS ; declare -gA EXISTING_IDS ; EXISTING_COUNT=0
+  unset EXISTING_IDS ; declare -gA EXISTING_IDS
   local response
   response=$(curl -sf \
     "https://api.vercel.com/v10/projects/${project_id}/env?teamId=${TEAM_ID}&limit=200" \
@@ -133,7 +133,7 @@ fetch_existing() {
     local ekey eid
     ekey=$(printf '%s' "$entry" | grep -o '"key":"[^"]*"' | head -1 | cut -d'"' -f4)
     eid=$(printf '%s' "$entry"  | grep -o '"id":"[^"]*"'  | head -1 | cut -d'"' -f4)
-    [[ -n "$ekey" && -n "$eid" ]] && { EXISTING_IDS["$ekey"]="$eid"; EXISTING_COUNT=$((EXISTING_COUNT+1)); }
+    [[ -n "$ekey" && -n "$eid" ]] && EXISTING_IDS["$ekey"]="$eid"
   done < <(printf '%s' "$response" | grep -o '{[^}]*}')
 }
 
@@ -221,7 +221,7 @@ for project_name in "${!PROJECTS[@]}"; do
   echo "=== $project_name ($project_id) ==="
 
   fetch_existing "$project_id"
-  echo "  Found ${EXISTING_COUNT} existing env var(s)"
+  echo "  Found ${#EXISTING_IDS[@]} existing env var(s)"
 
   push_keys "$project_id" "${CORE_KEYS[@]}"
 

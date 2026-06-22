@@ -1,10 +1,7 @@
-export const runtime = "nodejs";
-
 import { NextRequest, NextResponse } from 'next/server';
-
-// Heavy deps (auth, industrial billing, automation) are imported lazily inside the
-// handler so the Cloudflare Workers build can collect this route without evaluating
-// the Node/blockchain graph at build time.
+import { verifyApiKey } from '@/lib/auth-api';
+import { reportAgentUsage } from '@/lib/industrial/billing';
+import { logAutomation } from '@/lib/automation';
 
 /**
  * MCP ENDPOINT (Model Context Protocol)
@@ -59,9 +56,6 @@ const TOOLS = [
 ];
 
 export async function POST(req: NextRequest) {
-  const { verifyApiKey } = await import('@/lib/auth-api');
-  const { reportAgentUsage } = await import('@/lib/industrial/billing');
-  const { logAutomation } = await import('@/lib/automation');
   try {
     const apiKey = req.headers.get('X-API-Key');
     const { method, params } = await req.json();

@@ -1,18 +1,18 @@
-import { markTaskRunning, markTaskDone, markTaskFailed, logActivity } from '../db';
-import type { MissionTask as Task } from '../../drizzle/schema';
-import { runLeadFinder } from '../agents/lead-finder';
-import { runOutboundEmail } from '../agents/outbound-email';
-import { runFollowupSequence } from '../agents/followup';
-import { runBuildPilotPacket, runDraftIntelDossier } from '../agents/pilot-packet';
-import { runCrmUpdate } from '../agents/crm-update';
-import { runFinalizeRetailSignage, runPackageSkuOnboarding } from '../agents/retail';
-import { runCheckDnsConfig, runVerifySsl, runLighthouseAudit } from '../agents/infra';
+import { markTaskRunning, markTaskDone, markTaskFailed, logActivity } from '../db.js';
+import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { runLeadFinder } from '../agents/lead-finder.js';
+import { runOutboundEmail } from '../agents/outbound-email.js';
+import { runFollowupSequence } from '../agents/followup.js';
+import { runBuildPilotPacket, runDraftIntelDossier } from '../agents/pilot-packet.js';
+import { runCrmUpdate } from '../agents/crm-update.js';
+import { runFinalizeRetailSignage, runPackageSkuOnboarding } from '../agents/retail.js';
+import { runCheckDnsConfig, runVerifySsl, runLighthouseAudit } from '../agents/infra.js';
 import {
   runGenerateLaunchChecklist,
   runDraftLaunchEmail,
   runDraftPressRelease,
   runScheduleSocialPosts,
-} from '../agents/content';
+} from '../agents/content.js';
 import {
   runCheckReplies,
   runSendDemoPacket,
@@ -20,13 +20,9 @@ import {
   runSendContract,
   runAutoReply,
 } from '../agents/closer.js';
-import { runPitchMoonshotDeal, runMoonshotProposal } from '../agents/moonshot.js';
 import { runGenerateOutreachVideo } from '../agents/heygen-video.js';
 import { runSecurityAudit } from '../agents/security.js';
 import { runNewsjackingMonitor } from '../agents/news-pr.js';
-import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
-import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
-import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
 import {
   runBrowseResearchLead,
   runBrowseCompetitorMonitor,
@@ -34,7 +30,9 @@ import {
   runBrowseVerifyProductUrl,
 } from '../agents/browser.js';
 import { runVisionResearchLead, runVisionFreeform } from '../agents/browser-vision.js';
-import { awardXp } from '../agent-xp-service';
+import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
+import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
+import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
 
 export async function runTask(task: Task): Promise<{ ok: boolean }> {
   const claimed = await markTaskRunning(task.id);
@@ -47,10 +45,6 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
       case 'FIND_LUXURY_LEADS':
       case 'FIND_PHARMA_LEADS':
       case 'FIND_TIMEPIECE_LEADS':
-      case 'FIND_ENTERTAINMENT_LEADS':
-      case 'FIND_SPORTS_LEADS':
-      case 'FIND_CREATOR_LEADS':
-      case 'FIND_COLLECTIBLES_LEADS':
         await runLeadFinder(task);
         break;
 
@@ -128,14 +122,6 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
       case 'AUTO_REPLY':
         await runAutoReply(task);
-        break;
-
-      case 'PITCH_MOONSHOT_DEAL':
-        await runPitchMoonshotDeal(task);
-        break;
-
-      case 'MOONSHOT_PROPOSAL':
-        await runMoonshotProposal(task);
         break;
 
       case 'GENERATE_OUTREACH_VIDEO':
@@ -219,22 +205,10 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
 
     // markTaskDone guards with WHERE status='RUNNING', so WAITING_HUMAN is preserved if the agent set it
     await markTaskDone(task.id);
-
-    // Award XP to the autonomous agent for completing the task
-    await awardXp("autonomous-agent", "Autonomous AgentZ", task.kind, {
-      success: true,
-    });
-
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await markTaskFailed(task.id, message);
-
-    // Award partial XP for attempted task
-    await awardXp("autonomous-agent", "Autonomous AgentZ", task.kind, {
-      success: false,
-    });
-
     await logActivity({ userId: null, action: 'task_failed', entityType: 'task', entityId: 0, details: { taskId: task.id,
       kind: task.kind,
       missionId: task.missionId,

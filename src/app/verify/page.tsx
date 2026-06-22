@@ -13,7 +13,6 @@ import {
   Clock,
 } from 'lucide-react';
 import { verifyHash, type QRVerificationRecord } from '../../../server/_core/verification';
-import VerifyWidget from '@/components/VerifyWidget';
 
 interface PageProps {
   searchParams: Promise<{ id?: string; hash?: string }>;
@@ -177,20 +176,6 @@ export default async function VerifyPage({ searchParams }: PageProps) {
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Certificate Badge */}
-        <div className="mb-8 flex justify-center">
-          <VerifyWidget
-            productId={`PROD-${product.id}`}
-            productName={product.name}
-            certificationNumber={`CERT-${product.id}-${product.serialNumber?.substring(0, 6) ?? 'AUTH'}`}
-            issuer="AuthiChain Verification"
-            issuedDate={new Date(product.createdAt).toISOString().split('T')[0]}
-            expiryDate={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-            verificationUrl={`/verify?id=${product.id}`}
-            trustScore={isAuthentic ? 98 : isCounterfeit ? 15 : 75}
-          />
         </div>
 
         {/* Storymode Narrative */}

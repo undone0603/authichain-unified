@@ -11,22 +11,11 @@ from agentz.core.llm import get_llm
 logger = logging.getLogger("agentz.media")
 
 async def generate_narration(product_data: Dict[str, Any]) -> str:
-    """
-    Generates a script for the StoryMode narration.
-    Uses Template Manager to prefer customized local templates.
-    """
-    from agentz.core.templates import get_template, fill_template
-    
+    """Uses Gemini to generate a professional StoryMode narration script."""
     name = product_data.get("name", "this product")
     brand = product_data.get("brand", "our partner")
     vertical = product_data.get("metadata", {}).get("vertical", "general")
-    
-    # 1. Try Template First
-    template = get_template("media", "story_mode_default")
-    if template:
-        return fill_template(template, {"brand": brand, "name": name, "vertical": vertical})
 
-    # 2. Live LLM Fallback
     prompt = (
         f"Write a compelling 3-sentence StoryMode narration for a {vertical} product.\n"
         f"Product Name: {name}\n"
@@ -36,7 +25,7 @@ async def generate_narration(product_data: Dict[str, Any]) -> str:
     )
 
     try:
-        llm = get_llm(model="gpt-4o")
+        llm = get_llm(model="llama-3.3-70b-versatile")
         response = llm.invoke(prompt)
         return response.content.strip()
     except Exception as e:

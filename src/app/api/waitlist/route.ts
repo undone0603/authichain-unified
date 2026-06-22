@@ -1,15 +1,14 @@
-﻿export const runtime = 'nodejs';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 export async function POST(req: NextRequest) {
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
   const { email, name, use_case } = await req.json();
   if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 });
 
@@ -33,11 +32,14 @@ export async function POST(req: NextRequest) {
     .from('waitlist')
     .select('*', { count: 'exact', head: true });
 
+  const safeName = (name || 'friend').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeUseCase = (use_case || 'Not specified').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
   await resend.emails.send({
     from: 'QRON <noreply@qron.space>',
     to: email,
     subject: "You're on the QRON waitlist!",
-    html: `<h2>Welcome to QRON, ${name || 'friend'}!</h2><p>You're #${count} on our waitlist. We'll notify you when your spot opens up.</p><p>Use case: ${use_case || 'Not specified'}</p>`,
+    html: `<h2>Welcome to QRON, ${safeName}!</h2><p>You're #${count} on our waitlist. We'll notify you when your spot opens up.</p><p>Use case: ${safeUseCase}</p>`,
   }).catch(() => {});
 
   return NextResponse.json({ success: true, position: count });
@@ -45,13 +47,8 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const adminKey = searchParams.get('admin_key');
-  if (adminKey !== process.env.ADMIN_SECRET) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const admin = searchParams.get('admin_key');
+  if (admin !== process.env.ADMIN_SECRET) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data, count } = await supabase
     .from('waitlist')

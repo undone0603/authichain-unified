@@ -10,8 +10,8 @@ import {
   updateLead, 
   logActivity,
   createSystemNotification 
-} from "../db";
-import { calculateLeadScore } from "../sales/scoring-service";
+} from "../db.js";
+import { calculateLeadScore } from "../sales/scoring-service.js";
 
 export async function handleInstantlyWebhook(payload: any) {
   const { event: eventType, email, lead_id: instantlyLeadId } = payload;

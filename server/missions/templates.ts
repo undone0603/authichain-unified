@@ -1,4 +1,4 @@
-import type { MissionType, TaskKind } from './types';
+import type { MissionType, TaskKind } from './types.js';
 
 interface MissionTemplate {
   type: MissionType;
@@ -74,13 +74,13 @@ export const missionTemplates: Record<MissionType, MissionTemplate> = {
   },
   MEDTECH_VIDEO_BRIEFING: {
     type: 'MEDTECH_VIDEO_BRIEFING',
-    title: 'MedTech Video Briefing – ISO 13485 Audit Automation',
+    title: 'MedTech Video Briefing – Personalized Outreach',
     priority: 8,
   },
   MI_CRA_PARTNERSHIP: {
     type: 'MI_CRA_PARTNERSHIP',
-    title: 'Michigan CRA Partnership – Audit Integrity Shield',
-    priority: 9,
+    title: 'Michigan CRA Partnership Outreach',
+    priority: 7,
   },
 };
 

@@ -80,7 +80,7 @@ export async function queryDocuments(
 ): Promise<VectorQueryResult[]> {
   const index = await getIndex();
   const vector = await embed(query);
-  const results = await index.queryItems(vector, query, topK, filter as any);
+  const results = await index.queryItems(vector, topK, filter as any);
   return results.map((r: any) => ({
     id: r.item.id,
     score: r.score,
@@ -113,7 +113,7 @@ export async function getDocumentCount(): Promise<number> {
 }
 
 export interface GovernmentOpportunity extends VectorQueryResult {
-  // score is inherited as required number from VectorQueryResult
+  // inherits score: number from VectorQueryResult
 }
 
 export const vectorStoreUtils = {

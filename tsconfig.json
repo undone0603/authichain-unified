@@ -1,53 +1,52 @@
 {
-  "include": [
-    "src/**/*",
-    "server/**/*",
-    "shared/**/*",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "build",
-    "dist"
-  ],
   "compilerOptions": {
     "target": "esnext",
-    "strict": true,
     "lib": [
-      "esnext",
       "dom",
-      "dom.iterable"
+      "dom.iterable",
+      "esnext"
     ],
-    "jsx": "preserve",
-    "esModuleInterop": true,
+    "allowJs": true,
     "skipLibCheck": true,
+    "strict": true,
     "noEmit": true,
+    "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "types": [
       "node",
       "vite/client"
     ],
-    "paths": {
-      "@/server/*": [
-        "./server/*"
-      ],
-      "@/*": [
-        "./src/*"
-      ],
-      "@shared/*": [
-        "./shared/*"
-      ]
-    },
-    "allowJs": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "incremental": true
-  }
+    "paths": {
+      "@/*": [
+        "./src/*",
+        "./client/src/*"
+      ],
+      "@shared/*": [
+        "./shared/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "client/src/**/*",
+    "shared/**/*",
+    "server/**/*",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "build", "dist", "workers/**/*", "worker/**/*", "mobile/**/*", "packages/**/*", "scripts/**/*", "libs/**/*", "client/**/*", "server/src/**/*", "server/scripts/**/*", "app/**/*", "src/db/qron_schema.ts"]
 }

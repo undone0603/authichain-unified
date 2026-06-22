@@ -145,10 +145,11 @@ export default function MonetizationArchitecture() {
 
   useEffect(() => {
     const host = window.location.hostname;
-    if ((host === "qron.space" || host.endsWith(".qron.space"))) setTab("qron");
-    else if ((host === "strainchain.io" || host.endsWith(".strainchain.io"))) setTab("strainchain");
-    else if ((host === "govchain.us" || host.endsWith(".govchain.us"))) setTab("govchain");
-    else if ((host === "authichain.com" || host.endsWith(".authichain.com"))) setTab("authichain");
+    const isHost = (d: string) => host === d || host.endsWith(`.${d}`);
+    if (isHost("qron.space")) setTab("qron");
+    else if (isHost("strainchain.io")) setTab("strainchain");
+    else if (isHost("govchain.us")) setTab("govchain");
+    else if (isHost("authichain.com")) setTab("authichain");
   }, []);
 
   const handleCTA = (tierName: string) => {

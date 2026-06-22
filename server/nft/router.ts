@@ -32,7 +32,7 @@ export const nftRouter = router({
     // Trigger MACROHARD Webhook: nft_minted
     await triggerMacrohardEvent("nft_minted", {
       nftId: result.id,
-      name: input.name,
+      name: result.name,
       productId: input.productId,
       userId: ctx.user.id
     });

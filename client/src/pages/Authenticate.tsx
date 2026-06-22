@@ -77,11 +77,17 @@ export default function Authenticate() {
               <Input placeholder="https://example.com/product-image.jpg" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="mt-1" />
               <p className="text-xs text-muted-foreground mt-1">Provide a direct URL to the product image for AI analysis</p>
             </div>
-            {imageUrl && (
-              <div className="rounded-lg overflow-hidden border border-border">
-                <img src={/^https?:\/\//.test(imageUrl) ? encodeURI(imageUrl) : ''} alt="Product" className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              </div>
-            )}
+            {(() => {
+              try {
+                const u = new URL(imageUrl);
+                if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+                return (
+                  <div className="rounded-lg overflow-hidden border border-border">
+                    <img src={u.href} alt="Product" className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  </div>
+                );
+              } catch { return null; }
+            })()}
             <Button className="w-full" onClick={handleAuthenticate} disabled={isAnalyzing}>
               {isAnalyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing...</> : <><Upload className="mr-2 h-4 w-4" /> Authenticate Product</>}
             </Button>

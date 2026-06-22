@@ -1,19 +1,17 @@
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
-// NOTE: subscriptions.create is admin-only — it writes an active sub without
-// payment. The normal user flow goes through subscriptions.checkout → Stripe.
 import * as db from "../db";
 import * as stripeService from "../stripe-service";
+import * as paddleService from "../paddle-service";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { SUBSCRIPTION_PLANS } from "@shared/subscriptionPlans";
 
-const ALLOWED_CHECKOUT_ORIGINS = [
-  "https://authichain.com",
-  "https://www.authichain.com",
-  "https://govchain.us",
-  "https://strainchain.io",
-  "https://qron.io",
-];
+// Paddle price IDs by plan/billing — override with env vars
+const PADDLE_PRICES: Record<string, Record<string, string>> = {
+  starter:      { monthly: process.env.PADDLE_PRICE_STARTER_MONTHLY || "", annual: process.env.PADDLE_PRICE_STARTER_ANNUAL || "" },
+  professional: { monthly: process.env.PADDLE_PRICE_PRO_MONTHLY || "",     annual: process.env.PADDLE_PRICE_PRO_ANNUAL || "" },
+  enterprise:   { monthly: process.env.PADDLE_PRICE_ENT_MONTHLY || "",     annual: process.env.PADDLE_PRICE_ENT_ANNUAL || "" },
+};
 
 export const subscriptionsRouter = router({
   current: protectedProcedure.query(async ({ ctx }) => {
@@ -28,7 +26,7 @@ export const subscriptionsRouter = router({
       starter: SUBSCRIPTION_PLANS.starter.monthlyQuota,
       professional: SUBSCRIPTION_PLANS.professional.monthlyQuota,
       enterprise: SUBSCRIPTION_PLANS.enterprise.monthlyQuota,
-      medtech: (SUBSCRIPTION_PLANS as any).medtech?.monthlyQuota ?? 0,
+      medtech: SUBSCRIPTION_PLANS.medtech.monthlyQuota,
     };
     const result = await db.createSubscription({
       userId: ctx.user.id, plan: input.plan as any, monthlyQuota: quotas[input.plan] ?? 0,
@@ -52,11 +50,7 @@ export const subscriptionsRouter = router({
     billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
     origin: z.string().url(),
   })).mutation(async ({ ctx, input }) => {
-    const isLocalDev = process.env.NODE_ENV !== "production" &&
-      /^https?:\/\/localhost(:\d+)?$/.test(input.origin);
-    if (!ALLOWED_CHECKOUT_ORIGINS.includes(input.origin) && !isLocalDev) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid origin" });
-    }
+    // 14-day trial for self-serve plans; enterprise/medtech go through custom sales
     const trialDays = (input.plan === "starter" || input.plan === "professional") ? 14 : undefined;
     const url = await stripeService.createSubscriptionCheckout({
       userId: ctx.user.id,
@@ -69,6 +63,25 @@ export const subscriptionsRouter = router({
       trialDays,
     });
     return { checkoutUrl: url };
+  }),
+  createPaddleCheckout: protectedProcedure.input(z.object({
+    plan: z.enum(["starter", "professional", "enterprise", "medtech"]),
+    billing: z.enum(["monthly", "annual"]).optional().default("monthly"),
+    successUrl: z.string().url(),
+  })).mutation(async ({ ctx, input }) => {
+    const priceId = PADDLE_PRICES[input.plan]?.[input.billing];
+    if (!priceId) throw new TRPCError({ code: "BAD_REQUEST", message: `Paddle price not configured for ${input.plan}/${input.billing}` });
+    const customerId = await paddleService.upsertPaddleCustomer({
+      email: ctx.user.email || "",
+      name: ctx.user.name || "",
+      userId: ctx.user.id,
+    });
+    const checkoutUrl = await paddleService.createPaddleTransaction({
+      customerId,
+      priceId,
+      successUrl: input.successUrl,
+    });
+    return { checkoutUrl };
   }),
   cancel: protectedProcedure.mutation(async ({ ctx }) => {
     const sub = await db.getUserSubscription(ctx.user.id);
@@ -96,11 +109,11 @@ export const subscriptionsRouter = router({
       duration: "forever",
       name: input.name || `AuthiChain ${input.percentOff}% Off`,
     });
-    const promo = await stripe.promotionCodes.create({
+    const promo = await (stripe.promotionCodes as any).create({
       coupon: coupon.id,
       code: input.code,
       active: true,
-    } as any);
+    });
     return { success: true, code: promo.code, id: promo.id, percentOff: input.percentOff };
   }),
 });

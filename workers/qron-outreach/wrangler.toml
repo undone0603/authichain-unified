@@ -4,6 +4,5 @@ compatibility_date = "2026-04-01"
 account_id = "4c1869b90f13f86940aa3747839bf420"
 workers_dev = false
 
-# crons paused — 73% bounce rate on prior wave; re-enable after list scrub
-# [triggers]
-# crons = ["0 */4 * * *"]
+[triggers]
+crons = ["0 */4 * * *"]

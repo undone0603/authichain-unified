@@ -39,7 +39,8 @@ export async function generateProductAssets(productId: number) {
     await db.update(products)
       .set({
         audioUrl,
-        metadata: { ...(product.metadata as any), visionMarkers: visionResult?.markers || [], rarityScore: (product.metadata as any)?.rarity || 50 },
+        visionMarkers: visionResult?.markers || [],
+        rarityScore: (product.metadata as any)?.rarity || 50, // Default rarity
         updatedAt: new Date()
       })
       .where(eq(products.id, productId));
@@ -51,10 +52,11 @@ export async function generateProductAssets(productId: number) {
     
     // Push to Dead Letter Queue for retry
     await db.insert(deadLetterQueue).values({
-      type: "asset_generation",
+      taskType: "asset_generation",
       payload: { productId },
       error: error.message,
       status: "pending",
+      lastAttemptedAt: new Date()
     });
   }
 }
@@ -79,7 +81,10 @@ export async function retryFailedAssets() {
         .where(eq(deadLetterQueue.id, task.id));
     } catch (e) {
       await db.update(deadLetterQueue)
-        .set({ retries: (task.retries || 0) + 1 })
+        .set({ 
+          retryCount: (task.retryCount || 0) + 1,
+          lastAttemptedAt: new Date() 
+        })
         .where(eq(deadLetterQueue.id, task.id));
     }
   }
