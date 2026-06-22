@@ -2321,6 +2321,11 @@ h2 .accent { color: var(--primary); }
   padding: 32px;
   transition: all 0.3s ease;
 }
+.card:hover {
+  border-color: var(--border);
+  box-shadow: 0 0 24px var(--primary-glow);
+  transform: translateY(-2px);
+}
 footer {
   padding: 60px 24px;
   border-top: 1px solid var(--border-dim);
