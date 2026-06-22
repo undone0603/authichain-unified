@@ -1,5 +1,3 @@
-export const runtime = "nodejs";
-
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
@@ -90,7 +88,7 @@ export async function POST(req: NextRequest) {
   const newCode = {
     id: `qr_${Date.now()}`,
     name, url,
-    short_url: `https://qron.space/r/${Math.random().toString(36).slice(2, 8)}`,
+    short_url: `https://qron.space/r/${Buffer.from(crypto.getRandomValues(new Uint8Array(5))).toString('hex').slice(0, 8)}`,
     type,
     campaign_id: campaign_id || null,
     status: 'active',

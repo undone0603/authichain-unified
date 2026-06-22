@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { createMission, enqueueTask, getLeadByEmail } from "../db";
+import { createMission, enqueueTask, getLeadByEmail } from "../db.js";
 
 async function launchMedtronicVideoBriefing() {
   console.log("🎬 Initializing High-Prestige Video Outreach for Medtronic...");

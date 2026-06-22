@@ -8,19 +8,18 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Ecosystem Partners | AuthiChain',
-  description: 'Discover the integration partners, label printers, and certification bodies powering AuthiChain.',
-  alternates: { canonical: '/digital-product-passport/partners' },
+  title: 'Ecosystem Partners | StrainChain Protocol',
+  description: 'Discover the integration partners, label printers, and certification bodies powering StrainChain.',
 };
 
-export default function DPPPartners() {
+export default function StrainChainPartners() {
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
       <div className="max-w-5xl mx-auto px-6 py-20">
         <header className="flex items-center justify-between mb-16 border-b border-zinc-900 pb-8">
-            <Link href="/digital-product-passport" className="group flex items-center gap-2">
+            <Link href="/" className="group flex items-center gap-2">
                 <ChevronLeft className="w-4 h-4 text-zinc-500 group-hover:text-gold transition-colors" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-white transition-colors">Digital Product Passport</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-white transition-colors">Home</span>
             </Link>
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-widest">
               <Handshake className="w-3 h-3" />
@@ -33,7 +32,7 @@ export default function DPPPartners() {
         </h1>
 
         <p className="max-w-2xl text-zinc-400 text-lg font-medium mb-16 leading-relaxed">
-            AuthiChain is not built in isolation. We partner with the world&apos;s leading commercial printers, certification bodies, and trade associations to ensure our cryptographic standards integrate seamlessly into existing global supply chains.
+            StrainChain is not built in isolation. We partner with the world's leading commercial printers, certification bodies, and trade associations to ensure our cryptographic standards integrate seamlessly into existing global supply chains.
         </p>
 
         <div className="grid md:grid-cols-2 gap-8">

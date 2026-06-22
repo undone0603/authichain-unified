@@ -15,13 +15,6 @@ export default {
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>$QRON Token Hub — Stake, Govern, Bridge</title>
 <meta name="description" content="The $QRON token powers staking, governance, and cross-chain bridge for the AuthiChain ecosystem.">
-<meta property="og:title" content="$QRON Token Hub — Stake, Govern, Bridge">
-<meta property="og:description" content="Stake $QRON for 8-24% APY, vote on protocol upgrades, and bridge across Polygon, Base, and Solana.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://qron.space">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="$QRON Token Hub">
-<meta name="twitter:description" content="Stake, govern, and bridge with $QRON — the utility token of the AuthiChain ecosystem.">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#020817;--surface:#0d1425;--border:#1e2d4a;--cyan:#06b6d4;--purple:#8b5cf6;--text:#e2e8f0;--muted:#64748b}
@@ -191,28 +184,9 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
 
 <div class="cta-section">
   <h2>Ready to stake $QRON?</h2>
-  <p style="color:var(--muted);margin:1rem 0 2rem">Get notified when staking goes live on Polygon.</p>
-  <form id="lead-form" style="max-width:440px;margin:0 auto 1.5rem;display:flex;gap:.5rem">
-    <input type="email" id="lead-email" placeholder="you@example.com" required style="flex:1;padding:.75rem 1rem;border-radius:.5rem;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.95rem">
-    <button type="submit" class="btn btn-primary" style="white-space:nowrap">Join Waitlist</button>
-  </form>
-  <p id="lead-msg" style="color:var(--cyan);font-size:.9rem;display:none"></p>
+  <p style="color:var(--muted);margin:1rem 0 2rem">Connect your wallet and start earning yield on Polygon today.</p>
+  <a href="https://authichain.com/dapp" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Launch dApp</a>
 </div>
-<script>
-document.getElementById('lead-form').addEventListener('submit',async function(e){
-  e.preventDefault();
-  const email=document.getElementById('lead-email').value;
-  const msg=document.getElementById('lead-msg');
-  try{
-    const r=await fetch('https://api.authichain.com/api/v1/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,source:'qron.space'})});
-    const d=await r.json();
-    msg.textContent=d.message||'You\\'re on the list!';
-    msg.style.display='block';
-    msg.style.color=r.ok?'var(--cyan)':'#ff6b6b';
-    if(r.ok)this.reset();
-  }catch{msg.textContent='Something went wrong. Try again.';msg.style.display='block';msg.style.color='#ff6b6b';}
-});
-</script>
 
 <footer>
   <p>© 2026 QRON / AuthiChain Protocol · <a href="https://authichain.com">authichain.com</a> · Contract: 0xAebfA6b08fb25b59748c93273aB8880e20FfE437</p>

@@ -4,74 +4,14 @@
  */
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { logActivity, enqueueTask, getDb } from '../db.js';
-import { ENV } from '../_core/env.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
-
-/**
- * Fetch real news headlines for the given topics. Uses SerpAPI (Google News
- * results) when SERPAPI_KEY is set, then falls back to NewsAPI when NEWS_API_KEY
- * is set. Returns null when neither is configured — the caller falls back to
- * the existing LLM-only "imagine the news" path.
- */
-async function fetchRealNewsHeadlines(topics: string[]): Promise<Array<{ title: string; url: string; source?: string; snippet?: string }> | null> {
-  const query = topics.join(' OR ');
-
-  if (ENV.serpapiKey) {
-    try {
-      const url = `https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(query)}&api_key=${encodeURIComponent(ENV.serpapiKey)}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json() as { news_results?: Array<{ title: string; link: string; source?: { name?: string }; snippet?: string }> };
-        const items = (data.news_results ?? []).slice(0, 8).map(n => ({
-          title: n.title,
-          url: n.link,
-          source: n.source?.name,
-          snippet: n.snippet,
-        }));
-        if (items.length > 0) return items;
-      } else {
-        console.warn(`[Newsjacking] SerpAPI returned ${res.status}; falling through`);
-      }
-    } catch (err) {
-      console.warn('[Newsjacking] SerpAPI fetch failed:', err);
-    }
-  }
-
-  if (ENV.newsApiKey) {
-    try {
-      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&sortBy=publishedAt&pageSize=8&apiKey=${encodeURIComponent(ENV.newsApiKey)}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json() as { articles?: Array<{ title: string; url: string; source?: { name?: string }; description?: string }> };
-        const items = (data.articles ?? []).slice(0, 8).map(a => ({
-          title: a.title,
-          url: a.url,
-          source: a.source?.name,
-          snippet: a.description ?? undefined,
-        }));
-        if (items.length > 0) return items;
-      } else {
-        console.warn(`[Newsjacking] NewsAPI returned ${res.status}; falling through`);
-      }
-    } catch (err) {
-      console.warn('[Newsjacking] NewsAPI fetch failed:', err);
-    }
-  }
-
-  return null;
-}
 
 export async function runNewsjackingMonitor(task: Task): Promise<void> {
   const p = task.payload as { topics: string[] };
   console.log(`[Newsjacking] Monitoring for topics: ${p.topics.join(', ')}...`);
 
-  // 1. Try real news first; fall back to LLM-only simulation if no key set.
-  const realHeadlines = await fetchRealNewsHeadlines(p.topics);
-  const headlineContext = realHeadlines
-    ? `\n\nReal headlines from the last 72h (you MUST pick one of these as the story; do not invent):\n${realHeadlines.map((h, i) => `${i + 1}. ${h.title}${h.source ? ` (${h.source})` : ''} — ${h.url}${h.snippet ? `\n   ${h.snippet.slice(0, 200)}` : ''}`).join('\n')}\n\n`
-    : '';
-
-  const newsScrapePrompt = `You are a technical analyst for AuthiChain. ${headlineContext}
+  // 1. Simulate news search (In production, this would call Google News API / SerpAPI)
+  const newsScrapePrompt = `You are a technical analyst for AuthiChain. 
 Research the most recent (last 72 hours) high-impact news stories for these topics: ${p.topics.join(', ')}.
 
 Identify ONE specific story that is a "Perfect Fit" for an AuthiChain blockchain provenance solution.

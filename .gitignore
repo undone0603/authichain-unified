@@ -70,38 +70,7 @@ yarn.lock
 *.sqlite3
 /drizzle/migrations
 
-# Webdev artifacts (checkpoint zips, migrations, etc.)
-.webdev/
-
-# Vercel CLI link
-.vercel
-.env*.local
-
-__pycache__/
-*.py[cod]
-
-# Node
-node_modules/
-
-# Build artifacts
-.open-next/
-.next/
-dist/
-
-# Externally cloned repos (exploration only)
-authichain_premium/
-qron-platform/
-qron/
-govchain.us/
-maison-elite-ai-dropship/
-
-# Debug/lint output artifacts
-eslint_errors.txt
-*.errors.txt
-test-output.txt
-
-# Patch artifacts
-PATCH_EOF
-
-# Wrangler local cache
-.wrangler/
+# Authichain specifics
+AUTHENTICITY_INDEX.md
+SIGNATURE_MANIFEST.md
+SYSTEM_STATE.md

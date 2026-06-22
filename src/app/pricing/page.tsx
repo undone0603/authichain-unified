@@ -1,12 +1,11 @@
 import type { Metadata } from 'next';
 import { PLANS } from '@/lib/plans';
 import { CheckoutModal } from './pricing-client';
-import {
-  Check,
+import { 
+  Check, 
   Coins
 } from 'lucide-react';
 import Link from 'next/link';
-import MonetizationArchitecture from '@/components/MonetizationArchitecture';
 
 export const metadata: Metadata = {
   title: 'Pricing | QRON Protocol',
@@ -106,22 +105,22 @@ export default function PricingPage() {
                     name: 'Ordinal Single', 
                     price: '49', 
                     features: ['1 AI QR Art Inscription', 'Bitcoin L1 Permanence', 'Magic Eden Ready', 'Transferable Digital Artifact'],
-                    link: 'https://buy.stripe.com/8x25kv5dla3Qbay8xL6Vq01'
+                    link: 'https://buy.stripe.com/14A00jbjz9Ns5ia5fe1Nu1d'
                 },
-                {
-                    id: 'ordinal_auth',
-                    name: 'BTC Dual-Auth',
-                    price: '299',
+                { 
+                    id: 'ordinal_auth', 
+                    name: 'BTC Dual-Auth', 
+                    price: '299', 
                     features: ['Product Cert on BTC', 'Dual-Chain Proof', 'Authichain Verification', 'Brand Inscription'],
-                    link: 'https://buy.stripe.com/cNicMXbBJ1xk2E24hv6Vq02',
+                    link: 'https://buy.stripe.com/dRm3cv0EV6BgeSKdLK1Nu1e',
                     highlight: true
                 },
-                {
-                    id: 'ordinal_collection',
-                    name: 'Batch Collection',
-                    price: '799',
+                { 
+                    id: 'ordinal_collection', 
+                    name: 'Batch Collection', 
+                    price: '799', 
                     features: ['25 L1 Inscriptions', 'Collection Listing', 'Enterprise Scale', 'Co-Marketing Rights'],
-                    link: 'https://buy.stripe.com/14A00b49h0tgemK01f6Vq03'
+                    link: 'https://buy.stripe.com/eVq9AT5Zff7MbGy8rq1Nu1f'
                 }
             ].map(o => (
                 <div key={o.id} className={`protocol-card p-8 border-[#F7931A]/20 bg-[#F7931A]/5 ${o.highlight ? 'ring-2 ring-[#F7931A]/40' : ''}`}>
@@ -148,11 +147,6 @@ export default function PricingPage() {
                 </div>
             ))}
         </div>
-      </section>
-
-      {/* Ecosystem Monetization */}
-      <section className="max-w-7xl mx-auto px-6 py-24 border-t border-zinc-900">
-        <MonetizationArchitecture />
       </section>
 
       {/* Enterprise Support */}

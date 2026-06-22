@@ -28,7 +28,7 @@ export const profiles = pgTable(
     apiSecret: text('apiSecret'),
     tier: text('tier').default('free').notNull(),
     generationsUsed: integer('generations_used').default(0).notNull(),
-    generationsLimit: integer('generations_limit').default(0).notNull(),
+    generationsLimit: integer('generations_limit').default(10).notNull(),
     stripeCustomerId: text('stripe_customer_id').unique(),
     stripeSubscriptionId: text('stripe_subscription_id'),
     affiliateId: text('affiliate_id').unique(),

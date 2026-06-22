@@ -51,7 +51,7 @@ export async function handleCommand(
   }
 
   // If message looks like a TrueMark ID, auto-verify
-  if (/^TM-\d+-[A-Z0-9]+$/i.test(text.trim())) {
+  if (/^TM-\\d+-[A-Z0-9]+$/i.test(text.trim())) {
     return handleVerify(env, telegram, chatId, text.trim())
   }
 
@@ -93,7 +93,7 @@ async function handleVerify(
       product.blockchain_tx_hash ? `📦 Tx: <code>${product.blockchain_tx_hash.slice(0, 20)}…</code>` : null,
     ]
       .filter(Boolean)
-      .join('\n')
+      .join('\\n')
 
     return telegram.sendMessage(chatId, lines, { parse_mode: 'HTML' })
   } catch {

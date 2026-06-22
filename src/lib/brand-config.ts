@@ -30,39 +30,25 @@ export const BRANDS: Record<BrandId, BrandConfig> = {
   govchain: {
     id: 'govchain',
     name: 'GovChain',
-    tagline: 'Government Authentication Protocol',
+    tagline: 'Ecosystem Governance & DAO',
     domain: 'govchain.us',
-    primaryColor: '#1a3a6b',
+    primaryColor: '#c9a227',
   },
   strainchain: {
     id: 'strainchain',
     name: 'StrainChain',
-    tagline: 'Cannabis Supply Chain Compliance',
-    domain: 'strainchain.us',
-    primaryColor: '#2d6a4f',
+    tagline: 'Industrial Provenance & DPP',
+    domain: 'strainchain.io',
+    primaryColor: '#c9a227',
   },
 };
 
 /**
- * Allowed brand domains - exact match against hostname.
- * Prevents incomplete URL substring sanitization (CodeQL js/incomplete-url-substring-sanitization).
+ * Returns the brand config based on the hostname.
  */
-const ALLOWED_DOMAINS: Record<string, BrandId> = {
-  'govchain.us': 'govchain',
-  'www.govchain.us': 'govchain',
-  'strainchain.us': 'strainchain',
-  'www.strainchain.us': 'strainchain',
-  'authichain.com': 'authichain',
-  'www.authichain.com': 'authichain',
-  'qron.space': 'qron',
-  'www.qron.space': 'qron',
-};
-
 export function getBrandFromHost(host: string): BrandConfig {
-  // Extract hostname only (strip port if present)
-  const hostname = host.split(':')[0].toLowerCase();
-  // Exact domain lookup prevents substring-match spoofing
-  const brandId = ALLOWED_DOMAINS[hostname];
-  if (brandId) return BRANDS[brandId];
+  if (host.includes('govchain.us')) return BRANDS.govchain;
+  if (host.includes('strainchain.io')) return BRANDS.strainchain;
+  if (host.includes('authichain.com')) return BRANDS.authichain;
   return BRANDS.qron; // Default to QRON.space
 }

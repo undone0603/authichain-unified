@@ -56,7 +56,6 @@ export type SendEmailInput = {
   subject: string;
   body: string;
   fromName?: string;
-  trackLeadEmail?: string; // if set, embeds open pixel + click tracking
 };
 
 export type SendEmailResult = {
@@ -88,21 +87,6 @@ function toBase64Url(input: string) {
     .replace(/=+$/g, "");
 }
 
-const BASE_URL = "https://authichain.com";
-
-function buildHtmlEmail(plainBody: string, trackToken: string): string {
-  const htmlBody = plainBody
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/\n/g, "<br>")
-    .replace(/(https?:\/\/[^\s<]+)/g, (url) => {
-      const encodedUrl = encodeURIComponent(url);
-      const clickUrl = `${BASE_URL}/api/track/click/${trackToken}?url=${encodedUrl}`;
-      return `<a href="${clickUrl}">${url}</a>`;
-    });
-  const pixel = `<img src="${BASE_URL}/api/track/open/${trackToken}" width="1" height="1" alt="" style="display:none">`;
-  return `<html><body style="font-family:sans-serif;line-height:1.6">${htmlBody}${pixel}</body></html>`;
-}
-
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
   const to = input.to.trim().toLowerCase();
   if (isSuppressed(to)) {
@@ -113,9 +97,33 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const appPassword = ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
   const fromName = input.fromName || "AuthiChain";
 
-  const trackToken = input.trackLeadEmail
-    ? toBase64Url(input.trackLeadEmail.trim().toLowerCase())
-    : null;
+  // ─── Method 0: Resend (preferred transactional email SaaS) ─────────────────
+  const resendApiKey = ENV.resendApiKey || process.env.RESEND_API_KEY || "";
+  if (resendApiKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: `${fromName} <${ENV.resendFromEmail}>`,
+          to,
+          subject: input.subject,
+          text: input.body,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({} as any));
+        return { status: "sent", provider: "resend", providerMessageId: data?.id };
+      }
+      const errText = await res.text().catch(() => "");
+      console.warn(`[email-service] Resend failed (${res.status}): ${errText.slice(0, 200)}`);
+    } catch (resendErr: any) {
+      console.warn("[email-service] Resend error, falling back:", resendErr.message);
+    }
+  }
 
   // ─── Method 1: SMTP via App Password (Reliable Fallback) ───────────────────
   if (fromEmail && appPassword) {
@@ -125,15 +133,12 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         auth: { user: fromEmail, pass: appPassword },
       });
 
-      const mailOpts: any = {
+      const info = await transporter.sendMail({
         from: `${fromName} <${fromEmail}>`,
         to,
         subject: input.subject,
         text: input.body,
-      };
-      if (trackToken) mailOpts.html = buildHtmlEmail(input.body, trackToken);
-
-      const info = await transporter.sendMail(mailOpts);
+      });
 
       return {
         status: "sent",
@@ -145,47 +150,9 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     }
   }
 
-  // ── Method 3: Gmail OAuth2 ───────────────────────────────────────────────
-  const gmailConfigured = !!(
-    fromEmail &&
-    (process.env.GMAIL_ACCESS_TOKEN || ENV.gmailClientId)
-  );
-  if (gmailConfigured) {
-    const gmailAccessToken = await getGmailAccessToken();
-    if (gmailAccessToken) {
-      const mime = [
-        `From: ${fromName} <${fromEmail}>`,
-        `To: ${to}`,
-        `Subject: ${input.subject}`,
-        "MIME-Version: 1.0",
-        "Content-Type: text/plain; charset=UTF-8",
-        "",
-        input.body,
-      ].join("\r\n");
-
-      const raw = toBase64Url(mime);
-      const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${gmailAccessToken}`,
-        },
-        body: JSON.stringify({ raw }),
-      });
-
-      if (response.ok) {
-        const data = await response.json().catch(() => ({} as any));
-        return {
-          status: "sent",
-          provider: "gmail-oauth",
-          providerMessageId: data?.id,
-          threadId: data?.threadId,
-        };
-      }
-
-      const txt = await response.text().catch(() => "");
-      console.warn("[email] Gmail OAuth2 failed:", response.status, txt.slice(0, 200));
-    }
+  // ─── Method 2: OAuth2 (Primary/Legacy) ─────────────────────────────────────
+  if (!fromEmail) {
+    return { status: "skipped", reason: "gmail_not_configured", provider: "gmail" };
   }
 
   const gmailAccessToken = await getGmailAccessToken();
@@ -193,26 +160,15 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { status: "skipped", reason: "gmail_token_unavailable", provider: "gmail" };
   }
 
-  const htmlVersion = trackToken ? buildHtmlEmail(input.body, trackToken) : null;
-  const mime = htmlVersion
-    ? [
-        `From: ${fromName} <${fromEmail}>`,
-        `To: ${to}`,
-        `Subject: ${input.subject}`,
-        "MIME-Version: 1.0",
-        'Content-Type: text/html; charset=UTF-8',
-        "",
-        htmlVersion,
-      ].join("\r\n")
-    : [
-        `From: ${fromName} <${fromEmail}>`,
-        `To: ${to}`,
-        `Subject: ${input.subject}`,
-        "MIME-Version: 1.0",
-        "Content-Type: text/plain; charset=UTF-8",
-        "",
-        input.body,
-      ].join("\r\n");
+  const mime = [
+    `From: ${fromName} <${fromEmail}>`,
+    `To: ${to}`,
+    `Subject: ${input.subject}`,
+    "MIME-Version: 1.0",
+    "Content-Type: text/plain; charset=UTF-8",
+    "",
+    input.body,
+  ].join("\r\n");
 
   const raw = toBase64Url(mime);
   const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {

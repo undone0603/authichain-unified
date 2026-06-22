@@ -5,8 +5,6 @@ import { ENV } from "../_core/env";
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
   try {
     const db = await getDb();
     const values: InsertUser = {
@@ -41,14 +39,12 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) return null;
   const rows = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return rows[0] ?? null;
 }
 
 export async function getUserById(id: number) {
   const db = await getDb();
-  if (!db) return null;
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return rows[0] ?? null;
 }

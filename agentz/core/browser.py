@@ -55,31 +55,7 @@ def attach_interceptor(controller: Controller, ctx: ExecutionContext):
 
 async def run_browser_task(task: str, ctx: ExecutionContext) -> Any:
     """
-    High-level helper to run a browser-use agent with AgentZ defaults
-    and a robust resilience loop.
-    """
-    from agentz.core.resilience import RobustAgent, BrowserAction
-    
-    agent = RobustAgent()
-    plan = [BrowserAction(task)]
-    
-    # We pass the ctx in the initial context for the BrowserAction to use
-    results = await agent.run(
-        goal=task,
-        initial_plan=plan,
-        ctx=ctx,
-        initial_context={"ctx": ctx}
-    )
-    
-    # Return the last result from history if any
-    if agent.history:
-        return agent.history[-1][1]
-    return None
-
-
-async def _execute_raw_browser_task(task: str, ctx: ExecutionContext) -> Any:
-    """
-    Performs a single attempt of a browser-use task.
+    High-level helper to run a browser-use agent with AgentZ defaults.
     """
     from browser_use import Agent, Controller
     from agentz.core.llm import get_llm
@@ -93,7 +69,7 @@ async def _execute_raw_browser_task(task: str, ctx: ExecutionContext) -> Any:
         llm=llm,
         controller=controller
     )
-    
+
     return await run_with_healing(agent, ctx)
 
 

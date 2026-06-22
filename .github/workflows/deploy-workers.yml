@@ -25,53 +25,33 @@ jobs:
   deploy:
     name: Deploy ${{ matrix.worker }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         worker:
-          # authichain cluster
           - authichain-api
           - authichain-api-gateway
           - authichain-automation
-          - authichain-autopilot
-          - authichain-bridge
-          - authichain-chain-data
           - authichain-com
           - authichain-dashboard
-          - authichain-gateway
-          - authichain-infra
-          - authichain-license-issuer
-          - authichain-qron-provenance
-          - authichain-scan-validate
-          - authichain-telegram
-          - authichain-verify-worker
-          # qron cluster
           - qron-automation
-          - qron-edge
           - qron-image-gen
           - qron-outreach
           - qron-space
-          # brand sites
-          - govchain-us
-          - strainchain-io
-          - watchchain-io
-          # shared / platform
-          - ai-classification
-          - analytics
-          - auth
-          - bitcoin-auth
-          - blockchain
-          - gateway
-          - outreach-queue
           - resend-relay
+          - strainchain-io
+          - govchain-us
+          - bitcoin-auth
+          - outreach-queue
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          version: '10.28.2'
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
@@ -82,18 +62,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Skip if worker directory missing
-        id: check-dir
-        run: |
-          if [ ! -d "workers/${{ matrix.worker }}" ]; then
-            echo "⚠ workers/${{ matrix.worker }} not found — skipping"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Deploy Worker
-        if: steps.check-dir.outputs.skip != 'true'
         run: npx wrangler deploy --minify --config wrangler.toml
         working-directory: workers/${{ matrix.worker }}
         env:

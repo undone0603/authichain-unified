@@ -1,11 +1,11 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
-import { Shield, Sparkles } from 'lucide-react';
+import { useEffect, useState, use } from 'react';
+import { Shield, Loader2, Sparkles, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
+import { startAuthentication } from '@simplewebauthn/browser';
 
 interface RevealPageProps {
-  // Next.js 15: route params/searchParams are async (Promises).
   params: Promise<{ id: string }>;
   searchParams: Promise<{ dest?: string }>;
 }
@@ -15,13 +15,15 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
   const { dest } = use(searchParams);
   const [progress, setProgress] = useState(0);
   const [isReady, setIsReady] = useState(false);
-  const [redirectQueued, setRedirectQueued] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
+    // Cinematic countdown/loading
+    const timer = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          window.clearInterval(timer);
+          clearInterval(timer);
           setIsReady(true);
           return 100;
         }
@@ -29,18 +31,41 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
       });
     }, 30);
 
-    return () => window.clearInterval(timer);
+    return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (isReady && dest && !redirectQueued) {
-      setRedirectQueued(true);
-      const redirectTimer = window.setTimeout(() => {
-        window.location.assign(dest);
-      }, 1200);
-      return () => window.clearTimeout(redirectTimer);
+  const handleVerify = async () => {
+    setIsVerifying(true);
+    try {
+      const challengeResp = await fetch('https://api.authichain.com/generate-challenge');
+      const options = await challengeResp.json();
+      
+      const authResp = await startAuthentication(options);
+      
+      const verifyResp = await fetch('https://api.authichain.com/verify-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authResp),
+      });
+
+      if (verifyResp.ok) {
+        setIsVerified(true);
+      }
+    } catch (err) {
+      console.error('Verification failed', err);
+    } finally {
+      setIsVerifying(false);
     }
-  }, [isReady, dest, redirectQueued]);
+  };
+
+  useEffect(() => {
+    if (isReady && dest && isVerified) {
+      const redirectTimer = setTimeout(() => {
+        window.location.assign(dest);
+      }, 1500);
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [isReady, dest, isVerified]);
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center relative overflow-hidden">
@@ -86,36 +111,38 @@ export default function RevealPage({ params, searchParams }: RevealPageProps) {
           </div>
         </div>
 
-        {/* Story Mode Status */}
-        <div className="space-y-4">
-          {isReady ? (
-            <div className="p-6 rounded-3xl bg-zinc-950/70 border border-gold/15">
-              <p className="text-sm font-black uppercase tracking-widest text-gold">Story Mode Ready</p>
-              <p className="mt-3 text-zinc-400 text-sm leading-relaxed">
-                Your immersive reveal is complete.
-                You will be redirected to the verified destination automatically.
-              </p>
+        {/* Action Button */}
+        {isReady && !isVerified && (
+          <button 
+            onClick={handleVerify}
+            disabled={isVerifying}
+            className="group relative w-full py-4 bg-gold text-black font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 disabled:opacity-50"
+          >
+            <div className="flex items-center justify-center gap-3">
+              {isVerifying ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Scanning...</span>
+                </>
+              ) : (
+                <>
+                  <span>Verify Authenticity</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </div>
-          ) : (
-            <div className="p-6 rounded-3xl bg-zinc-950/70 border border-zinc-800/50">
-              <p className="text-sm font-black uppercase tracking-widest text-zinc-300">Preparing the narrative</p>
-              <p className="mt-3 text-zinc-500 text-sm leading-relaxed">
-                Story Mode is loading the cinematic experience. Please hold on for a moment.
-              </p>
-            </div>
-          )}
+          </button>
+        )}
 
-          {!dest && (
-            <div className="p-6 rounded-3xl bg-red-900/20 border border-red-500/20">
-              <p className="text-sm font-black uppercase tracking-widest text-red-300">
-                No destination found
-              </p>
-              <p className="mt-3 text-red-200 text-sm leading-relaxed">
-                The Story Mode reveal is active, but we could not locate the redirect target. Please return to the homepage and try again.
-              </p>
+        {isVerified && (
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2 text-gold font-bold">
+              <Shield className="w-5 h-5" />
+              Authenticity Anchored
             </div>
-          )}
-        </div>
+            <p className="text-zinc-500 text-xs">Redirecting to verified destination...</p>
+          </div>
+        )}
 
         <div className="mt-12 flex items-center gap-6 opacity-30 grayscale">
           <Image src="/media/logo-white.svg" alt="Authichain" width={80} height={20} />

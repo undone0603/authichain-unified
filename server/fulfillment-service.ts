@@ -95,7 +95,7 @@ export async function triggerFulfillmentFromPayment(sessionId: string) {
   if (!order) return;
 
   const physicalServices = ["brand_story_pack", "automation_setup"];
-  if (!order.serviceType || !physicalServices.includes(order.serviceType)) return;
+  if (!physicalServices.includes(order.serviceType)) return;
 
   if (process.env.FULFILLMENT_MOCK_ENABLED !== "true") {
     console.log(
@@ -107,7 +107,7 @@ export async function triggerFulfillmentFromPayment(sessionId: string) {
 
   return await processPhysicalFulfillment({
     orderId: order.id,
-    customerName: (order.details as any)?.customerName || "AuthiChain Customer",
+    customerName: order.customerName || "AuthiChain Customer",
     shippingAddress: {
       line1: "123 Main St",
       city: "Detroit",
@@ -115,7 +115,7 @@ export async function triggerFulfillmentFromPayment(sessionId: string) {
       zip: "48226",
       country: "US",
     },
-    artworkUrl: (order.details as any)?.deliveryUrl || "",
+    artworkUrl: order.deliveryUrl || "",
     quantity: 1000,
   });
 }

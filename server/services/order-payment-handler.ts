@@ -28,7 +28,7 @@ export async function handleServiceOrderPayment(session: SessionWithId): Promise
   }
 
   await db.updateServiceOrderStatus(order.id, decision.updates.status, {
-    stripePaymentIntentId: decision.updates.stripePaymentIntentId ?? undefined,
+    stripePaymentIntentId: decision.updates.stripePaymentIntentId,
   });
 
   await db.logActivity({
@@ -38,7 +38,7 @@ export async function handleServiceOrderPayment(session: SessionWithId): Promise
     entityId: order.id,
     details: {
       sessionId: session.id,
-      amount: (order.details as { amount?: unknown } | null)?.amount ?? null,
+      amount: order.amount,
       serviceType: order.serviceType,
     },
   });

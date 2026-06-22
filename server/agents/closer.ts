@@ -8,11 +8,11 @@
  */
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { sendEmail, checkThreadReplies } from '../email-service.js';
-import { logActivity, enqueueTask, getDb, createProposal, recordEmailReply } from '../db.js';
+import { logActivity, enqueueTask, getDb, createProposal } from '../db.js';
 import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
-import { getStripe } from '../stripe-service';
-import type { MissionTask as Task } from '../../drizzle/schema';
+import { getStripe } from '../stripe-service.js';
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -85,7 +85,6 @@ export async function runCheckReplies(task: Task): Promise<void> {
     const intent = await classifyReplyIntent(replyCheck.replyText, segment);
 
     await updateLeadStatus(leadEmail, 'REPLIED');
-    await recordEmailReply(leadEmail).catch(() => {});
 
     await logActivity({
       userId: null, action: 'reply_received', entityType: 'task', entityId: 0,
@@ -206,7 +205,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
 
   if (!body) throw new Error('Demo packet LLM returned empty body');
 
-  const sendResult = await sendEmail({ to: leadEmail, subject, body, trackLeadEmail: leadEmail });
+  const sendResult = await sendEmail({ to: leadEmail, subject, body });
 
   if (sendResult.status === 'sent') {
     await updateLeadStatus(leadEmail, 'DEMO_SENT');
@@ -327,18 +326,9 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
     to: leadEmail,
     subject,
     body: `${proposalContent}${paymentSection}`,
-    trackLeadEmail: leadEmail,
   });
 
   await updateLeadStatus(leadEmail, 'PILOT_PROPOSED');
-
-  // Mark contractSent so the scoring loop doesn't re-trigger another proposal
-  const db = await getDb();
-  if (db) {
-    await db.update(leads)
-      .set({ contractSent: true, updatedAt: new Date() })
-      .where(eq(leads.email, leadEmail.toLowerCase()));
-  }
 
   await logActivity({
     userId: null, action: 'proposal_sent', entityType: 'task', entityId: 0,
@@ -475,7 +465,7 @@ Return JSON: { "subject": "Re: [keep thread subject]", "body": "..." }`;
   const subject = parsed_reply.subject ?? `Re: AuthiChain`;
   const body = parsed_reply.body ?? '';
 
-  const sendResult = await sendEmail({ to: leadEmail, subject, body, trackLeadEmail: leadEmail });
+  const sendResult = await sendEmail({ to: leadEmail, subject, body });
 
   if (sendResult.status === 'sent') {
     // Check again in 72h

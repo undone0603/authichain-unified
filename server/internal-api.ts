@@ -21,16 +21,10 @@ import { reportUsageToStripe } from "./tenant-billing";
 export function createInternalRouter(): Router {
   const router = Router();
 
-  // Auth middleware — constant-time compare so the secret cannot be leaked
-  // byte-by-byte through response-timing analysis.
+  // Auth middleware
   router.use((req: Request, res: Response, next) => {
-    const expected = ENV.internalApiSecret;
-    if (!expected) return res.status(503).json({ error: "internal API not configured" });
-    const provided = req.headers["x-internal-secret"];
-    if (typeof provided !== "string") return res.status(401).json({ error: "Unauthorized" });
-    const a = Buffer.from(provided);
-    const b = Buffer.from(expected);
-    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    const secret = req.headers["x-internal-secret"];
+    if (!secret || typeof secret !== "string" || !timingSafeStringEqual(secret, ENV.internalApiSecret)) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     next();
@@ -121,10 +115,8 @@ export function createInternalRouter(): Router {
   router.post("/certificates/verify", async (req: Request, res: Response) => {
     try {
       const raw = req.body?.certNumber ?? req.body?.number;
-      const number = typeof raw === 'string' ? raw
-        : Array.isArray(raw) && typeof raw[0] === 'string' ? raw[0]
-        : undefined;
-      if (!number) return res.status(400).json({ error: "certNumber required in request body" });
+      const number = typeof raw === 'string' ? raw : undefined;
+      if (!number) return res.status(400).json({ error: "certNumber body field required" });
       if (number.length > 64) return res.status(400).json({ error: "certNumber too long" });
 
       const cert = await getCertificateByNumber(number);

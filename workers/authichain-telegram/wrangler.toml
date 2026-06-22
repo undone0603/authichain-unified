@@ -2,8 +2,6 @@ name = "authichain-telegram"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
-account_id = "4c1869b90f13f86940aa3747839bf420"
-workers_dev = true
 
 [[d1_databases]]
 binding = "DATABASE"
@@ -12,7 +10,13 @@ database_id = "3a330910-b81a-43e9-b3fb-bd8e529cff07"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "11d0f66da4ae4cb3890c7a75e6ecc0f5"
+id = "ef040f1eb8ca4d6f9f7fe4e908cdfd69"
+
+# Secrets — set via: wrangler secret put <NAME>
+# TELEGRAM_BOT_TOKEN
+# TELEGRAM_WEBHOOK_SECRET
+# TELEGRAM_ADMIN_CHAT_ID
+# SITE_URL
 
 [vars]
 ENVIRONMENT = "production"

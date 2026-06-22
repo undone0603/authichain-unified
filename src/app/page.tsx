@@ -13,6 +13,12 @@ import {
   Package,
   Vote,
   ArrowRight,
+  Palette,
+  Eye,
+  Activity,
+  ShieldCheck,
+  ScanLine,
+  Coins,
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -24,8 +30,6 @@ import Image from 'next/image';
 import { FeaturedQRONs } from '@/components/FeaturedQRONs';
 import { LeadCapturePopup } from '@/components/LeadCapturePopup';
 import { SocialShareCTA } from '@/components/SocialShareCTA';
-import { TrustAuditMagnet } from '@/components/TrustAuditMagnet';
-import { Star } from 'lucide-react';
 
 const StaticImageGallery = dynamic(
   () =>
@@ -71,6 +75,31 @@ export default function Home() {
         url: 'https://rolex.com',
         prompt: 'Luxury gold watch mechanisms, intricate gear details, emerald green and gold hues',
         mode: 'holographic'
+      },
+      Hermes: {
+        url: 'https://hermes.com',
+        prompt: 'Hermes Birkin leather texture, signature orange and brown tones, luxury equestrian aesthetic',
+        mode: 'living'
+      },
+      Chanel: {
+        url: 'https://chanel.com',
+        prompt: 'Chanel classic flap quilting, interlocking CC logo gold metal, black and white pearls',
+        mode: 'holographic'
+      },
+      Moderna: {
+        url: 'https://modernatx.com',
+        prompt: 'mRNA molecular structures, medical laboratory aesthetics, clean sterile blue and white',
+        mode: 'layered'
+      },
+      Gilmore: {
+        url: 'https://gilmorecarmuseum.org',
+        prompt: '1929 Duesenberg Model J at the Gilmore Car Museum. Elegant museum photography, soft studio lighting.',
+        mode: 'living'
+      },
+      Metrc: {
+        url: 'https://metrc.com',
+        prompt: 'StrainChain Bio Jungle AI QR. Organic forest textures, cannabis leaf veins, deep emerald green.',
+        mode: 'living'
       }
     };
 
@@ -163,8 +192,6 @@ export default function Home() {
       setLoading(false);
     }
   };
-  const [testimonials, setTestimonials] = useState<Array<{id: string; name: string; role: string; company: string; avatar_initials: string; rating: number; text: string}>>([]);
-  const [socialProof, setSocialProof] = useState<{stats?: {total_users: number; total_qrons: number; total_scans: number; countries_served: number}; trust_badges?: Array<{label: string}>} | null>(null);
   const [generationsUsed, setGenerationsUsed] = useState(0);
   const [generationsLimit, setGenerationsLimit] = useState(10);
   const [user, setUser] = useState<User | null>(null);
@@ -212,14 +239,6 @@ export default function Home() {
 
     fetchUserData();
     fetchPresets();
-
-    fetch('/api/testimonials?limit=4').then(r => r.json()).then(d => {
-      if (d.testimonials) setTestimonials(d.testimonials);
-    }).catch(() => {});
-
-    fetch('/api/social-proof').then(r => r.json()).then(d => {
-      if (d.stats) setSocialProof(d);
-    }).catch(() => {});
   }, [supabase]);
 
   const isTierSufficient = (requiredTier: string) => {
@@ -355,7 +374,7 @@ export default function Home() {
           {/* Magic Try Buttons */}
           <div className="flex flex-wrap justify-center gap-4 mt-8">
              <span className="w-full text-[10px] font-black uppercase tracking-[0.2em] text-zinc-700 mb-2">Instant Demo:</span>
-             {['Tesla', 'Nike', 'Rolex'].map(brand => (
+             {['Tesla', 'Nike', 'Rolex', 'Hermes', 'Chanel', 'Moderna', 'Gilmore', 'Metrc'].map(brand => (
                <button
                  key={brand}
                  onClick={() => handleMagicTry(brand)}
@@ -964,6 +983,101 @@ export default function Home() {
           ))}
         </div>
 
+        <div className="gold-divider my-12" />
+
+        {/* Elite Capabilities Section */}
+        <section className="mb-16">
+          <div className="text-center mb-12">
+            <span className="protocol-badge mb-4 inline-flex">
+              <Zap className="w-3 h-3" />
+              Elite / Theater 3 Capabilities
+            </span>
+            <h2 className="text-3xl md:text-5xl font-black mt-4 mb-4 uppercase tracking-tighter">
+              <span className="gold-text">Cryptographic Art Engine</span>
+            </h2>
+            <p className="text-base max-w-2xl mx-auto text-zinc-400 leading-relaxed">
+              QRON.space combines Hugging Face ControlNet pipelines with advanced quantitative imaging to create scannable, cryptographically anchored masterpieces.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* ControlNet & HF */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
+              <div className="w-10 h-10 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center mb-4">
+                <Palette className="w-5 h-5 text-gold" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">Hugging Face ControlNet</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Powered by SDXL and custom ControlNet models via the Hugging Face Inference API. Our pipeline perfectly balances QR scannability with hyper-realistic artistic generation.
+              </p>
+            </div>
+
+            {/* Magic Eye / Autostereography */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4">
+                <Eye className="w-5 h-5 text-purple-500" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">Magic Eye Autostereograms</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Pioneering autostereography techniques to embed scannable cryptographic payloads inside 3D stereogram patterns. Look past the image to see the underlying TrueMark.
+              </p>
+            </div>
+
+            {/* Quantitative Imaging & Colorimetry */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
+                <Activity className="w-5 h-5 text-blue-500" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">Quantitative Colorimetry</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Utilizing spectrophotometry principles and precise colorimetry to calculate structural contrast limits, guaranteeing the QR anchor remains functional in extreme light conditions.
+              </p>
+            </div>
+
+            {/* TrueMark Integration */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
+                <ShieldCheck className="w-5 h-5 text-emerald-500" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">TrueMark™ Anchor</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Every generated asset receives an immutable TrueMark ID. Scannable AI art acts as a physical-to-digital bridge, anchoring the item to Polygon and Base layer-2 networks.
+              </p>
+            </div>
+
+            {/* GPT Vision Validation */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4">
+                <ScanLine className="w-5 h-5 text-cyan-500" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-white">GPT-4o Vision Verification</h3>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Pre-flight scans are executed autonomously by GPT-4o Vision agents to ensure error-correction integrity and aesthetic alignment before the QRON is delivered.
+              </p>
+            </div>
+
+            {/* Living Portals & $QRON */}
+            <div className="protocol-card p-6 bg-zinc-950/50 flex flex-col items-start text-left relative overflow-hidden">
+              <div className="absolute inset-0 bg-gold/5 blur-2xl rounded-full" />
+              <div className="relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-gold/20 border border-gold/40 flex items-center justify-center mb-4">
+                  <Coins className="w-5 h-5 text-gold" />
+                </div>
+                <h3 className="text-sm font-black uppercase tracking-widest mb-2 text-gold">Living Portals & $QRON</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                  Generators create "Living Portals"—dynamic redirect hubs that update based on time, location, or user profile. Powered by the $QRON utility token for high-volume enterprise minting.
+                </p>
+                <div className="inline-flex items-center gap-2 bg-zinc-900 px-3 py-1 rounded text-[10px] font-mono border border-zinc-800">
+                  <span className="text-zinc-500">Contract:</span>
+                  <span className="text-gold">0xAebf...E437</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="gold-divider my-12" />
+
         {/* Demo Gallery Preview */}
         <section className="mb-16" id="demo-gallery">
           <div className="text-center mb-10">
@@ -1040,19 +1154,13 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <div className="text-center flex flex-col sm:flex-row justify-center items-center gap-4">
-            <a
-              href="/industries"
-              className="btn-gold px-8 py-3 rounded-xl inline-flex items-center gap-2 font-bold shadow-gold"
-            >
-              <Sparkles className="w-4 h-4" />
-              Industry Showcase (Model A) →
-            </a>
+          <div className="text-center">
             <a
               href="/demo"
-              className="btn-outline-gold px-8 py-3 rounded-xl inline-flex items-center gap-2 font-bold border-zinc-800"
+              className="btn-gold px-8 py-3 rounded-xl inline-flex items-center gap-2 font-bold"
             >
-              Marketplace Demos →
+              <Sparkles className="w-4 h-4" />
+              Browse Full Demo Gallery →
             </a>
             <p className="text-xs mt-3" style={{ color: '#6b6b6b' }}>
               20+ iconic brands · Order yours from $49 · Delivered in ~5 min
@@ -1360,86 +1468,6 @@ export default function Home() {
           </a>
         </div>
 
-        {/* Lead Magnet Section */}
-        <section className="mb-24 py-12 relative overflow-hidden">
-           <div className="absolute inset-0 bg-gold/5 blur-[120px] rounded-full -translate-y-1/2" />
-           <div className="relative z-10 max-w-4xl mx-auto">
-              <TrustAuditMagnet />
-           </div>
-        </section>
-
-        {/* Social Proof Stats */}
-        {socialProof?.stats && (
-          <section className="mb-16">
-            <div className="text-center mb-8">
-              <span className="protocol-badge mb-4 inline-flex">
-                <Shield className="w-3 h-3" />
-                Trusted Worldwide
-              </span>
-              <h2 className="text-3xl font-bold mt-4">
-                <span className="gold-text">Platform at Scale</span>
-              </h2>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { stat: socialProof.stats.total_users.toLocaleString(), label: 'Users' },
-                { stat: socialProof.stats.total_qrons.toLocaleString(), label: 'QRONs Created' },
-                { stat: socialProof.stats.total_scans.toLocaleString(), label: 'Total Scans' },
-                { stat: `${socialProof.stats.countries_served}+`, label: 'Countries Served' },
-              ].map(({ stat, label }) => (
-                <div key={label} className="protocol-card p-6 text-center">
-                  <div className="text-3xl font-black gold-text mb-1">{stat}</div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{label}</div>
-                </div>
-              ))}
-            </div>
-            {socialProof.trust_badges && (
-              <div className="flex flex-wrap justify-center gap-4 mt-6">
-                {socialProof.trust_badges.map(b => (
-                  <span key={b.label} className="text-[9px] font-black uppercase tracking-widest text-zinc-500 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">
-                    {b.label}
-                  </span>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* Testimonials */}
-        {testimonials.length > 0 && (
-          <section className="mb-16">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold">
-                <span className="gold-text">What Our Users Say</span>
-              </h2>
-              <p className="text-sm mt-2" style={{ color: '#6b6b6b' }}>Real feedback from verified QRON creators</p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              {testimonials.map(t => (
-                <div key={t.id} className="protocol-card p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-black text-gold">
-                      {t.avatar_initials}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">{t.name}</p>
-                      <p className="text-[10px] text-zinc-500">{t.role} · {t.company}</p>
-                    </div>
-                    <div className="ml-auto flex gap-0.5">
-                      {Array.from({ length: t.rating }).map((_, i) => (
-                        <Star key={i} className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm leading-relaxed" style={{ color: '#9e9e9e' }}>&ldquo;{t.text}&rdquo;</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <div className="gold-divider my-12" />
-
         {/* FAQ */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold text-center mb-8">
@@ -1487,17 +1515,90 @@ export default function Home() {
           </div>
         </section>
 
+        {/* YouTube Channel Section */}
+        <section className="mb-16 px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: '#c9a227' }}>@AuthiChain-Qronspace</p>
+            <h2 className="text-2xl font-bold mb-3"><span className="gold-text">See QRON in Action</span></h2>
+            <p className="text-sm mb-8" style={{ color: '#6b6b6b' }}>Watch how living QR codes power authentication across luxury, cannabis, food & pharma</p>
+
+            {/* Featured Video */}
+            <div className="mb-6 rounded-2xl overflow-hidden border border-zinc-800" style={{ background: '#0a0a0a' }}>
+              <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                <iframe
+                  src="https://www.youtube.com/embed/mfckohgDrNk?rel=0&color=white&modestbranding=1"
+                  title="QRON Main Overview"
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            </div>
+
+            {/* Video Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-left">
+              {[
+                { id: 'PdCibPadCxE', label: 'Food & Beverage', title: 'Validating Origin with QRON' },
+                { id: '70KG5d2fFUo', label: 'Token Economy', title: 'The $QRON Token Economy' },
+                { id: 'bAI14tPQFF4', label: 'Ecosystem', title: 'Use Cases for Trust' },
+              ].map(({ id, label, title }) => (
+                <a key={id} href={`https://www.youtube.com/watch?v=${id}`} target="_blank" rel="noopener noreferrer"
+                   className="rounded-xl overflow-hidden border border-zinc-800 hover:border-yellow-600 transition-colors block"
+                   style={{ background: '#0a0a0a', textDecoration: 'none' }}>
+                  <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#050505' }}>
+                    <img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt={title}
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 40, height: 40, background: 'rgba(220,38,38,0.9)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><polygon points="9.5,7.5 16.5,12 9.5,16.5"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#c9a227' }}>{label}</p>
+                    <p className="text-xs font-bold" style={{ color: '#c8c8c8' }}>{title}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {/* Channel CTA */}
+            <a href="https://www.youtube.com/@AuthiChain-Qronspace" target="_blank" rel="noopener noreferrer"
+               className="inline-flex items-center gap-3 font-black text-sm px-6 py-3 rounded-full transition-all"
+               style={{ background: '#dc2626', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 20px rgba(220,38,38,0.35)' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.54 3.5 12 3.5 12 3.5s-7.54 0-9.38.55A3.02 3.02 0 0 0 .5 6.19C0 8.04 0 12 0 12s0 3.96.5 5.81a3.02 3.02 0 0 0 2.12 2.14C4.46 20.5 12 20.5 12 20.5s7.54 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14C24 15.96 24 12 24 12s0-3.96-.5-5.81zM9.75 15.5V8.5l6.25 3.5-6.25 3.5z"/>
+              </svg>
+              Subscribe on YouTube
+              <span className="text-[10px] opacity-75">26 Videos · @AuthiChain-Qronspace</span>
+            </a>
+          </div>
+        </section>
+
         {/* Footer Navigation */}
         <footer className="text-center py-12 border-t border-zinc-900 mt-12">
-          <div className="flex flex-wrap justify-center gap-6 mb-4">
+          <div className="flex justify-center gap-6 mb-6">
              <Link href="/about" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">About</Link>
              <Link href="/creators" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Creators</Link>
-             <Link href="/affiliate" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Affiliates</Link>
-             <Link href="/ftc-shield" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">FTC Shield</Link>
-             <Link href="/explorers" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Explorers</Link>
              <span className="text-zinc-800">|</span>
              <Link href="/terms" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Terms</Link>
              <Link href="/privacy" className="text-[10px] font-black uppercase text-zinc-600 hover:text-gold transition-colors">Privacy</Link>
+          </div>
+          {/* Ecosystem Cross-Sell */}
+          <div className="flex flex-wrap justify-center gap-4 mb-6">
+            {[
+              { name: 'AuthiChain', url: 'https://authichain.com', color: '#34d399', desc: 'Product Auth Protocol' },
+              { name: 'StrainChain', url: 'https://strainchain.io', color: '#22c55e', desc: 'Cannabis Provenance' },
+              { name: 'GovChain', url: 'https://govchain.us', color: '#60a5fa', desc: 'Gov Authentication' },
+            ].map(({ name, url, color, desc }) => (
+              <a key={name} href={url} target="_blank" rel="noopener noreferrer"
+                 className="px-4 py-2 rounded-xl border border-zinc-800 hover:border-zinc-600 transition-colors"
+                 style={{ textDecoration: 'none', background: '#0a0a0a' }}>
+                <span className="text-xs font-black block" style={{ color }}>{name}</span>
+                <span className="text-[9px]" style={{ color: '#6b6b6b' }}>{desc}</span>
+              </a>
+            ))}
           </div>
           <div className="space-y-2">
             <p className="text-xs" style={{ color: '#6b6b6b' }}>

@@ -1,15 +1,15 @@
 import { ENV } from "../_core/env";
 
-let _sgMail: typeof import("@sendgrid/mail") | null = null;
-
 async function getSgMail() {
-  if (_sgMail) return _sgMail;
   const m = await import("@sendgrid/mail");
-  _sgMail = (m.default ?? m) as typeof import("@sendgrid/mail");
+  return (m.default ?? m) as typeof import("@sendgrid/mail");
+}
+
+async function init() {
   if (ENV.sendgridApiKey) {
-    _sgMail.setApiKey(ENV.sendgridApiKey);
+    const sgMail = await getSgMail();
+    sgMail.setApiKey(ENV.sendgridApiKey);
   }
-  return _sgMail;
 }
 
 function getFromEmail(): string {
@@ -31,6 +31,7 @@ export interface CertificateEmailParams {
 
 export async function sendCertificateEmail(params: CertificateEmailParams): Promise<void> {
   const sgMail = await getSgMail();
+  await init();
   const html = `
     <!DOCTYPE html>
     <html>
@@ -72,6 +73,7 @@ export interface WelcomeEmailParams {
 
 export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<void> {
   const sgMail = await getSgMail();
+  await init();
   const html = `
     <!DOCTYPE html>
     <html>

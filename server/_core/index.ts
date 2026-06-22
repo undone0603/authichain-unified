@@ -4,22 +4,6 @@ import net from "net";
 import { createApp } from "./app";
 import { serveStatic, setupVite } from "./vite";
 import { initializeScheduler } from "../scheduled-jobs";
-import { ENV } from "./env";
-
-function validateEnv(): void {
-  if (!ENV.isProduction) return;
-  const checks: [string, string | undefined][] = [
-    ["JWT_SECRET",             process.env.JWT_SECRET],
-    ["DATABASE_URL",           process.env.DATABASE_URL],
-    ["INTERNAL_API_SECRET",    process.env.INTERNAL_API_SECRET],
-    ["STRIPE_WEBHOOK_SECRET",  process.env.STRIPE_WEBHOOK_SECRET],
-    ["CRON_SECRET",            process.env.CRON_SECRET],
-  ];
-  const missing = checks.filter(([, v]) => !v).map(([k]) => k);
-  if (missing.length > 0) {
-    throw new Error(`[Startup] Missing required production env vars: ${missing.join(", ")}`);
-  }
-}
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -41,7 +25,6 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  validateEnv();
   const app = createApp();
   const server = createServer(app);
 
@@ -60,21 +43,8 @@ async function startServer() {
 
   server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
-    try {
-      await initializeScheduler();
-    } catch (err) {
-      console.error("Failed to initialize scheduler:", err);
-    }
+    await initializeScheduler();
   });
 }
-
-process.on("unhandledRejection", (reason) => {
-  console.error("[unhandledRejection]", reason);
-});
-
-process.on("uncaughtException", (err) => {
-  console.error("[uncaughtException]", err);
-  process.exit(1);
-});
 
 startServer().catch(console.error);

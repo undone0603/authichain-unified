@@ -23,9 +23,7 @@ __export(schema_exports, {
   authentications: () => authentications,
   autopilotConfig: () => autopilotConfig,
   autopilotDecisions: () => autopilotDecisions,
-  bayesianPriors: () => bayesianPriors,
   bonuses: () => bonuses,
-  budgetConfig: () => budgetConfig,
   certificates: () => certificates,
   characterAssets: () => characterAssets,
   characterGenerations: () => characterGenerations,
@@ -52,12 +50,9 @@ __export(schema_exports, {
   personalizationRules: () => personalizationRules,
   platformFees: () => platformFees,
   products: () => products,
-  promptCache: () => promptCache,
   protocolAgents: () => protocolAgents,
   qrCodes: () => qrCodes,
   qronRewardLedger: () => qronRewardLedger,
-  qronScanVerdicts: () => qronScanVerdicts,
-  qrons: () => qrons,
   referralClicks: () => referralClicks,
   referrals: () => referrals,
   revenueRecords: () => revenueRecords,
@@ -73,30 +68,44 @@ __export(schema_exports, {
   visitorProfiles: () => visitorProfiles,
   whiteLabelClients: () => whiteLabelClients
 });
-import { serial, integer, pgTable, text, timestamp, varchar, boolean, json, numeric, bigserial, date, uniqueIndex, real } from "drizzle-orm/pg-core";
-var users, products, deadLetterQueue, authentications, certificates, qrCodes, nftCollections, nfts, auctions, auctionBids, subscriptions, usageRecords, invoices, payments, leads, emailCampaigns, emailDrafts, supplyChainEvents, referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions, abTests, whiteLabelClients, apiUsageDaily, activityLog, fraudAlerts, customerHealthScores, revenueRecords, notifications, bonuses, referralClicks, aiModels, modelPurchases, modelReviews, promptCache, scheduledJobRuns, budgetConfig, serviceOrders, characterGenerations, characterAssets, protocolAgents, verificationClaims, consensusResults, qronRewardLedger, stakingPositions, checkpointBatches, missions, missionTasks, platformFees, transactions, bayesianPriors, qrons, qronScanVerdicts, feedback, feedbackVotes, visitorProfiles, personalizationRules, personalizationEvents;
+import {
+  pgTable,
+  varchar,
+  text,
+  timestamp,
+  integer,
+  serial,
+  jsonb,
+  numeric,
+  uniqueIndex
+} from "drizzle-orm/pg-core";
+var missions, missionTasks, products, deadLetterQueue, authentications, certificates, qrCodes, nftCollections, nfts, auctions, auctionBids, subscriptions, usageRecords, invoices, payments, leads, emailCampaigns, emailDrafts, supplyChainEvents, referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions, abTests, whiteLabelClients, activityLog, fraudAlerts, customerHealthScores, revenueRecords, notifications, scheduledJobRuns, characterGenerations, characterAssets, protocolAgents, verificationClaims, consensusResults, qronRewardLedger, checkpointBatches, bonuses, referralClicks, aiModels, modelPurchases, modelReviews, serviceOrders, users, stakingPositions, platformFees, transactions, feedback, feedbackVotes, visitorProfiles, personalizationRules, personalizationEvents, apiUsageDaily;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
-    users = pgTable("users", {
-      id: serial("id").primaryKey(),
-      openId: varchar("openId", { length: 64 }).notNull().unique(),
-      name: text("name"),
-      email: varchar("email", { length: 320 }),
-      loginMethod: varchar("loginMethod", { length: 64 }),
-      role: varchar("role", { length: 50 }).default("user").notNull(),
-      walletAddress: varchar("walletAddress", { length: 128 }),
-      avatarUrl: text("avatarUrl"),
-      company: varchar("company", { length: 256 }),
-      title: varchar("title", { length: 256 }),
-      phone: varchar("phone", { length: 32 }),
-      onboardingCompleted: integer("onboardingCompleted").default(0),
-      stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
-      paddleCustomerId: varchar("paddleCustomerId", { length: 128 }),
-      points: integer("points").default(0),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-      lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull()
+    missions = pgTable("missions", {
+      id: varchar("id", { length: 36 }).primaryKey(),
+      title: varchar("title", { length: 255 }).notNull(),
+      description: text("description").notNull(),
+      type: varchar("type", { length: 64 }),
+      status: text("status").notNull(),
+      // pending, active, completed, failed
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
+    });
+    missionTasks = pgTable("mission_tasks", {
+      id: varchar("id", { length: 36 }).primaryKey(),
+      missionId: varchar("mission_id", { length: 36 }).notNull().references(() => missions.id),
+      title: varchar("title", { length: 255 }).notNull(),
+      description: text("description").notNull(),
+      kind: varchar("kind", { length: 64 }),
+      payload: jsonb("payload"),
+      lastError: text("last_error"),
+      status: text("status").notNull(),
+      // pending, in_progress, completed, failed
+      order: integer("order").notNull(),
+      createdAt: timestamp("created_at").defaultNow(),
+      updatedAt: timestamp("updated_at").defaultNow()
     });
     products = pgTable("products", {
       id: serial("id").primaryKey(),
@@ -111,31 +120,37 @@ var init_schema = __esm({
       manufacturingDate: timestamp("manufacturingDate"),
       blockchainTxHash: varchar("blockchainTxHash", { length: 128 }),
       nftTokenId: varchar("nftTokenId", { length: 128 }),
-      status: varchar("status", { length: 50 }).default("active"),
+      status: text("status").default("active"),
+      // active, recalled, expired, flagged
+      // Generated Industrial Assets
       audioUrl: text("audioUrl"),
-      visionMarkers: json("visionMarkers"),
+      visionMarkers: jsonb("visionMarkers"),
       rarityScore: integer("rarityScore"),
-      metadata: json("metadata"),
+      brandVoiceScript: text("brandVoiceScript"),
+      metadata: jsonb("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
     deadLetterQueue = pgTable("dead_letter_queue", {
       id: serial("id").primaryKey(),
+      originalJobId: integer("originalJobId"),
       taskType: varchar("taskType", { length: 128 }).notNull(),
-      payload: json("payload"),
+      payload: jsonb("payload").notNull(),
       error: text("error"),
-      status: varchar("status", { length: 50 }).default("pending").notNull(),
       retryCount: integer("retryCount").default(0),
-      lastAttemptedAt: timestamp("lastAttemptedAt").defaultNow(),
+      lastAttemptedAt: timestamp("lastAttemptedAt"),
+      status: text("status").default("pending"),
+      // pending, resolved, failed
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     authentications = pgTable("authentications", {
       id: serial("id").primaryKey(),
       productId: integer("productId").notNull(),
       userId: integer("userId").notNull(),
-      result: varchar("result", { length: 50 }).notNull(),
+      result: text("result").notNull(),
+      // authentic, counterfeit, uncertain
       confidenceScore: integer("confidenceScore").notNull(),
-      aiAnalysis: json("aiAnalysis"),
+      aiAnalysis: jsonb("aiAnalysis"),
       imageUrl: text("imageUrl"),
       isPublic: integer("isPublic").default(0),
       shareToken: varchar("shareToken", { length: 128 }),
@@ -150,16 +165,19 @@ var init_schema = __esm({
       authenticationId: integer("authenticationId"),
       userId: integer("userId").notNull(),
       certificateNumber: varchar("certificateNumber", { length: 64 }).notNull().unique(),
-      status: varchar("status", { length: 50 }).default("active"),
+      status: text("status").default("active"),
+      // active, revoked, expired
       issuedAt: timestamp("issuedAt").defaultNow().notNull(),
       expiresAt: timestamp("expiresAt"),
       blockchainTxHash: varchar("blockchainTxHash", { length: 128 }),
-      nftTokenId: varchar("nftTokenId", { length: 256 }),
-      nftContractAddress: varchar("nftContractAddress", { length: 64 }),
-      certificateUrl: text("certificateUrl"),
-      metadata: json("metadata"),
+      nftTokenId: varchar("nft_token_id", { length: 128 }),
+      nftContractAddress: varchar("nft_contract_address", { length: 128 }),
+      certificateUrl: text("certificate_url"),
+      bountyAmount: numeric("bountyAmount", { precision: 18, scale: 2 }).default("0"),
+      escrowTxHash: varchar("escrowTxHash", { length: 128 }),
+      metadata: jsonb("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+      updatedAt: timestamp("updatedAt")
     });
     qrCodes = pgTable("qr_codes", {
       id: serial("id").primaryKey(),
@@ -203,8 +221,9 @@ var init_schema = __esm({
       currency: varchar("currency", { length: 16 }).default("ETH"),
       rarityScore: integer("rarityScore"),
       rarityRank: integer("rarityRank"),
-      traits: json("traits"),
-      status: varchar("status", { length: 50 }).default("listed"),
+      traits: jsonb("traits"),
+      status: text("status").default("listed"),
+      // listed, sold, unlisted, auction
       viewCount: integer("viewCount").default(0),
       likeCount: integer("likeCount").default(0),
       productId: integer("productId"),
@@ -220,7 +239,8 @@ var init_schema = __esm({
       currentBid: numeric("currentBid", { precision: 18, scale: 8 }),
       highestBidderId: integer("highestBidderId"),
       bidCount: integer("bidCount").default(0),
-      status: varchar("status", { length: 50 }).default("active"),
+      status: text("status").default("active"),
+      // active, ended, cancelled
       startsAt: timestamp("startsAt").defaultNow().notNull(),
       endsAt: timestamp("endsAt").notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull()
@@ -235,15 +255,18 @@ var init_schema = __esm({
     subscriptions = pgTable("subscriptions", {
       id: serial("id").primaryKey(),
       userId: integer("userId").notNull(),
-      plan: varchar("plan", { length: 50 }).notNull(),
-      status: varchar("status", { length: 50 }).default("active"),
+      plan: text("plan").notNull(),
+      // starter, professional, enterprise
+      status: text("status").default("active"),
+      // active, cancelled, past_due, trialing, paused
       monthlyQuota: integer("monthlyQuota").notNull(),
       usedQuota: integer("usedQuota").default(0),
       stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
       stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
       paddleSubscriptionId: varchar("paddleSubscriptionId", { length: 128 }),
       paddleCustomerId: varchar("paddleCustomerId", { length: 128 }),
-      billingCycle: varchar("billingCycle", { length: 50 }).default("monthly"),
+      billingCycle: text("billingCycle").default("monthly"),
+      // monthly, annual
       currentPeriodStart: timestamp("currentPeriodStart"),
       currentPeriodEnd: timestamp("currentPeriodEnd"),
       trialEndsAt: timestamp("trialEndsAt"),
@@ -257,7 +280,7 @@ var init_schema = __esm({
       subscriptionId: integer("subscriptionId"),
       type: varchar("type", { length: 64 }).notNull(),
       quantity: integer("quantity").default(1),
-      metadata: json("metadata"),
+      metadata: jsonb("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     invoices = pgTable("invoices", {
@@ -266,11 +289,12 @@ var init_schema = __esm({
       subscriptionId: integer("subscriptionId"),
       amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
       currency: varchar("currency", { length: 8 }).default("USD"),
-      status: varchar("status", { length: 50 }).default("draft"),
+      status: text("status").default("draft"),
+      // draft, pending, paid, overdue, cancelled
       stripeInvoiceId: varchar("stripeInvoiceId", { length: 128 }),
       paidAt: timestamp("paidAt"),
       dueDate: timestamp("dueDate"),
-      items: json("items"),
+      items: jsonb("items"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     payments = pgTable("payments", {
@@ -278,13 +302,15 @@ var init_schema = __esm({
       userId: integer("userId").notNull(),
       amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
       currency: varchar("currency", { length: 16 }).default("USD"),
-      method: varchar("method", { length: 50 }).notNull(),
-      status: varchar("status", { length: 50 }).default("pending"),
+      method: text("method").notNull(),
+      // stripe, crypto, escrow
+      status: text("status").default("pending"),
+      // pending, completed, failed, refunded, escrowed
       stripePaymentId: varchar("stripePaymentId", { length: 128 }),
       cryptoPaymentId: varchar("cryptoPaymentId", { length: 128 }),
       cryptoAddress: varchar("cryptoAddress", { length: 256 }),
       escrowReleaseDate: timestamp("escrowReleaseDate"),
-      metadata: json("metadata"),
+      metadata: jsonb("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
@@ -297,28 +323,15 @@ var init_schema = __esm({
       phone: varchar("phone", { length: 32 }),
       source: varchar("source", { length: 128 }),
       score: integer("score").default(0),
-      leadScore: integer("leadScore").default(0),
-      emailOpened: boolean("emailOpened").default(false),
-      emailClicked: boolean("emailClicked").default(false),
-      emailReplied: boolean("emailReplied").default(false),
-      roiCalculated: boolean("roiCalculated").default(false),
-      demoStarted: boolean("demoStarted").default(false),
-      interactionsCount: integer("interactionsCount").default(0),
-      isVip: boolean("isVip").default(false),
-      contractSent: boolean("contractSent").default(false),
-      contractOpened: boolean("contractOpened").default(false),
-      contractSigned: boolean("contractSigned").default(false),
-      roiSavings: integer("roiSavings"),
-      numProducts: integer("numProducts"),
-      dealStage: varchar("dealStage", { length: 64 }),
-      status: varchar("status", { length: 50 }).default("new"),
+      status: text("status").default("new"),
+      // new, contacted, qualified, proposal, won, lost
       industry: varchar("industry", { length: 128 }),
-      segment: varchar("segment", { length: 64 }),
       notes: text("notes"),
       lastContactedAt: timestamp("lastContactedAt"),
-      nextActionAt: timestamp("nextActionAt"),
       assignedTo: integer("assignedTo"),
-      metadata: json("metadata"),
+      segment: varchar("segment", { length: 64 }),
+      nextActionAt: timestamp("nextActionAt"),
+      metadata: jsonb("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
@@ -328,8 +341,10 @@ var init_schema = __esm({
       name: varchar("name", { length: 256 }).notNull(),
       subject: varchar("subject", { length: 512 }).notNull(),
       body: text("body").notNull(),
-      type: varchar("type", { length: 50 }).notNull(),
-      status: varchar("status", { length: 50 }).default("draft"),
+      type: text("type").notNull(),
+      // nurture, onboarding, trial_conversion, announcement, outreach
+      status: text("status").default("draft"),
+      // draft, scheduled, sending, sent, paused
       recipientCount: integer("recipientCount").default(0),
       sentCount: integer("sentCount").default(0),
       openCount: integer("openCount").default(0),
@@ -350,19 +365,21 @@ var init_schema = __esm({
       subject: varchar("subject", { length: 512 }).notNull(),
       body: text("body").notNull(),
       templateUsed: varchar("templateUsed", { length: 128 }),
-      status: varchar("status", { length: 50 }).default("pending"),
+      status: text("status").default("pending"),
+      // pending, approved, rejected, sent
       generatedBy: varchar("generatedBy", { length: 64 }).default("ai_manager"),
       approvedBy: integer("approvedBy"),
       approvedAt: timestamp("approvedAt"),
       sentAt: timestamp("sentAt"),
+      taskId: varchar("taskId", { length: 36 }),
       notes: text("notes"),
-      taskId: varchar("taskId", { length: 64 }),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     supplyChainEvents = pgTable("supply_chain_events", {
       id: serial("id").primaryKey(),
       productId: integer("productId").notNull(),
-      eventType: varchar("eventType", { length: 50 }).notNull(),
+      eventType: text("eventType").notNull(),
+      // manufactured, shipped, in_transit, customs, delivered, verified, recalled
       location: varchar("location", { length: 512 }),
       latitude: numeric("latitude", { precision: 10, scale: 7 }),
       longitude: numeric("longitude", { precision: 10, scale: 7 }),
@@ -372,7 +389,7 @@ var init_schema = __esm({
       notes: text("notes"),
       blockchainTxHash: varchar("blockchainTxHash", { length: 128 }),
       iotDeviceId: varchar("iotDeviceId", { length: 128 }),
-      metadata: json("metadata"),
+      metadata: jsonb("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     referrals = pgTable("referrals", {
@@ -380,12 +397,14 @@ var init_schema = __esm({
       referrerId: integer("referrerId").notNull(),
       referredId: integer("referredId"),
       referralCode: varchar("referralCode", { length: 32 }).notNull().unique(),
-      status: varchar("status", { length: 50 }).default("pending"),
-      rewardAmount: numeric("rewardAmount", { precision: 10, scale: 2 }).default("0"),
-      rewardPaid: integer("rewardPaid").default(0),
+      status: text("status").default("pending"),
+      // pending, active, converted, expired
       referredEmail: varchar("referredEmail", { length: 320 }),
-      tier: varchar("tier", { length: 50 }),
+      tier: text("tier"),
+      // starter, professional, enterprise, agency
+      rewardAmount: numeric("rewardAmount", { precision: 10, scale: 2 }).default("0"),
       commissionPaid: numeric("commissionPaid", { precision: 10, scale: 2 }).default("0"),
+      rewardPaid: integer("rewardPaid").default(0),
       convertedAt: timestamp("convertedAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
@@ -398,12 +417,14 @@ var init_schema = __esm({
       pendingPayout: numeric("pendingPayout", { precision: 18, scale: 2 }).default("0"),
       totalReferrals: integer("totalReferrals").default(0),
       totalConversions: integer("totalConversions").default(0),
-      status: varchar("status", { length: 50 }).default("pending"),
-      tier: varchar("affiliateTier", { length: 50 }).default("basic"),
+      tier: text("tier").default("basic"),
+      // basic, silver, gold, platinum
       activeReferrals: integer("activeReferrals").default(0),
       paypalEmail: varchar("paypalEmail", { length: 320 }),
+      status: text("status").default("pending"),
+      // active, suspended, pending
       payoutMethod: varchar("payoutMethod", { length: 64 }),
-      payoutDetails: json("payoutDetails"),
+      payoutDetails: jsonb("payoutDetails"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
@@ -412,15 +433,17 @@ var init_schema = __esm({
       affiliateId: integer("affiliateId").notNull(),
       paymentId: integer("paymentId"),
       amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
-      status: varchar("status", { length: 50 }).default("pending"),
+      status: text("status").default("pending"),
+      // pending, approved, paid, rejected
       paidAt: timestamp("paidAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     autopilotConfig = pgTable("autopilot_config", {
       id: serial("id").primaryKey(),
       enabled: integer("enabled").default(0),
-      mode: varchar("mode", { length: 50 }).default("balanced"),
-      guardrails: json("guardrails"),
+      mode: text("mode").default("balanced"),
+      // conservative, balanced, aggressive
+      guardrails: jsonb("guardrails"),
       updatedBy: integer("updatedBy"),
       updatedAt: timestamp("updatedAt").defaultNow().notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull()
@@ -431,8 +454,9 @@ var init_schema = __esm({
       action: varchar("action", { length: 256 }).notNull(),
       reasoning: text("reasoning"),
       confidence: integer("confidence"),
-      status: varchar("status", { length: 50 }).default("pending"),
-      result: json("result"),
+      status: text("status").default("pending"),
+      // pending, executed, overridden, failed
+      result: jsonb("result"),
       overriddenBy: integer("overriddenBy"),
       overrideReason: text("overrideReason"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
@@ -442,8 +466,9 @@ var init_schema = __esm({
       name: varchar("name", { length: 256 }).notNull(),
       description: text("description"),
       type: varchar("type", { length: 64 }).notNull(),
-      status: varchar("status", { length: 50 }).default("draft"),
-      variants: json("variants"),
+      status: text("status").default("draft"),
+      // draft, running, completed, paused
+      variants: jsonb("variants"),
       winnerVariant: varchar("winnerVariant", { length: 64 }),
       totalParticipants: integer("totalParticipants").default(0),
       startedAt: timestamp("startedAt"),
@@ -460,33 +485,21 @@ var init_schema = __esm({
       secondaryColor: varchar("secondaryColor", { length: 16 }),
       apiKey: varchar("apiKey", { length: 128 }).notNull().unique(),
       apiSecret: varchar("apiSecret", { length: 256 }),
-      status: varchar("status", { length: 50 }).default("pending"),
+      status: text("status").default("pending"),
+      // active, suspended, pending
       monthlyApiCalls: integer("monthlyApiCalls").default(0),
       apiCallLimit: integer("apiCallLimit").default(1e4),
-      features: json("features"),
+      features: jsonb("features"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    apiUsageDaily = pgTable("api_usage_daily", {
-      id: serial("id").primaryKey(),
-      tenantId: integer("tenantId").notNull(),
-      clientId: integer("clientId"),
-      date: date("date").notNull(),
-      endpoint: varchar("endpoint", { length: 128 }).notNull().default(""),
-      callCount: integer("callCount").default(0),
-      calls: integer("calls").default(0),
-      cost: numeric("cost", { precision: 18, scale: 4 }).default("0"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
-    }, (t2) => ({
-      uniqTenantDateEndpoint: uniqueIndex("api_usage_daily_tenant_date_endpoint").on(t2.tenantId, t2.date, t2.endpoint)
-    }));
     activityLog = pgTable("activity_log", {
       id: serial("id").primaryKey(),
       userId: integer("userId"),
       action: varchar("action", { length: 128 }).notNull(),
       entityType: varchar("entityType", { length: 64 }),
       entityId: integer("entityId"),
-      details: json("details"),
+      details: jsonb("details"),
       ipAddress: varchar("ipAddress", { length: 64 }),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
@@ -495,20 +508,23 @@ var init_schema = __esm({
       userId: integer("userId"),
       productId: integer("productId"),
       alertType: varchar("alertType", { length: 128 }).notNull(),
-      severity: varchar("severity", { length: 50 }).default("medium"),
+      severity: text("severity").default("medium"),
+      // low, medium, high, critical
       description: text("description"),
-      status: varchar("status", { length: 50 }).default("open"),
+      status: text("status").default("open"),
+      // open, investigating, resolved, dismissed
       resolvedBy: integer("resolvedBy"),
       resolvedAt: timestamp("resolvedAt"),
-      metadata: json("metadata"),
+      metadata: jsonb("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     customerHealthScores = pgTable("customer_health_scores", {
       id: serial("id").primaryKey(),
       userId: integer("userId").notNull(),
       score: integer("score").notNull(),
-      factors: json("factors"),
-      trend: varchar("trend", { length: 50 }).default("stable"),
+      factors: jsonb("factors"),
+      trend: text("trend").default("stable"),
+      // improving, stable, declining
       lastCalculatedAt: timestamp("lastCalculatedAt").defaultNow().notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
@@ -517,20 +533,186 @@ var init_schema = __esm({
       source: varchar("source", { length: 128 }).notNull(),
       amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
       currency: varchar("currency", { length: 8 }).default("USD"),
-      type: varchar("type", { length: 50 }).notNull(),
+      type: text("type").notNull(),
+      // subscription, one_time, overage, affiliate, marketplace
       userId: integer("userId"),
-      metadata: json("metadata"),
+      metadata: jsonb("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     notifications = pgTable("notifications", {
       id: serial("id").primaryKey(),
       userId: integer("userId").notNull(),
-      type: varchar("type", { length: 50 }).notNull(),
+      type: text("type").notNull(),
+      // authentication, certificate, payment, subscription, nft, referral, system, alert, supply_chain, autopilot
       title: varchar("title", { length: 256 }).notNull(),
       message: text("message").notNull(),
       isRead: integer("isRead").default(0).notNull(),
       actionUrl: varchar("actionUrl", { length: 512 }),
-      metadata: json("metadata"),
+      metadata: jsonb("metadata"),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    scheduledJobRuns = pgTable("scheduled_job_runs", {
+      id: serial("id").primaryKey(),
+      jobName: varchar("jobName", { length: 128 }).notNull(),
+      status: text("status").notNull(),
+      // running, completed, failed
+      startedAt: timestamp("startedAt").defaultNow().notNull(),
+      completedAt: timestamp("completedAt"),
+      duration: integer("duration"),
+      // milliseconds
+      result: jsonb("result"),
+      error: text("error"),
+      itemsProcessed: integer("itemsProcessed").default(0)
+    });
+    characterGenerations = pgTable("character_generations", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      tenantId: varchar("tenantId", { length: 128 }),
+      objectId: varchar("objectId", { length: 128 }),
+      archetype: text("archetype").notNull(),
+      // guardian, archivist, sentinel, scout, arbiter, merchant, explorer
+      style: varchar("style", { length: 256 }).default("premium futuristic heraldic concept art"),
+      colorway: varchar("colorway", { length: 256 }),
+      mood: varchar("mood", { length: 256 }),
+      prompt: text("prompt").notNull(),
+      negativePrompt: text("negativePrompt"),
+      provider: varchar("provider", { length: 64 }).default("openart"),
+      providerModel: varchar("providerModel", { length: 128 }),
+      variantCount: integer("variantCount").default(4),
+      status: text("status").default("pending"),
+      // pending, generating, completed, selected, mint_ready, failed
+      selectedAssetId: integer("selectedAssetId"),
+      bestAssetId: integer("bestAssetId"),
+      context: jsonb("context"),
+      requestPayload: jsonb("requestPayload"),
+      responsePayload: jsonb("responsePayload"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      completedAt: timestamp("completedAt")
+    });
+    characterAssets = pgTable("character_assets", {
+      id: serial("id").primaryKey(),
+      generationId: integer("generationId").notNull(),
+      tenantId: varchar("tenantId", { length: 128 }),
+      userId: integer("userId"),
+      providerAssetId: varchar("providerAssetId", { length: 256 }),
+      imageUrl: text("imageUrl").notNull(),
+      previewUrl: text("previewUrl"),
+      thumbnailUrl: text("thumbnailUrl"),
+      prompt: text("prompt"),
+      metadata: jsonb("metadata"),
+      // 7-dimension scoring (0.0-10.0 scale, matching OpenArt protocol)
+      protocolFitScore: numeric("protocolFitScore", { precision: 4, scale: 1 }),
+      thumbnailClarityScore: numeric("thumbnailClarityScore", { precision: 4, scale: 1 }),
+      premiumFeelScore: numeric("premiumFeelScore", { precision: 4, scale: 1 }),
+      silhouetteScore: numeric("silhouetteScore", { precision: 4, scale: 1 }),
+      trustSymbolismScore: numeric("trustSymbolismScore", { precision: 4, scale: 1 }),
+      mintReadinessScore: numeric("mintReadinessScore", { precision: 4, scale: 1 }),
+      uiCompatibilityScore: numeric("uiCompatibilityScore", { precision: 4, scale: 1 }),
+      totalScore: numeric("totalScore", { precision: 5, scale: 2 }),
+      // Legacy integer scores (backward compat)
+      scoreIconity: integer("scoreIconity"),
+      scoreTrustClarity: integer("scoreTrustClarity"),
+      scorePremiumFeel: integer("scorePremiumFeel"),
+      scoreSilhouette: integer("scoreSilhouette"),
+      scoreUiCompat: integer("scoreUiCompat"),
+      scoreMintReady: integer("scoreMintReady"),
+      scoreProtocolAlign: integer("scoreProtocolAlign"),
+      isRecommended: integer("isRecommended").default(0),
+      isSelected: integer("isSelected").default(0),
+      selectedAt: timestamp("selectedAt"),
+      // Mint fields
+      metadataUri: text("metadataUri"),
+      metadataHash: varchar("metadataHash", { length: 128 }),
+      imageHash: varchar("imageHash", { length: 128 }),
+      mintStatus: text("mintStatus").default("not_minted"),
+      // not_minted, preparing, queued, minting, minted, failed
+      mintTxHash: varchar("mintTxHash", { length: 128 }),
+      tokenId: varchar("tokenId", { length: 128 }),
+      mintedAt: timestamp("mintedAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    protocolAgents = pgTable("protocol_agents", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      characterAssetId: integer("characterAssetId"),
+      name: varchar("name", { length: 256 }).notNull(),
+      agentType: text("agentType").notNull(),
+      // guardian, archivist, sentinel, scout, arbiter, merchant, explorer
+      status: text("status").default("active"),
+      // active, inactive, suspended
+      level: integer("level").default(1),
+      xp: integer("xp").default(0),
+      reputationScore: integer("reputationScore").default(100),
+      totalVerifications: integer("totalVerifications").default(0),
+      successfulVerifications: integer("successfulVerifications").default(0),
+      totalClaims: integer("totalClaims").default(0),
+      consensusParticipations: integer("consensusParticipations").default(0),
+      qronEarned: numeric("qronEarned", { precision: 18, scale: 8 }).default("0"),
+      qronPending: numeric("qronPending", { precision: 18, scale: 8 }).default("0"),
+      walletAddress: varchar("walletAddress", { length: 128 }),
+      tokenId: varchar("tokenId", { length: 128 }),
+      policyConfig: jsonb("policyConfig"),
+      featureScopes: jsonb("featureScopes"),
+      metadata: jsonb("metadata"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    verificationClaims = pgTable("verification_claims", {
+      id: serial("id").primaryKey(),
+      agentId: integer("agentId").notNull(),
+      productId: integer("productId").notNull(),
+      authenticationId: integer("authenticationId"),
+      claimType: text("claimType").notNull(),
+      // authentic, counterfeit, inconclusive, needs_review
+      confidence: integer("confidence").notNull(),
+      evidence: jsonb("evidence"),
+      reasoning: text("reasoning"),
+      status: text("status").default("pending"),
+      // pending, accepted, rejected, superseded
+      weight: numeric("weight", { precision: 5, scale: 3 }).default("1.000"),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    consensusResults = pgTable("consensus_results", {
+      id: serial("id").primaryKey(),
+      productId: integer("productId").notNull(),
+      authenticationId: integer("authenticationId"),
+      finalStatus: text("finalStatus").notNull(),
+      // authentic, counterfeit, inconclusive
+      finalScore: integer("finalScore").notNull(),
+      quorumCount: integer("quorumCount").notNull(),
+      claimIds: jsonb("claimIds"),
+      settledOnChain: integer("settledOnChain").default(0),
+      checkpointBatchId: integer("checkpointBatchId"),
+      txHash: varchar("txHash", { length: 128 }),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    qronRewardLedger = pgTable("qron_reward_ledger", {
+      id: serial("id").primaryKey(),
+      agentId: integer("agentId").notNull(),
+      userId: integer("userId").notNull(),
+      amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
+      reason: text("reason").notNull(),
+      // verification_reward, consensus_participation, accuracy_bonus, streak_bonus, referral_reward, staking_yield, penalty
+      referenceType: varchar("referenceType", { length: 64 }),
+      referenceId: integer("referenceId"),
+      status: text("status").default("pending"),
+      // pending, settled, claimed, expired
+      settlementBatchId: integer("settlementBatchId"),
+      claimedAt: timestamp("claimedAt"),
+      metadata: jsonb("metadata"),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    checkpointBatches = pgTable("checkpoint_batches", {
+      id: serial("id").primaryKey(),
+      batchType: text("batchType").notNull(),
+      // verification, reward_settlement, agent_registration
+      rootHash: varchar("rootHash", { length: 128 }).notNull(),
+      chainId: integer("chainId").default(137),
+      txHash: varchar("txHash", { length: 128 }),
+      itemCount: integer("itemCount").default(0),
+      status: text("status").default("pending"),
+      // pending, submitted, confirmed, failed
+      finalizedAt: timestamp("finalizedAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     bonuses = pgTable("bonuses", {
@@ -539,8 +721,10 @@ var init_schema = __esm({
       bonusType: varchar("bonusType", { length: 64 }).notNull(),
       bonusName: varchar("bonusName", { length: 256 }).notNull(),
       bonusValue: integer("bonusValue").notNull(),
-      tier: varchar("bonusTier", { length: 50 }),
-      status: varchar("bonusStatus", { length: 50 }).default("pending"),
+      tier: text("tier"),
+      // starter, professional, enterprise, agency
+      status: text("status").default("pending"),
+      // pending, claimed, delivered
       deliveryMethod: varchar("deliveryMethod", { length: 64 }),
       claimedAt: timestamp("claimedAt"),
       deliveredAt: timestamp("deliveredAt"),
@@ -562,7 +746,8 @@ var init_schema = __esm({
       description: text("description"),
       category: varchar("category", { length: 128 }),
       price: integer("price").notNull().default(0),
-      status: varchar("modelStatus", { length: 50 }).default("draft"),
+      status: text("status").default("draft"),
+      // active, draft, archived
       downloads: integer("downloads").default(0),
       rating: numeric("rating", { precision: 3, scale: 2 }).default("0"),
       reviewCount: integer("reviewCount").default(0),
@@ -575,8 +760,10 @@ var init_schema = __esm({
       userId: integer("userId").notNull(),
       modelId: integer("modelId").notNull(),
       pricePaid: integer("pricePaid").notNull(),
-      purchaseType: varchar("purchaseType", { length: 50 }).default("purchase"),
-      status: varchar("purchaseStatus", { length: 50 }).default("active"),
+      purchaseType: text("purchaseType").default("purchase"),
+      // purchase, subscription, rental
+      status: text("status").default("active"),
+      // active, expired, refunded
       expiresAt: timestamp("expiresAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
@@ -588,262 +775,90 @@ var init_schema = __esm({
       review: text("review"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
-    promptCache = pgTable("prompt_cache", {
-      id: serial("id").primaryKey(),
-      promptHash: varchar("promptHash", { length: 128 }).notNull().unique(),
-      response: text("response").notNull(),
-      provider: varchar("provider", { length: 64 }),
-      model: varchar("model", { length: 64 }),
-      usage: json("usage"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
-    });
-    scheduledJobRuns = pgTable("scheduled_job_runs", {
-      id: bigserial("id", { mode: "number" }).primaryKey(),
-      jobName: varchar("jobName", { length: 128 }).notNull(),
-      status: varchar("status", { length: 50 }).notNull(),
-      startedAt: timestamp("startedAt").defaultNow().notNull(),
-      completedAt: timestamp("completedAt"),
-      duration: integer("duration"),
-      itemsProcessed: integer("itemsProcessed").default(0),
-      result: json("result"),
-      error: text("error")
-    });
-    budgetConfig = pgTable("budget_config", {
-      id: serial("id").primaryKey(),
-      monthlyLimit: numeric("monthlyLimit", { precision: 18, scale: 2 }).notNull(),
-      spent: numeric("spent", { precision: 18, scale: 2 }).default("0.00"),
-      currency: varchar("currency", { length: 16 }).default("USD"),
-      updatedAt: timestamp("updatedAt").defaultNow().notNull()
-    });
     serviceOrders = pgTable("service_orders", {
       id: serial("id").primaryKey(),
-      userId: integer("userId").notNull(),
-      serviceType: varchar("serviceType", { length: 64 }).notNull(),
-      status: varchar("status", { length: 50 }).default("pending").notNull(),
-      priority: integer("priority").default(0),
-      details: json("details"),
+      userId: integer("userId"),
+      customerEmail: varchar("customerEmail", { length: 320 }).notNull(),
+      customerName: varchar("customerName", { length: 256 }),
+      customerCompany: varchar("customerCompany", { length: 256 }),
+      customerPhone: varchar("customerPhone", { length: 32 }),
+      serviceType: text("serviceType").notNull(),
+      // authenticity_audit, cinematic_page, automation_setup, landing_page, brand_story_pack, government_dossier
+      status: text("status").default("pending").notNull(),
+      // pending, paid, in_progress, delivered, cancelled
+      amount: integer("amount").notNull(),
+      stripeSessionId: varchar("stripeSessionId", { length: 256 }),
+      stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 256 }),
+      businessName: varchar("businessName", { length: 256 }),
+      businessType: varchar("businessType", { length: 128 }),
+      businessUrl: varchar("businessUrl", { length: 512 }),
+      notes: text("notes"),
+      deliveryUrl: text("deliveryUrl"),
+      deliveredAt: timestamp("deliveredAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
-    characterGenerations = pgTable("character_generations", {
+    users = pgTable("users", {
       id: serial("id").primaryKey(),
-      userId: integer("userId").notNull(),
-      archetype: varchar("archetype", { length: 32 }).notNull(),
-      style: varchar("style", { length: 128 }),
-      colorway: varchar("colorway", { length: 64 }),
-      mood: varchar("mood", { length: 64 }),
-      prompt: text("prompt").notNull(),
-      negativePrompt: text("negativePrompt"),
-      provider: varchar("provider", { length: 64 }),
-      providerModel: varchar("providerModel", { length: 64 }),
-      variantCount: integer("variantCount").default(1),
-      status: varchar("status", { length: 50 }).default("pending"),
-      context: text("context"),
-      bestAssetId: integer("bestAssetId"),
-      selectedAssetId: integer("selectedAssetId"),
-      completedAt: timestamp("completedAt"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
-    });
-    characterAssets = pgTable("character_assets", {
-      id: serial("id").primaryKey(),
-      generationId: integer("generationId").notNull(),
-      userId: integer("userId").notNull(),
-      imageUrl: text("imageUrl").notNull(),
-      prompt: text("prompt"),
-      isRecommended: integer("isRecommended").default(0),
-      isSelected: integer("isSelected").default(0),
-      mintStatus: varchar("mintStatus", { length: 50 }).default("not_minted"),
-      nftTokenId: varchar("nftTokenId", { length: 64 }),
-      metadataUri: text("metadataUri"),
-      metadataHash: varchar("metadataHash", { length: 128 }),
-      imageHash: varchar("imageHash", { length: 128 }),
-      protocolFitScore: varchar("protocolFitScore", { length: 8 }),
-      thumbnailClarityScore: varchar("thumbnailClarityScore", { length: 8 }),
-      premiumFeelScore: varchar("premiumFeelScore", { length: 8 }),
-      silhouetteScore: varchar("silhouetteScore", { length: 8 }),
-      trustSymbolismScore: varchar("trustSymbolismScore", { length: 8 }),
-      mintReadinessScore: varchar("mintReadinessScore", { length: 8 }),
-      uiCompatibilityScore: varchar("uiCompatibilityScore", { length: 8 }),
-      totalScore: varchar("totalScore", { length: 8 }),
-      scoreIconity: integer("scoreIconity"),
-      scoreTrustClarity: integer("scoreTrustClarity"),
-      scorePremiumFeel: integer("scorePremiumFeel"),
-      scoreSilhouette: integer("scoreSilhouette"),
-      scoreUiCompat: integer("scoreUiCompat"),
-      scoreMintReady: integer("scoreMintReady"),
-      scoreProtocolAlign: integer("scoreProtocolAlign"),
-      selectedAt: timestamp("selectedAt"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
-    });
-    protocolAgents = pgTable("protocol_agents", {
-      id: serial("id").primaryKey(),
-      userId: integer("userId").notNull(),
-      characterAssetId: integer("characterAssetId").notNull(),
-      name: varchar("name", { length: 64 }).notNull(),
-      agentType: varchar("agentType", { length: 32 }).notNull(),
-      status: varchar("status", { length: 50 }).default("active"),
-      level: integer("level").default(1),
-      xp: integer("xp").default(0),
-      reputationScore: integer("reputationScore").default(0),
-      qronPending: numeric("qronPending", { precision: 20, scale: 9 }).default("0.000000000"),
-      totalVerifications: integer("totalVerifications").default(0),
-      successfulVerifications: integer("successfulVerifications").default(0),
-      totalClaims: integer("totalClaims").default(0),
-      featureScopes: json("featureScopes"),
-      policyConfig: json("policyConfig"),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().notNull()
-    });
-    verificationClaims = pgTable("verification_claims", {
-      id: serial("id").primaryKey(),
-      agentId: integer("agentId").notNull(),
-      productId: integer("productId").notNull(),
-      authenticationId: integer("authenticationId"),
-      claimType: varchar("claimType", { length: 50 }).notNull(),
-      confidence: integer("confidence").notNull(),
-      evidence: text("evidence"),
-      reasoning: text("reasoning"),
-      weight: varchar("weight", { length: 16 }),
-      status: varchar("status", { length: 50 }).default("pending"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
-    });
-    consensusResults = pgTable("consensus_results", {
-      id: serial("id").primaryKey(),
-      productId: integer("productId").notNull(),
-      authenticationId: integer("authenticationId").notNull(),
-      verdict: varchar("verdict", { length: 50 }).notNull(),
-      confidence: integer("confidence").notNull(),
-      participantCount: integer("participantCount").default(0),
-      finalizedAt: timestamp("finalizedAt").defaultNow().notNull()
-    });
-    qronRewardLedger = pgTable("qron_reward_ledger", {
-      id: serial("id").primaryKey(),
-      agentId: integer("agentId").notNull(),
-      userId: integer("userId").notNull(),
-      amount: numeric("amount", { precision: 20, scale: 9 }).notNull(),
-      reason: varchar("reason", { length: 64 }).notNull(),
-      referenceType: varchar("referenceType", { length: 32 }),
-      referenceId: integer("referenceId"),
-      status: varchar("status", { length: 50 }).default("pending"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
+      openId: varchar("open_id", { length: 256 }).notNull().unique(),
+      email: varchar("email", { length: 320 }),
+      name: varchar("name", { length: 256 }),
+      loginMethod: varchar("login_method", { length: 64 }),
+      role: text("role").default("user").notNull(),
+      // user, admin, brand
+      stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
+      lastSignedIn: timestamp("last_signed_in"),
+      createdAt: timestamp("created_at").defaultNow().notNull(),
+      updatedAt: timestamp("updated_at").defaultNow().notNull()
     });
     stakingPositions = pgTable("staking_positions", {
       id: serial("id").primaryKey(),
       userId: integer("userId").notNull(),
-      agentId: integer("agentId"),
-      amount: numeric("amount", { precision: 20, scale: 9 }).notNull(),
-      status: varchar("status", { length: 50 }).default("active"),
-      multiplier: numeric("multiplier", { precision: 5, scale: 2 }).default("1.00"),
-      apy: numeric("apy", { precision: 5, scale: 2 }).default("5.00"),
-      rewardsEarned: numeric("rewardsEarned", { precision: 20, scale: 9 }).default("0").notNull(),
+      amount: integer("amount").notNull(),
+      apy: integer("apy").notNull(),
+      status: text("status").default("active"),
+      // active, withdrawn, locked
+      rewardsEarned: integer("rewardsEarned").default(0).notNull(),
       lastRewardCalculation: timestamp("lastRewardCalculation").defaultNow().notNull(),
-      stakedAt: timestamp("stakedAt").defaultNow().notNull(),
-      releaseAt: timestamp("releaseAt"),
-      updatedAt: timestamp("updatedAt").defaultNow().notNull()
-    });
-    checkpointBatches = pgTable("checkpoint_batches", {
-      id: serial("id").primaryKey(),
-      batchHash: varchar("batchHash", { length: 128 }).notNull(),
-      blockchainTxHash: varchar("blockchainTxHash", { length: 128 }),
-      claimCount: integer("claimCount").default(0),
-      status: varchar("status", { length: 50 }).default("pending"),
-      finalizedAt: timestamp("finalizedAt"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
-    });
-    missions = pgTable("missions", {
-      id: varchar("id", { length: 64 }).primaryKey(),
-      type: varchar("type", { length: 64 }).notNull(),
-      title: varchar("title", { length: 256 }).notNull(),
-      description: text("description"),
-      status: varchar("status", { length: 50 }).default("pending").notNull(),
-      priority: integer("priority").default(0).notNull(),
-      metadata: json("metadata"),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().notNull()
-    });
-    missionTasks = pgTable("mission_tasks", {
-      id: varchar("id", { length: 64 }).primaryKey(),
-      missionId: varchar("missionId", { length: 64 }).notNull(),
-      kind: varchar("kind", { length: 128 }).notNull(),
-      title: varchar("title", { length: 256 }).notNull(),
-      description: text("description"),
-      status: varchar("status", { length: 50 }).default("pending").notNull(),
-      priority: integer("priority").default(0).notNull(),
-      order: integer("order").default(0).notNull(),
-      payload: json("payload"),
-      result: json("result"),
-      error: text("error"),
-      scheduledAt: timestamp("scheduledAt"),
+      startDate: timestamp("startDate").defaultNow(),
+      endDate: timestamp("endDate"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
     platformFees = pgTable("platform_fees", {
       id: serial("id").primaryKey(),
-      type: varchar("type", { length: 64 }).notNull(),
-      amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
-      currency: varchar("currency", { length: 16 }).default("USD"),
-      status: varchar("status", { length: 50 }).default("pending"),
+      feeType: varchar("feeType", { length: 64 }).notNull(),
+      percentage: integer("percentage").notNull(),
+      amount: integer("amount").notNull(),
+      transactionId: integer("transactionId"),
+      description: varchar("description", { length: 256 }),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     transactions = pgTable("transactions", {
       id: serial("id").primaryKey(),
       userId: integer("userId").notNull(),
-      type: varchar("type", { length: 64 }).notNull(),
-      amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
-      currency: varchar("currency", { length: 16 }).default("USD"),
-      status: varchar("status", { length: 50 }).default("pending"),
-      metadata: json("metadata"),
-      createdAt: timestamp("createdAt").defaultNow().notNull()
-    });
-    bayesianPriors = pgTable("bayesian_priors", {
-      id: serial("id").primaryKey(),
-      segment: varchar("segment", { length: 64 }).notNull().unique(),
-      priorAlpha: numeric("priorAlpha", { precision: 10, scale: 4 }).default("2.0000"),
-      // Successes
-      priorBeta: numeric("priorBeta", { precision: 10, scale: 4 }).default("18.0000"),
-      // Failures (Base 10% rate)
-      currentMean: numeric("currentMean", { precision: 5, scale: 4 }).default("0.1000"),
-      observationsCount: integer("observationsCount").default(0),
-      updatedAt: timestamp("updatedAt").defaultNow().notNull()
-    });
-    qrons = pgTable("qrons", {
-      id: varchar("id", { length: 128 }).primaryKey(),
-      productId: integer("productId").notNull(),
-      productName: varchar("productName", { length: 256 }),
-      brand: varchar("brand", { length: 256 }),
-      category: varchar("category", { length: 64 }),
-      mode: varchar("mode", { length: 64 }),
-      seed: varchar("seed", { length: 256 }),
-      imageUrl: text("imageUrl"),
-      thumbnailUrl: text("thumbnailUrl"),
-      fingerprintHash: varchar("fingerprintHash", { length: 256 }),
-      nftTokenId: varchar("nftTokenId", { length: 128 }),
-      openartUrl: text("openartUrl"),
-      openartRegistered: boolean("openartRegistered").default(false),
-      trustScore: integer("trustScore").default(0),
-      verifiedScanCount: integer("verifiedScanCount").default(0),
-      fakeFlagCount: integer("fakeFlagCount").default(0),
-      createdAt: timestamp("createdAt").defaultNow().notNull(),
-      updatedAt: timestamp("updatedAt").defaultNow().notNull()
-    });
-    qronScanVerdicts = pgTable("qron_scan_verdicts", {
-      id: serial("id").primaryKey(),
-      qronId: varchar("qronId", { length: 128 }).notNull(),
-      scannedImageUrl: text("scannedImageUrl"),
-      similarityScore: real("similarityScore"),
-      verdict: varchar("verdict", { length: 32 }),
-      details: json("details"),
+      type: text("type").notNull(),
+      // stake, unstake, reward, fee, transfer
+      amount: integer("amount").notNull(),
+      status: text("status").default("pending"),
+      // pending, completed, failed
+      feeAmount: integer("feeAmount").default(0),
+      stakingId: integer("stakingId"),
+      metadata: text("metadata"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     feedback = pgTable("feedback", {
       id: serial("id").primaryKey(),
-      userId: integer("userId"),
-      type: varchar("type", { length: 32 }).notNull(),
+      userId: integer("userId").notNull(),
+      type: text("type").notNull(),
+      // bug, feature, improvement, general
       title: varchar("title", { length: 256 }).notNull(),
       description: text("description"),
-      status: varchar("status", { length: 32 }).default("new").notNull(),
-      priority: varchar("priority", { length: 32 }).default("medium"),
-      votes: integer("votes").default(0),
+      status: text("status").default("new"),
+      // new, in_progress, completed, rejected
+      priority: text("priority").default("medium"),
+      // low, medium, high, critical
+      votes: integer("votes").default(0).notNull(),
       adminResponse: text("adminResponse"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull()
@@ -852,24 +867,25 @@ var init_schema = __esm({
       id: serial("id").primaryKey(),
       feedbackId: integer("feedbackId").notNull(),
       userId: integer("userId").notNull(),
-      voteType: varchar("voteType", { length: 8 }).notNull(),
+      voteType: text("voteType").notNull(),
+      // up, down
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     visitorProfiles = pgTable("visitor_profiles", {
       id: serial("id").primaryKey(),
       sessionId: varchar("sessionId", { length: 128 }).notNull(),
       ipAddress: varchar("ipAddress", { length: 64 }),
-      country: varchar("country", { length: 8 }),
+      country: varchar("country", { length: 64 }),
       city: varchar("city", { length: 128 }),
       region: varchar("region", { length: 128 }),
-      trafficSource: varchar("trafficSource", { length: 64 }),
+      trafficSource: varchar("trafficSource", { length: 128 }),
       referrer: text("referrer"),
       utmSource: varchar("utmSource", { length: 128 }),
       utmMedium: varchar("utmMedium", { length: 128 }),
       utmCampaign: varchar("utmCampaign", { length: 128 }),
-      deviceType: varchar("deviceType", { length: 16 }),
+      deviceType: varchar("deviceType", { length: 32 }),
       segment: varchar("segment", { length: 64 }),
-      pageViews: integer("pageViews").default(1).notNull(),
+      pageViews: integer("pageViews").default(0).notNull(),
       timeOnSite: integer("timeOnSite").default(0).notNull(),
       converted: integer("converted").default(0).notNull(),
       lastSeen: timestamp("lastSeen").defaultNow(),
@@ -879,25 +895,40 @@ var init_schema = __esm({
       id: serial("id").primaryKey(),
       name: varchar("name", { length: 256 }).notNull(),
       description: text("description"),
-      targetElement: varchar("targetElement", { length: 64 }).notNull(),
-      conditions: text("conditions"),
+      targetElement: varchar("targetElement", { length: 128 }).notNull(),
+      conditions: jsonb("conditions").notNull(),
       content: text("content").notNull(),
       priority: integer("priority").default(0).notNull(),
-      status: varchar("status", { length: 32 }).default("draft").notNull(),
-      aiGenerated: integer("aiGenerated").default(0),
-      createdBy: integer("createdBy"),
+      status: text("status").default("draft"),
+      // draft, active, paused
       views: integer("views").default(0).notNull(),
       conversions: integer("conversions").default(0).notNull(),
-      conversionRate: real("conversionRate").default(0).notNull(),
+      conversionRate: integer("conversionRate").default(0).notNull(),
+      aiGenerated: integer("aiGenerated").default(0).notNull(),
+      createdBy: integer("createdBy"),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
     personalizationEvents = pgTable("personalization_events", {
       id: serial("id").primaryKey(),
       ruleId: integer("ruleId").notNull(),
-      sessionId: varchar("sessionId", { length: 128 }),
+      sessionId: varchar("sessionId", { length: 128 }).notNull(),
       eventType: varchar("eventType", { length: 32 }).notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull()
     });
+    apiUsageDaily = pgTable("api_usage_daily", {
+      id: serial("id").primaryKey(),
+      tenantId: integer("tenantId").notNull(),
+      date: varchar("date", { length: 10 }).notNull(),
+      // "2026-04-21"
+      endpoint: varchar("endpoint", { length: 64 }).notNull(),
+      // verify, qr_generate, etc.
+      callCount: integer("callCount").default(0).notNull(),
+      tokenUsage: integer("tokenUsage").default(0),
+      cost: numeric("cost", { precision: 10, scale: 4 }).default("0"),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    }, (table) => [
+      uniqueIndex("tenant_date_endpoint_idx").on(table.tenantId, table.date, table.endpoint)
+    ]);
   }
 });
 
@@ -917,48 +948,50 @@ var init_env = __esm({
       forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
       thirdwebClientId: process.env.VITE_THIRDWEB_CLIENT_ID ?? "",
       thirdwebSecretKey: process.env.thirdweb_api_key ?? "",
+      blockchainPrivateKey: process.env.BLOCKCHAIN_PRIVATE_KEY ?? "",
       hubspotServiceKey: process.env.HUBSPOT_SERVICE_KEY ?? "",
       stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
       sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
-      apolloApiKey: process.env.APOLLO_API_KEY ?? "",
-      gmailClientId: process.env.GMAIL_CLIENT_ID ?? "",
-      gmailClientSecret: process.env.GMAIL_CLIENT_SECRET ?? "",
-      gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN ?? "",
-      gmailFromEmail: process.env.GMAIL_FROM_EMAIL ?? "",
-      gmailAppPassword: process.env.GMAIL_APP_PASSWORD ?? "",
-      suppressionList: process.env.SUPPRESSION_LIST ?? "",
       paddleApiKey: process.env.PADDLE_API_KEY ?? "",
       paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
-      walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
-      samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
-      // ── Pipeline Flags ────────────────────────────────────────────────────────
-      // Defaults to enabled unless explicitly disabled, to keep the revenue/autopilot
-      // pipeline alive even when the env var is not present.
-      autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED !== "false",
-      requireOutreachApproval: process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
-      requireDevApproval: process.env.REQUIRE_DEV_APPROVAL !== "false",
-      // ── Video / Media ─────────────────────────────────────────────────────────
-      heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
-      internalApiSecret: process.env.INTERNAL_API_SECRET ?? "",
-      qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
-      makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
-      smsRecipient: process.env.SMS_RECIPIENT ?? "",
-      // ── Supabase ──────────────────────────────────────────────────────────────
-      SUPABASE_URL: process.env.SUPABASE_URL ?? "",
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
-      // ── AI ────────────────────────────────────────────────────────────────────
-      openaiApiKey: process.env.OPENAI_API_KEY ?? "",
-      // ── Paddle Price IDs ──────────────────────────────────────────────────────
       paddleBasicPriceId: process.env.PADDLE_BASIC_PRICE_ID ?? "",
       paddlePremiumPriceId: process.env.PADDLE_PREMIUM_PRICE_ID ?? "",
       paddleEnterprisePriceId: process.env.PADDLE_ENTERPRISE_PRICE_ID ?? "",
-      // ── Blockchain ────────────────────────────────────────────────────────────
-      defaultNftContract: process.env.DEFAULT_NFT_CONTRACT ?? process.env.AUTHICHAIN_NFT_CONTRACT ?? "",
-      blockchainPrivateKey: process.env.BLOCKCHAIN_PRIVATE_KEY ?? process.env.WALLET_PRIVATE_KEY ?? "",
-      // ── Google OAuth ──────────────────────────────────────────────────────────
-      googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-      ownerEmails: process.env.OWNER_EMAILS ?? ""
+      qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
+      defaultNftContract: process.env.DEFAULT_NFT_CONTRACT ?? "0xc3143254997d48fdc9983d618fb2e10067673eb5",
+      // ── Autonomous Revenue Pipeline ──────────────────────────────────────────
+      autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
+      requireOutreachApproval: process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
+      requireDevApproval: process.env.REQUIRE_SCHEMA_MIGRATION_APPROVAL !== "false",
+      suppressionList: process.env.SUPPRESSION_LIST ?? "",
+      // ── Lead Discovery (Apollo.io) ────────────────────────────────────────────
+      apolloApiKey: process.env.APOLLO_API_KEY ?? "",
+      // ── Email ─────────────────────────────────────────────────────────────────
+      resendApiKey: process.env.RESEND_API_KEY ?? "",
+      gmailFromEmail: process.env.GMAIL_FROM_EMAIL ?? "",
+      gmailClientId: process.env.GMAIL_CLIENT_ID ?? "",
+      gmailClientSecret: process.env.GMAIL_CLIENT_SECRET ?? "",
+      gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN ?? "",
+      // ── AI / LLM ──────────────────────────────────────────────────────────────
+      openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
+      groqApiKey: process.env.GROQ_API_KEY ?? "",
+      openaiApiKey: process.env.OPENAI_API_KEY ?? "",
+      // ── Video / Media ─────────────────────────────────────────────────────────
+      heygenApiKey: process.env.HEYGEN_API_KEY ?? "",
+      // ── Budget guardrails ─────────────────────────────────────────────────────
+      llmMonthlyBudgetUsd: Number(process.env.LLM_MONTHLY_BUDGET_USD ?? 500),
+      llmPerRequestBudgetUsd: Number(process.env.LLM_PER_REQUEST_BUDGET_USD ?? 0.1),
+      adsDailyCapUsd: Number(process.env.ADS_DAILY_CAP_USD ?? 300),
+      enrichmentMonthlyCapUsd: Number(process.env.ENRICHMENT_MONTHLY_CAP_USD ?? 200),
+      // ── SMS / Owner alerts ──────────────────────────────────────────────────
+      smsRecipient: process.env.SMS_RECIPIENT ?? "",
+      // ── Integrations ─────────────────────────────────────────────────────────
+      airtableBaseId: process.env.AIRTABLE_BASE_ID ?? "",
+      airtableApiKey: process.env.AIRTABLE_API_KEY ?? "",
+      makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
+      posthogApiKey: process.env.POSTHOG_API_KEY ?? "",
+      // ── Internal Gateway ────────────────────────────────────────────────────
+      internalApiSecret: process.env.INTERNAL_API_SECRET ?? "dev-internal-secret"
     };
   }
 });
@@ -974,10 +1007,9 @@ __export(db_exports, {
   createAutopilotDecision: () => createAutopilotDecision,
   createCertificate: () => createCertificate,
   createCollection: () => createCollection,
+  createDb: () => createDb,
   createEmailCampaign: () => createEmailCampaign,
   createEmailDraft: () => createEmailDraft,
-  createFraudAlert: () => createFraudAlert,
-  createInvoice: () => createInvoice,
   createLead: () => createLead,
   createMission: () => createMission,
   createNft: () => createNft,
@@ -986,21 +1018,16 @@ __export(db_exports, {
   createProduct: () => createProduct,
   createProposal: () => createProposal,
   createQrCode: () => createQrCode,
-  createQron: () => createQron,
-  createQronScanVerdict: () => createQronScanVerdict,
   createReferral: () => createReferral,
   createServiceOrder: () => createServiceOrder,
-  createStakingPosition: () => createStakingPosition,
   createSubscription: () => createSubscription,
   createSupplyChainEvent: () => createSupplyChainEvent,
   createSystemNotification: () => createSystemNotification,
-  createTask: () => createTask,
   createWhiteLabelClient: () => createWhiteLabelClient,
   db: () => db,
   deleteNotification: () => deleteNotification,
   enqueueTask: () => enqueueTask,
   getAcceptanceCriteriaStatus: () => getAcceptanceCriteriaStatus,
-  getActiveAbTests: () => getActiveAbTests,
   getActiveAuctions: () => getActiveAuctions,
   getActiveMissionTypes: () => getActiveMissionTypes,
   getAdaptivePriors: () => getAdaptivePriors,
@@ -1018,6 +1045,7 @@ __export(db_exports, {
   getAuthenticationByShareToken: () => getAuthenticationByShareToken,
   getAutopilotConfig: () => getAutopilotConfig,
   getAutopilotDecisionCountByMonth: () => getAutopilotDecisionCountByMonth,
+  getAutopilotDecisions: () => getAutopilotDecisions,
   getBudgetStatus: () => getBudgetStatus,
   getCertificateByNumber: () => getCertificateByNumber,
   getCollectionBySlug: () => getCollectionBySlug,
@@ -1025,10 +1053,7 @@ __export(db_exports, {
   getDb: () => getDb,
   getDueTasks: () => getDueTasks,
   getFunnelBySegmentAndChannel: () => getFunnelBySegmentAndChannel,
-  getLeadByEmail: () => getLeadByEmail,
-  getLeadById: () => getLeadById,
   getLeadCohorts: () => getLeadCohorts,
-  getLeads: () => getLeads,
   getMissionById: () => getMissionById,
   getMissions: () => getMissions,
   getNftById: () => getNftById,
@@ -1037,8 +1062,6 @@ __export(db_exports, {
   getProductById: () => getProductById,
   getProductQrCodes: () => getProductQrCodes,
   getProductSupplyChain: () => getProductSupplyChain,
-  getQronById: () => getQronById,
-  getQronList: () => getQronList,
   getQuarterlyValueReport: () => getQuarterlyValueReport,
   getRecentActivity: () => getRecentActivity,
   getRecentDecisions: () => getRecentDecisions,
@@ -1049,12 +1072,10 @@ __export(db_exports, {
   getServiceOrderBySessionId: () => getServiceOrderBySessionId,
   getServiceOrdersByUser: () => getServiceOrdersByUser,
   getSubscriptionAnalytics: () => getSubscriptionAnalytics,
-  getSubscriptionByPaddleSubscriptionId: () => getSubscriptionByPaddleSubscriptionId,
   getSubscriptionByStripeSubscriptionId: () => getSubscriptionByStripeSubscriptionId,
   getTasksByMission: () => getTasksByMission,
   getUnreadNotificationCount: () => getUnreadNotificationCount,
   getUserAuthentications: () => getUserAuthentications,
-  getUserById: () => getUserById,
   getUserByOpenId: () => getUserByOpenId,
   getUserCertificates: () => getUserCertificates,
   getUserEmailCampaigns: () => getUserEmailCampaigns,
@@ -1063,7 +1084,6 @@ __export(db_exports, {
   getUserPayments: () => getUserPayments,
   getUserProducts: () => getUserProducts,
   getUserReferrals: () => getUserReferrals,
-  getUserStakingPositions: () => getUserStakingPositions,
   getUserSubscription: () => getUserSubscription,
   getWeeklyRevenueDigest: () => getWeeklyRevenueDigest,
   getWhiteLabelByApiKey: () => getWhiteLabelByApiKey,
@@ -1072,7 +1092,6 @@ __export(db_exports, {
   hasDunningStepLogged: () => hasDunningStepLogged,
   hasUserActionLogged: () => hasUserActionLogged,
   hasWebhookEventProcessed: () => hasWebhookEventProcessed,
-  incrementInteractionCount: () => incrementInteractionCount,
   incrementScanCount: () => incrementScanCount,
   incrementShareCount: () => incrementShareCount,
   listCollections: () => listCollections,
@@ -1093,127 +1112,117 @@ __export(db_exports, {
   recordRevenue: () => recordRevenue,
   recordUsage: () => recordUsage,
   retryTask: () => retryTask,
+  sendApprovalEmail: () => sendApprovalEmail,
   setSubscriptionStatusByPaddleId: () => setSubscriptionStatusByPaddleId,
   setSubscriptionStatusByStripeId: () => setSubscriptionStatusByStripeId,
+  setVendorBillingStatus: () => setVendorBillingStatus,
+  setVendorKycStatus: () => setVendorKycStatus,
   updateAuthenticationSharing: () => updateAuthenticationSharing,
   updateDraftStatus: () => updateDraftStatus,
-  updateEmailCampaign: () => updateEmailCampaign,
-  updateLead: () => updateLead,
   updateLeadScore: () => updateLeadScore,
   updateLeadStatus: () => updateLeadStatus,
+  updateLeadStatusByEmail: () => updateLeadStatusByEmail,
   updateMissionStatus: () => updateMissionStatus,
-  updatePaymentStatus: () => updatePaymentStatus,
   updateProduct: () => updateProduct,
-  updateQron: () => updateQron,
   updateServiceOrderStatus: () => updateServiceOrderStatus,
-  updateStakingPosition: () => updateStakingPosition,
+  updateSubscription: () => updateSubscription,
   updateSubscriptionUsage: () => updateSubscriptionUsage,
+  updateUser: () => updateUser,
   upsertAutopilotConfig: () => upsertAutopilotConfig,
-  upsertHealthScore: () => upsertHealthScore,
   upsertLeadByEmail: () => upsertLeadByEmail,
-  upsertPaddleSubscription: () => upsertPaddleSubscription,
   upsertStripeSubscription: () => upsertStripeSubscription,
   upsertUser: () => upsertUser
 });
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-import { eq, desc, and, gte, lte, like, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import {
+  eq,
+  desc,
+  and,
+  sql,
+  gte,
+  lte,
+  like
+} from "drizzle-orm";
 import { randomUUID } from "crypto";
+function createDb(connectionString) {
+  if (!connectionString) {
+    throw new Error("[Database] Missing connection string");
+  }
+  return drizzle(connectionString);
+}
 async function getDb() {
   if (_db) return _db;
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL environment variable is not set");
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error("[Database] DATABASE_URL is not set");
   }
   try {
-    const connectionString = (process.env.DATABASE_URL || "").replace(/([?&])sslmode=[^&]*&?/i, "$1").replace(/[?&]$/, "");
-    const pool = new Pool({
-      connectionString,
-      ssl: { rejectUnauthorized: false }
-    });
-    _db = drizzle(pool, { schema: schema_exports });
+    _db = createDb(url);
     return _db;
   } catch (error) {
     console.error("[Database] Failed to connect:", error);
-    throw error;
+    _db = null;
+    throw new Error("[Database] Unable to initialize database connection");
   }
 }
 async function upsertUser(user) {
-  if (!user.openId) throw new Error("User openId is required for upsert");
-  const db2 = await getDb();
-  if (!db2) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
+  if (!user.openId) {
+    throw new Error("[Database] User openId is required for upsert");
   }
-  try {
-    const values = { openId: user.openId };
-    const updateSet = {};
-    const textFields = ["name", "email", "loginMethod"];
-    const assignNullable = (field) => {
-      const value = user[field];
-      if (value === void 0) return;
+  const db2 = await getDb();
+  const values = { openId: user.openId };
+  const updateSet = {};
+  const textFields = ["name", "email", "loginMethod"];
+  for (const field of textFields) {
+    const value = user[field];
+    if (value !== void 0) {
       const normalized = value ?? null;
       values[field] = normalized;
       updateSet[field] = normalized;
-    };
-    textFields.forEach(assignNullable);
-    if (user.role) {
-      values.role = user.role;
-      updateSet.role = user.role;
     }
-    if (user.points !== void 0) {
-      values.points = user.points;
-      updateSet.points = user.points;
-    }
-    if (user.lastSignedIn) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    } else if (user.openId === ENV.ownerOpenId) values.role = "admin";
-    if (!values.lastSignedIn) values.lastSignedIn = /* @__PURE__ */ new Date();
-    if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = /* @__PURE__ */ new Date();
-    await db2.insert(users).values(values).onConflictDoUpdate({ target: users.openId, set: updateSet });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
+  }
+  const now = /* @__PURE__ */ new Date();
+  values.lastSignedIn = user.lastSignedIn ?? now;
+  updateSet.lastSignedIn = user.lastSignedIn ?? now;
+  if (user.role !== void 0) {
+    values.role = user.role;
+    updateSet.role = user.role;
+  } else if (user.openId === ENV.ownerOpenId) {
+    values.role = "admin";
+    updateSet.role = "admin";
+  }
+  const existing = await db2.select({ id: users.id }).from(users).where(eq(users.openId, user.openId)).limit(1);
+  if (existing.length === 0) {
+    await db2.insert(users).values(values);
+  } else {
+    await db2.update(users).set(updateSet).where(eq(users.openId, user.openId));
   }
 }
-async function getUserByOpenId(openId) {
-  const db2 = await getDb();
-  if (!db2) return null;
-  const result = await db2.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result.length > 0 ? result[0] : null;
-}
-async function getUserById(id) {
-  const db2 = await getDb();
-  if (!db2) return null;
-  const result = await db2.select().from(users).where(eq(users.id, id)).limit(1);
-  return result[0] ?? null;
+async function createSystemNotification(userId, title, message, type, actionUrl) {
+  const d = await getDb();
+  await d.insert(notifications).values({
+    userId,
+    type: type || title,
+    title,
+    message,
+    isRead: 0,
+    actionUrl: actionUrl ?? void 0
+  });
 }
 async function getAllUsers() {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(users).orderBy(desc(users.createdAt));
+  const d = await getDb();
+  return d.select().from(users);
 }
-async function getUserStakingPositions(userId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(stakingPositions).where(eq(stakingPositions.userId, userId)).orderBy(desc(stakingPositions.stakedAt));
-}
-async function createStakingPosition(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(stakingPositions).values(data).returning({ id: stakingPositions.id });
-  return { id: result[0].id, ...data };
-}
-async function updateStakingPosition(id, data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  await db2.update(stakingPositions).set(data).where(eq(stakingPositions.id, id));
-}
-async function createProduct(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(products).values(data).returning({ id: products.id });
-  return { id: result[0].id };
+async function getBudgetStatus(_now) {
+  const now = _now ?? /* @__PURE__ */ new Date();
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const day = `${month}-${String(now.getDate()).padStart(2, "0")}`;
+  return {
+    llm: { pct: 0, spent: 0, budget: 500 },
+    ads: { pct: 0, spent: 0, budget: 300 },
+    enrichment: { pct: 0, spent: 0, budget: 200 },
+    period: { month, day }
+  };
 }
 async function getRecentActivity(limit = 20) {
   const d = await getDb();
@@ -1237,6 +1246,24 @@ async function logActivity(actionOrData, details) {
     });
   }
 }
+async function enqueueTask(missionId, title, descriptionOrPayload, orderOrScheduledAt) {
+  const d = await getDb();
+  const id = randomUUID();
+  const description = typeof descriptionOrPayload === "string" ? descriptionOrPayload : title ?? "";
+  const payload = typeof descriptionOrPayload === "object" ? descriptionOrPayload : void 0;
+  const order = typeof orderOrScheduledAt === "number" ? orderOrScheduledAt : 0;
+  await d.insert(missionTasks).values({
+    id,
+    missionId,
+    title,
+    description,
+    kind: title,
+    payload: payload ?? void 0,
+    status: "pending",
+    order
+  });
+  return id;
+}
 async function getDueTasks(limit = 10) {
   const d = await getDb();
   return d.select().from(missionTasks).where(eq(missionTasks.status, "pending")).orderBy(missionTasks.order).limit(limit);
@@ -1245,6 +1272,14 @@ async function getRunTaskCount() {
   const d = await getDb();
   const rows = await d.select({ count: sql`count(*)` }).from(missionTasks).where(eq(missionTasks.status, "in_progress"));
   return rows[0]?.count ?? 0;
+}
+async function markTaskRunning(id) {
+  const d = await getDb();
+  await d.update(missionTasks).set({ status: "in_progress" }).where(eq(missionTasks.id, id));
+}
+async function markTaskDone(id) {
+  const d = await getDb();
+  await d.update(missionTasks).set({ status: "completed" }).where(eq(missionTasks.id, id));
 }
 async function markTaskWaitingHuman(id) {
   const d = await getDb();
@@ -1260,157 +1295,30 @@ async function getAdaptivePriors() {
   const rows = await d.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(50);
   return rows;
 }
-async function createLead(data) {
-  const d = await getDb();
-  const values = {
-    email: data.email,
-    name: data.name ?? null,
-    company: data.company ?? null,
-    title: data.title ?? null,
-    phone: data.phone ?? null,
-    source: data.source ?? "direct",
-    status: data.status ?? "new",
-    isVip: data.isVip ?? false,
-    industry: data.industry ?? null,
-    metadata: data.metadata ?? null
-  };
-  const result = await d.insert(leads).values(values).returning();
-  return result[0];
-}
-async function getLeadByEmail(email) {
-  const d = await getDb();
-  const rows = await d.select().from(leads).where(eq(leads.email, email)).limit(1);
-  return rows[0] ?? null;
-}
-async function updateLead(id, data) {
-  const d = await getDb();
-  await d.update(leads).set(data).where(eq(leads.id, id));
-}
-async function getLeadById(id) {
-  const d = await getDb();
-  const rows = await d.select().from(leads).where(eq(leads.id, id)).limit(1);
-  return rows[0] ?? null;
-}
-async function getAllLeads() {
-  const d = await getDb();
-  return d.select().from(leads).orderBy(desc(leads.createdAt));
-}
-async function updateLeadScore(id, score) {
-  const d = await getDb();
-  await d.update(leads).set({ score }).where(eq(leads.id, id));
-}
-async function updateLeadStatus(id, status) {
-  const d = await getDb();
-  await d.update(leads).set({ status }).where(eq(leads.id, id));
-}
 async function createServiceOrder(data) {
   const d = await getDb();
-  const result = await d.insert(serviceOrders).values(data).returning({ id: serviceOrders.id });
-  const id = result[0].id;
+  const [row] = await d.insert(serviceOrders).values(data).returning();
+  const id = row.id;
   return { id, ...data };
-}
-async function getServiceOrderBySessionId(sessionId) {
-  const d = await getDb();
-  const rows = await d.select().from(serviceOrders).where(eq(sql`details->>'sessionId'`, sessionId)).limit(1);
-  return rows[0] ?? null;
-}
-async function getServiceOrderById(id) {
-  const d = await getDb();
-  const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
-  return rows[0] ?? null;
-}
-async function getServiceOrdersByUser(userId) {
-  const d = await getDb();
-  return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId)).orderBy(desc(serviceOrders.createdAt));
 }
 async function getAllServiceOrders() {
   const d = await getDb();
   return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
 }
-async function updateServiceOrderStatus(id, status, updates) {
+async function getServiceOrderById(id) {
   const d = await getDb();
-  const setClause = { status, updatedAt: /* @__PURE__ */ new Date() };
-  if (updates?.stripePaymentIntentId) {
-    setClause.details = sql`jsonb_set(COALESCE(${serviceOrders.details}::jsonb, '{}'::jsonb), '{stripePaymentIntentId}', to_jsonb(${updates.stripePaymentIntentId}::text))`;
-  }
-  await d.update(serviceOrders).set(setClause).where(eq(serviceOrders.id, id));
-}
-async function getQronList() {
-  const d = await getDb();
-  return d.select().from(qrons).orderBy(desc(qrons.createdAt));
-}
-async function createQron(data) {
-  const d = await getDb();
-  return d.insert(qrons).values(data).returning();
-}
-async function getQronById(id) {
-  const d = await getDb();
-  const rows = await d.select().from(qrons).where(eq(qrons.id, id)).limit(1);
+  const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.id, id));
   return rows[0] ?? null;
 }
-async function updateQron(id, data) {
+async function getServiceOrdersByUser(userId) {
   const d = await getDb();
-  await d.update(qrons).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq(qrons.id, id));
+  return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId));
 }
-async function createQronScanVerdict(data) {
+async function updateServiceOrderStatus(id, status, extra) {
   const d = await getDb();
-  await d.insert(qronScanVerdicts).values(data);
-}
-async function getBudgetStatus(_at) {
-  const d = await getDb();
-  const rows = await d.select().from(budgetConfig).limit(1);
-  return rows[0] ?? { monthlyLimit: "1000.00", spent: "0.00" };
-}
-async function getLeads() {
-  const d = await getDb();
-  return d.select().from(leads).orderBy(desc(leads.createdAt));
-}
-async function incrementInteractionCount(leadId) {
-  const d = await getDb();
-  await d.update(leads).set({ interactionsCount: sql`COALESCE(${leads.interactionsCount}, 0) + 1`, updatedAt: /* @__PURE__ */ new Date() }).where(eq(leads.id, leadId));
-}
-async function getAutopilotDecisionCountByMonth(_decisionType) {
-  const d = await getDb();
-  const since = /* @__PURE__ */ new Date();
-  since.setDate(1);
-  since.setHours(0, 0, 0, 0);
-  const [row] = await d.select({ count: sql`count(*)` }).from(autopilotDecisions).where(gte(autopilotDecisions.createdAt, since));
-  return { data: Number(row?.count ?? 0) };
-}
-async function getAcceptanceCriteriaStatus() {
-  return {};
-}
-async function getFunnelBySegmentAndChannel() {
-  return [];
-}
-async function getLeadCohorts() {
-  return [];
-}
-async function markTaskRunning(id) {
-  const d = await getDb();
-  await d.update(missionTasks).set({ status: "in_progress", updatedAt: /* @__PURE__ */ new Date() }).where(eq(missionTasks.id, id));
-}
-async function markTaskDone(id, result) {
-  const d = await getDb();
-  await d.update(missionTasks).set({ status: "completed", result, updatedAt: /* @__PURE__ */ new Date() }).where(eq(missionTasks.id, id));
-}
-async function markTaskFailed(id, error) {
-  const d = await getDb();
-  await d.update(missionTasks).set({ status: "failed", error, updatedAt: /* @__PURE__ */ new Date() }).where(eq(missionTasks.id, id));
-}
-async function enqueueTask(missionId, kind, payload, scheduledAt) {
-  const d = await getDb();
-  const id = randomUUID();
-  await d.insert(missionTasks).values({
-    id,
-    missionId,
-    kind,
-    title: kind,
-    status: "pending",
-    payload,
-    scheduledAt: scheduledAt ?? null
-  });
-  return id;
+  const updateData = { status };
+  if (extra) Object.assign(updateData, extra);
+  await d.update(serviceOrders).set(updateData).where(eq(serviceOrders.id, id));
 }
 async function createProposal(data) {
   const d = await getDb();
@@ -1503,25 +1411,9 @@ async function createMission(type) {
   const id = randomUUID();
   await d.insert(missions).values({
     id,
-    type,
     title: type,
     description: `Mission: ${type}`,
     status: "pending"
-  });
-  return id;
-}
-async function createTask(data) {
-  const d = await getDb();
-  const id = randomUUID();
-  await d.insert(missionTasks).values({
-    id,
-    missionId: data.missionId,
-    kind: data.kind,
-    title: data.title || data.kind,
-    description: data.description || data.kind,
-    priority: data.priority || 0,
-    status: data.status || "pending",
-    payload: data.payload
   });
   return id;
 }
@@ -1537,594 +1429,984 @@ async function retryTask(id) {
   const d = await getDb();
   await d.update(missionTasks).set({ status: "pending" }).where(eq(missionTasks.id, id));
 }
+async function getUserByOpenId(openId) {
+  const d = await getDb();
+  const rows = await d.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return rows[0] ?? null;
+}
 async function getAllAdminIds() {
   const d = await getDb();
   const rows = await d.select({ id: users.id }).from(users).where(eq(users.role, "admin"));
   return rows.map((r) => r.id);
 }
 async function getUserProducts(userId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(products).where(eq(products.userId, userId)).orderBy(desc(products.createdAt));
+  const d = await getDb();
+  return d.select().from(products).where(eq(products.userId, userId)).orderBy(desc(products.createdAt));
 }
 async function getProductById(id) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(products).where(eq(products.id, id)).limit(1);
-  return result[0];
+  const d = await getDb();
+  const rows = await d.select().from(products).where(eq(products.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+async function createProduct(data) {
+  const d = await getDb();
+  const [row] = await d.insert(products).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function updateProduct(id, data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  await db2.update(products).set(data).where(eq(products.id, id));
+  const d = await getDb();
+  await d.update(products).set(data).where(eq(products.id, id));
 }
 async function createAuthentication(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(authentications).values(data).returning({ id: authentications.id });
-  return { id: result[0].id };
+  const d = await getDb();
+  const [row] = await d.insert(authentications).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function getUserAuthentications(userId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(authentications).where(eq(authentications.userId, userId)).orderBy(desc(authentications.createdAt));
+  const d = await getDb();
+  return d.select().from(authentications).where(eq(authentications.userId, userId)).orderBy(desc(authentications.createdAt));
 }
 async function getAuthenticationByShareToken(shareToken) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(authentications).where(eq(authentications.shareToken, shareToken)).limit(1);
-  return result[0];
+  const d = await getDb();
+  const rows = await d.select().from(authentications).where(eq(authentications.shareToken, shareToken)).limit(1);
+  return rows[0] ?? null;
 }
-async function updateAuthenticationSharing(id, isPublic, shareToken) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  await db2.update(authentications).set({ isPublic: isPublic ? 1 : 0, shareToken }).where(eq(authentications.id, id));
+async function updateAuthenticationSharing(authenticationId, isPublic, shareToken) {
+  const d = await getDb();
+  await d.update(authentications).set({
+    isPublic: isPublic ? 1 : 0,
+    shareToken
+  }).where(eq(authentications.id, authenticationId));
 }
-async function incrementShareCount(id) {
-  const db2 = await getDb();
-  if (!db2) return;
-  await db2.update(authentications).set({ shareCount: sql`${authentications.shareCount} + 1` }).where(eq(authentications.id, id));
-}
-async function createCertificate(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(certificates).values(data).returning();
-  return result[0];
-}
-async function getCertificateByNumber(certNumber) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(certificates).where(eq(certificates.certificateNumber, certNumber)).limit(1);
-  return result[0];
+async function incrementShareCount(authenticationId) {
+  const d = await getDb();
+  await d.update(authentications).set({
+    shareCount: sql`${authentications.shareCount} + 1`
+  }).where(eq(authentications.id, authenticationId));
 }
 async function getUserCertificates(userId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(certificates).where(eq(certificates.userId, userId)).orderBy(desc(certificates.createdAt));
+  const d = await getDb();
+  return d.select().from(certificates).where(eq(certificates.userId, userId)).orderBy(desc(certificates.createdAt));
+}
+async function getCertificateByNumber(certificateNumber) {
+  const d = await getDb();
+  const rows = await d.select().from(certificates).where(eq(certificates.certificateNumber, certificateNumber)).limit(1);
+  return rows[0] ?? null;
+}
+async function createCertificate(data) {
+  const d = await getDb();
+  const [row] = await d.insert(certificates).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
+}
+async function getUserSubscription(userId) {
+  const d = await getDb();
+  const rows = await d.select().from(subscriptions).where(eq(subscriptions.userId, userId)).orderBy(desc(subscriptions.createdAt)).limit(1);
+  return rows[0] ?? null;
+}
+async function createSubscription(data) {
+  const d = await getDb();
+  const [row] = await d.insert(subscriptions).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
+}
+async function updateSubscriptionUsage(userId, usedQuota) {
+  const d = await getDb();
+  await d.update(subscriptions).set({ usedQuota }).where(eq(subscriptions.userId, userId));
+}
+async function recordUsage(data) {
+  const d = await getDb();
+  await d.insert(usageRecords).values(data);
+}
+async function getUserInvoices(userId) {
+  const d = await getDb();
+  return d.select().from(invoices).where(eq(invoices.userId, userId)).orderBy(desc(invoices.createdAt));
+}
+async function getUserPayments(userId) {
+  const d = await getDb();
+  return d.select().from(payments).where(eq(payments.userId, userId)).orderBy(desc(payments.createdAt));
+}
+async function createPayment(data) {
+  const d = await getDb();
+  const [row] = await d.insert(payments).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function createQrCode(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(qrCodes).values(data).returning({ id: qrCodes.id });
-  return { id: result[0].id };
+  const d = await getDb();
+  const [row] = await d.insert(qrCodes).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function getProductQrCodes(productId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(qrCodes).where(eq(qrCodes.productId, productId));
+  const d = await getDb();
+  return d.select().from(qrCodes).where(eq(qrCodes.productId, productId)).orderBy(desc(qrCodes.createdAt));
 }
-async function incrementScanCount(id) {
-  const db2 = await getDb();
-  if (!db2) return;
-  await db2.update(qrCodes).set({ scanCount: sql`${qrCodes.scanCount} + 1`, lastScannedAt: /* @__PURE__ */ new Date() }).where(eq(qrCodes.id, id));
+async function incrementScanCount(qrCodeId) {
+  const d = await getDb();
+  await d.update(qrCodes).set({
+    scanCount: sql`${qrCodes.scanCount} + 1`,
+    lastScannedAt: /* @__PURE__ */ new Date()
+  }).where(eq(qrCodes.id, qrCodeId));
 }
 async function listNfts(filters) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  let query = db2.select().from(nfts);
+  const d = await getDb();
   const conditions = [];
   if (filters?.collectionId) conditions.push(eq(nfts.collectionId, filters.collectionId));
   if (filters?.status) conditions.push(eq(nfts.status, filters.status));
-  if (conditions.length) query = query.where(and(...conditions));
-  return await query.orderBy(desc(nfts.createdAt)).limit(filters?.limit || 50);
+  const query = d.select().from(nfts);
+  if (conditions.length > 0) {
+    return query.where(and(...conditions)).orderBy(desc(nfts.createdAt)).limit(filters?.limit ?? 50);
+  }
+  return query.orderBy(desc(nfts.createdAt)).limit(filters?.limit ?? 50);
 }
 async function getNftById(id) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(nfts).where(eq(nfts.id, id)).limit(1);
-  return result[0];
+  const d = await getDb();
+  const rows = await d.select().from(nfts).where(eq(nfts.id, id)).limit(1);
+  return rows[0] ?? null;
 }
 async function createNft(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(nfts).values(data).returning();
-  return result[0];
+  const d = await getDb();
+  const [row] = await d.insert(nfts).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function listCollections() {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(nftCollections).orderBy(desc(nftCollections.createdAt));
+  const d = await getDb();
+  return d.select().from(nftCollections).orderBy(desc(nftCollections.createdAt));
 }
 async function getCollectionBySlug(slug) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(nftCollections).where(eq(nftCollections.slug, slug)).limit(1);
-  return result[0];
+  const d = await getDb();
+  const rows = await d.select().from(nftCollections).where(eq(nftCollections.slug, slug)).limit(1);
+  return rows[0] ?? null;
 }
 async function createCollection(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(nftCollections).values(data).returning({ id: nftCollections.id });
-  return { id: result[0].id };
-}
-async function createAuction(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(auctions).values(data).returning({ id: auctions.id });
-  return { id: result[0].id };
+  const d = await getDb();
+  const [row] = await d.insert(nftCollections).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function getActiveAuctions() {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(auctions).where(eq(auctions.status, "active")).orderBy(desc(auctions.createdAt));
+  const d = await getDb();
+  return d.select().from(auctions).where(eq(auctions.status, "active")).orderBy(desc(auctions.createdAt));
 }
 async function getAuctionById(id) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(auctions).where(eq(auctions.id, id)).limit(1);
-  return result[0];
+  const d = await getDb();
+  const rows = await d.select().from(auctions).where(eq(auctions.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+async function getAuctionBids(auctionId) {
+  const d = await getDb();
+  return d.select().from(auctionBids).where(eq(auctionBids.auctionId, auctionId)).orderBy(desc(auctionBids.amount));
+}
+async function createAuction(data) {
+  const d = await getDb();
+  const [row] = await d.insert(auctions).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function placeBid(auctionId, bidderId, amount) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  await db2.insert(auctionBids).values({ auctionId, bidderId, amount });
-  await db2.update(auctions).set({
+  const d = await getDb();
+  await d.insert(auctionBids).values({ auctionId, bidderId, amount });
+  await d.update(auctions).set({
     currentBid: amount,
     highestBidderId: bidderId,
     bidCount: sql`${auctions.bidCount} + 1`
   }).where(eq(auctions.id, auctionId));
 }
-async function getAuctionBids(auctionId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(auctionBids).where(eq(auctionBids.auctionId, auctionId)).orderBy(desc(auctionBids.amount));
+async function getUserNotifications(userId, limit = 50) {
+  const d = await getDb();
+  return d.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(limit);
 }
-async function getUserSubscription(userId) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(subscriptions).where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active"))).limit(1);
-  return result[0];
+async function getUnreadNotificationCount(userId) {
+  const d = await getDb();
+  const rows = await d.select({ count: sql`count(*)` }).from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+  return rows[0]?.count ?? 0;
 }
-async function createSubscription(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(subscriptions).values(data).returning({ id: subscriptions.id });
-  return { id: result[0].id };
+async function markNotificationRead(id, userId) {
+  const d = await getDb();
+  await d.update(notifications).set({ isRead: 1 }).where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
 }
-async function updateSubscriptionUsage(userId, usedQuota) {
-  const db2 = await getDb();
-  if (!db2) return;
-  await db2.update(subscriptions).set({ usedQuota }).where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")));
+async function markAllNotificationsRead(userId) {
+  const d = await getDb();
+  await d.update(notifications).set({ isRead: 1 }).where(eq(notifications.userId, userId));
 }
-async function recordUsage(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  await db2.insert(usageRecords).values(data);
+async function deleteNotification(id, userId) {
+  const d = await getDb();
+  await d.delete(notifications).where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
 }
-async function createInvoice(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(invoices).values(data).returning({ id: invoices.id });
-  return { id: result[0].id };
-}
-async function getUserInvoices(userId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(invoices).where(eq(invoices.userId, userId)).orderBy(desc(invoices.createdAt));
-}
-async function createPayment(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(payments).values(data).returning({ id: payments.id });
-  return { id: result[0].id };
-}
-async function getUserPayments(userId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(payments).where(eq(payments.userId, userId)).orderBy(desc(payments.createdAt));
-}
-async function updatePaymentStatus(id, status) {
-  const db2 = await getDb();
-  if (!db2) return;
-  await db2.update(payments).set({ status }).where(eq(payments.id, id));
-}
-async function createEmailCampaign(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(emailCampaigns).values(data).returning({ id: emailCampaigns.id });
-  return { id: result[0].id };
-}
-async function getUserEmailCampaigns(userId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(emailCampaigns).where(eq(emailCampaigns.userId, userId)).orderBy(desc(emailCampaigns.createdAt));
-}
-async function updateEmailCampaign(id, data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  await db2.update(emailCampaigns).set(data).where(eq(emailCampaigns.id, id));
-}
-async function createEmailDraft(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(emailDrafts).values(data).returning({ id: emailDrafts.id });
-  return { id: result[0].id };
-}
-async function getPendingDrafts() {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(emailDrafts).where(eq(emailDrafts.status, "pending")).orderBy(desc(emailDrafts.createdAt));
-}
-async function updateDraftStatus(id, status, approvedBy) {
-  const db2 = await getDb();
-  if (!db2) return;
-  const updateData = { status };
-  if (approvedBy) {
-    updateData.approvedBy = approvedBy;
-    updateData.approvedAt = /* @__PURE__ */ new Date();
-  }
-  if (status === "sent") updateData.sentAt = /* @__PURE__ */ new Date();
-  await db2.update(emailDrafts).set(updateData).where(eq(emailDrafts.id, id));
-}
-async function createSupplyChainEvent(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(supplyChainEvents).values(data).returning({ id: supplyChainEvents.id });
-  return { id: result[0].id };
-}
-async function getProductSupplyChain(productId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(supplyChainEvents).where(eq(supplyChainEvents.productId, productId)).orderBy(supplyChainEvents.createdAt);
-}
-async function createReferral(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(referrals).values(data).returning({ id: referrals.id });
-  return { id: result[0].id };
-}
-async function getReferralByCode(code) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(referrals).where(eq(referrals.referralCode, code)).limit(1);
-  return result[0];
+async function createNotification(data) {
+  const d = await getDb();
+  const [row] = await d.insert(notifications).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function getUserReferrals(userId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(referrals).where(eq(referrals.referrerId, userId)).orderBy(desc(referrals.createdAt));
+  const d = await getDb();
+  return d.select().from(referrals).where(eq(referrals.referrerId, userId)).orderBy(desc(referrals.createdAt));
+}
+async function getReferralByCode(code) {
+  const d = await getDb();
+  const rows = await d.select().from(referrals).where(eq(referrals.referralCode, code)).limit(1);
+  return rows[0] ?? null;
+}
+async function createReferral(data) {
+  const d = await getDb();
+  const [row] = await d.insert(referrals).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function getAffiliateByUserId(userId) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(affiliates).where(eq(affiliates.userId, userId)).limit(1);
-  return result[0];
-}
-async function createAffiliate(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(affiliates).values(data).returning({ id: affiliates.id });
-  return { id: result[0].id };
+  const d = await getDb();
+  const rows = await d.select().from(affiliates).where(eq(affiliates.userId, userId)).limit(1);
+  return rows[0] ?? null;
 }
 async function getAffiliateCommissions(affiliateId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(affiliateCommissions).where(eq(affiliateCommissions.affiliateId, affiliateId)).orderBy(desc(affiliateCommissions.createdAt));
+  const d = await getDb();
+  return d.select().from(affiliateCommissions).where(eq(affiliateCommissions.affiliateId, affiliateId)).orderBy(desc(affiliateCommissions.createdAt));
+}
+async function createAffiliate(data) {
+  const d = await getDb();
+  const [row] = await d.insert(affiliates).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function getAutopilotConfig() {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(autopilotConfig).orderBy(desc(autopilotConfig.id)).limit(1);
-  return result[0];
+  const d = await getDb();
+  const rows = await d.select().from(autopilotConfig).orderBy(desc(autopilotConfig.createdAt)).limit(1);
+  return rows[0] ?? null;
 }
 async function upsertAutopilotConfig(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const [result] = await db2.insert(autopilotConfig).values(data).onConflictDoUpdate({ target: autopilotConfig.id, set: data }).returning();
-  return result?.id;
+  const d = await getDb();
+  const existing = await d.select().from(autopilotConfig).limit(1);
+  if (existing.length === 0) {
+    await d.insert(autopilotConfig).values(data);
+  } else {
+    await d.update(autopilotConfig).set(data).where(eq(autopilotConfig.id, existing[0].id));
+  }
+}
+async function getAutopilotDecisions(limit = 20) {
+  const d = await getDb();
+  return d.select().from(autopilotDecisions).orderBy(desc(autopilotDecisions.createdAt)).limit(limit);
+}
+async function getAutopilotDecisionCountByMonth(type) {
+  const d = await getDb();
+  const startOfMonth = /* @__PURE__ */ new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+  const result = await d.select({ count: sql`count(*)` }).from(autopilotDecisions).where(and(
+    eq(autopilotDecisions.type, type),
+    gte(autopilotDecisions.createdAt, startOfMonth)
+  ));
+  return { data: result[0]?.count ?? 0 };
 }
 async function createAutopilotDecision(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(autopilotDecisions).values(data).returning({ id: autopilotDecisions.id });
-  return { id: result[0].id };
-}
-async function createAbTest(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(abTests).values(data).returning({ id: abTests.id });
-  return { id: result[0].id };
-}
-async function getActiveAbTests() {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(abTests).where(eq(abTests.status, "running")).orderBy(desc(abTests.createdAt));
+  const d = await getDb();
+  const [row] = await d.insert(autopilotDecisions).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function getAllAbTests() {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(abTests).orderBy(desc(abTests.createdAt));
+  const d = await getDb();
+  return d.select().from(abTests).orderBy(desc(abTests.createdAt));
 }
-async function createWhiteLabelClient(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(whiteLabelClients).values(data).returning({ id: whiteLabelClients.id });
-  return { id: result[0].id };
+async function createAbTest(data) {
+  const d = await getDb();
+  const [row] = await d.insert(abTests).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function getWhiteLabelClients() {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(whiteLabelClients).orderBy(desc(whiteLabelClients.createdAt));
+  const d = await getDb();
+  return d.select().from(whiteLabelClients).orderBy(desc(whiteLabelClients.createdAt));
+}
+async function createWhiteLabelClient(data) {
+  const d = await getDb();
+  const [row] = await d.insert(whiteLabelClients).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function getWhiteLabelByApiKey(apiKey) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(whiteLabelClients).where(eq(whiteLabelClients.apiKey, apiKey)).limit(1);
-  return result[0];
+  const d = await getDb();
+  const rows = await d.select().from(whiteLabelClients).where(eq(whiteLabelClients.apiKey, apiKey)).limit(1);
+  return rows[0] ?? null;
 }
-async function createFraudAlert(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(fraudAlerts).values(data).returning({ id: fraudAlerts.id });
-  return { id: result[0].id };
+async function setVendorKycStatus(stripeAccountId, status) {
+  const d = await getDb();
+  await d.update(whiteLabelClients).set({ features: sql`json_set(COALESCE(features, '{}'), '$.kyc_status', ${status})` }).where(eq(whiteLabelClients.apiSecret, stripeAccountId));
 }
-async function getOpenFraudAlerts() {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(fraudAlerts).where(eq(fraudAlerts.status, "open")).orderBy(desc(fraudAlerts.createdAt));
+async function setVendorBillingStatus(stripeSubscriptionId, status) {
+  const d = await getDb();
+  await d.update(whiteLabelClients).set({ features: sql`json_set(COALESCE(features, '{}'), '$.billing_status', ${status})` }).where(eq(whiteLabelClients.apiSecret, stripeSubscriptionId));
 }
-async function upsertHealthScore(userId, score, factors, trend) {
-  const db2 = await getDb();
-  if (!db2) return;
-  await db2.insert(customerHealthScores).values({ userId, score, factors, trend }).onConflictDoUpdate({ target: customerHealthScores.userId, set: { score, factors, trend, lastCalculatedAt: /* @__PURE__ */ new Date() } });
+async function getAllLeads() {
+  const d = await getDb();
+  return d.select().from(leads).orderBy(desc(leads.createdAt));
 }
-async function getAllHealthScores() {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(customerHealthScores).orderBy(desc(customerHealthScores.score));
+async function createLead(data) {
+  const d = await getDb();
+  const [row] = await d.insert(leads).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
-async function recordRevenue(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  await db2.insert(revenueRecords).values(data);
+async function updateLeadScore(id, score) {
+  const d = await getDb();
+  await d.update(leads).set({ score }).where(eq(leads.id, id));
 }
-async function getRevenueAnalytics(startDate, endDate) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  let query = db2.select().from(revenueRecords);
-  if (startDate && endDate) {
-    query = query.where(and(gte(revenueRecords.createdAt, startDate), lte(revenueRecords.createdAt, endDate)));
+async function updateLeadStatus(id, status) {
+  const d = await getDb();
+  await d.update(leads).set({ status, updatedAt: /* @__PURE__ */ new Date() }).where(eq(leads.id, id));
+}
+async function updateLeadStatusByEmail(email, status) {
+  const d = await getDb();
+  await d.update(leads).set({ status, updatedAt: /* @__PURE__ */ new Date() }).where(eq(leads.email, email.toLowerCase()));
+}
+async function getUserEmailCampaigns(userId) {
+  const d = await getDb();
+  return d.select().from(emailCampaigns).where(eq(emailCampaigns.userId, userId)).orderBy(desc(emailCampaigns.createdAt));
+}
+async function createEmailCampaign(data) {
+  const d = await getDb();
+  const [row] = await d.insert(emailCampaigns).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
+}
+async function getPendingDrafts() {
+  const d = await getDb();
+  return d.select().from(emailDrafts).where(eq(emailDrafts.status, "pending")).orderBy(desc(emailDrafts.createdAt));
+}
+async function createEmailDraft(data) {
+  const d = await getDb();
+  const [row] = await d.insert(emailDrafts).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
+}
+async function updateDraftStatus(id, status, approvedBy) {
+  const d = await getDb();
+  const updateData = { status };
+  if (approvedBy !== void 0) {
+    updateData.approvedBy = approvedBy;
+    if (status === "approved" || status === "sent") updateData.approvedAt = /* @__PURE__ */ new Date();
+    if (status === "sent") updateData.sentAt = /* @__PURE__ */ new Date();
   }
-  return await query.orderBy(desc(revenueRecords.createdAt));
+  await d.update(emailDrafts).set(updateData).where(eq(emailDrafts.id, id));
+}
+async function sendApprovalEmail(to, subject, body) {
+  console.log(`[EmailDrafts] Sending approved email to ${to}: ${subject}`);
+}
+async function getProductSupplyChain(productId) {
+  const d = await getDb();
+  return d.select().from(supplyChainEvents).where(eq(supplyChainEvents.productId, productId)).orderBy(desc(supplyChainEvents.createdAt));
+}
+async function createSupplyChainEvent(data) {
+  const d = await getDb();
+  const [row] = await d.insert(supplyChainEvents).values(data).returning();
+  const id = row.id;
+  return { id, ...data };
 }
 async function getDashboardMetrics(userId) {
-  const db2 = await getDb();
-  if (!db2) return { totalProducts: 0, totalAuthentications: 0, totalCertificates: 0, totalNfts: 0 };
-  const [[prods], [auths], [certs], [nftCount]] = await Promise.all([
-    db2.select({ count: sql`count(*)` }).from(products).where(eq(products.userId, userId)),
-    db2.select({ count: sql`count(*)` }).from(authentications).where(eq(authentications.userId, userId)),
-    db2.select({ count: sql`count(*)` }).from(certificates).where(eq(certificates.userId, userId)),
-    db2.select({ count: sql`count(*)` }).from(nfts).where(eq(nfts.ownerId, userId))
+  const d = await getDb();
+  const [productRows, authRows, certRows, subRows] = await Promise.all([
+    d.select({ count: sql`count(*)` }).from(products).where(eq(products.userId, userId)),
+    d.select({ count: sql`count(*)` }).from(authentications).where(eq(authentications.userId, userId)),
+    d.select({ count: sql`count(*)` }).from(certificates).where(eq(certificates.userId, userId)),
+    d.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1)
   ]);
   return {
-    totalProducts: prods?.count || 0,
-    totalAuthentications: auths?.count || 0,
-    totalCertificates: certs?.count || 0,
-    totalNfts: nftCount?.count || 0
+    totalProducts: productRows[0]?.count ?? 0,
+    totalAuthentications: authRows[0]?.count ?? 0,
+    totalCertificates: certRows[0]?.count ?? 0,
+    subscription: subRows[0] ?? null
   };
 }
 async function getAdminDashboardMetrics() {
-  const db2 = await getDb();
-  if (!db2) return { totalUsers: 0, totalProducts: 0, totalAuthentications: 0, totalRevenue: 0, totalLeads: 0, totalNfts: 0 };
-  const [[userCount], [prodCount], [authCount], [leadCount], [nftCount], [revenue]] = await Promise.all([
-    db2.select({ count: sql`count(*)` }).from(users),
-    db2.select({ count: sql`count(*)` }).from(products),
-    db2.select({ count: sql`count(*)` }).from(authentications),
-    db2.select({ count: sql`count(*)` }).from(leads),
-    db2.select({ count: sql`count(*)` }).from(nfts),
-    db2.select({ total: sql`COALESCE(SUM(amount), 0)` }).from(revenueRecords)
+  const d = await getDb();
+  const [userCount, productCount, authCount, certCount, subCount] = await Promise.all([
+    d.select({ count: sql`count(*)` }).from(users),
+    d.select({ count: sql`count(*)` }).from(products),
+    d.select({ count: sql`count(*)` }).from(authentications),
+    d.select({ count: sql`count(*)` }).from(certificates),
+    d.select({ count: sql`count(*)` }).from(subscriptions)
   ]);
   return {
-    totalUsers: userCount?.count || 0,
-    totalProducts: prodCount?.count || 0,
-    totalAuthentications: authCount?.count || 0,
-    totalRevenue: parseFloat(revenue?.total || "0"),
-    totalLeads: leadCount?.count || 0,
-    totalNfts: nftCount?.count || 0
+    totalUsers: userCount[0]?.count ?? 0,
+    totalProducts: productCount[0]?.count ?? 0,
+    totalAuthentications: authCount[0]?.count ?? 0,
+    totalCertificates: certCount[0]?.count ?? 0,
+    totalSubscriptions: subCount[0]?.count ?? 0
   };
 }
-async function getSubscriptionAnalytics() {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(subscriptions).orderBy(desc(subscriptions.createdAt));
-}
-async function createNotification(data) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const result = await db2.insert(notifications).values(data).returning({ id: notifications.id });
-  return { id: result[0].id };
-}
-async function getUserNotifications(userId, limit = 50) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return await db2.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(limit);
-}
-async function getUnreadNotificationCount(userId) {
-  const db2 = await getDb();
-  if (!db2) return 0;
-  const [result] = await db2.select({ count: sql`count(*)` }).from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
-  return result?.count || 0;
-}
-async function markNotificationRead(id, userId) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  await db2.update(notifications).set({ isRead: 1 }).where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
-}
-async function markAllNotificationsRead(userId) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  await db2.update(notifications).set({ isRead: 1 }).where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
-}
-async function deleteNotification(id, userId) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  await db2.delete(notifications).where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
-}
-async function createSystemNotification(userId, title, message, type, actionUrl) {
-  return createNotification({ userId, type, title, message, isRead: 0, actionUrl });
-}
-async function logAutomationAudit(action, data, userId) {
-  const db2 = await getDb();
-  if (!db2) return;
-  await db2.insert(activityLog).values({ userId, action, details: { text: action, ...data } });
-}
-async function upsertLeadByEmail(input) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const existing = await db2.select({ id: leads.id }).from(leads).where(eq(leads.email, input.email)).limit(1);
-  if (existing[0]) {
-    await db2.update(leads).set({
-      name: input.name,
-      company: input.company,
-      title: input.title,
-      phone: input.phone,
-      source: input.source,
-      industry: input.industry,
-      metadata: input.metadata
-    }).where(eq(leads.id, existing[0].id));
-    return { id: existing[0].id, created: false };
+async function getRevenueAnalytics(startDate, endDate) {
+  const d = await getDb();
+  const conditions = [];
+  if (startDate) conditions.push(gte(revenueRecords.createdAt, startDate));
+  if (endDate) conditions.push(lte(revenueRecords.createdAt, endDate));
+  if (conditions.length > 0) {
+    return d.select().from(revenueRecords).where(and(...conditions)).orderBy(desc(revenueRecords.createdAt));
   }
-  const result = await db2.insert(leads).values({
-    email: input.email,
-    name: input.name,
-    company: input.company,
-    title: input.title,
-    phone: input.phone,
-    source: input.source || "website_form",
-    industry: input.industry,
-    metadata: input.metadata
-  }).returning({ id: leads.id });
-  return { id: result[0].id, created: true };
+  return d.select().from(revenueRecords).orderBy(desc(revenueRecords.createdAt));
 }
-function computeLeadScore(signals) {
-  const w = { segmentFit: 0.3, intent: 0.35, urgency: 0.2, budgetProxy: 0.15 };
-  const score = Math.round(
-    (signals.segmentFit ?? 50) * w.segmentFit + (signals.intent ?? 50) * w.intent + (signals.urgency ?? 50) * w.urgency + (signals.budgetProxy ?? 50) * w.budgetProxy
-  );
-  const band = score >= 80 ? "hot" : score >= 50 ? "warm" : "cold";
-  const route = band === "hot" ? "sales_direct" : band === "warm" ? "nurture_sequence" : "newsletter";
-  return { score, band, route };
+async function getOpenFraudAlerts() {
+  const d = await getDb();
+  return d.select().from(fraudAlerts).where(eq(fraudAlerts.status, "open")).orderBy(desc(fraudAlerts.createdAt));
+}
+async function getAllHealthScores() {
+  const d = await getDb();
+  return d.select().from(customerHealthScores).orderBy(desc(customerHealthScores.lastCalculatedAt));
+}
+async function getSubscriptionAnalytics() {
+  const d = await getDb();
+  const [total, active, cancelled, pastDue] = await Promise.all([
+    d.select({ count: sql`count(*)` }).from(subscriptions),
+    d.select({ count: sql`count(*)` }).from(subscriptions).where(eq(subscriptions.status, "active")),
+    d.select({ count: sql`count(*)` }).from(subscriptions).where(eq(subscriptions.status, "cancelled")),
+    d.select({ count: sql`count(*)` }).from(subscriptions).where(eq(subscriptions.status, "past_due"))
+  ]);
+  return {
+    total: total[0]?.count ?? 0,
+    active: active[0]?.count ?? 0,
+    cancelled: cancelled[0]?.count ?? 0,
+    pastDue: pastDue[0]?.count ?? 0
+  };
+}
+async function getServiceOrderBySessionId(sessionId) {
+  const d = await getDb();
+  const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.stripeSessionId, sessionId)).limit(1);
+  return rows[0] ?? null;
+}
+async function logAutomationAudit(action, details, userId) {
+  const d = await getDb();
+  await d.insert(activityLog).values({
+    userId: userId ?? void 0,
+    action: `audit:${action}`,
+    entityType: "automation",
+    details
+  });
+}
+async function recordRevenue(data) {
+  const d = await getDb();
+  await d.insert(revenueRecords).values({
+    source: data.source,
+    amount: data.amount,
+    currency: data.currency,
+    type: data.type,
+    userId: data.userId ?? void 0,
+    metadata: data.metadata
+  });
 }
 async function upsertStripeSubscription(data) {
-  const db2 = await getDb();
-  if (!db2) return;
-  const existing = await db2.select({ id: subscriptions.id }).from(subscriptions).where(eq(subscriptions.stripeSubscriptionId, data.stripeSubscriptionId)).limit(1);
-  if (existing[0]) {
-    await db2.update(subscriptions).set({
-      plan: data.plan,
-      status: data.status,
-      monthlyQuota: data.monthlyQuota,
-      billingCycle: data.billingCycle,
-      stripeCustomerId: data.stripeCustomerId ?? void 0,
-      currentPeriodStart: data.currentPeriodStart,
-      currentPeriodEnd: data.currentPeriodEnd,
-      trialEndsAt: data.trialEndsAt ?? void 0
-    }).where(eq(subscriptions.id, existing[0].id));
-  } else {
-    await db2.insert(subscriptions).values({
+  const d = await getDb();
+  const existing = await d.select().from(subscriptions).where(eq(subscriptions.stripeSubscriptionId, data.stripeSubscriptionId)).limit(1);
+  if (existing.length === 0) {
+    await d.insert(subscriptions).values({
       userId: data.userId,
       plan: data.plan,
       status: data.status,
       monthlyQuota: data.monthlyQuota,
       billingCycle: data.billingCycle,
-      stripeCustomerId: data.stripeCustomerId ?? void 0,
+      stripeCustomerId: data.stripeCustomerId,
       stripeSubscriptionId: data.stripeSubscriptionId,
       currentPeriodStart: data.currentPeriodStart,
       currentPeriodEnd: data.currentPeriodEnd,
-      trialEndsAt: data.trialEndsAt ?? void 0
+      trialEndsAt: data.trialEndsAt
     });
+  } else {
+    await d.update(subscriptions).set({
+      plan: data.plan,
+      status: data.status,
+      monthlyQuota: data.monthlyQuota,
+      billingCycle: data.billingCycle,
+      stripeCustomerId: data.stripeCustomerId,
+      currentPeriodStart: data.currentPeriodStart,
+      currentPeriodEnd: data.currentPeriodEnd,
+      trialEndsAt: data.trialEndsAt
+    }).where(eq(subscriptions.stripeSubscriptionId, data.stripeSubscriptionId));
   }
 }
 async function setSubscriptionStatusByStripeId(stripeSubscriptionId, status, cancelledAt) {
-  const db2 = await getDb();
-  if (!db2) return;
-  await db2.update(subscriptions).set({ status, cancelledAt: cancelledAt ?? void 0 }).where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId));
+  const d = await getDb();
+  const updateData = { status };
+  if (cancelledAt) updateData.cancelledAt = cancelledAt;
+  await d.update(subscriptions).set(updateData).where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId));
 }
 async function getSubscriptionByStripeSubscriptionId(stripeSubscriptionId) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(subscriptions).where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId)).limit(1);
-  return result[0];
+  const d = await getDb();
+  const rows = await d.select().from(subscriptions).where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId)).limit(1);
+  return rows[0] ?? null;
 }
 async function hasWebhookEventProcessed(eventId) {
-  const db2 = await getDb();
-  if (!db2) return false;
-  const [row] = await db2.select({ count: sql`count(*)` }).from(activityLog).where(sql`JSON_EXTRACT(${activityLog.details}, '$.eventId') = ${eventId}`);
-  return (row?.count ?? 0) > 0;
+  const d = await getDb();
+  const rows = await d.select().from(activityLog).where(like(activityLog.action, `audit:%`)).limit(100);
+  return rows.some((r) => {
+    const details = r.details;
+    return details?.eventId === eventId;
+  });
 }
-async function upsertPaddleSubscription(data) {
-  const db2 = await getDb();
-  if (!db2) return;
-  const existing = await db2.select({ id: subscriptions.id }).from(subscriptions).where(eq(subscriptions.paddleSubscriptionId, data.paddleSubscriptionId)).limit(1);
-  if (existing[0]) {
-    await db2.update(subscriptions).set({
-      plan: data.plan,
-      status: data.status,
-      monthlyQuota: data.monthlyQuota,
-      billingCycle: data.billingCycle,
-      paddleCustomerId: data.paddleCustomerId ?? void 0,
-      currentPeriodStart: data.currentPeriodStart,
-      currentPeriodEnd: data.currentPeriodEnd
-    }).where(eq(subscriptions.id, existing[0].id));
-  } else {
-    await db2.insert(subscriptions).values({
-      userId: data.userId,
-      plan: data.plan,
-      status: data.status,
-      monthlyQuota: data.monthlyQuota,
-      billingCycle: data.billingCycle,
-      paddleCustomerId: data.paddleCustomerId ?? void 0,
-      paddleSubscriptionId: data.paddleSubscriptionId,
-      currentPeriodStart: data.currentPeriodStart,
-      currentPeriodEnd: data.currentPeriodEnd
-    });
+function computeLeadScore(signals) {
+  const weights = { segmentFit: 30, intent: 30, urgency: 20, budgetProxy: 20 };
+  const score = Math.round(
+    (signals.segmentFit ?? 50) * (weights.segmentFit / 100) + (signals.intent ?? 50) * (weights.intent / 100) + (signals.urgency ?? 50) * (weights.urgency / 100) + (signals.budgetProxy ?? 50) * (weights.budgetProxy / 100)
+  );
+  const band = score >= 80 ? "hot" : score >= 50 ? "warm" : "cold";
+  const route = score >= 80 ? "immediate_outreach" : score >= 50 ? "nurture_sequence" : "monitor";
+  return { score, band, route };
+}
+async function upsertLeadByEmail(data) {
+  const d = await getDb();
+  const existing = await d.select().from(leads).where(eq(leads.email, data.email)).limit(1);
+  if (existing.length > 0) {
+    await d.update(leads).set({
+      name: data.name ?? existing[0].name,
+      company: data.company ?? existing[0].company,
+      title: data.title ?? existing[0].title,
+      phone: data.phone ?? existing[0].phone,
+      source: data.source ?? existing[0].source,
+      industry: data.industry ?? existing[0].industry
+    }).where(eq(leads.email, data.email));
+    return { id: existing[0].id, created: false };
   }
+  const [row] = await d.insert(leads).values({
+    email: data.email,
+    name: data.name,
+    company: data.company,
+    title: data.title,
+    phone: data.phone,
+    source: data.source ?? "website_form",
+    industry: data.industry,
+    status: "new"
+  }).returning();
+  return { id: row.id, created: true };
+}
+async function getAcceptanceCriteriaStatus() {
+  return { criteriaCount: 0, metCount: 0, details: [] };
+}
+async function getFunnelBySegmentAndChannel() {
+  return [];
+}
+async function getLeadCohorts() {
+  return [];
+}
+async function markTaskFailed(id, error) {
+  const d = await getDb();
+  await d.update(missionTasks).set({ status: "failed", lastError: error ?? null }).where(eq(missionTasks.id, id));
+}
+async function updateSubscription(paddleSubscriptionId, data) {
+  const d = await getDb();
+  await d.update(subscriptions).set(data).where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId));
 }
 async function setSubscriptionStatusByPaddleId(paddleSubscriptionId, status, cancelledAt) {
-  const db2 = await getDb();
-  if (!db2) return;
-  await db2.update(subscriptions).set({ status, cancelledAt: cancelledAt ?? void 0 }).where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId));
+  const d = await getDb();
+  const updateData = { status };
+  if (cancelledAt) updateData.cancelledAt = cancelledAt;
+  await d.update(subscriptions).set(updateData).where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId));
 }
-async function getSubscriptionByPaddleSubscriptionId(paddleSubscriptionId) {
-  const db2 = await getDb();
-  if (!db2) return void 0;
-  const result = await db2.select().from(subscriptions).where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId)).limit(1);
-  return result[0];
+async function updateUser(userId, data) {
+  const d = await getDb();
+  await d.update(users).set(data).where(eq(users.id, userId));
 }
 var _db, db;
 var init_db = __esm({
   "server/db.ts"() {
     "use strict";
     init_schema();
-    init_schema();
     init_env();
     _db = null;
     db = new Proxy({}, {
       get(_target, prop) {
-        if (!_db) throw new Error("Database not available");
+        if (!_db) {
+          throw new Error(
+            "[Database] Database not available. Call `await getDb()` during startup."
+          );
+        }
         return Reflect.get(_db, prop);
       }
     });
+  }
+});
+
+// server/_core/notification.ts
+import { TRPCError } from "@trpc/server";
+async function notifyOwner(payload) {
+  const { title, content } = validatePayload(payload);
+  if (!ENV.forgeApiUrl) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Notification service URL is not configured."
+    });
+  }
+  if (!ENV.forgeApiKey) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Notification service API key is not configured."
+    });
+  }
+  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${ENV.forgeApiKey}`,
+        "content-type": "application/json",
+        "connect-protocol-version": "1"
+      },
+      body: JSON.stringify({ title, content })
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.warn(
+        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
+      );
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.warn("[Notification] Error calling notification service:", error);
+    return false;
+  }
+}
+var TITLE_MAX_LENGTH, CONTENT_MAX_LENGTH, trimValue, isNonEmptyString2, buildEndpointUrl, validatePayload;
+var init_notification = __esm({
+  "server/_core/notification.ts"() {
+    "use strict";
+    init_env();
+    TITLE_MAX_LENGTH = 1200;
+    CONTENT_MAX_LENGTH = 2e4;
+    trimValue = (value) => value.trim();
+    isNonEmptyString2 = (value) => typeof value === "string" && value.trim().length > 0;
+    buildEndpointUrl = (baseUrl) => {
+      const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+      return new URL(
+        "webdevtoken.v1.WebDevService/SendNotification",
+        normalizedBase
+      ).toString();
+    };
+    validatePayload = (input) => {
+      if (!isNonEmptyString2(input.title)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Notification title is required."
+        });
+      }
+      if (!isNonEmptyString2(input.content)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Notification content is required."
+        });
+      }
+      const title = trimValue(input.title);
+      const content = trimValue(input.content);
+      if (title.length > TITLE_MAX_LENGTH) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
+        });
+      }
+      if (content.length > CONTENT_MAX_LENGTH) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
+        });
+      }
+      return { title, content };
+    };
+  }
+});
+
+// server/stripe-products.ts
+var stripe_products_exports = {};
+__export(stripe_products_exports, {
+  STRIPE_PRODUCTS: () => STRIPE_PRODUCTS,
+  getPlanPrice: () => getPlanPrice,
+  getPlanQuota: () => getPlanQuota
+});
+function getPlanPrice(plan, billing) {
+  const product = STRIPE_PRODUCTS[plan];
+  return billing === "annual" ? product.priceAnnual : product.priceMonthly;
+}
+function getPlanQuota(plan) {
+  switch (plan) {
+    case "starter":
+      return 500;
+    case "professional":
+      return 5e3;
+    case "enterprise":
+      return 999999;
+  }
+}
+var STRIPE_PRODUCTS;
+var init_stripe_products = __esm({
+  "server/stripe-products.ts"() {
+    "use strict";
+    STRIPE_PRODUCTS = {
+      starter: {
+        name: "AuthiChain Starter",
+        description: "Essential blockchain authentication for growing brands. 500 verifications/month, AI analysis, QR codes, and basic supply chain tracking.",
+        priceMonthly: 4900,
+        // $49.00 in cents
+        priceAnnual: 47e3,
+        // $470.00/year ($39.17/mo, save 20%)
+        features: [
+          "500 AI authentications/month",
+          "QR code generation",
+          "Basic certificates",
+          "Email support",
+          "1 team member"
+        ]
+      },
+      professional: {
+        name: "AuthiChain Professional",
+        description: "Advanced authentication suite with NFT certificates, autopilot AI, and full supply chain visibility. 5,000 verifications/month.",
+        priceMonthly: 19900,
+        // $199.00 in cents
+        priceAnnual: 190800,
+        // $1,908.00/year ($159/mo, save 20%)
+        features: [
+          "5,000 AI authentications/month",
+          "NFT certificate minting",
+          "AI Autopilot engine",
+          "Supply chain tracking",
+          "Email campaigns",
+          "Priority support",
+          "5 team members"
+        ]
+      },
+      enterprise: {
+        name: "AuthiChain Enterprise",
+        description: "Full-scale enterprise authentication with white-label solutions, unlimited verifications, dedicated support, and custom integrations.",
+        priceMonthly: 79900,
+        // $799.00 in cents
+        priceAnnual: 766800,
+        // $7,668.00/year ($639/mo, save 20%)
+        features: [
+          "Unlimited AI authentications",
+          "White-label solution",
+          "Custom smart contracts",
+          "Dedicated account manager",
+          "SLA guarantee",
+          "API access",
+          "Unlimited team members",
+          "Custom integrations"
+        ]
+      }
+    };
+  }
+});
+
+// server/stripe-service.ts
+var stripe_service_exports = {};
+__export(stripe_service_exports, {
+  cancelSubscription: () => cancelSubscription,
+  createPaymentCheckout: () => createPaymentCheckout,
+  createSubscriptionCheckout: () => createSubscriptionCheckout,
+  getCustomerInvoices: () => getCustomerInvoices,
+  getCustomerPayments: () => getCustomerPayments,
+  getOrCreateStripeCustomer: () => getOrCreateStripeCustomer,
+  getStripe: () => getStripe,
+  getSubscriptionDetails: () => getSubscriptionDetails,
+  processWebhookEvent: () => processWebhookEvent
+});
+import Stripe from "stripe";
+function getStripe() {
+  if (!_stripe) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error("STRIPE_SECRET_KEY not configured");
+    _stripe = new Stripe(secretKey, { apiVersion: "2025-03-31.basil" });
+  }
+  return _stripe;
+}
+async function createSubscriptionCheckout(params) {
+  const stripe = getStripe();
+  const product = STRIPE_PRODUCTS[params.plan];
+  const priceAmount = params.billing === "annual" ? product.priceAnnual : product.priceMonthly;
+  const sessionConfig = {
+    mode: "subscription",
+    payment_method_types: ["card"],
+    allow_promotion_codes: true,
+    client_reference_id: params.userId.toString(),
+    customer_email: params.stripeCustomerId ? void 0 : params.userEmail,
+    customer: params.stripeCustomerId || void 0,
+    metadata: {
+      user_id: params.userId.toString(),
+      customer_email: params.userEmail,
+      customer_name: params.userName,
+      plan: params.plan,
+      billing: params.billing
+    },
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: product.name,
+            description: product.description
+          },
+          unit_amount: priceAmount,
+          recurring: {
+            interval: params.billing === "annual" ? "year" : "month"
+          }
+        },
+        quantity: 1
+      }
+    ],
+    success_url: `${params.origin}/subscriptions?session_id={CHECKOUT_SESSION_ID}&success=true`,
+    cancel_url: `${params.origin}/subscriptions?cancelled=true`
+  };
+  const session = await stripe.checkout.sessions.create(sessionConfig);
+  return session.url;
+}
+async function createPaymentCheckout(params) {
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    payment_method_types: ["card"],
+    allow_promotion_codes: true,
+    client_reference_id: params.userId.toString(),
+    customer_email: params.stripeCustomerId ? void 0 : params.userEmail,
+    customer: params.stripeCustomerId || void 0,
+    metadata: {
+      user_id: params.userId.toString(),
+      customer_email: params.userEmail,
+      customer_name: params.userName,
+      ...params.metadata
+    },
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: params.description
+          },
+          unit_amount: params.amount
+        },
+        quantity: 1
+      }
+    ],
+    success_url: `${params.origin}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
+    cancel_url: `${params.origin}/payments?cancelled=true`
+  });
+  return session.url;
+}
+async function getOrCreateStripeCustomer(userId, email, name, existingCustomerId) {
+  const stripe = getStripe();
+  if (existingCustomerId) {
+    try {
+      const customer2 = await stripe.customers.retrieve(existingCustomerId);
+      if (!customer2.deleted) return existingCustomerId;
+    } catch {
+    }
+  }
+  const customer = await stripe.customers.create({
+    email,
+    name,
+    metadata: { user_id: userId.toString() }
+  });
+  return customer.id;
+}
+async function getSubscriptionDetails(subscriptionId) {
+  const stripe = getStripe();
+  return await stripe.subscriptions.retrieve(subscriptionId);
+}
+async function cancelSubscription(subscriptionId, immediately = false) {
+  const stripe = getStripe();
+  if (immediately) {
+    return await stripe.subscriptions.cancel(subscriptionId);
+  }
+  return await stripe.subscriptions.update(subscriptionId, {
+    cancel_at_period_end: true
+  });
+}
+async function getCustomerPayments(customerId, limit = 20) {
+  const stripe = getStripe();
+  const charges = await stripe.charges.list({
+    customer: customerId,
+    limit
+  });
+  return charges.data.map((charge) => ({
+    id: charge.id,
+    amount: charge.amount,
+    currency: charge.currency,
+    status: charge.status,
+    description: charge.description,
+    created: charge.created,
+    receiptUrl: charge.receipt_url
+  }));
+}
+async function getCustomerInvoices(customerId, limit = 20) {
+  const stripe = getStripe();
+  const invoices2 = await stripe.invoices.list({
+    customer: customerId,
+    limit
+  });
+  return invoices2.data.map((inv) => ({
+    id: inv.id,
+    number: inv.number,
+    amount: inv.amount_due,
+    currency: inv.currency,
+    status: inv.status,
+    created: inv.created,
+    hostedInvoiceUrl: inv.hosted_invoice_url,
+    pdfUrl: inv.invoice_pdf
+  }));
+}
+async function processWebhookEvent(event) {
+  const result = {
+    eventType: event.type,
+    handled: false
+  };
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object;
+      result.userId = session.metadata?.user_id ? parseInt(session.metadata.user_id) : void 0;
+      result.plan = session.metadata?.plan;
+      result.subscriptionId = session.subscription;
+      result.customerId = session.customer;
+      result.email = session.customer_email || session.metadata?.customer_email || void 0;
+      result.customerName = session.metadata?.customer_name || void 0;
+      result.handled = true;
+      break;
+    }
+    case "customer.subscription.updated": {
+      const subscription = event.data.object;
+      result.subscriptionId = subscription.id;
+      result.customerId = subscription.customer;
+      result.handled = true;
+      break;
+    }
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object;
+      result.subscriptionId = subscription.id;
+      result.customerId = subscription.customer;
+      result.handled = true;
+      break;
+    }
+    case "invoice.paid": {
+      const invoice = event.data.object;
+      result.customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+      result.subscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+      result.handled = true;
+      break;
+    }
+    case "invoice.payment_failed": {
+      const invoice = event.data.object;
+      result.customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+      result.subscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+      result.handled = true;
+      break;
+    }
+    default:
+      result.handled = false;
+  }
+  return result;
+}
+var _stripe;
+var init_stripe_service = __esm({
+  "server/stripe-service.ts"() {
+    "use strict";
+    init_stripe_products();
+    _stripe = null;
   }
 });
 
@@ -2133,10 +2415,7 @@ var llm_exports = {};
 __export(llm_exports, {
   invokeLLM: () => invokeLLM
 });
-import { eq as eq2 } from "drizzle-orm";
-import { createHash } from "node:crypto";
 async function invokeLLM(params) {
-  assertApiKey();
   const {
     messages,
     tools,
@@ -2148,23 +2427,17 @@ async function invokeLLM(params) {
     response_format
   } = params;
   const payload = {
-    model: "gemini-2.5-flash",
-    messages: messages.map(normalizeMessage)
+    model: "gpt-4o",
+    messages: messages.map(normalizeMessage),
+    max_tokens: 32768
   };
   if (tools && tools.length > 0) {
     payload.tools = tools;
   }
-  const normalizedToolChoice = normalizeToolChoice(
-    toolChoice || tool_choice,
-    tools
-  );
+  const normalizedToolChoice = normalizeToolChoice(toolChoice || tool_choice, tools);
   if (normalizedToolChoice) {
     payload.tool_choice = normalizedToolChoice;
   }
-  payload.max_tokens = 32768;
-  payload.thinking = {
-    "budget_tokens": 128
-  };
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
     response_format,
@@ -2174,59 +2447,54 @@ async function invokeLLM(params) {
   if (normalizedResponseFormat) {
     payload.response_format = normalizedResponseFormat;
   }
-  const payloadStr = JSON.stringify(payload);
-  const promptHash = createHash("sha256").update(payloadStr).digest("hex");
-  try {
-    const db2 = await getDb();
-    if (db2) {
-      const [cached] = await db2.select().from(promptCache).where(eq2(promptCache.promptHash, promptHash)).limit(1);
-      if (cached) {
-        console.log(`[LLM Cache] Hit for hash: ${promptHash.substring(0, 8)}`);
-        return JSON.parse(cached.response);
+  const endpoints = [
+    { url: resolveApiUrl(), key: ENV.forgeApiKey, name: "Forge" },
+    { url: "https://api.openai.com/v1/chat/completions", key: ENV.openaiApiKey, name: "OpenAI" }
+  ].filter((e) => e.key);
+  if (endpoints.length === 0) {
+    throw new Error("No LLM API keys configured (Neither Forge nor OpenAI)");
+  }
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    console.log(`[LLM] Attempting invoke via ${endpoint.name}...`);
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await fetch(endpoint.url, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${endpoint.key}`
+          },
+          body: JSON.stringify(payload),
+          // Set a 30s timeout
+          signal: AbortSignal.timeout(3e4)
+        });
+        if (response.ok) {
+          return await response.json();
+        }
+        const errorText = await response.text();
+        const status = response.status;
+        if (status >= 400 && status < 500 && status !== 429) {
+          throw new Error(`[${endpoint.name} Client Error] ${status}: ${errorText}`);
+        }
+        console.warn(`[LLM] ${endpoint.name} attempt ${attempt} failed with ${status}.`);
+        lastError = new Error(`${endpoint.name} ${status}: ${errorText}`);
+        await new Promise((r) => setTimeout(r, attempt * 500));
+      } catch (err) {
+        console.warn(`[LLM] ${endpoint.name} attempt ${attempt} exception: ${err.message}`);
+        lastError = err;
+        if (attempt === 2) break;
+        await new Promise((r) => setTimeout(r, attempt * 500));
       }
     }
-  } catch (err) {
-    console.warn("[LLM Cache] Check failed:", err.message);
   }
-  const response = await fetch(resolveApiUrl(), {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`
-    },
-    body: payloadStr
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} \u2013 ${errorText}`
-    );
-  }
-  const result = await response.json();
-  try {
-    const db2 = await getDb();
-    if (db2) {
-      await db2.insert(promptCache).values({
-        promptHash,
-        response: JSON.stringify(result),
-        provider: "forge",
-        model: payload.model,
-        usage: result.usage
-      });
-      console.log(`[LLM Cache] Stored for hash: ${promptHash.substring(0, 8)}`);
-    }
-  } catch (err) {
-    console.warn("[LLM Cache] Store failed:", err.message);
-  }
-  return result;
+  throw new Error(`All LLM endpoints failed. Last error: ${lastError?.message}`);
 }
-var ensureArray, normalizeContentPart, normalizeMessage, normalizeToolChoice, resolveApiUrl, assertApiKey, normalizeResponseFormat;
+var ensureArray, normalizeContentPart, normalizeMessage, normalizeToolChoice, resolveApiUrl, normalizeResponseFormat;
 var init_llm = __esm({
   "server/_core/llm.ts"() {
     "use strict";
     init_env();
-    init_db();
-    init_schema();
     ensureArray = (value) => Array.isArray(value) ? value : [value];
     normalizeContentPart = (part) => {
       if (typeof part === "string") {
@@ -2297,11 +2565,9 @@ var init_llm = __esm({
       }
       return toolChoice;
     };
-    resolveApiUrl = () => ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0 ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions` : "https://forge.manus.im/v1/chat/completions";
-    assertApiKey = () => {
-      if (!ENV.forgeApiKey) {
-        throw new Error("OPENAI_API_KEY is not configured");
-      }
+    resolveApiUrl = () => {
+      const base = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0 ? ENV.forgeApiUrl.replace(/\/$/, "") : "https://forge.manus.im";
+      return `${base}/v1/chat/completions`;
     };
     normalizeResponseFormat = ({
       responseFormat,
@@ -2335,14 +2601,63 @@ var init_llm = __esm({
   }
 });
 
+// server/ordinals-service.ts
+var ordinals_service_exports = {};
+__export(ordinals_service_exports, {
+  getInscriptionStatus: () => getInscriptionStatus,
+  linkOrdinalToProduct: () => linkOrdinalToProduct,
+  prepareOrdinalEnvelope: () => prepareOrdinalEnvelope
+});
+async function prepareOrdinalEnvelope(imageUrl, metadata) {
+  return {
+    protocol: "ord",
+    version: "1.0",
+    body: metadata,
+    image_ref: imageUrl
+  };
+}
+async function getInscriptionStatus(inscriptionId) {
+  const res = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions/${inscriptionId}`);
+  if (!res.ok) return { status: "pending" };
+  return await res.json();
+}
+async function linkOrdinalToProduct(productId, inscriptionId) {
+  const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+  const { products: products2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+  const { eq: eq18 } = await import("drizzle-orm");
+  const d = await getDb2();
+  await d.update(products2).set({ blockchainTxHash: inscriptionId }).where(eq18(products2.id, productId));
+  console.log(`[Ordinals] Linked Product ${productId} to BTC Inscription ${inscriptionId}`);
+  return { success: true };
+}
+var init_ordinals_service = __esm({
+  "server/ordinals-service.ts"() {
+    "use strict";
+  }
+});
+
 // server/hubspot-service.ts
+var hubspot_service_exports = {};
+__export(hubspot_service_exports, {
+  createCompany: () => createCompany,
+  createContact: () => createContact,
+  createDeal: () => createDeal,
+  getCRMStats: () => getCRMStats,
+  isHubSpotConfigured: () => isHubSpotConfigured,
+  listCompanies: () => listCompanies,
+  listContacts: () => listContacts,
+  listDeals: () => listDeals,
+  searchContacts: () => searchContacts,
+  syncLeadToHubSpot: () => syncLeadToHubSpot,
+  syncPaymentToHubSpot: () => syncPaymentToHubSpot
+});
 import { Client } from "@hubspot/api-client";
 function getClient() {
-  if (!_client) {
+  if (!_client2) {
     if (!ENV.hubspotServiceKey) throw new Error("HUBSPOT_SERVICE_KEY is not configured");
-    _client = new Client({ accessToken: ENV.hubspotServiceKey });
+    _client2 = new Client({ accessToken: ENV.hubspotServiceKey });
   }
-  return _client;
+  return _client2;
 }
 function isHubSpotConfigured() {
   return !!ENV.hubspotServiceKey;
@@ -2448,27 +2763,49 @@ async function listDeals(limit = 50) {
 async function getCRMStats() {
   try {
     const client = getClient();
-    const missingScopes = [];
-    const [contactResult, companyResult, dealResult] = await Promise.allSettled([
-      client.crm.contacts.searchApi.doSearch({ filterGroups: [], sorts: [], properties: ["email"], limit: 1, after: "0" }),
-      client.crm.companies.searchApi.doSearch({ filterGroups: [], sorts: [], properties: ["name"], limit: 1, after: "0" }),
-      client.crm.deals.searchApi.doSearch({ filterGroups: [], sorts: [], properties: ["dealname"], limit: 1, after: "0" })
-    ]);
     let contactCount = 0, companyCount = 0, dealCount = 0;
     let isConnected = false;
-    if (contactResult.status === "fulfilled") {
-      contactCount = contactResult.value.total;
+    const missingScopes = [];
+    try {
+      const contactSearch = await client.crm.contacts.searchApi.doSearch({
+        filterGroups: [],
+        sorts: [],
+        properties: ["email"],
+        limit: 1,
+        after: "0"
+      });
+      contactCount = contactSearch.total;
       isConnected = true;
-    } else if (contactResult.reason?.code === 403 || contactResult.reason?.body?.category === "MISSING_SCOPES") missingScopes.push("contacts");
-    else throw contactResult.reason;
-    if (companyResult.status === "fulfilled") {
-      companyCount = companyResult.value.total;
+    } catch (err) {
+      if (err.code === 403 || err.body?.category === "MISSING_SCOPES") missingScopes.push("contacts");
+      else throw err;
+    }
+    try {
+      const companySearch = await client.crm.companies.searchApi.doSearch({
+        filterGroups: [],
+        sorts: [],
+        properties: ["name"],
+        limit: 1,
+        after: "0"
+      });
+      companyCount = companySearch.total;
       isConnected = true;
-    } else if (companyResult.reason?.code === 403 || companyResult.reason?.body?.category === "MISSING_SCOPES") missingScopes.push("companies");
-    if (dealResult.status === "fulfilled") {
-      dealCount = dealResult.value.total;
+    } catch (err) {
+      if (err.code === 403 || err.body?.category === "MISSING_SCOPES") missingScopes.push("companies");
+    }
+    try {
+      const dealSearch = await client.crm.deals.searchApi.doSearch({
+        filterGroups: [],
+        sorts: [],
+        properties: ["dealname"],
+        limit: 1,
+        after: "0"
+      });
+      dealCount = dealSearch.total;
       isConnected = true;
-    } else if (dealResult.reason?.code === 403 || dealResult.reason?.body?.category === "MISSING_SCOPES") missingScopes.push("deals");
+    } catch (err) {
+      if (err.code === 403 || err.body?.category === "MISSING_SCOPES") missingScopes.push("deals");
+    }
     return {
       contacts: contactCount,
       companies: companyCount,
@@ -2499,483 +2836,696 @@ async function syncLeadToHubSpot(lead) {
     return null;
   }
 }
-var _client;
+async function syncPaymentToHubSpot(payment) {
+  if (!isHubSpotConfigured()) return null;
+  try {
+    const result = await createDeal({
+      dealname: `AuthiChain ${payment.plan} - ${payment.email}`,
+      amount: payment.amount.toString(),
+      dealstage: "closedwon",
+      closedate: (/* @__PURE__ */ new Date()).toISOString().split("T")[0]
+    });
+    console.log("[HubSpot] Payment synced as deal:", result.success ? result.id : result.error);
+    return result;
+  } catch (err) {
+    console.error("[HubSpot] Payment sync failed:", err.message);
+    return null;
+  }
+}
+var _client2;
 var init_hubspot_service = __esm({
   "server/hubspot-service.ts"() {
     "use strict";
     init_env();
-    _client = null;
+    _client2 = null;
   }
 });
 
-// server/stripe-products.ts
-var stripe_products_exports = {};
-__export(stripe_products_exports, {
-  STRIPE_PRODUCTS: () => STRIPE_PRODUCTS,
-  getPlanPrice: () => getPlanPrice,
-  getPlanQuota: () => getPlanQuota
-});
-function getPlanPrice(plan, billing) {
-  const product = STRIPE_PRODUCTS[plan];
-  return billing === "annual" ? product.priceAnnual : product.priceMonthly;
-}
-function getPlanQuota(plan) {
-  switch (plan) {
-    case "starter":
-      return 500;
-    case "professional":
-      return 5e3;
-    case "enterprise":
-      return 999999;
+// server/storage.ts
+function getStorageConfig() {
+  const baseUrl = ENV.forgeApiUrl;
+  const apiKey = ENV.forgeApiKey;
+  if (!baseUrl || !apiKey) {
+    throw new Error(
+      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
+    );
   }
+  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
 }
-var STRIPE_PRODUCTS;
-var init_stripe_products = __esm({
-  "server/stripe-products.ts"() {
-    "use strict";
-    STRIPE_PRODUCTS = {
-      starter: {
-        name: "AuthiChain Starter",
-        description: "Essential blockchain authentication for growing brands. 500 verifications/month, AI analysis, QR codes, and basic supply chain tracking.",
-        priceMonthly: 4900,
-        // $49.00 in cents
-        priceAnnual: 47e3,
-        // $470.00/year ($39.17/mo, save 20%)
-        features: [
-          "500 AI authentications/month",
-          "QR code generation",
-          "Basic certificates",
-          "Email support",
-          "1 team member"
-        ]
-      },
-      professional: {
-        name: "AuthiChain Professional",
-        description: "Advanced authentication suite with NFT certificates, autopilot AI, and full supply chain visibility. 5,000 verifications/month.",
-        priceMonthly: 19900,
-        // $199.00 in cents
-        priceAnnual: 190800,
-        // $1,908.00/year ($159/mo, save 20%)
-        features: [
-          "5,000 AI authentications/month",
-          "NFT certificate minting",
-          "AI Autopilot engine",
-          "Supply chain tracking",
-          "Email campaigns",
-          "Priority support",
-          "5 team members"
-        ]
-      },
-      enterprise: {
-        name: "AuthiChain Enterprise",
-        description: "Full-scale enterprise authentication with white-label solutions, unlimited verifications, dedicated support, and custom integrations.",
-        priceMonthly: 79900,
-        // $799.00 in cents
-        priceAnnual: 766800,
-        // $7,668.00/year ($639/mo, save 20%)
-        features: [
-          "Unlimited AI authentications",
-          "White-label solution",
-          "Custom smart contracts",
-          "Dedicated account manager",
-          "SLA guarantee",
-          "API access",
-          "Unlimited team members",
-          "Custom integrations"
-        ]
-      }
-    };
-  }
-});
-
-// server/stripe-service.ts
-import Stripe from "stripe";
-function getStripe() {
-  if (!_stripe) {
-    const secretKey = ENV.stripeSecretKey;
-    if (!secretKey) throw new Error("STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(secretKey, { apiVersion: "2025-03-31.basil" });
-  }
-  return _stripe;
+function buildUploadUrl(baseUrl, relKey) {
+  const url = new URL("v1/storage/upload", ensureTrailingSlash(baseUrl));
+  url.searchParams.set("path", normalizeKey(relKey));
+  return url;
 }
-async function createSubscriptionCheckout(params) {
-  const stripe = getStripe();
-  const product = STRIPE_PRODUCTS[params.plan];
-  const priceAmount = params.billing === "annual" ? product.priceAnnual : product.priceMonthly;
-  const sessionConfig = {
-    mode: "subscription",
-    payment_method_types: ["card"],
-    allow_promotion_codes: true,
-    client_reference_id: params.userId.toString(),
-    customer_email: params.stripeCustomerId ? void 0 : params.userEmail,
-    customer: params.stripeCustomerId || void 0,
-    metadata: {
-      user_id: params.userId.toString(),
-      customer_email: params.userEmail,
-      customer_name: params.userName,
-      plan: params.plan,
-      billing: params.billing
-    },
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: product.name,
-            description: product.description
-          },
-          unit_amount: priceAmount,
-          recurring: {
-            interval: params.billing === "annual" ? "year" : "month"
-          }
-        },
-        quantity: 1
-      }
-    ],
-    success_url: `${params.origin}/subscriptions?session_id={CHECKOUT_SESSION_ID}&success=true`,
-    cancel_url: `${params.origin}/subscriptions?cancelled=true`
-  };
-  const session = await stripe.checkout.sessions.create(sessionConfig);
-  return session.url;
+function ensureTrailingSlash(value) {
+  return value.endsWith("/") ? value : `${value}/`;
 }
-async function createPaymentCheckout(params) {
-  const stripe = getStripe();
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    payment_method_types: ["card"],
-    allow_promotion_codes: true,
-    client_reference_id: params.userId.toString(),
-    customer_email: params.stripeCustomerId ? void 0 : params.userEmail,
-    customer: params.stripeCustomerId || void 0,
-    metadata: {
-      user_id: params.userId.toString(),
-      customer_email: params.userEmail,
-      customer_name: params.userName,
-      ...params.metadata
-    },
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: params.description
-          },
-          unit_amount: params.amount
-        },
-        quantity: 1
-      }
-    ],
-    success_url: `${params.origin}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
-    cancel_url: `${params.origin}/payments?cancelled=true`
-  });
-  return session.url;
+function normalizeKey(relKey) {
+  return relKey.replace(/^\/+/, "");
 }
-async function cancelSubscription(subscriptionId, immediately = false) {
-  const stripe = getStripe();
-  if (immediately) {
-    return await stripe.subscriptions.cancel(subscriptionId);
-  }
-  return await stripe.subscriptions.update(subscriptionId, {
-    cancel_at_period_end: true
-  });
+function toFormData(data, contentType, fileName) {
+  const blob = typeof data === "string" ? new Blob([data], { type: contentType }) : new Blob([data], { type: contentType });
+  const form = new FormData();
+  form.append("file", blob, fileName || "file");
+  return form;
 }
-async function getCustomerPayments(customerId, limit = 20) {
-  const stripe = getStripe();
-  const charges = await stripe.charges.list({
-    customer: customerId,
-    limit
-  });
-  return charges.data.map((charge) => ({
-    id: charge.id,
-    amount: charge.amount,
-    currency: charge.currency,
-    status: charge.status,
-    description: charge.description,
-    created: charge.created,
-    receiptUrl: charge.receipt_url
-  }));
+function buildAuthHeaders(apiKey) {
+  return { Authorization: `Bearer ${apiKey}` };
 }
-async function getCustomerInvoices(customerId, limit = 20) {
-  const stripe = getStripe();
-  const invoices2 = await stripe.invoices.list({
-    customer: customerId,
-    limit
-  });
-  return invoices2.data.map((inv) => ({
-    id: inv.id,
-    number: inv.number,
-    amount: inv.amount_due,
-    currency: inv.currency,
-    status: inv.status,
-    created: inv.created,
-    hostedInvoiceUrl: inv.hosted_invoice_url,
-    pdfUrl: inv.invoice_pdf
-  }));
-}
-var _stripe;
-var init_stripe_service = __esm({
-  "server/stripe-service.ts"() {
-    "use strict";
-    init_stripe_products();
-    init_env();
-    _stripe = null;
-  }
-});
-
-// server/paddle-service.ts
-async function getPaddleSDK() {
-  const sdk2 = await import("@paddle/paddle-node-sdk");
-  return sdk2;
-}
-async function getPaddle() {
-  if (!_paddle) {
-    if (!ENV.paddleApiKey) throw new Error("PADDLE_API_KEY is not configured");
-    const { Paddle, Environment } = await getPaddleSDK();
-    _paddle = new Paddle(ENV.paddleApiKey, {
-      environment: ENV.isProduction ? Environment.production : Environment.sandbox
-    });
-  }
-  return _paddle;
-}
-async function upsertPaddleCustomer(input) {
-  const paddle = await getPaddle();
-  const customers = await paddle.customers.list({ email: [input.email] });
-  const existing = customers.data?.[0];
-  if (existing) return existing.id;
-  const customer = await paddle.customers.create({
-    email: input.email,
-    name: input.name,
-    customData: { userId: String(input.userId) }
-  });
-  return customer.id;
-}
-async function createPaddleTransaction(input) {
-  const paddle = await getPaddle();
-  const transaction = await paddle.transactions.create({
-    items: [{ priceId: input.priceId, quantity: 1 }],
-    customerId: input.customerId,
-    checkout: { url: input.successUrl }
-  });
-  return transaction.checkout?.url || "";
-}
-var _paddle;
-var init_paddle_service = __esm({
-  "server/paddle-service.ts"() {
-    "use strict";
-    init_env();
-    _paddle = null;
-  }
-});
-
-// server/email-service.ts
-var email_service_exports = {};
-__export(email_service_exports, {
-  checkThreadReplies: () => checkThreadReplies,
-  isSuppressed: () => isSuppressed,
-  sendEmail: () => sendEmail
-});
-import nodemailer from "nodemailer";
-async function getGmailAccessToken() {
-  if (_cachedToken && Date.now() < _tokenExpiresAt - 6e4) {
-    return _cachedToken;
-  }
-  const staticToken = process.env.GMAIL_ACCESS_TOKEN || "";
-  if (staticToken && !ENV.gmailRefreshToken) {
-    _cachedToken = staticToken;
-    _tokenExpiresAt = Date.now() + 55 * 60 * 1e3;
-    return staticToken;
-  }
-  if (!ENV.gmailClientId || !ENV.gmailClientSecret || !ENV.gmailRefreshToken) {
-    return staticToken;
-  }
-  const res = await fetch("https://oauth2.googleapis.com/token", {
+async function storagePut(relKey, data, contentType = "application/octet-stream") {
+  const { baseUrl, apiKey } = getStorageConfig();
+  const key = normalizeKey(relKey);
+  const uploadUrl = buildUploadUrl(baseUrl, key);
+  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
+  const response = await fetch(uploadUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: ENV.gmailClientId,
-      client_secret: ENV.gmailClientSecret,
-      refresh_token: ENV.gmailRefreshToken,
-      grant_type: "refresh_token"
-    }).toString()
-  });
-  if (!res.ok) {
-    console.error("[gmail] token refresh failed:", res.status, await res.text().catch(() => ""));
-    return staticToken;
-  }
-  const data = await res.json().catch(() => ({}));
-  _cachedToken = data.access_token ?? staticToken;
-  _tokenExpiresAt = Date.now() + (data.expires_in ?? 3600) * 1e3;
-  return _cachedToken;
-}
-function suppressionSet() {
-  return new Set(
-    ENV.suppressionList.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean)
-  );
-}
-function isSuppressed(email) {
-  return suppressionSet().has(email.trim().toLowerCase());
-}
-function toBase64Url(input) {
-  return Buffer.from(input).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-async function sendEmail(input) {
-  const to = input.to.trim().toLowerCase();
-  if (isSuppressed(to)) {
-    return { status: "suppressed", reason: "suppression_list" };
-  }
-  const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
-  const appPassword = ENV.gmailAppPassword || process.env.GMAIL_APP_PASSWORD || "";
-  const fromName = input.fromName || "AuthiChain";
-  if (fromEmail && appPassword) {
-    try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: fromEmail, pass: appPassword }
-      });
-      const info = await transporter.sendMail({
-        from: `${fromName} <${fromEmail}>`,
-        to,
-        subject: input.subject,
-        text: input.body
-      });
-      return {
-        status: "sent",
-        provider: "gmail-smtp",
-        providerMessageId: info.messageId
-      };
-    } catch (smtpErr) {
-      console.warn("[email-service] SMTP failed, attempting OAuth2...", smtpErr.message);
-    }
-  }
-  if (!fromEmail) {
-    return { status: "skipped", reason: "gmail_not_configured", provider: "gmail" };
-  }
-  const gmailAccessToken = await getGmailAccessToken();
-  if (!gmailAccessToken) {
-    return { status: "skipped", reason: "gmail_token_unavailable", provider: "gmail" };
-  }
-  const mime = [
-    `From: ${fromName} <${fromEmail}>`,
-    `To: ${to}`,
-    `Subject: ${input.subject}`,
-    "MIME-Version: 1.0",
-    "Content-Type: text/plain; charset=UTF-8",
-    "",
-    input.body
-  ].join("\r\n");
-  const raw = toBase64Url(mime);
-  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${gmailAccessToken}`
-    },
-    body: JSON.stringify({ raw })
+    headers: buildAuthHeaders(apiKey),
+    body: formData
   });
   if (!response.ok) {
-    const txt = await response.text().catch(() => "");
-    return {
-      status: "skipped",
-      provider: "gmail",
-      reason: `gmail_send_failed:${response.status}:${txt.slice(0, 200)}`
-    };
+    const message = await response.text().catch(() => response.statusText);
+    throw new Error(
+      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
+    );
   }
-  const data = await response.json().catch(() => ({}));
-  return {
-    status: "sent",
-    provider: "gmail-oauth",
-    providerMessageId: data?.id,
-    threadId: data?.threadId
-  };
+  const url = (await response.json()).url;
+  return { key, url };
 }
-async function checkThreadReplies(threadId) {
-  const gmailAccessToken = await getGmailAccessToken();
-  if (!gmailAccessToken || !threadId) return { hasReply: false };
-  const res = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`,
-    { headers: { Authorization: `Bearer ${gmailAccessToken}` } }
-  );
-  if (!res.ok) return { hasReply: false };
-  const thread = await res.json().catch(() => null);
-  const messages = thread?.messages ?? [];
-  const replies = messages.filter(
-    (m) => Array.isArray(m.labelIds) && m.labelIds.includes("INBOX")
-  );
-  if (replies.length === 0) return { hasReply: false };
-  const latest = replies[replies.length - 1];
-  function extractBody(payload) {
-    if (!payload) return "";
-    if (payload.mimeType === "text/plain" && payload.body?.data) {
-      return Buffer.from(payload.body.data, "base64").toString("utf-8");
-    }
-    for (const part of payload.parts ?? []) {
-      const t2 = extractBody(part);
-      if (t2) return t2;
-    }
-    return "";
-  }
-  const replyText = extractBody(latest.payload).slice(0, 1500);
-  const fromHeader = (latest.payload?.headers ?? []).find((h) => h.name === "From");
-  return { hasReply: true, replyText, replyFrom: fromHeader?.value };
-}
-var _cachedToken, _tokenExpiresAt;
-var init_email_service = __esm({
-  "server/email-service.ts"() {
+var init_storage = __esm({
+  "server/storage.ts"() {
     "use strict";
     init_env();
-    _cachedToken = null;
-    _tokenExpiresAt = 0;
   }
 });
 
-// server/sales/scoring-service.ts
-async function calculateLeadScore(leadId) {
-  const lead = await getLeadById(leadId);
-  if (!lead) return 0;
-  let score = 0;
-  if (lead.emailOpened) score += 10;
-  if (lead.emailClicked) score += 20;
-  if (lead.emailReplied) score += 15;
-  if (lead.roiCalculated) score += 20;
-  if (lead.demoStarted) score += 10;
-  const interactions = lead.interactionsCount || 0;
-  score += Math.min(15, interactions * 3);
-  if (lead.isVip) score += 10;
-  const finalScore = Math.min(100, score);
-  await updateLead(leadId, {
-    leadScore: finalScore,
-    status: finalScore >= 70 ? "HOT" : finalScore >= 40 ? "WARM" : "COLD"
-  });
-  if (finalScore >= 70 && !lead.contractSent) {
-    console.log(`[Sales Automation] HOT lead detected: ${lead.email}. Triggering contract...`);
-    await triggerAutoContract(leadId);
+// server/_core/imageGeneration.ts
+async function generateImage(options) {
+  if (!ENV.forgeApiUrl) {
+    throw new Error("BUILT_IN_FORGE_API_URL is not configured");
   }
-  return finalScore;
-}
-async function triggerAutoContract(leadId) {
-  const lead = await getLeadById(leadId);
-  if (!lead) return;
-  const missionId = await createMission("LUXURY_OUTREACH");
-  await createTask({
-    missionId,
-    kind: "GENERATE_PROPOSAL",
-    // This task will be handled by the DocuSign service
-    priority: 1,
-    status: "PENDING",
-    payload: {
-      leadId,
-      email: lead.email,
-      name: lead.name,
-      company: lead.company,
-      numProducts: lead.numProducts || 1e3,
-      applyDiscount: true
-    }
+  if (!ENV.forgeApiKey) {
+    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
+  }
+  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
+  const fullUrl = new URL(
+    "images.v1.ImageService/GenerateImage",
+    baseUrl
+  ).toString();
+  const response = await fetch(fullUrl, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      "connect-protocol-version": "1",
+      authorization: `Bearer ${ENV.forgeApiKey}`
+    },
+    body: JSON.stringify({
+      prompt: options.prompt,
+      original_images: options.originalImages || []
+    })
   });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `Image generation request failed (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
+    );
+  }
+  const result = await response.json();
+  const base64Data = result.image.b64Json;
+  const buffer = Buffer.from(base64Data, "base64");
+  const { url } = await storagePut(
+    `generated/${Date.now()}.png`,
+    buffer,
+    result.image.mimeType
+  );
+  return {
+    url
+  };
 }
-var init_scoring_service = __esm({
-  "server/sales/scoring-service.ts"() {
+var init_imageGeneration = __esm({
+  "server/_core/imageGeneration.ts"() {
+    "use strict";
+    init_storage();
+    init_env();
+  }
+});
+
+// server/character-service.ts
+var character_service_exports = {};
+__export(character_service_exports, {
+  ARCHETYPES: () => ARCHETYPES,
+  awardQRON: () => awardQRON,
+  createProtocolAgent: () => createProtocolAgent,
+  getAgentByUser: () => getAgentByUser,
+  getAgentLeaderboard: () => getAgentLeaderboard,
+  getAgentRewards: () => getAgentRewards,
+  getGenerationStatus: () => getGenerationStatus,
+  getNetworkStats: () => getNetworkStats,
+  getUserCharacterAssets: () => getUserCharacterAssets,
+  getUserGenerations: () => getUserGenerations,
+  prepareMint: () => prepareMint,
+  rewardAgentForVerification: () => rewardAgentForVerification,
+  selectCharacterAsset: () => selectCharacterAsset,
+  startCharacterGeneration: () => startCharacterGeneration,
+  submitVerificationClaim: () => submitVerificationClaim
+});
+import { eq as eq9, desc as desc7, sql as sql3, and as and7, count } from "drizzle-orm";
+import crypto3 from "crypto";
+function buildCharacterPrompt(archetype, context) {
+  const arch = ARCHETYPES[archetype];
+  const v = arch.visual;
+  const brandLine = context?.brand ? `
+Brand affiliation: "${context.brand}" \u2014 incorporate subtle brand-aligned elements.` : "";
+  const objectLine = context?.object ? `
+Guarding/representing: ${context.object}.` : "";
+  const colorLine = context?.colorway ? `
+Color direction: ${context.colorway}.` : `
+Primary color: ${arch.color}, with metallic accents and deep navy/charcoal background.`;
+  const moodLine = context?.mood ? `
+Mood: ${context.mood}.` : "\nMood: authoritative yet approachable, premium yet accessible.";
+  const prompt = `Premium futuristic heraldic concept art of a protocol-grade digital character.
+
+ROLE: ${v.role}
+ARMOR/ATTIRE: ${v.armor}
+SIGNATURE ELEMENT: ${v.weapon}
+AURA: ${v.aura}
+SETTING: ${v.environment}
+${brandLine}${objectLine}${colorLine}${moodLine}
+
+STYLE REQUIREMENTS:
+- Clean vector-inspired digital art with subtle gradients
+- Protocol-heraldic aesthetic: blockchain motifs, verification symbols, trust iconography
+- Suitable for NFT minting: no text, no watermarks, no borders
+- Square 1:1 aspect ratio, high detail, professional quality
+- Character should embody trust, verification, and digital authority
+- Background: abstract blockchain network pattern with subtle glow effects`;
+  const negativePrompt = `text, watermark, signature, logo, border, frame, low quality, blurry, 
+deformed, ugly, amateur, cartoon, anime, chibi, pixel art, voxel, 
+photorealistic human face, photograph, stock photo, clip art,
+violent, gore, nsfw, offensive symbols, real brand logos`;
+  return { prompt, negativePrompt };
+}
+async function startCharacterGeneration(userId, archetype, context) {
+  const db2 = await getDb();
+  if (!db2) throw new Error("Database not available");
+  const { prompt, negativePrompt } = buildCharacterPrompt(archetype, context);
+  const [result] = await db2.insert(characterGenerations).values({
+    userId,
+    archetype,
+    style: "premium futuristic heraldic concept art",
+    colorway: context?.colorway || null,
+    mood: context?.mood || null,
+    prompt,
+    negativePrompt,
+    provider: "built-in",
+    providerModel: "image-gen-v1",
+    variantCount: 4,
+    status: "pending",
+    context: context ? JSON.stringify(context) : null
+  }).returning();
+  const generationId = result.id;
+  generateVariants(generationId, prompt, archetype, userId).catch((err) => {
+    console.error(`[CharacterGen] Generation ${generationId} failed:`, err);
+  });
+  return { generationId, prompt };
+}
+async function generateVariants(generationId, prompt, archetype, userId) {
+  const db2 = await getDb();
+  if (!db2) return;
+  await db2.update(characterGenerations).set({ status: "generating" }).where(eq9(characterGenerations.id, generationId));
+  const variants = [];
+  const variations = [
+    prompt,
+    prompt + "\nEmphasis: power and authority, imposing presence.",
+    prompt + "\nEmphasis: elegance and precision, refined details.",
+    prompt + "\nEmphasis: dynamic energy and agility, motion lines."
+  ];
+  for (const variantPrompt of variations) {
+    try {
+      const result = await generateImage({ prompt: variantPrompt });
+      if (result.url) {
+        variants.push({ imageUrl: result.url, variantPrompt });
+      }
+    } catch (err) {
+      console.error(`[CharacterGen] Variant generation failed:`, err);
+    }
+  }
+  if (variants.length === 0) {
+    await db2.update(characterGenerations).set({ status: "failed" }).where(eq9(characterGenerations.id, generationId));
+    return;
+  }
+  let bestScore = -1;
+  let bestAssetId = null;
+  for (const variant of variants) {
+    const [assetResult] = await db2.insert(characterAssets).values({
+      generationId,
+      userId,
+      imageUrl: variant.imageUrl,
+      prompt: variant.variantPrompt,
+      mintStatus: "not_minted"
+    }).returning();
+    const assetId = assetResult.id;
+    try {
+      const score = await scoreCharacterAsset(assetId, variant.imageUrl, archetype);
+      if (score > bestScore) {
+        bestScore = score;
+        bestAssetId = assetId;
+      }
+    } catch (err) {
+      console.error(`[CharacterGen] Scoring failed for asset ${assetId}:`, err);
+    }
+  }
+  if (bestAssetId) {
+    await db2.update(characterAssets).set({ isRecommended: 1 }).where(eq9(characterAssets.id, bestAssetId));
+  }
+  await db2.update(characterGenerations).set({
+    status: "completed",
+    completedAt: /* @__PURE__ */ new Date(),
+    bestAssetId
+  }).where(eq9(characterGenerations.id, generationId));
+}
+async function scoreCharacterAsset(assetId, imageUrl, archetype) {
+  const db2 = await getDb();
+  if (!db2) return 0;
+  try {
+    const result = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert digital art evaluator for the AuthiChain protocol.
+Score the character avatar on these 7 dimensions (0.0 to 10.0 scale, one decimal):
+
+1. protocol_fit \u2014 Does the character embody the "${archetype}" role within a blockchain authentication protocol?
+2. thumbnail_clarity \u2014 Is the character recognizable and impactful at 64\xD764 thumbnail size?
+3. premium_feel \u2014 Does the art feel premium, polished, and worth minting as an NFT?
+4. silhouette \u2014 Is the silhouette distinctive and instantly recognizable?
+5. trust_symbolism \u2014 Does the design incorporate trust, verification, and authority symbols?
+6. mint_readiness \u2014 Is the image clean (no artifacts, text, watermarks) and ready for on-chain minting?
+7. ui_compatibility \u2014 Will it work well as an avatar in dashboards, leaderboards, and mobile UI?
+
+Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: `Score this ${archetype} character avatar for the AuthiChain protocol:` },
+            { type: "image_url", image_url: { url: imageUrl, detail: "high" } }
+          ]
+        }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "character_score",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              protocol_fit: { type: "number" },
+              thumbnail_clarity: { type: "number" },
+              premium_feel: { type: "number" },
+              silhouette: { type: "number" },
+              trust_symbolism: { type: "number" },
+              mint_readiness: { type: "number" },
+              ui_compatibility: { type: "number" }
+            },
+            required: ["protocol_fit", "thumbnail_clarity", "premium_feel", "silhouette", "trust_symbolism", "mint_readiness", "ui_compatibility"],
+            additionalProperties: false
+          }
+        }
+      }
+    });
+    const content = result.choices[0]?.message?.content;
+    const scoreText = typeof content === "string" ? content : "";
+    const scores = JSON.parse(scoreText);
+    const totalScore = scores.protocol_fit * 0.2 + scores.thumbnail_clarity * 0.15 + scores.premium_feel * 0.2 + scores.silhouette * 0.1 + scores.trust_symbolism * 0.15 + scores.mint_readiness * 0.1 + scores.ui_compatibility * 0.1;
+    const roundedTotal = Math.round(totalScore * 100) / 100;
+    await db2.update(characterAssets).set({
+      protocolFitScore: String(scores.protocol_fit),
+      thumbnailClarityScore: String(scores.thumbnail_clarity),
+      premiumFeelScore: String(scores.premium_feel),
+      silhouetteScore: String(scores.silhouette),
+      trustSymbolismScore: String(scores.trust_symbolism),
+      mintReadinessScore: String(scores.mint_readiness),
+      uiCompatibilityScore: String(scores.ui_compatibility),
+      totalScore: String(roundedTotal),
+      // Also fill legacy integer scores (0-100 scale) for backward compat
+      scoreIconity: Math.round(scores.protocol_fit * 10),
+      scoreTrustClarity: Math.round(scores.trust_symbolism * 10),
+      scorePremiumFeel: Math.round(scores.premium_feel * 10),
+      scoreSilhouette: Math.round(scores.silhouette * 10),
+      scoreUiCompat: Math.round(scores.ui_compatibility * 10),
+      scoreMintReady: Math.round(scores.mint_readiness * 10),
+      scoreProtocolAlign: Math.round(scores.protocol_fit * 10)
+    }).where(eq9(characterAssets.id, assetId));
+    return roundedTotal;
+  } catch (err) {
+    console.error(`[CharacterGen] LLM scoring failed for asset ${assetId}:`, err);
+    const defaultScore = "7.0";
+    await db2.update(characterAssets).set({
+      protocolFitScore: defaultScore,
+      thumbnailClarityScore: defaultScore,
+      premiumFeelScore: defaultScore,
+      silhouetteScore: defaultScore,
+      trustSymbolismScore: defaultScore,
+      mintReadinessScore: defaultScore,
+      uiCompatibilityScore: defaultScore,
+      totalScore: defaultScore,
+      scoreIconity: 70,
+      scoreTrustClarity: 70,
+      scorePremiumFeel: 70,
+      scoreSilhouette: 70,
+      scoreUiCompat: 70,
+      scoreMintReady: 70,
+      scoreProtocolAlign: 70
+    }).where(eq9(characterAssets.id, assetId));
+    return 7;
+  }
+}
+async function selectCharacterAsset(userId, assetId) {
+  const db2 = await getDb();
+  if (!db2) throw new Error("Database not available");
+  const [asset] = await db2.select().from(characterAssets).innerJoin(characterGenerations, eq9(characterAssets.generationId, characterGenerations.id)).where(and7(eq9(characterAssets.id, assetId), eq9(characterGenerations.userId, userId))).limit(1);
+  if (!asset) throw new Error("Asset not found or not owned by user");
+  const userGens = await db2.select({ id: characterGenerations.id }).from(characterGenerations).where(eq9(characterGenerations.userId, userId));
+  for (const gen of userGens) {
+    await db2.update(characterAssets).set({ isSelected: 0 }).where(eq9(characterAssets.generationId, gen.id));
+  }
+  const arch = ARCHETYPES[asset.character_generations.archetype];
+  const metadata = {
+    name: `AuthiCharacter #${assetId} \u2014 ${arch?.name || asset.character_generations.archetype}`,
+    description: `Protocol ${asset.character_generations.archetype} agent for the AuthiChain verification network. ${arch?.description || ""}`,
+    image: asset.character_assets.imageUrl,
+    external_url: "https://authichain-gpea3uhe.manus.space",
+    attributes: [
+      { trait_type: "Archetype", value: arch?.name || asset.character_generations.archetype },
+      { trait_type: "Protocol Fit", value: parseFloat(asset.character_assets.protocolFitScore || "0"), display_type: "number" },
+      { trait_type: "Thumbnail Clarity", value: parseFloat(asset.character_assets.thumbnailClarityScore || "0"), display_type: "number" },
+      { trait_type: "Premium Feel", value: parseFloat(asset.character_assets.premiumFeelScore || "0"), display_type: "number" },
+      { trait_type: "Silhouette", value: parseFloat(asset.character_assets.silhouetteScore || "0"), display_type: "number" },
+      { trait_type: "Trust Symbolism", value: parseFloat(asset.character_assets.trustSymbolismScore || "0"), display_type: "number" },
+      { trait_type: "Mint Readiness", value: parseFloat(asset.character_assets.mintReadinessScore || "0"), display_type: "number" },
+      { trait_type: "UI Compatibility", value: parseFloat(asset.character_assets.uiCompatibilityScore || "0"), display_type: "number" },
+      { trait_type: "Total Score", value: parseFloat(asset.character_assets.totalScore || "0"), display_type: "number" }
+    ],
+    protocol: "AuthiChain",
+    version: "2.0"
+  };
+  const metadataJson = JSON.stringify(metadata);
+  const metadataHash = crypto3.createHash("sha256").update(metadataJson).digest("hex");
+  const imageHash = crypto3.createHash("sha256").update(asset.character_assets.imageUrl).digest("hex");
+  const { url: metadataUri } = await storagePut(
+    `character-metadata/${assetId}-${metadataHash.slice(0, 8)}.json`,
+    Buffer.from(metadataJson),
+    "application/json"
+  );
+  await db2.update(characterAssets).set({
+    isSelected: 1,
+    selectedAt: /* @__PURE__ */ new Date(),
+    metadataUri,
+    metadataHash,
+    imageHash,
+    mintStatus: "preparing"
+  }).where(eq9(characterAssets.id, assetId));
+  await db2.update(characterGenerations).set({ status: "selected", selectedAssetId: assetId }).where(eq9(characterGenerations.id, asset.character_assets.generationId));
+  return { success: true, metadataHash };
+}
+async function prepareMint(userId, assetId) {
+  const db2 = await getDb();
+  if (!db2) throw new Error("Database not available");
+  const [asset] = await db2.select().from(characterAssets).innerJoin(characterGenerations, eq9(characterAssets.generationId, characterGenerations.id)).where(and7(
+    eq9(characterAssets.id, assetId),
+    eq9(characterGenerations.userId, userId),
+    eq9(characterAssets.isSelected, 1)
+  )).limit(1);
+  if (!asset) throw new Error("Asset not found, not owned, or not selected");
+  if (!asset.character_assets.metadataUri || !asset.character_assets.metadataHash) {
+    throw new Error("Asset metadata not prepared \u2014 select the asset first");
+  }
+  await db2.update(characterAssets).set({ mintStatus: "queued" }).where(eq9(characterAssets.id, assetId));
+  await db2.update(characterGenerations).set({ status: "mint_ready" }).where(eq9(characterGenerations.id, asset.character_assets.generationId));
+  return {
+    success: true,
+    metadataUri: asset.character_assets.metadataUri,
+    metadataHash: asset.character_assets.metadataHash,
+    imageHash: asset.character_assets.imageHash || "",
+    imageUrl: asset.character_assets.imageUrl
+  };
+}
+async function createProtocolAgent(userId, characterAssetId, name, agentType) {
+  const db2 = await getDb();
+  if (!db2) throw new Error("Database not available");
+  const arch = ARCHETYPES[agentType];
+  const [result] = await db2.insert(protocolAgents).values({
+    userId,
+    characterAssetId,
+    name,
+    agentType,
+    status: "active",
+    level: 1,
+    xp: arch.baseXP,
+    reputationScore: 100,
+    featureScopes: JSON.stringify(arch.featureScopes),
+    policyConfig: JSON.stringify({ autoVerify: false, minConfidence: 70 })
+  }).returning();
+  return { agentId: result.id };
+}
+async function getAgentByUser(userId) {
+  const db2 = await getDb();
+  if (!db2) return null;
+  const [agent] = await db2.select().from(protocolAgents).where(and7(eq9(protocolAgents.userId, userId), eq9(protocolAgents.status, "active"))).orderBy(desc7(protocolAgents.createdAt)).limit(1);
+  return agent || null;
+}
+async function getAgentLeaderboard(limit = 20) {
+  const db2 = await getDb();
+  if (!db2) return [];
+  return db2.select().from(protocolAgents).where(eq9(protocolAgents.status, "active")).orderBy(desc7(protocolAgents.reputationScore), desc7(protocolAgents.xp)).limit(limit);
+}
+async function getGenerationStatus(generationId) {
+  const db2 = await getDb();
+  if (!db2) return null;
+  const [gen] = await db2.select().from(characterGenerations).where(eq9(characterGenerations.id, generationId)).limit(1);
+  if (!gen) return null;
+  const assets = await db2.select().from(characterAssets).where(eq9(characterAssets.generationId, generationId)).orderBy(desc7(characterAssets.totalScore));
+  return { ...gen, assets };
+}
+async function getUserGenerations(userId) {
+  const db2 = await getDb();
+  if (!db2) return [];
+  return db2.select().from(characterGenerations).where(eq9(characterGenerations.userId, userId)).orderBy(desc7(characterGenerations.createdAt));
+}
+async function getUserCharacterAssets(userId) {
+  const db2 = await getDb();
+  if (!db2) return [];
+  return db2.select({
+    asset: characterAssets,
+    generation: characterGenerations
+  }).from(characterAssets).innerJoin(characterGenerations, eq9(characterAssets.generationId, characterGenerations.id)).where(eq9(characterGenerations.userId, userId)).orderBy(desc7(characterAssets.totalScore));
+}
+async function awardQRON(agentId, userId, amount, reason, referenceType, referenceId) {
+  const db2 = await getDb();
+  if (!db2) return;
+  await db2.insert(qronRewardLedger).values({
+    agentId,
+    userId,
+    amount,
+    reason,
+    referenceType,
+    referenceId,
+    status: "pending"
+  });
+  await db2.update(protocolAgents).set({
+    qronPending: sql3`${protocolAgents.qronPending} + ${amount}`
+  }).where(eq9(protocolAgents.id, agentId));
+}
+async function getAgentRewards(agentId, limit = 50) {
+  const db2 = await getDb();
+  if (!db2) return [];
+  return db2.select().from(qronRewardLedger).where(eq9(qronRewardLedger.agentId, agentId)).orderBy(desc7(qronRewardLedger.createdAt)).limit(limit);
+}
+async function getNetworkStats() {
+  const db2 = await getDb();
+  if (!db2) return {
+    totalAgents: 0,
+    totalVerifications: 0,
+    totalConsensus: 0,
+    totalQRONDistributed: "0",
+    totalCheckpoints: 0,
+    agentsByType: [],
+    recentActivity: []
+  };
+  const [agentCount] = await db2.select({ count: count() }).from(protocolAgents);
+  const [verifyCount] = await db2.select({ count: count() }).from(verificationClaims);
+  const [consensusCount] = await db2.select({ count: count() }).from(consensusResults);
+  const [checkpointCount] = await db2.select({ count: count() }).from(checkpointBatches);
+  const [qronSum] = await db2.select({
+    total: sql3`COALESCE(SUM(${qronRewardLedger.amount}), 0)`
+  }).from(qronRewardLedger);
+  const agentsByType = await db2.select({
+    agentType: protocolAgents.agentType,
+    count: count()
+  }).from(protocolAgents).where(eq9(protocolAgents.status, "active")).groupBy(protocolAgents.agentType);
+  const recentAgents = await db2.select().from(protocolAgents).orderBy(desc7(protocolAgents.createdAt)).limit(10);
+  return {
+    totalAgents: agentCount?.count || 0,
+    totalVerifications: verifyCount?.count || 0,
+    totalConsensus: consensusCount?.count || 0,
+    totalQRONDistributed: qronSum?.total || "0",
+    totalCheckpoints: checkpointCount?.count || 0,
+    agentsByType,
+    recentActivity: recentAgents
+  };
+}
+async function submitVerificationClaim(agentId, productId, authenticationId, claimType, confidence, evidence, reasoning) {
+  const db2 = await getDb();
+  if (!db2) throw new Error("Database not available");
+  const [agent] = await db2.select().from(protocolAgents).where(eq9(protocolAgents.id, agentId)).limit(1);
+  const weight = agent?.reputationScore ? (agent.reputationScore / 100).toFixed(3) : "1.000";
+  const [result] = await db2.insert(verificationClaims).values({
+    agentId,
+    productId,
+    authenticationId,
+    claimType,
+    confidence,
+    evidence: evidence ? JSON.stringify(evidence) : null,
+    reasoning,
+    weight,
+    status: "pending"
+  }).returning();
+  await db2.update(protocolAgents).set({
+    totalClaims: sql3`${protocolAgents.totalClaims} + 1`,
+    xp: sql3`${protocolAgents.xp} + 10`
+  }).where(eq9(protocolAgents.id, agentId));
+  await awardQRON(agentId, agent?.userId || 0, "0.50", "verification_reward", "claim", result.id);
+  return { claimId: result.id };
+}
+async function rewardAgentForVerification(userId, wasSuccessful) {
+  const db2 = await getDb();
+  if (!db2) return;
+  const [agent] = await db2.select().from(protocolAgents).where(eq9(protocolAgents.userId, userId)).limit(1);
+  if (!agent) return;
+  const xpReward = wasSuccessful ? 25 : 10;
+  const qronReward = wasSuccessful ? "1.00" : "0.25";
+  const updateSet = {
+    totalVerifications: sql3`${protocolAgents.totalVerifications} + 1`,
+    xp: sql3`${protocolAgents.xp} + ${xpReward}`
+  };
+  if (wasSuccessful) {
+    updateSet.successfulVerifications = sql3`${protocolAgents.successfulVerifications} + 1`;
+  }
+  await db2.update(protocolAgents).set(updateSet).where(eq9(protocolAgents.id, agent.id));
+  await awardQRON(agent.id, userId, qronReward, "verification_reward", "verification", 0);
+  console.log(`[Agent XP] User ${userId} agent ${agent.id} earned ${xpReward} XP + ${qronReward} QRON`);
+}
+var ARCHETYPES;
+var init_character_service = __esm({
+  "server/character-service.ts"() {
     "use strict";
     init_db();
+    init_schema();
+    init_imageGeneration();
+    init_llm();
+    init_storage();
+    ARCHETYPES = {
+      guardian: {
+        name: "Guardian",
+        description: "Protects brand integrity and product authenticity",
+        color: "#3B82F6",
+        baseXP: 100,
+        featureScopes: ["verify", "protect", "alert"],
+        visual: {
+          role: "shield-bearing protector",
+          armor: "crystalline blockchain plates with glowing verification sigils",
+          weapon: "luminous shield projecting holographic authenticity seals",
+          aura: "steady blue-gold radiance of unwavering trust",
+          environment: "fortified gateway between physical and digital realms"
+        }
+      },
+      archivist: {
+        name: "Archivist",
+        description: "Records and preserves provenance data on-chain",
+        color: "#8B5CF6",
+        baseXP: 80,
+        featureScopes: ["record", "archive", "query"],
+        visual: {
+          role: "ancient scholar of digital provenance",
+          armor: "robes woven from data-stream fabric with golden chain links",
+          weapon: "floating holographic scrolls containing immutable records",
+          aura: "soft violet glow of accumulated knowledge",
+          environment: "vast library of crystallized blockchain ledgers"
+        }
+      },
+      sentinel: {
+        name: "Sentinel",
+        description: "Monitors supply chain integrity in real-time",
+        color: "#EF4444",
+        baseXP: 120,
+        featureScopes: ["monitor", "detect", "respond"],
+        visual: {
+          role: "vigilant watchtower entity",
+          armor: "sensor-mesh plating with pulsing IoT nodes",
+          weapon: "radar-like scanning eyes that pierce deception",
+          aura: "crimson alert pulses radiating outward",
+          environment: "elevated observation post overlooking global supply networks"
+        }
+      },
+      scout: {
+        name: "Scout",
+        description: "Discovers counterfeits and maps threat networks",
+        color: "#10B981",
+        baseXP: 90,
+        featureScopes: ["scan", "discover", "map"],
+        visual: {
+          role: "agile reconnaissance operative",
+          armor: "stealth-mesh cloak with network mapping trails",
+          weapon: "magnifying lens eye revealing hidden patterns",
+          aura: "emerald traces of discovered connections",
+          environment: "shadowy marketplace where fakes hide among genuine goods"
+        }
+      },
+      arbiter: {
+        name: "Arbiter",
+        description: "Resolves disputes and renders consensus verdicts",
+        color: "#F59E0B",
+        baseXP: 150,
+        featureScopes: ["judge", "resolve", "settle"],
+        visual: {
+          role: "judicial figure of absolute fairness",
+          armor: "consensus-weave robes with embedded voting nodes",
+          weapon: "balanced scales of verification and gavel of finality",
+          aura: "golden symmetry of impartial judgment",
+          environment: "grand tribunal hall where truth is determined by consensus"
+        }
+      },
+      merchant: {
+        name: "Merchant",
+        description: "Facilitates authentic commerce and value exchange",
+        color: "#EC4899",
+        baseXP: 110,
+        featureScopes: ["trade", "certify", "price"],
+        visual: {
+          role: "master trader of verified goods",
+          armor: "merchant vestments threaded with smart-contract filigree",
+          weapon: "authentication stamp that brands genuine articles",
+          aura: "warm rose-gold shimmer of trusted commerce",
+          environment: "bustling digital bazaar where every item bears proof of origin"
+        }
+      },
+      explorer: {
+        name: "Explorer",
+        description: "Charts new authentication frontiers and protocols",
+        color: "#06B6D4",
+        baseXP: 95,
+        featureScopes: ["discover", "pioneer", "integrate"],
+        visual: {
+          role: "frontier pathfinder of new verification domains",
+          armor: "adaptive exploration suit with multi-protocol interfaces",
+          weapon: "compass that points toward undiscovered authentication methods",
+          aura: "cyan trails of newly charted protocol paths",
+          environment: "edge of the known verification network, peering into unexplored chains"
+        }
+      }
+    };
   }
 });
 
@@ -3033,84 +3583,6 @@ var init_social_service = __esm({
   "server/social-service.ts"() {
     "use strict";
     init_env();
-    init_db();
-  }
-});
-
-// server/metrc-service.ts
-async function syncMetrcTransfers(auth) {
-  const { vendorKey, userKey, licenseNumber } = auth;
-  const authHeader = `Basic ${Buffer.from(`${vendorKey}:${userKey}`).toString("base64")}`;
-  const endpoints = [
-    "https://api-mi.metrc.com",
-    "https://api-mi-backup.metrc.com"
-    // Simulated fallback
-  ];
-  let lastError = null;
-  for (const baseUrl of endpoints) {
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        console.log(`[METRC] Sync attempt ${attempt} via ${baseUrl}...`);
-        const response = await fetch(`${baseUrl}/transfers/v1/incoming?licenseNumber=${licenseNumber}`, {
-          headers: { "Authorization": authHeader },
-          signal: AbortSignal.timeout(2e4)
-        });
-        if (response.ok) {
-          const transfers = await response.json();
-          for (const transfer of transfers) {
-            if (transfer.status === "Shipped" || transfer.status === "Received") {
-              await logActivity({
-                userId: 1,
-                action: "metrc_manifest_synced",
-                entityType: "manifest",
-                entityId: transfer.id,
-                details: {
-                  manifestNumber: transfer.manifestNumber,
-                  value: transfer.wholesalePrice,
-                  taxDue: transfer.wholesalePrice * 0.24
-                }
-              });
-            }
-          }
-          return transfers;
-        }
-        console.warn(`[METRC] ${baseUrl} failed with ${response.status}`);
-        await new Promise((r) => setTimeout(r, attempt * 1e3));
-      } catch (err) {
-        console.warn(`[METRC] ${baseUrl} exception: ${err.message}`);
-        lastError = err;
-        await new Promise((r) => setTimeout(r, attempt * 1e3));
-      }
-    }
-  }
-  console.error("[METRC] All state API endpoints failed.");
-  return [];
-}
-async function anchorPackageToTruthLayer(packageTag, manifestId) {
-  console.log(`\u{1F517} Anchoring METRC Package ${packageTag} to Bitcoin L1...`);
-  const inscriptionUrl = "https://qron.space/api/ordinals/inscribe";
-  try {
-    const { broadcastSocialProof: broadcastSocialProof2 } = await Promise.resolve().then(() => (init_social_service(), social_service_exports));
-    await broadcastSocialProof2({
-      type: "inscription",
-      brandName: "Michigan Processor",
-      // Dynamically resolve brand name from DB in real scenario
-      productName: `Package ${packageTag}`,
-      imageUrl: "https://authichain.com/images/bitcoin-proof-badge.png",
-      verifyUrl: `https://govchain.us/verify/${packageTag}`
-    });
-  } catch (socialErr) {
-    console.warn("[Social Bridge] Trigger failed during anchoring:", socialErr);
-  }
-  return {
-    success: true,
-    txId: "btc_pending_hash_...",
-    truthLayerUrl: `https://govchain.us/verify/${packageTag}`
-  };
-}
-var init_metrc_service = __esm({
-  "server/metrc-service.ts"() {
-    "use strict";
     init_db();
   }
 });
@@ -3193,9 +3665,9 @@ var init_budget_monitor = __esm({
 // server/jobs/dunning.ts
 import "dotenv/config";
 import { pathToFileURL as pathToFileURL2 } from "node:url";
-function daysSince(date2) {
-  if (!date2) return 0;
-  const then = new Date(date2).getTime();
+function daysSince(date) {
+  if (!date) return 0;
+  const then = new Date(date).getTime();
   return Math.floor((Date.now() - then) / (24 * 60 * 60 * 1e3));
 }
 async function runStep(subscription, step, message) {
@@ -3208,22 +3680,6 @@ async function runStep(subscription, step, message) {
     "alert",
     "/subscriptions"
   );
-  if (subscription.userId) {
-    try {
-      const user = await getUserById(subscription.userId);
-      if (user?.email) {
-        const planLabel = subscription.plan || "starter";
-        const planDisplay = planLabel.charAt(0).toUpperCase() + planLabel.slice(1);
-        await sendEmail({
-          to: user.email,
-          subject: EMAIL_SUBJECTS[step],
-          body: EMAIL_BODY[step](user.name || "there", planDisplay),
-          fromName: "AuthiChain Billing"
-        });
-      }
-    } catch {
-    }
-  }
   await logActivity({
     userId: subscription.userId,
     action: `billing_dunning_${step}`,
@@ -3270,40 +3726,11 @@ async function runDunningEscalation() {
   }
   return { checked: pastDue.length, remindersSent: sent };
 }
-var EMAIL_SUBJECTS, EMAIL_BODY, isMain2;
+var isMain2;
 var init_dunning = __esm({
   "server/jobs/dunning.ts"() {
     "use strict";
     init_db();
-    init_email_service();
-    EMAIL_SUBJECTS = {
-      day_3: "Action required: Your AuthiChain payment failed",
-      day_7: "Reminder: Your AuthiChain account is past due",
-      day_14: "Final notice: AuthiChain account at risk of suspension"
-    };
-    EMAIL_BODY = {
-      day_3: (name, plan) => `Hi ${name},
-
-We were unable to process your payment for AuthiChain ${plan}. Please update your payment method to keep your account active.
-
-Update billing: https://authichain.com/subscriptions
-
-The AuthiChain Team`,
-      day_7: (name, plan) => `Hi ${name},
-
-Your AuthiChain ${plan} subscription payment is still outstanding. Your account will be suspended if payment is not received within 7 days.
-
-Update billing: https://authichain.com/subscriptions
-
-The AuthiChain Team`,
-      day_14: (name, plan) => `Hi ${name},
-
-This is a final notice. Your AuthiChain ${plan} subscription payment is 14 days overdue. Please update your billing details immediately to avoid account suspension.
-
-Update billing: https://authichain.com/subscriptions
-
-The AuthiChain Team`
-    };
     isMain2 = !!process.argv[1] && import.meta.url === pathToFileURL2(process.argv[1]).href;
     if (isMain2) {
       runDunningEscalation().then((result) => {
@@ -3794,14 +4221,6 @@ var init_bayesian = __esm({
       // ~8 %  reply rate, slow-moving
       RETAIL: { alpha: 3, beta: 17 },
       // ~15 % reply rate
-      LUXURY: { alpha: 4, beta: 16 },
-      // ~20 % — high value but high barrier
-      PHARMA: { alpha: 3, beta: 17 },
-      // ~15 % — regulatory driven
-      MEDTECH: { alpha: 2, beta: 18 },
-      // ~10 % — long sales cycle, high complexity
-      TIMEPIECE: { alpha: 3, beta: 17 },
-      // ~15 % — prestige driven, relationship focused
       PRESS: { alpha: 4, beta: 16 },
       // ~20 % — journalists are responsive
       PARTNER: { alpha: 5, beta: 15 },
@@ -3811,10 +4230,6 @@ var init_bayesian = __esm({
     SEGMENT_REVENUE = {
       GOV: 12e4,
       RETAIL: 18e3,
-      LUXURY: 45e3,
-      PHARMA: 9e4,
-      MEDTECH: 15e4,
-      TIMEPIECE: 75e3,
       PRESS: 5e3,
       // brand value, not direct revenue
       PARTNER: 4e4,
@@ -3834,28 +4249,6 @@ var init_bayesian = __esm({
         // retail is relationship-driven
         direct: { alpha: 3, beta: 7 },
         story: { alpha: 3, beta: 7 }
-      },
-      LUXURY: {
-        formal: { alpha: 5, beta: 5 },
-        // luxury likes prestige
-        warm: { alpha: 2, beta: 8 },
-        direct: { alpha: 1, beta: 9 },
-        story: { alpha: 5, beta: 5 }
-        // storytelling is key for luxury
-      },
-      PHARMA: {
-        formal: { alpha: 6, beta: 4 },
-        // pharma is heavily formal/regulatory
-        warm: { alpha: 1, beta: 9 },
-        direct: { alpha: 4, beta: 6 },
-        story: { alpha: 1, beta: 9 }
-      },
-      MEDTECH: {
-        formal: { alpha: 5, beta: 5 },
-        warm: { alpha: 2, beta: 8 },
-        direct: { alpha: 6, beta: 4 },
-        // medtech wants specs and ROI direct
-        story: { alpha: 2, beta: 8 }
       },
       PRESS: {
         formal: { alpha: 1, beta: 9 },
@@ -4075,11 +4468,11 @@ Return JSON array (same order, same indices):
 }
 async function runLeadFinder(task) {
   const payload = task.payload;
-  const segment = payload.segment ?? (task.kind === "FIND_GOV_LEADS" ? "GOV" : task.kind === "FIND_LUXURY_LEADS" ? "LUXURY" : task.kind === "FIND_PHARMA_LEADS" ? "PHARMA" : task.kind === "FIND_TIMEPIECE_LEADS" ? "TIMEPIECE" : "RETAIL");
+  const segment = payload.segment ?? (task.kind === "FIND_GOV_LEADS" ? "GOV" : "RETAIL");
   const count3 = payload.count ?? 10;
-  const icp = payload.icp ?? (segment === "GOV" ? "government agency procurement and supply chain officer" : segment === "LUXURY" ? "Head of Brand Protection at luxury fashion house" : segment === "PHARMA" ? "Chief Compliance Officer at pharmaceutical manufacturer" : segment === "TIMEPIECE" ? "CEO or Founder of independent luxury watch brand" : "retail cannabis dispensary owner or manager");
+  const icp = payload.icp ?? (segment === "GOV" ? "government agency procurement and supply chain officer" : "retail cannabis dispensary owner or manager");
   const adaptivePriors = await getAdaptivePriors();
-  const prior = adaptivePriors[segment] ?? adaptivePriors.DEFAULT;
+  const prior = adaptivePriors[segment] ?? adaptivePriors.DEFAULT ?? { alpha: 1, beta: 9 };
   const conversionMean = betaMean(prior);
   const [ciLo, ciHi] = betaCI(prior);
   const expectedRevenue = SEGMENT_REVENUE[segment] ?? SEGMENT_REVENUE.DEFAULT;
@@ -4093,16 +4486,19 @@ async function runLeadFinder(task) {
   for (const lead of selected) {
     if (!lead.email || !lead.org) continue;
     if (db2) {
-      await db2.insert(leads).values({
-        email: lead.email.toLowerCase(),
-        name: lead.name,
-        company: lead.org,
-        title: lead.title,
-        notes: `[apollo][fit:${lead.fitProbability.toFixed(2)}] ${lead.fitNotes}`,
-        source: `agentz_apollo_${segment.toLowerCase()}`,
-        status: "new",
-        segment
-      }).onConflictDoNothing();
+      try {
+        await db2.insert(leads).values({
+          email: lead.email.toLowerCase(),
+          name: lead.name,
+          company: lead.org,
+          title: lead.title,
+          notes: `[apollo][fit:${lead.fitProbability.toFixed(2)}] ${lead.fitNotes}`,
+          source: `agentz_apollo_${segment.toLowerCase()}`,
+          status: "new",
+          segment
+        });
+      } catch {
+      }
     }
     await enqueueTask(task.missionId, "DRAFT_OUTBOUND_EMAIL", {
       segment,
@@ -4142,14 +4538,162 @@ var init_lead_finder = __esm({
   }
 });
 
+// server/email-service.ts
+async function getGmailAccessToken() {
+  if (_cachedToken && Date.now() < _tokenExpiresAt - 6e4) {
+    return _cachedToken;
+  }
+  const staticToken = process.env.GMAIL_ACCESS_TOKEN || "";
+  if (staticToken && !ENV.gmailRefreshToken) {
+    _cachedToken = staticToken;
+    _tokenExpiresAt = Date.now() + 55 * 60 * 1e3;
+    return staticToken;
+  }
+  if (!ENV.gmailClientId || !ENV.gmailClientSecret || !ENV.gmailRefreshToken) {
+    return staticToken;
+  }
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: ENV.gmailClientId,
+      client_secret: ENV.gmailClientSecret,
+      refresh_token: ENV.gmailRefreshToken,
+      grant_type: "refresh_token"
+    }).toString()
+  });
+  if (!res.ok) {
+    console.error("[gmail] token refresh failed:", res.status, await res.text().catch(() => ""));
+    return staticToken;
+  }
+  const data = await res.json().catch(() => ({}));
+  _cachedToken = data.access_token ?? staticToken;
+  _tokenExpiresAt = Date.now() + (data.expires_in ?? 3600) * 1e3;
+  return _cachedToken;
+}
+function suppressionSet() {
+  return new Set(
+    ENV.suppressionList.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean)
+  );
+}
+function isSuppressed(email) {
+  return suppressionSet().has(email.trim().toLowerCase());
+}
+function toBase64Url(input) {
+  return Buffer.from(input).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+async function sendEmail(input) {
+  const to = input.to.trim().toLowerCase();
+  if (isSuppressed(to)) {
+    return { status: "suppressed", reason: "suppression_list" };
+  }
+  const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";
+  const fromName = input.fromName || "AuthiChain";
+  if (fromEmail) {
+    const gmailAccessToken = await getGmailAccessToken();
+    if (gmailAccessToken) {
+      const mime = [
+        `From: ${fromName} <${fromEmail}>`,
+        `To: ${to}`,
+        `Subject: ${input.subject}`,
+        "MIME-Version: 1.0",
+        "Content-Type: text/plain; charset=UTF-8",
+        "",
+        input.body
+      ].join("\r\n");
+      const raw = toBase64Url(mime);
+      const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${gmailAccessToken}`
+        },
+        body: JSON.stringify({ raw })
+      });
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return {
+          status: "sent",
+          provider: "gmail",
+          providerMessageId: data?.id,
+          threadId: data?.threadId
+        };
+      }
+      console.warn("[email] Gmail send failed, falling back to SendGrid");
+    }
+  }
+  if (ENV.sendgridApiKey) {
+    const senderEmail = fromEmail || "outreach@authichain.com";
+    const sgRes = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${ENV.sendgridApiKey}`
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: senderEmail, name: fromName },
+        subject: input.subject,
+        content: [{ type: "text/plain", value: input.body }]
+      })
+    });
+    if (sgRes.ok || sgRes.status === 202) {
+      const msgId = sgRes.headers.get("X-Message-Id") ?? void 0;
+      return { status: "sent", provider: "sendgrid", providerMessageId: msgId };
+    }
+    const errTxt = await sgRes.text().catch(() => "");
+    console.error("[email] SendGrid failed:", sgRes.status, errTxt.slice(0, 200));
+    return { status: "skipped", provider: "sendgrid", reason: `sendgrid_failed:${sgRes.status}` };
+  }
+  return { status: "skipped", reason: "no_email_provider_configured" };
+}
+async function checkThreadReplies(threadId) {
+  const gmailAccessToken = await getGmailAccessToken();
+  if (!gmailAccessToken || !threadId) return { hasReply: false };
+  const res = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`,
+    { headers: { Authorization: `Bearer ${gmailAccessToken}` } }
+  );
+  if (!res.ok) return { hasReply: false };
+  const thread = await res.json().catch(() => null);
+  const messages = thread?.messages ?? [];
+  const replies = messages.filter(
+    (m) => Array.isArray(m.labelIds) && m.labelIds.includes("INBOX")
+  );
+  if (replies.length === 0) return { hasReply: false };
+  const latest = replies[replies.length - 1];
+  function extractBody(payload) {
+    if (!payload) return "";
+    if (payload.mimeType === "text/plain" && payload.body?.data) {
+      return Buffer.from(payload.body.data, "base64").toString("utf-8");
+    }
+    for (const part of payload.parts ?? []) {
+      const t2 = extractBody(part);
+      if (t2) return t2;
+    }
+    return "";
+  }
+  const replyText = extractBody(latest.payload).slice(0, 1500);
+  const fromHeader = (latest.payload?.headers ?? []).find((h) => h.name === "From");
+  return { hasReply: true, replyText, replyFrom: fromHeader?.value };
+}
+var _cachedToken, _tokenExpiresAt;
+var init_email_service = __esm({
+  "server/email-service.ts"() {
+    "use strict";
+    init_env();
+    _cachedToken = null;
+    _tokenExpiresAt = 0;
+  }
+});
+
 // server/agents/outbound-email.ts
-import { eq as eq13 } from "drizzle-orm";
+import { eq as eq11 } from "drizzle-orm";
 async function runOutboundEmail(task) {
   const payload = task.payload;
   const segment = payload.segment ?? "GOV";
   const sequence = payload.sequence ?? 1;
   const recipientContext = segmentContext[segment] ?? "business professional";
-  const ctaDirective = segmentCTAs[segment] ?? segmentCTAs.DEFAULT;
   const tone = selectTone(segment);
   const prior = SEGMENT_PRIORS[segment] ?? SEGMENT_PRIORS.DEFAULT;
   const conversionEstimate = betaMean(prior);
@@ -4168,16 +4712,14 @@ Recipient: ${payload.leadName ?? "there"} at ${payload.leadOrg ?? "your organiza
 Recipient profile: ${recipientContext}
 Sequence: Email ${sequence} of 3
 Tone directive: ${toneGuidance[tone]}
-CTA directive: ${ctaDirective}
 
 AuthiChain helps brands verify product authenticity via blockchain-backed QR codes and AI. Key value props:
 - Instant product authentication via QR scan
 - Tamper-evident certificate of authenticity
 - Counterfeit detection with AI confidence scoring
 - NFT-backed provenance trail
-- Compliance readiness for FDA DSCSA (Pharma) and ISO 13485 (MedTech)
 
-Write a ${sequence === 1 ? "3-4 sentence intro email" : "2-3 sentence follow-up"} that applies the tone and CTA directives above. Ensure the email is concise, high-impact, and professional.
+Write a ${sequence === 1 ? "3-4 sentence intro email" : "2-3 sentence follow-up"} that applies the tone directive above and ends with a clear CTA (schedule a 15-min call or reply with interest).
 
 Return JSON: { "subject": "...", "body": "..." }`;
   const result = await invokeLLM({
@@ -4225,7 +4767,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
   const sendResult = await sendEmail({ to: payload.leadEmail, subject, body });
   const db2 = await getDb();
   if (db2) {
-    await db2.update(leads).set({ status: "CONTACTED", lastContactedAt: /* @__PURE__ */ new Date(), updatedAt: /* @__PURE__ */ new Date() }).where(eq13(leads.email, payload.leadEmail.toLowerCase()));
+    await db2.update(leads).set({ status: "contacted", lastContactedAt: /* @__PURE__ */ new Date(), updatedAt: /* @__PURE__ */ new Date() }).where(eq11(leads.email, payload.leadEmail.toLowerCase()));
   }
   if (sendResult.status === "sent") {
     const check48h = new Date(Date.now() + 48 * 60 * 60 * 1e3);
@@ -4252,7 +4794,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
     ci: `${(ci[0] * 100).toFixed(1)}%\u2013${(ci[1] * 100).toFixed(1)}%`
   } });
 }
-var segmentContext, segmentCTAs, toneGuidance;
+var segmentContext, toneGuidance;
 var init_outbound_email = __esm({
   "server/agents/outbound-email.ts"() {
     "use strict";
@@ -4265,18 +4807,8 @@ var init_outbound_email = __esm({
     segmentContext = {
       GOV: "government agency procurement officer focused on supply chain integrity and anti-counterfeiting",
       RETAIL: "retail business owner (dispensary or specialty retail) focused on product authenticity and brand trust",
-      LUXURY: "Head of Brand Protection at a high-end luxury fashion house concerned with global counterfeiting and gray market diversion",
-      PHARMA: "Compliance or Supply Chain Director at a pharmaceutical manufacturer preparing for FDA DSCSA 2027 mandates",
-      MEDTECH: "Director of Quality or Regulatory Affairs at a medical device manufacturer focused on ISO 13485 compliance and preventing clinical trial fraud",
-      TIMEPIECE: "CEO or Founder of an independent luxury watch brand concerned with gray-market diversion and secondary market trust",
       PRESS: "technology journalist or crypto reporter interested in blockchain product authentication",
       PARTNER: "technology partner or integration partner interested in embedded authentication APIs"
-    };
-    segmentCTAs = {
-      LUXURY: 'Invite them to see a "Cinematic Storymode" demonstration for high-end product engagement.',
-      MEDTECH: "Direct them to the AuthiChain ROI Calculator to quantify their Year 1 savings on compliance labor.",
-      PHARMA: "Offer a 15-minute briefing on automated DSCSA 2027 technical readiness.",
-      DEFAULT: "Schedule a 15-minute call or reply with interest."
     };
     toneGuidance = {
       formal: "Use a professional, respectful tone. Reference institutional responsibilities and compliance.",
@@ -4288,7 +4820,7 @@ var init_outbound_email = __esm({
 });
 
 // server/agents/followup.ts
-import { eq as eq14, and as and7, lte as lte2, inArray } from "drizzle-orm";
+import { eq as eq12, and as and8, lte as lte2, inArray as inArray2 } from "drizzle-orm";
 async function runFollowupSequence(task) {
   const payload = task.payload;
   const segment = payload.segment ?? "GOV";
@@ -4300,9 +4832,9 @@ async function runFollowupSequence(task) {
   }
   const now = /* @__PURE__ */ new Date();
   const dueLeads = await db2.select().from(leads).where(
-    and7(
-      eq14(leads.segment, segment),
-      inArray(leads.status, ["CONTACTED"]),
+    and8(
+      eq12(leads.segment, segment),
+      inArray2(leads.status, ["contacted"]),
       lte2(leads.nextActionAt, now)
     )
   );
@@ -4342,17 +4874,17 @@ Return JSON: { "subject": "...", "body": "..." }`;
         generatedBy: "agentz_followup",
         taskId: task.id
       });
-      await db2.update(leads).set({ nextActionAt, metadata: { ...meta, followupCount: followupNum }, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(leads.id, lead.id));
+      await db2.update(leads).set({ nextActionAt, metadata: { ...meta, followupCount: followupNum }, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(leads.id, lead.id));
       drafted++;
     } else {
       const sendResult = await sendEmail({ to: lead.email, subject, body });
       await db2.update(leads).set({
-        status: "CONTACTED",
+        status: "contacted",
         lastContactedAt: now,
         nextActionAt,
         metadata: { ...meta, followupCount: followupNum },
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq14(leads.id, lead.id));
+      }).where(eq12(leads.id, lead.id));
       if (sendResult.status === "sent") sent++;
     }
   }
@@ -4465,7 +4997,7 @@ var init_pilot_packet = __esm({
 });
 
 // server/agents/crm-update.ts
-import { eq as eq15 } from "drizzle-orm";
+import { eq as eq13 } from "drizzle-orm";
 async function runCrmUpdate(task) {
   const payload = task.payload;
   if (!isHubSpotConfigured()) {
@@ -4480,7 +5012,7 @@ async function runCrmUpdate(task) {
       company: payload.leadOrg
     });
     if (db2) {
-      await db2.update(leads).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq15(leads.email, payload.leadEmail.toLowerCase()));
+      await db2.update(leads).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq13(leads.email, payload.leadEmail.toLowerCase()));
     }
     await logActivity({ userId: null, action: "crm_lead_synced", entityType: "task", entityId: 0, details: {
       taskId: task.id,
@@ -4490,7 +5022,7 @@ async function runCrmUpdate(task) {
     return;
   }
   if (!db2) return;
-  const segmentLeads = payload.segment ? await db2.select().from(leads).where(eq15(leads.segment, payload.segment)) : await db2.select().from(leads);
+  const segmentLeads = payload.segment ? await db2.select().from(leads).where(eq13(leads.segment, payload.segment)) : await db2.select().from(leads);
   let synced = 0;
   for (const lead of segmentLeads) {
     try {
@@ -4733,10 +5265,10 @@ async function postThread(tweets, account) {
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error(`Thread tweet failed: ${await res.text()}`);
-    const json2 = await res.json();
+    const json = await res.json();
     const handle = account === "qron" ? "QRONspace" : "AuthiChain";
-    results.push({ id: json2.data.id, text: json2.data.text, url: `https://x.com/${handle}/status/${json2.data.id}` });
-    replyToId = json2.data.id;
+    results.push({ id: json.data.id, text: json.data.text, url: `https://x.com/${handle}/status/${json.data.id}` });
+    replyToId = json.data.id;
   }
   return results;
 }
@@ -4774,9 +5306,9 @@ async function getAccessToken() {
     })
   });
   if (!res.ok) throw new Error(`LinkedIn token refresh failed: ${await res.text()}`);
-  const json2 = await res.json();
-  _tokenCache = { token: json2.access_token, expiresAt: Date.now() + json2.expires_in * 1e3 };
-  return json2.access_token;
+  const json = await res.json();
+  _tokenCache = { token: json.access_token, expiresAt: Date.now() + json.expires_in * 1e3 };
+  return json.access_token;
 }
 async function resolvePersonUrn(token) {
   if (_personUrnCache) return _personUrnCache;
@@ -4789,9 +5321,9 @@ async function resolvePersonUrn(token) {
     headers: { Authorization: `Bearer ${token}` }
   });
   if (res.ok) {
-    const json2 = await res.json();
-    if (json2.sub) {
-      _personUrnCache = json2.sub.startsWith("urn:li:person:") ? json2.sub : `urn:li:person:${json2.sub}`;
+    const json = await res.json();
+    if (json.sub) {
+      _personUrnCache = json.sub.startsWith("urn:li:person:") ? json.sub : `urn:li:person:${json.sub}`;
       return _personUrnCache;
     }
   }
@@ -5042,11 +5574,11 @@ var init_content = __esm({
 });
 
 // server/agents/closer.ts
-import { eq as eq16 } from "drizzle-orm";
+import { eq as eq14 } from "drizzle-orm";
 async function updateLeadStatus2(email, status) {
   const db2 = await getDb();
   if (!db2) return;
-  await db2.update(leads).set({ status, updatedAt: /* @__PURE__ */ new Date() }).where(eq16(leads.email, email.toLowerCase()));
+  await db2.update(leads).set({ status: status.toLowerCase(), updatedAt: /* @__PURE__ */ new Date() }).where(eq14(leads.email, email.toLowerCase()));
 }
 async function classifyReplyIntent(replyText, segment) {
   const prompt = `Classify this email reply from a B2B sales prospect for AuthiChain (blockchain product authentication).
@@ -5177,6 +5709,31 @@ Return JSON: { "subject": "...", "body": "..." }`;
     throw new Error("SEND_DEMO_PACKET LLM returned unparseable JSON");
   }
   if (!body) throw new Error("Demo packet LLM returned empty body");
+  if (ENV.requireOutreachApproval) {
+    const db2 = await getDb();
+    if (db2) {
+      await db2.insert(emailDrafts).values({
+        prospectEmail: leadEmail,
+        prospectName: leadName ?? void 0,
+        prospectCompany: leadOrg ?? void 0,
+        prospectTitle: leadTitle ?? void 0,
+        subject,
+        body,
+        status: "pending",
+        generatedBy: "agentz_closer_demo",
+        taskId: task.id
+      });
+    }
+    await markTaskWaitingHuman(task.id);
+    await logActivity({
+      userId: null,
+      action: "demo_packet_draft_pending_approval",
+      entityType: "task",
+      entityId: 0,
+      details: { taskId: task.id, leadEmail, segment, subject }
+    });
+    return;
+  }
   const sendResult = await sendEmail({ to: leadEmail, subject, body });
   if (sendResult.status === "sent") {
     await updateLeadStatus2(leadEmail, "DEMO_SENT");
@@ -5283,10 +5840,36 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
 \u{1F512} Ready to proceed? Secure your pilot today:
 ${paymentLink}
 (This link is valid for 30 days)` : "";
+  const fullBody = `${proposalContent}${paymentSection}`;
+  if (ENV.requireOutreachApproval) {
+    const db2 = await getDb();
+    if (db2) {
+      await db2.insert(emailDrafts).values({
+        prospectEmail: leadEmail,
+        prospectName: leadName ?? void 0,
+        prospectCompany: leadOrg ?? void 0,
+        prospectTitle: leadTitle ?? void 0,
+        subject,
+        body: fullBody,
+        status: "pending",
+        generatedBy: "agentz_closer_proposal",
+        taskId: task.id
+      });
+    }
+    await markTaskWaitingHuman(task.id);
+    await logActivity({
+      userId: null,
+      action: "proposal_draft_pending_approval",
+      entityType: "task",
+      entityId: 0,
+      details: { taskId: task.id, leadEmail, segment, proposalId, hasPaymentLink: !!paymentLink, priceUsd, subject }
+    });
+    return;
+  }
   const sendResult = await sendEmail({
     to: leadEmail,
     subject,
-    body: `${proposalContent}${paymentSection}`
+    body: fullBody
   });
   await updateLeadStatus2(leadEmail, "PILOT_PROPOSED");
   await logActivity({
@@ -5361,10 +5944,35 @@ Return JSON: { "subject": "AuthiChain Service Agreement \u2014 [Org]", "body": "
 To execute this agreement, complete payment here:
 ${paymentLink}
 (Link expires in 14 days. Payment constitutes acceptance of the above terms.)` : "";
+  const contractFullBody = `${contractBody}${paymentSection}`;
+  if (ENV.requireOutreachApproval) {
+    const db2 = await getDb();
+    if (db2) {
+      await db2.insert(emailDrafts).values({
+        prospectEmail: leadEmail,
+        prospectName: leadName ?? void 0,
+        prospectCompany: leadOrg ?? void 0,
+        subject,
+        body: contractFullBody,
+        status: "pending",
+        generatedBy: "agentz_closer_contract",
+        taskId: task.id
+      });
+    }
+    await markTaskWaitingHuman(task.id);
+    await logActivity({
+      userId: null,
+      action: "contract_draft_pending_approval",
+      entityType: "task",
+      entityId: 0,
+      details: { taskId: task.id, leadEmail, segment, hasPaymentLink: !!paymentLink, subject }
+    });
+    return;
+  }
   const sendResult = await sendEmail({
     to: leadEmail,
     subject,
-    body: `${contractBody}${paymentSection}`
+    body: contractFullBody
   });
   await logActivity({
     userId: null,
@@ -5405,6 +6013,30 @@ Return JSON: { "subject": "Re: [keep thread subject]", "body": "..." }`;
   } catch {
     throw new Error("AUTO_REPLY LLM returned unparseable JSON");
   }
+  if (ENV.requireOutreachApproval) {
+    const db2 = await getDb();
+    if (db2) {
+      await db2.insert(emailDrafts).values({
+        prospectEmail: leadEmail,
+        prospectName: leadName ?? void 0,
+        prospectCompany: leadOrg ?? void 0,
+        subject,
+        body,
+        status: "pending",
+        generatedBy: "agentz_closer_autoreply",
+        taskId: task.id
+      });
+    }
+    await markTaskWaitingHuman(task.id);
+    await logActivity({
+      userId: null,
+      action: "auto_reply_draft_pending_approval",
+      entityType: "task",
+      entityId: 0,
+      details: { taskId: task.id, leadEmail, segment, intent, subject }
+    });
+    return;
+  }
   const sendResult = await sendEmail({ to: leadEmail, subject, body });
   if (sendResult.status === "sent") {
     const check72h = new Date(Date.now() + 72 * 60 * 60 * 1e3);
@@ -5431,13 +6063,20 @@ var init_closer = __esm({
   "server/agents/closer.ts"() {
     "use strict";
     init_llm();
+    init_env();
     init_email_service();
     init_db();
     init_schema();
     init_stripe_service();
     PILOT_PRICE_USD = {
       GOV: 25e3,
+      LUXURY: 9999,
+      // Signature Sotheby's
       RETAIL: 5e3,
+      ENTERPRISE: 999,
+      // QRON Enterprise
+      API_STARTER: 299,
+      // AuthiChain API Starter
       PARTNER: 1e4,
       PRESS: 0,
       // press is comp
@@ -5469,25 +6108,25 @@ async function heygenFetch(path, options = {}) {
       ...options.headers ?? {}
     }
   });
-  const json2 = await res.json();
-  if (json2.error) throw new Error(`HeyGen: ${JSON.stringify(json2.error)}`);
-  return json2;
+  const json = await res.json();
+  if (json.error) throw new Error(`HeyGen: ${JSON.stringify(json.error)}`);
+  return json;
 }
 async function listAvatars() {
-  const json2 = await heygenFetch("/v2/avatars");
-  return json2.data?.avatars ?? [];
+  const json = await heygenFetch("/v2/avatars");
+  return json.data?.avatars ?? [];
 }
 async function listVoices() {
-  const json2 = await heygenFetch("/v2/voices");
-  return json2.data?.voices ?? [];
+  const json = await heygenFetch("/v2/voices");
+  return json.data?.voices ?? [];
 }
 async function getVideoStatus(videoId) {
-  const json2 = await heygenFetch(`/v1/video_status.get?video_id=${encodeURIComponent(videoId)}`);
-  return json2.data;
+  const json = await heygenFetch(`/v1/video_status.get?video_id=${encodeURIComponent(videoId)}`);
+  return json.data;
 }
 async function generateVideo(params) {
   const dim = DIMENSIONS[params.aspectRatio ?? "16:9"];
-  const json2 = await heygenFetch("/v2/video/generate", {
+  const json = await heygenFetch("/v2/video/generate", {
     method: "POST",
     body: JSON.stringify({
       video_inputs: [{
@@ -5506,7 +6145,7 @@ async function generateVideo(params) {
       title: params.title
     })
   });
-  const videoId = json2.data?.video_id;
+  const videoId = json.data?.video_id;
   if (!videoId) throw new Error("HeyGen did not return a video_id");
   return videoId;
 }
@@ -5519,7 +6158,8 @@ Product: AuthiChain \u2014 product authentication & anti-counterfeiting platform
 Tone: professional, warm, direct. End with a soft CTA to book a 15-min call.
 Return ONLY the script text, no labels or quotes.`;
   const res = await invokeLLM2({ messages: [{ role: "user", content: prompt }] });
-  return res.choices?.[0]?.message?.content?.trim() ?? "";
+  const content = res.choices?.[0]?.message?.content;
+  return (typeof content === "string" ? content.trim() : "") ?? "";
 }
 var BASE, DIMENSIONS;
 var init_heygen_service = __esm({
@@ -5552,11 +6192,11 @@ async function getAccessToken2(channel = "authichain") {
     })
   });
   if (!res.ok) throw new Error(`YouTube token refresh failed: ${await res.text()}`);
-  const json2 = await res.json();
-  const entry = { token: json2.access_token, expiresAt: Date.now() + json2.expires_in * 1e3 };
+  const json = await res.json();
+  const entry = { token: json.access_token, expiresAt: Date.now() + json.expires_in * 1e3 };
   if (channel === "qron") _qronTokenCache = entry;
   else _tokenCache2 = entry;
-  return json2.access_token;
+  return json.access_token;
 }
 async function uploadVideo(params) {
   const token = await getAccessToken2(params.channel ?? "authichain");
@@ -5690,197 +6330,6 @@ var init_heygen_video = __esm({
     init_youtube_service();
     POLL_INTERVAL_MS = 8e3;
     MAX_POLLS = 30;
-  }
-});
-
-// server/agents/security.ts
-async function runSecurityAudit(task) {
-  const p = task.payload;
-  const securityContext = `
-Platform: AuthiChain Unified
-Endpoints: /api/*, /verify/*, /dashboard/*
-Database: Supabase (PostgreSQL)
-Auth: JWT Cookie-based
-Encryption: Ed25519 (QRON)
-Compliance Requirements: ${p.compliance?.join(", ") || "General SOC2"}
-  `;
-  const prompt = `You are a Senior Security Auditor for the AuthiChain platform.
-Analyze the following platform context and identify potential security vulnerabilities or compliance gaps.
-
-Context:
-${securityContext}
-
-Focus areas:
-- Injection vulnerabilities (SQL, XSS, etc.)
-- Authentication & Session Management
-- Cryptographic implementations (Ed25519)
-- Compliance with ${p.compliance?.join(" and ") || "industry standards"}
-- API rate limiting and DDoS protection
-
-Return JSON:
-{
-  "findings": [
-    {
-      "severity": "CRITICAL" | "HIGH" | "MEDIUM" | "LOW",
-      "category": "Authentication" | "Injection" | "Cryptography" | "Compliance" | "Infrastructure",
-      "title": "...",
-      "description": "...",
-      "recommendation": "..."
-    }
-  ],
-  "complianceStatus": {
-    "EU_DPP": "READY" | "PARTIAL" | "GAP",
-    "FIPS_140_2": "READY" | "PARTIAL" | "GAP"
-  },
-  "summary": "..."
-}
-  `;
-  const result = await invokeLLM({
-    messages: [{ role: "system", content: "You are a rigorous security auditor." }, { role: "user", content: prompt }],
-    responseFormat: { type: "json_object" }
-  });
-  let auditResult;
-  try {
-    auditResult = JSON.parse(result.choices[0].message.content);
-  } catch {
-    throw new Error("SECURITY_AUDIT: LLM returned unparseable JSON");
-  }
-  await logActivity({
-    userId: null,
-    action: "security_audit_completed",
-    entityType: "task",
-    entityId: 0,
-    details: {
-      taskId: task.id,
-      missionId: task.missionId,
-      findingsCount: auditResult.findings.length,
-      compliance: auditResult.complianceStatus,
-      summary: auditResult.summary
-    }
-  });
-  if (auditResult.findings.some((f) => f.severity === "CRITICAL" || f.severity === "HIGH")) {
-    await createSystemNotification(
-      1,
-      // Admin user ID
-      "\u{1F6A8} Critical Security Findings",
-      `The Security Audit identified ${auditResult.findings.filter((f) => f.severity === "CRITICAL").length} critical issues. Action required immediately.`,
-      "alert",
-      "/admin/security"
-    );
-  }
-}
-var init_security = __esm({
-  "server/agents/security.ts"() {
-    "use strict";
-    init_llm();
-    init_db();
-  }
-});
-
-// server/agents/news-pr.ts
-var news_pr_exports = {};
-__export(news_pr_exports, {
-  runNewsjackingMonitor: () => runNewsjackingMonitor
-});
-async function runNewsjackingMonitor(task) {
-  const p = task.payload;
-  console.log(`[Newsjacking] Monitoring for topics: ${p.topics.join(", ")}...`);
-  const newsScrapePrompt = `You are a technical analyst for AuthiChain. 
-Research the most recent (last 72 hours) high-impact news stories for these topics: ${p.topics.join(", ")}.
-
-Identify ONE specific story that is a "Perfect Fit" for an AuthiChain blockchain provenance solution.
-Focus on: Recalls, counterfeit busts, or supply chain hacks.
-
-Return JSON:
-{
-  "storyTitle": "...",
-  "sourceUrl": "...",
-  "summary": "...",
-  "incidentDate": "...",
-  "whyAuthiChainFixesThis": "...",
-  "technicalAngle": "..."
-}
-  `;
-  try {
-    const result = await invokeLLM({
-      messages: [{ role: "system", content: "You are an expert technical scout." }, { role: "user", content: newsScrapePrompt }],
-      responseFormat: { type: "json_object" }
-    });
-    const story = JSON.parse(result.choices[0].message.content);
-    console.log(`[Newsjacking] Target Story Found: ${story.storyTitle}`);
-    const prPrompt = `Draft a 300-word technical "Analysis & Solution" response to this news event.
-Story: ${story.storyTitle}
-Angle: ${story.whyAuthiChainFixesThis}
-
-Style: Institutional, authoritative, solution-oriented.
-Header: AuthiChain Protocol Response: How Blockchain Provenance Prevents ${story.storyTitle}
-
-Include:
-- The "Atomic Action" of truth.
-- Ed25519 signature verification.
-- Bitcoin L1 anchoring.
-- 5-Agent AI Consensus.
-
-Return JSON: { "prTitle": "...", "prBody": "..." }
-    `;
-    const prResult = await invokeLLM({
-      messages: [{ role: "user", content: prPrompt }],
-      responseFormat: { type: "json_object" }
-    });
-    const pr = JSON.parse(prResult.choices[0].message.content);
-    await logActivity({
-      userId: null,
-      action: "newsjacking_target_identified",
-      entityType: "campaign",
-      entityId: 0,
-      details: { story, pr }
-    });
-    await enqueueTask(task.missionId, "DRAFT_LAUNCH_EMAIL", {
-      audience: "PRESS",
-      topic: story.storyTitle,
-      narrative: pr.prBody
-    });
-    await enqueueTask(task.missionId, "SCHEDULE_SOCIAL_POSTS", {
-      platforms: ["twitter", "linkedin"],
-      content: pr.prTitle
-    });
-    console.log(`\u2705 Newsjacking analysis complete for: ${story.storyTitle}`);
-  } catch (err) {
-    console.warn("\u26A0\uFE0F Newsjacking Monitor primary path failed. Executing high-fidelity Production Fallback...");
-    const fallbackStory = {
-      storyTitle: "FDA Designates Medtronic Bravo Esophageal pH Monitoring Capsules as Class I Recall",
-      sourceUrl: "https://www.fda.gov/medical-devices/medical-device-recalls/medtronic-recalls-bravo-esophageal-ph-monitoring-capsules",
-      summary: "Medtronic recalled the Bravo delivery system due to a defect in the adhesive that causes capsules to prematurely detach, leading to risk of aspiration or esophageal perforation. 33 serious injuries reported.",
-      incidentDate: "January 8, 2026",
-      whyAuthiChainFixesThis: "AuthiChain's Bitcoin L1 Truth Layer would have provided an immutable manufacturing record of the faulty adhesive batches, enabling Medtronic to perform a surgical recall of specific affected SKUs instead of a global device quarantine.",
-      technicalAngle: "Cryptographic batch-ancestry tracking isolates component-level failures in under 2 seconds."
-    };
-    const prBody = `Roscommon, MI \u2014 AuthiChain, Inc. (CAGE 1PUJ6) has released a technical analysis in response to the FDA Class I designation of the Medtronic Bravo Esophageal pH Monitoring Capsules recall.
-
-The recall, cited for detachment risks linked to adhesive failure, highlights a critical 'Provenance Gap' in medical device supply chains. AuthiChain's protocol addresses this by anchoring component-level metadata\u2014including adhesive batch IDs and curing timestamps\u2014directly to the Bitcoin L1 blockchain.
-
-By utilizing Ed25519-signed QRON identifiers, manufacturers can perform surgical recalls of specific faulty units within minutes, rather than months. AuthiChain's 5-Agent AI Consensus engine further identifies supply chain anomalies before they result in the 33 serious injuries cited in the Medtronic report. 
-
-As the FDA DSCSA 2027 mandates approach, AuthiChain provides the only fips-compliant Truth Layer capable of securing life-critical hardware provenance.`;
-    await logActivity({
-      userId: null,
-      action: "newsjacking_fallback_executed",
-      entityType: "campaign",
-      entityId: 0,
-      details: { fallbackStory, prTitle: fallbackStory.storyTitle, prBody }
-    });
-    await enqueueTask(task.missionId, "DRAFT_LAUNCH_EMAIL", {
-      audience: "PRESS",
-      topic: fallbackStory.storyTitle,
-      narrative: prBody
-    });
-  }
-}
-var init_news_pr = __esm({
-  "server/agents/news-pr.ts"() {
-    "use strict";
-    init_llm();
-    init_db();
   }
 });
 
@@ -6703,9 +7152,6 @@ async function runTask(task) {
     switch (task.kind) {
       case "FIND_GOV_LEADS":
       case "FIND_RETAIL_LEADS":
-      case "FIND_LUXURY_LEADS":
-      case "FIND_PHARMA_LEADS":
-      case "FIND_TIMEPIECE_LEADS":
         await runLeadFinder(task);
         break;
       case "DRAFT_OUTBOUND_EMAIL":
@@ -6716,6 +7162,15 @@ async function runTask(task) {
         break;
       case "BUILD_PILOT_PACKET":
         await runBuildPilotPacket(task);
+        break;
+      case "CHECK_DNS_CONFIG":
+        await runCheckDnsConfig(task);
+        break;
+      case "VERIFY_SSL":
+        await runVerifySsl(task);
+        break;
+      case "RUN_LIGHTHOUSE_AUDIT":
+        await runLighthouseAudit(task);
         break;
       case "DRAFT_INTEL_DOSSIER":
         await runDraftIntelDossier(task);
@@ -6728,15 +7183,6 @@ async function runTask(task) {
         break;
       case "PACKAGE_SKU_ONBOARDING":
         await runPackageSkuOnboarding(task);
-        break;
-      case "CHECK_DNS_CONFIG":
-        await runCheckDnsConfig(task);
-        break;
-      case "VERIFY_SSL":
-        await runVerifySsl(task);
-        break;
-      case "RUN_LIGHTHOUSE_AUDIT":
-        await runLighthouseAudit(task);
         break;
       case "GENERATE_LAUNCH_CHECKLIST":
         await runGenerateLaunchChecklist(task);
@@ -6767,12 +7213,6 @@ async function runTask(task) {
         break;
       case "GENERATE_OUTREACH_VIDEO":
         await runGenerateOutreachVideo(task);
-        break;
-      case "SECURITY_AUDIT":
-        await runSecurityAudit(task);
-        break;
-      case "MONITOR_NEWS_FOR_PR":
-        await runNewsjackingMonitor(task);
         break;
       // ── Dev Team ────────────────────────────────────────────────────────
       case "PLAN_SPRINT":
@@ -6833,11 +7273,50 @@ var init_task_runner = __esm({
     init_content();
     init_closer();
     init_heygen_video();
-    init_security();
-    init_news_pr();
     init_code_writer();
     init_pr_manager();
     init_test_runner();
+  }
+});
+
+// server/sms-handshake.ts
+async function triggerHumanHandshake(lead) {
+  const title = `\u{1F6A8} URGENT: High-Intent Lead Handshake`;
+  const content = `
+Founder Alert: Immediate Handshake Required
+-------------------------------------------
+Lead: ${lead.name}
+Company: ${lead.company}
+Email: ${lead.email}
+Phone: ${lead.phone || "N/A"}
+Context: ${lead.context}
+
+Action: Text them immediately to bypass the corporate sales cycle.
+1-click Text: sms:${lead.phone || ""}?body=Hi%20${lead.name},%20I'm%20the%20founder%20of%20AuthiChain.%20I%20saw%20your%20interest...
+  `.trim();
+  await notifyOwner({ title, content });
+  if (ENV.makeWebhookUrl && ENV.smsRecipient) {
+    try {
+      await fetch(ENV.makeWebhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: ENV.smsRecipient,
+          message: content,
+          leadName: lead.name,
+          leadPhone: lead.phone
+        })
+      });
+    } catch (err) {
+      console.warn("[SMS Handshake] Webhook failed:", err);
+    }
+  }
+}
+var init_sms_handshake = __esm({
+  "server/sms-handshake.ts"() {
+    "use strict";
+    init_notification();
+    init_env();
   }
 });
 
@@ -6848,6 +7327,7 @@ __export(pipeline_tick_exports, {
 });
 import "dotenv/config";
 import { pathToFileURL as pathToFileURL7 } from "node:url";
+import { eq as eq15 } from "drizzle-orm";
 async function runPipelineTick() {
   if (!ENV.autonomousPipelineEnabled) {
     return { enabled: false, skipped: true, reason: "AUTONOMOUS_PIPELINE_ENABLED=false" };
@@ -6872,26 +7352,75 @@ async function runPipelineTick() {
     BUILD_PILOT_PACKET: "PARTNER",
     DRAFT_INTEL_DOSSIER: "PRESS",
     CRM_UPDATE: "PARTNER",
-    DRAFT_PRESS_RELEASE: "PRESS"
+    DRAFT_PRESS_RELEASE: "PRESS",
+    SEND_CONTRACT: "HIGH_INTENT",
+    GENERATE_PROPOSAL: "HIGH_INTENT",
+    CHECK_REPLIES: "HIGH_INTENT"
   };
   const scored = dueTasks.map((task) => {
-    const seg = kindToSegment[task.kind] ?? "DEFAULT";
-    const prior = adaptivePriors[seg] ?? adaptivePriors.DEFAULT;
-    return { task, score: ucb1Score(prior, totalTasks) };
+    const kind = task.kind ?? "";
+    const seg = kindToSegment[kind] ?? "DEFAULT";
+    const prior = adaptivePriors[seg] ?? adaptivePriors.DEFAULT ?? { alpha: 1, beta: 1 };
+    let score = ucb1Score(prior, totalTasks);
+    if (seg === "HIGH_INTENT") score *= 2.5;
+    return { task, score };
   });
   scored.sort((a, b) => b.score - a.score);
   const taskResults = { total: dueTasks.length, ran: 0, errors: 0 };
-  for (const { task } of scored) {
+  for (const { task, score } of scored) {
     const result = await runTask(task);
     if (result.ok) {
       taskResults.ran++;
+      if (task.kind === "SEND_CONTRACT" || task.kind === "GENERATE_PROPOSAL") {
+        const payload = task.payload || {};
+        await triggerHumanHandshake({
+          name: payload.prospectName || "High-Intent Lead",
+          company: payload.prospectCompany || "Enterprise Prospect",
+          email: payload.prospectEmail || "N/A",
+          phone: payload.prospectPhone || "",
+          context: `Autonomous agent successfully executed ${task.kind}. Outreach dispatched automatically. Immediate handshake recommended.`
+        });
+      }
     } else {
       taskResults.errors++;
     }
   }
+  const blitzCreated = [];
+  for (const [seg, prior] of Object.entries(adaptivePriors)) {
+    if (seg === "DEFAULT") continue;
+    const mean = betaMean(prior);
+    if (mean > 0.15) {
+      console.log(`[Pipeline] Blitz triggered for ${seg} (Mean: ${mean.toFixed(2)})`);
+      try {
+        const blitzDb = await getDb();
+        const blitzMissions = await blitzDb.select().from(missions).where(eq15(missions.status, "ACTIVE")).limit(5);
+        for (const m of blitzMissions) {
+          await blitzDb.insert(missionTasks).values({
+            id: crypto.randomUUID(),
+            missionId: m.id,
+            title: `Blitz: ${seg} Lead Generation`,
+            description: `Auto-generated blitz task for ${seg} segment`,
+            kind: seg === "GOV" ? "FIND_GOV_LEADS" : "FIND_RETAIL_LEADS",
+            status: "pending",
+            order: 0,
+            payload: { blitz: true, timestamp: (/* @__PURE__ */ new Date()).toISOString() }
+          });
+          blitzCreated.push(`${seg}:${m.id}`);
+        }
+      } catch (err) {
+        console.error(`[Pipeline] Blitz DB operation failed for ${seg}:`, err);
+      }
+    }
+  }
   const PMF_THRESHOLDS = {
-    GOV: { missionType: "GOV_PILOT", threshold: 0.12 },
-    RETAIL: { missionType: "RETAIL_PILOT", threshold: 0.1 }
+    GOV: { missionType: "GOV_PILOT", threshold: 0.05 },
+    // Aggressive: Was 0.12
+    RETAIL: { missionType: "RETAIL_PILOT", threshold: 0.04 },
+    // Aggressive: Was 0.10
+    LUXURY: { missionType: "LUXURY_BLITZ", threshold: 0.03 },
+    // New: Aggressive expansion
+    PHARMA: { missionType: "PHARMA_AUDIT", threshold: 0.03 }
+    // New: Aggressive expansion
   };
   const activeMissionTypes = await getActiveMissionTypes();
   const pmfCreated = [];
@@ -6930,6 +7459,7 @@ var init_pipeline_tick = __esm({
     "use strict";
     init_env();
     init_db();
+    init_schema();
     init_budget_monitor();
     init_dunning();
     init_retention();
@@ -6939,6 +7469,7 @@ var init_pipeline_tick = __esm({
     init_db();
     init_task_runner();
     init_bayesian();
+    init_sms_handshake();
     isMain7 = !!process.argv[1] && import.meta.url === pathToFileURL7(process.argv[1]).href;
     if (isMain7) {
       runPipelineTick().then((result) => {
@@ -6952,7 +7483,7 @@ var init_pipeline_tick = __esm({
   }
 });
 
-// shared/industries.ts
+// lib/industries.ts
 function classifyIndustry(name, description) {
   const text2 = `${name} ${description}`.toLowerCase();
   let bestMatch = "general";
@@ -6987,7 +7518,7 @@ function classifyIndustry(name, description) {
 }
 var INDUSTRIES;
 var init_industries = __esm({
-  "shared/industries.ts"() {
+  "lib/industries.ts"() {
     "use strict";
     INDUSTRIES = {
       cannabis: {
@@ -7111,69 +7642,6 @@ var init_vertical_cloner = __esm({
   }
 });
 
-// server/jobs/strainchain-sync.ts
-var strainchain_sync_exports = {};
-__export(strainchain_sync_exports, {
-  runStrainChainSync: () => runStrainChainSync
-});
-async function runStrainChainSync() {
-  console.log("[StrainChain Job] Starting METRC sync...");
-  const clients = await getWhiteLabelClients();
-  let anchoredCount = 0;
-  for (const client of clients) {
-    const features = client.features;
-    const metrcConfig = features?.metrc;
-    if (!metrcConfig || !metrcConfig.licenseNumber) {
-      continue;
-    }
-    console.log(`[StrainChain Job] Syncing for client: ${client.companyName} (${metrcConfig.licenseNumber})`);
-    try {
-      const transfers = await syncMetrcTransfers({
-        licenseNumber: metrcConfig.licenseNumber,
-        vendorKey: metrcConfig.vendorKey || process.env.METRC_VENDOR_KEY || "",
-        userKey: metrcConfig.userKey || process.env.METRC_USER_KEY || ""
-      });
-      for (const transfer of transfers) {
-        if (transfer.status === "Shipped" || transfer.status === "Received") {
-          const packageTag = `1A400031266B0${transfer.id}`;
-          const anchorResult = await anchorPackageToTruthLayer(packageTag, String(transfer.id));
-          if (anchorResult.success) {
-            anchoredCount++;
-            await logActivity({
-              userId: client.userId,
-              action: "strainchain_auto_anchor",
-              entityType: "manifest",
-              entityId: transfer.id,
-              details: {
-                manifestNumber: transfer.manifestNumber,
-                packageTag,
-                txId: anchorResult.txId
-              }
-            });
-          }
-        }
-      }
-    } catch (err) {
-      console.error(`[StrainChain Job] Failed for client ${client.id}:`, err.message);
-    }
-  }
-  return {
-    itemsProcessed: anchoredCount,
-    details: {
-      status: "success",
-      totalAnchored: anchoredCount,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    }
-  };
-}
-var init_strainchain_sync = __esm({
-  "server/jobs/strainchain-sync.ts"() {
-    "use strict";
-    init_metrc_service();
-    init_db();
-  }
-});
-
 // server/tenant-billing.ts
 var tenant_billing_exports = {};
 __export(tenant_billing_exports, {
@@ -7182,7 +7650,7 @@ __export(tenant_billing_exports, {
   provisionTenant: () => provisionTenant,
   reportUsageToStripe: () => reportUsageToStripe
 });
-import { eq as eq18, and as and9 } from "drizzle-orm";
+import { eq as eq17, and as and10 } from "drizzle-orm";
 import { randomBytes as randomBytes2 } from "crypto";
 async function provisionTenant(data) {
   const stripe = getStripe();
@@ -7229,7 +7697,7 @@ async function provisionTenant(data) {
 async function reportUsageToStripe(tenantId, endpoint, quantity) {
   const db2 = await getDb();
   if (!db2) return;
-  const [tenant] = await db2.select().from(whiteLabelClients).where(eq18(whiteLabelClients.id, tenantId)).limit(1);
+  const [tenant] = await db2.select().from(whiteLabelClients).where(eq17(whiteLabelClients.id, tenantId)).limit(1);
   if (!tenant) return;
   const features = tenant.features;
   const plan = features?.pricing_tier || "starter";
@@ -7253,12 +7721,12 @@ async function reportUsageToStripe(tenantId, endpoint, quantity) {
 async function getTenantBillingStatus(tenantId) {
   const db2 = await getDb();
   if (!db2) return null;
-  const [tenant] = await db2.select().from(whiteLabelClients).where(eq18(whiteLabelClients.id, tenantId)).limit(1);
+  const [tenant] = await db2.select().from(whiteLabelClients).where(eq17(whiteLabelClients.id, tenantId)).limit(1);
   if (!tenant) return null;
   const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
   const monthStart = today.slice(0, 8) + "01";
-  const usage = await db2.select().from(apiUsageDaily).where(and9(
-    eq18(apiUsageDaily.tenantId, tenantId)
+  const usage = await db2.select().from(apiUsageDaily).where(and10(
+    eq17(apiUsageDaily.tenantId, tenantId)
   ));
   const monthUsage = usage.filter((u) => u.date >= monthStart);
   const totalCalls = monthUsage.reduce((sum, u) => sum + (u.callCount || 0), 0);
@@ -7300,697 +7768,6 @@ var init_tenant_billing = __esm({
   }
 });
 
-// server/webhooks/stripe.ts
-var stripe_exports = {};
-__export(stripe_exports, {
-  handleStripeWebhook: () => handleStripeWebhook
-});
-import Stripe2 from "stripe";
-function getStripeClient() {
-  if (!_stripe2) {
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) throw new Error("[stripe-webhook] STRIPE_SECRET_KEY not configured");
-    _stripe2 = new Stripe2(key, { apiVersion: "2025-03-31.basil" });
-  }
-  return _stripe2;
-}
-function detectPlanFromPriceId(priceId) {
-  if (!priceId) return "starter";
-  const lower = priceId.toLowerCase();
-  if (lower.includes("enterprise")) return "enterprise";
-  if (lower.includes("professional") || lower.includes("pro")) return "professional";
-  if (lower.includes("starter")) return "starter";
-  return "starter";
-}
-function detectPlanFromAmount(amountCents) {
-  if (amountCents >= 7e4) return "enterprise";
-  if (amountCents >= 15e3) return "professional";
-  return "starter";
-}
-function detectPlan(priceId, amountCents) {
-  if (priceId) {
-    const fromId = detectPlanFromPriceId(priceId);
-    if (fromId !== "starter" || priceId.toLowerCase().includes("starter")) return fromId;
-  }
-  return detectPlanFromAmount(amountCents);
-}
-function mapStripeStatus(s) {
-  switch (s) {
-    case "active":
-      return "active";
-    case "trialing":
-      return "trialing";
-    case "past_due":
-      return "past_due";
-    case "canceled":
-    case "unpaid":
-    case "incomplete_expired":
-      return "cancelled";
-    case "incomplete":
-      return "past_due";
-    case "paused":
-      return "paused";
-    default:
-      return "active";
-  }
-}
-async function resolveUserId(stripe, customerId, subscriptionMeta) {
-  if (subscriptionMeta?.user_id) {
-    const id = parseInt(subscriptionMeta.user_id, 10);
-    if (!isNaN(id)) return id;
-  }
-  if (!customerId) return void 0;
-  try {
-    const customer = await stripe.customers.retrieve(customerId);
-    if (!customer.deleted && customer.metadata?.user_id) {
-      const id = parseInt(customer.metadata.user_id, 10);
-      if (!isNaN(id)) return id;
-    }
-  } catch {
-  }
-  return void 0;
-}
-async function handleStripeWebhook(rawBody, sig) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    throw new Error("[stripe-webhook] STRIPE_WEBHOOK_SECRET not configured");
-  }
-  const stripe = getStripeClient();
-  const event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-  console.log(`[stripe-webhook] Received: ${event.type} (${event.id})`);
-  if (event.id.startsWith("evt_test_")) {
-    console.log("[stripe-webhook] Test event, returning verified");
-    return { received: true, type: event.type };
-  }
-  if (await hasWebhookEventProcessed(event.id)) {
-    console.log(`[stripe-webhook] Duplicate event ignored: ${event.id}`);
-    return { received: true, type: event.type, duplicate: true };
-  }
-  switch (event.type) {
-    // ── Subscription created / updated ──────────────────────────────────────
-    case "customer.subscription.created":
-    case "customer.subscription.updated": {
-      const sub = event.data.object;
-      const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
-      const firstItem = sub.items?.data?.[0];
-      const priceId = firstItem?.price?.id ?? null;
-      const amountCents = firstItem?.price?.unit_amount ?? 0;
-      const plan = detectPlan(priceId, amountCents);
-      const status = mapStripeStatus(sub.status);
-      const billingCycle = firstItem?.price?.recurring?.interval === "year" ? "annual" : "monthly";
-      const userId = await resolveUserId(stripe, customerId, sub.metadata);
-      if (userId) {
-        await upsertStripeSubscription({
-          userId,
-          plan,
-          status,
-          monthlyQuota: getPlanQuota(plan),
-          billingCycle,
-          stripeCustomerId: customerId ?? null,
-          stripeSubscriptionId: sub.id,
-          currentPeriodStart: sub.current_period_start ? new Date(sub.current_period_start * 1e3) : /* @__PURE__ */ new Date(),
-          currentPeriodEnd: sub.current_period_end ? new Date(sub.current_period_end * 1e3) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3),
-          trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1e3) : null
-        });
-      }
-      await logAutomationAudit(
-        event.type === "customer.subscription.created" ? "billing_subscription_created" : "billing_subscription_updated",
-        {
-          eventId: event.id,
-          stripeSubscriptionId: sub.id,
-          stripeCustomerId: customerId ?? null,
-          plan,
-          status,
-          billingCycle,
-          userId: userId ?? null
-        },
-        userId
-      );
-      console.log(`[stripe-webhook] Subscription ${event.type === "customer.subscription.created" ? "created" : "updated"}: ${sub.id} \u2192 plan=${plan} status=${status}`);
-      break;
-    }
-    // ── Subscription deleted (cancelled) ────────────────────────────────────
-    case "customer.subscription.deleted": {
-      const sub = event.data.object;
-      const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
-      const userId = await resolveUserId(stripe, customerId, sub.metadata);
-      await setSubscriptionStatusByStripeId(sub.id, "cancelled", /* @__PURE__ */ new Date());
-      await logAutomationAudit(
-        "billing_subscription_cancelled",
-        {
-          eventId: event.id,
-          stripeSubscriptionId: sub.id,
-          stripeCustomerId: customerId ?? null,
-          userId: userId ?? null
-        },
-        userId
-      );
-      console.log(`[stripe-webhook] Subscription cancelled: ${sub.id}`);
-      break;
-    }
-    // ── Invoice payment succeeded ────────────────────────────────────────────
-    case "invoice.payment_succeeded":
-    case "invoice.paid": {
-      const inv = event.data.object;
-      const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
-      const subscriptionId = typeof inv.subscription === "string" ? inv.subscription : inv.subscription?.id;
-      let userId;
-      if (subscriptionId) {
-        const localSub = await getSubscriptionByStripeSubscriptionId(subscriptionId);
-        userId = localSub?.userId ?? void 0;
-      }
-      if (!userId) {
-        userId = await resolveUserId(stripe, customerId);
-      }
-      const amountCents = inv.amount_paid ?? 0;
-      const amountUsd = amountCents / 100;
-      const currency = (inv.currency ?? "usd").toUpperCase();
-      const firstLine = inv.lines?.data?.[0];
-      const priceId = firstLine?.price?.id ?? null;
-      const plan = detectPlan(priceId, amountCents);
-      if (amountUsd > 0) {
-        await recordRevenue({
-          source: "stripe",
-          amount: amountUsd.toFixed(2),
-          currency,
-          type: "subscription",
-          userId: userId ?? null,
-          metadata: {
-            eventId: event.id,
-            invoiceId: inv.id,
-            stripeSubscriptionId: subscriptionId ?? null,
-            stripeCustomerId: customerId ?? null,
-            plan
-          }
-        });
-      }
-      if (subscriptionId) {
-        await setSubscriptionStatusByStripeId(subscriptionId, "active");
-      }
-      await logAutomationAudit(
-        "billing_invoice_paid",
-        {
-          eventId: event.id,
-          invoiceId: inv.id,
-          stripeSubscriptionId: subscriptionId ?? null,
-          stripeCustomerId: customerId ?? null,
-          amountUsd,
-          currency,
-          plan,
-          userId: userId ?? null
-        },
-        userId
-      );
-      console.log(`[stripe-webhook] Invoice paid: ${inv.id} amount=${amountUsd} ${currency}`);
-      break;
-    }
-    // ── Invoice payment failed ───────────────────────────────────────────────
-    case "invoice.payment_failed": {
-      const inv = event.data.object;
-      const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
-      const subscriptionId = typeof inv.subscription === "string" ? inv.subscription : inv.subscription?.id;
-      let userId;
-      if (subscriptionId) {
-        const localSub = await getSubscriptionByStripeSubscriptionId(subscriptionId);
-        userId = localSub?.userId ?? void 0;
-        await setSubscriptionStatusByStripeId(subscriptionId, "past_due");
-        if (userId) {
-          await createSystemNotification(
-            userId,
-            "Payment Failed",
-            "A payment for your AuthiChain subscription failed. Please update your billing details to avoid service interruption.",
-            "alert",
-            "/subscriptions"
-          );
-        }
-      }
-      await logAutomationAudit(
-        "billing_dunning_started",
-        {
-          eventId: event.id,
-          invoiceId: inv.id,
-          stripeSubscriptionId: subscriptionId ?? null,
-          stripeCustomerId: customerId ?? null,
-          attemptCount: inv.attempt_count ?? 1,
-          dunningStep: "day_0",
-          userId: userId ?? null
-        },
-        userId
-      );
-      console.log(`[stripe-webhook] Payment failed: invoice=${inv.id} sub=${subscriptionId}`);
-      break;
-    }
-    // ── Checkout session completed ───────────────────────────────────────────
-    case "checkout.session.completed": {
-      const session = event.data.object;
-      const userId = session.metadata?.user_id ? parseInt(session.metadata.user_id, 10) : void 0;
-      const plan = session.metadata?.plan ?? "starter";
-      const billingCycle = session.metadata?.billing === "annual" ? "annual" : "monthly";
-      const amountCents = session.amount_total ?? 0;
-      const amountUsd = amountCents / 100;
-      const customerId = typeof session.customer === "string" ? session.customer : void 0;
-      const subscriptionId = typeof session.subscription === "string" ? session.subscription : void 0;
-      await logAutomationAudit(
-        "billing_checkout_completed",
-        {
-          eventId: event.id,
-          userId: userId ?? null,
-          plan,
-          billingCycle,
-          amountUsd,
-          stripeSubscriptionId: subscriptionId ?? null,
-          stripeCustomerId: customerId ?? null
-        },
-        userId
-      );
-      console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);
-      break;
-    }
-    // ── Checkout session expired (abandoned) ─────────────────────────────────
-    case "checkout.session.expired": {
-      const session = event.data.object;
-      const userId = session.metadata?.user_id ? parseInt(session.metadata.user_id, 10) : void 0;
-      const plan = session.metadata?.plan ?? "starter";
-      const email = session.customer_email || session.metadata?.customer_email;
-      const name = session.metadata?.customer_name || "there";
-      await logAutomationAudit(
-        "checkout_abandoned",
-        {
-          eventId: event.id,
-          userId: userId ?? null,
-          plan: plan ?? null,
-          email: email ?? null
-        },
-        userId
-      );
-      if (email) {
-        const { sendEmail: sendEmail3 } = await Promise.resolve().then(() => (init_email_service(), email_service_exports));
-        const { STRIPE_PRODUCTS: STRIPE_PRODUCTS2 } = await Promise.resolve().then(() => (init_stripe_products(), stripe_products_exports));
-        const product = STRIPE_PRODUCTS2[plan] ?? STRIPE_PRODUCTS2.starter;
-        const monthlyPrice = (product.priceMonthly / 100).toFixed(0);
-        await sendEmail3({
-          to: email,
-          subject: `You left something behind \u2014 complete your AuthiChain ${product.name} setup`,
-          body: `Hi ${name},
-
-We noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.
-
-Here's what you're missing out on:
-${product.features.map((f) => `\u2022 ${f}`).join("\n")}
-
-Ready to pick up where you left off? Visit https://authichain.com/subscriptions to continue.
-
-As a thank-you for your interest, use code COMEBACK20 at checkout for 20% off your first month.
-
-Best,
-The AuthiChain Team
-https://authichain.com`,
-          fromName: "AuthiChain"
-        });
-        console.log(`[stripe-webhook] Checkout recovery email sent to ${email}`);
-      }
-      console.log(`[stripe-webhook] Checkout expired/abandoned: user=${userId} plan=${plan}`);
-      break;
-    }
-    default:
-      console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
-      return { received: true, type: event.type, handled: false };
-  }
-  return { received: true, type: event.type, handled: true };
-}
-var _stripe2;
-var init_stripe = __esm({
-  "server/webhooks/stripe.ts"() {
-    "use strict";
-    init_db();
-    init_stripe_products();
-    _stripe2 = null;
-  }
-});
-
-// server/paddle/webhook.ts
-var webhook_exports = {};
-__export(webhook_exports, {
-  handlePaddleWebhook: () => handlePaddleWebhook
-});
-function detectPlanFromPaddleData(priceId, amountCents) {
-  if (priceId) {
-    const lower = priceId.toLowerCase();
-    if (lower.includes("enterprise")) return "enterprise";
-    if (lower.includes("professional") || lower.includes("pro")) return "professional";
-    if (lower.includes("starter")) return "starter";
-  }
-  if (amountCents >= 7e4) return "enterprise";
-  if (amountCents >= 15e3) return "professional";
-  return "starter";
-}
-async function handlePaddleWebhook(req, res) {
-  const signature = req.headers["paddle-signature"];
-  const rawBody = req.body.toString();
-  const webhookSecret = ENV.paddleWebhookSecret;
-  if (!webhookSecret) {
-    console.error("[Paddle Webhook] Webhook secret not configured");
-    return res.status(500).json({ error: "Webhook secret not configured" });
-  }
-  if (!signature) {
-    console.error("[Paddle Webhook] Missing signature header");
-    return res.status(401).json({ error: "Missing signature" });
-  }
-  let eventData;
-  try {
-    const paddle = await getPaddle();
-    eventData = await paddle.webhooks.unmarshal(rawBody, webhookSecret, signature);
-  } catch {
-    console.error("[Paddle Webhook] Invalid signature or malformed payload");
-    return res.status(401).json({ error: "Invalid signature" });
-  }
-  if (!eventData) {
-    return res.status(401).json({ error: "Invalid signature" });
-  }
-  console.log(`[Paddle Webhook] Received event: ${eventData.eventType}`);
-  try {
-    switch (eventData.eventType) {
-      case "transaction.completed":
-        await handleTransactionCompleted(eventData.data);
-        break;
-      case "transaction.paid":
-        break;
-      case "transaction.payment_failed":
-        await handleTransactionPaymentFailed(eventData.data);
-        break;
-      case "subscription.created":
-        await handleSubscriptionCreated(eventData.data);
-        break;
-      case "subscription.updated":
-        await handleSubscriptionUpdated(eventData.data);
-        break;
-      case "subscription.canceled":
-        await handleSubscriptionCanceled(eventData.data);
-        break;
-      default:
-        console.log(`[Paddle Webhook] Unhandled event type: ${eventData.eventType}`);
-    }
-    res.json({ received: true });
-  } catch (error) {
-    console.error("[Paddle Webhook] Error processing webhook:", error);
-    res.status(500).json({ error: "Webhook processing failed" });
-  }
-}
-async function handleTransactionCompleted(data) {
-  console.log(`[Paddle] Transaction completed: ${data.id}`);
-  const customData = data.customData || {};
-  const userId = customData.userId ? parseInt(customData.userId) : null;
-  const firstItem = data.items?.[0];
-  const priceId = firstItem?.price?.id ?? null;
-  const amountCents = data.details?.totals?.total ? parseInt(data.details.totals.total) : 0;
-  const amountUsd = amountCents / 100;
-  const currency = (data.currencyCode ?? "USD").toUpperCase();
-  const plan = detectPlanFromPaddleData(priceId, amountCents);
-  if (amountUsd > 0) {
-    await recordRevenue({
-      source: "paddle",
-      amount: amountUsd.toFixed(2),
-      currency,
-      type: "subscription",
-      userId: userId ?? null,
-      metadata: {
-        eventType: "transaction.completed",
-        transactionId: data.id,
-        paddleCustomerId: data.customerId ?? null,
-        plan
-      }
-    });
-  }
-  if (userId) {
-    await createInvoice({
-      userId,
-      amount: amountUsd.toFixed(2),
-      currency,
-      status: "paid"
-    });
-  }
-  await logAutomationAudit("billing_paddle_transaction_completed", {
-    transactionId: data.id,
-    amountUsd,
-    currency,
-    plan,
-    userId: userId ?? null
-  }, userId ?? void 0);
-  console.log(`[Paddle] Transaction completed recorded: ${data.id} amount=${amountUsd}`);
-}
-async function handleTransactionPaymentFailed(data) {
-  console.log(`[Paddle] Transaction payment failed: ${data.id}`);
-  const customData = data.customData || {};
-  const userId = customData.userId ? parseInt(customData.userId) : null;
-  const subscriptionId = data.subscriptionId ?? null;
-  if (subscriptionId) {
-    await setSubscriptionStatusByPaddleId(subscriptionId, "past_due");
-  }
-  if (userId) {
-    await createSystemNotification(
-      userId,
-      "Payment Failed",
-      "A payment for your AuthiChain subscription failed. Please update your payment method to avoid service interruption.",
-      "alert",
-      "/subscriptions"
-    );
-  }
-  await logAutomationAudit("billing_paddle_payment_failed", {
-    transactionId: data.id,
-    paddleSubscriptionId: subscriptionId ?? null,
-    userId: userId ?? null
-  }, userId ?? void 0);
-}
-async function handleSubscriptionCreated(data) {
-  console.log(`[Paddle] Subscription created: ${data.id}`);
-  const customData = data.customData || {};
-  const userId = customData.userId ? parseInt(customData.userId) : null;
-  if (!userId) {
-    console.error("[Paddle] Missing userId in subscription metadata");
-    return;
-  }
-  const firstItem = data.items?.[0];
-  const priceId = firstItem?.price?.id ?? null;
-  const amountCents = firstItem?.price?.unitPrice?.amount ? parseInt(firstItem.price.unitPrice.amount) : 0;
-  const plan = detectPlanFromPaddleData(priceId, amountCents);
-  const billingCycle = firstItem?.price?.billingCycle?.interval === "year" ? "annual" : "monthly";
-  const now = /* @__PURE__ */ new Date();
-  const periodEnd = data.currentBillingPeriod?.endsAt ? new Date(data.currentBillingPeriod.endsAt) : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1e3);
-  const periodStart = data.currentBillingPeriod?.startsAt ? new Date(data.currentBillingPeriod.startsAt) : now;
-  await upsertPaddleSubscription({
-    userId,
-    plan,
-    status: "active",
-    monthlyQuota: getPlanQuota(plan),
-    billingCycle,
-    paddleCustomerId: data.customerId ?? null,
-    paddleSubscriptionId: data.id,
-    currentPeriodStart: periodStart,
-    currentPeriodEnd: periodEnd
-  });
-  await createSystemNotification(
-    userId,
-    "Subscription Activated",
-    `Your AuthiChain ${plan} plan is now active. Welcome!`,
-    "subscription",
-    "/subscriptions"
-  );
-  await logAutomationAudit("billing_paddle_subscription_created", {
-    paddleSubscriptionId: data.id,
-    paddleCustomerId: data.customerId ?? null,
-    plan,
-    billingCycle,
-    userId
-  }, userId);
-  console.log(`[Paddle] Subscription created: ${data.id} user=${userId} plan=${plan}`);
-}
-async function handleSubscriptionUpdated(data) {
-  console.log(`[Paddle] Subscription updated: ${data.id}`);
-  const firstItem = data.items?.[0];
-  const priceId = firstItem?.price?.id ?? null;
-  const amountCents = firstItem?.price?.unitPrice?.amount ? parseInt(firstItem.price.unitPrice.amount) : 0;
-  const plan = detectPlanFromPaddleData(priceId, amountCents);
-  const paddleStatusMap = {
-    active: "active",
-    trialing: "trialing",
-    past_due: "past_due",
-    paused: "paused",
-    canceled: "cancelled"
-  };
-  const status = paddleStatusMap[data.status] ?? "active";
-  const customData = data.customData || {};
-  const userId = customData.userId ? parseInt(customData.userId) : null;
-  const now = /* @__PURE__ */ new Date();
-  const periodEnd = data.currentBillingPeriod?.endsAt ? new Date(data.currentBillingPeriod.endsAt) : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1e3);
-  const periodStart = data.currentBillingPeriod?.startsAt ? new Date(data.currentBillingPeriod.startsAt) : now;
-  const billingCycle = firstItem?.price?.billingCycle?.interval === "year" ? "annual" : "monthly";
-  if (userId) {
-    await upsertPaddleSubscription({
-      userId,
-      plan,
-      status,
-      monthlyQuota: getPlanQuota(plan),
-      billingCycle,
-      paddleCustomerId: data.customerId ?? null,
-      paddleSubscriptionId: data.id,
-      currentPeriodStart: periodStart,
-      currentPeriodEnd: periodEnd
-    });
-  } else {
-    await setSubscriptionStatusByPaddleId(data.id, status);
-  }
-  await logAutomationAudit("billing_paddle_subscription_updated", {
-    paddleSubscriptionId: data.id,
-    plan,
-    status,
-    userId: userId ?? null
-  }, userId ?? void 0);
-  console.log(`[Paddle] Subscription updated: ${data.id} status=${status} plan=${plan}`);
-}
-async function handleSubscriptionCanceled(data) {
-  console.log(`[Paddle] Subscription canceled: ${data.id}`);
-  const customData = data.customData || {};
-  const userId = customData.userId ? parseInt(customData.userId) : null;
-  const cancelledAt = data.canceledAt ? new Date(data.canceledAt) : /* @__PURE__ */ new Date();
-  await setSubscriptionStatusByPaddleId(data.id, "cancelled", cancelledAt);
-  if (userId) {
-    await createSystemNotification(
-      userId,
-      "Subscription Cancelled",
-      "Your AuthiChain subscription has been cancelled. You will retain access until the end of your billing period.",
-      "subscription",
-      "/subscriptions"
-    );
-  }
-  await logAutomationAudit("billing_paddle_subscription_cancelled", {
-    paddleSubscriptionId: data.id,
-    paddleCustomerId: data.customerId ?? null,
-    cancelledAt: cancelledAt.toISOString(),
-    userId: userId ?? null
-  }, userId ?? void 0);
-  console.log(`[Paddle] Subscription cancelled: ${data.id}`);
-}
-var init_webhook = __esm({
-  "server/paddle/webhook.ts"() {
-    "use strict";
-    init_paddle_service();
-    init_env();
-    init_db();
-    init_stripe_products();
-  }
-});
-
-// server/webhooks/instantly.ts
-var instantly_exports = {};
-__export(instantly_exports, {
-  handleInstantlyWebhook: () => handleInstantlyWebhook
-});
-async function handleInstantlyWebhook(payload) {
-  const { event: eventType, email, lead_id: instantlyLeadId } = payload;
-  if (!email) {
-    return { success: false, error: "Email missing" };
-  }
-  console.log(`[instantly-webhook] Received ${eventType} for ${email}`);
-  const lead = await getLeadByEmail(email);
-  if (!lead) {
-    console.warn(`[instantly-webhook] Lead not found for email: ${email}`);
-    return { success: false, error: "Lead not found" };
-  }
-  const updates = {};
-  if (eventType === "email_opened") {
-    updates.emailOpened = true;
-  } else if (eventType === "email_clicked") {
-    updates.emailClicked = true;
-  } else if (eventType === "email_replied") {
-    updates.emailReplied = true;
-    await createSystemNotification(
-      1,
-      // Admin
-      "New Prospect Reply",
-      `Lead ${email} has replied to an outreach sequence. Check Gmail immediately.`,
-      "system",
-      "/email-campaigns"
-    );
-  }
-  if (Object.keys(updates).length > 0) {
-    await updateLead(lead.id, updates);
-  }
-  await logActivity({
-    userId: null,
-    action: `instantly_${eventType}`,
-    entityType: "lead",
-    entityId: lead.id,
-    details: payload
-  });
-  const newScore = await calculateLeadScore(lead.id);
-  console.log(`[instantly-webhook] Lead ${email} score updated to ${newScore}`);
-  return { success: true, score: newScore };
-}
-var init_instantly = __esm({
-  "server/webhooks/instantly.ts"() {
-    "use strict";
-    init_db();
-    init_scoring_service();
-  }
-});
-
-// server/webhooks/docusign.ts
-var docusign_exports = {};
-__export(docusign_exports, {
-  handleDocuSignWebhook: () => handleDocuSignWebhook
-});
-async function handleDocuSignWebhook(payload) {
-  const { event: eventType, recipientEmail, envelopeId } = payload;
-  if (!recipientEmail) {
-    return { success: false, error: "Recipient email missing" };
-  }
-  console.log(`[docusign-webhook] Received ${eventType} for ${recipientEmail}`);
-  const lead = await getLeadByEmail(recipientEmail);
-  if (!lead) {
-    console.warn(`[docusign-webhook] Lead not found for email: ${recipientEmail}`);
-    return { success: false, error: "Lead not found" };
-  }
-  const updates = {};
-  if (eventType === "envelope-sent") {
-    updates.contractSent = true;
-  } else if (eventType === "envelope-delivered") {
-    updates.contractOpened = true;
-  } else if (eventType === "envelope-completed") {
-    updates.contractSigned = true;
-    updates.dealStage = "CLOSED_WON";
-    await createSystemNotification(
-      1,
-      // Admin
-      "\u{1F389} DEAL CLOSED!",
-      `Prospect ${recipientEmail} (${lead.company}) has signed the AuthiChain MSA!`,
-      "system",
-      "/admin/revenue"
-    );
-  } else if (eventType === "envelope-declined") {
-    updates.dealStage = "DECLINED";
-  }
-  if (Object.keys(updates).length > 0) {
-    await updateLead(lead.id, updates);
-  }
-  await logActivity({
-    userId: null,
-    action: `docusign_${eventType}`,
-    entityType: "lead",
-    entityId: lead.id,
-    details: payload
-  });
-  const newScore = await calculateLeadScore(lead.id);
-  console.log(`[docusign-webhook] Lead ${recipientEmail} status updated after DocuSign event.`);
-  return { success: true, score: newScore };
-}
-var init_docusign = __esm({
-  "server/webhooks/docusign.ts"() {
-    "use strict";
-    init_db();
-    init_scoring_service();
-  }
-});
-
 // server/_core/app.ts
 import "dotenv/config";
 import express from "express";
@@ -8002,12 +7779,9 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var ORDER_STATUSES = ["pending", "paid", "in_progress", "delivered", "cancelled"];
 
 // server/_core/oauth.ts
 init_db();
-init_env();
-import { randomUUID as randomUUID2 } from "crypto";
 
 // server/_core/cookies.ts
 function isSecureRequest(req) {
@@ -8026,62 +7800,6 @@ function getSessionCookieOptions(req) {
   };
 }
 
-// server/_core/google-oauth.ts
-import axios from "axios";
-var GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
-var GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-var GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
-function buildGoogleAuthUrl(opts) {
-  const u = new URL(GOOGLE_AUTH_URL);
-  u.searchParams.set("client_id", opts.clientId);
-  u.searchParams.set("redirect_uri", opts.redirectUri);
-  u.searchParams.set("response_type", "code");
-  u.searchParams.set("scope", "openid email profile");
-  u.searchParams.set("state", opts.state);
-  u.searchParams.set("access_type", "online");
-  u.searchParams.set("prompt", "select_account");
-  return u.toString();
-}
-function mapGoogleUserInfo(raw) {
-  return {
-    openId: `google:${raw.sub}`,
-    email: raw.email,
-    emailVerified: raw.email_verified === true,
-    name: raw.name ?? "",
-    loginMethod: "google",
-    platform: "google"
-  };
-}
-async function exchangeGoogleCode(opts) {
-  const body = new URLSearchParams({
-    code: opts.code,
-    client_id: opts.clientId,
-    client_secret: opts.clientSecret,
-    redirect_uri: opts.redirectUri,
-    grant_type: "authorization_code"
-  });
-  const { data } = await axios.post(GOOGLE_TOKEN_URL, body.toString(), {
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    timeout: 1e4
-  });
-  return { accessToken: data.access_token, idToken: data.id_token };
-}
-async function fetchGoogleUserInfo(accessToken) {
-  const { data } = await axios.get(GOOGLE_USERINFO_URL, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    timeout: 1e4
-  });
-  return data;
-}
-
-// server/_core/auth-roles.ts
-function resolveRole(email, ownerEmailsCsv) {
-  const normalized = (email ?? "").trim().toLowerCase();
-  if (!normalized) return "user";
-  const owners = (ownerEmailsCsv ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-  return owners.includes(normalized) ? "admin" : "user";
-}
-
 // shared/_core/errors.ts
 var HttpError = class extends Error {
   constructor(statusCode, message) {
@@ -8096,7 +7814,7 @@ var ForbiddenError = (msg) => new HttpError(403, msg);
 // server/_core/sdk.ts
 init_db();
 init_env();
-import axios2 from "axios";
+import axios from "axios";
 import { parse as parseCookieHeader } from "cookie";
 import { SignJWT, jwtVerify } from "jose";
 var isNonEmptyString = (value) => typeof value === "string" && value.length > 0;
@@ -8141,7 +7859,7 @@ var OAuthService = class {
     return data;
   }
 };
-var createOAuthHttpClient = () => axios2.create({
+var createOAuthHttpClient = () => axios.create({
   baseURL: ENV.oAuthServerUrl,
   timeout: AXIOS_TIMEOUT_MS
 });
@@ -8172,14 +7890,8 @@ var SDKServer = class {
    * @example
    * const tokenResponse = await sdk.exchangeCodeForToken(code, state);
    */
-  async exchangeCodeForToken(code, redirectUri) {
-    const { accessToken } = await exchangeGoogleCode({
-      code,
-      redirectUri,
-      clientId: ENV.googleClientId,
-      clientSecret: ENV.googleClientSecret
-    });
-    return { accessToken };
+  async exchangeCodeForToken(code, state) {
+    return this.oauthService.getTokenByCode(code, state);
   }
   /**
    * Get user information using access token
@@ -8187,8 +7899,18 @@ var SDKServer = class {
    * const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
    */
   async getUserInfo(accessToken) {
-    const raw = await fetchGoogleUserInfo(accessToken);
-    return mapGoogleUserInfo(raw);
+    const data = await this.oauthService.getUserInfoByToken({
+      accessToken
+    });
+    const loginMethod = this.deriveLoginMethod(
+      data?.platforms,
+      data?.platform ?? data.platform ?? null
+    );
+    return {
+      ...data,
+      platform: loginMethod,
+      loginMethod
+    };
   }
   parseCookies(cookieHeader) {
     if (!cookieHeader) {
@@ -8310,92 +8032,52 @@ var SDKServer = class {
 var sdk = new SDKServer();
 
 // server/_core/oauth.ts
-var STATE_COOKIE = "oauth_state";
 function getQueryParam(req, key) {
   const value = req.query[key];
   return typeof value === "string" ? value : void 0;
 }
-function firstHeader(value) {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
-function originOf(req) {
-  const proto = firstHeader(req.headers["x-forwarded-proto"])?.split(",")[0]?.trim() || req.protocol;
-  const host = firstHeader(req.headers["x-forwarded-host"]) || req.get("host") || "";
-  return `${proto}://${host}`;
-}
-function parseCookie(req, name) {
-  const raw = req.headers.cookie;
-  if (!raw) return void 0;
-  for (const part of raw.split(";")) {
-    const [k, ...v] = part.trim().split("=");
-    if (k === name) return decodeURIComponent(v.join("="));
-  }
-  return void 0;
-}
 function registerOAuthRoutes(app) {
-  app.get("/api/oauth/login", (req, res) => {
-    if (!ENV.googleClientId) {
-      res.status(500).json({ error: "GOOGLE_CLIENT_ID not configured" });
-      return;
-    }
-    const state = randomUUID2();
-    const redirectUri = `${originOf(req)}/api/oauth/callback`;
-    const base = getSessionCookieOptions(req);
-    res.cookie(STATE_COOKIE, state, { ...base, httpOnly: true, maxAge: 10 * 60 * 1e3 });
-    res.redirect(302, buildGoogleAuthUrl({ clientId: ENV.googleClientId, redirectUri, state }));
-  });
   app.get("/api/oauth/callback", async (req, res) => {
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");
-    const cookieState = parseCookie(req, STATE_COOKIE);
     if (!code || !state) {
-      res.redirect(302, "/?authError=missing_params");
+      res.status(400).json({ error: "code and state are required" });
       return;
     }
-    if (!cookieState || cookieState !== state) {
-      res.redirect(302, "/?authError=bad_state");
-      return;
-    }
-    const base = getSessionCookieOptions(req);
-    res.clearCookie(STATE_COOKIE, base);
     try {
-      const redirectUri = `${originOf(req)}/api/oauth/callback`;
-      const tokenResponse = await sdk.exchangeCodeForToken(code, redirectUri);
+      const tokenResponse = await sdk.exchangeCodeForToken(code, state);
       const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
       if (!userInfo.openId) {
-        res.redirect(302, "/?authError=no_openid");
+        res.status(400).json({ error: "openId missing from user info" });
         return;
       }
-      if (userInfo.emailVerified === false) {
-        res.redirect(302, "/?authError=email_unverified");
-        return;
-      }
-      const email = userInfo.email ?? "";
-      const role = resolveRole(email, ENV.ownerEmails);
       await upsertUser({
         openId: userInfo.openId,
         name: userInfo.name || null,
-        email: email || null,
-        loginMethod: userInfo.loginMethod ?? "google",
-        role,
+        email: userInfo.email ?? null,
+        loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
         lastSignedIn: /* @__PURE__ */ new Date()
       });
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
         name: userInfo.name || "",
         expiresInMs: ONE_YEAR_MS
       });
-      res.cookie(COOKIE_NAME, sessionToken, { ...base, maxAge: ONE_YEAR_MS });
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
       res.redirect(302, "/");
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
-      res.redirect(302, "/?authError=callback_failed");
+      res.status(500).json({ error: "OAuth callback failed" });
     }
   });
 }
 
+// server/_core/systemRouter.ts
+init_notification();
+import { z } from "zod";
+
 // server/_core/trpc.ts
-import { initTRPC, TRPCError } from "@trpc/server";
+import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
 import superjson from "superjson";
 var t = initTRPC.context().create({
   transformer: superjson
@@ -8405,7 +8087,7 @@ var publicProcedure = t.procedure;
 var requireUser = t.middleware(async (opts) => {
   const { ctx, next } = opts;
   if (!ctx.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    throw new TRPCError2({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
   }
   return next({
     ctx: {
@@ -8419,7 +8101,7 @@ var adminProcedure = t.procedure.use(
   t.middleware(async (opts) => {
     const { ctx, next } = opts;
     if (!ctx.user || ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+      throw new TRPCError2({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
     return next({
       ctx: {
@@ -8429,92 +8111,6 @@ var adminProcedure = t.procedure.use(
     });
   })
 );
-
-// server/_core/systemRouter.ts
-import { z } from "zod";
-
-// server/_core/notification.ts
-init_env();
-import { TRPCError as TRPCError2 } from "@trpc/server";
-var TITLE_MAX_LENGTH = 1200;
-var CONTENT_MAX_LENGTH = 2e4;
-var trimValue = (value) => value.trim();
-var isNonEmptyString2 = (value) => typeof value === "string" && value.trim().length > 0;
-var buildEndpointUrl = (baseUrl) => {
-  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  return new URL(
-    "webdevtoken.v1.WebDevService/SendNotification",
-    normalizedBase
-  ).toString();
-};
-var validatePayload = (input) => {
-  if (!isNonEmptyString2(input.title)) {
-    throw new TRPCError2({
-      code: "BAD_REQUEST",
-      message: "Notification title is required."
-    });
-  }
-  if (!isNonEmptyString2(input.content)) {
-    throw new TRPCError2({
-      code: "BAD_REQUEST",
-      message: "Notification content is required."
-    });
-  }
-  const title = trimValue(input.title);
-  const content = trimValue(input.content);
-  if (title.length > TITLE_MAX_LENGTH) {
-    throw new TRPCError2({
-      code: "BAD_REQUEST",
-      message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
-    });
-  }
-  if (content.length > CONTENT_MAX_LENGTH) {
-    throw new TRPCError2({
-      code: "BAD_REQUEST",
-      message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
-    });
-  }
-  return { title, content };
-};
-async function notifyOwner(payload) {
-  const { title, content } = validatePayload(payload);
-  if (!ENV.forgeApiUrl) {
-    throw new TRPCError2({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Notification service URL is not configured."
-    });
-  }
-  if (!ENV.forgeApiKey) {
-    throw new TRPCError2({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Notification service API key is not configured."
-    });
-  }
-  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        authorization: `Bearer ${ENV.forgeApiKey}`,
-        "content-type": "application/json",
-        "connect-protocol-version": "1"
-      },
-      body: JSON.stringify({ title, content })
-    });
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      console.warn(
-        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
-      );
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.warn("[Notification] Error calling notification service:", error);
-    return false;
-  }
-}
 
 // server/_core/systemRouter.ts
 var systemRouter = router({
@@ -8538,1021 +8134,377 @@ var systemRouter = router({
   })
 });
 
-// server/auth/router.ts
-var authRouter = router({
-  me: publicProcedure.query((opts) => opts.ctx.user),
-  logout: publicProcedure.mutation(({ ctx }) => {
-    const cookieOptions = getSessionCookieOptions(ctx.req);
-    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-    return { success: true };
-  })
-});
+// server/routers.ts
+import { z as z28 } from "zod";
+import { TRPCError as TRPCError6 } from "@trpc/server";
 
-// server/products/router.ts
+// server/referral/router.ts
 init_db();
 import { z as z2 } from "zod";
-var productsRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return await getUserProducts(ctx.user.id);
-  }),
-  getById: protectedProcedure.input(z2.object({ id: z2.number() })).query(async ({ input }) => {
-    return await getProductById(input.id);
-  }),
-  create: protectedProcedure.input(z2.object({
-    name: z2.string().min(1),
-    brand: z2.string().optional(),
-    category: z2.string().optional(),
-    description: z2.string().optional(),
-    imageUrl: z2.string().optional(),
-    serialNumber: z2.string().optional(),
-    batchNumber: z2.string().optional()
-  })).mutation(async ({ ctx, input }) => {
-    const result = await createProduct({ ...input, userId: ctx.user.id });
-    await logActivity({ userId: ctx.user.id, action: "product_created", entityType: "product", entityId: result.id });
-    return result;
-  })
-});
 
-// server/authenticate/router.ts
-init_db();
-init_llm();
-import { z as z3 } from "zod";
-import { TRPCError as TRPCError3 } from "@trpc/server";
-import { nanoid } from "nanoid";
-
-// server/macrohard/service.ts
-var BASE_URL = process.env.MACROHARD_API_URL ?? "";
-var API_KEY = process.env.MACROHARD_API_KEY ?? "";
-async function triggerMacrohardEvent(type, data) {
-  if (!BASE_URL || !API_KEY) {
-    return { success: false, reason: "MACROHARD not configured" };
-  }
-  try {
-    const res = await fetch(`${BASE_URL}/events`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Macrohard-Key": API_KEY
-      },
-      body: JSON.stringify({ type, data, timestamp: (/* @__PURE__ */ new Date()).toISOString() })
-    });
-    if (!res.ok) {
-      console.warn(`[Macrohard Webhook] Failed with status ${res.status}`);
-      return { success: false, status: res.status };
-    }
-    return { success: true };
-  } catch (error) {
-    console.error("[Macrohard Webhook] Error:", error);
-    return { success: false, error };
-  }
-}
-
-// server/character-service.ts
+// server/referral/core.ts
 init_db();
 init_schema();
-import { eq as eq3, desc as desc2, sql as sql2, and as and2, count } from "drizzle-orm";
-
-// server/storage.ts
-init_env();
-function getStorageConfig() {
-  const baseUrl = ENV.forgeApiUrl;
-  const apiKey = ENV.forgeApiKey;
-  if (!baseUrl || !apiKey) {
-    throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
-    );
-  }
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
-}
-function buildUploadUrl(baseUrl, relKey) {
-  const url = new URL("v1/storage/upload", ensureTrailingSlash(baseUrl));
-  url.searchParams.set("path", normalizeKey(relKey));
-  return url;
-}
-function ensureTrailingSlash(value) {
-  return value.endsWith("/") ? value : `${value}/`;
-}
-function normalizeKey(relKey) {
-  return relKey.replace(/^\/+/, "");
-}
-function toFormData(data, contentType, fileName) {
-  const blob = typeof data === "string" ? new Blob([data], { type: contentType }) : new Blob([data], { type: contentType });
-  const form = new FormData();
-  form.append("file", blob, fileName || "file");
-  return form;
-}
-function buildAuthHeaders(apiKey) {
-  return { Authorization: `Bearer ${apiKey}` };
-}
-async function storagePut(relKey, data, contentType = "application/octet-stream") {
-  const { baseUrl, apiKey } = getStorageConfig();
-  const key = normalizeKey(relKey);
-  const uploadUrl = buildUploadUrl(baseUrl, key);
-  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: buildAuthHeaders(apiKey),
-    body: formData
-  });
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new Error(
-      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
-    );
-  }
-  const url = (await response.json()).url;
-  return { key, url };
-}
-
-// server/_core/imageGeneration.ts
-init_env();
-async function generateImage(options) {
-  if (!ENV.forgeApiUrl) {
-    throw new Error("BUILT_IN_FORGE_API_URL is not configured");
-  }
-  if (!ENV.forgeApiKey) {
-    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
-  }
-  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
-  const fullUrl = new URL(
-    "images.v1.ImageService/GenerateImage",
-    baseUrl
-  ).toString();
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      "connect-protocol-version": "1",
-      authorization: `Bearer ${ENV.forgeApiKey}`
-    },
-    body: JSON.stringify({
-      prompt: options.prompt,
-      original_images: options.originalImages || []
-    })
-  });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(
-      `Image generation request failed (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
-    );
-  }
-  const result = await response.json();
-  const base64Data = result.image.b64Json;
-  const buffer = Buffer.from(base64Data, "base64");
-  const { url } = await storagePut(
-    `generated/${Date.now()}.png`,
-    buffer,
-    result.image.mimeType
-  );
-  return {
-    url
-  };
-}
-
-// server/character-service.ts
-init_llm();
-import crypto2 from "crypto";
-
-// server/hubspot/automation.ts
-init_hubspot_service();
-init_db();
-var SCAN_THRESHOLD = 50;
-var XP_THRESHOLD = 500;
-async function checkUserMilestones(userId) {
-  if (!isHubSpotConfigured()) return;
-  try {
-    const user = await getUserById(userId);
-    if (!user) return;
-    const metrics = await getDashboardMetrics(userId);
-    if (metrics.totalAuthentications >= SCAN_THRESHOLD) {
-      const alreadyLogged = await hasUserActionLogged(userId, "hubspot_milestone_scans");
-      if (!alreadyLogged) {
-        await createDeal({
-          dealname: `High-Activity User: ${user.email} (${metrics.totalAuthentications} scans)`,
-          amount: "999",
-          // Enterprise potential
-          dealstage: "appointmentscheduled"
-        });
-        await logActivity({ userId, action: "hubspot_milestone_scans", details: { count: metrics.totalAuthentications } });
-        console.log(`[HubSpot Automation] High-activity deal created for ${user.email}`);
-      }
-    }
-    const [agent] = await (await getDb()).select().from((await Promise.resolve().then(() => (init_schema(), schema_exports))).protocolAgents).where((await import("drizzle-orm")).eq((await Promise.resolve().then(() => (init_schema(), schema_exports))).protocolAgents.userId, userId)).limit(1);
-    if (agent && (agent.xp || 0) >= XP_THRESHOLD) {
-      const alreadyLogged = await hasUserActionLogged(userId, "hubspot_milestone_reputation");
-      if (!alreadyLogged) {
-        await createDeal({
-          dealname: `Power Agent: ${user.email} (${agent.xp} XP)`,
-          amount: "2499",
-          // White-label potential
-          dealstage: "appointmentscheduled"
-        });
-        await logActivity({ userId, action: "hubspot_milestone_reputation", details: { xp: agent.xp } });
-        console.log(`[HubSpot Automation] Power agent deal created for ${user.email}`);
-      }
-    }
-  } catch (error) {
-    console.error("[HubSpot Automation] Error checking milestones:", error);
-  }
-}
-
-// server/character-service.ts
-var ARCHETYPES = {
-  guardian: {
-    name: "Guardian",
-    description: "Protects brand integrity and product authenticity",
-    color: "#3B82F6",
-    baseXP: 100,
-    featureScopes: ["verify", "protect", "alert"],
-    visual: {
-      role: "shield-bearing protector",
-      armor: "crystalline blockchain plates with glowing verification sigils",
-      weapon: "luminous shield projecting holographic authenticity seals",
-      aura: "steady blue-gold radiance of unwavering trust",
-      environment: "fortified gateway between physical and digital realms"
-    }
-  },
-  archivist: {
-    name: "Archivist",
-    description: "Records and preserves provenance data on-chain",
-    color: "#8B5CF6",
-    baseXP: 80,
-    featureScopes: ["record", "archive", "query"],
-    visual: {
-      role: "ancient scholar of digital provenance",
-      armor: "robes woven from data-stream fabric with golden chain links",
-      weapon: "floating holographic scrolls containing immutable records",
-      aura: "soft violet glow of accumulated knowledge",
-      environment: "vast library of crystallized blockchain ledgers"
-    }
-  },
-  sentinel: {
-    name: "Sentinel",
-    description: "Monitors supply chain integrity in real-time",
-    color: "#EF4444",
-    baseXP: 120,
-    featureScopes: ["monitor", "detect", "respond"],
-    visual: {
-      role: "vigilant watchtower entity",
-      armor: "sensor-mesh plating with pulsing IoT nodes",
-      weapon: "radar-like scanning eyes that pierce deception",
-      aura: "crimson alert pulses radiating outward",
-      environment: "elevated observation post overlooking global supply networks"
-    }
-  },
-  scout: {
-    name: "Scout",
-    description: "Discovers counterfeits and maps threat networks",
-    color: "#10B981",
-    baseXP: 90,
-    featureScopes: ["scan", "discover", "map"],
-    visual: {
-      role: "agile reconnaissance operative",
-      armor: "stealth-mesh cloak with network mapping trails",
-      weapon: "magnifying lens eye revealing hidden patterns",
-      aura: "emerald traces of discovered connections",
-      environment: "shadowy marketplace where fakes hide among genuine goods"
-    }
-  },
-  arbiter: {
-    name: "Arbiter",
-    description: "Resolves disputes and renders consensus verdicts",
-    color: "#F59E0B",
-    baseXP: 150,
-    featureScopes: ["judge", "resolve", "settle"],
-    visual: {
-      role: "judicial figure of absolute fairness",
-      armor: "consensus-weave robes with embedded voting nodes",
-      weapon: "balanced scales of verification and gavel of finality",
-      aura: "golden symmetry of impartial judgment",
-      environment: "grand tribunal hall where truth is determined by consensus"
-    }
-  },
-  merchant: {
-    name: "Merchant",
-    description: "Facilitates authentic commerce and value exchange",
-    color: "#EC4899",
-    baseXP: 110,
-    featureScopes: ["trade", "certify", "price"],
-    visual: {
-      role: "master trader of verified goods",
-      armor: "merchant vestments threaded with smart-contract filigree",
-      weapon: "authentication stamp that brands genuine articles",
-      aura: "warm rose-gold shimmer of trusted commerce",
-      environment: "bustling digital bazaar where every item bears proof of origin"
-    }
-  },
-  explorer: {
-    name: "Explorer",
-    description: "Charts new authentication frontiers and protocols",
-    color: "#06B6D4",
-    baseXP: 95,
-    featureScopes: ["discover", "pioneer", "integrate"],
-    visual: {
-      role: "frontier pathfinder of new verification domains",
-      armor: "adaptive exploration suit with multi-protocol interfaces",
-      weapon: "compass that points toward undiscovered authentication methods",
-      aura: "cyan trails of newly charted protocol paths",
-      environment: "edge of the known verification network, peering into unexplored chains"
-    }
-  }
+import { nanoid } from "nanoid";
+import { eq as eq2 } from "drizzle-orm";
+var COMMISSION_RATES = {
+  starter: 0.1,
+  // 10%
+  professional: 0.15,
+  // 15%
+  enterprise: 0.2,
+  // 20%
+  agency: 0.25
+  // 25%
 };
-function buildCharacterPrompt(archetype, context) {
-  const arch = ARCHETYPES[archetype];
-  const v = arch.visual;
-  const brandLine = context?.brand ? `
-Brand affiliation: "${context.brand}" \u2014 incorporate subtle brand-aligned elements.` : "";
-  const objectLine = context?.object ? `
-Guarding/representing: ${context.object}.` : "";
-  const colorLine = context?.colorway ? `
-Color direction: ${context.colorway}.` : `
-Primary color: ${arch.color}, with metallic accents and deep navy/charcoal background.`;
-  const moodLine = context?.mood ? `
-Mood: ${context.mood}.` : "\nMood: authoritative yet approachable, premium yet accessible.";
-  const prompt = `Premium futuristic heraldic concept art of a protocol-grade digital character.
-
-ROLE: ${v.role}
-ARMOR/ATTIRE: ${v.armor}
-SIGNATURE ELEMENT: ${v.weapon}
-AURA: ${v.aura}
-SETTING: ${v.environment}
-${brandLine}${objectLine}${colorLine}${moodLine}
-
-STYLE REQUIREMENTS:
-- Clean vector-inspired digital art with subtle gradients
-- Protocol-heraldic aesthetic: blockchain motifs, verification symbols, trust iconography
-- Suitable for NFT minting: no text, no watermarks, no borders
-- Square 1:1 aspect ratio, high detail, professional quality
-- Character should embody trust, verification, and digital authority
-- Background: abstract blockchain network pattern with subtle glow effects`;
-  const negativePrompt = `text, watermark, signature, logo, border, frame, low quality, blurry, 
-deformed, ugly, amateur, cartoon, anime, chibi, pixel art, voxel, 
-photorealistic human face, photograph, stock photo, clip art,
-violent, gore, nsfw, offensive symbols, real brand logos`;
-  return { prompt, negativePrompt };
+var AFFILIATE_BONUS_TIERS = [
+  { threshold: 5, bonus: 1e3, tier: "silver" },
+  // $10 bonus at 5 referrals
+  { threshold: 10, bonus: 2500, tier: "gold" },
+  // $25 bonus at 10 referrals
+  { threshold: 25, bonus: 7500, tier: "platinum" }
+  // $75 bonus at 25 referrals
+];
+function generateReferralCode(userId) {
+  return `REF-${userId}-${nanoid(6).toUpperCase()}`;
 }
-async function startCharacterGeneration(userId, archetype, context) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const { prompt, negativePrompt } = buildCharacterPrompt(archetype, context);
-  const [result] = await db2.insert(characterGenerations).values({
-    userId,
-    archetype,
-    style: "premium futuristic heraldic concept art",
-    colorway: context?.colorway || null,
-    mood: context?.mood || null,
-    prompt,
-    negativePrompt,
-    provider: "built-in",
-    providerModel: "image-gen-v1",
-    variantCount: 4,
-    status: "pending",
-    context: context ? JSON.stringify(context) : null
-  }).returning();
-  const generationId = result.id;
-  generateVariants(generationId, prompt, archetype, userId).catch((err) => {
-    console.error(`[CharacterGen] Generation ${generationId} failed:`, err);
-  });
-  return { generationId, prompt };
+function generateAffiliateCode(userId) {
+  return `AFF-${userId}-${nanoid(6).toUpperCase()}`;
 }
-async function generateVariants(generationId, prompt, archetype, userId) {
-  const db2 = await getDb();
-  if (!db2) return;
-  await db2.update(characterGenerations).set({ status: "generating" }).where(eq3(characterGenerations.id, generationId));
-  const variants = [];
-  const variations = [
-    prompt,
-    prompt + "\nEmphasis: power and authority, imposing presence.",
-    prompt + "\nEmphasis: elegance and precision, refined details.",
-    prompt + "\nEmphasis: dynamic energy and agility, motion lines."
-  ];
-  for (const variantPrompt of variations) {
-    try {
-      const result = await generateImage({ prompt: variantPrompt });
-      if (result.url) {
-        variants.push({ imageUrl: result.url, variantPrompt });
-      }
-    } catch (err) {
-      console.error(`[CharacterGen] Variant generation failed:`, err);
-    }
-  }
-  if (variants.length === 0) {
-    await db2.update(characterGenerations).set({ status: "failed" }).where(eq3(characterGenerations.id, generationId));
-    return;
-  }
-  let bestScore = -1;
-  let bestAssetId = null;
-  for (const variant of variants) {
-    const [assetResult] = await db2.insert(characterAssets).values({
-      generationId,
-      userId,
-      imageUrl: variant.imageUrl,
-      prompt: variant.variantPrompt,
-      mintStatus: "not_minted"
-    }).returning();
-    const assetId = assetResult.id;
-    try {
-      const score = await scoreCharacterAsset(assetId, variant.imageUrl, archetype);
-      if (score > bestScore) {
-        bestScore = score;
-        bestAssetId = assetId;
-      }
-    } catch (err) {
-      console.error(`[CharacterGen] Scoring failed for asset ${assetId}:`, err);
-    }
-  }
-  if (bestAssetId) {
-    await db2.update(characterAssets).set({ isRecommended: 1 }).where(eq3(characterAssets.id, bestAssetId));
-  }
-  await db2.update(characterGenerations).set({
-    status: "completed",
-    completedAt: /* @__PURE__ */ new Date(),
-    bestAssetId
-  }).where(eq3(characterGenerations.id, generationId));
-}
-async function scoreCharacterAsset(assetId, imageUrl, archetype) {
-  const db2 = await getDb();
-  if (!db2) return 0;
-  try {
-    const result = await invokeLLM({
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert digital art evaluator for the AuthiChain protocol.
-Score the character avatar on these 7 dimensions (0.0 to 10.0 scale, one decimal):
-
-1. protocol_fit \u2014 Does the character embody the "${archetype}" role within a blockchain authentication protocol?
-2. thumbnail_clarity \u2014 Is the character recognizable and impactful at 64\xD764 thumbnail size?
-3. premium_feel \u2014 Does the art feel premium, polished, and worth minting as an NFT?
-4. silhouette \u2014 Is the silhouette distinctive and instantly recognizable?
-5. trust_symbolism \u2014 Does the design incorporate trust, verification, and authority symbols?
-6. mint_readiness \u2014 Is the image clean (no artifacts, text, watermarks) and ready for on-chain minting?
-7. ui_compatibility \u2014 Will it work well as an avatar in dashboards, leaderboards, and mobile UI?
-
-Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: `Score this ${archetype} character avatar for the AuthiChain protocol:` },
-            { type: "image_url", image_url: { url: imageUrl, detail: "high" } }
-          ]
-        }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "character_score",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              protocol_fit: { type: "number" },
-              thumbnail_clarity: { type: "number" },
-              premium_feel: { type: "number" },
-              silhouette: { type: "number" },
-              trust_symbolism: { type: "number" },
-              mint_readiness: { type: "number" },
-              ui_compatibility: { type: "number" }
-            },
-            required: ["protocol_fit", "thumbnail_clarity", "premium_feel", "silhouette", "trust_symbolism", "mint_readiness", "ui_compatibility"],
-            additionalProperties: false
-          }
-        }
-      }
-    });
-    const content = result.choices[0]?.message?.content;
-    const scoreText = typeof content === "string" ? content : "";
-    const scores = JSON.parse(scoreText);
-    const totalScore = scores.protocol_fit * 0.2 + scores.thumbnail_clarity * 0.15 + scores.premium_feel * 0.2 + scores.silhouette * 0.1 + scores.trust_symbolism * 0.15 + scores.mint_readiness * 0.1 + scores.ui_compatibility * 0.1;
-    const roundedTotal = Math.round(totalScore * 100) / 100;
-    await db2.update(characterAssets).set({
-      protocolFitScore: String(scores.protocol_fit),
-      thumbnailClarityScore: String(scores.thumbnail_clarity),
-      premiumFeelScore: String(scores.premium_feel),
-      silhouetteScore: String(scores.silhouette),
-      trustSymbolismScore: String(scores.trust_symbolism),
-      mintReadinessScore: String(scores.mint_readiness),
-      uiCompatibilityScore: String(scores.ui_compatibility),
-      totalScore: String(roundedTotal),
-      // Also fill legacy integer scores (0-100 scale) for backward compat
-      scoreIconity: Math.round(scores.protocol_fit * 10),
-      scoreTrustClarity: Math.round(scores.trust_symbolism * 10),
-      scorePremiumFeel: Math.round(scores.premium_feel * 10),
-      scoreSilhouette: Math.round(scores.silhouette * 10),
-      scoreUiCompat: Math.round(scores.ui_compatibility * 10),
-      scoreMintReady: Math.round(scores.mint_readiness * 10),
-      scoreProtocolAlign: Math.round(scores.protocol_fit * 10)
-    }).where(eq3(characterAssets.id, assetId));
-    return roundedTotal;
-  } catch (err) {
-    console.error(`[CharacterGen] LLM scoring failed for asset ${assetId}:`, err);
-    const defaultScore = "7.0";
-    await db2.update(characterAssets).set({
-      protocolFitScore: defaultScore,
-      thumbnailClarityScore: defaultScore,
-      premiumFeelScore: defaultScore,
-      silhouetteScore: defaultScore,
-      trustSymbolismScore: defaultScore,
-      mintReadinessScore: defaultScore,
-      uiCompatibilityScore: defaultScore,
-      totalScore: defaultScore,
-      scoreIconity: 70,
-      scoreTrustClarity: 70,
-      scorePremiumFeel: 70,
-      scoreSilhouette: 70,
-      scoreUiCompat: 70,
-      scoreMintReady: 70,
-      scoreProtocolAlign: 70
-    }).where(eq3(characterAssets.id, assetId));
-    return 7;
-  }
-}
-async function selectCharacterAsset(userId, assetId) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const [asset] = await db2.select().from(characterAssets).innerJoin(characterGenerations, eq3(characterAssets.generationId, characterGenerations.id)).where(and2(eq3(characterAssets.id, assetId), eq3(characterGenerations.userId, userId))).limit(1);
-  if (!asset) throw new Error("Asset not found or not owned by user");
-  const userGens = await db2.select({ id: characterGenerations.id }).from(characterGenerations).where(eq3(characterGenerations.userId, userId));
-  for (const gen of userGens) {
-    await db2.update(characterAssets).set({ isSelected: 0 }).where(eq3(characterAssets.generationId, gen.id));
-  }
-  const arch = ARCHETYPES[asset.character_generations.archetype];
-  const metadata = {
-    name: `AuthiCharacter #${assetId} \u2014 ${arch?.name || asset.character_generations.archetype}`,
-    description: `Protocol ${asset.character_generations.archetype} agent for the AuthiChain verification network. ${arch?.description || ""}`,
-    image: asset.character_assets.imageUrl,
-    external_url: "https://authichain-gpea3uhe.manus.space",
-    attributes: [
-      { trait_type: "Archetype", value: arch?.name || asset.character_generations.archetype },
-      { trait_type: "Protocol Fit", value: parseFloat(asset.character_assets.protocolFitScore || "0"), display_type: "number" },
-      { trait_type: "Thumbnail Clarity", value: parseFloat(asset.character_assets.thumbnailClarityScore || "0"), display_type: "number" },
-      { trait_type: "Premium Feel", value: parseFloat(asset.character_assets.premiumFeelScore || "0"), display_type: "number" },
-      { trait_type: "Silhouette", value: parseFloat(asset.character_assets.silhouetteScore || "0"), display_type: "number" },
-      { trait_type: "Trust Symbolism", value: parseFloat(asset.character_assets.trustSymbolismScore || "0"), display_type: "number" },
-      { trait_type: "Mint Readiness", value: parseFloat(asset.character_assets.mintReadinessScore || "0"), display_type: "number" },
-      { trait_type: "UI Compatibility", value: parseFloat(asset.character_assets.uiCompatibilityScore || "0"), display_type: "number" },
-      { trait_type: "Total Score", value: parseFloat(asset.character_assets.totalScore || "0"), display_type: "number" }
-    ],
-    protocol: "AuthiChain",
-    version: "2.0"
-  };
-  const metadataJson = JSON.stringify(metadata);
-  const metadataHash = crypto2.createHash("sha256").update(metadataJson).digest("hex");
-  const imageHash = crypto2.createHash("sha256").update(asset.character_assets.imageUrl).digest("hex");
-  const { url: metadataUri } = await storagePut(
-    `character-metadata/${assetId}-${metadataHash.slice(0, 8)}.json`,
-    Buffer.from(metadataJson),
-    "application/json"
-  );
-  await db2.update(characterAssets).set({
-    isSelected: 1,
-    selectedAt: /* @__PURE__ */ new Date(),
-    metadataUri,
-    metadataHash,
-    imageHash,
-    mintStatus: "preparing"
-  }).where(eq3(characterAssets.id, assetId));
-  await db2.update(characterGenerations).set({ status: "selected", selectedAssetId: assetId }).where(eq3(characterGenerations.id, asset.character_assets.generationId));
-  return { success: true, metadataHash };
-}
-async function createProtocolAgent(userId, characterAssetId, name, agentType) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const arch = ARCHETYPES[agentType];
-  const [result] = await db2.insert(protocolAgents).values({
-    userId,
-    characterAssetId,
-    name,
-    agentType,
-    status: "active",
-    level: 1,
-    xp: arch.baseXP,
-    reputationScore: 100,
-    featureScopes: JSON.stringify(arch.featureScopes),
-    policyConfig: JSON.stringify({ autoVerify: false, minConfidence: 70 })
-  }).returning();
-  return { agentId: result.id };
-}
-async function getAgentByUser(userId) {
-  const db2 = await getDb();
-  if (!db2) return null;
-  const [agent] = await db2.select().from(protocolAgents).where(and2(eq3(protocolAgents.userId, userId), eq3(protocolAgents.status, "active"))).orderBy(desc2(protocolAgents.createdAt)).limit(1);
-  return agent || null;
-}
-async function getAgentLeaderboard(limit = 20) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return db2.select().from(protocolAgents).where(eq3(protocolAgents.status, "active")).orderBy(desc2(protocolAgents.reputationScore), desc2(protocolAgents.xp)).limit(limit);
-}
-async function getGenerationStatus(generationId) {
-  const db2 = await getDb();
-  if (!db2) return null;
-  const [gen] = await db2.select().from(characterGenerations).where(eq3(characterGenerations.id, generationId)).limit(1);
-  if (!gen) return null;
-  const assets = await db2.select().from(characterAssets).where(eq3(characterAssets.generationId, generationId)).orderBy(desc2(characterAssets.totalScore));
-  return { ...gen, assets };
-}
-async function getUserGenerations(userId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return db2.select().from(characterGenerations).where(eq3(characterGenerations.userId, userId)).orderBy(desc2(characterGenerations.createdAt));
-}
-async function getUserCharacterAssets(userId) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return db2.select({
-    asset: characterAssets,
-    generation: characterGenerations
-  }).from(characterAssets).innerJoin(characterGenerations, eq3(characterAssets.generationId, characterGenerations.id)).where(eq3(characterGenerations.userId, userId)).orderBy(desc2(characterAssets.totalScore));
-}
-async function awardQRON(agentId, userId, amount, reason, referenceType, referenceId) {
-  const db2 = await getDb();
-  if (!db2) return;
-  await db2.insert(qronRewardLedger).values({
-    agentId,
-    userId,
-    amount,
-    reason,
-    referenceType,
-    referenceId,
+async function createReferralCode(referrerId) {
+  const code = generateReferralCode(referrerId);
+  const [result] = await db.insert(referrals).values({
+    referrerId,
+    referralCode: code,
     status: "pending"
-  });
-  await db2.update(protocolAgents).set({
-    qronPending: sql2`${protocolAgents.qronPending} + ${amount}`
-  }).where(eq3(protocolAgents.id, agentId));
+  }).returning();
+  return { id: result.id, referralCode: code };
 }
-async function getAgentRewards(agentId, limit = 50) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return db2.select().from(qronRewardLedger).where(eq3(qronRewardLedger.agentId, agentId)).orderBy(desc2(qronRewardLedger.createdAt)).limit(limit);
+async function trackReferralClick(params) {
+  await db.insert(referralClicks).values(params);
 }
-async function getNetworkStats() {
-  const db2 = await getDb();
-  if (!db2) return {
-    totalAgents: 0,
-    totalVerifications: 0,
-    totalConsensus: 0,
-    totalQRONDistributed: "0",
-    totalCheckpoints: 0,
-    agentsByType: [],
-    recentActivity: []
-  };
-  const [agentCount] = await db2.select({ count: count() }).from(protocolAgents);
-  const [verifyCount] = await db2.select({ count: count() }).from(verificationClaims);
-  const [consensusCount] = await db2.select({ count: count() }).from(consensusResults);
-  const [checkpointCount] = await db2.select({ count: count() }).from(checkpointBatches);
-  const [qronSum] = await db2.select({
-    total: sql2`COALESCE(SUM(${qronRewardLedger.amount}), 0)`
-  }).from(qronRewardLedger);
-  const agentsByType = await db2.select({
-    agentType: protocolAgents.agentType,
-    count: count()
-  }).from(protocolAgents).where(eq3(protocolAgents.status, "active")).groupBy(protocolAgents.agentType);
-  const recentAgents = await db2.select().from(protocolAgents).orderBy(desc2(protocolAgents.createdAt)).limit(10);
+async function completeReferral(params) {
+  const rate = COMMISSION_RATES[params.tier] || COMMISSION_RATES.starter;
+  await db.update(referrals).set({
+    referredId: params.referredId,
+    referredEmail: params.referredEmail,
+    status: "converted",
+    tier: params.tier,
+    convertedAt: /* @__PURE__ */ new Date()
+  }).where(eq2(referrals.referralCode, params.referralCode));
+}
+async function getReferralStats(referrerId) {
+  const all = await db.select().from(referrals).where(eq2(referrals.referrerId, referrerId));
+  const converted = all.filter((r) => r.status === "converted");
+  const totalCommission = converted.reduce((sum, r) => sum + parseFloat(r.commissionPaid || "0"), 0);
   return {
-    totalAgents: agentCount?.count || 0,
-    totalVerifications: verifyCount?.count || 0,
-    totalConsensus: consensusCount?.count || 0,
-    totalQRONDistributed: qronSum?.total || "0",
-    totalCheckpoints: checkpointCount?.count || 0,
-    agentsByType,
-    recentActivity: recentAgents
+    totalReferrals: all.length,
+    convertedReferrals: converted.length,
+    pendingReferrals: all.filter((r) => r.status === "pending").length,
+    totalCommission,
+    conversionRate: all.length > 0 ? Math.round(converted.length / all.length * 100) : 0
   };
 }
-async function submitVerificationClaim(agentId, productId, authenticationId, claimType, confidence, evidence, reasoning) {
-  const db2 = await getDb();
-  if (!db2) throw new Error("Database not available");
-  const [agent] = await db2.select().from(protocolAgents).where(eq3(protocolAgents.id, agentId)).limit(1);
-  const weight = agent?.reputationScore ? (agent.reputationScore / 100).toFixed(3) : "1.000";
-  const [result] = await db2.insert(verificationClaims).values({
-    agentId,
-    productId,
-    authenticationId,
-    claimType,
-    confidence,
-    evidence: evidence ? JSON.stringify(evidence) : null,
-    reasoning,
-    weight,
-    status: "pending"
-  }).returning();
-  await db2.update(protocolAgents).set({
-    totalClaims: sql2`${protocolAgents.totalClaims} + 1`,
-    xp: sql2`${protocolAgents.xp} + 10`
-  }).where(eq3(protocolAgents.id, agentId));
-  await awardQRON(agentId, agent?.userId || 0, "0.50", "verification_reward", "claim", result.id);
-  return { claimId: result.id };
-}
-async function rewardAgentForVerification(userId, wasSuccessful) {
-  const db2 = await getDb();
-  if (!db2) return;
-  const [agent] = await db2.select().from(protocolAgents).where(eq3(protocolAgents.userId, userId)).limit(1);
-  if (!agent) return;
-  const xpReward = wasSuccessful ? 25 : 10;
-  const qronReward = wasSuccessful ? "1.00" : "0.25";
-  const updateSet = {
-    totalVerifications: sql2`${protocolAgents.totalVerifications} + 1`,
-    xp: sql2`${protocolAgents.xp} + ${xpReward}`
-  };
-  if (wasSuccessful) {
-    updateSet.successfulVerifications = sql2`${protocolAgents.successfulVerifications} + 1`;
-  }
-  await db2.update(protocolAgents).set(updateSet).where(eq3(protocolAgents.id, agent.id));
-  await awardQRON(agent.id, userId, qronReward, "verification_reward", "verification", 0);
-  console.log(`[Agent XP] User ${userId} agent ${agent.id} earned ${xpReward} XP + ${qronReward} QRON`);
-  await checkUserMilestones(userId);
-}
 
-// server/authenticate/router.ts
-var authenticateRouter = router({
-  analyze: protectedProcedure.input(z3.object({
-    productId: z3.number(),
-    imageUrl: z3.string()
-  })).mutation(async ({ ctx, input }) => {
-    const sub = await getUserSubscription(ctx.user.id);
-    if (sub && (sub.usedQuota ?? 0) >= sub.monthlyQuota) throw new TRPCError3({ code: "FORBIDDEN", message: "Monthly quota exceeded. Please upgrade your plan." });
-    const product = await getProductById(input.productId);
-    if (!product) throw new TRPCError3({ code: "NOT_FOUND", message: "Product not found" });
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: "You are an expert luxury product authenticator with blockchain verification capabilities. Analyze the provided product image and determine if it is authentic or counterfeit. Provide detailed reasoning, a confidence score (0-100), red flags, and authentic markers." },
-        { role: "user", content: [
-          { type: "text", text: `Authenticate this ${product.brand || ""} ${product.name}. Serial: ${product.serialNumber || "N/A"}. Category: ${product.category || "general"}` },
-          { type: "image_url", image_url: { url: input.imageUrl } }
-        ] }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "authentication_result",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              result: { type: "string", enum: ["authentic", "counterfeit", "uncertain"] },
-              confidence: { type: "integer" },
-              analysis: { type: "string" },
-              redFlags: { type: "array", items: { type: "string" } },
-              authenticMarkers: { type: "array", items: { type: "string" } },
-              recommendation: { type: "string" }
-            },
-            required: ["result", "confidence", "analysis", "redFlags", "authenticMarkers", "recommendation"],
-            additionalProperties: false
-          }
-        }
-      }
-    });
-    const aiResult = JSON.parse(response.choices[0].message.content);
-    const authResult = await createAuthentication({
-      productId: input.productId,
-      userId: ctx.user.id,
-      aiAnalysis: aiResult,
-      confidenceScore: aiResult.confidence,
-      result: aiResult.result,
-      imageUrl: input.imageUrl
-    });
-    await rewardAgentForVerification(ctx.user.id, aiResult.result === "authentic");
-    await triggerMacrohardEvent("product_authenticated", {
-      authId: authResult.id,
-      productId: input.productId,
-      result: aiResult.result,
-      confidence: aiResult.confidence,
-      userId: ctx.user.id
-    });
-    if (aiResult.result === "authentic" && aiResult.confidence >= 80) {
-      const certNumber = `AC-${Date.now()}-${nanoid(8).toUpperCase()}`;
-      const cert = await createCertificate({
-        productId: input.productId,
-        authenticationId: authResult.id,
-        userId: ctx.user.id,
-        certificateNumber: certNumber,
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1e3)
-      });
-      await triggerMacrohardEvent("certificate_issued", {
-        certificateId: cert.id,
-        certificateNumber: cert.certificateNumber,
-        productId: input.productId,
-        userId: ctx.user.id
-      });
-    }
-    if (sub) await updateSubscriptionUsage(ctx.user.id, (sub.usedQuota || 0) + 1);
-    await recordUsage({ userId: ctx.user.id, subscriptionId: sub?.id, type: "authentication", quantity: 1 });
-    await logActivity({ userId: ctx.user.id, action: "product_authenticated", entityType: "authentication", entityId: authResult.id });
-    try {
-      const emoji = aiResult.result === "authentic" ? "Verified" : aiResult.result === "counterfeit" ? "Alert" : "Review Needed";
-      await createSystemNotification(
-        ctx.user.id,
-        `Authentication ${emoji}: ${product.name}`,
-        `${product.brand || "Product"} ${product.name} scored ${aiResult.confidence}% confidence as ${aiResult.result}. ${aiResult.recommendation}`,
-        aiResult.result === "counterfeit" ? "alert" : "authentication",
-        "/authenticate"
-      );
-    } catch (notifErr) {
-      console.warn("[Notification] Failed:", notifErr);
-    }
-    return aiResult;
+// server/referral/router.ts
+var referralRouter = router({
+  generateCode: protectedProcedure.mutation(async ({ ctx }) => {
+    return await createReferralCode(ctx.user.id);
   }),
-  history: protectedProcedure.query(async ({ ctx }) => {
-    return await getUserAuthentications(ctx.user.id);
-  })
-});
-
-// server/certificates/router.ts
-init_db();
-import { z as z4 } from "zod";
-import { TRPCError as TRPCError4 } from "@trpc/server";
-var certificatesRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return await getUserCertificates(ctx.user.id);
+  getStats: protectedProcedure.query(async ({ ctx }) => {
+    return await getReferralStats(ctx.user.id);
   }),
-  verify: publicProcedure.input(z4.object({ certificateNumber: z4.string() })).query(async ({ input }) => {
-    const cert = await getCertificateByNumber(input.certificateNumber);
-    if (!cert) return { valid: false, message: "Certificate not found" };
-    if (cert.status === "revoked") return { valid: false, message: "Certificate has been revoked" };
-    if (cert.expiresAt && cert.expiresAt < /* @__PURE__ */ new Date()) return { valid: false, message: "Certificate has expired" };
-    const product = await getProductById(cert.productId);
-    return { valid: true, certificate: cert, product };
+  getHistory: protectedProcedure.query(async ({ ctx }) => {
+    return await getUserReferrals(ctx.user.id);
   }),
-  makePublic: protectedProcedure.input(z4.object({ authenticationId: z4.number() })).mutation(async ({ input }) => {
-    const crypto4 = await import("crypto");
-    const shareToken = crypto4.randomBytes(32).toString("hex");
-    await updateAuthenticationSharing(input.authenticationId, true, shareToken);
-    return { shareToken, shareUrl: `/certificate/${shareToken}` };
-  }),
-  getPublic: publicProcedure.input(z4.object({ shareToken: z4.string() })).query(async ({ input }) => {
-    const auth = await getAuthenticationByShareToken(input.shareToken);
-    if (!auth || !auth.isPublic) throw new TRPCError4({ code: "NOT_FOUND", message: "Certificate not found" });
-    const product = await getProductById(auth.productId);
-    await incrementShareCount(auth.id);
-    return { authentication: auth, product };
-  })
-});
-
-// server/qrcode/router.ts
-init_db();
-import { z as z5 } from "zod";
-import { TRPCError as TRPCError5 } from "@trpc/server";
-import QRCode from "qrcode";
-var qrcodeRouter = router({
-  generate: protectedProcedure.input(z5.object({
-    productId: z5.number(),
-    size: z5.number().optional().default(300)
-  })).mutation(async ({ ctx, input }) => {
-    const product = await getProductById(input.productId);
-    if (!product) throw new TRPCError5({ code: "NOT_FOUND", message: "Product not found" });
-    const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL || "https://authichain.com"}/verify/${product.id}`;
-    const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: input.size, margin: 2, color: { dark: "#000000", light: "#FFFFFF" } });
-    await createQrCode({ productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl });
-    return { qrCodeDataUrl: qrDataUrl, verifyUrl };
-  }),
-  scan: publicProcedure.input(z5.object({ productId: z5.number() })).query(async ({ input }) => {
-    const product = await getProductById(input.productId);
-    if (!product) throw new TRPCError5({ code: "NOT_FOUND", message: "Product not found" });
-    const qrCodes2 = await getProductQrCodes(input.productId);
-    if (qrCodes2.length > 0) await incrementScanCount(qrCodes2[0].id);
-    return { product, scanCount: (qrCodes2[0]?.scanCount || 0) + 1 };
-  }),
-  listForProduct: protectedProcedure.input(z5.object({ productId: z5.number() })).query(async ({ input }) => {
-    return await getProductQrCodes(input.productId);
-  }),
-  generateStorymode: protectedProcedure.input(z5.object({
-    productId: z5.number()
+  trackClick: publicProcedure.input(z2.object({
+    referralCode: z2.string(),
+    ipAddress: z2.string().optional(),
+    userAgent: z2.string().optional(),
+    referer: z2.string().optional(),
+    landingPage: z2.string().optional()
   })).mutation(async ({ input }) => {
-    const product = await getProductById(input.productId);
-    if (!product) throw new TRPCError5({ code: "NOT_FOUND", message: "Product not found" });
-    const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
-    const response = await invokeLLM2({
-      messages: [
-        { role: "system", content: "You are a cinematic brand storyteller for AuthiChain. Create a 3-chapter 'Storymode' narrative for a product based on its metadata. Each chapter should have a title and a 2-3 sentence description. Tone: luxury, high-fidelity, futuristic, authoritative." },
-        { role: "user", content: `Product: ${product.name}. Brand: ${product.brand}. Category: ${product.category}. Description: ${product.description}.` }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "storymode_narrative",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              chapters: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    title: { type: "string" },
-                    content: { type: "string" }
-                  },
-                  required: ["title", "content"],
-                  additionalProperties: false
-                }
-              }
-            },
-            required: ["chapters"],
-            additionalProperties: false
-          }
-        }
-      }
+    await trackReferralClick(input);
+    return { success: true };
+  }),
+  validate: publicProcedure.input(z2.object({ code: z2.string() })).query(async ({ input }) => {
+    const referral = await getReferralByCode(input.code);
+    return { valid: !!referral, referral };
+  }),
+  complete: protectedProcedure.input(z2.object({
+    referralCode: z2.string(),
+    referredEmail: z2.string().email(),
+    tier: z2.enum(["starter", "professional", "enterprise", "agency"]).optional().default("starter")
+  })).mutation(async ({ ctx, input }) => {
+    await completeReferral({
+      referralCode: input.referralCode,
+      referredId: ctx.user.id,
+      referredEmail: input.referredEmail,
+      tier: input.tier
     });
-    const storyData = JSON.parse(response.choices[0].message.content);
-    const metadata = { ...product.metadata || {}, storymode: storyData };
-    await updateProduct(product.id, { metadata });
-    return { success: true, storymode: storyData };
+    return { success: true };
   })
 });
 
-// server/nft/router.ts
+// server/affiliate/router.ts
+init_db();
+import { z as z3 } from "zod";
+var affiliateRouter = router({
+  getStatus: protectedProcedure.query(async ({ ctx }) => {
+    return await getAffiliateByUserId(ctx.user.id);
+  }),
+  getStats: protectedProcedure.query(async ({ ctx }) => {
+    const affiliate = await getAffiliateByUserId(ctx.user.id);
+    if (!affiliate) return null;
+    const commissions = await getAffiliateCommissions(affiliate.id);
+    const totalEarned = parseFloat(affiliate.totalEarnings || "0");
+    const pendingPayout = parseFloat(affiliate.pendingPayout || "0");
+    const nextTier = AFFILIATE_BONUS_TIERS.find((t2) => (affiliate.totalReferrals || 0) < t2.threshold);
+    return {
+      affiliate,
+      commissions,
+      totalEarned,
+      pendingPayout,
+      nextTierThreshold: nextTier?.threshold ?? null,
+      nextTierBonus: nextTier?.bonus ?? null
+    };
+  }),
+  submitApplication: protectedProcedure.input(z3.object({
+    paypalEmail: z3.string().email().optional(),
+    payoutMethod: z3.string().optional().default("paypal")
+  })).mutation(async ({ ctx, input }) => {
+    const existing = await getAffiliateByUserId(ctx.user.id);
+    if (existing) return { success: false, message: "Already enrolled in affiliate program" };
+    const code = generateAffiliateCode(ctx.user.id);
+    const result = await createAffiliate({
+      userId: ctx.user.id,
+      affiliateCode: code,
+      status: "active",
+      commissionRate: "10.00",
+      payoutMethod: input.payoutMethod,
+      payoutDetails: input.paypalEmail ? { paypalEmail: input.paypalEmail } : null
+    });
+    return { success: true, affiliateCode: code, id: result.id };
+  }),
+  getReferrals: protectedProcedure.query(async ({ ctx }) => {
+    return await getUserReferrals(ctx.user.id);
+  })
+});
+
+// server/bonuses/router.ts
+init_db();
+init_schema();
+import { z as z4 } from "zod";
+import { eq as eq3, and as and3 } from "drizzle-orm";
+var bonusesRouter = router({
+  getUserBonuses: protectedProcedure.query(async ({ ctx }) => {
+    return await db.select().from(bonuses).where(eq3(bonuses.userId, ctx.user.id));
+  }),
+  claimBonus: protectedProcedure.input(z4.object({ bonusId: z4.number() })).mutation(async ({ ctx, input }) => {
+    const [bonus] = await db.select().from(bonuses).where(and3(eq3(bonuses.id, input.bonusId), eq3(bonuses.userId, ctx.user.id))).limit(1);
+    if (!bonus) throw new Error("Bonus not found");
+    if (bonus.status !== "pending") throw new Error("Bonus already claimed or delivered");
+    await db.update(bonuses).set({ status: "claimed", claimedAt: /* @__PURE__ */ new Date() }).where(eq3(bonuses.id, input.bonusId));
+    return { success: true };
+  }),
+  createUserBonuses: adminProcedure.input(z4.object({
+    userId: z4.number(),
+    bonusType: z4.string(),
+    bonusName: z4.string(),
+    bonusValue: z4.number(),
+    tier: z4.enum(["starter", "professional", "enterprise", "agency"]).optional(),
+    deliveryMethod: z4.string().optional().default("account_credit")
+  })).mutation(async ({ input }) => {
+    const [result] = await db.insert(bonuses).values({
+      userId: input.userId,
+      bonusType: input.bonusType,
+      bonusName: input.bonusName,
+      bonusValue: input.bonusValue,
+      tier: input.tier,
+      status: "pending",
+      deliveryMethod: input.deliveryMethod
+    }).returning();
+    return { id: result.id };
+  })
+});
+
+// server/marketplace/router.ts
+import { z as z5 } from "zod";
+
+// server/marketplace/db.ts
+init_db();
+init_schema();
+import { eq as eq4, desc as desc3, and as and4, sql as sql2 } from "drizzle-orm";
+async function listModels(filters) {
+  let query = db.select().from(aiModels);
+  const conditions = [];
+  if (filters?.status) conditions.push(eq4(aiModels.status, filters.status));
+  if (filters?.category) conditions.push(eq4(aiModels.category, filters.category));
+  if (conditions.length) {
+    query = query.where(and4(...conditions));
+  }
+  return await query.orderBy(desc3(aiModels.downloads)).limit(filters?.limit || 50);
+}
+async function getModelById(id) {
+  const [model] = await db.select().from(aiModels).where(eq4(aiModels.id, id)).limit(1);
+  return model;
+}
+async function createModel(data) {
+  const [result] = await db.insert(aiModels).values({ ...data, status: "draft" }).returning();
+  return { id: result.id };
+}
+async function purchaseModel(data) {
+  const [result] = await db.insert(modelPurchases).values({ ...data, status: "active" }).returning();
+  await db.update(aiModels).set({ downloads: sql2`${aiModels.downloads} + 1` }).where(eq4(aiModels.id, data.modelId));
+  return { id: result.id };
+}
+async function getUserPurchases(userId) {
+  return await db.select().from(modelPurchases).where(eq4(modelPurchases.userId, userId)).orderBy(desc3(modelPurchases.createdAt));
+}
+async function addReview(data) {
+  const [result] = await db.insert(modelReviews).values(data).returning();
+  const [avg] = await db.select({ avg: sql2`AVG(rating)`, count: sql2`COUNT(*)` }).from(modelReviews).where(eq4(modelReviews.modelId, data.modelId));
+  await db.update(aiModels).set({ rating: avg.avg, reviewCount: avg.count }).where(eq4(aiModels.id, data.modelId));
+  return { id: result.id };
+}
+async function getModelReviews(modelId) {
+  return await db.select().from(modelReviews).where(eq4(modelReviews.modelId, modelId)).orderBy(desc3(modelReviews.createdAt));
+}
+
+// server/marketplace/router.ts
+var marketplaceRouter = router({
+  listModels: publicProcedure.input(z5.object({
+    category: z5.string().optional(),
+    limit: z5.number().optional().default(50)
+  })).query(async ({ input }) => {
+    return await listModels({ ...input, status: "active" });
+  }),
+  getModel: publicProcedure.input(z5.object({ id: z5.number() })).query(async ({ input }) => {
+    return await getModelById(input.id);
+  }),
+  createModel: adminProcedure.input(z5.object({
+    name: z5.string().min(1),
+    description: z5.string().optional(),
+    category: z5.string().optional(),
+    price: z5.number().min(0)
+  })).mutation(async ({ ctx, input }) => {
+    return await createModel({ ...input, creatorId: ctx.user.id });
+  }),
+  purchaseModel: protectedProcedure.input(z5.object({
+    modelId: z5.number(),
+    purchaseType: z5.enum(["purchase", "subscription", "rental"]).optional().default("purchase")
+  })).mutation(async ({ ctx, input }) => {
+    const model = await getModelById(input.modelId);
+    if (!model) throw new Error("Model not found");
+    return await purchaseModel({
+      userId: ctx.user.id,
+      modelId: input.modelId,
+      pricePaid: model.price,
+      purchaseType: input.purchaseType
+    });
+  }),
+  myPurchases: protectedProcedure.query(async ({ ctx }) => {
+    return await getUserPurchases(ctx.user.id);
+  }),
+  addReview: protectedProcedure.input(z5.object({
+    modelId: z5.number(),
+    rating: z5.number().min(1).max(5),
+    review: z5.string().optional()
+  })).mutation(async ({ ctx, input }) => {
+    return await addReview({ ...input, userId: ctx.user.id });
+  }),
+  getReviews: publicProcedure.input(z5.object({ modelId: z5.number() })).query(async ({ input }) => {
+    return await getModelReviews(input.modelId);
+  })
+});
+
+// server/email-drafts/router.ts
 init_db();
 import { z as z6 } from "zod";
-import { TRPCError as TRPCError6 } from "@trpc/server";
-var nftRouter = router({
-  list: publicProcedure.input(z6.object({
-    collectionId: z6.number().optional(),
-    status: z6.string().optional(),
-    limit: z6.number().optional().default(50)
-  })).query(async ({ input }) => {
-    return await listNfts(input);
-  }),
-  getById: publicProcedure.input(z6.object({ id: z6.number() })).query(async ({ input }) => {
-    return await getNftById(input.id);
+var emailDraftsRouter = router({
+  listPending: protectedProcedure.query(async () => {
+    return await getPendingDrafts();
   }),
   create: protectedProcedure.input(z6.object({
-    name: z6.string().min(1),
-    description: z6.string().optional(),
-    imageUrl: z6.string().optional(),
-    ipfsHash: z6.string().optional(),
-    collectionId: z6.number().optional(),
-    price: z6.string().optional(),
-    currency: z6.string().optional().default("ETH"),
-    traits: z6.any().optional(),
-    productId: z6.number().optional()
-  })).mutation(async ({ ctx, input }) => {
-    const result = await createNft({ ...input, ownerId: ctx.user.id, creatorId: ctx.user.id, status: "listed" });
-    await logActivity({ userId: ctx.user.id, action: "nft_created", entityType: "nft", entityId: result.id });
-    await triggerMacrohardEvent("nft_minted", {
-      nftId: result.id,
-      name: result.name,
-      productId: input.productId,
-      userId: ctx.user.id
-    });
-    return result;
+    prospectName: z6.string().optional(),
+    prospectEmail: z6.string().email(),
+    prospectCompany: z6.string().optional(),
+    industry: z6.string().optional(),
+    subject: z6.string().min(1),
+    body: z6.string().min(1)
+  })).mutation(async ({ input }) => {
+    return await createEmailDraft({ ...input, status: "pending", generatedBy: "ai_manager" });
   }),
-  collections: router({
-    list: publicProcedure.query(async () => {
-      return await listCollections();
-    }),
-    getBySlug: publicProcedure.input(z6.object({ slug: z6.string() })).query(async ({ input }) => {
-      return await getCollectionBySlug(input.slug);
-    }),
-    create: protectedProcedure.input(z6.object({
-      name: z6.string().min(1),
-      slug: z6.string().min(1),
-      description: z6.string().optional(),
-      imageUrl: z6.string().optional(),
-      category: z6.string().optional()
-    })).mutation(async ({ ctx, input }) => {
-      return await createCollection({ ...input, userId: ctx.user.id });
-    })
-  }),
-  auctions: router({
-    list: publicProcedure.query(async () => {
-      return await getActiveAuctions();
-    }),
-    getById: publicProcedure.input(z6.object({ id: z6.number() })).query(async ({ input }) => {
-      const auction = await getAuctionById(input.id);
-      const bids = await getAuctionBids(input.id);
-      return { auction, bids };
-    }),
-    create: protectedProcedure.input(z6.object({
-      nftId: z6.number(),
-      startPrice: z6.string(),
-      reservePrice: z6.string().optional(),
-      endsAt: z6.string()
-    })).mutation(async ({ ctx, input }) => {
-      return await createAuction({ ...input, sellerId: ctx.user.id, endsAt: new Date(input.endsAt) });
-    }),
-    bid: protectedProcedure.input(z6.object({
-      auctionId: z6.number(),
-      amount: z6.string()
-    })).mutation(async ({ ctx, input }) => {
-      const auction = await getAuctionById(input.auctionId);
-      if (!auction) throw new TRPCError6({ code: "NOT_FOUND" });
-      if (auction.status !== "active") throw new TRPCError6({ code: "BAD_REQUEST", message: "Auction not active" });
-      if (auction.currentBid && parseFloat(input.amount) <= parseFloat(auction.currentBid)) {
-        throw new TRPCError6({ code: "BAD_REQUEST", message: "Bid must be higher than current bid" });
+  approve: protectedProcedure.input(z6.object({ id: z6.number() })).mutation(async ({ ctx, input }) => {
+    const drafts = await getPendingDrafts();
+    const draft = drafts.find((d) => d.id === input.id);
+    await updateDraftStatus(input.id, "approved", ctx.user.id);
+    if (draft) {
+      try {
+        await sendApprovalEmail(draft.prospectEmail, draft.subject, draft.body);
+        await updateDraftStatus(input.id, "sent", ctx.user.id);
+      } catch (err) {
+        console.error("[EmailDrafts] Failed to send approved email:", err);
       }
-      await placeBid(input.auctionId, ctx.user.id, input.amount);
-      return { success: true };
-    })
+    }
+    return { success: true };
+  }),
+  reject: protectedProcedure.input(z6.object({ id: z6.number(), notes: z6.string().optional() })).mutation(async ({ ctx, input }) => {
+    await updateDraftStatus(input.id, "rejected", ctx.user.id);
+    return { success: true };
+  }),
+  bulkApprove: protectedProcedure.input(z6.object({ ids: z6.array(z6.number()) })).mutation(async ({ ctx, input }) => {
+    for (const id of input.ids) await updateDraftStatus(id, "approved", ctx.user.id);
+    return { success: true, count: input.ids.length };
   })
 });
 
 // server/subscriptions/router.ts
 init_db();
 init_stripe_service();
-init_paddle_service();
+
+// server/paddle-service.ts
+init_env();
+var _paddle = null;
+async function getPaddleSDK() {
+  const sdk2 = await import("@paddle/paddle-node-sdk");
+  return sdk2;
+}
+async function getPaddle() {
+  if (!_paddle) {
+    if (!ENV.paddleApiKey) throw new Error("PADDLE_API_KEY is not configured");
+    const { Paddle, Environment } = await getPaddleSDK();
+    _paddle = new Paddle(ENV.paddleApiKey, {
+      environment: ENV.isProduction ? Environment.production : Environment.sandbox
+    });
+  }
+  return _paddle;
+}
+async function upsertPaddleCustomer(input) {
+  const paddle = await getPaddle();
+  const customers = await paddle.customers.list({ email: [input.email] });
+  const existing = customers.data?.[0];
+  if (existing) return existing.id;
+  const customer = await paddle.customers.create({
+    email: input.email,
+    name: input.name,
+    customData: { userId: String(input.userId) }
+  });
+  return customer.id;
+}
+async function createPaddleTransaction(input) {
+  const paddle = await getPaddle();
+  const transaction = await paddle.transactions.create({
+    items: [{ priceId: input.priceId, quantity: 1 }],
+    customerId: input.customerId,
+    checkout: { url: input.successUrl }
+  });
+  return transaction.checkout?.url || "";
+}
+
+// server/subscriptions/router.ts
 import { z as z7 } from "zod";
-import { TRPCError as TRPCError7 } from "@trpc/server";
+import { TRPCError as TRPCError3 } from "@trpc/server";
 
 // shared/subscriptionPlans.ts
 var SUBSCRIPTION_PLANS = {
@@ -9562,7 +8514,6 @@ var SUBSCRIPTION_PLANS = {
     annualPrice: 470,
     monthlyQuota: 100,
     perAuthCost: "0.49",
-    paymentLink: "https://buy.stripe.com/7sY00j87n5xcfWObDC1Nu3r",
     features: [
       "100 authentications/month",
       "Basic AI image analysis",
@@ -9581,7 +8532,6 @@ var SUBSCRIPTION_PLANS = {
     annualPrice: 1910,
     monthlyQuota: 2500,
     perAuthCost: "0.08",
-    paymentLink: "https://buy.stripe.com/28E4gzbjze3I7qi4ba1Nu3s",
     features: [
       "2,500 authentications/month",
       "Advanced AI + blockchain verification",
@@ -9603,7 +8553,6 @@ var SUBSCRIPTION_PLANS = {
     annualPrice: 7670,
     monthlyQuota: 25e3,
     perAuthCost: "0.03",
-    paymentLink: "https://buy.stripe.com/6oU5kDfzP7Fk6medLK1Nu3t",
     features: [
       "25,000 authentications/month",
       "Full AI suite with custom models",
@@ -9620,28 +8569,6 @@ var SUBSCRIPTION_PLANS = {
     ],
     highlighted: false,
     badge: "Best Value"
-  },
-  medtech: {
-    name: "MedTech Enterprise",
-    monthlyPrice: 12500,
-    // $150K / 12
-    annualPrice: 15e4,
-    monthlyQuota: 5e4,
-    perAuthCost: "0.25",
-    features: [
-      "50,000 authentications/month",
-      "ISO 13485 Compliance Module",
-      "Clinical Trial Fraud Prevention AI",
-      "FIPS 140-2 HSM Crypto Module",
-      "W3C Verifiable Credentials",
-      "Blockchain-anchored Proof of Purity",
-      "Priority 24/7 Concierge Support",
-      "Dedicated Technical Account Lead",
-      "On-premise / Hybrid Cloud Deployment",
-      "Full API & Webhook Integration"
-    ],
-    highlighted: false,
-    badge: "High-Ticket"
   }
 };
 
@@ -9708,7 +8635,7 @@ var subscriptionsRouter = router({
     successUrl: z7.string()
   })).mutation(async ({ ctx, input }) => {
     const priceId = PADDLE_PRICES[input.plan]?.[input.billing];
-    if (!priceId) throw new TRPCError7({ code: "BAD_REQUEST", message: `Paddle price not configured for ${input.plan}/${input.billing}` });
+    if (!priceId) throw new TRPCError3({ code: "BAD_REQUEST", message: `Paddle price not configured for ${input.plan}/${input.billing}` });
     const customerId = await upsertPaddleCustomer({
       email: ctx.user.email || "",
       name: ctx.user.name || "",
@@ -9723,7 +8650,7 @@ var subscriptionsRouter = router({
   }),
   cancel: protectedProcedure.mutation(async ({ ctx }) => {
     const sub = await getUserSubscription(ctx.user.id);
-    if (!sub?.stripeSubscriptionId) throw new TRPCError7({ code: "NOT_FOUND", message: "No active Stripe subscription" });
+    if (!sub?.stripeSubscriptionId) throw new TRPCError3({ code: "NOT_FOUND", message: "No active Stripe subscription" });
     await cancelSubscription(sub.stripeSubscriptionId);
     return { success: true, message: "Subscription will cancel at end of billing period" };
   }),
@@ -9756,47 +8683,286 @@ var subscriptionsRouter = router({
   })
 });
 
-// server/payments/router.ts
-init_db();
+// server/missions/router.ts
 import { z as z8 } from "zod";
-var paymentsRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return await getUserPayments(ctx.user.id);
+
+// server/missions/missions.db.ts
+init_db();
+init_schema();
+import { eq as eq5, desc as desc4 } from "drizzle-orm";
+import { randomUUID as randomUUID2 } from "crypto";
+
+// server/missions/templates.ts
+var missionTemplates = {
+  TECH_SPRINT: {
+    type: "TECH_SPRINT",
+    title: "Tech Sprint \u2013 Feature Development",
+    priority: 8
+  },
+  GOV_PILOT: {
+    type: "GOV_PILOT",
+    title: "Government Pilot \u2013 Initial Agency",
+    priority: 10
+  },
+  RETAIL_PILOT: {
+    type: "RETAIL_PILOT",
+    title: "Retail Pilot \u2013 Dispensary / Retail Partner",
+    priority: 9
+  },
+  PRESS_LAUNCH: {
+    type: "PRESS_LAUNCH",
+    title: "Press Launch \u2013 Media & PR Outreach",
+    priority: 8
+  },
+  PARTNER_ONBOARDING: {
+    type: "PARTNER_ONBOARDING",
+    title: "Partner Onboarding",
+    priority: 7
+  },
+  TECH_OS_LOCK: {
+    type: "TECH_OS_LOCK",
+    title: "Tech OS Lock \u2013 Platform Defensibility",
+    priority: 6
+  },
+  LAUNCH_AUTHICHAIN: {
+    type: "LAUNCH_AUTHICHAIN",
+    title: "AuthiChain.com \u2013 Full Launch Orchestration",
+    priority: 10
+  },
+  GOVCHAIN_LAUNCH: {
+    type: "GOVCHAIN_LAUNCH",
+    title: "GovChain.us \u2013 Government Protocol Launch",
+    priority: 10
+  }
+};
+var taskTemplates = {
+  TECH_SPRINT: [
+    {
+      kind: "PLAN_SPRINT",
+      payload: {
+        feature: "Feature to be specified at mission creation",
+        context: "authichain-unified full-stack TypeScript Cloudflare Worker"
+      }
+    }
+  ],
+  GOV_PILOT: [
+    { kind: "BUILD_PILOT_PACKET", payload: { segment: "GOV" } },
+    { kind: "DRAFT_INTEL_DOSSIER", payload: { segment: "GOV" } },
+    { kind: "FIND_GOV_LEADS", payload: { count: 10, icp: "government agency supply chain / procurement" } },
+    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "GOV", sequence: 1 } },
+    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "GOV", maxFollowups: 3 } },
+    { kind: "CRM_UPDATE", payload: { segment: "GOV", dealStage: "pilot_proposed" } }
+  ],
+  RETAIL_PILOT: [
+    { kind: "FINALIZE_RETAIL_SIGNAGE", payload: {} },
+    { kind: "PACKAGE_SKU_ONBOARDING", payload: {} },
+    { kind: "FIND_RETAIL_LEADS", payload: { count: 15, vertical: "dispensary", icp: "retail cannabis dispensary owner" } },
+    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "RETAIL", sequence: 1 } },
+    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "RETAIL", maxFollowups: 3 } },
+    { kind: "CRM_UPDATE", payload: { segment: "RETAIL", dealStage: "pilot_proposed" } }
+  ],
+  PRESS_LAUNCH: [
+    { kind: "FIND_RETAIL_LEADS", payload: { count: 20, vertical: "press", icp: "tech journalist / crypto reporter" } },
+    { kind: "DRAFT_PRESS_RELEASE", payload: {} },
+    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "PRESS", sequence: 1 } },
+    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "PRESS", maxFollowups: 2 } },
+    { kind: "SCHEDULE_SOCIAL_POSTS", payload: { platforms: ["twitter", "linkedin"] } }
+  ],
+  PARTNER_ONBOARDING: [
+    { kind: "BUILD_PILOT_PACKET", payload: { segment: "PARTNER" } },
+    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "PARTNER", sequence: 1 } },
+    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "PARTNER", maxFollowups: 2 } },
+    { kind: "CRM_UPDATE", payload: { dealStage: "partner_onboarding" } }
+  ],
+  TECH_OS_LOCK: [
+    { kind: "BUILD_PILOT_PACKET", payload: { segment: "TECH", focus: "platform_defensibility" } },
+    { kind: "DRAFT_INTEL_DOSSIER", payload: { segment: "TECH", focus: "competitive_moat" } },
+    { kind: "GENERATE_LAUNCH_CHECKLIST", payload: { scope: "tech_os" } }
+  ],
+  LAUNCH_AUTHICHAIN: [
+    { kind: "CHECK_DNS_CONFIG", payload: { domain: "authichain.com" } },
+    { kind: "VERIFY_SSL", payload: { domain: "authichain.com" } },
+    { kind: "RUN_LIGHTHOUSE_AUDIT", payload: { url: "https://authichain.com" } },
+    { kind: "GENERATE_LAUNCH_CHECKLIST", payload: { scope: "full_launch" } },
+    { kind: "DRAFT_LAUNCH_EMAIL", payload: { audience: "founders" } },
+    { kind: "DRAFT_PRESS_RELEASE", payload: {} },
+    { kind: "SCHEDULE_SOCIAL_POSTS", payload: { platforms: ["twitter", "linkedin"] } }
+  ],
+  GOVCHAIN_LAUNCH: [
+    { kind: "CHECK_DNS_CONFIG", payload: { domain: "govchain.us" } },
+    { kind: "VERIFY_SSL", payload: { domain: "govchain.us" } },
+    { kind: "DRAFT_INTEL_DOSSIER", payload: { segment: "GOV", focus: "sovereign_trust" } },
+    { kind: "GENERATE_LAUNCH_CHECKLIST", payload: { scope: "govchain_launch" } },
+    { kind: "DRAFT_PRESS_RELEASE", payload: { focus: "government_blockchain" } },
+    { kind: "SCHEDULE_SOCIAL_POSTS", payload: { platforms: ["twitter", "linkedin"] } }
+  ]
+};
+
+// server/missions/missions.db.ts
+async function getMissions2(statusFilter) {
+  const d = await getDb();
+  if (statusFilter) {
+    return d.select().from(missions).where(eq5(missions.status, statusFilter));
+  }
+  return d.select().from(missions).orderBy(desc4(missions.createdAt));
+}
+async function getMissionById2(id) {
+  const d = await getDb();
+  const [mission] = await d.select().from(missions).where(eq5(missions.id, id)).limit(1);
+  if (!mission) return null;
+  const tasks = await d.select().from(missionTasks).where(eq5(missionTasks.missionId, id)).orderBy(missionTasks.order);
+  return { ...mission, tasks };
+}
+async function createMission2(type) {
+  const d = await getDb();
+  const template = missionTemplates[type];
+  if (!template) throw new Error(`Unknown mission type: ${type}`);
+  const id = randomUUID2();
+  await d.insert(missions).values({
+    id,
+    title: template.title,
+    description: `Mission: ${template.title}`,
+    status: "pending"
+  });
+  const templateTasks = taskTemplates[type] ?? [];
+  if (templateTasks.length > 0) {
+    const taskRows = templateTasks.map((t2, index) => ({
+      id: randomUUID2(),
+      missionId: id,
+      title: t2.kind,
+      description: JSON.stringify(t2.payload),
+      status: "pending",
+      order: index + 1
+    }));
+    await d.insert(missionTasks).values(taskRows);
+  }
+  return id;
+}
+async function updateMissionStatus2(id, status) {
+  const d = await getDb();
+  await d.update(missions).set({ status: status.toLowerCase() }).where(eq5(missions.id, id));
+}
+async function getTasksByMission2(missionId) {
+  const d = await getDb();
+  return d.select().from(missionTasks).where(eq5(missionTasks.missionId, missionId)).orderBy(missionTasks.order);
+}
+async function retryTask2(id) {
+  const d = await getDb();
+  await d.update(missionTasks).set({ status: "pending" }).where(eq5(missionTasks.id, id));
+}
+
+// server/missions/router.ts
+var missionsRouter = router({
+  list: protectedProcedure.input(z8.object({ status: z8.string().optional() })).query(async ({ input }) => {
+    return getMissions2(input.status);
   }),
-  createStripe: protectedProcedure.input(z8.object({
-    amount: z8.string(),
-    currency: z8.string().optional().default("USD"),
-    metadata: z8.any().optional()
-  })).mutation(async ({ ctx, input }) => {
-    return await createPayment({ userId: ctx.user.id, amount: input.amount, currency: input.currency, method: "stripe", status: "pending", metadata: input.metadata });
+  create: protectedProcedure.input(z8.object({ type: z8.custom() })).mutation(async ({ input }) => {
+    const id = await createMission2(input.type);
+    return { id };
   }),
-  createCrypto: protectedProcedure.input(z8.object({
-    amount: z8.string(),
-    currency: z8.string().optional().default("BTC"),
-    metadata: z8.any().optional()
-  })).mutation(async ({ ctx, input }) => {
-    return await createPayment({ userId: ctx.user.id, amount: input.amount, currency: input.currency, method: "crypto", status: "pending", metadata: input.metadata });
+  get: protectedProcedure.input(z8.object({ id: z8.string() })).query(async ({ input }) => {
+    return getMissionById2(input.id);
   }),
-  createEscrow: protectedProcedure.input(z8.object({
-    amount: z8.string(),
-    releaseDate: z8.string(),
-    metadata: z8.any().optional()
+  updateStatus: protectedProcedure.input(z8.object({ id: z8.string(), status: z8.custom() })).mutation(async ({ input }) => {
+    await updateMissionStatus2(input.id, input.status);
+    return { ok: true };
+  })
+});
+var tasksRouter = router({
+  list: protectedProcedure.input(z8.object({ missionId: z8.string() })).query(async ({ input }) => {
+    return getTasksByMission2(input.missionId);
+  }),
+  retry: protectedProcedure.input(z8.object({ id: z8.string() })).mutation(async ({ input }) => {
+    await retryTask2(input.id);
+    return { ok: true };
+  })
+});
+
+// server/admin/router.ts
+init_db();
+import { z as z9 } from "zod";
+var adminRouter = router({
+  metrics: adminProcedure.query(async () => {
+    return await getAdminDashboardMetrics();
+  }),
+  users: adminProcedure.query(async () => {
+    return await getAllUsers();
+  }),
+  revenue: adminProcedure.input(z9.object({
+    startDate: z9.string().optional(),
+    endDate: z9.string().optional()
+  }).optional()).query(async ({ input }) => {
+    return await getRevenueAnalytics(
+      input?.startDate ? new Date(input.startDate) : void 0,
+      input?.endDate ? new Date(input.endDate) : void 0
+    );
+  }),
+  fraudAlerts: adminProcedure.query(async () => {
+    return await getOpenFraudAlerts();
+  }),
+  healthScores: adminProcedure.query(async () => {
+    return await getAllHealthScores();
+  }),
+  activity: adminProcedure.input(z9.object({ limit: z9.number().optional().default(50) })).query(async ({ input }) => {
+    return await getRecentActivity(input.limit);
+  }),
+  subscriptions: adminProcedure.query(async () => {
+    return await getSubscriptionAnalytics();
+  })
+});
+
+// server/notifications/router.ts
+init_db();
+import { z as z10 } from "zod";
+var notificationsRouter = router({
+  list: protectedProcedure.input(z10.object({
+    limit: z10.number().optional().default(50)
+  }).optional()).query(async ({ ctx, input }) => {
+    return await getUserNotifications(ctx.user.id, input?.limit ?? 50);
+  }),
+  unreadCount: protectedProcedure.query(async ({ ctx }) => {
+    return { count: await getUnreadNotificationCount(ctx.user.id) };
+  }),
+  markRead: protectedProcedure.input(z10.object({ id: z10.number() })).mutation(async ({ ctx, input }) => {
+    await markNotificationRead(input.id, ctx.user.id);
+    return { success: true };
+  }),
+  markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+    await markAllNotificationsRead(ctx.user.id);
+    return { success: true };
+  }),
+  delete: protectedProcedure.input(z10.object({ id: z10.number() })).mutation(async ({ ctx, input }) => {
+    await deleteNotification(input.id, ctx.user.id);
+    return { success: true };
+  }),
+  create: protectedProcedure.input(z10.object({
+    title: z10.string().min(1),
+    message: z10.string().min(1),
+    type: z10.enum(["authentication", "certificate", "payment", "subscription", "nft", "referral", "system", "alert", "supply_chain", "autopilot"]),
+    actionUrl: z10.string().optional()
   })).mutation(async ({ ctx, input }) => {
-    return await createPayment({
-      userId: ctx.user.id,
-      amount: input.amount,
-      method: "escrow",
-      status: "escrowed",
-      escrowReleaseDate: new Date(input.releaseDate),
-      metadata: input.metadata
-    });
+    return await createNotification({ ...input, userId: ctx.user.id, isRead: 0 });
+  })
+});
+
+// server/ai/router.ts
+init_llm();
+import { z as z11 } from "zod";
+var aiRouter = router({
+  chat: protectedProcedure.input(z11.object({
+    messages: z11.array(z11.object({ role: z11.enum(["user", "assistant", "system"]), content: z11.string() }))
+  })).mutation(async ({ input }) => {
+    const systemPrompt = "You are AuthiChain AI, an expert assistant for product authentication, blockchain verification, supply chain management, and anti-counterfeiting. Help users understand authentication results, manage their products, and optimize their supply chain security.";
+    const messages = [{ role: "system", content: systemPrompt }, ...input.messages];
+    const response = await invokeLLM({ messages });
+    return { content: response.choices?.[0]?.message?.content || "I apologize, I could not generate a response." };
   })
 });
 
 // server/autopilot/router.ts
 init_db();
 init_llm();
-import { z as z9 } from "zod";
+import { z as z12 } from "zod";
 var autopilotRouter = router({
   getStatus: protectedProcedure.query(async () => {
     const config = await getAutopilotConfig();
@@ -9823,30 +8989,30 @@ var autopilotRouter = router({
     });
     return { success: true, enabled: config?.enabled === 1 ? 0 : 1 };
   }),
-  updateMode: protectedProcedure.input(z9.object({
-    mode: z9.enum(["conservative", "balanced", "aggressive"])
+  updateMode: protectedProcedure.input(z12.object({
+    mode: z12.enum(["conservative", "balanced", "aggressive"])
   })).mutation(async ({ ctx, input }) => {
     await upsertAutopilotConfig({ mode: input.mode, updatedBy: ctx.user.id });
     return { success: true };
   }),
-  getDecisions: protectedProcedure.input(z9.object({ limit: z9.number().optional().default(20) })).query(async ({ input }) => {
+  getDecisions: protectedProcedure.input(z12.object({ limit: z12.number().optional().default(20) })).query(async ({ input }) => {
     return await getRecentDecisions(input.limit);
   }),
-  overrideDecision: protectedProcedure.input(z9.object({
-    decisionId: z9.number(),
-    reason: z9.string()
+  overrideDecision: protectedProcedure.input(z12.object({
+    decisionId: z12.number(),
+    reason: z12.string()
   })).mutation(async ({ ctx, input }) => {
     const { autopilotDecisions: autopilotDecisions2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq20 } = await import("drizzle-orm");
+    const { eq: eq18 } = await import("drizzle-orm");
     const dbInstance = await getDb();
     if (!dbInstance) throw new Error("Database not available");
-    await dbInstance.update(autopilotDecisions2).set({ status: "overridden", overriddenBy: ctx.user.id, overrideReason: input.reason }).where(eq20(autopilotDecisions2.id, input.decisionId));
+    await dbInstance.update(autopilotDecisions2).set({ status: "overridden", overriddenBy: ctx.user.id, overrideReason: input.reason }).where(eq18(autopilotDecisions2.id, input.decisionId));
     return { success: true };
   }),
-  executeAction: protectedProcedure.input(z9.object({
-    type: z9.string(),
-    action: z9.string(),
-    reasoning: z9.string().optional()
+  executeAction: protectedProcedure.input(z12.object({
+    type: z12.string(),
+    action: z12.string(),
+    reasoning: z12.string().optional()
   })).mutation(async ({ ctx, input }) => {
     const response = await invokeLLM({
       messages: [
@@ -9874,7 +9040,9 @@ Reasoning: ${input.reasoning || "N/A"}` }
         }
       }
     });
-    const evaluation = JSON.parse(response.choices[0].message.content);
+    const rawContent = response.choices?.[0]?.message?.content;
+    if (!rawContent) throw new Error("Autopilot AI returned empty response");
+    const evaluation = JSON.parse(rawContent);
     const decision = await createAutopilotDecision({
       type: input.type,
       action: input.action,
@@ -9888,497 +9056,6 @@ Reasoning: ${input.reasoning || "N/A"}` }
   })
 });
 
-// server/email-campaigns/router.ts
-init_db();
-init_llm();
-init_email_service();
-import { z as z10 } from "zod";
-import { TRPCError as TRPCError8 } from "@trpc/server";
-var emailCampaignsRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return await getUserEmailCampaigns(ctx.user.id);
-  }),
-  create: protectedProcedure.input(z10.object({
-    name: z10.string().min(1),
-    subject: z10.string().min(1),
-    body: z10.string().min(1),
-    type: z10.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
-    scheduledAt: z10.string().optional(),
-    targetEmail: z10.string().email().optional()
-  })).mutation(async ({ ctx, input }) => {
-    return await createEmailCampaign({
-      ...input,
-      userId: ctx.user.id,
-      status: input.scheduledAt ? "scheduled" : "draft",
-      scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null
-    });
-  }),
-  send: protectedProcedure.input(z10.object({
-    campaignId: z10.number(),
-    targetEmail: z10.string().email()
-  })).mutation(async ({ ctx, input }) => {
-    const campaigns = await getUserEmailCampaigns(ctx.user.id);
-    const campaign = campaigns.find((c) => c.id === input.campaignId);
-    if (!campaign) throw new TRPCError8({ code: "NOT_FOUND", message: "Campaign not found" });
-    const result = await sendEmail({
-      to: input.targetEmail,
-      subject: campaign.subject,
-      body: campaign.body
-    });
-    if (result.status === "sent") {
-      await updateEmailCampaign(input.campaignId, {
-        status: "sent",
-        sentAt: /* @__PURE__ */ new Date(),
-        targetEmail: input.targetEmail,
-        providerMessageId: result.providerMessageId
-      });
-      return { success: true, messageId: result.providerMessageId };
-    } else {
-      throw new TRPCError8({
-        code: "INTERNAL_SERVER_ERROR",
-        message: `Failed to send email: ${result.reason || "unknown error"}`
-      });
-    }
-  }),
-  generateContent: protectedProcedure.input(z10.object({
-    type: z10.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
-    topic: z10.string(),
-    targetAudience: z10.string().optional()
-  })).mutation(async ({ input }) => {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: "You are an expert email marketing specialist for a blockchain authentication platform. Create compelling, professional email content that drives conversions." },
-        { role: "user", content: `Create a ${input.type} email about: ${input.topic}. Target audience: ${input.targetAudience || "enterprise decision makers"}. Return JSON with subject and body fields.` }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "email_content",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: { subject: { type: "string" }, body: { type: "string" } },
-            required: ["subject", "body"],
-            additionalProperties: false
-          }
-        }
-      }
-    });
-    return JSON.parse(response.choices[0].message.content);
-  })
-});
-
-// server/email-drafts/router.ts
-init_db();
-import { z as z11 } from "zod";
-
-// server/email/smtp.ts
-async function getNodemailer() {
-  return await import("nodemailer");
-}
-function getFrom() {
-  const name = process.env.SMTP_FROM_NAME || "AuthiChain";
-  const email = process.env.SMTP_FROM || "noreply@authichain.com";
-  return `"${name}" <${email}>`;
-}
-async function createTransporter() {
-  const nodemailer3 = await getNodemailer();
-  const nm = nodemailer3.default ?? nodemailer3;
-  const host = process.env.SMTP_HOST || "smtp.gmail.com";
-  const port = parseInt(process.env.SMTP_PORT || "587", 10);
-  const secure = process.env.SMTP_SECURE === "true";
-  return nm.createTransport({
-    host,
-    port,
-    secure,
-    auth: {
-      user: process.env.SMTP_USER || "",
-      pass: process.env.SMTP_PASS || ""
-    }
-  });
-}
-async function sendEmail2(options) {
-  const transporter = await createTransporter();
-  await transporter.sendMail({
-    from: options.from || getFrom(),
-    to: Array.isArray(options.to) ? options.to.join(", ") : options.to,
-    subject: options.subject,
-    html: options.html,
-    text: options.text,
-    replyTo: options.replyTo,
-    attachments: options.attachments
-  });
-}
-
-// server/email-drafts/router.ts
-var emailDraftsRouter = router({
-  listPending: protectedProcedure.query(async () => {
-    return await getPendingDrafts();
-  }),
-  create: protectedProcedure.input(z11.object({
-    prospectName: z11.string().optional(),
-    prospectEmail: z11.string().email(),
-    prospectCompany: z11.string().optional(),
-    industry: z11.string().optional(),
-    subject: z11.string().min(1),
-    body: z11.string().min(1)
-  })).mutation(async ({ input }) => {
-    return await createEmailDraft({ ...input, status: "pending", generatedBy: "ai_manager" });
-  }),
-  approve: protectedProcedure.input(z11.object({ id: z11.number() })).mutation(async ({ ctx, input }) => {
-    const drafts = await getPendingDrafts();
-    const draft = drafts.find((d) => d.id === input.id);
-    await updateDraftStatus(input.id, "approved", ctx.user.id);
-    if (draft) {
-      try {
-        await sendEmail2({
-          to: draft.prospectEmail,
-          subject: draft.subject,
-          html: draft.body
-        });
-        await updateDraftStatus(input.id, "sent", ctx.user.id);
-      } catch (err) {
-        console.error("[EmailDrafts] Failed to send approved email:", err);
-      }
-    }
-    return { success: true };
-  }),
-  reject: protectedProcedure.input(z11.object({ id: z11.number(), notes: z11.string().optional() })).mutation(async ({ ctx, input }) => {
-    await updateDraftStatus(input.id, "rejected", ctx.user.id);
-    return { success: true };
-  }),
-  bulkApprove: protectedProcedure.input(z11.object({ ids: z11.array(z11.number()) })).mutation(async ({ ctx, input }) => {
-    for (const id of input.ids) await updateDraftStatus(id, "approved", ctx.user.id);
-    return { success: true, count: input.ids.length };
-  }),
-  // Fetch the draft generated for a given AgentZ task (consumed by the Missions review modal).
-  getByTaskId: protectedProcedure.input(z11.object({ taskId: z11.string() })).query(async ({ input }) => {
-    const d = await getDb();
-    const { emailDrafts: emailDrafts2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq20 } = await import("drizzle-orm");
-    const rows = await d.select().from(emailDrafts2).where(eq20(emailDrafts2.taskId, input.taskId)).limit(1);
-    return rows[0] ?? null;
-  }),
-  // Mark a draft as sent by id.
-  sendById: protectedProcedure.input(z11.object({ id: z11.number() })).mutation(async ({ input }) => {
-    const d = await getDb();
-    const { emailDrafts: emailDrafts2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq20 } = await import("drizzle-orm");
-    await d.update(emailDrafts2).set({ status: "sent", sentAt: /* @__PURE__ */ new Date() }).where(eq20(emailDrafts2.id, input.id));
-    return { success: true };
-  })
-});
-
-// server/supply-chain/router.ts
-init_db();
-import { z as z12 } from "zod";
-var supplyChainRouter = router({
-  getEvents: protectedProcedure.input(z12.object({ productId: z12.number() })).query(async ({ input }) => {
-    return await getProductSupplyChain(input.productId);
-  }),
-  addEvent: protectedProcedure.input(z12.object({
-    productId: z12.number(),
-    eventType: z12.enum(["manufactured", "shipped", "in_transit", "customs", "delivered", "verified", "recalled"]),
-    location: z12.string().optional(),
-    latitude: z12.string().optional(),
-    longitude: z12.string().optional(),
-    temperature: z12.string().optional(),
-    humidity: z12.string().optional(),
-    handler: z12.string().optional(),
-    notes: z12.string().optional(),
-    iotDeviceId: z12.string().optional()
-  })).mutation(async ({ ctx, input }) => {
-    const result = await createSupplyChainEvent(input);
-    await logActivity({ userId: ctx.user.id, action: "supply_chain_event", entityType: "supply_chain", entityId: result.id });
-    return result;
-  })
-});
-
-// server/notifications/router.ts
-init_db();
-import { z as z13 } from "zod";
-var notificationsRouter = router({
-  list: protectedProcedure.input(z13.object({
-    limit: z13.number().optional().default(50)
-  }).optional()).query(async ({ ctx, input }) => {
-    return await getUserNotifications(ctx.user.id, input?.limit ?? 50);
-  }),
-  unreadCount: protectedProcedure.query(async ({ ctx }) => {
-    return { count: await getUnreadNotificationCount(ctx.user.id) };
-  }),
-  markRead: protectedProcedure.input(z13.object({ id: z13.number() })).mutation(async ({ ctx, input }) => {
-    await markNotificationRead(input.id, ctx.user.id);
-    return { success: true };
-  }),
-  markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
-    await markAllNotificationsRead(ctx.user.id);
-    return { success: true };
-  }),
-  delete: protectedProcedure.input(z13.object({ id: z13.number() })).mutation(async ({ ctx, input }) => {
-    await deleteNotification(input.id, ctx.user.id);
-    return { success: true };
-  }),
-  create: protectedProcedure.input(z13.object({
-    title: z13.string().min(1),
-    message: z13.string().min(1),
-    type: z13.enum(["authentication", "certificate", "payment", "subscription", "nft", "referral", "system", "alert", "supply_chain", "autopilot"]),
-    actionUrl: z13.string().optional()
-  })).mutation(async ({ ctx, input }) => {
-    return await createNotification({ ...input, userId: ctx.user.id, isRead: 0 });
-  })
-});
-
-// server/admin/router.ts
-init_db();
-import { z as z14 } from "zod";
-var adminRouter = router({
-  metrics: adminProcedure.query(async () => {
-    return await getAdminDashboardMetrics();
-  }),
-  users: adminProcedure.query(async () => {
-    return await getAllUsers();
-  }),
-  revenue: adminProcedure.input(z14.object({
-    startDate: z14.string().optional(),
-    endDate: z14.string().optional()
-  }).optional()).query(async ({ input }) => {
-    return await getRevenueAnalytics(
-      input?.startDate ? new Date(input.startDate) : void 0,
-      input?.endDate ? new Date(input.endDate) : void 0
-    );
-  }),
-  revenueStats: adminProcedure.query(async () => {
-    const [allRevenue, allSubs] = await Promise.all([
-      getRevenueAnalytics(),
-      getSubscriptionAnalytics()
-    ]);
-    const totalRevenue = allRevenue.reduce((s, r) => s + parseFloat(r.amount || "0"), 0);
-    const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3);
-    const recentRevenue = allRevenue.filter((r) => new Date(r.createdAt) >= last30Days);
-    const revenue30d = recentRevenue.reduce((s, r) => s + parseFloat(r.amount || "0"), 0);
-    const bySource = {};
-    for (const r of allRevenue) {
-      const src = r.source || "unknown";
-      bySource[src] = (bySource[src] || 0) + parseFloat(r.amount || "0");
-    }
-    const byType = {};
-    for (const r of allRevenue) {
-      const t2 = r.type || "unknown";
-      byType[t2] = (byType[t2] || 0) + parseFloat(r.amount || "0");
-    }
-    const subsByPlan = {};
-    const subsByStatus = {};
-    const planPrices = { starter: 49, professional: 199, enterprise: 799 };
-    let mrr = 0;
-    for (const s of allSubs) {
-      const plan = s.plan || "starter";
-      const status = s.status || "unknown";
-      subsByPlan[plan] = (subsByPlan[plan] || 0) + 1;
-      subsByStatus[status] = (subsByStatus[status] || 0) + 1;
-      if (status === "active") {
-        const monthly = s.billingCycle === "annual" ? (planPrices[plan] || 0) * 0.8 : planPrices[plan] || 0;
-        mrr += monthly;
-      }
-    }
-    return {
-      totalRevenue: parseFloat(totalRevenue.toFixed(2)),
-      revenue30d: parseFloat(revenue30d.toFixed(2)),
-      mrr: parseFloat(mrr.toFixed(2)),
-      arr: parseFloat((mrr * 12).toFixed(2)),
-      bySource,
-      byType,
-      subsByPlan,
-      subsByStatus,
-      totalSubs: allSubs.length,
-      activeSubs: subsByStatus["active"] || 0,
-      pastDueSubs: subsByStatus["past_due"] || 0
-    };
-  }),
-  fraudAlerts: adminProcedure.query(async () => {
-    return await getOpenFraudAlerts();
-  }),
-  healthScores: adminProcedure.query(async () => {
-    return await getAllHealthScores();
-  }),
-  activity: adminProcedure.input(z14.object({ limit: z14.number().optional().default(50) })).query(async ({ input }) => {
-    return await getRecentActivity(input.limit);
-  }),
-  subscriptions: adminProcedure.query(async () => {
-    return await getSubscriptionAnalytics();
-  }),
-  platformStaking: adminProcedure.query(async () => {
-    return { totalStaked: 0, activeStakers: 0, totalRewardsDistributed: 0, avgApy: 0 };
-  }),
-  // Stage a GovChain sovereign-passport deal (consumed by the Gov onboarding page).
-  createSovereignDeal: adminProcedure.input(z14.any()).mutation(async () => {
-    return { success: true };
-  })
-});
-
-// server/marketing/router.ts
-init_db();
-init_hubspot_service();
-init_llm();
-import { z as z15 } from "zod";
-var marketingRouter = router({
-  leads: adminProcedure.query(async () => {
-    return await getAllLeads();
-  }),
-  createLead: publicProcedure.input(z15.object({
-    email: z15.string().email(),
-    name: z15.string().optional(),
-    company: z15.string().optional(),
-    source: z15.string().optional()
-  })).mutation(async ({ input }) => {
-    const result = await createLead(input);
-    try {
-      await syncLeadToHubSpot(input);
-    } catch (e) {
-    }
-    return result;
-  }),
-  updateLeadScore: adminProcedure.input(z15.object({ id: z15.number(), score: z15.number() })).mutation(async ({ input }) => {
-    await updateLeadScore(input.id, input.score);
-    return { success: true };
-  }),
-  updateLeadStatus: adminProcedure.input(z15.object({ id: z15.number(), status: z15.string() })).mutation(async ({ input }) => {
-    await updateLeadStatus(input.id, input.status);
-    return { success: true };
-  }),
-  generateContent: protectedProcedure.input(z15.object({
-    type: z15.enum(["email", "social", "blog"]),
-    topic: z15.string(),
-    targetAudience: z15.string().optional()
-  })).mutation(async ({ input }) => {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: "You are a marketing expert for a blockchain authentication platform. Create compelling, professional content." },
-        { role: "user", content: `Create ${input.type} content about: ${input.topic}. Target: ${input.targetAudience || "enterprise decision makers"}` }
-      ]
-    });
-    return { content: response.choices[0].message.content };
-  })
-});
-
-// server/ab-testing/router.ts
-init_db();
-import { z as z16 } from "zod";
-var abTestingRouter = router({
-  list: protectedProcedure.query(async () => {
-    return await getAllAbTests();
-  }),
-  create: protectedProcedure.input(z16.object({
-    name: z16.string().min(1),
-    description: z16.string().optional(),
-    type: z16.string(),
-    variants: z16.any()
-  })).mutation(async ({ input }) => {
-    return await createAbTest({ ...input, status: "draft" });
-  })
-});
-
-// server/white-label/router.ts
-init_db();
-import { z as z17 } from "zod";
-var whiteLabelRouter = router({
-  list: adminProcedure.query(async () => {
-    return await getWhiteLabelClients();
-  }),
-  create: adminProcedure.input(z17.object({
-    companyName: z17.string().min(1),
-    domain: z17.string().optional(),
-    logoUrl: z17.string().optional(),
-    primaryColor: z17.string().optional(),
-    secondaryColor: z17.string().optional(),
-    apiCallLimit: z17.number().optional().default(1e4)
-  })).mutation(async ({ ctx, input }) => {
-    const crypto4 = await import("crypto");
-    const apiKey = `wl_${crypto4.randomBytes(24).toString("hex")}`;
-    const apiSecret = crypto4.randomBytes(32).toString("hex");
-    return await createWhiteLabelClient({ ...input, userId: ctx.user.id, apiKey, apiSecret });
-  }),
-  validateApiKey: publicProcedure.input(z17.object({ apiKey: z17.string() })).query(async ({ input }) => {
-    const client = await getWhiteLabelByApiKey(input.apiKey);
-    return { valid: !!client && client.status === "active", client: client ? { companyName: client.companyName, domain: client.domain } : null };
-  })
-});
-
-// server/dashboard/router.ts
-init_db();
-
-// server/sales/harmony-service.ts
-init_db();
-init_schema();
-import { sql as sql3, eq as eq4, gte as gte2 } from "drizzle-orm";
-async function calculateHarmony() {
-  const d = await getDb();
-  if (!d) throw new Error("Database unavailable");
-  const now = /* @__PURE__ */ new Date();
-  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
-  const [totalAuths] = await d.select({ count: sql3`count(*)` }).from(authentications);
-  const [anchoredAuths] = await d.select({ count: sql3`count(*)` }).from(authentications).where(eq4(authentications.blockchainVerified, 1));
-  const anchoredPct = anchoredAuths.count / (totalAuths.count || 1);
-  const trust = Math.min(1, anchoredPct * 0.6 + 0.4);
-  const [recentAuths] = await d.select({ count: sql3`count(*)` }).from(authentications).where(gte2(authentications.createdAt, last24h));
-  const tps = recentAuths.count / (24 * 3600);
-  const peakTps = 100;
-  const velocity = Math.min(1, tps / peakTps + 0.2);
-  const [totalStaked] = await d.select({ sum: sql3`sum(amount)` }).from(stakingPositions).where(eq4(stakingPositions.status, "active"));
-  const stakedAmount = Number(totalStaked.sum || 0);
-  const targetStake = 1e7;
-  const adoption = Math.min(1, stakedAmount / targetStake * 0.5 + 0.5);
-  const index = Math.pow(trust * velocity * adoption, 1 / 3);
-  const baseValuation = 18.4;
-  const valuation = baseValuation * (1 + (index - 0.5));
-  return {
-    index: Number(index.toFixed(4)),
-    trust,
-    velocity,
-    adoption,
-    valuation,
-    breakdown: {
-      anchoredPct,
-      avgConfidence: 99.7,
-      // Protocol baseline
-      tps,
-      stakedSupplyPct: stakedAmount / 1e8 * 100,
-      // % of total supply
-      mrrGrowth: 15.4
-      // Current momentum
-    }
-  };
-}
-
-// server/dashboard/router.ts
-var dashboardRouter = router({
-  metrics: protectedProcedure.query(async ({ ctx }) => {
-    return await getDashboardMetrics(ctx.user.id);
-  }),
-  harmony: publicProcedure.query(async () => {
-    return await calculateHarmony();
-  }),
-  pulse: publicProcedure.query(async () => {
-    const activity = await getRecentActivity(10);
-    return activity.map((a) => {
-      let text2 = "Network Activity Detected";
-      if (a.action === "strainchain_auto_anchor") {
-        text2 = `Bitcoin L1 Anchor: Package #${a.details?.packageTag?.substring(0, 8)}...`;
-      } else if (a.action === "roi_calculated") {
-        text2 = `MedTech ROI Analysis: $${(a.details?.savings || 25e4).toLocaleString()} Savings...`;
-      } else if (a.action === "govchain_passport_issued") {
-        text2 = `Sovereign Passport Issued: #${a.details?.documentId}...`;
-      } else if (a.action === "nft_minted") {
-        text2 = `Authenticity Token Minted: ${a.details?.name}...`;
-      } else if (a.action === "product_authenticated") {
-        text2 = `High-Fidelity Scan Verified: Confidence ${a.details?.confidence}%...`;
-      } else if (a.action === "qron_staked") {
-        text2 = `Validator Stake Active: ${a.details?.amount} $QRON Locked...`;
-      }
-      return { id: a.id, text: text2, time: a.createdAt };
-    });
-  })
-});
-
 // server/blockchain/router.ts
 init_db();
 
@@ -10389,16 +9066,16 @@ import { privateKeyToAccount } from "thirdweb/wallets";
 import { mintTo, balanceOf, totalSupply, getOwnedNFTs } from "thirdweb/extensions/erc721";
 import { upload } from "thirdweb/storage";
 import { sendTransaction } from "thirdweb";
-var _client2 = null;
+var _client = null;
 function getThirdwebClient() {
-  if (!_client2) {
+  if (!_client) {
     const secretKey = ENV.thirdwebSecretKey;
     if (!secretKey) {
       throw new Error("Thirdweb secret key not configured. Set thirdweb_api_key env var.");
     }
-    _client2 = createThirdwebClient({ secretKey });
+    _client = createThirdwebClient({ secretKey });
   }
-  return _client2;
+  return _client;
 }
 var CHAINS = {
   polygon: defineChain(137),
@@ -10411,13 +9088,12 @@ var CHAINS = {
 function getDefaultChain() {
   return ENV.isProduction ? CHAINS.polygon : CHAINS.polygonAmoy;
 }
-async function uploadFileToIPFS(file) {
+async function uploadMetadataToIPFS(metadata) {
   const client = getThirdwebClient();
+  const jsonStr = JSON.stringify(metadata);
+  const file = new File([jsonStr], "metadata.json", { type: "application/json" });
   const uri = await upload({ client, files: [file] });
   return typeof uri === "string" ? uri : uri[0];
-}
-async function uploadMetadataToIPFS(metadata) {
-  return uploadFileToIPFS(new File([JSON.stringify(metadata)], "metadata.json", { type: "application/json" }));
 }
 async function mintAuthenticationNFT(params) {
   const client = getThirdwebClient();
@@ -10511,17 +9187,23 @@ async function checkThirdwebConnection() {
 }
 
 // server/blockchain/router.ts
-import { z as z18 } from "zod";
-import { TRPCError as TRPCError9 } from "@trpc/server";
+init_env();
+import { z as z13 } from "zod";
+import { TRPCError as TRPCError4 } from "@trpc/server";
+function getServerPrivateKey() {
+  const key = ENV.blockchainPrivateKey || process.env.BLOCKCHAIN_PRIVATE_KEY;
+  if (!key) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Blockchain signing key not configured on server" });
+  return key;
+}
 var blockchainRouter = router({
   status: publicProcedure.query(async () => {
     return await checkThirdwebConnection();
   }),
-  uploadToIPFS: protectedProcedure.input(z18.object({
-    name: z18.string(),
-    description: z18.string().optional(),
-    imageUrl: z18.string().optional(),
-    attributes: z18.array(z18.object({ trait_type: z18.string(), value: z18.union([z18.string(), z18.number()]) })).optional()
+  uploadToIPFS: protectedProcedure.input(z13.object({
+    name: z13.string(),
+    description: z13.string().optional(),
+    imageUrl: z13.string().optional(),
+    attributes: z13.array(z13.object({ trait_type: z13.string(), value: z13.union([z13.string(), z13.number()]) })).optional()
   })).mutation(async ({ input }) => {
     const uri = await uploadMetadataToIPFS({
       name: input.name,
@@ -10531,18 +9213,18 @@ var blockchainRouter = router({
     });
     return { ipfsUri: uri };
   }),
-  mintCertificateNFT: protectedProcedure.input(z18.object({
-    productId: z18.number(),
-    certificateNumber: z18.string(),
-    walletAddress: z18.string(),
-    contractAddress: z18.string(),
-    privateKey: z18.string(),
-    chainId: z18.number().optional()
+  mintCertificateNFT: protectedProcedure.input(z13.object({
+    productId: z13.number(),
+    certificateNumber: z13.string(),
+    walletAddress: z13.string(),
+    contractAddress: z13.string(),
+    chainId: z13.number().optional(),
+    privateKey: z13.string().optional()
   })).mutation(async ({ ctx, input }) => {
     const product = await getProductById(input.productId);
-    if (!product) throw new TRPCError9({ code: "NOT_FOUND", message: "Product not found" });
+    if (!product) throw new TRPCError4({ code: "NOT_FOUND", message: "Product not found" });
     const cert = await getCertificateByNumber(input.certificateNumber);
-    if (!cert) throw new TRPCError9({ code: "NOT_FOUND", message: "Certificate not found" });
+    if (!cert) throw new TRPCError4({ code: "NOT_FOUND", message: "Certificate not found" });
     const metadata = buildAuthCertificateMetadata({
       productName: product.name,
       productBrand: product.brand || void 0,
@@ -10557,21 +9239,39 @@ var blockchainRouter = router({
       contractAddress: input.contractAddress,
       recipientAddress: input.walletAddress,
       metadata,
-      privateKey: input.privateKey,
+      privateKey: input.privateKey || getServerPrivateKey(),
       chainId: input.chainId
     });
     await logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "certificate", entityId: cert.id });
     return { transactionHash: result.transactionHash, metadataUri: result.metadataUri, chain: result.chain };
   }),
-  mintNFT: protectedProcedure.input(z18.object({
-    name: z18.string(),
-    description: z18.string().optional(),
-    imageUrl: z18.string().optional(),
-    walletAddress: z18.string(),
-    contractAddress: z18.string(),
-    privateKey: z18.string(),
-    chainId: z18.number().optional(),
-    attributes: z18.array(z18.object({ trait_type: z18.string(), value: z18.union([z18.string(), z18.number()]) })).optional()
+  anchorToBitcoin: protectedProcedure.input(z13.object({
+    productId: z13.number(),
+    truemarkId: z13.string()
+  })).mutation(async ({ input }) => {
+    const { prepareOrdinalEnvelope: prepareOrdinalEnvelope2, linkOrdinalToProduct: linkOrdinalToProduct2 } = await Promise.resolve().then(() => (init_ordinals_service(), ordinals_service_exports));
+    const { getProductById: getProductById2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+    const product = await getProductById2(input.productId);
+    const metadata = {
+      p: "auth",
+      v: "1.0",
+      id: input.truemarkId,
+      name: product?.name,
+      ts: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    const envelope = await prepareOrdinalEnvelope2(product?.imageUrl || "", metadata);
+    const result = await linkOrdinalToProduct2(input.productId, "btc_ins_pending_" + Date.now());
+    return { success: true, status: "ANCHORING_INITIATED", details: "BTC Inscription staged for witness." };
+  }),
+  mintNFT: protectedProcedure.input(z13.object({
+    name: z13.string(),
+    description: z13.string().optional(),
+    imageUrl: z13.string().optional(),
+    walletAddress: z13.string(),
+    contractAddress: z13.string(),
+    chainId: z13.number().optional(),
+    privateKey: z13.string().optional(),
+    attributes: z13.array(z13.object({ trait_type: z13.string(), value: z13.union([z13.string(), z13.number()]) })).optional()
   })).mutation(async ({ ctx, input }) => {
     const result = await mintAuthenticationNFT({
       contractAddress: input.contractAddress,
@@ -10582,31 +9282,31 @@ var blockchainRouter = router({
         image: input.imageUrl,
         attributes: input.attributes
       },
-      privateKey: input.privateKey,
+      privateKey: input.privateKey || getServerPrivateKey(),
       chainId: input.chainId
     });
     await logActivity({ userId: ctx.user.id, action: "nft_minted", entityType: "nft", entityId: 0 });
     return { transactionHash: result.transactionHash, metadataUri: result.metadataUri, chain: result.chain };
   }),
-  getNFTBalance: publicProcedure.input(z18.object({
-    contractAddress: z18.string(),
-    walletAddress: z18.string(),
-    chainId: z18.number().optional()
+  getNFTBalance: publicProcedure.input(z13.object({
+    contractAddress: z13.string(),
+    walletAddress: z13.string(),
+    chainId: z13.number().optional()
   })).query(async ({ input }) => {
     const balance = await getNFTBalance(input.contractAddress, input.walletAddress, input.chainId);
     return { balance };
   }),
-  getContractSupply: publicProcedure.input(z18.object({
-    contractAddress: z18.string(),
-    chainId: z18.number().optional()
+  getContractSupply: publicProcedure.input(z13.object({
+    contractAddress: z13.string(),
+    chainId: z13.number().optional()
   })).query(async ({ input }) => {
     const supply = await getContractTotalSupply(input.contractAddress, input.chainId);
     return { totalSupply: supply };
   }),
-  getWalletNFTs: publicProcedure.input(z18.object({
-    contractAddress: z18.string(),
-    walletAddress: z18.string(),
-    chainId: z18.number().optional()
+  getWalletNFTs: publicProcedure.input(z13.object({
+    contractAddress: z13.string(),
+    walletAddress: z13.string(),
+    chainId: z13.number().optional()
   })).query(async ({ input }) => {
     const nfts2 = await getWalletNFTs(input.contractAddress, input.walletAddress, input.chainId);
     return { nfts: nfts2 };
@@ -10623,808 +9323,137 @@ var blockchainRouter = router({
   })
 });
 
-// server/hubspot/router.ts
+// server/marketing/router.ts
+init_db();
 init_hubspot_service();
-import { z as z19 } from "zod";
-var hubspotRouter = router({
-  status: protectedProcedure.query(async () => {
-    if (!isHubSpotConfigured()) return { connected: false, contacts: 0, companies: 0, deals: 0, error: "HUBSPOT_SERVICE_KEY is not configured. Add it in Settings \u2192 Secrets." };
-    return await getCRMStats();
-  }),
-  contacts: router({
-    list: protectedProcedure.query(async () => {
-      return await listContacts();
-    }),
-    search: protectedProcedure.input(z19.object({ query: z19.string() })).query(async ({ input }) => {
-      return await searchContacts(input.query);
-    }),
-    create: protectedProcedure.input(z19.object({
-      email: z19.string().email(),
-      firstname: z19.string().optional(),
-      lastname: z19.string().optional(),
-      phone: z19.string().optional(),
-      company: z19.string().optional()
-    })).mutation(async ({ input }) => {
-      return await createContact(input);
-    })
-  }),
-  companies: router({
-    list: protectedProcedure.query(async () => {
-      return await listCompanies();
-    }),
-    create: protectedProcedure.input(z19.object({
-      name: z19.string(),
-      domain: z19.string().optional(),
-      industry: z19.string().optional(),
-      description: z19.string().optional()
-    })).mutation(async ({ input }) => {
-      return await createCompany(input);
-    })
-  }),
-  deals: router({
-    list: protectedProcedure.query(async () => {
-      return await listDeals();
-    }),
-    create: protectedProcedure.input(z19.object({
-      dealname: z19.string(),
-      amount: z19.string().optional(),
-      pipeline: z19.string().optional(),
-      dealstage: z19.string().optional(),
-      closedate: z19.string().optional()
-    })).mutation(async ({ input }) => {
-      return await createDeal(input);
-    })
-  })
-});
-
-// server/ai/router.ts
 init_llm();
-import { z as z20 } from "zod";
-var aiRouter = router({
-  chat: protectedProcedure.input(z20.object({
-    messages: z20.array(z20.object({ role: z20.enum(["user", "assistant", "system"]), content: z20.string() }))
+import { z as z14 } from "zod";
+var marketingRouter = router({
+  leads: adminProcedure.query(async () => {
+    return await getAllLeads();
+  }),
+  createLead: publicProcedure.input(z14.object({
+    email: z14.string().email(),
+    name: z14.string().optional(),
+    company: z14.string().optional(),
+    source: z14.string().optional()
   })).mutation(async ({ input }) => {
-    const systemPrompt = "You are AuthiChain AI, an expert assistant for product authentication, blockchain verification, supply chain management, and anti-counterfeiting. Help users understand authentication results, manage their products, and optimize their supply chain security.";
-    const messages = [{ role: "system", content: systemPrompt }, ...input.messages];
-    const response = await invokeLLM({ messages });
-    return { content: response.choices?.[0]?.message?.content || "I apologize, I could not generate a response." };
-  })
-});
-
-// server/referral/router.ts
-init_db();
-import { z as z21 } from "zod";
-
-// server/referral/core.ts
-init_db();
-init_schema();
-import { nanoid as nanoid2 } from "nanoid";
-import { eq as eq5 } from "drizzle-orm";
-var COMMISSION_RATES = {
-  starter: 0.1,
-  // 10%
-  professional: 0.15,
-  // 15%
-  enterprise: 0.2,
-  // 20%
-  agency: 0.25
-  // 25%
-};
-var AFFILIATE_BONUS_TIERS = [
-  { threshold: 5, bonus: 1e3, tier: "silver" },
-  // $10 bonus at 5 referrals
-  { threshold: 10, bonus: 2500, tier: "gold" },
-  // $25 bonus at 10 referrals
-  { threshold: 25, bonus: 7500, tier: "platinum" }
-  // $75 bonus at 25 referrals
-];
-function generateReferralCode(userId) {
-  return `REF-${userId}-${nanoid2(6).toUpperCase()}`;
-}
-function generateAffiliateCode(userId) {
-  return `AFF-${userId}-${nanoid2(6).toUpperCase()}`;
-}
-async function createReferralCode(referrerId) {
-  const code = generateReferralCode(referrerId);
-  const result = await db.insert(referrals).values({
-    referrerId,
-    referralCode: code,
-    status: "pending"
-  }).returning({ id: referrals.id });
-  return { id: result[0].id, referralCode: code };
-}
-async function trackReferralClick(params) {
-  await db.insert(referralClicks).values(params);
-}
-async function completeReferral(params) {
-  const rate = COMMISSION_RATES[params.tier] || COMMISSION_RATES.starter;
-  await db.update(referrals).set({
-    referredId: params.referredId,
-    referredEmail: params.referredEmail,
-    status: "converted",
-    tier: params.tier,
-    convertedAt: /* @__PURE__ */ new Date()
-  }).where(eq5(referrals.referralCode, params.referralCode));
-}
-async function getReferralStats(referrerId) {
-  const all = await db.select().from(referrals).where(eq5(referrals.referrerId, referrerId));
-  const converted = all.filter((r) => r.status === "converted");
-  const totalCommission = converted.reduce((sum, r) => sum + parseFloat(r.commissionPaid || "0"), 0);
-  return {
-    totalReferrals: all.length,
-    convertedReferrals: converted.length,
-    pendingReferrals: all.filter((r) => r.status === "pending").length,
-    totalCommission,
-    conversionRate: all.length > 0 ? Math.round(converted.length / all.length * 100) : 0
-  };
-}
-
-// server/referral/router.ts
-var referralRouter = router({
-  generateCode: protectedProcedure.mutation(async ({ ctx }) => {
-    return await createReferralCode(ctx.user.id);
-  }),
-  getStats: protectedProcedure.query(async ({ ctx }) => {
-    return await getReferralStats(ctx.user.id);
-  }),
-  getHistory: protectedProcedure.query(async ({ ctx }) => {
-    return await getUserReferrals(ctx.user.id);
-  }),
-  trackClick: publicProcedure.input(z21.object({
-    referralCode: z21.string(),
-    ipAddress: z21.string().optional(),
-    userAgent: z21.string().optional(),
-    referer: z21.string().optional(),
-    landingPage: z21.string().optional()
-  })).mutation(async ({ input }) => {
-    await trackReferralClick(input);
-    return { success: true };
-  }),
-  validate: publicProcedure.input(z21.object({ code: z21.string() })).query(async ({ input }) => {
-    const referral = await getReferralByCode(input.code);
-    return { valid: !!referral, referral };
-  }),
-  complete: protectedProcedure.input(z21.object({
-    referralCode: z21.string(),
-    referredEmail: z21.string().email(),
-    tier: z21.enum(["starter", "professional", "enterprise", "agency"]).optional().default("starter")
-  })).mutation(async ({ ctx, input }) => {
-    await completeReferral({
-      referralCode: input.referralCode,
-      referredId: ctx.user.id,
-      referredEmail: input.referredEmail,
-      tier: input.tier
-    });
-    return { success: true };
-  })
-});
-
-// server/affiliate/router.ts
-init_db();
-import { z as z22 } from "zod";
-var affiliateRouter = router({
-  getStatus: protectedProcedure.query(async ({ ctx }) => {
-    return await getAffiliateByUserId(ctx.user.id);
-  }),
-  getStats: protectedProcedure.query(async ({ ctx }) => {
-    const affiliate = await getAffiliateByUserId(ctx.user.id);
-    if (!affiliate) return null;
-    const commissions = await getAffiliateCommissions(affiliate.id);
-    const totalEarned = parseFloat(affiliate.totalEarnings || "0");
-    const pendingPayout = parseFloat(affiliate.pendingPayout || "0");
-    const nextTier = AFFILIATE_BONUS_TIERS.find((t2) => (affiliate.totalReferrals || 0) < t2.threshold);
-    return {
-      affiliate,
-      commissions,
-      totalEarned,
-      pendingPayout,
-      nextTierThreshold: nextTier?.threshold ?? null,
-      nextTierBonus: nextTier?.bonus ?? null
-    };
-  }),
-  submitApplication: protectedProcedure.input(z22.object({
-    paypalEmail: z22.string().email().optional(),
-    payoutMethod: z22.string().optional().default("paypal")
-  })).mutation(async ({ ctx, input }) => {
-    const existing = await getAffiliateByUserId(ctx.user.id);
-    if (existing) return { success: false, message: "Already enrolled in affiliate program" };
-    const code = generateAffiliateCode(ctx.user.id);
-    const result = await createAffiliate({
-      userId: ctx.user.id,
-      affiliateCode: code,
-      status: "active",
-      commissionRate: "10.00",
-      payoutMethod: input.payoutMethod,
-      payoutDetails: input.paypalEmail ? { paypalEmail: input.paypalEmail } : null
-    });
-    return { success: true, affiliateCode: code, id: result.id };
-  }),
-  getReferrals: protectedProcedure.query(async ({ ctx }) => {
-    return await getUserReferrals(ctx.user.id);
-  })
-});
-
-// server/bonuses/router.ts
-init_db();
-init_schema();
-import { z as z23 } from "zod";
-import { eq as eq6, and as and4 } from "drizzle-orm";
-var bonusesRouter = router({
-  getUserBonuses: protectedProcedure.query(async ({ ctx }) => {
-    return await db.select().from(bonuses).where(eq6(bonuses.userId, ctx.user.id));
-  }),
-  claimBonus: protectedProcedure.input(z23.object({ bonusId: z23.number() })).mutation(async ({ ctx, input }) => {
-    const [bonus] = await db.select().from(bonuses).where(and4(eq6(bonuses.id, input.bonusId), eq6(bonuses.userId, ctx.user.id))).limit(1);
-    if (!bonus) throw new Error("Bonus not found");
-    if (bonus.status !== "pending") throw new Error("Bonus already claimed or delivered");
-    await db.update(bonuses).set({ status: "claimed", claimedAt: /* @__PURE__ */ new Date() }).where(eq6(bonuses.id, input.bonusId));
-    return { success: true };
-  }),
-  createUserBonuses: adminProcedure.input(z23.object({
-    userId: z23.number(),
-    bonusType: z23.string(),
-    bonusName: z23.string(),
-    bonusValue: z23.number(),
-    tier: z23.enum(["starter", "professional", "enterprise", "agency"]).optional(),
-    deliveryMethod: z23.string().optional().default("account_credit")
-  })).mutation(async ({ input }) => {
-    const result = await db.insert(bonuses).values({
-      userId: input.userId,
-      bonusType: input.bonusType,
-      bonusName: input.bonusName,
-      bonusValue: input.bonusValue,
-      tier: input.tier,
-      status: "pending",
-      deliveryMethod: input.deliveryMethod
-    }).returning({ id: bonuses.id });
-    return { id: result[0].id };
-  })
-});
-
-// server/marketplace/router.ts
-import { z as z24 } from "zod";
-
-// server/marketplace/db.ts
-init_db();
-init_schema();
-import { eq as eq7, desc as desc4, and as and5, sql as sql4 } from "drizzle-orm";
-async function listModels(filters) {
-  let query = db.select().from(aiModels);
-  const conditions = [];
-  if (filters?.status) conditions.push(eq7(aiModels.status, filters.status));
-  if (filters?.category) conditions.push(eq7(aiModels.category, filters.category));
-  if (conditions.length) {
-    query = query.where(and5(...conditions));
-  }
-  return await query.orderBy(desc4(aiModels.downloads)).limit(filters?.limit || 50);
-}
-async function getModelById(id) {
-  const [model] = await db.select().from(aiModels).where(eq7(aiModels.id, id)).limit(1);
-  return model;
-}
-async function createModel(data) {
-  const result = await db.insert(aiModels).values({ ...data, status: "draft" }).returning({ id: aiModels.id });
-  return { id: result[0].id };
-}
-async function purchaseModel(data) {
-  const result = await db.insert(modelPurchases).values({ ...data, status: "active" }).returning({ id: modelPurchases.id });
-  await db.update(aiModels).set({ downloads: sql4`${aiModels.downloads} + 1` }).where(eq7(aiModels.id, data.modelId));
-  return { id: result[0].id };
-}
-async function getUserPurchases(userId) {
-  return await db.select().from(modelPurchases).where(eq7(modelPurchases.userId, userId)).orderBy(desc4(modelPurchases.createdAt));
-}
-async function addReview(data) {
-  const result = await db.insert(modelReviews).values(data).returning({ id: modelReviews.id });
-  const [avg] = await db.select({ avg: sql4`AVG(rating)`, count: sql4`COUNT(*)` }).from(modelReviews).where(eq7(modelReviews.modelId, data.modelId));
-  await db.update(aiModels).set({ rating: avg.avg, reviewCount: avg.count }).where(eq7(aiModels.id, data.modelId));
-  return { id: result[0].id };
-}
-async function getModelReviews(modelId) {
-  return await db.select().from(modelReviews).where(eq7(modelReviews.modelId, modelId)).orderBy(desc4(modelReviews.createdAt));
-}
-
-// server/marketplace/router.ts
-var marketplaceRouter = router({
-  listModels: publicProcedure.input(z24.object({
-    category: z24.string().optional(),
-    limit: z24.number().optional().default(50)
-  })).query(async ({ input }) => {
-    return await listModels({ ...input, status: "active" });
-  }),
-  getModel: publicProcedure.input(z24.object({ id: z24.number() })).query(async ({ input }) => {
-    return await getModelById(input.id);
-  }),
-  createModel: adminProcedure.input(z24.object({
-    name: z24.string().min(1),
-    description: z24.string().optional(),
-    category: z24.string().optional(),
-    price: z24.number().min(0)
-  })).mutation(async ({ ctx, input }) => {
-    return await createModel({ ...input, creatorId: ctx.user.id });
-  }),
-  purchaseModel: protectedProcedure.input(z24.object({
-    modelId: z24.number(),
-    purchaseType: z24.enum(["purchase", "subscription", "rental"]).optional().default("purchase")
-  })).mutation(async ({ ctx, input }) => {
-    const model = await getModelById(input.modelId);
-    if (!model) throw new Error("Model not found");
-    return await purchaseModel({
-      userId: ctx.user.id,
-      modelId: input.modelId,
-      pricePaid: model.price,
-      purchaseType: input.purchaseType
-    });
-  }),
-  myPurchases: protectedProcedure.query(async ({ ctx }) => {
-    return await getUserPurchases(ctx.user.id);
-  }),
-  addReview: protectedProcedure.input(z24.object({
-    modelId: z24.number(),
-    rating: z24.number().min(1).max(5),
-    review: z24.string().optional()
-  })).mutation(async ({ ctx, input }) => {
-    return await addReview({ ...input, userId: ctx.user.id });
-  }),
-  getReviews: publicProcedure.input(z24.object({ modelId: z24.number() })).query(async ({ input }) => {
-    return await getModelReviews(input.modelId);
-  })
-});
-
-// server/heygen/router.ts
-import { z as z25 } from "zod";
-var HEYGEN_BASE = "https://api.heygen.com";
-async function heygenGet(path) {
-  const key = process.env.HEYGEN_API_KEY;
-  if (!key) throw new Error("HEYGEN_API_KEY not configured");
-  const res = await fetch(`${HEYGEN_BASE}${path}`, {
-    headers: { "X-Api-Key": key, Accept: "application/json" }
-  });
-  if (!res.ok) throw new Error(`HeyGen API error ${res.status}`);
-  return res.json();
-}
-async function heygenPost(path, body) {
-  const key = process.env.HEYGEN_API_KEY;
-  if (!key) throw new Error("HEYGEN_API_KEY not configured");
-  const res = await fetch(`${HEYGEN_BASE}${path}`, {
-    method: "POST",
-    headers: { "X-Api-Key": key, "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) {
-    const text2 = await res.text();
-    throw new Error(`HeyGen API error ${res.status}: ${text2}`);
-  }
-  return res.json();
-}
-var heygenRouter = router({
-  status: protectedProcedure.query(async () => {
-    const configured = !!process.env.HEYGEN_API_KEY;
-    if (!configured) return { configured, credits: 0 };
+    const result = await createLead(input);
     try {
-      const data = await heygenGet("/v2/user/remaining_quota");
-      return { configured, credits: data.data?.remaining_quota ?? 0 };
-    } catch {
-      return { configured, credits: 0 };
-    }
-  }),
-  avatars: protectedProcedure.query(async () => {
-    const data = await heygenGet("/v2/avatars");
-    return data.data?.avatars ?? [];
-  }),
-  voices: protectedProcedure.query(async () => {
-    const data = await heygenGet("/v2/voices");
-    return data.data?.voices ?? [];
-  }),
-  generateVideo: protectedProcedure.input(
-    z25.object({
-      avatarId: z25.string(),
-      voiceId: z25.string(),
-      script: z25.string().max(2e3),
-      title: z25.string().optional(),
-      backgroundHex: z25.string().default("#1a1a2e")
-    })
-  ).mutation(async ({ input }) => {
-    const data = await heygenPost("/v2/video/generate", {
-      video_inputs: [
-        {
-          character: {
-            type: "avatar",
-            avatar_id: input.avatarId,
-            avatar_style: "normal"
-          },
-          voice: {
-            type: "text",
-            input_text: input.script,
-            voice_id: input.voiceId
-          },
-          background: { type: "color", value: input.backgroundHex }
-        }
-      ],
-      dimension: { width: 1280, height: 720 },
-      ...input.title ? { title: input.title } : {}
-    });
-    return { videoId: data.data?.video_id };
-  }),
-  videoStatus: protectedProcedure.input(z25.object({ videoId: z25.string() })).query(async ({ input }) => {
-    const data = await heygenGet(`/v1/video_status.get?video_id=${input.videoId}`);
-    const v = data.data ?? {};
-    return {
-      status: v.status,
-      video_url: v.video_url,
-      thumbnail_url: v.thumbnail_url,
-      duration: v.duration,
-      error: v.error
-    };
-  }),
-  videos: protectedProcedure.input(z25.object({ page: z25.number().default(1), limit: z25.number().default(50) })).query(async ({ input }) => {
-    const data = await heygenGet(`/v1/video.list?page_size=${input.limit}&page_number=${input.page}`);
-    return {
-      videos: data.data?.list ?? [],
-      total: data.data?.total ?? 0
-    };
-  }),
-  draftScript: protectedProcedure.input(z25.object({
-    firstName: z25.string(),
-    company: z25.string(),
-    segment: z25.string()
-  })).mutation(async ({ input }) => {
-    if (!process.env.OPENAI_API_KEY) {
-      return { script: `Hi ${input.firstName} from ${input.company}, I'm reaching out from AuthiChain regarding your ${input.segment} needs.` };
-    }
-    const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
-    const prompt = `Write a short, professional 30-second outreach script for a personalized video.
-        Recipient: ${input.firstName}
-        Company: ${input.company}
-        Segment: ${input.segment}
-        Tone: Visionary, secure, authoritative.
-        Keep it under 75 words.`;
-    const res = await invokeLLM2({
-      messages: [{ role: "user", content: prompt }]
-    });
-    return { script: res.choices[0].message.content };
-  }),
-  // Queue a HeyGen video render (consumed by the Video Studio page).
-  generate: protectedProcedure.input(z25.any()).mutation(async ({ input }) => {
-    return { videoId: `pending-${Date.now()}` };
-  })
-});
-
-// server/macrohard/router.ts
-import { z as z26 } from "zod";
-var BASE_URL2 = process.env.MACROHARD_API_URL ?? "";
-var API_KEY2 = process.env.MACROHARD_API_KEY ?? "";
-async function mhFetch(path, options = {}) {
-  if (!BASE_URL2 || !API_KEY2) throw new Error("MACROHARD integration not configured");
-  const res = await fetch(`${BASE_URL2}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "X-Macrohard-Key": API_KEY2,
-      ...options.headers ?? {}
-    }
-  });
-  if (!res.ok) throw new Error(`MACROHARD API error ${res.status}`);
-  return res.json();
-}
-var macrohardRouter = router({
-  /** Check connection status and API health */
-  status: protectedProcedure.query(async () => {
-    const configured = !!(BASE_URL2 && API_KEY2);
-    if (!configured) return { configured, connected: false, version: null };
-    try {
-      const data = await mhFetch("/health");
-      return { configured, connected: true, version: data.version ?? null };
+      await syncLeadToHubSpot(input);
     } catch (e) {
-      return { configured, connected: false, version: null, error: e.message };
     }
+    return result;
   }),
-  /** Get the configuration / integration settings */
-  getConfig: adminProcedure.query(async () => {
-    return {
-      apiUrl: BASE_URL2 ? BASE_URL2.replace(/^https?:\/\//, "").split("/")[0] : null,
-      configured: !!(BASE_URL2 && API_KEY2)
-    };
+  updateLeadScore: adminProcedure.input(z14.object({ id: z14.number(), score: z14.number() })).mutation(async ({ input }) => {
+    await updateLeadScore(input.id, input.score);
+    return { success: true };
   }),
-  /** Sync data from MACROHARD into AuthiChain */
-  sync: adminProcedure.input(z26.object({ entity: z26.enum(["products", "users", "inventory", "all"]) })).mutation(async ({ input }) => {
-    const data = await mhFetch(`/sync/${input.entity}`, { method: "POST" });
-    return {
-      entity: input.entity,
-      synced: data.count ?? 0,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    };
+  updateLeadStatus: adminProcedure.input(z14.object({ id: z14.number(), status: z14.string() })).mutation(async ({ input }) => {
+    await updateLeadStatus(input.id, input.status);
+    return { success: true };
   }),
-  /** Generic query — fetch a resource from MACROHARD */
-  query: protectedProcedure.input(
-    z26.object({
-      resource: z26.string().min(1).max(100),
-      params: z26.record(z26.string(), z26.string()).optional()
-    })
-  ).query(async ({ input }) => {
-    const qs = input.params ? "?" + new URLSearchParams(input.params).toString() : "";
-    const data = await mhFetch(`/api/${input.resource}${qs}`);
-    return data;
-  }),
-  /** Push an AuthiChain product/certificate event to MACROHARD */
-  pushEvent: protectedProcedure.input(
-    z26.object({
-      eventType: z26.enum(["product_authenticated", "certificate_issued", "nft_minted"]),
-      payload: z26.record(z26.string(), z26.unknown())
-    })
-  ).mutation(async ({ input }) => {
-    const data = await mhFetch("/events", {
-      method: "POST",
-      body: JSON.stringify({ type: input.eventType, data: input.payload })
+  generateContent: protectedProcedure.input(z14.object({
+    type: z14.enum(["email", "social", "blog"]),
+    topic: z14.string(),
+    targetAudience: z14.string().optional()
+  })).mutation(async ({ input }) => {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: "You are a marketing expert for a blockchain authentication platform. Create compelling, professional content." },
+        { role: "user", content: `Create ${input.type} content about: ${input.topic}. Target: ${input.targetAudience || "enterprise decision makers"}` }
+      ]
     });
-    return { success: true, eventId: data.id ?? null };
+    return { content: response.choices?.[0]?.message?.content || "Content generation failed. Please try again." };
   })
 });
 
-// server/missions/router.ts
-import { z as z27 } from "zod";
-
-// server/missions/missions.db.ts
+// server/nft/router.ts
 init_db();
-init_schema();
-import { eq as eq8, desc as desc5 } from "drizzle-orm";
-import { randomUUID as randomUUID3 } from "crypto";
-
-// server/missions/templates.ts
-var missionTemplates = {
-  TECH_SPRINT: {
-    type: "TECH_SPRINT",
-    title: "Tech Sprint \u2013 Feature Development",
-    priority: 8
-  },
-  MEDTECH_VIDEO_BRIEFING: {
-    type: "MEDTECH_VIDEO_BRIEFING",
-    title: "MedTech Video Briefing \u2013 Cinematic Outreach",
-    priority: 7
-  },
-  MI_CRA_PARTNERSHIP: {
-    type: "MI_CRA_PARTNERSHIP",
-    title: "Michigan CRA Partnership \u2013 Gov Audit Integrity",
-    priority: 9
-  },
-  GOV_PILOT: {
-    type: "GOV_PILOT",
-    title: "Government Pilot \u2013 Initial Agency",
-    priority: 10
-  },
-  RETAIL_PILOT: {
-    type: "RETAIL_PILOT",
-    title: "Retail Pilot \u2013 Dispensary / Retail Partner",
-    priority: 9
-  },
-  PRESS_LAUNCH: {
-    type: "PRESS_LAUNCH",
-    title: "Press Launch \u2013 Media & PR Outreach",
-    priority: 8
-  },
-  PARTNER_ONBOARDING: {
-    type: "PARTNER_ONBOARDING",
-    title: "Partner Onboarding",
-    priority: 7
-  },
-  TECH_OS_LOCK: {
-    type: "TECH_OS_LOCK",
-    title: "Tech OS Lock \u2013 Platform Defensibility",
-    priority: 6
-  },
-  LAUNCH_AUTHICHAIN: {
-    type: "LAUNCH_AUTHICHAIN",
-    title: "AuthiChain.com \u2013 Full Launch Orchestration",
-    priority: 10
-  },
-  LUXURY_OUTREACH: {
-    type: "LUXURY_OUTREACH",
-    title: "Luxury Outreach \u2013 High-End Brands",
-    priority: 9
-  },
-  PHARMA_OUTREACH: {
-    type: "PHARMA_OUTREACH",
-    title: "Pharma Outreach \u2013 Generic Drug Mfrs",
-    priority: 9
-  },
-  MEDTECH_OUTREACH: {
-    type: "MEDTECH_OUTREACH",
-    title: "MedTech Outreach \u2013 Device Manufacturers",
-    priority: 9
-  },
-  TIMEPIECE_OUTREACH: {
-    type: "TIMEPIECE_OUTREACH",
-    title: "Timepiece Outreach \u2013 Independent Brands",
-    priority: 8
-  },
-  NEWSJACKING_LAUNCH: {
-    type: "NEWSJACKING_LAUNCH",
-    title: "Newsjacking Launch \u2013 Viral PR Response",
-    priority: 7
-  }
-};
-var taskTemplates = {
-  TECH_SPRINT: [
-    {
-      kind: "PLAN_SPRINT",
-      payload: {
-        feature: "Feature to be specified at mission creation",
-        context: "authichain-unified full-stack TypeScript Cloudflare Worker"
+import { z as z15 } from "zod";
+import { TRPCError as TRPCError5 } from "@trpc/server";
+var nftRouter = router({
+  list: publicProcedure.input(z15.object({
+    collectionId: z15.number().optional(),
+    status: z15.string().optional(),
+    limit: z15.number().optional().default(50)
+  })).query(async ({ input }) => {
+    return await listNfts(input);
+  }),
+  getById: publicProcedure.input(z15.object({ id: z15.number() })).query(async ({ input }) => {
+    return await getNftById(input.id);
+  }),
+  create: protectedProcedure.input(z15.object({
+    name: z15.string().min(1),
+    description: z15.string().optional(),
+    imageUrl: z15.string().optional(),
+    ipfsHash: z15.string().optional(),
+    collectionId: z15.number().optional(),
+    price: z15.string().optional(),
+    currency: z15.string().optional().default("ETH"),
+    traits: z15.any().optional(),
+    productId: z15.number().optional()
+  })).mutation(async ({ ctx, input }) => {
+    const result = await createNft({ ...input, ownerId: ctx.user.id, creatorId: ctx.user.id, status: "listed" });
+    await logActivity({ userId: ctx.user.id, action: "nft_created", entityType: "nft", entityId: result.id });
+    return result;
+  }),
+  collections: router({
+    list: publicProcedure.query(async () => {
+      return await listCollections();
+    }),
+    getBySlug: publicProcedure.input(z15.object({ slug: z15.string() })).query(async ({ input }) => {
+      return await getCollectionBySlug(input.slug);
+    }),
+    create: protectedProcedure.input(z15.object({
+      name: z15.string().min(1),
+      slug: z15.string().min(1),
+      description: z15.string().optional(),
+      imageUrl: z15.string().optional(),
+      category: z15.string().optional()
+    })).mutation(async ({ ctx, input }) => {
+      return await createCollection({ ...input, userId: ctx.user.id });
+    })
+  }),
+  auctions: router({
+    list: publicProcedure.query(async () => {
+      return await getActiveAuctions();
+    }),
+    getById: publicProcedure.input(z15.object({ id: z15.number() })).query(async ({ input }) => {
+      const auction = await getAuctionById(input.id);
+      const bids = await getAuctionBids(input.id);
+      return { auction, bids };
+    }),
+    create: protectedProcedure.input(z15.object({
+      nftId: z15.number(),
+      startPrice: z15.string(),
+      reservePrice: z15.string().optional(),
+      endsAt: z15.string()
+    })).mutation(async ({ ctx, input }) => {
+      return await createAuction({ ...input, sellerId: ctx.user.id, endsAt: new Date(input.endsAt) });
+    }),
+    bid: protectedProcedure.input(z15.object({
+      auctionId: z15.number(),
+      amount: z15.string()
+    })).mutation(async ({ ctx, input }) => {
+      const auction = await getAuctionById(input.auctionId);
+      if (!auction) throw new TRPCError5({ code: "NOT_FOUND" });
+      if (auction.status !== "active") throw new TRPCError5({ code: "BAD_REQUEST", message: "Auction not active" });
+      const currentBidNum = auction.currentBid ? parseFloat(auction.currentBid) : 0;
+      if (auction.currentBid && (isNaN(currentBidNum) || parseFloat(input.amount) <= currentBidNum)) {
+        throw new TRPCError5({ code: "BAD_REQUEST", message: "Bid must be higher than current bid" });
       }
-    }
-    // PLAN_SPRINT dynamically enqueues: WRITE_CODE → OPEN_PR → RUN_TESTS → CODE_REVIEW → MERGE_PR → MONITOR_DEPLOY
-  ],
-  GOV_PILOT: [
-    { kind: "BUILD_PILOT_PACKET", payload: { segment: "GOV" } },
-    { kind: "DRAFT_INTEL_DOSSIER", payload: { segment: "GOV" } },
-    { kind: "FIND_GOV_LEADS", payload: { count: 10, icp: "government agency supply chain / procurement" } },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "GOV", sequence: 1 } },
-    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "GOV", maxFollowups: 3 } },
-    { kind: "CRM_UPDATE", payload: { segment: "GOV", dealStage: "pilot_proposed" } }
-  ],
-  RETAIL_PILOT: [
-    { kind: "FINALIZE_RETAIL_SIGNAGE", payload: {} },
-    { kind: "PACKAGE_SKU_ONBOARDING", payload: {} },
-    { kind: "FIND_RETAIL_LEADS", payload: { count: 15, vertical: "dispensary", icp: "retail cannabis dispensary owner" } },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "RETAIL", sequence: 1 } },
-    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "RETAIL", maxFollowups: 3 } },
-    { kind: "CRM_UPDATE", payload: { segment: "RETAIL", dealStage: "pilot_proposed" } }
-  ],
-  PRESS_LAUNCH: [
-    { kind: "FIND_RETAIL_LEADS", payload: { count: 20, vertical: "press", icp: "tech journalist / crypto reporter" } },
-    { kind: "DRAFT_PRESS_RELEASE", payload: {} },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "PRESS", sequence: 1 } },
-    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "PRESS", maxFollowups: 2 } },
-    { kind: "SCHEDULE_SOCIAL_POSTS", payload: { platforms: ["twitter", "linkedin"] } }
-  ],
-  PARTNER_ONBOARDING: [
-    { kind: "BUILD_PILOT_PACKET", payload: { segment: "PARTNER" } },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "PARTNER", sequence: 1 } },
-    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "PARTNER", maxFollowups: 2 } },
-    { kind: "CRM_UPDATE", payload: { dealStage: "partner_onboarding" } }
-  ],
-  TECH_OS_LOCK: [
-    { kind: "BUILD_PILOT_PACKET", payload: { segment: "TECH", focus: "platform_defensibility" } },
-    { kind: "DRAFT_INTEL_DOSSIER", payload: { segment: "TECH", focus: "competitive_moat" } },
-    { kind: "GENERATE_LAUNCH_CHECKLIST", payload: { scope: "tech_os" } }
-  ],
-  LAUNCH_AUTHICHAIN: [
-    { kind: "CHECK_DNS_CONFIG", payload: { domain: "authichain.com" } },
-    { kind: "VERIFY_SSL", payload: { domain: "authichain.com" } },
-    { kind: "RUN_LIGHTHOUSE_AUDIT", payload: { url: "https://authichain.com" } },
-    { kind: "SECURITY_AUDIT", payload: { scope: "full_platform", compliance: ["EU_DPP", "FIPS_140_2"] } },
-    { kind: "GENERATE_LAUNCH_CHECKLIST", payload: { scope: "full_launch" } },
-    { kind: "DRAFT_LAUNCH_EMAIL", payload: { audience: "founders" } },
-    { kind: "DRAFT_PRESS_RELEASE", payload: {} },
-    { kind: "SCHEDULE_SOCIAL_POSTS", payload: { platforms: ["twitter", "linkedin"] } }
-  ],
-  LUXURY_OUTREACH: [
-    { kind: "FIND_LUXURY_LEADS", payload: { count: 20, icp: "Head of Brand Protection at luxury fashion houses" } },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "LUXURY", sequence: 1 } },
-    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "LUXURY", maxFollowups: 3 } },
-    { kind: "CRM_UPDATE", payload: { segment: "LUXURY", dealStage: "contacted" } }
-  ],
-  PHARMA_OUTREACH: [
-    { kind: "FIND_PHARMA_LEADS", payload: { count: 15, icp: "Chief Compliance Officer at generic pharmaceutical manufacturers" } },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "PHARMA", sequence: 1 } },
-    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "PHARMA", maxFollowups: 4 } },
-    { kind: "CRM_UPDATE", payload: { segment: "PHARMA", dealStage: "contacted" } }
-  ],
-  MEDTECH_OUTREACH: [
-    { kind: "FIND_MEDTECH_LEADS", payload: { count: 10, icp: "Compliance Director at medical device manufacturer" } },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "MEDTECH", sequence: 1 } },
-    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "MEDTECH", maxFollowups: 3 } },
-    { kind: "CRM_UPDATE", payload: { segment: "MEDTECH", dealStage: "contacted" } }
-  ],
-  TIMEPIECE_OUTREACH: [
-    { kind: "FIND_TIMEPIECE_LEADS", payload: { count: 15, icp: "CEO or Founder of independent luxury watch brand" } },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "TIMEPIECE", sequence: 1 } },
-    { kind: "FOLLOWUP_SEQUENCE", payload: { segment: "TIMEPIECE", maxFollowups: 2 } },
-    { kind: "CRM_UPDATE", payload: { segment: "TIMEPIECE", dealStage: "contacted" } }
-  ],
-  MEDTECH_VIDEO_BRIEFING: [
-    { kind: "GENERATE_OUTREACH_VIDEO", payload: { segment: "MEDTECH", useCase: "ISO 13485 audit automation and recall risk mitigation" } },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "MEDTECH", sequence: 2, includeVideo: true } }
-  ],
-  MI_CRA_PARTNERSHIP: [
-    { kind: "DRAFT_LAUNCH_EMAIL", payload: { audience: "GOV", topic: "Michigan CRA Audit Integrity Shield Proposal" } },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "GOV", sequence: 1, recipient: "directors@cra.michigan.gov" } }
-  ],
-  NEWSJACKING_LAUNCH: [
-    { kind: "MONITOR_NEWS_FOR_PR", payload: { topics: ["medical device recall", "counterfeit pharma", "luxury forgery"] } },
-    { kind: "DRAFT_PRESS_RELEASE", payload: { newsjacking: true } },
-    { kind: "DRAFT_OUTBOUND_EMAIL", payload: { segment: "PRESS", sequence: 1 } },
-    { kind: "SCHEDULE_SOCIAL_POSTS", payload: { platforms: ["twitter", "linkedin"] } }
-  ]
-};
-
-// server/missions/missions.db.ts
-async function getMissions2(statusFilter) {
-  const d = await getDb();
-  if (statusFilter) {
-    return d.select().from(missions).where(eq8(missions.status, statusFilter));
-  }
-  return d.select().from(missions).orderBy(desc5(missions.createdAt));
-}
-async function getMissionById2(id) {
-  const d = await getDb();
-  const [mission] = await d.select().from(missions).where(eq8(missions.id, id)).limit(1);
-  if (!mission) return null;
-  const tasks = await d.select().from(missionTasks).where(eq8(missionTasks.missionId, id)).orderBy(missionTasks.order);
-  return { ...mission, tasks };
-}
-async function createMission2(type) {
-  const d = await getDb();
-  const template = missionTemplates[type];
-  if (!template) throw new Error(`Unknown mission type: ${type}`);
-  const id = randomUUID3();
-  await d.insert(missions).values({
-    id,
-    type,
-    title: template.title,
-    description: `Mission: ${template.title}`,
-    status: "pending"
-  });
-  const templateTasks = taskTemplates[type] ?? [];
-  if (templateTasks.length > 0) {
-    const taskRows = templateTasks.map((t2, index) => ({
-      id: randomUUID3(),
-      missionId: id,
-      kind: t2.kind,
-      title: t2.kind,
-      description: JSON.stringify(t2.payload),
-      status: "pending",
-      order: index + 1
-    }));
-    await d.insert(missionTasks).values(taskRows);
-  }
-  return id;
-}
-async function updateMissionStatus2(id, status) {
-  const d = await getDb();
-  await d.update(missions).set({ status: status.toLowerCase() }).where(eq8(missions.id, id));
-}
-async function getTasksByMission2(missionId) {
-  const d = await getDb();
-  return d.select().from(missionTasks).where(eq8(missionTasks.missionId, missionId)).orderBy(missionTasks.order);
-}
-async function retryTask2(id) {
-  const d = await getDb();
-  await d.update(missionTasks).set({ status: "pending" }).where(eq8(missionTasks.id, id));
-}
-
-// server/missions/router.ts
-var missionsRouter = router({
-  list: protectedProcedure.input(z27.object({ status: z27.string().optional() })).query(async ({ input }) => {
-    return getMissions2(input.status);
-  }),
-  create: protectedProcedure.input(z27.object({ type: z27.custom() })).mutation(async ({ input }) => {
-    const id = await createMission2(input.type);
-    return { id };
-  }),
-  get: protectedProcedure.input(z27.object({ id: z27.string() })).query(async ({ input }) => {
-    return getMissionById2(input.id);
-  }),
-  updateStatus: protectedProcedure.input(z27.object({ id: z27.string(), status: z27.custom() })).mutation(async ({ input }) => {
-    await updateMissionStatus2(input.id, input.status);
-    return { ok: true };
-  })
-});
-var tasksRouter = router({
-  list: protectedProcedure.input(z27.object({ missionId: z27.string() })).query(async ({ input }) => {
-    return getTasksByMission2(input.missionId);
-  }),
-  retry: protectedProcedure.input(z27.object({ id: z27.string() })).mutation(async ({ input }) => {
-    await retryTask2(input.id);
-    return { ok: true };
+      await placeBid(input.auctionId, ctx.user.id, input.amount);
+      return { success: true };
+    })
   })
 });
 
 // server/personalization/router.ts
 init_db();
 init_schema();
-import { z as z28 } from "zod";
-import { eq as eq9, desc as desc6, and as and6 } from "drizzle-orm";
+import { z as z16 } from "zod";
+import { eq as eq6, desc as desc5, and as and5 } from "drizzle-orm";
 
 // server/personalization/contentEngine.ts
 init_llm();
@@ -11662,17 +9691,17 @@ Provide actionable insights for optimization.`;
 // server/personalization/router.ts
 var personalizationRouter = router({
   // Track visitor and get personalized content (public endpoint)
-  getPersonalizedContent: publicProcedure.input(z28.object({
-    sessionId: z28.string(),
-    ipAddress: z28.string().optional(),
-    referrer: z28.string().optional(),
-    userAgent: z28.string().optional(),
-    url: z28.string().optional(),
-    targetElement: z28.string().optional().default("headline")
+  getPersonalizedContent: publicProcedure.input(z16.object({
+    sessionId: z16.string(),
+    ipAddress: z16.string().optional(),
+    referrer: z16.string().optional(),
+    userAgent: z16.string().optional(),
+    url: z16.string().optional(),
+    targetElement: z16.string().optional().default("headline")
   })).query(async ({ input }) => {
     const db2 = await getDb();
     if (!db2) return null;
-    let profile = (await db2.select().from(visitorProfiles).where(eq9(visitorProfiles.sessionId, input.sessionId)).limit(1))[0];
+    let profile = (await db2.select().from(visitorProfiles).where(eq6(visitorProfiles.sessionId, input.sessionId)).limit(1))[0];
     if (!profile) {
       const geo = input.ipAddress ? await getGeolocation(input.ipAddress) : {};
       const utmParams = input.url ? parseUTMParams(input.url) : {};
@@ -11703,17 +9732,17 @@ var personalizationRouter = router({
         segment,
         pageViews: 1
       });
-      profile = (await db2.select().from(visitorProfiles).where(eq9(visitorProfiles.sessionId, input.sessionId)).limit(1))[0];
+      profile = (await db2.select().from(visitorProfiles).where(eq6(visitorProfiles.sessionId, input.sessionId)).limit(1))[0];
     } else {
       await db2.update(visitorProfiles).set({
         pageViews: profile.pageViews + 1,
         lastSeen: /* @__PURE__ */ new Date()
-      }).where(eq9(visitorProfiles.id, profile.id));
+      }).where(eq6(visitorProfiles.id, profile.id));
     }
     const rules = await db2.select().from(personalizationRules).where(
-      and6(
-        eq9(personalizationRules.status, "active"),
-        eq9(personalizationRules.targetElement, input.targetElement)
+      and5(
+        eq6(personalizationRules.status, "active"),
+        eq6(personalizationRules.targetElement, input.targetElement)
       )
     );
     const matchedRule = matchRules(
@@ -11729,7 +9758,7 @@ var personalizationRouter = router({
       },
       rules.map((r) => ({
         id: r.id,
-        conditions: r.conditions ?? "",
+        conditions: String(r.conditions ?? "{}"),
         content: r.content,
         priority: r.priority
       }))
@@ -11744,11 +9773,11 @@ var personalizationRouter = router({
       if (rule) {
         await db2.update(personalizationRules).set({
           views: rule.views + 1
-        }).where(eq9(personalizationRules.id, matchedRule.id));
+        }).where(eq6(personalizationRules.id, matchedRule.id));
         const newRate = rule.views > 0 ? Math.round(rule.conversions / rule.views * 1e4) / 100 : 0;
         await db2.update(personalizationRules).set({
           conversionRate: newRate
-        }).where(eq9(personalizationRules.id, matchedRule.id));
+        }).where(eq6(personalizationRules.id, matchedRule.id));
       }
       return {
         content: matchedRule.content,
@@ -11759,42 +9788,42 @@ var personalizationRouter = router({
     return null;
   }),
   // Track conversion (public endpoint)
-  trackConversion: publicProcedure.input(z28.object({
-    sessionId: z28.string(),
-    ruleId: z28.number().optional()
+  trackConversion: publicProcedure.input(z16.object({
+    sessionId: z16.string(),
+    ruleId: z16.number().optional()
   })).mutation(async ({ input }) => {
     const db2 = await getDb();
     if (!db2) return { success: false };
     await db2.update(visitorProfiles).set({
       converted: 1
-    }).where(eq9(visitorProfiles.sessionId, input.sessionId));
+    }).where(eq6(visitorProfiles.sessionId, input.sessionId));
     if (input.ruleId) {
       await db2.insert(personalizationEvents).values({
         ruleId: input.ruleId,
         sessionId: input.sessionId,
         eventType: "conversion"
       });
-      const rule = (await db2.select().from(personalizationRules).where(eq9(personalizationRules.id, input.ruleId)).limit(1))[0];
+      const rule = (await db2.select().from(personalizationRules).where(eq6(personalizationRules.id, input.ruleId)).limit(1))[0];
       if (rule) {
         await db2.update(personalizationRules).set({
           conversions: rule.conversions + 1
-        }).where(eq9(personalizationRules.id, input.ruleId));
+        }).where(eq6(personalizationRules.id, input.ruleId));
         const newRate = rule.views > 0 ? Math.round(rule.conversions / rule.views * 1e4) / 100 : 0;
         await db2.update(personalizationRules).set({
           conversionRate: newRate
-        }).where(eq9(personalizationRules.id, input.ruleId));
+        }).where(eq6(personalizationRules.id, input.ruleId));
       }
     }
     return { success: true };
   }),
   // Create personalization rule
-  createRule: protectedProcedure.input(z28.object({
-    name: z28.string(),
-    description: z28.string().optional(),
-    targetElement: z28.string(),
-    conditions: z28.record(z28.string(), z28.any()),
-    content: z28.string(),
-    priority: z28.number().optional().default(0)
+  createRule: protectedProcedure.input(z16.object({
+    name: z16.string(),
+    description: z16.string().optional(),
+    targetElement: z16.string(),
+    conditions: z16.record(z16.string(), z16.any()),
+    content: z16.string(),
+    priority: z16.number().optional().default(0)
   })).mutation(async ({ ctx, input }) => {
     const db2 = await getDb();
     if (!db2) throw new Error("Database not available");
@@ -11812,9 +9841,9 @@ var personalizationRouter = router({
     return { success: true };
   }),
   // Generate personalization rules using AI
-  generateRules: protectedProcedure.input(z28.object({
-    targetElement: z28.string(),
-    baseContent: z28.string()
+  generateRules: protectedProcedure.input(z16.object({
+    targetElement: z16.string(),
+    baseContent: z16.string()
   })).mutation(async ({ ctx, input }) => {
     const db2 = await getDb();
     if (!db2) throw new Error("Database not available");
@@ -11837,46 +9866,46 @@ var personalizationRouter = router({
     return { rulesGenerated: rules.length };
   }),
   // List all rules
-  listRules: protectedProcedure.input(z28.object({
-    status: z28.enum(["active", "paused", "draft"]).optional()
+  listRules: protectedProcedure.input(z16.object({
+    status: z16.enum(["active", "paused", "draft"]).optional()
   }).optional()).query(async ({ input }) => {
     const db2 = await getDb();
     if (!db2) return [];
-    let query = db2.select().from(personalizationRules).orderBy(desc6(personalizationRules.createdAt));
+    let query = db2.select().from(personalizationRules).orderBy(desc5(personalizationRules.createdAt));
     if (input?.status) {
-      query = query.where(eq9(personalizationRules.status, input.status));
+      query = query.where(eq6(personalizationRules.status, input.status));
     }
     return await query;
   }),
   // Get rule details
-  getRule: protectedProcedure.input(z28.object({
-    ruleId: z28.number()
+  getRule: protectedProcedure.input(z16.object({
+    ruleId: z16.number()
   })).query(async ({ input }) => {
     const db2 = await getDb();
     if (!db2) return null;
-    const rules = await db2.select().from(personalizationRules).where(eq9(personalizationRules.id, input.ruleId)).limit(1);
+    const rules = await db2.select().from(personalizationRules).where(eq6(personalizationRules.id, input.ruleId)).limit(1);
     return rules[0] || null;
   }),
   // Activate rule
-  activateRule: protectedProcedure.input(z28.object({
-    ruleId: z28.number()
+  activateRule: protectedProcedure.input(z16.object({
+    ruleId: z16.number()
   })).mutation(async ({ input }) => {
     const db2 = await getDb();
     if (!db2) throw new Error("Database not available");
     await db2.update(personalizationRules).set({
       status: "active"
-    }).where(eq9(personalizationRules.id, input.ruleId));
+    }).where(eq6(personalizationRules.id, input.ruleId));
     return { success: true };
   }),
   // Pause rule
-  pauseRule: protectedProcedure.input(z28.object({
-    ruleId: z28.number()
+  pauseRule: protectedProcedure.input(z16.object({
+    ruleId: z16.number()
   })).mutation(async ({ input }) => {
     const db2 = await getDb();
     if (!db2) throw new Error("Database not available");
     await db2.update(personalizationRules).set({
       status: "paused"
-    }).where(eq9(personalizationRules.id, input.ruleId));
+    }).where(eq6(personalizationRules.id, input.ruleId));
     return { success: true };
   }),
   // Get visitor segments analytics
@@ -11913,12 +9942,12 @@ var personalizationRouter = router({
   getPerformanceAnalytics: protectedProcedure.query(async () => {
     const db2 = await getDb();
     if (!db2) return null;
-    const rules = await db2.select().from(personalizationRules).where(eq9(personalizationRules.status, "active"));
+    const rules = await db2.select().from(personalizationRules).where(eq6(personalizationRules.status, "active"));
     if (rules.length === 0) return null;
     const analysis = await analyzePersonalizationPerformance(
       rules.map((r) => ({
         name: r.name,
-        conditions: r.conditions ?? "",
+        conditions: String(r.conditions ?? "{}"),
         views: r.views,
         conversions: r.conversions,
         conversionRate: r.conversionRate
@@ -11937,50 +9966,309 @@ var personalizationRouter = router({
 });
 
 // server/staking/router.ts
-import { z as z29 } from "zod";
+import { z as z17 } from "zod";
+
+// server/staking/db.ts
 init_db();
+init_schema();
+import { eq as eq7, and as and6, desc as desc6 } from "drizzle-orm";
+async function getUserStakingPositions(userId) {
+  const db2 = await getDb();
+  if (!db2) return [];
+  return await db2.select().from(stakingPositions).where(eq7(stakingPositions.userId, userId)).orderBy(desc6(stakingPositions.createdAt));
+}
+async function getActiveStakingPositions(userId) {
+  const db2 = await getDb();
+  if (!db2) return [];
+  return await db2.select().from(stakingPositions).where(
+    and6(
+      eq7(stakingPositions.userId, userId),
+      eq7(stakingPositions.status, "active")
+    )
+  ).orderBy(desc6(stakingPositions.createdAt));
+}
+async function createStakingPosition(data) {
+  const db2 = await getDb();
+  if (!db2) throw new Error("Database not available");
+  const position = {
+    userId: data.userId,
+    amount: data.amount,
+    apy: data.apy,
+    status: "active",
+    rewardsEarned: 0,
+    lastRewardCalculation: /* @__PURE__ */ new Date()
+  };
+  await db2.insert(stakingPositions).values(position);
+  return 0;
+}
+async function calculateRewards(positionId) {
+  const db2 = await getDb();
+  if (!db2) throw new Error("Database not available");
+  const positions = await db2.select().from(stakingPositions).where(eq7(stakingPositions.id, positionId)).limit(1);
+  if (positions.length === 0) {
+    throw new Error("Staking position not found");
+  }
+  const position = positions[0];
+  if (position.status !== "active") {
+    return 0;
+  }
+  const now = /* @__PURE__ */ new Date();
+  const lastCalc = new Date(position.lastRewardCalculation);
+  const hoursElapsed = (now.getTime() - lastCalc.getTime()) / (1e3 * 60 * 60);
+  const annualReward = position.amount * position.apy / 1e4;
+  const hourlyReward = annualReward / 365 / 24;
+  const newRewards = Math.floor(hourlyReward * hoursElapsed);
+  await db2.update(stakingPositions).set({
+    rewardsEarned: position.rewardsEarned + newRewards,
+    lastRewardCalculation: now,
+    updatedAt: now
+  }).where(eq7(stakingPositions.id, positionId));
+  return newRewards;
+}
+async function withdrawStaking(positionId, userId) {
+  const db2 = await getDb();
+  if (!db2) throw new Error("Database not available");
+  const positions = await db2.select().from(stakingPositions).where(
+    and6(
+      eq7(stakingPositions.id, positionId),
+      eq7(stakingPositions.userId, userId)
+    )
+  ).limit(1);
+  if (positions.length === 0) {
+    throw new Error("Staking position not found");
+  }
+  const position = positions[0];
+  if (position.status !== "active") {
+    throw new Error("Position is not active");
+  }
+  await calculateRewards(positionId);
+  const updatedPositions = await db2.select().from(stakingPositions).where(eq7(stakingPositions.id, positionId)).limit(1);
+  const updatedPosition = updatedPositions[0];
+  const now = /* @__PURE__ */ new Date();
+  await db2.update(stakingPositions).set({
+    status: "withdrawn",
+    endDate: now,
+    updatedAt: now
+  }).where(eq7(stakingPositions.id, positionId));
+  return {
+    principal: updatedPosition.amount,
+    rewards: updatedPosition.rewardsEarned,
+    total: updatedPosition.amount + updatedPosition.rewardsEarned
+  };
+}
+async function getUserStakingStats(userId) {
+  const db2 = await getDb();
+  if (!db2) {
+    return {
+      totalStaked: 0,
+      totalRewards: 0,
+      activePositions: 0,
+      totalPositions: 0
+    };
+  }
+  const positions = await db2.select().from(stakingPositions).where(eq7(stakingPositions.userId, userId));
+  const activePositions = positions.filter((p) => p.status === "active");
+  const totalStaked = activePositions.reduce((sum, p) => sum + p.amount, 0);
+  const totalRewards = positions.reduce((sum, p) => sum + p.rewardsEarned, 0);
+  return {
+    totalStaked,
+    totalRewards,
+    activePositions: activePositions.length,
+    totalPositions: positions.length
+  };
+}
+async function createTransaction(data) {
+  const db2 = await getDb();
+  if (!db2) throw new Error("Database not available");
+  const transaction = {
+    userId: data.userId,
+    type: data.type,
+    amount: data.amount,
+    status: data.status,
+    feeAmount: data.feeAmount || 0,
+    stakingId: data.stakingId,
+    metadata: data.metadata
+  };
+  await db2.insert(transactions).values(transaction);
+  return 0;
+}
+async function createPlatformFee(data) {
+  const db2 = await getDb();
+  if (!db2) throw new Error("Database not available");
+  const fee = {
+    feeType: data.feeType,
+    percentage: data.percentage,
+    amount: data.amount,
+    transactionId: data.transactionId,
+    description: data.description
+  };
+  await db2.insert(platformFees).values(fee);
+  return 0;
+}
+
+// server/staking/router.ts
 var stakingRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
+  /**
+   * Get user's staking positions
+   */
+  myPositions: protectedProcedure.query(async ({ ctx }) => {
     return await getUserStakingPositions(ctx.user.id);
   }),
-  stake: protectedProcedure.input(z29.object({
-    amount: z29.string(),
-    agentId: z29.number().optional()
-  })).mutation(async ({ ctx, input }) => {
-    const position = await createStakingPosition({
-      userId: ctx.user.id,
-      agentId: input.agentId,
-      amount: input.amount,
-      status: "active",
-      multiplier: "1.50",
-      apy: "12.50"
-    });
-    await logActivity({
-      userId: ctx.user.id,
-      action: "qron_staked",
-      entityType: "staking",
-      entityId: position.id,
-      details: { amount: input.amount }
-    });
-    return position;
+  /**
+   * Get active staking positions
+   */
+  activePositions: protectedProcedure.query(async ({ ctx }) => {
+    return await getActiveStakingPositions(ctx.user.id);
   }),
-  unstake: protectedProcedure.input(z29.object({ id: z29.number() })).mutation(async ({ ctx, input }) => {
-    await updateStakingPosition(input.id, { status: "unstaking" });
-    return { success: true };
+  /**
+   * Get staking statistics
+   */
+  stats: protectedProcedure.query(async ({ ctx }) => {
+    return await getUserStakingStats(ctx.user.id);
+  }),
+  /**
+   * Create new staking position
+   */
+  stake: protectedProcedure.input(
+    z17.object({
+      amount: z17.number().min(1e3, "Minimum stake is $10"),
+      // Amount in cents
+      apy: z17.number().min(100).max(5e3)
+      // APY in basis points (100-5000 = 1%-50%)
+    })
+  ).mutation(async ({ ctx, input }) => {
+    const { amount, apy } = input;
+    const positionId = await createStakingPosition({
+      userId: ctx.user.id,
+      amount,
+      apy
+    });
+    await createTransaction({
+      userId: ctx.user.id,
+      type: "staking_deposit",
+      amount,
+      status: "completed",
+      stakingId: positionId,
+      metadata: JSON.stringify({ apy })
+    });
+    return {
+      success: true,
+      positionId,
+      message: "Staking position created successfully"
+    };
+  }),
+  /**
+   * Withdraw from staking position
+   */
+  withdraw: protectedProcedure.input(
+    z17.object({
+      positionId: z17.number()
+    })
+  ).mutation(async ({ ctx, input }) => {
+    const { positionId } = input;
+    const result = await withdrawStaking(positionId, ctx.user.id);
+    await createTransaction({
+      userId: ctx.user.id,
+      type: "staking_withdrawal",
+      amount: result.total,
+      status: "completed",
+      stakingId: positionId,
+      metadata: JSON.stringify({
+        principal: result.principal,
+        rewards: result.rewards
+      })
+    });
+    if (result.rewards > 0) {
+      const feePercentage = 500;
+      const feeAmount = Math.floor(result.rewards * feePercentage / 1e4);
+      await createPlatformFee({
+        feeType: "staking_reward",
+        percentage: feePercentage,
+        amount: feeAmount,
+        description: `Fee collected on staking rewards for position #${positionId}`
+      });
+    }
+    return {
+      success: true,
+      ...result,
+      message: "Withdrawal successful"
+    };
+  }),
+  /**
+   * Calculate current rewards for a position
+   */
+  calculateRewards: protectedProcedure.input(
+    z17.object({
+      positionId: z17.number()
+    })
+  ).query(async ({ input }) => {
+    const rewards = await calculateRewards(input.positionId);
+    return { rewards };
+  })
+});
+
+// server/supply-chain/router.ts
+init_db();
+import { z as z18 } from "zod";
+var supplyChainRouter = router({
+  getEvents: protectedProcedure.input(z18.object({ productId: z18.number() })).query(async ({ input }) => {
+    return await getProductSupplyChain(input.productId);
+  }),
+  addEvent: protectedProcedure.input(z18.object({
+    productId: z18.number(),
+    eventType: z18.enum(["manufactured", "shipped", "in_transit", "customs", "delivered", "verified", "recalled"]),
+    location: z18.string().optional(),
+    latitude: z18.string().optional(),
+    longitude: z18.string().optional(),
+    temperature: z18.string().optional(),
+    humidity: z18.string().optional(),
+    handler: z18.string().optional(),
+    notes: z18.string().optional(),
+    iotDeviceId: z18.string().optional()
+  })).mutation(async ({ ctx, input }) => {
+    const result = await createSupplyChainEvent(input);
+    await logActivity({ userId: ctx.user.id, action: "supply_chain_event", entityType: "supply_chain", entityId: result.id });
+    return result;
+  })
+});
+
+// server/white-label/router.ts
+init_db();
+import { z as z19 } from "zod";
+var whiteLabelRouter = router({
+  list: adminProcedure.query(async () => {
+    return await getWhiteLabelClients();
+  }),
+  create: adminProcedure.input(z19.object({
+    companyName: z19.string().min(1),
+    domain: z19.string().optional(),
+    logoUrl: z19.string().optional(),
+    primaryColor: z19.string().optional(),
+    secondaryColor: z19.string().optional(),
+    apiCallLimit: z19.number().optional().default(1e4)
+  })).mutation(async ({ ctx, input }) => {
+    const crypto4 = await import("crypto");
+    const apiKey = `wl_${crypto4.randomBytes(24).toString("hex")}`;
+    const apiSecret = crypto4.randomBytes(32).toString("hex");
+    return await createWhiteLabelClient({ ...input, userId: ctx.user.id, apiKey, apiSecret });
+  }),
+  validateApiKey: publicProcedure.input(z19.object({ apiKey: z19.string() })).query(async ({ input }) => {
+    const client = await getWhiteLabelByApiKey(input.apiKey);
+    return { valid: !!client && client.status === "active", client: client ? { companyName: client.companyName, domain: client.domain } : null };
   })
 });
 
 // server/stripe-connect-router.ts
-import { z as z30 } from "zod";
+import { z as z20 } from "zod";
 
 // server/stripe-connect-service.ts
 init_stripe_service();
 init_db();
 init_schema();
-import { eq as eq10 } from "drizzle-orm";
-import crypto3 from "crypto";
+import { eq as eq8 } from "drizzle-orm";
+import crypto2 from "crypto";
 function generateIdempotencyKey(operation, id) {
-  return crypto3.createHash("sha256").update(`${operation}-${id}`).digest("hex").slice(0, 32);
+  return crypto2.createHash("sha256").update(`${operation}-${id}`).digest("hex").slice(0, 32);
 }
 async function provisionVendorAccount(userId, displayName, email, countryCode = "US") {
   const stripe = getStripe();
@@ -11994,7 +10282,7 @@ async function provisionVendorAccount(userId, displayName, email, countryCode = 
   const body = JSON.parse(response.toJSON().body);
   const accountId = body.id;
   const d = await getDb();
-  await d.update(whiteLabelClients).set({ apiSecret: accountId }).where(eq10(whiteLabelClients.userId, userId));
+  await d.update(whiteLabelClients).set({ apiSecret: accountId }).where(eq8(whiteLabelClients.userId, userId));
   return accountId;
 }
 async function generateOnboardingLink(vendorAccountId) {
@@ -12078,7 +10366,7 @@ async function subscribeVendorToPlatform(vendorAccountId, paymentMethodId, price
 
 // server/stripe-connect-router.ts
 var stripeConnectRouter = router({
-  provisionAccount: protectedProcedure.input(z30.object({ country: z30.string().length(2).default("US") })).mutation(async ({ ctx, input }) => {
+  provisionAccount: protectedProcedure.input(z20.object({ country: z20.string().length(2).default("US") })).mutation(async ({ ctx, input }) => {
     const accountId = await provisionVendorAccount(
       ctx.user.id,
       ctx.user.name ?? "Vendor",
@@ -12087,29 +10375,29 @@ var stripeConnectRouter = router({
     );
     return { accountId };
   }),
-  getOnboardingLink: protectedProcedure.input(z30.object({ accountId: z30.string() })).mutation(async ({ input }) => {
+  getOnboardingLink: protectedProcedure.input(z20.object({ accountId: z20.string() })).mutation(async ({ input }) => {
     const url = await generateOnboardingLink(input.accountId);
     return { url };
   }),
-  createCheckout: protectedProcedure.input(z30.object({
-    accountId: z30.string(),
-    currency: z30.string().default("usd")
+  createCheckout: protectedProcedure.input(z20.object({
+    accountId: z20.string(),
+    currency: z20.string().default("usd")
   })).mutation(async ({ input }) => {
     const url = await createVendorCheckoutSession(input.accountId, input.currency);
     return { url };
   }),
-  createPlan: protectedProcedure.input(z30.object({ currency: z30.string().default("usd") })).mutation(async ({ input }) => {
+  createPlan: protectedProcedure.input(z20.object({ currency: z20.string().default("usd") })).mutation(async ({ input }) => {
     const product = await createPlatformSubscriptionPlan(input.currency);
     return { productId: product.id, defaultPriceId: product.default_price };
   }),
-  attachPaymentMethod: protectedProcedure.input(z30.object({ accountId: z30.string() })).mutation(async ({ input }) => {
+  attachPaymentMethod: protectedProcedure.input(z20.object({ accountId: z20.string() })).mutation(async ({ input }) => {
     const paymentMethodId = await attachBalancePaymentMethod(input.accountId);
     return { paymentMethodId };
   }),
-  subscribe: protectedProcedure.input(z30.object({
-    accountId: z30.string(),
-    paymentMethodId: z30.string(),
-    priceId: z30.string()
+  subscribe: protectedProcedure.input(z20.object({
+    accountId: z20.string(),
+    paymentMethodId: z20.string(),
+    priceId: z20.string()
   })).mutation(async ({ input }) => {
     const subscription = await subscribeVendorToPlatform(
       input.accountId,
@@ -12120,22 +10408,137 @@ var stripeConnectRouter = router({
   })
 });
 
+// server/hubspot/router.ts
+init_hubspot_service();
+import { z as z21 } from "zod";
+var hubspotRouter = router({
+  status: protectedProcedure.query(async () => {
+    if (!isHubSpotConfigured()) return { connected: false, contacts: 0, companies: 0, deals: 0, error: "HUBSPOT_SERVICE_KEY is not configured. Add it in Settings \u2192 Secrets." };
+    return await getCRMStats();
+  }),
+  contacts: router({
+    list: protectedProcedure.query(async () => {
+      return await listContacts();
+    }),
+    search: protectedProcedure.input(z21.object({ query: z21.string() })).query(async ({ input }) => {
+      return await searchContacts(input.query);
+    }),
+    create: protectedProcedure.input(z21.object({
+      email: z21.string().email(),
+      firstname: z21.string().optional(),
+      lastname: z21.string().optional(),
+      phone: z21.string().optional(),
+      company: z21.string().optional()
+    })).mutation(async ({ input }) => {
+      return await createContact(input);
+    })
+  }),
+  companies: router({
+    list: protectedProcedure.query(async () => {
+      return await listCompanies();
+    }),
+    create: protectedProcedure.input(z21.object({
+      name: z21.string(),
+      domain: z21.string().optional(),
+      industry: z21.string().optional(),
+      description: z21.string().optional()
+    })).mutation(async ({ input }) => {
+      return await createCompany(input);
+    })
+  }),
+  deals: router({
+    list: protectedProcedure.query(async () => {
+      return await listDeals();
+    }),
+    create: protectedProcedure.input(z21.object({
+      dealname: z21.string(),
+      amount: z21.string().optional(),
+      pipeline: z21.string().optional(),
+      dealstage: z21.string().optional(),
+      closedate: z21.string().optional()
+    })).mutation(async ({ input }) => {
+      return await createDeal(input);
+    })
+  })
+});
+
+// server/email-campaigns/router.ts
+init_db();
+init_llm();
+import { z as z22 } from "zod";
+var emailCampaignsRouter = router({
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return await getUserEmailCampaigns(ctx.user.id);
+  }),
+  create: protectedProcedure.input(z22.object({
+    name: z22.string().min(1),
+    subject: z22.string().min(1),
+    body: z22.string().min(1),
+    type: z22.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
+    scheduledAt: z22.string().optional()
+  })).mutation(async ({ ctx, input }) => {
+    return await createEmailCampaign({
+      ...input,
+      userId: ctx.user.id,
+      status: input.scheduledAt ? "scheduled" : "draft",
+      scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null
+    });
+  }),
+  generateContent: protectedProcedure.input(z22.object({
+    type: z22.enum(["nurture", "onboarding", "trial_conversion", "announcement", "outreach"]),
+    topic: z22.string(),
+    targetAudience: z22.string().optional()
+  })).mutation(async ({ input }) => {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: "You are an expert email marketing specialist for a blockchain authentication platform. Create compelling, professional email content that drives conversions." },
+        { role: "user", content: `Create a ${input.type} email about: ${input.topic}. Target audience: ${input.targetAudience || "enterprise decision makers"}. Return JSON with subject and body fields.` }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "email_content",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: { subject: { type: "string" }, body: { type: "string" } },
+            required: ["subject", "body"],
+            additionalProperties: false
+          }
+        }
+      }
+    });
+    const rawContent = response.choices?.[0]?.message?.content;
+    if (!rawContent) throw new Error("Email content generation returned empty response");
+    return JSON.parse(rawContent);
+  })
+});
+
+// server/dashboard/router.ts
+init_db();
+var dashboardRouter = router({
+  metrics: protectedProcedure.query(async ({ ctx }) => {
+    return await getDashboardMetrics(ctx.user.id);
+  })
+});
+
 // server/character/router.ts
-import { z as z31 } from "zod";
+init_character_service();
+import { z as z23 } from "zod";
 var characterRouter = router({
-  generate: protectedProcedure.input(z31.object({
-    archetype: z31.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
-    context: z31.object({
-      brand: z31.string().optional(),
-      object: z31.string().optional(),
-      colorway: z31.string().optional(),
-      mood: z31.string().optional()
+  generate: protectedProcedure.input(z23.object({
+    archetype: z23.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
+    context: z23.object({
+      brand: z23.string().optional(),
+      object: z23.string().optional(),
+      colorway: z23.string().optional(),
+      mood: z23.string().optional()
     }).optional()
   })).mutation(async ({ ctx, input }) => {
     return await startCharacterGeneration(ctx.user.id, input.archetype, input.context);
   }),
-  generationStatus: protectedProcedure.input(z31.object({
-    generationId: z31.number()
+  generationStatus: protectedProcedure.input(z23.object({
+    generationId: z23.number()
   })).query(async ({ input }) => {
     return await getGenerationStatus(input.generationId);
   }),
@@ -12145,18 +10548,18 @@ var characterRouter = router({
   myAssets: protectedProcedure.query(async ({ ctx }) => {
     return await getUserCharacterAssets(ctx.user.id);
   }),
-  select: protectedProcedure.input(z31.object({
-    characterAssetId: z31.number(),
-    assetId: z31.number().optional()
+  select: protectedProcedure.input(z23.object({
+    characterAssetId: z23.number(),
+    assetId: z23.number().optional()
     // Support legacy frontend field
   })).mutation(async ({ ctx, input }) => {
     return await selectCharacterAsset(ctx.user.id, input.characterAssetId || input.assetId || 0);
   }),
-  createAgent: protectedProcedure.input(z31.object({
-    characterAssetId: z31.number(),
-    agentName: z31.string().min(1),
-    agentType: z31.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
-    name: z31.string().optional()
+  createAgent: protectedProcedure.input(z23.object({
+    characterAssetId: z23.number(),
+    agentName: z23.string().min(1),
+    agentType: z23.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
+    name: z23.string().optional()
     // Support legacy frontend field
   })).mutation(async ({ ctx, input }) => {
     return await createProtocolAgent(
@@ -12169,28 +10572,28 @@ var characterRouter = router({
   myAgent: protectedProcedure.query(async ({ ctx }) => {
     return await getAgentByUser(ctx.user.id);
   }),
-  agentRewards: protectedProcedure.input(z31.object({
-    agentId: z31.number(),
-    limit: z31.number().optional().default(50)
+  agentRewards: protectedProcedure.input(z23.object({
+    agentId: z23.number(),
+    limit: z23.number().optional().default(50)
   })).query(async ({ input }) => {
     return await getAgentRewards(input.agentId, input.limit);
   }),
   networkStats: publicProcedure.query(async () => {
     return await getNetworkStats();
   }),
-  leaderboard: publicProcedure.input(z31.object({
-    limit: z31.number().optional().default(20)
+  leaderboard: publicProcedure.input(z23.object({
+    limit: z23.number().optional().default(20)
   })).query(async ({ input }) => {
     return await getAgentLeaderboard(input.limit);
   }),
-  submitClaim: protectedProcedure.input(z31.object({
-    agentId: z31.number(),
-    productId: z31.number(),
-    authenticationId: z31.number().nullable(),
-    claimType: z31.enum(["authentic", "counterfeit", "inconclusive", "needs_review"]),
-    confidence: z31.number(),
-    evidence: z31.record(z31.string(), z31.any()).optional(),
-    reasoning: z31.string().optional()
+  submitClaim: protectedProcedure.input(z23.object({
+    agentId: z23.number(),
+    productId: z23.number(),
+    authenticationId: z23.number().nullable(),
+    claimType: z23.enum(["authentic", "counterfeit", "inconclusive", "needs_review"]),
+    confidence: z23.number(),
+    evidence: z23.record(z23.string(), z23.any()).optional(),
+    reasoning: z23.string().optional()
   })).mutation(async ({ input }) => {
     return await submitVerificationClaim(
       input.agentId,
@@ -12201,655 +10604,94 @@ var characterRouter = router({
       input.evidence,
       input.reasoning
     );
-  }),
-  // Returns the caller's primary character agent (consumed by the Staking hub).
-  getAgent: protectedProcedure.query(async () => {
-    return null;
-  })
-});
-
-// server/analytics/router.ts
-import { eq as eq11 } from "drizzle-orm";
-init_db();
-init_schema();
-
-// server/analytics/aggregate.ts
-function toIsoDate(value) {
-  return (typeof value === "string" ? new Date(value) : value).toISOString().split("T")[0];
-}
-function aggregateAuthentications(rows, now = /* @__PURE__ */ new Date()) {
-  const totalScans = rows.length;
-  const counterfeits = rows.filter((r) => r.result === "counterfeit").length;
-  const authentic = rows.filter((r) => r.result === "authentic").length;
-  const counterfeitRate = totalScans > 0 ? Math.round(counterfeits / totalScans * 100) : 0;
-  const last7Days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    last7Days.push(d.toISOString().split("T")[0]);
-  }
-  const dailyTrends = last7Days.map((isoDate) => {
-    const dayRows = rows.filter((r) => toIsoDate(r.createdAt) === isoDate);
-    return {
-      date: new Date(isoDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      scans: dayRows.length,
-      authentic: dayRows.filter((r) => r.result === "authentic").length,
-      counterfeit: dayRows.filter((r) => r.result === "counterfeit").length
-    };
-  });
-  return {
-    stats: {
-      totalScans,
-      counterfeitRate,
-      authenticScans: authentic,
-      counterfeitScans: counterfeits
-    },
-    dailyTrends
-  };
-}
-
-// server/analytics/router.ts
-var analyticsRouter = router({
-  myStats: protectedProcedure.query(async ({ ctx }) => {
-    const db2 = await getDb();
-    const rows = await db2.select({ result: authentications.result, createdAt: authentications.createdAt }).from(authentications).where(eq11(authentications.userId, ctx.user.id));
-    return aggregateAuthentications(rows);
-  })
-});
-
-// server/qron/router.ts
-import { z as z32 } from "zod";
-init_db();
-import { TRPCError as TRPCError10 } from "@trpc/server";
-
-// server/qron-service.ts
-init_env();
-import { createHash as createHash2 } from "crypto";
-var QRON_API = process.env.NEXT_PUBLIC_WORKER_URL ?? "https://qron-api.exzactly-k.workers.dev";
-var QRON_SPACE_URL = "https://qron.space";
-var FAL_API = "https://fal.run";
-var FINGERPRINT_MATCH_THRESHOLD = 0.85;
-var MODE_BY_TIER = {
-  standard: "holographic",
-  // Legendary rarity, prismatic surface, hardest to copy
-  premium: "dimensional",
-  // Perspective-warped grid, spatially complex
-  enterprise: "living",
-  // Particle halo + evolving aura, nearly impossible to fake
-  pharma: "temporal"
-  // Time-ringed pulsing — changes appearance over scan sessions
-};
-function generateProductSeed(params) {
-  const raw = `${params.productId}:${params.nftTokenId ?? ""}:${params.serialNumber ?? ""}`;
-  return createHash2("sha256").update(raw).digest("hex");
-}
-async function generateProductQRON(params) {
-  const seed = generateProductSeed({
-    productId: params.productId,
-    nftTokenId: params.nftTokenId,
-    serialNumber: params.serialNumber
-  });
-  const mode = MODE_BY_TIER[params.tier ?? "standard"];
-  const category = params.category ?? "other";
-  const prompt = buildArtPrompt(params.productName, params.brand, mode, category);
-  const res = await fetch(`${QRON_API}/api/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      prompt,
-      controlImage: params.verifyUrl,
-      // QR data encoded inside the art
-      seed: parseInt(seed.slice(0, 8), 16),
-      // first 8 hex chars as numeric seed
-      brandTier: params.tier === "enterprise" ? "enterprise" : params.tier === "premium" ? "growth" : "starter",
-      rarityTier: mode === "living" || mode === "temporal" ? "legendary" : mode === "holographic" || mode === "dimensional" ? "legendary" : "rare",
-      mode,
-      metadata: {
-        productId: params.productId,
-        brand: params.brand,
-        serialNumber: params.serialNumber,
-        nftTokenId: params.nftTokenId,
-        authichainSeed: seed,
-        category
-      }
-    })
-  });
-  if (!res.ok) {
-    const text2 = await res.text();
-    throw new Error(`QRON generation failed: ${res.status} ${text2}`);
-  }
-  const json2 = await res.json();
-  const imageUrl = json2.imageUrl ?? json2.image_url ?? json2.url;
-  if (!imageUrl) throw new Error("QRON API did not return an image URL");
-  const fingerprintHash = await computeImageHash(imageUrl);
-  const openartUrl = await registerToOpenART({
-    qronId: json2.id ?? json2.qronId,
-    imageUrl,
-    productId: params.productId,
-    productName: params.productName,
-    brand: params.brand,
-    seed,
-    mode,
-    category
-  }).catch(() => void 0);
-  return {
-    qronId: json2.id ?? json2.qronId ?? seed,
-    imageUrl,
-    thumbnailUrl: json2.thumbnailUrl ?? json2.thumbnail_url,
-    mode,
-    seed,
-    fingerprintHash,
-    nftTokenId: json2.nftTokenId ?? json2.nft_token_id,
-    openartUrl
-  };
-}
-async function verifyVisualFingerprint(params) {
-  if (params.registeredFingerprintHash) {
-    const scannedHash = await computeImageHash(params.scannedImageUrl);
-    const hammingDist = hammingDistance(params.registeredFingerprintHash, scannedHash);
-    const hashSim = 1 - hammingDist / 64;
-    if (hashSim >= 0.9) {
-      return {
-        pass: true,
-        similarity: hashSim,
-        verdict: "authentic",
-        details: `pHash similarity: ${(hashSim * 100).toFixed(1)}% \u2014 pattern matches registered QRON`
-      };
-    }
-    if (hashSim < 0.4) {
-      return {
-        pass: false,
-        similarity: hashSim,
-        verdict: "fake",
-        details: `pHash similarity: ${(hashSim * 100).toFixed(1)}% \u2014 visual pattern does not match registered QRON`
-      };
-    }
-  }
-  const sim = await getCLIPSimilarity(params.scannedImageUrl, params.registeredImageUrl);
-  const pass = sim >= FINGERPRINT_MATCH_THRESHOLD;
-  const verdict = sim >= FINGERPRINT_MATCH_THRESHOLD ? "authentic" : sim >= 0.65 ? "suspicious" : "fake";
-  return {
-    pass,
-    similarity: sim,
-    verdict,
-    details: `CLIP similarity: ${(sim * 100).toFixed(1)}% (threshold: ${FINGERPRINT_MATCH_THRESHOLD * 100}%)`
-  };
-}
-function computeTrustScore(params) {
-  const layers = {
-    qrDecode: { pass: params.qrDecodePass, weight: 20 },
-    blockchain: { pass: params.blockchainCertExists, weight: 25 },
-    visualFingerprint: { pass: params.visualFingerprint?.pass ?? false, similarity: params.visualFingerprint?.similarity ?? 0, weight: 30 },
-    community: { pass: params.communityVerified > params.communityFlagged, verified: params.communityVerified, flagged: params.communityFlagged, weight: 15 },
-    openArt: { pass: params.openArtRegistered, weight: 10 }
-  };
-  const score = (layers.qrDecode.pass ? layers.qrDecode.weight : 0) + (layers.blockchain.pass ? layers.blockchain.weight : 0) + (layers.visualFingerprint.pass ? layers.visualFingerprint.weight : 0) + (layers.community.pass ? layers.community.weight : 0) + (layers.openArt.pass ? layers.openArt.weight : 0);
-  const grade = score >= 90 ? "A" : score >= 70 ? "B" : score >= 50 ? "C" : "F";
-  const verdict = score >= 70 ? "authentic" : score >= 40 ? "suspicious" : "unregistered";
-  return { score, grade, layers, verdict };
-}
-async function registerToOpenART(params) {
-  const res = await fetch(`${QRON_SPACE_URL}/api/openart/register`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-authichain-key": ENV.qronAuthichainKey
-    },
-    body: JSON.stringify(params)
-  });
-  if (!res.ok) throw new Error(`openART register failed: ${res.status}`);
-  const json2 = await res.json();
-  return `${QRON_SPACE_URL}/openart/${json2.id ?? params.qronId}`;
-}
-function buildArtPrompt(name, brand, mode, category) {
-  const modePrompts = {
-    holographic: "holographic prismatic iridescent surface, rainbow light refraction, authentication seal",
-    dimensional: "deep perspective grid, impossible geometry, 3D depth illusion, serialization marks",
-    living: "particle halo swarm, bio-luminescent aura, evolving organic pattern, unique fingerprint",
-    temporal: "pulsing concentric time rings, chronological depth, pharmaceutical precision markings"
-  };
-  const base = modePrompts[mode ?? "holographic"] ?? modePrompts.holographic;
-  const brandTag = brand ? `${brand} brand identity, ` : "";
-  const catTag = category === "pharma" ? "medical grade, sterile aesthetic, " : category === "luxury_fashion" ? "luxury craftsmanship, haute couture, " : "";
-  return `${brandTag}${catTag}${base}, anti-counterfeit visual seal for "${name}", ultra high detail, certificate of authenticity`;
-}
-async function computeImageHash(imageUrl) {
-  try {
-    const res = await fetch(imageUrl);
-    const buf = await res.arrayBuffer();
-    return createHash2("sha256").update(Buffer.from(buf)).digest("hex").slice(0, 64);
-  } catch {
-    return createHash2("sha256").update(imageUrl).digest("hex").slice(0, 64);
-  }
-}
-function hammingDistance(a, b) {
-  const len = Math.min(a.length, b.length);
-  let dist = 0;
-  for (let i = 0; i < len; i++) {
-    if (a[i] !== b[i]) dist++;
-  }
-  return dist + Math.abs(a.length - b.length);
-}
-async function getCLIPSimilarity(urlA, urlB) {
-  try {
-    const [embA, embB] = await Promise.all([
-      getFalEmbedding(urlA),
-      getFalEmbedding(urlB)
-    ]);
-    return cosineSimilarity(embA, embB);
-  } catch {
-    return urlA === urlB ? 1 : 0.5;
-  }
-}
-async function getFalEmbedding(imageUrl) {
-  const res = await fetch(`${FAL_API}/fal-ai/clip/image`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Key ${process.env.FAL_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ image_url: imageUrl })
-  });
-  const json2 = await res.json();
-  return json2.embedding ?? json2.image_embedding ?? [];
-}
-function cosineSimilarity(a, b) {
-  if (!a.length || !b.length) return 0;
-  const dot = a.reduce((s, v, i) => s + v * (b[i] ?? 0), 0);
-  const magA = Math.sqrt(a.reduce((s, v) => s + v * v, 0));
-  const magB = Math.sqrt(b.reduce((s, v) => s + v * v, 0));
-  return magA && magB ? dot / (magA * magB) : 0;
-}
-
-// server/qron/router.ts
-var qronRouter = router({
-  list: protectedProcedure.query(async () => {
-    return await getQronList();
-  }),
-  generate: protectedProcedure.input(z32.object({
-    productId: z32.number(),
-    productName: z32.string(),
-    brand: z32.string().optional(),
-    category: z32.enum(["luxury_fashion", "pharma", "electronics", "automotive", "food_bev", "other"]).optional(),
-    tier: z32.enum(["standard", "premium", "enterprise", "pharma"]).optional()
-  })).mutation(async ({ ctx, input }) => {
-    const product = await getProductById(input.productId);
-    if (!product) throw new TRPCError10({ code: "NOT_FOUND", message: "Product not found" });
-    const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL || "https://authichain.com"}/verify/${product.id}`;
-    const qron = await generateProductQRON({
-      ...input,
-      serialNumber: product.serialNumber ?? void 0,
-      nftTokenId: product.nftTokenId ?? void 0,
-      verifyUrl
-    });
-    const [record] = await createQron({
-      id: qron.qronId,
-      productId: input.productId,
-      productName: input.productName,
-      brand: input.brand,
-      category: input.category,
-      mode: qron.mode,
-      seed: qron.seed,
-      imageUrl: qron.imageUrl,
-      thumbnailUrl: qron.thumbnailUrl,
-      fingerprintHash: qron.fingerprintHash,
-      nftTokenId: qron.nftTokenId,
-      openartUrl: qron.openartUrl,
-      trustScore: 100
-      // Initial trust score for genuine generation
-    });
-    return record;
-  }),
-  verify: publicProcedure.input(z32.object({
-    qronId: z32.string(),
-    scannedImageUrl: z32.string()
-  })).mutation(async ({ input }) => {
-    const qron = await getQronById(input.qronId);
-    if (!qron) throw new TRPCError10({ code: "NOT_FOUND", message: "QRON not found" });
-    const visualResult = await verifyVisualFingerprint({
-      scannedImageUrl: input.scannedImageUrl,
-      registeredImageUrl: qron.imageUrl ?? "",
-      registeredFingerprintHash: qron.fingerprintHash ?? void 0
-    });
-    const trust = computeTrustScore({
-      qrDecodePass: true,
-      // Assuming QR decoded to get here
-      blockchainCertExists: !!qron.nftTokenId,
-      visualFingerprint: visualResult,
-      communityVerified: qron.verifiedScanCount ?? 0,
-      communityFlagged: qron.fakeFlagCount ?? 0,
-      openArtRegistered: !!qron.openartRegistered
-    });
-    await createQronScanVerdict({
-      qronId: qron.id,
-      scannedImageUrl: input.scannedImageUrl,
-      similarityScore: visualResult.similarity,
-      verdict: visualResult.verdict,
-      details: visualResult.details
-    });
-    if (visualResult.verdict === "authentic") {
-      await updateQron(qron.id, {
-        verifiedScanCount: (qron.verifiedScanCount ?? 0) + 1,
-        trustScore: trust.score
-      });
-    } else if (visualResult.verdict === "fake") {
-      await updateQron(qron.id, {
-        fakeFlagCount: (qron.fakeFlagCount ?? 0) + 1,
-        trustScore: trust.score
-      });
-    }
-    return { trust, visualResult };
-  })
-});
-
-// server/govchain/router.ts
-import { z as z33 } from "zod";
-
-// server/govchain/vc-service.ts
-async function issueSovereignPassport(data) {
-  const vc = {
-    "@context": [
-      "https://www.w3.org/2018/credentials/v1",
-      "https://w3id.org/security/suites/ed25519-2020/v1"
-    ],
-    id: `urn:uuid:${data.documentId}`,
-    type: ["VerifiableCredential", "SovereignDocumentPassport"],
-    issuer: data.issuerDid,
-    issuanceDate: (/* @__PURE__ */ new Date()).toISOString(),
-    credentialSubject: {
-      id: data.subjectDid,
-      ...data.claims
-    }
-  };
-  vc.proof = {
-    type: "Ed25519Signature2020",
-    created: (/* @__PURE__ */ new Date()).toISOString(),
-    proofPurpose: "assertionMethod",
-    verificationMethod: `${data.issuerDid}#key-1`,
-    jws: "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..simulated_signature"
-  };
-  return vc;
-}
-async function verifySovereignPassport(vc) {
-  const isValid = vc.proof?.jws !== void 0;
-  return {
-    valid: isValid,
-    claims: vc.credentialSubject,
-    issuer: vc.issuer
-  };
-}
-
-// server/govchain/router.ts
-init_db();
-import { TRPCError as TRPCError11 } from "@trpc/server";
-var govchainRouter = router({
-  /**
-   * Government Issuer: Issue a Sovereign Document Passport
-   */
-  issuePassport: protectedProcedure.input(z33.object({
-    documentId: z33.string(),
-    claims: z33.record(z33.string(), z33.any()),
-    recipientEmail: z33.string().email()
-  })).mutation(async ({ ctx, input }) => {
-    if (ctx.user.role !== "admin") {
-      throw new TRPCError11({ code: "FORBIDDEN", message: "Only authorized government issuers can perform this action." });
-    }
-    const issuerDid = `did:authichain:gov:${ctx.user.id}`;
-    const subjectDid = `did:authichain:user:${input.recipientEmail}`;
-    const vc = await issueSovereignPassport({
-      documentId: input.documentId,
-      issuerDid,
-      subjectDid,
-      claims: input.claims
-    });
-    await logActivity({
-      userId: ctx.user.id,
-      action: "govchain_passport_issued",
-      entityType: "passport",
-      entityId: 0,
-      details: {
-        documentId: input.documentId,
-        recipient: input.recipientEmail,
-        vcId: vc.id
-      }
-    });
-    return { success: true, vc };
-  }),
-  /**
-   * Public Verification: Verify a Sovereign Document Passport
-   */
-  verifyPassport: publicProcedure.input(z33.object({
-    vc: z33.any()
-  })).query(async ({ input }) => {
-    const result = await verifySovereignPassport(input.vc);
-    if (result.valid) {
-      await logActivity({
-        userId: null,
-        action: "govchain_passport_verified",
-        entityType: "passport",
-        entityId: 0,
-        details: { issuer: result.issuer, vcId: input.vc.id }
-      });
-    }
-    return result;
-  }),
-  /**
-   * GovChain Stats: Real-time metrics for the government vertical
-   */
-  stats: publicProcedure.query(async () => {
-    return {
-      activeAgencies: 12,
-      passportsIssued: 1420,
-      complianceScore: 99.9,
-      network: "GovChain Federal Hub (FIPS 140-2)"
-    };
-  })
-});
-
-// server/sales/router.ts
-import { z as z34 } from "zod";
-
-// server/sales/roi-service.ts
-function calculateROI(input) {
-  const {
-    numProducts,
-    complianceHoursPerMonth,
-    hourlyRate,
-    existingTechCosts
-  } = input;
-  const annualLaborCost = complianceHoursPerMonth * 12 * hourlyRate;
-  let riskMitigationValue = 5e4;
-  let hiddenOperationCosts = 45e3;
-  if (input.industry === "medtech") {
-    riskMitigationValue = 25e4;
-    hiddenOperationCosts = 15e4;
-  } else if (input.industry === "pharma") {
-    riskMitigationValue = 18e4;
-    hiddenOperationCosts = 9e4;
-  } else if (input.industry === "timepieces") {
-    riskMitigationValue = 4e5;
-    hiddenOperationCosts = 5e4;
-  }
-  const currentAnnualCost = annualLaborCost + existingTechCosts + riskMitigationValue + hiddenOperationCosts;
-  let subscriptionFee = 12e4;
-  let tierName = "Enterprise";
-  if (input.industry === "medtech") {
-    subscriptionFee = 15e4;
-    tierName = "MedTech Enterprise";
-  } else if (input.industry === "timepieces") {
-    subscriptionFee = 75e3;
-    tierName = "Timepiece Integrity";
-  } else {
-    if (numProducts <= 1e3) {
-      subscriptionFee = 3e4;
-      tierName = "Starter";
-    } else if (numProducts <= 1e4) {
-      subscriptionFee = 6e4;
-      tierName = "Professional";
-    }
-  }
-  const implementationFee = 3e4;
-  const earlySigningDiscount = subscriptionFee * 0.1;
-  const authiChainAnnualCost = implementationFee + (subscriptionFee - earlySigningDiscount);
-  const year1Savings = currentAnnualCost - authiChainAnnualCost;
-  const paybackMonths = Number((authiChainAnnualCost / (currentAnnualCost / 12)).toFixed(1));
-  const year2Legacy = currentAnnualCost * 1.1;
-  const year3Legacy = year2Legacy * 1.1;
-  const threeYearCurrent = currentAnnualCost + year2Legacy + year3Legacy;
-  const year2AuthiChain = subscriptionFee * 1.05;
-  const year3AuthiChain = year2AuthiChain * 1.05;
-  const threeYearAuthiChain = authiChainAnnualCost + year2AuthiChain + year3AuthiChain;
-  const threeYearSavings = Math.round(threeYearCurrent - threeYearAuthiChain);
-  const timeSavingsPct = 80;
-  return {
-    currentAnnualCost,
-    authiChainAnnualCost,
-    year1Savings,
-    threeYearSavings,
-    paybackMonths,
-    timeSavingsPct,
-    tierName,
-    pricing: {
-      implementationFee,
-      subscriptionFee,
-      discount: earlySigningDiscount,
-      total: authiChainAnnualCost
-    }
-  };
-}
-
-// server/sales/router.ts
-init_scoring_service();
-init_db();
-var salesRouter = router({
-  /**
-   * Public: Calculate ROI for a potential customer
-   */
-  calculateRoi: publicProcedure.input(z34.object({
-    numProducts: z34.number(),
-    complianceHoursPerMonth: z34.number(),
-    hourlyRate: z34.number(),
-    existingTechCosts: z34.number(),
-    industry: z34.string(),
-    userEmail: z34.string().email().optional()
-  })).mutation(async ({ input }) => {
-    const results = calculateROI(input);
-    if (input.userEmail) {
-      let lead = await getLeadByEmail(input.userEmail);
-      if (!lead) {
-        lead = await createLead({
-          email: input.userEmail,
-          industry: input.industry,
-          source: "roi_calculator"
-        });
-      }
-      await updateLead(lead.id, {
-        roiCalculated: true,
-        numProducts: input.numProducts,
-        roiSavings: results.year1Savings
-      });
-      await calculateLeadScore(lead.id);
-    }
-    return results;
-  }),
-  /**
-   * Track interactive demo engagement
-   */
-  trackDemoActivity: publicProcedure.input(z34.object({
-    email: z34.string().email(),
-    event: z34.string()
-  })).mutation(async ({ input }) => {
-    const lead = await getLeadByEmail(input.email);
-    if (lead) {
-      await incrementInteractionCount(lead.id);
-      if (input.event === "demo_start") {
-        await updateLead(lead.id, { demoStarted: true });
-      }
-      await calculateLeadScore(lead.id);
-    }
-    return { success: true };
-  }),
-  /**
-   * Get current lead status
-   */
-  getLeadStatus: protectedProcedure.query(async ({ ctx }) => {
-    return await getLeadByEmail(ctx.user.email ?? "");
-  })
-});
-
-// server/agents/dev-team/router.ts
-import { z as z35 } from "zod";
-init_db();
-var devTeamRouter = router({
-  sprintTasks: protectedProcedure.input(z35.object({ missionId: z35.string().optional() })).query(async ({ input }) => {
-    const d = await getDb();
-    const { missionTasks: missionTasks2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq20 } = await import("drizzle-orm");
-    let query = d.select().from(missionTasks2);
-    if (input.missionId) {
-      query = query.where(eq20(missionTasks2.missionId, input.missionId));
-    }
-    return await query.orderBy(missionTasks2.order);
-  }),
-  retryTask: protectedProcedure.input(z35.object({ taskId: z35.string() })).mutation(async ({ input }) => {
-    const d = await getDb();
-    const { missionTasks: missionTasks2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq20 } = await import("drizzle-orm");
-    await d.update(missionTasks2).set({ status: "pending", error: null }).where(eq20(missionTasks2.id, input.taskId));
-    return { success: true };
-  }),
-  stats: protectedProcedure.query(async () => {
-    const d = await getDb();
-    const { missionTasks: missionTasks2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { sql: sql6 } = await import("drizzle-orm");
-    const [all] = await d.select({ count: sql6`count(*)` }).from(missionTasks2);
-    const [pending] = await d.select({ count: sql6`count(*)` }).from(missionTasks2).where(sql6`status = 'pending'`);
-    const [completed] = await d.select({ count: sql6`count(*)` }).from(missionTasks2).where(sql6`status = 'completed'`);
-    const [failed] = await d.select({ count: sql6`count(*)` }).from(missionTasks2).where(sql6`status = 'failed'`);
-    return {
-      total: Number(all?.count || 0),
-      pending: Number(pending?.count || 0),
-      completed: Number(completed?.count || 0),
-      failed: Number(failed?.count || 0)
-    };
-  }),
-  // Sprint list (consumed by the BuildLoop dashboard).
-  sprints: protectedProcedure.query(async () => {
-    const d = await getDb();
-    const { missions: missions2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const { eq: eq20 } = await import("drizzle-orm");
-    return await d.select().from(missions2).where(eq20(missions2.type, "TECH_SPRINT"));
-  }),
-  // Queue a PLAN_SPRINT task for AgentZ; picked up on the next scheduler tick.
-  createSprint: protectedProcedure.input(z35.any()).mutation(async ({ input }) => {
-    const missionId = await createMission("TECH_SPRINT");
-    await enqueueTask(missionId, "PLAN_SPRINT", input ?? {});
-    return { success: true };
-  }),
-  // Approve a pending merge; AgentZ performs the merge on its next tick.
-  approveMerge: protectedProcedure.input(z35.any()).mutation(async ({ input }) => {
-    const taskId = input && input.taskId || void 0;
-    if (taskId) {
-      const d = await getDb();
-      const { missionTasks: missionTasks2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq20 } = await import("drizzle-orm");
-      await d.update(missionTasks2).set({ status: "approved" }).where(eq20(missionTasks2.id, taskId));
-    }
-    return { success: true };
   })
 });
 
 // server/routers/metrc.ts
-import { z as z36 } from "zod";
-init_metrc_service();
+import { z as z24 } from "zod";
+
+// server/metrc-service.ts
+init_db();
+async function syncMetrcTransfers(auth) {
+  const { vendorKey, userKey, licenseNumber } = auth;
+  const authHeader = `Basic ${Buffer.from(`${vendorKey}:${userKey}`).toString("base64")}`;
+  const endpoints = [
+    "https://api-mi.metrc.com",
+    "https://api-mi-backup.metrc.com"
+    // Simulated fallback
+  ];
+  let lastError = null;
+  for (const baseUrl of endpoints) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`[METRC] Sync attempt ${attempt} via ${baseUrl}...`);
+        const response = await fetch(`${baseUrl}/transfers/v1/incoming?licenseNumber=${licenseNumber}`, {
+          headers: { "Authorization": authHeader },
+          signal: AbortSignal.timeout(2e4)
+        });
+        if (response.ok) {
+          const transfers = await response.json();
+          for (const transfer of transfers) {
+            if (transfer.status === "Shipped" || transfer.status === "Received") {
+              await logActivity({
+                userId: 1,
+                action: "metrc_manifest_synced",
+                entityType: "manifest",
+                entityId: transfer.id,
+                details: {
+                  manifestNumber: transfer.manifestNumber,
+                  value: transfer.wholesalePrice,
+                  taxDue: transfer.wholesalePrice * 0.24
+                }
+              });
+            }
+          }
+          return transfers;
+        }
+        console.warn(`[METRC] ${baseUrl} failed with ${response.status}`);
+        await new Promise((r) => setTimeout(r, attempt * 1e3));
+      } catch (err) {
+        console.warn(`[METRC] ${baseUrl} exception: ${err.message}`);
+        lastError = err;
+        await new Promise((r) => setTimeout(r, attempt * 1e3));
+      }
+    }
+  }
+  console.error("[METRC] All state API endpoints failed.");
+  return [];
+}
+async function anchorPackageToTruthLayer(packageTag, manifestId) {
+  console.log(`\u{1F517} Anchoring METRC Package ${packageTag} to Bitcoin L1...`);
+  const inscriptionUrl = "https://qron.space/api/ordinals/inscribe";
+  try {
+    const { broadcastSocialProof: broadcastSocialProof2 } = await Promise.resolve().then(() => (init_social_service(), social_service_exports));
+    await broadcastSocialProof2({
+      type: "inscription",
+      brandName: "Michigan Processor",
+      // Dynamically resolve brand name from DB in real scenario
+      productName: `Package ${packageTag}`,
+      imageUrl: "https://authichain.com/images/bitcoin-proof-badge.png",
+      verifyUrl: `https://govchain.us/verify/${packageTag}`
+    });
+  } catch (socialErr) {
+    console.warn("[Social Bridge] Trigger failed during anchoring:", socialErr);
+  }
+  return {
+    success: true,
+    txId: "btc_pending_hash_...",
+    truthLayerUrl: `https://govchain.us/verify/${packageTag}`
+  };
+}
+
+// server/routers/metrc.ts
 var metrcRouter = router({
   /**
    * Sync active transfers from METRC for a vendor
    */
-  sync: protectedProcedure.input(z36.object({
-    licenseNumber: z36.string(),
-    vendorKey: z36.string().optional(),
-    userKey: z36.string().optional()
+  sync: protectedProcedure.input(z24.object({
+    licenseNumber: z24.string(),
+    vendorKey: z24.string().optional(),
+    userKey: z24.string().optional()
   })).mutation(async ({ input }) => {
     const result = await syncMetrcTransfers({
       licenseNumber: input.licenseNumber,
@@ -12861,9 +10703,9 @@ var metrcRouter = router({
   /**
    * Anchor a specific METRC package to the Bitcoin Truth Layer
    */
-  anchor: protectedProcedure.input(z36.object({
-    packageTag: z36.string(),
-    manifestId: z36.string()
+  anchor: protectedProcedure.input(z24.object({
+    packageTag: z24.string(),
+    manifestId: z24.string()
   })).mutation(async ({ input }) => {
     return await anchorPackageToTruthLayer(input.packageTag, input.manifestId);
   }),
@@ -12881,12 +10723,12 @@ var metrcRouter = router({
 });
 
 // server/routers/products.ts
-import { z as z37 } from "zod";
+import { z as z25 } from "zod";
 
 // server/asset-service.ts
 init_db();
 init_schema();
-import { eq as eq12 } from "drizzle-orm";
+import { eq as eq10 } from "drizzle-orm";
 
 // server/vision-service.ts
 init_llm();
@@ -12949,6 +10791,7 @@ async function analyzeProductVision(imageUrl, productType) {
 
 // server/audio-service.ts
 init_env();
+init_storage();
 async function generateProductAudioStory(data) {
   console.log(`\u{1F399}\uFE0F Generating BrandVoice story for ${data.brandName} - ${data.strainName}...`);
   const script = `This is an authentic ${data.strainName} experience by ${data.brandName}. 
@@ -12996,7 +10839,7 @@ async function generateProductAudioStory(data) {
 // server/asset-service.ts
 async function generateProductAssets(productId) {
   const db2 = await getDb();
-  const [product] = await db2.select().from(products).where(eq12(products.id, productId));
+  const [product] = await db2.select().from(products).where(eq10(products.id, productId));
   if (!product) throw new Error(`Product ${productId} not found`);
   console.log(`\u{1F680} Starting asset generation for Product ${productId}: ${product.name}`);
   try {
@@ -13016,7 +10859,7 @@ async function generateProductAssets(productId) {
       rarityScore: product.metadata?.rarity || 50,
       // Default rarity
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq12(products.id, productId));
+    }).where(eq10(products.id, productId));
     console.log(`\u2705 Assets persisted for Product ${productId}`);
   } catch (error) {
     console.error(`\u274C Asset generation failed for Product ${productId}:`, error.message);
@@ -13031,28 +10874,28 @@ async function generateProductAssets(productId) {
 }
 async function retryFailedAssets() {
   const db2 = await getDb();
-  const failedTasks = await db2.select().from(deadLetterQueue).where(eq12(deadLetterQueue.status, "pending"));
+  const failedTasks = await db2.select().from(deadLetterQueue).where(eq10(deadLetterQueue.status, "pending"));
   console.log(`\u{1F504} Retrying ${failedTasks.length} failed asset tasks...`);
   for (const task of failedTasks) {
     const { productId } = task.payload;
     try {
       await generateProductAssets(productId);
-      await db2.update(deadLetterQueue).set({ status: "resolved" }).where(eq12(deadLetterQueue.id, task.id));
+      await db2.update(deadLetterQueue).set({ status: "resolved" }).where(eq10(deadLetterQueue.id, task.id));
     } catch (e) {
       await db2.update(deadLetterQueue).set({
         retryCount: (task.retryCount || 0) + 1,
         lastAttemptedAt: /* @__PURE__ */ new Date()
-      }).where(eq12(deadLetterQueue.id, task.id));
+      }).where(eq10(deadLetterQueue.id, task.id));
     }
   }
 }
 
 // server/routers/products.ts
-var productsRouter2 = router({
+var productsRouter = router({
   /**
    * Triggers industrial asset generation (DNA + Audio) for a product.
    */
-  generateAssets: protectedProcedure.input(z37.object({ productId: z37.number() })).mutation(async ({ input }) => {
+  generateAssets: protectedProcedure.input(z25.object({ productId: z25.number() })).mutation(async ({ input }) => {
     await generateProductAssets(input.productId);
     return { success: true };
   }),
@@ -13066,14 +10909,15 @@ var productsRouter2 = router({
 });
 
 // server/routers/scheduler.ts
-import { z as z38 } from "zod";
+import { z as z26 } from "zod";
 
 // server/scheduled-jobs.ts
 init_db();
 init_schema();
-import { eq as eq17, lt, and as and8, sql as sql5, desc as desc7, lte as lte3, gte as gte3, count as count2 } from "drizzle-orm";
+init_notification();
 init_hubspot_service();
 init_env();
+import { eq as eq16, lt, and as and9, sql as sql4, desc as desc8, lte as lte3, gte as gte2, count as count2 } from "drizzle-orm";
 var jobs = [];
 var scheduledTasks = /* @__PURE__ */ new Map();
 function registerJob(job) {
@@ -13102,7 +10946,7 @@ async function executeJob(job) {
       duration,
       itemsProcessed: result.itemsProcessed,
       result: result.details
-    }).where(eq17(scheduledJobRuns.id, Number(runId)));
+    }).where(eq16(scheduledJobRuns.id, Number(runId)));
     console.log(`[Scheduler] Completed ${job.name} in ${duration}ms (${result.itemsProcessed} items)`);
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -13112,7 +10956,7 @@ async function executeJob(job) {
       completedAt: /* @__PURE__ */ new Date(),
       duration,
       error: error.message || "Unknown error"
-    }).where(eq17(scheduledJobRuns.id, Number(runId)));
+    }).where(eq16(scheduledJobRuns.id, Number(runId)));
   }
 }
 registerJob({
@@ -13127,10 +10971,10 @@ registerJob({
     const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1e3);
     let processed = 0;
     const details = {};
-    const expiringSubs = await db2.select().from(subscriptions).where(and8(
-      eq17(subscriptions.status, "active"),
+    const expiringSubs = await db2.select().from(subscriptions).where(and9(
+      eq16(subscriptions.status, "active"),
       lte3(subscriptions.currentPeriodEnd, threeDaysFromNow),
-      gte3(subscriptions.currentPeriodEnd, now)
+      gte2(subscriptions.currentPeriodEnd, now)
     ));
     for (const sub of expiringSubs) {
       await db2.insert(notifications).values({
@@ -13143,18 +10987,18 @@ registerJob({
       processed++;
     }
     details.expiringNotified = expiringSubs.length;
-    const pastDueSubs = await db2.select().from(subscriptions).where(and8(
-      eq17(subscriptions.status, "active"),
+    const pastDueSubs = await db2.select().from(subscriptions).where(and9(
+      eq16(subscriptions.status, "active"),
       lt(subscriptions.currentPeriodEnd, now)
     ));
     for (const sub of pastDueSubs) {
-      await db2.update(subscriptions).set({ status: "past_due" }).where(eq17(subscriptions.id, sub.id));
+      await db2.update(subscriptions).set({ status: "past_due" }).where(eq16(subscriptions.id, sub.id));
       processed++;
     }
     details.markedPastDue = pastDueSubs.length;
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     if (now.getDate() === 1) {
-      await db2.update(subscriptions).set({ usedQuota: 0 }).where(eq17(subscriptions.status, "active"));
+      const [resetResult] = await db2.update(subscriptions).set({ usedQuota: 0 }).where(eq16(subscriptions.status, "active"));
       details.quotasReset = true;
     }
     return { itemsProcessed: processed, details };
@@ -13171,10 +11015,10 @@ registerJob({
     const now = /* @__PURE__ */ new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1e3);
     let processed = 0;
-    const expiringCerts = await db2.select().from(certificates).where(and8(
-      eq17(certificates.status, "active"),
+    const expiringCerts = await db2.select().from(certificates).where(and9(
+      eq16(certificates.status, "active"),
       lte3(certificates.expiresAt, thirtyDaysFromNow),
-      gte3(certificates.expiresAt, now)
+      gte2(certificates.expiresAt, now)
     ));
     for (const cert of expiringCerts) {
       await db2.insert(notifications).values({
@@ -13186,8 +11030,8 @@ registerJob({
       });
       processed++;
     }
-    await db2.update(certificates).set({ status: "expired" }).where(and8(
-      eq17(certificates.status, "active"),
+    const [expiredResult] = await db2.update(certificates).set({ status: "expired" }).where(and9(
+      eq16(certificates.status, "active"),
       lt(certificates.expiresAt, now)
     ));
     return {
@@ -13208,13 +11052,13 @@ registerJob({
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
     let processed = 0;
     const details = {};
-    const staleLeads = await db2.select().from(leads).where(and8(
-      eq17(leads.status, "new"),
+    const staleLeads = await db2.select().from(leads).where(and9(
+      eq16(leads.status, "new"),
       lt(leads.createdAt, sevenDaysAgo)
     ));
     details.staleLeadsFound = staleLeads.length;
     if (isHubSpotConfigured()) {
-      const newLeads = await db2.select().from(leads).where(eq17(leads.status, "new")).limit(20);
+      const newLeads = await db2.select().from(leads).where(eq16(leads.status, "new")).limit(20);
       let synced = 0;
       for (const lead of newLeads) {
         try {
@@ -13246,14 +11090,14 @@ registerJob({
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1e3);
     let processed = 0;
     const details = {};
-    await db2.delete(notifications).where(and8(
-      eq17(notifications.isRead, 1),
+    const [notifResult] = await db2.delete(notifications).where(and9(
+      eq16(notifications.isRead, 1),
       lt(notifications.createdAt, thirtyDaysAgo)
     ));
     details.oldNotificationsDeleted = "checked";
     processed++;
-    await db2.delete(scheduledJobRuns).where(and8(
-      eq17(scheduledJobRuns.status, "completed"),
+    const [jobRunResult] = await db2.delete(scheduledJobRuns).where(and9(
+      eq16(scheduledJobRuns.status, "completed"),
       lt(scheduledJobRuns.startedAt, ninetyDaysAgo)
     ));
     details.oldJobRunsDeleted = "checked";
@@ -13270,15 +11114,15 @@ registerJob({
     const db2 = await getDb();
     if (!db2) return { itemsProcessed: 0, details: { error: "No DB" } };
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1e3);
-    const [newUsersResult] = await db2.select({ count: count2() }).from(users).where(gte3(users.createdAt, oneWeekAgo));
+    const [newUsersResult] = await db2.select({ count: count2() }).from(users).where(gte2(users.createdAt, oneWeekAgo));
     const newUsers = newUsersResult?.count || 0;
-    const [authsResult] = await db2.select({ count: count2() }).from(authentications).where(gte3(authentications.createdAt, oneWeekAgo));
+    const [authsResult] = await db2.select({ count: count2() }).from(authentications).where(gte2(authentications.createdAt, oneWeekAgo));
     const newAuths = authsResult?.count || 0;
-    const [leadsResult] = await db2.select({ count: count2() }).from(leads).where(gte3(leads.createdAt, oneWeekAgo));
+    const [leadsResult] = await db2.select({ count: count2() }).from(leads).where(gte2(leads.createdAt, oneWeekAgo));
     const newLeads = leadsResult?.count || 0;
-    const [paymentsResult] = await db2.select({ count: count2() }).from(payments).where(gte3(payments.createdAt, oneWeekAgo));
+    const [paymentsResult] = await db2.select({ count: count2() }).from(payments).where(gte2(payments.createdAt, oneWeekAgo));
     const newPayments = paymentsResult?.count || 0;
-    const [activeSubs] = await db2.select({ count: count2() }).from(subscriptions).where(eq17(subscriptions.status, "active"));
+    const [activeSubs] = await db2.select({ count: count2() }).from(subscriptions).where(eq16(subscriptions.status, "active"));
     const totalActiveSubs = activeSubs?.count || 0;
     let crmStats = { contacts: 0, companies: 0, deals: 0 };
     if (isHubSpotConfigured()) {
@@ -13320,7 +11164,7 @@ registerJob({
     if (!db2) return { itemsProcessed: 0, details: { error: "No DB" } };
     const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1e3);
     let synced = 0;
-    const recentLeads = await db2.select().from(leads).where(gte3(leads.createdAt, fourHoursAgo)).limit(50);
+    const recentLeads = await db2.select().from(leads).where(gte2(leads.createdAt, fourHoursAgo)).limit(50);
     for (const lead of recentLeads) {
       try {
         await syncLeadToHubSpot({
@@ -13349,13 +11193,13 @@ registerJob({
     if (!db2) return { itemsProcessed: 0, details: { error: "No DB" } };
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3);
     let processed = 0;
-    const activeSubs = await db2.select().from(subscriptions).where(eq17(subscriptions.status, "active"));
+    const activeSubs = await db2.select().from(subscriptions).where(eq16(subscriptions.status, "active"));
     for (const sub of activeSubs) {
       const quotaUsage = sub.usedQuota && sub.monthlyQuota ? Math.round(sub.usedQuota / sub.monthlyQuota * 100) : 0;
       let score = Math.min(100, quotaUsage);
       if (sub.plan === "enterprise") score = Math.min(100, score + 20);
       else if (sub.plan === "professional") score = Math.min(100, score + 10);
-      const [existing] = await db2.select().from(customerHealthScores).where(eq17(customerHealthScores.userId, sub.userId)).orderBy(desc7(customerHealthScores.lastCalculatedAt)).limit(1);
+      const [existing] = await db2.select().from(customerHealthScores).where(eq16(customerHealthScores.userId, sub.userId)).orderBy(desc8(customerHealthScores.lastCalculatedAt)).limit(1);
       let trend = "stable";
       if (existing) {
         if (score > existing.score + 5) trend = "improving";
@@ -13386,7 +11230,7 @@ registerJob({
     const highVolumeUsers = await db2.select({
       userId: authentications.userId,
       authCount: count2()
-    }).from(authentications).where(gte3(authentications.createdAt, sixHoursAgo)).groupBy(authentications.userId).having(sql5`count(*) > 50`);
+    }).from(authentications).where(gte2(authentications.createdAt, sixHoursAgo)).groupBy(authentications.userId).having(sql4`count(*) > 50`);
     for (const user of highVolumeUsers) {
       await db2.insert(fraudAlerts).values({
         userId: user.userId,
@@ -13400,10 +11244,10 @@ registerJob({
     const failedAuths = await db2.select({
       productId: authentications.productId,
       failCount: count2()
-    }).from(authentications).where(and8(
-      gte3(authentications.createdAt, sixHoursAgo),
-      eq17(authentications.result, "counterfeit")
-    )).groupBy(authentications.productId).having(sql5`count(*) > 5`);
+    }).from(authentications).where(and9(
+      gte2(authentications.createdAt, sixHoursAgo),
+      eq16(authentications.result, "counterfeit")
+    )).groupBy(authentications.productId).having(sql4`count(*) > 5`);
     for (const item of failedAuths) {
       if (item.productId) {
         await db2.insert(fraudAlerts).values({
@@ -13490,52 +11334,6 @@ registerJob({
     return { itemsProcessed: 2, details: { status: "cloning_cycle_complete", verticals: ["EV_BATTERY", "ARTISAN_COFFEE"] } };
   }
 });
-registerJob({
-  name: "strainchain-metrc-sync",
-  description: "Sync METRC transfers and auto-anchor to the Truth Layer",
-  schedule: "0 * * * *",
-  enabled: true,
-  handler: async () => {
-    const { runStrainChainSync: runStrainChainSync2 } = await Promise.resolve().then(() => (init_strainchain_sync(), strainchain_sync_exports));
-    return await runStrainChainSync2();
-  }
-});
-registerJob({
-  name: "newsjacking-monitor",
-  description: "Monitor global news for supply chain incidents and trigger PR missions",
-  schedule: "*/30 * * * *",
-  enabled: true,
-  handler: async () => {
-    const { runNewsjackingMonitor: runNewsjackingMonitor2 } = await Promise.resolve().then(() => (init_news_pr(), news_pr_exports));
-    await runNewsjackingMonitor2({
-      missionId: "SYSTEM_PR",
-      payload: { topics: ["medical device recall", "counterfeit pharma", "luxury forgery"] }
-    });
-    return { itemsProcessed: 1, details: { status: "news_scan_complete" } };
-  }
-});
-registerJob({
-  name: "staking-rewards",
-  description: "Distribute validation rewards to active $QRON stakers",
-  schedule: "0 4 * * *",
-  enabled: true,
-  handler: async () => {
-    const db2 = await getDb();
-    if (!db2) return { itemsProcessed: 0, details: { error: "No DB" } };
-    const activePositions = await db2.select().from((await Promise.resolve().then(() => (init_schema(), schema_exports))).stakingPositions).where(eq17((await Promise.resolve().then(() => (init_schema(), schema_exports))).stakingPositions.status, "active"));
-    for (const pos of activePositions) {
-      const dailyReward = Number(pos.amount) * 0.125 / 365;
-      await db2.insert((await Promise.resolve().then(() => (init_schema(), schema_exports))).qronRewardLedger).values({
-        agentId: pos.agentId || 0,
-        userId: pos.userId,
-        amount: dailyReward.toFixed(9),
-        reason: "staking_reward",
-        status: "pending"
-      });
-    }
-    return { itemsProcessed: activePositions.length, details: { status: "rewards_distributed" } };
-  }
-});
 var _systemActive = true;
 function getSystemStatus() {
   return {
@@ -13571,9 +11369,9 @@ async function getJobHistory(jobName, limit = 50) {
   const db2 = await getDb();
   if (!db2) return [];
   if (jobName) {
-    return db2.select().from(scheduledJobRuns).where(eq17(scheduledJobRuns.jobName, jobName)).orderBy(desc7(scheduledJobRuns.startedAt)).limit(limit);
+    return db2.select().from(scheduledJobRuns).where(eq16(scheduledJobRuns.jobName, jobName)).orderBy(desc8(scheduledJobRuns.startedAt)).limit(limit);
   }
-  return db2.select().from(scheduledJobRuns).orderBy(desc7(scheduledJobRuns.startedAt)).limit(limit);
+  return db2.select().from(scheduledJobRuns).orderBy(desc8(scheduledJobRuns.startedAt)).limit(limit);
 }
 async function runJobManually(jobName) {
   const job = jobs.find((j) => j.name === jobName);
@@ -13587,14 +11385,14 @@ var schedulerRouter = router({
   listJobs: adminProcedure.query(() => {
     return getRegisteredJobs();
   }),
-  getHistory: adminProcedure.input(z38.object({
-    jobName: z38.string().optional(),
-    limit: z38.number().optional().default(50)
+  getHistory: adminProcedure.input(z26.object({
+    jobName: z26.string().optional(),
+    limit: z26.number().optional().default(50)
   })).query(({ input }) => {
     return getJobHistory(input.jobName, input.limit);
   }),
-  runManually: adminProcedure.input(z38.object({
-    jobName: z38.string()
+  runManually: adminProcedure.input(z26.object({
+    jobName: z26.string()
   })).mutation(async ({ input }) => {
     const success = await runJobManually(input.jobName);
     return {
@@ -13605,8 +11403,8 @@ var schedulerRouter = router({
   getSystemStatus: adminProcedure.query(() => {
     return getSystemStatus();
   }),
-  toggleSystemState: adminProcedure.input(z38.object({
-    active: z38.boolean()
+  toggleSystemState: adminProcedure.input(z26.object({
+    active: z26.boolean()
   })).mutation(({ input }) => {
     const isActive = toggleKillSwitch(input.active);
     return {
@@ -13618,7 +11416,7 @@ var schedulerRouter = router({
 });
 
 // server/routers/services.ts
-import { z as z39 } from "zod";
+import { z as z27 } from "zod";
 
 // server/service-catalog.ts
 var SERVICE_CATALOG = {
@@ -13800,31 +11598,6 @@ var SERVICE_CATALOG = {
     deliveryTime: "3-5 business days",
     icon: "CloudLightning",
     featured: true
-  },
-  contract_setup: {
-    key: "contract_setup",
-    name: "AuthiChain Contract Pilot \u2014 Setup Fee",
-    tagline: "Custom integration + compliance reporting onboarding",
-    description: "One-time implementation fee for AuthiChain Contract Pilot customers (signed Service Agreement). Covers METRC/DSCSA compliance reporting setup, custom API integration, dedicated onboarding, and Stripe subscription provisioning at the Professional tier ($499/mo).",
-    price: 25e4,
-    displayPrice: "$2,500",
-    // Stripe IDs are populated by scripts/setup-stripe-products.ts.
-    stripeProductId: "",
-    stripePriceId: "",
-    deliverables: [
-      "METRC / DSCSA compliance reporting configuration",
-      "Custom API integration & webhook setup",
-      "Dedicated onboarding session",
-      "Provisioning of recurring B2B Professional subscription"
-    ],
-    targetAudience: [
-      "Manufacturers",
-      "Dispensaries",
-      "Brand-protection directors",
-      "Compliance officers"
-    ],
-    deliveryTime: "5-10 business days",
-    icon: "FileSignature"
   }
 };
 var SERVICE_LIST = Object.values(SERVICE_CATALOG);
@@ -13833,8 +11606,6 @@ var SERVICE_KEYS = Object.keys(SERVICE_CATALOG);
 // server/routers/services.ts
 init_db();
 init_stripe_service();
-var serviceKeyEnum = z39.enum(SERVICE_KEYS);
-var orderStatusEnum = z39.enum(ORDER_STATUSES);
 var servicesRouter = router({
   catalog: publicProcedure.query(() => {
     return SERVICE_LIST;
@@ -13845,26 +11616,26 @@ var servicesRouter = router({
   allOrders: adminProcedure.query(async () => {
     return await getAllServiceOrders();
   }),
-  updateStatus: adminProcedure.input(z39.object({
-    id: z39.number(),
-    status: orderStatusEnum
+  updateStatus: adminProcedure.input(z27.object({
+    id: z27.number(),
+    status: z27.string()
   })).mutation(async ({ input }) => {
     await updateServiceOrderStatus(input.id, input.status);
     return { success: true };
   }),
-  checkout: protectedProcedure.input(z39.object({
-    serviceKey: serviceKeyEnum.optional(),
-    serviceType: serviceKeyEnum.optional(),
+  checkout: protectedProcedure.input(z27.object({
+    serviceKey: z27.string().optional(),
+    serviceType: z27.string().optional(),
     // Support both for frontend compatibility
-    origin: z39.string(),
-    businessName: z39.string().optional(),
-    businessType: z39.string().optional(),
-    businessUrl: z39.string().optional(),
-    notes: z39.string().optional()
+    origin: z27.string(),
+    businessName: z27.string().optional(),
+    businessType: z27.string().optional(),
+    businessUrl: z27.string().optional(),
+    notes: z27.string().optional()
   })).mutation(async ({ ctx, input }) => {
-    const key = input.serviceKey ?? input.serviceType;
-    if (!key) throw new Error("serviceKey or serviceType is required");
+    const key = input.serviceKey || input.serviceType;
     const service = SERVICE_CATALOG[key];
+    if (!service) throw new Error("Service not found");
     const url = await createPaymentCheckout({
       userId: ctx.user.id,
       userEmail: ctx.user.email || "",
@@ -13885,89 +11656,220 @@ var servicesRouter = router({
   })
 });
 
-// server/routers/pipeline.ts
-init_pipeline_tick();
-var pipelineRouter = router({
-  status: protectedProcedure.query(async () => {
-    const result = await runPipelineTick();
-    return { ...result, ranAt: (/* @__PURE__ */ new Date()).toISOString(), missionTasks: result.missionTasks ?? [] };
-  })
-});
-
-// server/routers/outcomes.ts
-init_db();
-import { z as z40 } from "zod";
-var outcomesRouter = router({
-  getSegmentStats: protectedProcedure.query(async () => {
-    return {
-      GOV: { alpha: 12, beta: 84, mean: 0.12, confidence: 0.85 },
-      RETAIL: { alpha: 8, beta: 112, mean: 0.07, confidence: 0.92 },
-      PARTNER: { alpha: 5, beta: 45, mean: 0.1, confidence: 0.78 },
-      PRESS: { alpha: 3, beta: 27, mean: 0.1, confidence: 0.7 },
-      HIGH_INTENT: { alpha: 15, beta: 35, mean: 0.3, confidence: 0.88 }
-    };
-  }),
-  record: protectedProcedure.input(z40.object({
-    segment: z40.string(),
-    signal: z40.string()
-  })).mutation(async ({ input }) => {
-    await logActivity({
-      action: "outcome_recorded",
-      entityType: "segment",
-      details: input
-    });
-    return { success: true };
-  })
-});
-
 // server/routers.ts
 var appRouter = router({
   system: systemRouter,
-  auth: authRouter,
-  products: productsRouter,
-  authenticate: authenticateRouter,
-  certificates: certificatesRouter,
-  qrcode: qrcodeRouter,
-  nft: nftRouter,
-  subscription: subscriptionsRouter,
-  payments: paymentsRouter,
-  autopilot: autopilotRouter,
-  emailCampaigns: emailCampaignsRouter,
-  emailDrafts: emailDraftsRouter,
-  supplyChain: supplyChainRouter,
+  auth: router({
+    me: publicProcedure.query((opts) => opts.ctx.user),
+    logout: publicProcedure.mutation(({ ctx }) => {
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      return { success: true };
+    })
+  }),
+  // ─── Products (Merged Industrial + Standard) ──────────────────────────
+  products: router({
+    // Standard Methods
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const { getUserProducts: getUserProducts2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      return await getUserProducts2(ctx.user.id);
+    }),
+    getById: protectedProcedure.input(z28.object({ id: z28.number() })).query(async ({ input }) => {
+      const { getProductById: getProductById2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      return await getProductById2(input.id);
+    }),
+    create: protectedProcedure.input(z28.object({
+      name: z28.string().min(1),
+      brand: z28.string().optional(),
+      category: z28.string().optional(),
+      description: z28.string().optional(),
+      imageUrl: z28.string().optional(),
+      serialNumber: z28.string().optional(),
+      batchNumber: z28.string().optional()
+    })).mutation(async ({ ctx, input }) => {
+      const { createProduct: createProduct2, logActivity: logActivity2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const result = await createProduct2({ ...input, userId: ctx.user.id });
+      await logActivity2({ userId: ctx.user.id, action: "product_created", entityType: "product", entityId: result.id });
+      return result;
+    }),
+    // Industrial Pipeline Methods
+    generateAssets: productsRouter.generateAssets,
+    retryFailedTasks: productsRouter.retryFailedTasks
+  }),
+  // ─── AI Authentication ───────────────────────────────────────────────────
+  authenticate: router({
+    analyze: protectedProcedure.input(z28.object({
+      productId: z28.number(),
+      imageUrl: z28.string()
+    })).mutation(async ({ ctx, input }) => {
+      const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
+      const { createAuthentication: createAuthentication2, getProductById: getProductById2, getUserSubscription: getUserSubscription2, updateSubscriptionUsage: updateSubscriptionUsage2, recordUsage: recordUsage2, createCertificate: createCertificate2, logActivity: logActivity2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const sub = await getUserSubscription2(ctx.user.id);
+      if (sub && (sub.usedQuota ?? 0) >= sub.monthlyQuota) throw new TRPCError6({ code: "FORBIDDEN", message: "Monthly quota exceeded. Please upgrade your plan." });
+      const product = await getProductById2(input.productId);
+      if (!product) throw new TRPCError6({ code: "NOT_FOUND", message: "Product not found" });
+      const response = await invokeLLM2({
+        messages: [
+          { role: "system", content: "You are an expert luxury product authenticator with blockchain verification capabilities. Analyze the provided product image and determine if it is authentic or counterfeit. Provide detailed reasoning, a confidence score (0-100), red flags, and authentic markers." },
+          { role: "user", content: [
+            { type: "text", text: `Authenticate this ${product.brand || ""} ${product.name}. Serial: ${product.serialNumber || "N/A"}. Category: ${product.category || "general"}` },
+            { type: "image_url", image_url: { url: input.imageUrl } }
+          ] }
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "authentication_result",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                result: { type: "string", enum: ["authentic", "counterfeit", "uncertain"] },
+                confidence: { type: "integer" },
+                analysis: { type: "string" },
+                redFlags: { type: "array", items: { type: "string" } },
+                authenticMarkers: { type: "array", items: { type: "string" } },
+                recommendation: { type: "string" }
+              },
+              required: ["result", "confidence", "analysis", "redFlags", "authenticMarkers", "recommendation"],
+              additionalProperties: false
+            }
+          }
+        }
+      });
+      const aiResult = JSON.parse(response.choices[0].message.content);
+      const authResult = await createAuthentication2({
+        productId: input.productId,
+        userId: ctx.user.id,
+        aiAnalysis: aiResult,
+        confidenceScore: aiResult.confidence,
+        result: aiResult.result,
+        imageUrl: input.imageUrl
+      });
+      if (aiResult.result === "authentic" && aiResult.confidence >= 80) {
+        const certNumber = `AC-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        await createCertificate2({
+          productId: input.productId,
+          authenticationId: authResult.id,
+          userId: ctx.user.id,
+          certificateNumber: certNumber,
+          expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1e3)
+        });
+      }
+      if (sub) await updateSubscriptionUsage2(ctx.user.id, (sub.usedQuota || 0) + 1);
+      await recordUsage2({ userId: ctx.user.id, subscriptionId: sub?.id, type: "authentication", quantity: 1 });
+      await logActivity2({ userId: ctx.user.id, action: "product_authenticated", entityType: "authentication", entityId: authResult.id });
+      try {
+        const { rewardAgentForVerification: rewardAgentForVerification2 } = await Promise.resolve().then(() => (init_character_service(), character_service_exports));
+        await rewardAgentForVerification2(ctx.user.id, aiResult.result === "authentic");
+      } catch (agentErr) {
+        console.warn("[Agent XP] No agent or error:", agentErr);
+      }
+      return aiResult;
+    }),
+    history: protectedProcedure.query(async ({ ctx }) => {
+      const { getUserAuthentications: getUserAuthentications2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      return await getUserAuthentications2(ctx.user.id);
+    })
+  }),
+  // ─── Certificates ────────────────────────────────────────────────────────
+  certificates: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const { getUserCertificates: getUserCertificates2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      return await getUserCertificates2(ctx.user.id);
+    }),
+    verify: publicProcedure.input(z28.object({ certificateNumber: z28.string() })).query(async ({ input }) => {
+      const { getCertificateByNumber: getCertificateByNumber2, getProductById: getProductById2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const cert = await getCertificateByNumber2(input.certificateNumber);
+      if (!cert) return { valid: false, message: "Certificate not found" };
+      if (cert.status === "revoked") return { valid: false, message: "Certificate has been revoked" };
+      if (cert.expiresAt && cert.expiresAt < /* @__PURE__ */ new Date()) return { valid: false, message: "Certificate has expired" };
+      const product = await getProductById2(cert.productId);
+      return { valid: true, certificate: cert, product };
+    })
+  }),
+  // ─── QR Codes ────────────────────────────────────────────────────────────
+  qrcode: router({
+    generate: protectedProcedure.input(z28.object({
+      productId: z28.number(),
+      size: z28.number().optional().default(300)
+    })).mutation(async ({ ctx, input }) => {
+      const QRCode = (await import("qrcode")).default;
+      const { getProductById: getProductById2, createQrCode: createQrCode2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const product = await getProductById2(input.productId);
+      if (!product) throw new TRPCError6({ code: "NOT_FOUND", message: "Product not found" });
+      const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL || "https://authichain.com"}/verify/${product.id}`;
+      const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: input.size, margin: 2, color: { dark: "#000000", light: "#FFFFFF" } });
+      await createQrCode2({ productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl });
+      return { qrCodeDataUrl: qrDataUrl, verifyUrl };
+    })
+  }),
+  // ─── Direct Mapped Routers ───────────────────────────────────────────────
+  admin: router({
+    ...adminRouter._def.procedures,
+    createSovereignDeal: adminProcedure.input(z28.object({
+      manufacturerName: z28.string(),
+      dealType: z28.enum(["MADE_IN_USA", "GOV_CONTRACT", "INFRASTRUCTURE"]),
+      value: z28.number(),
+      description: z28.string(),
+      productId: z28.number().optional()
+    })).mutation(async ({ ctx, input }) => {
+      const { createProduct: createProduct2, logActivity: logActivity2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const deal = await createProduct2({
+        name: `${input.manufacturerName} - ${input.dealType}`,
+        brand: input.manufacturerName,
+        category: "SOVEREIGN_DEAL",
+        description: input.description,
+        userId: ctx.user.id,
+        metadata: { ...input, sealedAt: (/* @__PURE__ */ new Date()).toISOString() }
+      });
+      await logActivity2({ userId: ctx.user.id, action: "sovereign_deal_created", entityType: "deal", entityId: deal.id });
+      return { success: true, dealId: deal.id, status: "SEALED" };
+    })
+  }),
   notifications: notificationsRouter,
-  admin: adminRouter,
-  marketing: marketingRouter,
-  abTesting: abTestingRouter,
-  whiteLabel: whiteLabelRouter,
-  dashboard: dashboardRouter,
-  blockchain: blockchainRouter,
-  hubspot: hubspotRouter,
   ai: aiRouter,
+  autopilot: autopilotRouter,
+  blockchain: blockchainRouter,
+  marketing: marketingRouter,
+  nft: nftRouter,
+  personalization: personalizationRouter,
+  staking: stakingRouter,
+  supplyChain: supplyChainRouter,
+  whiteLabel: whiteLabelRouter,
+  scheduler: schedulerRouter,
+  metrc: metrcRouter,
   referral: referralRouter,
+  referrals: router({
+    ...referralRouter._def.procedures,
+    myReferrals: referralRouter.getHistory
+  }),
   affiliate: affiliateRouter,
+  affiliates: router({
+    ...affiliateRouter._def.procedures,
+    myProfile: affiliateRouter.getStatus,
+    commissions: protectedProcedure.query(async ({ ctx }) => {
+      const { getAffiliateByUserId: getAffiliateByUserId2, getAffiliateCommissions: getAffiliateCommissions2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const aff = await getAffiliateByUserId2(ctx.user.id);
+      if (!aff) return [];
+      return await getAffiliateCommissions2(aff.id);
+    }),
+    join: affiliateRouter.submitApplication
+  }),
   bonuses: bonusesRouter,
   marketplace: marketplaceRouter,
-  heygen: heygenRouter,
-  macrohard: macrohardRouter,
   missions: missionsRouter,
   tasks: tasksRouter,
   stripeConnect: stripeConnectRouter,
   subscriptions: subscriptionsRouter,
+  subscription: subscriptionsRouter,
+  // Alias
+  emailDrafts: emailDraftsRouter,
+  emailCampaigns: emailCampaignsRouter,
+  hubspot: hubspotRouter,
+  dashboard: dashboardRouter,
   character: characterRouter,
-  services: servicesRouter,
-  analytics: analyticsRouter,
-  scheduler: schedulerRouter,
-  staking: stakingRouter,
-  personalization: personalizationRouter,
-  qron: qronRouter,
-  govchain: govchainRouter,
-  sales: salesRouter,
-  devTeam: devTeamRouter,
-  pipeline: pipelineRouter,
-  outcomes: outcomesRouter,
-  metrc: metrcRouter,
-  industrialProducts: productsRouter2
+  services: servicesRouter
 });
 
 // server/_core/context.ts
@@ -13988,6 +11890,133 @@ async function createContext(opts) {
 // server/internal-api.ts
 init_db();
 import { Router } from "express";
+
+// server/qron-service.ts
+init_env();
+import { createHash } from "crypto";
+var QRON_API = process.env.NEXT_PUBLIC_WORKER_URL ?? "https://qron-api.exzactly-k.workers.dev";
+var QRON_SPACE_URL = "https://qron.space";
+var MODE_BY_TIER = {
+  standard: "holographic",
+  // Legendary rarity, prismatic surface, hardest to copy
+  premium: "dimensional",
+  // Perspective-warped grid, spatially complex
+  enterprise: "living",
+  // Particle halo + evolving aura, nearly impossible to fake
+  pharma: "temporal"
+  // Time-ringed pulsing — changes appearance over scan sessions
+};
+function generateProductSeed(params) {
+  const raw = `${params.productId}:${params.nftTokenId ?? ""}:${params.serialNumber ?? ""}`;
+  return createHash("sha256").update(raw).digest("hex");
+}
+async function generateProductQRON(params) {
+  const seed = generateProductSeed({
+    productId: params.productId,
+    nftTokenId: params.nftTokenId,
+    serialNumber: params.serialNumber
+  });
+  const mode = MODE_BY_TIER[params.tier ?? "standard"];
+  const category = params.category ?? "other";
+  const prompt = buildArtPrompt(params.productName, params.brand, mode, category);
+  const res = await fetch(`${QRON_API}/api/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt,
+      controlImage: params.verifyUrl,
+      // QR data encoded inside the art
+      seed: parseInt(seed.slice(0, 8), 16),
+      // first 8 hex chars as numeric seed
+      brandTier: params.tier === "enterprise" ? "enterprise" : params.tier === "premium" ? "growth" : "starter",
+      rarityTier: mode === "living" || mode === "temporal" ? "legendary" : mode === "holographic" || mode === "dimensional" ? "legendary" : "rare",
+      mode,
+      metadata: {
+        productId: params.productId,
+        brand: params.brand,
+        serialNumber: params.serialNumber,
+        nftTokenId: params.nftTokenId,
+        authichainSeed: seed,
+        category
+      }
+    })
+  });
+  if (!res.ok) {
+    const text2 = await res.text();
+    throw new Error(`QRON generation failed: ${res.status} ${text2}`);
+  }
+  const json = await res.json();
+  const imageUrl = json.imageUrl ?? json.image_url ?? json.url;
+  if (!imageUrl) throw new Error("QRON API did not return an image URL");
+  const fingerprintHash = await computeImageHash(imageUrl);
+  const openartUrl = await registerToOpenART({
+    qronId: json.id ?? json.qronId,
+    imageUrl,
+    productId: params.productId,
+    productName: params.productName,
+    brand: params.brand,
+    seed,
+    mode,
+    category
+  }).catch(() => void 0);
+  return {
+    qronId: json.id ?? json.qronId ?? seed,
+    imageUrl,
+    thumbnailUrl: json.thumbnailUrl ?? json.thumbnail_url,
+    mode,
+    seed,
+    fingerprintHash,
+    nftTokenId: json.nftTokenId ?? json.nft_token_id,
+    openartUrl
+  };
+}
+function computeTrustScore(params) {
+  const layers = {
+    qrDecode: { pass: params.qrDecodePass, weight: 20 },
+    blockchain: { pass: params.blockchainCertExists, weight: 25 },
+    visualFingerprint: { pass: params.visualFingerprint?.pass ?? false, similarity: params.visualFingerprint?.similarity ?? 0, weight: 30 },
+    community: { pass: params.communityVerified > params.communityFlagged, verified: params.communityVerified, flagged: params.communityFlagged, weight: 15 },
+    openArt: { pass: params.openArtRegistered, weight: 10 }
+  };
+  const score = (layers.qrDecode.pass ? layers.qrDecode.weight : 0) + (layers.blockchain.pass ? layers.blockchain.weight : 0) + (layers.visualFingerprint.pass ? layers.visualFingerprint.weight : 0) + (layers.community.pass ? layers.community.weight : 0) + (layers.openArt.pass ? layers.openArt.weight : 0);
+  const grade = score >= 90 ? "A" : score >= 70 ? "B" : score >= 50 ? "C" : "F";
+  const verdict = score >= 70 ? "authentic" : score >= 40 ? "suspicious" : "unregistered";
+  return { score, grade, layers, verdict };
+}
+async function registerToOpenART(params) {
+  const res = await fetch(`${QRON_SPACE_URL}/api/openart/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-authichain-key": ENV.qronAuthichainKey
+    },
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) throw new Error(`openART register failed: ${res.status}`);
+  const json = await res.json();
+  return `${QRON_SPACE_URL}/openart/${json.id ?? params.qronId}`;
+}
+function buildArtPrompt(name, brand, mode, category) {
+  const modePrompts = {
+    holographic: "holographic prismatic iridescent surface, rainbow light refraction, authentication seal",
+    dimensional: "deep perspective grid, impossible geometry, 3D depth illusion, serialization marks",
+    living: "particle halo swarm, bio-luminescent aura, evolving organic pattern, unique fingerprint",
+    temporal: "pulsing concentric time rings, chronological depth, pharmaceutical precision markings"
+  };
+  const base = modePrompts[mode ?? "holographic"] ?? modePrompts.holographic;
+  const brandTag = brand ? `${brand} brand identity, ` : "";
+  const catTag = category === "pharma" ? "medical grade, sterile aesthetic, " : category === "luxury_fashion" ? "luxury craftsmanship, haute couture, " : "";
+  return `${brandTag}${catTag}${base}, anti-counterfeit visual seal for "${name}", ultra high detail, certificate of authenticity`;
+}
+async function computeImageHash(imageUrl) {
+  try {
+    const res = await fetch(imageUrl);
+    const buf = await res.arrayBuffer();
+    return createHash("sha256").update(Buffer.from(buf)).digest("hex").slice(0, 64);
+  } catch {
+    return createHash("sha256").update(imageUrl).digest("hex").slice(0, 64);
+  }
+}
 
 // server/cannabis-service.ts
 function calculateStrainRarity(metadata, profile) {
@@ -14027,15 +12056,15 @@ function formatTruthLayerMetadata(metadata, profile) {
 init_llm();
 init_env();
 function createInternalRouter() {
-  const router4 = Router();
-  router4.use((req, res, next) => {
+  const router2 = Router();
+  router2.use((req, res, next) => {
     const secret = req.headers["x-internal-secret"];
     if (!secret || secret !== ENV.internalApiSecret) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     next();
   });
-  router4.post("/verify", async (req, res) => {
+  router2.post("/verify", async (req, res) => {
     try {
       const { identifier, productId, barcode, imageUrl } = req.body;
       const lookupId = identifier || productId || barcode;
@@ -14076,7 +12105,7 @@ function createInternalRouter() {
       res.status(500).json({ error: err.message });
     }
   });
-  router4.post("/qr/generate", async (req, res) => {
+  router2.post("/qr/generate", async (req, res) => {
     try {
       const { url, data, style, productName, brand, productId, prompt } = req.body;
       const qrData = url || data;
@@ -14094,7 +12123,7 @@ function createInternalRouter() {
       res.status(500).json({ error: err.message });
     }
   });
-  router4.get("/certificates/verify", async (req, res) => {
+  router2.get("/certificates/verify", async (req, res) => {
     try {
       const number = req.query.certNumber || req.query.number;
       if (!number) return res.status(400).json({ error: "certNumber query param required" });
@@ -14112,7 +12141,7 @@ function createInternalRouter() {
       res.status(500).json({ error: err.message });
     }
   });
-  router4.post("/cannabis/verify", async (req, res) => {
+  router2.post("/cannabis/verify", async (req, res) => {
     try {
       const { strainId, strainName, dispensaryId, batchId, thcPercent, cbdPercent } = req.body;
       const strain = strainName || strainId;
@@ -14142,7 +12171,7 @@ function createInternalRouter() {
       res.status(500).json({ error: err.message });
     }
   });
-  router4.post("/trust-score", async (req, res) => {
+  router2.post("/trust-score", async (req, res) => {
     try {
       const { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk } = req.body;
       const score = computeTrustScore({
@@ -14161,7 +12190,7 @@ function createInternalRouter() {
       res.status(500).json({ error: err.message });
     }
   });
-  router4.get("/analytics", async (req, res) => {
+  router2.get("/analytics", async (req, res) => {
     try {
       const period = req.query.period || "30d";
       const db2 = await getDb();
@@ -14179,7 +12208,7 @@ function createInternalRouter() {
       res.status(500).json({ error: err.message });
     }
   });
-  router4.post("/products/register", async (req, res) => {
+  router2.post("/products/register", async (req, res) => {
     try {
       const { name, brand, category, serialNumber, description, userId } = req.body;
       if (!name) return res.status(400).json({ error: "name required" });
@@ -14198,7 +12227,7 @@ function createInternalRouter() {
       res.status(500).json({ error: err.message });
     }
   });
-  router4.post("/usage/report", async (req, res) => {
+  router2.post("/usage/report", async (req, res) => {
     try {
       const { records } = req.body;
       if (!Array.isArray(records) || records.length === 0) {
@@ -14216,7 +12245,7 @@ function createInternalRouter() {
       res.status(500).json({ error: err.message });
     }
   });
-  router4.get("/tenant", async (req, res) => {
+  router2.get("/tenant", async (req, res) => {
     try {
       const apiKey = req.query.apiKey;
       if (!apiKey) return res.status(400).json({ error: "apiKey query param required" });
@@ -14235,7 +12264,7 @@ function createInternalRouter() {
       res.status(500).json({ error: err.message });
     }
   });
-  return router4;
+  return router2;
 }
 
 // shared/brands.ts
@@ -14318,256 +12347,97 @@ var brandMiddleware = (req, res, next) => {
   next();
 };
 
-// server/contact/index.ts
-import { Router as Router2 } from "express";
-import nodemailer2 from "nodemailer";
-var router2 = Router2();
-router2.post("/", async (req, res) => {
-  try {
-    const { name, email, company, message, subject } = req.body;
-    if (!name || !email || !message) {
-      return res.status(400).json({
-        success: false,
-        error: "Name, email, and message are required"
-      });
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid email address"
-      });
-    }
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const toEmail = process.env.CONTACT_EMAIL || "hello@authichain.com";
-    if (smtpHost && smtpUser && smtpPass) {
-      const transporter = nodemailer2.createTransport({
-        host: smtpHost,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: false,
-        auth: { user: smtpUser, pass: smtpPass }
-      });
-      await transporter.sendMail({
-        from: `"${name}" <${smtpUser}>`,
-        replyTo: email,
-        to: toEmail,
-        subject: subject || `Contact form: ${name}`,
-        text: `Name: ${name}
-Email: ${email}
-Company: ${company || "N/A"}
-
-Message:
-${message}`,
-        html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${company || "N/A"}</p><p><strong>Message:</strong></p><p>${message}</p>`
-      });
-    }
-    return res.status(200).json({
-      success: true,
-      message: "Thank you for your message. We will be in touch shortly."
-    });
-  } catch (error) {
-    console.error("Contact form error:", error);
-    return res.status(500).json({
-      success: false,
-      error: "Failed to process your request. Please try again."
-    });
-  }
-});
-var contact_default = router2;
-
-// server/gpt/router.ts
-init_db();
-init_schema();
-import { Router as Router3 } from "express";
-import { eq as eq19 } from "drizzle-orm";
-var router3 = Router3();
-router3.post("/verify", async (req, res) => {
-  try {
-    const { productId } = req.body;
-    if (!productId) {
-      return res.status(400).json({ error: "productId required" });
-    }
-    const product = await db.query.products.findFirst({
-      where: eq19(products.id, Number(productId))
-    });
-    if (!product) {
-      return res.json({
-        verified: false,
-        trustScore: 0,
-        message: "Product not found. This item may be counterfeit.",
-        blockchain: null
-      });
-    }
-    const cert = await db.query.certificates.findFirst({
-      where: eq19(certificates.productId, product.id)
-    });
-    return res.json({
-      verified: !!cert,
-      trustScore: cert ? 95 : 20,
-      productName: product.name,
-      brand: product.brand ?? null,
-      certificateId: cert?.id ?? null,
-      blockchain: cert ? { status: "SECURED", network: "Polygon" } : null,
-      message: cert ? `VERIFIED AUTHENTIC: ${product.name} - Blockchain secured.` : `UNVERIFIED: ${product.name} lacks blockchain certificate.`
-    });
-  } catch (err) {
-    console.error("[GPT /verify]", err);
-    res.status(500).json({ error: "Internal error during verification" });
-  }
-});
-router3.post("/qr/generate", async (req, res) => {
-  try {
-    const { productId, style, size } = req.body;
-    if (!productId) return res.status(400).json({ error: "productId required" });
-    const verifyUrl = `https://authichain.com/verify/${productId}`;
-    return res.json({
-      qrUrl: verifyUrl,
-      embedUrl: `https://authichain.com/api/qr/${productId}?style=${style || "default"}&size=${size || 256}`,
-      message: `QR code generated for product ${productId}`
-    });
-  } catch (err) {
-    console.error("[GPT /qr/generate]", err);
-    res.status(500).json({ error: "QR generation failed" });
-  }
-});
-router3.get("/certificates/verify", async (req, res) => {
-  try {
-    const { certNumber } = req.query;
-    if (!certNumber) return res.status(400).json({ error: "certNumber required" });
-    const cert = await db.query.certificates.findFirst({
-      where: eq19(certificates.certificateNumber, String(certNumber))
-    });
-    if (!cert) return res.json({ valid: false, message: "Certificate not found" });
-    return res.json({
-      valid: true,
-      certificateId: cert.id,
-      issuedAt: cert.issuedAt,
-      blockchain: { status: "SECURED", network: "Polygon" },
-      message: "Certificate is valid and blockchain-secured."
-    });
-  } catch (err) {
-    console.error("[GPT /certificates/verify]", err);
-    res.status(500).json({ error: "Certificate check failed" });
-  }
-});
-router3.post("/cannabis/verify", async (req, res) => {
-  try {
-    const { strainName, batchId } = req.body;
-    if (!batchId && !strainName) {
-      return res.status(400).json({ error: "strainName or batchId required" });
-    }
-    const product = strainName ? await db.query.products.findFirst({ where: eq19(products.name, strainName) }) : null;
-    return res.json({
-      verified: !!product,
-      strainName: strainName || "Unknown",
-      batchId: batchId || null,
-      metrcCompliant: !!product,
-      blockchain: product ? { status: "SECURED", network: "Polygon" } : null,
-      message: product ? `VERIFIED: ${product.name} - METRC compliant, blockchain secured.` : "Strain not found in AuthiChain registry."
-    });
-  } catch (err) {
-    console.error("[GPT /cannabis/verify]", err);
-    res.status(500).json({ error: "Cannabis verification failed" });
-  }
-});
-router3.post("/trust-score", async (req, res) => {
-  try {
-    const { productId } = req.body;
-    if (!productId) return res.status(400).json({ error: "productId required" });
-    const product = await db.query.products.findFirst({
-      where: eq19(products.id, Number(productId))
-    });
-    if (!product) return res.json({ trustScore: 0, verdict: "UNKNOWN", message: "Product not found" });
-    const cert = await db.query.certificates.findFirst({
-      where: eq19(certificates.productId, product.id)
-    });
-    const baseScore = cert ? 85 : 15;
-    const trustScore = Math.min(100, baseScore);
-    const verdict = trustScore >= 80 ? "TRUSTED" : trustScore >= 50 ? "MODERATE" : "SUSPICIOUS";
-    return res.json({
-      trustScore,
-      verdict,
-      breakdown: { blockchainCert: cert ? 85 : 0 },
-      message: `Trust score for ${product.name}: ${trustScore}/100 \u2014 ${verdict}`
-    });
-  } catch (err) {
-    console.error("[GPT /trust-score]", err);
-    res.status(500).json({ error: "Trust score computation failed" });
-  }
-});
-var router_default = router3;
-
 // server/_core/app.ts
 function createApp() {
   const app = express();
   app.use(brandMiddleware);
   app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
     const sig = req.headers["stripe-signature"];
-    if (!sig) {
-      return res.status(400).json({ error: "Missing stripe-signature header" });
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error("[Stripe Webhook] STRIPE_WEBHOOK_SECRET not configured");
+      return res.status(500).json({ error: "Webhook secret not configured" });
     }
     try {
-      const { handleStripeWebhook: handleStripeWebhook2 } = await Promise.resolve().then(() => (init_stripe(), stripe_exports));
-      const result = await handleStripeWebhook2(req.body, sig);
-      res.json(result);
+      const { getStripe: getStripe2, processWebhookEvent: processWebhookEvent2 } = await Promise.resolve().then(() => (init_stripe_service(), stripe_service_exports));
+      const stripe = getStripe2();
+      const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      console.log(`[Stripe Webhook] Received event: ${event.type} (${event.id})`);
+      if (event.id.startsWith("evt_test_")) {
+        return res.json({ verified: true });
+      }
+      const result = await processWebhookEvent2(event);
+      if (result.handled && result.eventType === "checkout.session.completed" && result.userId && result.plan) {
+        const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+        const db2 = await getDb2();
+        if (db2) {
+          const { subscriptions: subscriptions2, users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+          const { eq: eq18 } = await import("drizzle-orm");
+          const { getPlanQuota: getPlanQuota3 } = await Promise.resolve().then(() => (init_stripe_products(), stripe_products_exports));
+          const plan = result.plan;
+          await db2.insert(subscriptions2).values({
+            userId: result.userId,
+            plan,
+            status: "active",
+            monthlyQuota: getPlanQuota3(plan),
+            usedQuota: 0,
+            stripeCustomerId: result.customerId || null,
+            stripeSubscriptionId: result.subscriptionId || null,
+            billingCycle: "monthly",
+            currentPeriodStart: /* @__PURE__ */ new Date(),
+            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3)
+          });
+          if (result.customerId) {
+            await db2.update(users2).set({ stripeCustomerId: result.customerId }).where(eq18(users2.id, result.userId));
+          }
+          try {
+            const { createSystemNotification: createSystemNotification2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+            await createSystemNotification2(
+              result.userId,
+              `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Activated`,
+              `Your ${plan} subscription is now active.`,
+              "subscription",
+              "/subscriptions"
+            );
+          } catch {
+          }
+          try {
+            const { syncPaymentToHubSpot: syncPaymentToHubSpot2 } = await Promise.resolve().then(() => (init_hubspot_service(), hubspot_service_exports));
+            await syncPaymentToHubSpot2({ email: result.email || "", name: result.customerName || void 0, amount: 0, plan });
+          } catch {
+          }
+        }
+      }
+      if (result.handled && result.eventType === "customer.subscription.deleted" && result.subscriptionId) {
+        const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+        const db2 = await getDb2();
+        if (db2) {
+          const { subscriptions: subscriptions2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+          const { eq: eq18 } = await import("drizzle-orm");
+          await db2.update(subscriptions2).set({ status: "cancelled", cancelledAt: /* @__PURE__ */ new Date() }).where(eq18(subscriptions2.stripeSubscriptionId, result.subscriptionId));
+        }
+      }
+      if (result.handled && result.eventType === "invoice.payment_failed" && result.subscriptionId) {
+        const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+        const db2 = await getDb2();
+        if (db2) {
+          const { subscriptions: subscriptions2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+          const { eq: eq18 } = await import("drizzle-orm");
+          await db2.update(subscriptions2).set({ status: "past_due" }).where(eq18(subscriptions2.stripeSubscriptionId, result.subscriptionId));
+        }
+      }
+      res.json({ received: true, type: event.type });
     } catch (err) {
       console.error(`[Stripe Webhook] Error: ${err.message}`);
       res.status(400).json({ error: err.message });
     }
   });
-  app.post("/api/paddle/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-    const sig = req.headers["paddle-signature"];
-    if (!sig) {
-      return res.status(400).json({ error: "Missing paddle-signature header" });
-    }
-    try {
-      const { handlePaddleWebhook: handlePaddleWebhook2 } = await Promise.resolve().then(() => (init_webhook(), webhook_exports));
-      await handlePaddleWebhook2(req, res);
-    } catch (err) {
-      console.error(`[Paddle Webhook] Error: ${err.message}`);
-      res.status(400).json({ error: err.message });
-    }
-  });
-  app.post("/api/webhooks/instantly", async (req, res) => {
-    try {
-      const { handleInstantlyWebhook: handleInstantlyWebhook2 } = await Promise.resolve().then(() => (init_instantly(), instantly_exports));
-      const result = await handleInstantlyWebhook2(req.body);
-      res.json(result);
-    } catch (err) {
-      console.error(`[Instantly Webhook] Error: ${err.message}`);
-      res.status(500).json({ error: err.message });
-    }
-  });
-  app.post("/api/webhooks/docusign", async (req, res) => {
-    try {
-      const { handleDocuSignWebhook: handleDocuSignWebhook2 } = await Promise.resolve().then(() => (init_docusign(), docusign_exports));
-      const result = await handleDocuSignWebhook2(req.body);
-      res.json(result);
-    } catch (err) {
-      console.error(`[DocuSign Webhook] Error: ${err.message}`);
-      res.status(500).json({ error: err.message });
-    }
-  });
-  if (!process.env.PADDLE_WEBHOOK_SECRET) {
-    console.warn(
-      "[Paddle] PADDLE_WEBHOOK_SECRET is not set. Register https://<your-domain>/api/paddle/webhook in the Paddle dashboard (Developer \u2192 Notifications) and set PADDLE_WEBHOOK_SECRET to the signing secret."
-    );
-  }
   app.get("/api/health", (_req, res) => {
-    res.json({
-      status: "ok",
-      uptime: process.uptime(),
-      paddle: !!process.env.PADDLE_WEBHOOK_SECRET,
-      stripe: !!process.env.STRIPE_WEBHOOK_SECRET
-    });
+    res.json({ status: "ok", uptime: process.uptime() });
   });
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerOAuthRoutes(app);
-  app.use("/api/contact", contact_default);
-  app.use("/api/gpt", router_default);
   app.use("/api/internal", createInternalRouter());
   app.use(
     "/api/trpc",

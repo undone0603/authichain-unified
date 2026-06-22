@@ -58,7 +58,7 @@ export function formatTruthLayerMetadata(metadata: StrainMetadata, profile: Cann
   const rarity = calculateStrainRarity(metadata, profile);
   
   return {
-    inscription_type: "AuthiChain_StrainChain_v1",
+    incription_type: "AuthiChain_StrainChain_v1",
     product: metadata.name,
     type: metadata.type,
     metrics: {

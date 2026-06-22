@@ -16,7 +16,7 @@ export function SocialShareCTA({
 }: SocialShareCTAProps) {
 
     const [copied, setCopied] = useState(false);
-  const shareUrl = 'https://authichain.com';
+  const shareUrl = 'https://qron.space';
   const shareText = `${title}\n\n${description}\n\nCreate yours free:`;
 
   const handleNativeShare = async () => {

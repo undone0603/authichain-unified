@@ -11,7 +11,7 @@ import {
   Package,
   FileText,
   Tag,
-  Hash,
+  Hash
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
@@ -93,10 +93,11 @@ export default function NewProductPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] ml-1">
-                  <Box className="w-3 h-3" /> Manufacturer
+                  <Box className="w-3 h-3" /> Manufacturer *
                 </label>
                 <input
                   type="text"
+                  required
                   value={formData.manufacturer}
                   onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
                   className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-gold outline-none transition-colors"

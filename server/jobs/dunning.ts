@@ -8,24 +8,6 @@ import {
   getUserById,
 } from "../db";
 import { sendEmail } from "../email-service";
-import { ENV } from "../_core/env";
-
-async function retryStripePayment(stripeSubscriptionId: string): Promise<"retried" | "no_key" | "no_sub" | "error"> {
-  if (!ENV.stripeSecretKey) return "no_key";
-  if (!stripeSubscriptionId) return "no_sub";
-  try {
-    const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(ENV.stripeSecretKey);
-    // Retrieve open invoices for this subscription and attempt payment
-    const invoices = await stripe.invoices.list({ subscription: stripeSubscriptionId, status: "open", limit: 3 });
-    for (const invoice of invoices.data) {
-      await stripe.invoices.pay(invoice.id, { forgive: false });
-    }
-    return "retried";
-  } catch {
-    return "error";
-  }
-}
 
 function daysSince(date: Date | null | undefined) {
   if (!date) return 0;
@@ -80,12 +62,6 @@ async function runStep(subscription: any, step: Step, message: string) {
     }
   }
 
-  // Attempt Stripe payment retry on day_3 and day_7 (before suspension)
-  let stripeRetryStatus: string | undefined;
-  if ((step === "day_3" || step === "day_7") && subscription.stripeSubscriptionId) {
-    stripeRetryStatus = await retryStripePayment(subscription.stripeSubscriptionId);
-  }
-
   await logActivity({
     userId: subscription.userId,
     action: `billing_dunning_${step}`,
@@ -94,7 +70,6 @@ async function runStep(subscription: any, step: Step, message: string) {
     details: {
       stripeSubscriptionId: subscription.stripeSubscriptionId,
       status: subscription.status,
-      stripeRetryStatus,
     },
   });
   return true;

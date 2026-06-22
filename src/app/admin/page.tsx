@@ -2,25 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  Shield,
-  Target,
-  Activity,
-  BarChart3,
-  Users,
-  Package,
-  ShieldCheck,
-  Zap,
+import { 
+  Shield, 
+  Target, 
+  Activity, 
+  BarChart3, 
+  Users, 
+  Package, 
+  ShieldCheck, 
+  Zap, 
   Flame,
   ChevronRight,
   Loader2,
-  ArrowUpRight,
-  TrendingUp,
-  Wrench,
-  Zap as ZapIcon
+  ArrowUpRight
 } from 'lucide-react';
-import { DomainForge } from '@/components/DomainForge';
-import BuildLoop from '@/components/BuildLoop';
 
 interface AdminStats {
   creative: { total_qrons: number; total_scans: number };
@@ -195,19 +190,7 @@ export default function AdminDashboard() {
                     </div>
                     <ChevronRight className="w-4 h-4 text-zinc-800" />
                 </Link>
-                <Link href="/founders" className="protocol-card p-6 flex items-center justify-between group hover:border-gold/40 transition-all">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-lg bg-zinc-900 text-zinc-500 group-hover:text-gold transition-colors">
-                            <TrendingUp className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-white uppercase text-sm">Founders DreamDash</h4>
-                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Real-time deal pipeline</p>
-                        </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-zinc-800" />
-                </Link>
-                <Link href="/admin/ops" className="protocol-card p-6 flex items-center justify-between group hover:border-gold/40 transition-all">
+                <Link href="/admin/ops" className="protocol-card p-6 flex items-center justify-between group hover:border-gold/40 transition-all md:col-span-2">
                     <div className="flex items-center gap-4">
                         <div className="p-3 rounded-lg bg-zinc-900 text-zinc-500 group-hover:text-gold transition-colors">
                             <Activity className="w-5 h-5" />
@@ -261,28 +244,6 @@ export default function AdminDashboard() {
                     )}
                 </div>
             </section>
-          </div>
-        </div>
-
-        {/* Developer Tools Section */}
-        <div className="mt-16 pt-12 border-t border-zinc-900">
-          <div className="mb-8">
-            <h2 className="text-2xl font-black uppercase tracking-tight mb-2">
-              Developer <span className="gold-text">Tools</span>
-            </h2>
-            <p className="text-zinc-500 text-sm uppercase tracking-widest">Forge new verticals and manage dev sprints</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Domain Forge */}
-            <div className="lg:col-span-1">
-              <DomainForge />
-            </div>
-
-            {/* Build Loop */}
-            <div className="lg:col-span-1">
-              <BuildLoop />
-            </div>
           </div>
         </div>
       </div>

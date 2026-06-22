@@ -9,25 +9,6 @@ function maskEmail(email: string): string {
 }
 
 /**
- * Scores all leads that haven't been scored yet or are due for re-scoring.
- * Called by the pipeline tick every 5 minutes.
- */
-export async function runLeadScoring(): Promise<{ checked: number; scored: number; hotLeads: number }> {
-  const allLeads = await db.getAllLeads();
-  let scored = 0;
-  let hotLeads = 0;
-
-  for (const lead of allLeads) {
-    if (!lead.id) continue;
-    const score = await calculateLeadScore(lead.id);
-    scored++;
-    if (score >= 70) hotLeads++;
-  }
-
-  return { checked: allLeads.length, scored, hotLeads };
-}
-
-/**
  * Lead Scoring Service — Ported from legacy AgentZ Sales System
  * Calculates a lead's "Truth Score" (0-100) based on engagement.
  */

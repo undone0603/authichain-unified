@@ -13,7 +13,7 @@ export function getStripe(): Stripe {
   if (!_stripe) {
     const secretKey = ENV.stripeSecretKey;
     if (!secretKey) throw new Error("STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(secretKey, { apiVersion: "2026-05-27.dahlia" as const });
+    _stripe = new Stripe(secretKey, { apiVersion: "2026-04-22.dahlia" as const });
   }
   return _stripe;
 }
@@ -29,30 +29,14 @@ export interface CreateCheckoutParams {
   origin: string;
   stripeCustomerId?: string;
   trialDays?: number;
-  brand?: string;
-  contractSetupOrderId?: string;
 }
 
 export async function createSubscriptionCheckout(params: CreateCheckoutParams): Promise<string> {
   const stripe = getStripe();
   const product = STRIPE_PRODUCTS[params.plan];
-  // White-label products (setupFee) don't support annual billing
-  const isLicensed = "setupFee" in product;
-  const priceAmount = !isLicensed && params.billing === "annual"
+  const priceAmount = params.billing === "annual"
     ? product.priceAnnual
     : product.priceMonthly;
-
-  const sharedMeta: Record<string, string> = {
-    user_id: params.userId.toString(),
-    customer_email: params.userEmail,
-    customer_name: params.userName,
-    plan: params.plan,
-    billing: params.billing,
-    ...(params.brand ? { brand: params.brand } : {}),
-    ...(params.contractSetupOrderId
-      ? { contract: "true", setup_order_id: params.contractSetupOrderId }
-      : {}),
-  };
 
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
@@ -61,12 +45,19 @@ export async function createSubscriptionCheckout(params: CreateCheckoutParams): 
     client_reference_id: params.userId.toString(),
     customer_email: params.stripeCustomerId ? undefined : params.userEmail,
     customer: params.stripeCustomerId || undefined,
-    metadata: sharedMeta,
-    // Propagate user_id onto the Subscription object so lifecycle events
-    // (created, updated, deleted, invoice.payment_failed) can resolve userId
-    // without a separate customer lookup.
+    metadata: {
+      user_id: params.userId.toString(),
+      customer_email: params.userEmail,
+      customer_name: params.userName,
+      plan: params.plan,
+      billing: params.billing,
+    },
     subscription_data: {
-      metadata: sharedMeta,
+      metadata: {
+        user_id: params.userId.toString(),
+        plan: params.plan,
+        billing: params.billing,
+      },
       ...(params.trialDays ? { trial_period_days: params.trialDays } : {}),
     },
     line_items: [

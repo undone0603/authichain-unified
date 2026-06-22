@@ -1,7 +1,7 @@
 import { getStripe } from "./stripe-service";
 import { getDb } from "./db";
 import { whiteLabelClients, apiUsageDaily } from "../drizzle/schema";
-import { eq, and, gte } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { randomBytes } from "crypto";
 
 /**
@@ -94,15 +94,19 @@ export async function reportUsageToStripe(tenantId: number, endpoint: string, qu
   const pricePerCall = PRICING[plan]?.[endpoint] || 0.02;
 
   // Record in our usage table
-  const today = new Date();
+  const today = new Date().toISOString().slice(0, 10);
   await db.insert(apiUsageDaily).values({
+    tenantId,
+    date: new Date(today),
+    endpoint,
+    callCount: quantity,
+    cost: (pricePerCall * quantity).toFixed(4),
     clientId: tenantId,
-    date: today,
-    calls: quantity,
   }).onConflictDoUpdate({
-    target: [apiUsageDaily.clientId, apiUsageDaily.date],
+    target: apiUsageDaily.id,
     set: {
-      calls: quantity,
+      callCount: quantity,
+      cost: (pricePerCall * quantity).toFixed(4),
     },
   });
 }
@@ -119,15 +123,14 @@ export async function getTenantBillingStatus(tenantId: number) {
   const monthStart = today.slice(0, 8) + "01";
 
   // Sum this month's usage
-  const monthStartDate = new Date(today.slice(0, 8) + "01");
   const usage = await db.select().from(apiUsageDaily)
     .where(and(
-      eq(apiUsageDaily.clientId, tenantId),
-      gte(apiUsageDaily.date, monthStartDate),
+      eq(apiUsageDaily.tenantId, tenantId),
     ));
 
-  const totalCalls = usage.reduce((sum, u) => sum + (u.calls || 0), 0);
-  const totalCost = 0;
+  const monthUsage = usage.filter(u => u.date >= new Date(monthStart));
+  const totalCalls = monthUsage.reduce((sum, u) => sum + (u.callCount || 0), 0);
+  const totalCost = monthUsage.reduce((sum, u) => sum + parseFloat(u.cost || "0"), 0);
 
   return {
     tenantId,

@@ -7,7 +7,6 @@ import {
   hasActionLogged,
   logActivity,
 } from "../db";
-import { sendEmail } from "../email-service";
 
 export async function runQuarterlyValueReportDispatch() {
   const report = await getQuarterlyValueReport();
@@ -20,17 +19,13 @@ export async function runQuarterlyValueReportDispatch() {
 
   let delivered = 0;
   for (const admin of admins) {
-    await createSystemNotification(admin.id, "Quarterly Value Report", report.roiSummary, "system", "/admin");
-    try {
-      if (admin.email) {
-        await sendEmail({
-          to: admin.email,
-          subject: `AuthiChain Quarterly Value Report — ${report.period}`,
-          body: `Quarterly Value Report — ${report.period}\n\n${report.roiSummary}\n\nFull dashboard: https://authichain.com/admin`,
-          fromName: "AuthiChain Analytics",
-        });
-      }
-    } catch { /* email failure must not block activity log */ }
+    await createSystemNotification(
+      admin.id,
+      "Quarterly Value Report",
+      report.roiSummary,
+      "system",
+      "/admin",
+    );
     await logActivity({
       userId: admin.id,
       action: periodAction,

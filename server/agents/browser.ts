@@ -1,8 +1,8 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm';
-import { logActivity, getDb, enqueueTask } from '../db';
-import { leads } from '../../drizzle/schema';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
+import { logActivity, getDb, enqueueTask } from '../db.js';
+import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
-import type { MissionTask as Task } from '../../drizzle/schema';
+import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 const MAX_PAGE_CHARS = 8_000;

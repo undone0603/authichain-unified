@@ -31,16 +31,10 @@ export default function Subscriptions() {
     }
   }, []);
 
-  const handleCheckout = async (plan: "starter" | "professional" | "enterprise" | "medtech") => {
-    // MedTech is a $150K high-ticket tier handled via sales, not self-serve checkout.
-    if (plan === "medtech") {
-      toast.info("MedTech is a custom enterprise tier — our team will reach out to you.");
-      window.location.href = "mailto:sales@authichain.com?subject=MedTech%20Enterprise%20Inquiry";
-      return;
-    }
+  const handleCheckout = async (plan: PlanKey) => {
     try {
       const result = await checkout.mutateAsync({
-        plan: plan as any,
+        plan,
         billing,
         origin: window.location.origin,
       });

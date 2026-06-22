@@ -26,14 +26,13 @@ import {
   LayoutDashboard, LogOut, PanelLeft, Shield, QrCode, Award,
   Gem, CreditCard, Bot, Mail, Truck, Users, BarChart3,
   Building2, Link2, Settings, Rocket, DollarSign, TrendingUp, Blocks, Bell, Video, Cpu,
-  Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins, Zap, Leaf,
+  Sparkles, Landmark, Activity, Image, Calendar, ShoppingCart, Briefcase, BookOpen, HandCoins,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
-import { useBrand } from "@/contexts/BrandContext";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -43,7 +42,6 @@ const menuItems = [
   { icon: Gem, label: "NFT Marketplace", path: "/nft" },
   { icon: Truck, label: "Supply Chain", path: "/supply-chain" },
   { icon: Bot, label: "AI Autopilot", path: "/autopilot" },
-  { icon: Zap, label: "Autonomous Control", path: "/autonomous" },
   { icon: Mail, label: "Email Campaigns", path: "/email-campaigns" },
   { icon: CreditCard, label: "Subscriptions", path: "/subscriptions" },
   { icon: Link2, label: "Referrals", path: "/referrals" },
@@ -76,19 +74,11 @@ const DEFAULT_WIDTH = 260;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 
-const BRAND_ICONS: Record<string, React.ElementType> = {
-  authichain: Shield,
-  qron: QrCode,
-  strainchain: Leaf,
-  govchain: Landmark,
-};
-
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { brandId, brand } = useBrand();
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
@@ -104,20 +94,19 @@ export default function DashboardLayout({
   }
 
   if (!user) {
-    const BrandIcon = BRAND_ICONS[brandId] || Shield;
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2">
-              <BrandIcon className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold gradient-text">{brand.displayName}</span>
+              <Shield className="h-8 w-8 text-primary" />
+              <span className="text-2xl font-bold gradient-text">AuthiChain</span>
             </div>
             <h1 className="text-xl font-semibold tracking-tight text-center">
               Sign in to continue
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to the {brand.displayName} platform requires authentication.
+              Access to the AuthiChain platform requires authentication.
             </p>
           </div>
           <Button
@@ -149,7 +138,6 @@ type DashboardLayoutContentProps = {
 };
 
 function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutContentProps) {
-  const { brandId, brand } = useBrand();
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
@@ -159,7 +147,6 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
   const allItems = [...menuItems, ...(user?.role === "admin" ? adminMenuItems : [])];
   const activeMenuItem = allItems.find(item => location.startsWith(item.path));
   const isMobile = useIsMobile();
-  const BrandIcon = BRAND_ICONS[brandId] || Shield;
 
   useEffect(() => {
     if (isCollapsed) setIsResizing(false);
@@ -202,8 +189,8 @@ function DashboardLayoutContent({ children, setSidebarWidth }: DashboardLayoutCo
               </button>
               {!isCollapsed && (
                 <div className="flex items-center gap-2 min-w-0">
-                  <BrandIcon className="h-5 w-5 text-primary shrink-0" />
-                  <span className="font-bold tracking-tight truncate gradient-text">{brand.displayName}</span>
+                  <Shield className="h-5 w-5 text-primary shrink-0" />
+                  <span className="font-bold tracking-tight truncate gradient-text">AuthiChain</span>
                 </div>
               )}
             </div>

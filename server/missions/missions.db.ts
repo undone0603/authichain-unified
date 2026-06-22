@@ -14,9 +14,11 @@ export async function getMissions(statusFilter?: string) {
     return d
       .select()
       .from(missions)
-      .where(eq(missions.status, statusFilter as any));
+      .where(eq(missions.status, statusFilter as any))
+      .orderBy(desc(missions.createdAt))
+      .limit(200);
   }
-  return d.select().from(missions).orderBy(desc(missions.createdAt));
+  return d.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
 }
 
 export async function getMissionById(id: string) {
@@ -39,52 +41,12 @@ export async function getMissionById(id: string) {
 
 // ─── Write ───────────────────────────────────────────────────────────────────
 
-export interface CreateMissionInput {
-  userId?: number;
-  title: string;
-  description?: string;
-  type: MissionType;
-  tasks?: { kind: string; payload?: unknown }[];
-}
-
-// Template form: tasks come from the mission templates, returns the id.
-export async function createMission(type: MissionType): Promise<string>;
-// Ad-hoc form (Commander / revenue orchestrator): explicit title + tasks.
-export async function createMission(input: CreateMissionInput): Promise<{ id: string; title: string }>;
-export async function createMission(
-  arg: MissionType | CreateMissionInput,
-): Promise<string | { id: string; title: string }> {
+export async function createMission(type: MissionType) {
   const d = await getDb();
-  const id = randomUUID();
-
-  if (typeof arg !== "string") {
-    await d.insert(missions).values({
-      id,
-      type: arg.type,
-      title: arg.title,
-      description: arg.description ?? `Mission: ${arg.title}`,
-      status: "pending",
-    });
-    const adhocTasks = arg.tasks ?? [];
-    if (adhocTasks.length > 0) {
-      const taskRows = adhocTasks.map((t, index) => ({
-        id: randomUUID(),
-        missionId: id,
-        kind: t.kind,
-        title: t.kind,
-        description: JSON.stringify(t.payload ?? {}),
-        status: "pending" as const,
-        order: index + 1,
-      }));
-      await d.insert(missionTasks).values(taskRows);
-    }
-    return { id, title: arg.title };
-  }
-
-  const type = arg;
   const template = missionTemplates[type];
   if (!template) throw new Error(`Unknown mission type: ${type}`);
 
+  const id = randomUUID();
   await d.insert(missions).values({
     id,
     type,
@@ -144,28 +106,4 @@ export async function updateTaskStatus(
 ) {
   const d = await getDb();
   await d.update(missionTasks).set({ status }).where(eq(missionTasks.id, id));
-}
-
-export async function createTask(data: {
-  missionId: string;
-  kind: string;
-  title?: string;
-  description?: string;
-  payload?: unknown;
-  order?: number;
-}): Promise<string> {
-  const d = await getDb();
-  const id = randomUUID();
-
-  await d.insert(missionTasks).values({
-    id,
-    missionId: data.missionId,
-    kind: data.kind,
-    title: data.title ?? data.kind,
-    description: data.description ?? JSON.stringify(data.payload ?? {}),
-    status: "pending",
-    order: data.order ?? 1,
-  });
-
-  return id;
 }

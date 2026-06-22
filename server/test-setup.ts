@@ -45,15 +45,16 @@ vi.mock("./db", async (importOriginal) => {
       totalUsers: 0,
       totalProducts: 0,
       totalAuthentications: 0,
-      totalRevenue: 0,
-      totalLeads: 0,
-      totalNfts: 0,
+      totalCertificates: 0,
+      totalSubscriptions: 0,
     }),
     getAllUsers: vi.fn().mockResolvedValue([]),
     getOpenFraudAlerts: vi.fn().mockResolvedValue([]),
     getAllHealthScores: vi.fn().mockResolvedValue([]),
     getRecentActivity: vi.fn().mockResolvedValue([]),
-    getSubscriptionAnalytics: vi.fn().mockResolvedValue([]),
+    getSubscriptionAnalytics: vi.fn().mockResolvedValue({
+      total: 0, active: 0, cancelled: 0, pastDue: 0
+    }),
     getRevenueAnalytics: vi.fn().mockResolvedValue([]),
     getWhiteLabelClients: vi.fn().mockResolvedValue([]),
     getServiceOrdersByUser: vi.fn().mockResolvedValue([]),
@@ -81,11 +82,7 @@ vi.mock("./db", async (importOriginal) => {
 
 // Mock character-service as well since it also uses getDb
 vi.mock("./character-service", () => ({
-  getNetworkStats: vi.fn().mockResolvedValue({ 
-    totalAgents: 0, 
-    totalVerifications: 0, 
-    totalQRONDistributed: 0 
-  }),
+  getNetworkStats: vi.fn().mockResolvedValue({ agents: 0, verifications: 0, qronCirculating: 0 }),
   getAgentLeaderboard: vi.fn().mockResolvedValue([]),
   getUserGenerations: vi.fn().mockResolvedValue([]),
   getUserCharacterAssets: vi.fn().mockResolvedValue([]),
@@ -96,18 +93,7 @@ vi.mock("./character-service", () => ({
 // Mock scheduled-jobs as well
 vi.mock("./scheduled-jobs", () => ({
   getJobHistory: vi.fn().mockResolvedValue([]),
-  // Mirrors the real signature: runJobManually(jobName: string): Promise<boolean>
-  runJobManually: vi.fn(async (jobName: string) => jobName !== "nonexistent-job"),
+  runJobManually: vi.fn().mockResolvedValue({ success: true }),
   executeJob: vi.fn().mockResolvedValue({ success: true }),
-  getRegisteredJobs: vi.fn().mockReturnValue([
-    { name: "subscription-health-check", description: "check health", schedule: "0 0 * * *", enabled: true },
-    { name: "certificate-expiry-check", description: "check expiry", schedule: "0 0 * * *", enabled: true },
-    { name: "lead-nurturing", description: "nurture leads", schedule: "0 0 * * *", enabled: true },
-    { name: "database-cleanup", description: "cleanup", schedule: "0 0 * * *", enabled: true },
-    { name: "weekly-analytics-digest", description: "digest", schedule: "0 0 * * *", enabled: true },
-    { name: "hubspot-crm-sync", description: "sync", schedule: "0 0 * * *", enabled: true },
-    { name: "customer-health-score", description: "score", schedule: "0 0 * * *", enabled: true },
-    { name: "fraud-detection-sweep", description: "sweep", schedule: "0 0 * * *", enabled: true },
-  ]),
   REGISTERED_JOBS: [],
 }));

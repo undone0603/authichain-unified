@@ -2,9 +2,8 @@ name = "authichain-sync-worker"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
+[triggers]
+crons = ["0 * * * *"]
+
 [vars]
 GITHUB_REPO = "undone0603/authichain-unified"
-
-[[r2_buckets]]
-binding = "B2"
-bucket_name = "authichain-b2"

@@ -18,7 +18,7 @@ This project is optimized for Agentic Workflows. When assisting, adhere to the *
 ## 🏗 Architecture
 - **Frontend**: React + tRPC + Tailwind + Shadcn UI.
 - **Backend**: Node.js Express (Serverless on Vercel).
-- **Edge**: 1 root Cloudflare Worker (`worker/index.ts`, deployed by `.github/workflows/deploy-cloudflare.yml`) + 22 deployed standalone workers under `workers/<name>/` (all deployed, all in CI via `.github/workflows/deploy-workers.yml`). See `docs/superpowers/plans/worker-status-2026-04-27.md` for the per-worker inventory. Multi-tenant brand routing via Host-header dispatch.
+- **Edge**: 1 root Cloudflare Worker (`worker/index.ts`, deployed by `.github/workflows/deploy-cloudflare.yml`) + 12 deployed standalone workers under `workers/<name>/` (with 8 scaffolded-but-undeployed). 20 worker projects in total — see `docs/superpowers/plans/worker-status-2026-04-27.md` for the per-worker inventory. Multi-tenant brand routing via Host-header dispatch.
 - **Database**: Postgres (Supabase) + Drizzle ORM.
 - **Blockchain**: Polygon (ERC-20 $QRON, ERC-721 Certificates) + BTC Ordinals.
 

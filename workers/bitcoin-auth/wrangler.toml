@@ -1,7 +1,6 @@
 name = "bitcoin-auth"
 main = "src/index.ts"
 compatibility_date = "2026-04-01"
-compatibility_flags = ["nodejs_compat"]
 account_id = "4c1869b90f13f86940aa3747839bf420"
 workers_dev = false
 
@@ -11,7 +10,7 @@ zone_name = "authichain.com"
 
 [[kv_namespaces]]
 binding = "AUTH_KV"
-id = "02ae8193c85e42e68026b5faaf58420c"
+id = "AUTH_KV_ID_REPLACE_ME"
 
 [vars]
 BITCOIN_NETWORK = "mainnet"

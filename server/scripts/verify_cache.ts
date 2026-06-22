@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM } from "../_core/llm.js";
 
 async function verifyCache() {
   console.log("⚡ Starting LLM Cache Verification Test...");

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { IndustrialTheater } from '@/lib/industrial/telemetry';
+import { verifyApiKey } from '@/lib/auth-api';
+import { createClient } from '@supabase/supabase-js';
+import { processIndustrialEvent, IndustrialTheater } from '@/lib/industrial/telemetry';
+import { anchorEdgeHash } from '@/lib/blockchain';
+import { logAutomation } from '@/lib/automation';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const admin = createClient(supabaseUrl, serviceKey);
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-// Heavy/blockchain deps are imported lazily inside the handlers so the Cloudflare
-// Workers build can collect this route without evaluating the Node/blockchain graph
-// at build time. The route still runs normally at request time on a Node runtime.
 
 /**
  * GET /api/industrial/telemetry
@@ -52,15 +56,12 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/industrial/telemetry
- *
+ * 
  * Secure ingestor for Metrc (Theater 1) and BMW (Theater 3) data.
  * Automates State Hash generation and Polygon anchoring.
  */
 export async function POST(req: NextRequest) {
-  const { logAutomation } = await import('@/lib/automation');
   try {
-    const { verifyApiKey } = await import('@/lib/auth-api');
-
     // 1. Authenticate Industrial Node
     const apiKey = req.headers.get('X-API-Key');
     if (!apiKey) {
@@ -81,9 +82,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Process Industrial State
-    const { processIndustrialEvent } = await import('@/lib/industrial/telemetry');
     const { parsedState, stateHash, timestamp } = await processIndustrialEvent(
-      theater as IndustrialTheater,
+      theater as IndustrialTheater, 
       payload
     );
 
@@ -91,7 +91,6 @@ export async function POST(req: NextRequest) {
     // We don't block the ingestion for anchoring success
     let anchoredTxHash: string | undefined;
     try {
-      const { anchorEdgeHash } = await import('@/lib/blockchain');
       const anchorResult = await anchorEdgeHash(stateHash, `${theater}:${parsedState.identity}`);
       anchoredTxHash = anchorResult.txHash;
       console.log(`[Industrial] Anchored ${theater} state: ${anchoredTxHash}`);
@@ -102,11 +101,6 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. Store Telemetry Event
-    const { createClient } = await import('@supabase/supabase-js');
-    const admin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-      process.env.SUPABASE_SERVICE_ROLE_KEY || 'not_configured'
-    );
     const { data: event, error: dbError } = await admin
       .from('telemetry_events')
       .insert({

@@ -18,15 +18,16 @@
  *   Reads existing files, LLM proposes changes, writes them via GitHub API.
  */
 
-import { invokeLLM, parseLLMContent } from '../../_core/llm';
-import { logActivity, getDb } from '../../db';
-import { missionTasks } from '../../../drizzle/schema';
-import type { MissionTask as Task } from '../../../drizzle/schema';
+import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
+import { logActivity, getDb } from '../../db.js';
+import { missionTasks } from '../../../drizzle/schema.js';
+import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
   createBranch,
   getFile,
   writeFile,
   searchCode,
+  listFiles,
 } from './github-service.js';
 
 // ─── Codebase knowledge injected into every code-write prompt ────────────
@@ -153,18 +154,20 @@ Rules:
   await createBranch(plan.branch);
 
   // Enqueue all planned tasks (WRITE_CODE + OPEN_PR + RUN_TESTS + CODE_REVIEW)
-  const { createTask } = await import('../../db.js');
+  const db = await getDb();
   const allTasks = [...plan.tasks, ...plan.followupTasks];
 
-  for (const t of allTasks) {
-    await createTask({
+  await db.insert(missionTasks).values(
+    allTasks.map((t, i) => ({
+      id: crypto.randomUUID(),
       missionId: task.missionId,
       kind: t.kind,
-      title: t.kind,
+      title: `${t.kind.replace(/_/g, ' ')}: ${p.feature.slice(0, 60)}`,
       payload: t.payload,
-      status: 'pending',
-    });
-  }
+      status: 'PENDING' as const,
+      scheduledAt: new Date(Date.now() + (i + 1) * 5 * 60 * 1000),
+    }))
+  );
 
   await logActivity({
     userId: null,

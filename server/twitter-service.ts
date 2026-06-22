@@ -53,7 +53,7 @@ function buildOAuthHeader(params: {
 
   const sigBase = [method.toUpperCase(), pct(url), pct(sortedParams)].join("&");
   const sigKey = `${pct(apiSecret)}&${pct(accessTokenSecret)}`;
-  // lgtm[js/weak-cryptographic-algorithm] Twitter OAuth 1.0a requires HMAC-SHA1 // codeql-suppress[js/insufficient-password-hash] -- Required by Twitter OAuth 1.0a spec; not a password hash
+  // lgtm[js/weak-cryptographic-algorithm] Twitter OAuth 1.0a requires HMAC-SHA1
   const signature = createHmac("sha1", sigKey).update(sigBase).digest("base64");
 
   oauthParams["oauth_signature"] = signature;

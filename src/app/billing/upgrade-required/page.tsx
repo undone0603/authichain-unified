@@ -1,12 +1,11 @@
 import React from 'react';
 
-export default async function UpgradeRequiredPage({
+export default function UpgradeRequiredPage({
   searchParams,
 }: {
-  searchParams: Promise<{ orgId: string }>;
+  searchParams: { orgId: string };
 }) {
-  const { orgId } = await searchParams;
-  const stripePortalLink = `https://billing.authichain.com/checkout?client_reference_id=${orgId}`;
+  const stripePortalLink = `https://billing.authichain.com/checkout?client_reference_id=${searchParams.orgId}`;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-6 text-slate-100">

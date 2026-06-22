@@ -73,36 +73,6 @@ async def api_create_product(data: ProductCreate, supabase: Client = Depends(get
     res = await create_product_identity(supabase, data.dict())
     return res
 
-@app.post("/launch")
-async def api_launch(mode: str = "auto", parallel: bool = True, token: bool = Depends(verify_token)):
-    """Trigger a full AgentZ power launch for autonomous business operations."""
-    from agentz.core.modes import parse_mode
-    from agentz.power_launch import power_launch_all
-
-    parse_mode(mode)  # validate mode
-    results = await asyncio.to_thread(power_launch_all, mode=mode, parallel=parallel)
-    summary = {
-        "total": len(results),
-        "ok": sum(1 for r in results if r.ok),
-        "failed": sum(1 for r in results if not r.ok),
-    }
-    return {
-        "mode": mode,
-        "parallel": parallel,
-        "summary": summary,
-        "results": [
-            {
-                "name": r.name,
-                "ok": r.ok,
-                "output": r.output,
-                "error": r.error,
-                "duration_ms": r.duration_ms,
-                "details": r.details,
-            }
-            for r in results
-        ],
-    }
-
 @app.post("/scan")
 async def api_scan(data: ScanInput, supabase: Client = Depends(get_supabase)):
     # The Atomic Action

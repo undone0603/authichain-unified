@@ -1,5 +1,5 @@
-import ARHousingViewer from '../../components/ARHousingViewer';
-import AgenticCloser from '../../components/AgenticCloser';
+import ARHousingViewer from '@/components/ARHousingViewer';
+import AgenticCloser from '@/components/AgenticCloser';
 import { ShieldCheck, Cpu, Link as LinkIcon } from 'lucide-react';
 
 export default function SandboxPage() {
@@ -17,11 +17,11 @@ export default function SandboxPage() {
       <main className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
         <div className="lg:col-span-7 space-y-8">
           <div>
-            <h1 className="text-4xl lg:text-5xl font-extrabold text-white mb-4 tracking-tight">The &quot;Digital Twin&quot; <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500">Provenance Anchor</span></h1>
-            <p className="text-lg text-zinc-400 max-w-2xl leading-relaxed">Welcome to your private sandbox. Below is a live WebXR render of our &quot;Missing Middle&quot; architectural integration. We are mapping blockchain-verified QRON data to physical spaces. No apps required.</p>
+            <h1 className="text-4xl lg:text-5xl font-extrabold text-white mb-4 tracking-tight">The "Digital Twin" <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500">Provenance Anchor</span></h1>
+            <p className="text-lg text-zinc-400 max-w-2xl leading-relaxed">Welcome to your private sandbox. Below is a live WebXR render of our "Missing Middle" architectural integration. We are mapping blockchain-verified QRON data to physical spaces. No apps required.</p>
           </div>
           <div className="p-1 bg-gradient-to-br from-zinc-800 to-zinc-950 rounded-2xl shadow-2xl">
-            <ARHousingViewer projectName="Missing Middle" />
+            <ARHousingViewer />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">

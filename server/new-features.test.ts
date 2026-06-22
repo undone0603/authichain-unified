@@ -32,11 +32,8 @@ vi.mock("./db", async (importOriginal) => {
       values: (data: any) => {
         const id = store.nextId();
         store.bonuses.push({ ...data, id });
-        return {
-          returning: (_shape?: any) => [{ id }],
-        };
+        return { returning: () => [{ id }] };
       },
-      onConflictDoNothing: () => ({ returning: (_shape?: any) => [] }),
     }),
     update: () => ({ set: () => ({ where: () => undefined }) }),
   };
@@ -56,7 +53,7 @@ vi.mock("./db", async (importOriginal) => {
     getPendingDrafts: vi.fn(async () => []),
     createEmailDraft: vi.fn(async () => ({ id: store.nextId() })),
     updateDraftStatus: vi.fn(async () => undefined),
-    // subscription helpers
+    // subscription helpers used by paddle checkout
     getUserSubscription: vi.fn(async () => null),
   };
 });
@@ -118,11 +115,9 @@ type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1, openId: "test-user-001", email: "test@authichain.com",
-    name: "Test User", loginMethod: "manus", role, walletAddress: null,
-    avatarUrl: null, company: null, title: null, phone: null,
-    onboardingCompleted: 0, stripeCustomerId: null, paddleCustomerId: null,
-    points: 0, metadata: null, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
-  };
+    name: "Test User", loginMethod: "manus", role, stripeCustomerId: null,
+    createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+  } as any;
   return {
     user,
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
@@ -451,7 +446,7 @@ describe("New Features", () => {
           body: "<p>Hello!</p>", prospectName: "Alice",
           prospectCompany: null, prospectTitle: null, industry: null,
           status: "pending", templateUsed: null, generatedBy: "ai_manager",
-          taskId: null, approvedBy: null, approvedAt: null, sentAt: null, notes: null, createdAt: new Date(),
+          approvedBy: null, approvedAt: null, sentAt: null, notes: null, taskId: null, createdAt: new Date(),
         }]);
         await appRouter.createCaller(createAuthContext("admin")).emailDrafts.approve({ id: 42 });
         const { sendEmail } = await import("./email/smtp");
@@ -461,6 +456,22 @@ describe("New Features", () => {
           subject: "Our Partnership",
         }));
       });
+    });
+  });
+
+  // ── Paddle checkout ─────────────────────────────────────────────────────────
+  describe("subscription.createPaddleCheckout", () => {
+    it("requires auth", async () => {
+      await expect(appRouter.createCaller(createPublicContext()).subscription.createPaddleCheckout({
+        plan: "starter", successUrl: "https://app.authichain.com/success",
+      })).rejects.toThrow();
+    });
+
+    it("throws BAD_REQUEST when Paddle price env var not set", async () => {
+      // Paddle price env vars are not configured in test env
+      await expect(appRouter.createCaller(createAuthContext()).subscription.createPaddleCheckout({
+        plan: "starter", billing: "monthly", successUrl: "https://app.authichain.com/success",
+      })).rejects.toMatchObject({ code: "BAD_REQUEST" });
     });
   });
 

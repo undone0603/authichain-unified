@@ -19,90 +19,60 @@ type Bindings = {
   DB: D1Database;
   SESSIONS: KVNamespace;
   ASSETS: Fetcher;
-  MICROSITES_BUCKET: R2Bucket;
+  MICROSITES_KV: KVNamespace;
   PRIMARY_APP_URL: string;
   GITHUB_WEBHOOK_SECRET: string;
 };
 
-async function verifyHmacSha256(secret: string, body: string, signature: string): Promise<boolean> {
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
-  const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
-  const expected = `sha256=${hex}`;
-  return expected.length === signature.length &&
-    crypto.subtle.timingSafeEqual
-      ? await timingSafeCompare(expected, signature)
-      : expected === signature;
-}
+const BRANDS = {
+  authichain: {
+    name: "AuthiChain",
+    tagline: "The Truth Layer for the Global Economy",
+    primary: "#d4af37",
+    primaryDim: "#b8952d",
+    secondary: "#1a1a1a",
+    bg: "#050505",
+    bg2: "#0d0d0d",
+    bg3: "#151515",
+    text: "#ffffff",
+    textDim: "#a0a0a0",
+    border: "rgba(212,175,55,0.15)",
+    borderDim: "rgba(212,175,55,0.12)",
+    glowRgba: "rgba(212,175,55,0.15)",
+    logoMark: "AC",
+    url: "https://authichain.com",
+  },
+} as const;
 
-function timingSafeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
+function cssVars(brand: keyof typeof BRANDS) {
+  const b = BRANDS[brand];
+  return `:root {
+    --bg: \${b.bg};
+    --bg2: \${b.bg2};
+    --bg3: \${b.bg3};
+    --text: \${b.text};
+    --text-dim: \${b.textDim};
+    --primary: \${b.primary};
+    --primary-dim: \${b.primaryDim};
+    --secondary: \${b.secondary};
+    --border: \${b.border};
+    --border-dim: \${b.borderDim};
+    --primary-glow: \${b.glowRgba};
+    --mono: 'JetBrains Mono', monospace;
+    --display: 'Bebas Neue', cursive;
+    --body: 'Outfit', sans-serif;
+    --radius: 12px;
+  }`;
 }
-
-const MARKETING_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AuthiChain — The Truth Layer for the Global Economy</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#050505;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}
-.wrap{max-width:600px}
-.logo{font-size:48px;font-weight:800;color:#d4af37;letter-spacing:2px;margin-bottom:16px}
-.tagline{font-size:20px;color:#a0a0a0;margin-bottom:40px}
-.cta{display:inline-block;padding:14px 36px;background:#d4af37;color:#050505;font-weight:700;border-radius:8px;text-decoration:none;font-size:16px;letter-spacing:1px}
-.cta:hover{background:#b8952d}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="logo">AuthiChain</div>
-  <p class="tagline">The Truth Layer for the Global Economy</p>
-  <a class="cta" href="https://authichain.com/app">Get Started</a>
-</div>
-</body>
-</html>`;
 
 const app = new Hono<{ Bindings: Bindings }>();
 app.use("*", cors());
 
-app.get("/health", (c) => c.json({ status: "ok" }));
-
-const WORKER_HEALTH_URLS = [
-  { name: "authichain-api-gateway", url: "https://authichain-api.undone-k.workers.dev/health" },
-  { name: "govchain-us", url: "https://govchain-us.undone-k.workers.dev/health" },
-  { name: "qron-space", url: "https://qron-space.undone-k.workers.dev/health" },
-  { name: "strainchain-io", url: "https://strainchain.io/health" },
-  { name: "bitcoin-auth", url: "https://bitcoin-auth.undone-k.workers.dev/health" },
-];
-
-app.get("/api/status", async (c) => {
-  const checks = await Promise.allSettled(
-    WORKER_HEALTH_URLS.map(async ({ name, url }) => {
-      const start = Date.now();
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      return { name, status: res.ok ? "ok" : "error", latencyMs: Date.now() - start };
-    }),
-  );
-
-  const results = checks.map((r, i) =>
-    r.status === "fulfilled"
-      ? r.value
-      : { name: WORKER_HEALTH_URLS[i].name, status: "unreachable", latencyMs: -1 },
-  );
-
-  const allOk = results.every((r) => r.status === "ok");
-  return c.json({ status: allOk ? "ok" : "degraded", services: results, ts: new Date().toISOString() }, allOk ? 200 : 503);
+app.get("/", (c) => {
+  return c.html("<h1>AuthiChain</h1>");
 });
+
+app.get("/health", (c) => c.json({ status: "ok" }));
 
 // ---------------------------------------------------------------------------
 // Product verification (physical QR scan entry point)
@@ -238,11 +208,9 @@ app.get("/cron/hourly", async (c) => {
 // ---------------------------------------------------------------------------
 app.post("/webhook/github", async (c) => {
   const signature = c.req.header("X-Hub-Signature-256");
-  if (!signature) return c.json({ error: "missing signature" }, 401);
-
   const body = await c.req.text();
-  const valid = await verifyHmacSha256(c.env.GITHUB_WEBHOOK_SECRET, body, signature);
-  if (!valid) {
+
+  if (!signature || !(await verifyGithubSignature(c.env.GITHUB_WEBHOOK_SECRET, body, signature))) {
     return c.json({ error: "invalid signature" }, 401);
   }
 
@@ -259,8 +227,10 @@ app.post("/webhook/github", async (c) => {
 });
 
 // ---------------------------------------------------------------------------
-// Microsite R2 router — serves subdomain brand sites from R2
-// e.g. luxury.authichain.com → R2 key: luxury/index.html
+// Microsite KV router — serves subdomain brand sites from KV
+// e.g. luxury.authichain.com → KV key: luxury/index.html
+// R2 was previously used but is not enabled on this Cloudflare account.
+// KV is fine for static HTML/CSS/JS under 25 MiB per value.
 // ---------------------------------------------------------------------------
 app.use("*", async (c, next) => {
   const url = new URL(c.req.url);
@@ -271,23 +241,23 @@ app.use("*", async (c, next) => {
     hostname === "www.authichain.com" ||
     hostname.endsWith(".workers.dev");
 
-  if (!isApexOrWild && hostname.endsWith(".authichain.com") && c.env.MICROSITES_BUCKET) {
+  if (!isApexOrWild && hostname.endsWith(".authichain.com") && c.env.MICROSITES_KV) {
     const subdomain = hostname.split(".")[0];
     let path = url.pathname;
     if (path === "/") path = "/index.html";
-    const key = `${subdomain}${path}`;
+    const kvKey = `${subdomain}${path}`;
 
-    const obj = await c.env.MICROSITES_BUCKET.get(key);
-    if (obj) {
+    const body = await c.env.MICROSITES_KV.get(kvKey, "stream");
+    if (body) {
       const headers = new Headers();
-      if (key.endsWith(".html")) headers.set("Content-Type", "text/html; charset=UTF-8");
-      else if (key.endsWith(".css")) headers.set("Content-Type", "text/css");
-      else if (key.endsWith(".js")) headers.set("Content-Type", "application/javascript");
-      else if (key.endsWith(".svg")) headers.set("Content-Type", "image/svg+xml");
-      else if (key.endsWith(".json")) headers.set("Content-Type", "application/json");
+      if (kvKey.endsWith(".html")) headers.set("Content-Type", "text/html; charset=UTF-8");
+      else if (kvKey.endsWith(".css")) headers.set("Content-Type", "text/css");
+      else if (kvKey.endsWith(".js")) headers.set("Content-Type", "application/javascript");
+      else if (kvKey.endsWith(".svg")) headers.set("Content-Type", "image/svg+xml");
+      else if (kvKey.endsWith(".json")) headers.set("Content-Type", "application/json");
       headers.set("Cache-Control", "public, max-age=300");
       headers.set("x-served-by", "authichain-microsite-router");
-      return new Response(obj.body, { headers });
+      return new Response(body, { headers });
     }
   }
 

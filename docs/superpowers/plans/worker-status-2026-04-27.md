@@ -10,7 +10,7 @@
 
 | Question | Outcome |
 |---|---|
-| Q1 — `workers/<name>/` deployment status | **20 DEPLOYED, 0 SCAFFOLDED, 0 PHANTOM** (updated 2026-06-04) |
+| Q1 — `workers/<name>/` deployment status | **12 DEPLOYED, 8 SCAFFOLDED, 0 PHANTOM** |
 | Q2 — "Remote forks" status | None exist on GitHub; 3 are stale **local** branches |
 | Q3 — Top-level `src/` orphan? | **NO — it's a Hono Cloudflare Worker** (Bridge/JWT/Supabase/RapidAPI). Reclassify, do not delete. |
 | Q4 — Where do `lib/*` get imported? | `lib/industries.ts` used by `server/`; `lib/ecosystem.ts` has no consumers. Target: `shared/` |
@@ -26,23 +26,23 @@ Queried via `wrangler deployments list --name <declared-name>` against account `
 | `authichain-api` | authichain-api | **DEPLOYED** | 2026-04-11 | 427 | no |
 | `authichain-api-gateway` | authichain-api-gateway | **DEPLOYED** | 2026-04-23 | 466 | no |
 | `authichain-automation` | authichain-automation | **DEPLOYED** | 2026-02-25 | 468 | no |
-| `authichain-autopilot` | authichain-autopilot | **DEPLOYED** | 2026-06-04 | 302 | no |
-| `authichain-chain-data` | authichain-chain-data | **DEPLOYED** | 2026-06-04 | 155 | no |
+| `authichain-autopilot` | authichain-autopilot | SCAFFOLDED | never | 302 | no |
+| `authichain-chain-data` | authichain-chain-data | SCAFFOLDED | never | 155 | no |
 | `authichain-com` | authichain-com | **DEPLOYED** | 2026-04-23 | 302 | no |
 | `authichain-dashboard` | authichain-dashboard | **DEPLOYED** | 2026-04-13 | 271 | no |
-| `authichain-gateway` | authichain-gateway | **DEPLOYED** | 2026-06-04 | 552 | yes |
+| `authichain-gateway` | authichain-gateway | SCAFFOLDED | never | 552 | yes |
 | `govchain-us` | govchain-us | **DEPLOYED** | 2026-04-23 | 298 | no |
-| `license-issuer` | authichain-license-issuer | **DEPLOYED** | 2026-06-04 | 644 | yes |
+| `license-issuer` | authichain-license-issuer | SCAFFOLDED | never | 644 | yes |
 | `qron-automation` | qron-automation | **DEPLOYED** | 2026-04-13 | 412 | no |
 | `qron-image-gen` | qron-image-gen | **DEPLOYED** | 2026-04-11 | 280 | no |
 | `qron-outreach` | qron-outreach | **DEPLOYED** | 2026-04-13 | 357 | no |
-| `qron-provenance` | authichain-qron-provenance (+ staging) | **DEPLOYED** | 2026-06-04 | 226 | yes |
+| `qron-provenance` | authichain-qron-provenance (+ staging) | SCAFFOLDED | never | 226 | yes |
 | `qron-space` | qron-space | **DEPLOYED** | 2026-04-23 | 318 | no |
 | `resend-relay` | resend-relay | **DEPLOYED** | 2026-04-03 | 91 | no |
-| `scan-validate` | authichain-scan-validate (+ staging) | **DEPLOYED** | 2026-06-04 | 193 | yes |
+| `scan-validate` | authichain-scan-validate (+ staging) | SCAFFOLDED | never | 193 | yes |
 | `strainchain-io` | strainchain-io | **DEPLOYED** | 2026-04-23 | 272 | no |
-| `telegram` | authichain-telegram | **DEPLOYED** | 2026-06-04 | 376 | yes |
-| `verify-worker` | authichain-verify-worker (+ staging) | **DEPLOYED** | 2026-06-04 | 174 | yes |
+| `telegram` | authichain-telegram | SCAFFOLDED | never | 376 | yes |
+| `verify-worker` | authichain-verify-worker (+ staging) | SCAFFOLDED | never | 174 | yes |
 
 **12 DEPLOYED workers** are all on the user's Cloudflare account, last-deployed within the past 60 days. These need CI deploy coverage in Phase 3.2 (currently only the root `worker/index.ts` is deployed by `.github/workflows/deploy-cloudflare.yml`).
 

@@ -12,7 +12,6 @@ import {
   uuid,
   pgEnum,
   index,
-  uniqueIndex,
   jsonb,
   primaryKey,
   real,
@@ -41,7 +40,7 @@ export const users = pgTable('users', {
   points: integer('points').default(0),
   // QRON specific fields
   generationsUsed: integer('generations_used').default(0).notNull(),
-  generationsLimit: integer('generations_limit').default(0).notNull(),
+  generationsLimit: integer('generations_limit').default(10).notNull(),
   affiliateId: text('affiliate_id').unique(),
   referredBy: text('referred_by'),
   storyModeEnabled: boolean('story_mode_enabled').default(false),
@@ -560,20 +559,6 @@ export const activityLog = pgTable("activity_log", {
   ipAddress: varchar("ipAddress", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
-
-// ─── Webhook Event Dedup ──────────────────────────────────────────────────────
-// Atomic claim/process tracker for inbound webhook events. UNIQUE(provider, eventId)
-// lets us use INSERT ... ON CONFLICT DO NOTHING as a race-safe dedup primitive.
-export const webhookEvents = pgTable("webhook_events", {
-  id: serial("id").primaryKey(),
-  provider: varchar("provider", { length: 32 }).notNull(),
-  eventId: varchar("eventId", { length: 128 }).notNull(),
-  eventType: varchar("eventType", { length: 128 }).notNull(),
-  receivedAt: timestamp("receivedAt").defaultNow().notNull(),
-  processedAt: timestamp("processedAt"),
-}, (t) => ({
-  uniqProviderEvent: uniqueIndex("webhook_events_provider_eventId_uniq").on(t.provider, t.eventId),
-}));
 
 // ─── Fraud Alerts ────────────────────────────────────────────────────────────
 export const fraudAlerts = pgTable("fraud_alerts", {

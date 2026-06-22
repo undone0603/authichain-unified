@@ -1,5 +1,10 @@
 name: Dependabot Auto Merge
 
+# Auto-squash-merges patch-level Dependabot PRs (the action's default
+# `target` is `patch` — minor/major bumps still require human review,
+# which matches how we triaged the recent batch). Picked up from the
+# abandoned codex/fix-authichain.com-issues-and-match-theme branch.
+
 on:
   pull_request:
     types: [opened, reopened, synchronize]
@@ -10,12 +15,10 @@ permissions:
 
 jobs:
   auto-merge:
-    name: Auto-merge patch and minor Dependabot PRs
+    name: Auto-merge patch-level Dependabot PRs
     runs-on: ubuntu-latest
     if: ${{ github.actor == 'dependabot[bot]' }}
     steps:
       - uses: ahmadnassri/action-dependabot-auto-merge@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          target: minor
-          command: squash and merge

@@ -81,10 +81,10 @@ function makeTask(kind: string, payload: Record<string, unknown> = {}): MissionT
     payload,
     status: 'RUNNING',
     error: null,
-    order: 0,
-    priority: 0,
     result: null,
+    priority: 0,
     scheduledAt: null,
+    order: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

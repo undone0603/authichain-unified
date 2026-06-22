@@ -14,8 +14,8 @@ import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import {
   Shield, Check, ArrowRight, Calculator, Zap, Building2,
-  Pill, Leaf, Palette, Cannabis, Cpu,
-  TrendingUp, DollarSign, Globe,
+  Pill, Leaf, Palette, Cannabis, Cpu, ChevronDown, Star,
+  TrendingUp, DollarSign, Lock, Globe, Users
 } from "lucide-react";
 
 const industryIcons: Record<string, React.ReactNode> = {
@@ -360,8 +360,10 @@ export default function Pricing() {
                       variant={plan.highlighted ? "default" : "outline"}
                       asChild
                     >
-                      <a href={(plan as { paymentLink?: string }).paymentLink} target="_blank" rel="noopener noreferrer">
-                        {key === "enterprise" ? "Buy Enterprise" : "Buy Now"} <ArrowRight className="ml-2 h-4 w-4" />
+                      <a href={plan.paymentLink} target="_blank" rel="noopener noreferrer">
+                        {key === "enterprise" || key === "medtech"
+                          ? "Contact Sales"
+                          : "Start Free Trial"} <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
                     {(key === "starter" || key === "professional") && (

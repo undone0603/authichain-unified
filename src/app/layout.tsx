@@ -1,109 +1,80 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { TRPCProvider } from "@/components/TRPCProvider";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
+import { ReferralTracker } from '@/components/ReferralTracker';
+import { ThemeManager } from '@/components/ThemeManager';
+import { TRPCProvider } from '@/components/TRPCProvider';
+import React, { Suspense } from 'react';
+import { ThirdwebProvider } from 'thirdweb/react';
 
-// Resolve metadataBase defensively. NEXT_PUBLIC_APP_URL can be misconfigured in
-// the deploy env (e.g. set to the literal string '""', or a bare host with no
-// protocol). A truthy-but-invalid value slips past `|| fallback` and makes
-// `new URL()` throw ERR_INVALID_URL at build time — which fails `next build`
-// while collecting page data for every route. Strip quotes/whitespace, add a
-// protocol if missing, and fall back to a known-good URL on any failure.
-function resolveMetadataBase(): URL {
-  const fallback = "https://qron.space";
-  let raw = (process.env.NEXT_PUBLIC_APP_URL ?? "")
-    .trim()
-    .replace(/^["']+|["']+$/g, "")
-    .trim();
-  if (raw && !/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
-  try {
-    return new URL(raw || fallback);
-  } catch {
-    return new URL(fallback);
-  }
-}
+const geistSans = Geist({
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
+});
+
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+});
 
 export const metadata: Metadata = {
   title: {
-    default: "QRON — AI-Powered Authenticated QR Art",
-    template: "%s | QRON",
+    default: 'QRON | Cryptographically Verified AI QR Art',
+    template: '%s | AuthiChain Protocol',
   },
-  description:
-    "Create cryptographically verified, Ed25519-signed QR art with the AuthiChain Protocol. Blockchain-anchored, publicly verifiable, ~100% scan rate.",
-  metadataBase: resolveMetadataBase(),
+  description: 'The global standard for cryptographically-verified product identity, industrial provenance, and AI-generated QR art.',
+  metadataBase: new URL('https://qron.space'),
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
-    siteName: "QRON",
-    type: "website",
-    locale: "en_US",
+    title: 'QRON | Verified AI QR Art',
+    description: 'Transform your brand with cryptographically-signed AI QR codes. Ed25519 secure, Polygon anchored.',
+    url: 'https://qron.space',
+    siteName: 'QRON Space',
     images: [
       {
-        url: "/media/samples/03_flux_authichain.png",
+        url: '/media/samples/01_flux_qron_space.png',
         width: 1200,
-        height: 630,
-        alt: "QRON — AI-Powered QR Art by AuthiChain Protocol",
+        height: 1200,
+        alt: 'AuthiChain QRON Artistic AI',
       },
     ],
+    locale: 'en_US',
+    type: 'website',
   },
   twitter: {
-    card: "summary_large_image",
-    site: "@qronspace",
-    images: ["/media/samples/03_flux_authichain.png"],
+    card: 'summary_large_image',
+    title: 'QRON | Verified AI QR Art',
+    description: 'Transform your brand with cryptographically-signed AI QR codes.',
+    images: ['/media/samples/01_flux_qron_space.png'],
+    creator: '@AuthiChain',
   },
-  robots: {
-    index: true,
-    follow: true,
+  icons: {
+    icon: '/favicon.ico',
   },
-  keywords: [
-    "QR code generator",
-    "AI QR art",
-    "authenticated QR codes",
-    "blockchain verification",
-    "AuthiChain",
-    "Ed25519",
-    "digital credentials",
-  ],
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              name: "QRON",
-              applicationCategory: "DesignApplication",
-              operatingSystem: "Web",
-              description:
-                "AI-powered QR code art generator with Ed25519 cryptographic signing and blockchain verification via the AuthiChain Protocol.",
-              offers: {
-                "@type": "AggregateOffer",
-                priceCurrency: "USD",
-                lowPrice: "0",
-                highPrice: "49",
-              },
-              aggregateRating: {
-                "@type": "AggregateRating",
-                ratingValue: "4.8",
-                reviewCount: "47",
-              },
-              creator: {
-                "@type": "Organization",
-                name: "AuthiChain",
-                url: "https://authichain.com",
-              },
-            }),
-          }}
-        />
-      </head>
-      <body>
-        <TRPCProvider>{children}</TRPCProvider>
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col">
+        <ThemeManager />
+        <TRPCProvider>
+          <ThirdwebProvider>
+            <Suspense fallback={null}>
+              <ReferralTracker />
+            </Suspense>
+            {children}
+          </ThirdwebProvider>
+        </TRPCProvider>
       </body>
     </html>
   );

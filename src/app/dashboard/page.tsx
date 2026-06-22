@@ -1,9 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 
-// Auth is handled by src/app/dashboard/layout.tsx — no need to duplicate here.
-// Remove conflicting revalidate (force-dynamic already opts out of caching).
 export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 async function getStats() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -44,8 +43,8 @@ export default async function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total QR Codes', value: stats ? stats.totalQr.toLocaleString() : '\u2014', color: 'text-blue-400' },
-          { label: 'Registered Users', value: stats ? stats.totalUsers.toLocaleString() : '\u2014', color: 'text-green-400' },
+          { label: 'Total QR Codes', value: stats ? stats.totalQr.toLocaleString() : '—', color: 'text-blue-400' },
+          { label: 'Registered Users', value: stats ? stats.totalUsers.toLocaleString() : '—', color: 'text-green-400' },
           { label: 'Active Edge Nodes', value: '300+', color: 'text-purple-400' },
           { label: 'Uptime (30d)', value: '99.97%', color: 'text-emerald-400' },
         ].map(({ label, value, color }) => (
@@ -57,14 +56,12 @@ export default async function Dashboard() {
       </div>
 
       {/* Quick Links */}
-      <div className="grid md:grid-cols-6 gap-4 mb-8">
+      <div className="grid md:grid-cols-4 gap-4 mb-8">
         {[
           { href: '/studio', label: 'Create QRON', desc: 'Generate AI-powered QR art', color: 'from-blue-600 to-blue-800' },
           { href: '/dashboard/products', label: 'Products & QR Codes', desc: 'Manage products and tamper-evident QR codes', color: 'from-emerald-600 to-teal-800' },
           { href: '/gallery', label: 'Browse Gallery', desc: 'View all generated QRONs', color: 'from-purple-600 to-purple-800' },
           { href: '/dashboard/autonomous', label: 'Autonomous Ops', desc: 'AgentZ pipeline, scheduled jobs, control panel', color: 'from-yellow-600 to-orange-700' },
-          { href: '/dashboard/agent-xp', label: 'Agent XP', desc: 'Autonomous agent reputation & leaderboard', color: 'from-cyan-600 to-blue-700' },
-          { href: '/founders', label: 'DreamDash', desc: 'Real-time deal pipeline & revenue', color: 'from-amber-600 to-amber-800' },
         ].map(({ href, label, desc, color }) => (
           <Link key={href} href={href}
             className={`block p-6 rounded-xl bg-gradient-to-br ${color} text-white hover:opacity-90 transition-opacity`}
@@ -73,16 +70,6 @@ export default async function Dashboard() {
             <p className="text-sm opacity-80">{desc}</p>
           </Link>
         ))}
-      </div>
-
-      {/* Additional Tools */}
-      <div className="grid md:grid-cols-3 gap-4 mb-8">
-        <Link href="/dashboard/folders"
-          className="block p-6 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-800 text-white hover:opacity-90 transition-opacity"
-          style={{ textDecoration: 'none' }}>
-          <p className="font-black text-lg mb-1">Folder Manager</p>
-          <p className="text-sm opacity-80">Organize QRONs & assets</p>
-        </Link>
       </div>
 
       {/* YouTube Channel */}

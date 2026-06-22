@@ -1,53 +1,42 @@
-name: Deploy Next.js to Vercel
+name: Deploy Vercel App
 
-# Vercel is the production host for the Next.js app. Runs on every push to main.
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 permissions:
   contents: read
-
-# Ensures that only one deployment runs at a time
-concurrency:
-  group: vercel-deploy
-  cancel-in-progress: true
+  id-token: write
+  deployments: write
 
 env:
-  # Required by Vercel CLI to link the project
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-  NODE_VERSION: '22'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  deploy-production:
-    name: Autonomous Vercel Production Deployment
+  deploy-vercel-root:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    name: deploy (root - authichain.com)
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
-          run_install: false
+          version: '10.28.2'
 
-      - name: Setup Node.js
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
       - name: Install Vercel CLI
-        # Use npm (not pnpm add -g) to avoid modifying the workspace lockfile
-        run: npm install -g vercel@latest
+        run: npm install --global vercel@latest
 
       - name: Pull Vercel Environment Information
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
@@ -55,5 +44,38 @@ jobs:
       - name: Build Project Artifacts
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Deploy to Vercel
-        run: vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy Project Artifacts to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  deploy-worker:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - workers/qron-automation
+    name: deploy (${{ matrix.project }})
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          version: '10.28.2'
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Deploy Cloudflare Worker
+        run: npx wrangler deploy --minify --config wrangler.toml
+        working-directory: ${{ matrix.project }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

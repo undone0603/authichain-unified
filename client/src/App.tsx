@@ -44,16 +44,9 @@ const CharacterCreate = lazy(() => import("./pages/CharacterCreate"));
 const GovOnboarding = lazy(() => import("./pages/GovOnboarding"));
 const NetworkStats = lazy(() => import("./pages/NetworkStats"));
 const QrArtGallery = lazy(() => import("./pages/QrArtGallery"));
-const Verify = lazy(() => import("./pages/Verify"));
 const SbaDisasterLoan = lazy(() => import("./pages/SbaDisasterLoan"));
 const ScheduledTasks = lazy(() => import("./pages/ScheduledTasks"));
 const ServiceOrders = lazy(() => import("./pages/ServiceOrders"));
-const AutonomousControl = lazy(() => import("./pages/AutonomousControl"));
-const Missions = lazy(() => import("./pages/Missions"));
-const BuildLoop = lazy(() => import("./pages/BuildLoop"));
-const PhysicalAuth = lazy(() => import("./pages/PhysicalAuth"));
-const Staking = lazy(() => import("./pages/Staking"));
-const VideoStudio = lazy(() => import("./pages/VideoStudio"));
 
 function PageLoader() {
   return (
@@ -96,12 +89,6 @@ function DashboardRoutes() {
           <WRoute path="/sba-loan" component={SbaDisasterLoan} />
           <WRoute path="/scheduled-tasks" component={ScheduledTasks} />
           <WRoute path="/service-orders" component={ServiceOrders} />
-          <WRoute path="/autonomous" component={AutonomousControl} />
-          <WRoute path="/missions" component={Missions} />
-          <WRoute path="/build-loop" component={BuildLoop} />
-          <WRoute path="/physical-auth" component={PhysicalAuth} />
-          <WRoute path="/staking" component={Staking} />
-          <WRoute path="/video-studio" component={VideoStudio} />
           <WRoute path="/services" component={Services} />
           <WRoute path="/storymode" component={Storymode} />
           <WRoute path="/regulatory-demo" component={RegulatoryDemo} />
@@ -130,13 +117,6 @@ function AppRouter() {
         {({ token }: { token?: string }) => (
           <Suspense fallback={<PageLoader />}>
             <CertificatePublic token={token ?? ""} />
-          </Suspense>
-        )}
-      </WRoute>
-      <WRoute path="/verify/:productId">
-        {({ productId }: { productId?: string }) => (
-          <Suspense fallback={<PageLoader />}>
-            <Verify productId={productId ?? ""} />
           </Suspense>
         )}
       </WRoute>

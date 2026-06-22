@@ -16,11 +16,11 @@
  *   Merges the PR (squash). If REQUIRE_DEV_APPROVAL=true → sets task WAITING_HUMAN first.
  */
 
-import { invokeLLM, parseLLMContent } from '../../_core/llm';
-import { logActivity, markTaskWaitingHuman, getDb } from '../../db';
-import { ENV } from '../../_core/env';
-import { missionTasks } from '../../../drizzle/schema';
-import type { MissionTask as Task } from '../../../drizzle/schema';
+import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
+import { logActivity, markTaskWaitingHuman, getDb } from '../../db.js';
+import { ENV } from '../../_core/env.js';
+import { missionTasks } from '../../../drizzle/schema.js';
+import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
   createPR,
   getPR,
@@ -28,8 +28,7 @@ import {
   addPRReview,
   addPRComment,
   mergePR,
-  getFile,
-} from './github-service';
+} from './github-service.js';
 
 // ─── OPEN_PR ─────────────────────────────────────────────────────────────
 

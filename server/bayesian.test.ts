@@ -398,9 +398,9 @@ describe('SEGMENT_REVENUE', () => {
     }
   });
 
-  it('MEDTECH has the highest revenue proxy', () => {
+  it('GOV has the highest revenue proxy', () => {
     const values = Object.values(SEGMENT_REVENUE);
-    expect(SEGMENT_REVENUE.MEDTECH).toBe(Math.max(...values));
+    expect(SEGMENT_REVENUE.GOV).toBe(Math.max(...values));
   });
 });
 

@@ -15,24 +15,10 @@ logger = logging.getLogger("agentz.multiplier")
 async def multiply_content(product_data: Dict[str, Any]) -> Dict[str, str]:
     """
     Generates a suite of marketing assets from product data.
-    Uses Template Manager to prefer customized local templates.
     """
-    from agentz.core.templates import get_template, fill_template
-    
     brand = product_data.get("brand", "Strategic Partner")
     name = product_data.get("name", "Verified Product")
-    origin = product_data.get("metadata", {}).get("origin", "Global")
-
-    # 1. Try Template Suite First
-    suite = get_template("marketing", "marketing_suite")
-    if suite:
-        try:
-            raw_content = fill_template(suite, {"brand": brand, "name": name, "origin": origin})
-            return json.loads(raw_content)
-        except Exception as e:
-            logger.error(f"Failed to parse marketing_suite template: {e}")
-
-    # 2. Live LLM Fallback
+    
     prompt = f"""
     You are the AgentZ Content Multiplier. 
     Transform this verified product into 3 high-impact marketing assets:

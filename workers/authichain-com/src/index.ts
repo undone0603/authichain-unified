@@ -2146,8 +2146,6 @@ function cssVars(brand) {
 const BASE_CSS = `
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-/* Keep anchored section headings clear of the fixed nav when jumping via #links. */
-section[id] { scroll-margin-top: 80px; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -2198,11 +2196,6 @@ nav {
   color: var(--text);
 }
 .nav-logo-text span { color: var(--primary); }
-.nav-cta {
-  width: auto;
-  padding: 10px 20px;
-  font-size: 11px;
-}
 .hero {
   position: relative;
   z-index: 1;
@@ -2235,23 +2228,6 @@ nav {
   margin: 0 auto 40px;
   line-height: 1.6;
 }
-h2 {
-  font-family: var(--display);
-  font-size: clamp(36px, 7vw, 64px);
-  line-height: 0.95;
-  letter-spacing: 2px;
-  color: var(--text);
-  margin-bottom: 16px;
-}
-h2 .accent { color: var(--primary); }
-.section-tag {
-  color: var(--primary);
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
 .btn {
   font-family: var(--mono);
   font-size: 12px;
@@ -2262,7 +2238,7 @@ h2 .accent { color: var(--primary); }
   text-decoration: none;
   font-weight: 600;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-block;
+  width: 100%;
   text-align: center;
 }
 .btn-primary {
@@ -2270,42 +2246,6 @@ h2 .accent { color: var(--primary); }
   color: #000;
   box-shadow: 0 4px 0 var(--primary-dim);
 }
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--primary-dim); }
-.btn-secondary {
-  background: transparent;
-  color: var(--primary);
-  border: 1px solid var(--primary);
-}
-.btn-secondary:hover { background: rgba(212,175,55,0.1); }
-.hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 40px; }
-.nav-links { display: none; align-items: center; gap: 28px; }
-@media (min-width: 768px) { .nav-links { display: flex; } }
-.nav-link { color: var(--text-dim); text-decoration: none; font-size: 14px; letter-spacing: 0.04em; transition: color 0.2s; }
-.nav-link:hover { color: var(--text); }
-.btn-nav {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 10px 20px;
-  border-radius: 4px;
-  text-decoration: none;
-  font-weight: 600;
-  background: var(--primary);
-  color: #000;
-  transition: all 0.2s;
-}
-.btn-nav:hover { background: var(--primary-dim); }
-.pricing-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 48px; }
-@media (min-width: 768px) { .pricing-grid { grid-template-columns: repeat(3, 1fr); } }
-.pricing-card { padding: 40px 32px; display: flex; flex-direction: column; gap: 20px; }
-.pricing-card.featured { border-color: var(--primary); background: rgba(212,175,55,0.05); }
-.pricing-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--primary); }
-.pricing-price { font-family: var(--display); font-size: 56px; line-height: 1; color: var(--text); }
-.pricing-price span { font-family: var(--body); font-size: 16px; color: var(--text-dim); }
-.pricing-features { list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; }
-.pricing-features li { font-size: 14px; color: var(--text-dim); padding-left: 16px; position: relative; }
-.pricing-features li::before { content: '—'; position: absolute; left: 0; color: var(--primary); }
 .grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -2320,11 +2260,6 @@ h2 .accent { color: var(--primary); }
 .card {
   padding: 32px;
   transition: all 0.3s ease;
-}
-.card:hover {
-  border-color: var(--border);
-  box-shadow: 0 0 24px var(--primary-glow);
-  transform: translateY(-2px);
 }
 footer {
   padding: 60px 24px;
@@ -2381,6 +2316,25 @@ footer {
   text-transform: uppercase;
   color: var(--text-dim);
   margin-bottom: 20px;
+}
+/* Push anchored sections below the fixed nav (nav ≈ 64px) */
+section[id] { scroll-margin-top: 80px; }
+/* Hide nav links on small screens to prevent overflow */
+@media (max-width: 767px) {
+  .nav-links { display: none; }
+}
+h2 {
+  font-family: var(--display);
+  font-size: clamp(28px, 6vw, 52px);
+  letter-spacing: 2px;
+  color: var(--text);
+  margin-bottom: 16px;
+  line-height: 1.1;
+}
+.card:hover {
+  border-color: var(--border);
+  box-shadow: 0 0 24px var(--primary-glow);
+  transform: translateY(-2px);
 }
 `;
 
@@ -2466,10 +2420,10 @@ function ecosystemFooter() {
     <div>
       <div class="footer-heading">Platform</div>
       <ul class="footer-links">
-        <li><a href="/auth">Get Started</a></li>
-        <li><a href="/subscriptions">Pricing</a></li>
-        <li><a href="/dashboard">Dashboard</a></li>
-        <li><a href="/onboard">Brand Onboarding</a></li>
+        <li><a href="https://authichain-unified.vercel.app/auth">Get Started</a></li>
+        <li><a href="https://authichain-unified.vercel.app/subscriptions">Pricing</a></li>
+        <li><a href="https://authichain-unified.vercel.app/dashboard">Dashboard</a></li>
+        <li><a href="https://authichain-unified.vercel.app/onboard">Brand Onboarding</a></li>
       </ul>
     </div>
     <div>
@@ -2485,7 +2439,7 @@ function ecosystemFooter() {
       <div class="footer-heading">Company</div>
       <ul class="footer-links">
         <li><a href="mailto:hello@authichain.com">Contact</a></li>
-        <li><a href="/auth">Sign In</a></li>
+        <li><a href="https://authichain-unified.vercel.app/auth">Sign In</a></li>
       </ul>
     </div>
   </div>
@@ -2518,14 +2472,22 @@ const HTML = `<!DOCTYPE html>
       ${svgLogo(BRAND)}
       <span class="nav-logo-text">AUTHI<span>CHAIN</span></span>
     </a>
-    <a class="btn btn-primary nav-cta" href="https://app.authichain.com">Launch App</a>
+    <div class="nav-links">
+      <a class="nav-link" href="#community">$QRON</a>
+      <a class="nav-link" href="#technology">Technology</a>
+      <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
+      <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/auth">Get Started</a>
+    </div>
   </nav>
 
   <section class="hero" id="hero">
     <div class="hero-content">
       <h1 class="hero-title"><span>VERIFY </span><span class="accent">EVERYTHING.</span></h1>
-      <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets.</p>
-      <a class="btn btn-primary" style="display:inline-block;width:auto" href="https://app.authichain.com">Launch App &rarr;</a>
+      <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets. ERC-721 NFTs · AI QR · 2.1-second verification.</p>
+      <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:40px">
+        <a class="btn btn-primary" style="width:auto; min-width:200px" href="https://authichain-unified.vercel.app/auth">Start Free Trial</a>
+        <a class="btn" style="width:auto; min-width:200px; background:transparent; border:1px solid var(--border); color:var(--text)" href="#community">Learn More</a>
+      </div>
     </div>
   </section>
 
@@ -2552,22 +2514,18 @@ export default {
     if (p === '/apple-touch-icon.svg' || p === '/apple-touch-icon.png' || p === '/apple-touch-icon-precomposed.png') {
       return assetResponse(FAVICON_SVG);
     }
-    if (p === '/login' || p === '/signin' || p === '/app' || p.startsWith('/app/')) {
-      return Response.redirect('https://app.authichain.com/', 302);
-    }
     if (p === '/dapp' || p.startsWith('/dapp/')) {
-      return Response.redirect('https://authichain.com/dashboard', 302);
+      return Response.redirect('https://authichain-unified.vercel.app/dashboard', 302);
     }
     if (p === '/demo' || p.startsWith('/demo/')) {
-      return Response.redirect('https://authichain.com/subscriptions', 302);
+      return Response.redirect('https://authichain-unified.vercel.app/subscriptions', 302);
     }
     // Proxy app routes to the Vercel deployment instead of serving marketing HTML.
     // Prefixes must NOT have a trailing slash so the startsWith check works correctly
     // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).
-    // if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
     const APP_PREFIXES = ['/dashboard', '/api', '/verify', '/auth', '/login', '/logout',
       '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin'];
-    if (APP_PREFIXES.some(prefix => p.startsWith(prefix))) {
+    if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       const target = new URL(request.url);
       target.hostname = 'authichain-unified.vercel.app';
       target.protocol = 'https:';

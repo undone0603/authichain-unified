@@ -22,11 +22,9 @@ export default function LoginPage() {
     }
     setLoading(true);
     setError('');
-    const redirectParam = new URLSearchParams(window.location.search).get('redirect') || '/';
-    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectParam)}`;
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: callbackUrl },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) {
       setError(error.message);

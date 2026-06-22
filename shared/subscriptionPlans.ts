@@ -64,11 +64,6 @@ export const SUBSCRIPTION_PLANS = {
     highlighted: false,
     badge: "Best Value",
   },
-} as const;
-
-// High-ticket plans sold via direct sales engagement, not Stripe checkout.
-// These do NOT participate in the subscription router's plan enum.
-export const HIGH_TICKET_PLANS = {
   medtech: {
     name: "MedTech Enterprise",
     monthlyPrice: 12500,
@@ -90,7 +85,6 @@ export const HIGH_TICKET_PLANS = {
     ],
     highlighted: false,
     badge: "High-Ticket",
-    contactSales: true,
   },
 } as const;
 
@@ -178,66 +172,6 @@ export const INDUSTRY_SOLUTIONS = {
   },
 } as const;
 
-/**
- * B2B licensing / white-label tiers (distinct from the SaaS SUBSCRIPTION_PLANS).
- * One-time setup fee + monthly recurring, each a live Stripe payment link.
- * Source of truth for the tier definitions: agentz/core/licensing.py (LICENSE_TIERS).
- * Links are managed idempotently by scripts/stripe-tier-links.py.
- */
-export const LICENSING_TIERS = [
-  {
-    key: "verify_api",
-    name: "Verify API License",
-    setupPrice: 2500,
-    monthlyPrice: 499,
-    idealFor: "SMB brands & single-site sellers wanting authentication checks",
-    setupLink: "https://buy.stripe.com/14A14n2N30cScKC5fe1Ny03",
-    monthlyLink: "https://buy.stripe.com/9B6eVdevL8Jo25Y8rq1Ny06",
-    highlighted: false,
-    badge: null as string | null,
-    features: [
-      "REST verification API (scan → authenticity score)",
-      "5,000 verifications/mo included, then metered",
-      "Polygon-anchored certificate of authenticity",
-    ],
-  },
-  {
-    key: "white_label",
-    name: "White-Label Trust Portal",
-    setupPrice: 10000,
-    monthlyPrice: 2500,
-    idealFor: "Mid-market brands & marketplaces reselling trust under their own name",
-    setupLink: "https://buy.stripe.com/dRm28r0EVe3IaCu3761Ny04",
-    monthlyLink: "https://buy.stripe.com/eVqaEX3R74t84e6azy1Ny07",
-    highlighted: true,
-    badge: "Most Popular",
-    features: [
-      "Fully rebrandable verification portal (your domain, your logo)",
-      "NFT / ERC-721 certificate minting under your brand",
-      "Customer-facing scan + story-mode provenance pages",
-      "50,000 verifications/mo included",
-    ],
-  },
-  {
-    key: "vertical",
-    name: "Enterprise Vertical License",
-    setupPrice: 25000,
-    monthlyPrice: 7500,
-    idealFor: "Enterprises, govt agencies & vertical operators (luxury, cannabis, pharma)",
-    setupLink: "https://buy.stripe.com/aFadR91IZ3p4bGygXW1Ny05",
-    monthlyLink: "https://buy.stripe.com/5kQ14n4VbaRw6me8rq1Ny08",
-    highlighted: false,
-    badge: "35% rev-share option",
-    features: [
-      "Dedicated white-label vertical deployment (e.g. StrainChain / GovChain)",
-      "Unlimited verifications + SLA",
-      "Custom AutoFlow classification for your category",
-      "Quarterly business review; annual revenue audit right",
-    ],
-  },
-] as const;
-
 export type PlanKey = keyof typeof SUBSCRIPTION_PLANS;
 export type AddonKey = keyof typeof ADDON_PRICING;
 export type IndustryKey = keyof typeof INDUSTRY_SOLUTIONS;
-export type LicensingTier = (typeof LICENSING_TIERS)[number];

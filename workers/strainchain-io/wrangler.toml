@@ -12,13 +12,5 @@ zone_name = "strainchain.io"
 pattern = "www.strainchain.io/*"
 zone_name = "strainchain.io"
 
-[[routes]]
-pattern = "strainchain.io/"
-zone_name = "strainchain.io"
-
-[[routes]]
-pattern = "www.strainchain.io/"
-zone_name = "strainchain.io"
-
 
 

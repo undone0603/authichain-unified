@@ -2,7 +2,7 @@
  * Services router unit tests — db and stripe-service are mocked.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SERVICE_LIST, SERVICE_CATALOG } from "../service-catalog";
+import { SERVICE_LIST, SERVICE_CATALOG } from "../service-catalog.js";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ describe("servicesRouter — checkout", () => {
     const ctx = { user: { id: 1, email: "a@b.com", name: "Test" } };
     const result = await (servicesRouter as any).checkout._fn({
       ctx,
-      input: { serviceKey: "authenticity_audit", origin: "http://localhost:3000" },
+      input: { serviceKey: "authenticity_audit", origin: "https://example.com" },
     });
     expect(vi.mocked(createPaymentCheckout)).toHaveBeenCalledOnce();
     expect(result.checkoutUrl).toBe("https://checkout.stripe.com/mock");

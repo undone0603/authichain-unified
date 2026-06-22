@@ -1,18 +1,9 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { SERVICE_LIST, SERVICE_CATALOG, SERVICE_KEYS, type ServiceType } from "../service-catalog";
 import { ORDER_STATUSES, type OrderStatus } from "../../shared/const";
 import * as db from "../db";
 import { createPaymentCheckout } from "../stripe-service";
-
-const ALLOWED_CHECKOUT_ORIGINS = [
-  "https://authichain.com",
-  "https://www.authichain.com",
-  "https://govchain.us",
-  "https://strainchain.io",
-  "https://qron.io",
-];
 
 const serviceKeyEnum = z.enum(SERVICE_KEYS as [ServiceType, ...ServiceType[]]);
 const orderStatusEnum = z.enum(ORDER_STATUSES as unknown as [OrderStatus, ...OrderStatus[]]);
@@ -48,13 +39,7 @@ export const servicesRouter = router({
     notes: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
     const key = input.serviceKey ?? input.serviceType;
-    if (!key) throw new TRPCError({ code: "BAD_REQUEST", message: "serviceKey or serviceType is required" });
-    const origin = input.origin ?? "";
-    const isLocalhost = process.env.NODE_ENV !== "production" &&
-      /^https?:\/\/localhost(:\d+)?$/.test(origin);
-    if (!ALLOWED_CHECKOUT_ORIGINS.includes(origin) && !isLocalhost) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid origin" });
-    }
+    if (!key) throw new Error("serviceKey or serviceType is required");
     const service = SERVICE_CATALOG[key];
 
     const { url, sessionId } = await createPaymentCheckout({
