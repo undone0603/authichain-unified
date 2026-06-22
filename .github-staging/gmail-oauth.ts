@@ -81,11 +81,10 @@ export function registerGmailOAuthRoutes(app: Express) {
 
       if (!tokenRes.ok || !data.refresh_token) {
         console.error("[gmail-oauth] token exchange failed:", data);
-        res.status(500).send(
-          `Token exchange failed: ${JSON.stringify(data)}\n\n` +
-          "Make sure 'access_type=offline' and 'prompt=consent' are set, " +
-          "and that this is the first time the account grants access (or revoke first).",
-        );
+        res.status(500).json({
+          error: "Token exchange failed",
+          detail: "Make sure 'access_type=offline' and 'prompt=consent' are set, and that this is the first time the account grants access (or revoke first).",
+        });
         return;
       }
 
@@ -95,13 +94,15 @@ export function registerGmailOAuthRoutes(app: Express) {
       console.log(`GMAIL_REFRESH_TOKEN=${data.refresh_token}`);
       console.log("=========================================\n");
 
+      const safeToken = String(data.refresh_token)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       res.send(`
         <html><body style="font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px">
-          <h2>✅ Gmail Connected</h2>
+          <h2>&#10003; Gmail Connected</h2>
           <p>Copy the <strong>GMAIL_REFRESH_TOKEN</strong> from the server console into your
-          <code>.env</code> file (or your hosting platform's secret store), then restart the server.</p>
-          <pre style="background:#f4f4f4;padding:12px;border-radius:6px;overflow-x:auto">GMAIL_REFRESH_TOKEN=${data.refresh_token}</pre>
-          <p style="color:#666;font-size:13px">This token does not expire — it will be used to obtain short-lived access tokens automatically.</p>
+          <code>.env</code> file (or your hosting platform&#39;s secret store), then restart the server.</p>
+          <pre style="background:#f4f4f4;padding:12px;border-radius:6px;overflow-x:auto">GMAIL_REFRESH_TOKEN=${safeToken}</pre>
+          <p style="color:#666;font-size:13px">This token does not expire &mdash; it will be used to obtain short-lived access tokens automatically.</p>
         </body></html>
       `);
     } catch (err: any) {
