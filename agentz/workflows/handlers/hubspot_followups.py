@@ -4,8 +4,7 @@ agentz.workflows.handlers.hubspot_followups
 Executes the 7-day follow-up cycle for near-term high-value deals.
 """
 import httpx
-from datetime import datetime, timezone
-from agentz.core.credentials import get, get_or_placeholder
+from agentz.core.credentials import get_or_placeholder
 from agentz.core.modes import ExecutionContext
 
 HUBSPOT_BASE = "https://api.hubapi.com"
@@ -84,7 +83,7 @@ def run(ctx: ExecutionContext) -> str:
         # Draft and send email (using LLM)
         ctx.step(f"Drafting follow-up for {email}...")
         
-        email_body = _draft_followup(name, company, subject)
+        _email_body = _draft_followup(name, company, subject)
         
         # Send via SMTP (using credentials from env)
         # Note: In a real run, we'd use the sendEmail utility.

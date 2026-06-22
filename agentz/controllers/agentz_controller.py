@@ -9,7 +9,7 @@
         try:
             if isinstance(raw_result, AgentOutput):
                 return raw_result
-        except Exception:
+        except Exception:  # noqa: BLE001 — raw_result is not AgentOutput, fall through to next check
             pass
 
         if isinstance(raw_result, str):

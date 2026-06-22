@@ -17,7 +17,7 @@
 import { google } from "googleapis";
 import open from "open";
 import { createServer } from "http";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const CLIENT_ID     = process.env.YOUTUBE_CLIENT_ID     || "";
 const CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET || "";
@@ -98,8 +98,9 @@ const { refreshToken, channelId } = await new Promise((resolve, reject) => {
     const error = url.searchParams.get("error");
 
     if (error || !code) {
+      const safe = String(error || "no code").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       res.writeHead(400, { "Content-Type": "text/html" });
-      res.end(`<h2 style="color:red">Error: ${error || "no code"}</h2>`);
+      res.end(`<h2 style="color:red">Error: ${safe}</h2>`);
       server.close(() => reject(new Error(error || "no code returned")));
       return;
     }
@@ -165,31 +166,30 @@ console.log("╚═════════════════════�
 console.log(`YOUTUBE_CLIENT_ID      = ${CLIENT_ID}`);
 console.log(`YOUTUBE_CLIENT_SECRET  = ${CLIENT_SECRET.slice(0, 6)}...`);
 
-let fields;
+let fieldPairs;
 if (CHANNEL === "qron") {
   console.log(`YOUTUBE_QRON_REFRESH_TOKEN = ${refreshToken.slice(0, 12)}...`);
   console.log(`YOUTUBE_QRON_CHANNEL_ID    = ${channelId}\n`);
-  fields = [
-    `--field YOUTUBE_CLIENT_ID="${CLIENT_ID}"`,
-    `--field YOUTUBE_CLIENT_SECRET="${CLIENT_SECRET}"`,
-    `--field YOUTUBE_QRON_REFRESH_TOKEN="${refreshToken}"`,
-    `--field YOUTUBE_QRON_CHANNEL_ID="${channelId}"`,
-  ].join(" ");
+  fieldPairs = [
+    ["YOUTUBE_CLIENT_ID", CLIENT_ID],
+    ["YOUTUBE_CLIENT_SECRET", CLIENT_SECRET],
+    ["YOUTUBE_QRON_REFRESH_TOKEN", refreshToken],
+    ["YOUTUBE_QRON_CHANNEL_ID", channelId],
+  ];
 } else {
   console.log(`YOUTUBE_REFRESH_TOKEN  = ${refreshToken.slice(0, 12)}...`);
   console.log(`YOUTUBE_CHANNEL_ID     = ${channelId}\n`);
-  fields = [
-    `--field YOUTUBE_CLIENT_ID="${CLIENT_ID}"`,
-    `--field YOUTUBE_CLIENT_SECRET="${CLIENT_SECRET}"`,
-    `--field YOUTUBE_REFRESH_TOKEN="${refreshToken}"`,
-    `--field YOUTUBE_CHANNEL_ID="${channelId}"`,
-  ].join(" ");
+  fieldPairs = [
+    ["YOUTUBE_CLIENT_ID", CLIENT_ID],
+    ["YOUTUBE_CLIENT_SECRET", CLIENT_SECRET],
+    ["YOUTUBE_REFRESH_TOKEN", refreshToken],
+    ["YOUTUBE_CHANNEL_ID", channelId],
+  ];
 }
 
-execSync(
-  `gh workflow run set-social-secrets.yml --repo ${REPO} ${fields}`,
-  { stdio: "inherit" }
-);
+const ghArgs = ["workflow", "run", "set-social-secrets.yml", "--repo", REPO];
+for (const [k, v] of fieldPairs) ghArgs.push("--field", `${k}=${v}`);
+execFileSync("gh", ghArgs, { stdio: "inherit" });
 
 console.log(`\n✓ Workflow dispatched!`);
 console.log(`  Progress: https://github.com/${REPO}/actions/workflows/set-social-secrets.yml`);

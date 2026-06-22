@@ -6,7 +6,7 @@ import { chat } from './lib/llm.ts';
 
 const isDryRun  = process.env.DRY_RUN === 'true';
 const supabase  = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
-const pinecone  = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+const _pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
 const GOVCHAIN  = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
 const AUTHICHAIN_PROFILE = `

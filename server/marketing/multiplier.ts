@@ -1,5 +1,4 @@
 import { invokeLLM, parseLLMContent } from "../_core/llm.js";
-import { logActivity } from "../db.js";
 
 /**
  * Social Multiplier Service — Ported from legacy traffic strategies.
@@ -36,7 +35,7 @@ Return JSON:
   } catch (err: any) {
     console.warn("⚠️ LLM Generation failed. Using vertical-aware traffic bundle.");
     
-    if (announcement.includes("QRON.space")) {
+    if (announcement.toLowerCase().includes("qron.space")) {
       return {
         linkedin: "🚀 QRON.space officially launches 'Dimensional Gateways'—the future of product engagement.\n\nOur AI-powered gateways drive 78% higher scan rates vs standard QR codes. Every gateway is cryptographically signed and anchored to the AuthiChain Protocol. Turn your physical product into a cinematic digital portal today.\n\nExplore the studio: qron.space\n\n#QRON #AIArt #ProductIdentity #Blockchain",
         reddit: {
@@ -51,7 +50,7 @@ Return JSON:
       };
     }
 
-    if (announcement.includes("StrainChain.io")) {
+    if (announcement.toLowerCase().includes("strainchain.io")) {
       return {
         linkedin: "🌿 StrainChain.io is now the automated 'Truth Layer' for Michigan cannabis.\n\nOur new background job automatically anchors METRC manifests to Bitcoin L1. Cultivators now receive an immutable 'Proof of Purity' certificate for every package tag, eliminating 80% of manual audit labor.\n\nVerify your provenance: strainchain.io\n\n#StrainChain #CannabisCompliance #BitcoinL1 #METRC",
         reddit: {

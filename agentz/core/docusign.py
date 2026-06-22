@@ -26,7 +26,7 @@ async def create_envelope_from_markdown(agreement_path: str, contact_email: str)
     logger.info(f"Preparing DocuSign envelope for {contact_email} (Length: {len(content)} chars)")
     
     # 1. Convert Markdown to simple HTML (Mock)
-    html_content = f"<html><body>{content.replace('\n', '<p>')}</body></html>"
+    _html_content = f"<html><body>{content.replace(chr(10), '<p>')}</body></html>"
     
     # 2. Call DocuSign API (Mocked until docusign_token is set)
     token = get("docusign_token", required=False)

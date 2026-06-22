@@ -26,8 +26,7 @@ export async function POST(req: Request) {
   // Handle the event
   switch (event.type) {
     case "checkout.session.completed":
-      const session = event.data.object as Stripe.Checkout.Session;
-      // Fullfill the purchase...
+      // event.data.object is Stripe.Checkout.Session — fulfill purchase here
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);

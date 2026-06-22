@@ -80,7 +80,8 @@ async def monitor_scans(supabase, product_id: str) -> float:
     geo_check = await detect_geospatial_anomalies(supabase, qron_id, expected_region=target_market)
     
     if geo_check["anomaly"]:
-        logger.warning(f"Geo-Anomaly for Product {product_id}: {geo_check['reason']}")
+        safe_reason = str(geo_check.get('reason', 'unknown')).replace('\n', ' ').replace('\r', ' ')[:200]
+        logger.warning(f"Geo-Anomaly for Product {product_id}: {safe_reason}")
         product_metadata["security_flag"] = "geo_anomaly"
         product_metadata["geo_alert"] = geo_check["reason"]
         score = max(0.0, score - 25.0)

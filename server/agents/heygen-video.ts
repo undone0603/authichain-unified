@@ -25,7 +25,6 @@ import {
   getVideoStatus,
 } from '../heygen-service.js';
 import { uploadVideo } from '../youtube-service.js';
-import { postTweet } from '../twitter-service.js';
 
 const POLL_INTERVAL_MS = 8_000;
 const MAX_POLLS = 30; // 4 minutes max wait

@@ -82,8 +82,9 @@ const refreshToken = await new Promise((resolve, reject) => {
     const error = url.searchParams.get("error");
 
     if (error || !code) {
+      const safe = String(error || "no code").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       res.writeHead(400, { "Content-Type": "text/html" });
-      res.end(`<h2 style="color:red">Error: ${error || "no code"}</h2>`);
+      res.end(`<h2 style="color:red">Error: ${safe}</h2>`);
       server.close(() => reject(new Error(error || "no code returned")));
       return;
     }

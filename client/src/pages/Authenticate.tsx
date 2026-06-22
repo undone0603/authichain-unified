@@ -77,7 +77,7 @@ export default function Authenticate() {
               <Input placeholder="https://example.com/product-image.jpg" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="mt-1" />
               <p className="text-xs text-muted-foreground mt-1">Provide a direct URL to the product image for AI analysis</p>
             </div>
-            {imageUrl && (
+            {imageUrl && /^https?:\/\//.test(imageUrl) && (
               <div className="rounded-lg overflow-hidden border border-border">
                 <img src={imageUrl} alt="Product" className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
