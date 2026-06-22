@@ -38,9 +38,11 @@ export async function GET(req: NextRequest) {
 
   let sent = 0;
 
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
   for (const user of (day10Users || [])) {
     const email = (user as any).users?.email;
-    const name = (user as any).users?.name || 'there';
+    const name = esc((user as any).users?.name || 'there');
     if (!email) continue;
     await resend.emails.send({
       from: 'QRON <noreply@qron.space>',
@@ -53,7 +55,7 @@ export async function GET(req: NextRequest) {
 
   for (const user of (day13Users || [])) {
     const email = (user as any).users?.email;
-    const name = (user as any).users?.name || 'there';
+    const name = esc((user as any).users?.name || 'there');
     if (!email) continue;
     await resend.emails.send({
       from: 'QRON <noreply@qron.space>',

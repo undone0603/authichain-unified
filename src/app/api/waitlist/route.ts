@@ -32,11 +32,14 @@ export async function POST(req: NextRequest) {
     .from('waitlist')
     .select('*', { count: 'exact', head: true });
 
+  const safeName = (name || 'friend').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeUseCase = (use_case || 'Not specified').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
   await resend.emails.send({
     from: 'QRON <noreply@qron.space>',
     to: email,
     subject: "You're on the QRON waitlist!",
-    html: `<h2>Welcome to QRON, ${name || 'friend'}!</h2><p>You're #${count} on our waitlist. We'll notify you when your spot opens up.</p><p>Use case: ${use_case || 'Not specified'}</p>`,
+    html: `<h2>Welcome to QRON, ${safeName}!</h2><p>You're #${count} on our waitlist. We'll notify you when your spot opens up.</p><p>Use case: ${safeUseCase}</p>`,
   }).catch(() => {});
 
   return NextResponse.json({ success: true, position: count });
