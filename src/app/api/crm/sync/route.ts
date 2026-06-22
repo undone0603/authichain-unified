@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       const errText = await res.text();
       // If contact exists (409), we could handle an update, but for now we log it.
       if (res.status === 409) {
-          console.log(`[CRM-Sync] Contact already exists in HubSpot: ${email}`);
+          console.log('[CRM-Sync] Contact already exists in HubSpot');
           return NextResponse.json({ success: true, message: 'Contact already exists' });
       }
       throw new Error(`HubSpot API Error: ${res.status} - ${errText}`);
