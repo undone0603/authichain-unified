@@ -68,8 +68,12 @@ function createMcpServer(env: Env): McpServer {
     },
     async ({ certificateNumber }) => {
       const res = await fetch(
-        `${env.BACKEND_URL}/api/internal/certificates/verify?certNumber=${encodeURIComponent(certificateNumber)}`,
-        { headers: { "X-Internal-Secret": env.INTERNAL_SECRET } },
+        `${env.BACKEND_URL}/api/internal/certificates/verify`,
+        {
+          method: "POST",
+          headers: { "X-Internal-Secret": env.INTERNAL_SECRET, "Content-Type": "application/json" },
+          body: JSON.stringify({ certNumber: certificateNumber }),
+        },
       );
       const data = await res.json();
       return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
