@@ -24,6 +24,9 @@ on:
         default: 'false'
         type: boolean
 
+permissions:
+  contents: read
+
 concurrency:
   group: marketing-pipeline
   cancel-in-progress: false
