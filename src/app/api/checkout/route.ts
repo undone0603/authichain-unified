@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     }
 
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-04-22.dahlia' as const });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-05-27.dahlia' as const });
 
     const origin = request.headers.get('origin') || new URL(request.url).origin;
 
@@ -68,15 +68,15 @@ export async function POST(request: Request) {
       cancel_url: `${origin}/#pricing`,
       ...(email ? { customer_email: email } : {}),
       metadata: {
-        planId: plan.id,
-        ...(userId ? { userId } : {}),
+        plan: plan.id,
+        ...(userId ? { user_id: userId } : {}),
       },
       // For subscriptions, allow promo codes and show a cancel URL
       ...(plan.stripe_mode === 'subscription'
         ? {
             allow_promotion_codes: true,
             subscription_data: {
-              metadata: { planId: plan.id, ...(userId ? { userId } : {}) },
+              metadata: { plan: plan.id, ...(userId ? { user_id: userId } : {}) },
             },
           }
         : {}),

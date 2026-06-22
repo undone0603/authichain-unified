@@ -1416,3 +1416,111 @@ export async function getFunnelBySegmentAndChannel() {
 export async function getLeadCohorts() {
   return [] as Array<{ cohort: string; count: number; conversionRate: number }>;
 }
+
+// ─── QRON Helpers (backed by qr_codes + metadata) ────────────────────────────
+
+export async function getQronList() {
+  const d = await getDb();
+  return d.select().from(qrCodes).orderBy(desc(qrCodes.createdAt)).limit(200);
+}
+
+export async function createQron(data: {
+  id: string;
+  productId: number;
+  userId: number;
+  productName?: string;
+  brand?: string;
+  category?: string;
+  mode?: string;
+  seed?: string;
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  fingerprintHash?: string;
+  nftTokenId?: string;
+  openartUrl?: string;
+  trustScore?: number;
+}) {
+  const d = await getDb();
+  return d.insert(qrCodes).values({
+    userId: data.userId,
+    productId: data.productId,
+    shortCode: data.id,
+    mode: data.mode ?? 'standard',
+    imageUrl: data.imageUrl,
+    qrData: data.id,
+    metadata: {
+      qronId: data.id,
+      productName: data.productName,
+      brand: data.brand,
+      category: data.category,
+      seed: data.seed,
+      thumbnailUrl: data.thumbnailUrl,
+      fingerprintHash: data.fingerprintHash,
+      nftTokenId: data.nftTokenId,
+      openartUrl: data.openartUrl,
+      openartRegistered: !!data.openartUrl,
+      trustScore: data.trustScore ?? 100,
+      verifiedScanCount: 0,
+      fakeFlagCount: 0,
+    },
+  }).returning();
+}
+
+export async function getQronById(qronId: string) {
+  const d = await getDb();
+  const rows = await d.select().from(qrCodes).where(eq(qrCodes.shortCode, qronId)).limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  const meta = (row.metadata ?? {}) as Record<string, unknown>;
+  return {
+    ...row,
+    id: row.shortCode ?? String(row.id),
+    fingerprintHash: meta.fingerprintHash as string | undefined,
+    nftTokenId: meta.nftTokenId as string | undefined,
+    openartUrl: meta.openartUrl as string | undefined,
+    openartRegistered: !!(meta.openartUrl),
+    trustScore: meta.trustScore as number | undefined,
+    verifiedScanCount: meta.verifiedScanCount as number | undefined,
+    fakeFlagCount: meta.fakeFlagCount as number | undefined,
+  };
+}
+
+export async function createQronScanVerdict(data: {
+  qronId: string;
+  scannedImageUrl: string;
+  similarityScore: number;
+  verdict: string;
+  details: unknown;
+}) {
+  const d = await getDb();
+  const rows = await d.select({ id: qrCodes.id, productId: qrCodes.productId })
+    .from(qrCodes).where(eq(qrCodes.shortCode, data.qronId)).limit(1);
+  const qr = rows[0];
+  if (!qr) return;
+  await d.insert(qrScanEvents).values({
+    qrCodeId: qr.id,
+    productId: qr.productId ?? 0,
+    isAuthentic: data.verdict === 'authentic',
+    userAgent: JSON.stringify({
+      verdict: data.verdict,
+      similarity: data.similarityScore,
+      details: data.details,
+      scannedImageUrl: data.scannedImageUrl,
+    }),
+  });
+}
+
+export async function updateQron(
+  qronId: string,
+  data: { verifiedScanCount?: number; fakeFlagCount?: number; trustScore?: number },
+) {
+  const d = await getDb();
+  const rows = await d.select({ id: qrCodes.id, metadata: qrCodes.metadata })
+    .from(qrCodes).where(eq(qrCodes.shortCode, qronId)).limit(1);
+  const row = rows[0];
+  if (!row) return;
+  const merged = { ...(row.metadata as Record<string, unknown> ?? {}), ...data };
+  await d.update(qrCodes)
+    .set({ metadata: merged, updatedAt: new Date() })
+    .where(eq(qrCodes.id, row.id));
+}
