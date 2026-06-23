@@ -108,11 +108,17 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
 </div>
 
 <div class="stats-bar">
-  <div class="stat"><div class="stat-value">28K+</div><div class="stat-label">Opportunities Scored</div></div>
-  <div class="stat"><div class="stat-value">340</div><div class="stat-label">Agencies Tracked</div></div>
-  <div class="stat"><div class="stat-value">&lt;2 min</div><div class="stat-label">Opportunity → Draft</div></div>
+  <div class="stat"><div class="stat-value" id="stat-scored">546</div><div class="stat-label">Opportunities Scored</div></div>
+  <div class="stat"><div class="stat-value" id="stat-highfit">139</div><div class="stat-label">High-Fit Matches</div></div>
+  <div class="stat"><div class="stat-value" id="stat-proposals">248</div><div class="stat-label">Proposals Drafted</div></div>
   <div class="stat"><div class="stat-value">100%</div><div class="stat-label">On-Chain Auditable</div></div>
 </div>
+
+<section id="live">
+  <h2>Live <span class="accent">High-Fit Opportunities</span></h2>
+  <p class="section-sub">Real federal opportunities scored ≥70 by the GovChain engine, live from the pipeline.</p>
+  <div id="live-feed" class="pros-grid"><p style="color:var(--muted)">Loading live opportunities…</p></div>
+</section>
 
 <section id="how">
   <h2>From Notice to <span class="accent">Awarded</span> in 4 Steps</h2>
@@ -197,6 +203,33 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
 <footer>
   <p>© 2026 GovChain · Powered by AuthiChain Protocol · <a href="https://authichain.com">authichain.com</a></p>
 </footer>
+<script>
+(function(){
+  var API='https://authichain-unified.vercel.app';
+  function n(x){try{return Number(x).toLocaleString();}catch(e){return x;}}
+  function esc(s){return String(s==null?'':s).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});}
+  fetch(API+'/api/govchain/stats').then(function(r){return r.json();}).then(function(s){
+    if(!s)return;
+    var m={'stat-scored':s.opportunities_scored,'stat-highfit':s.high_fit,'stat-proposals':s.proposals_drafted};
+    Object.keys(m).forEach(function(id){var el=document.getElementById(id);if(el&&m[id]!=null)el.textContent=n(m[id]);});
+  }).catch(function(){});
+  fetch(API+'/api/govchain/opportunities?min_fit=70&limit=6').then(function(r){return r.json();}).then(function(d){
+    var feed=document.getElementById('live-feed');if(!feed)return;
+    if(d&&d.opportunities&&d.opportunities.length){
+      feed.innerHTML=d.opportunities.map(function(o){
+        var title=esc(o.title||'Untitled federal opportunity');
+        var agency=esc(o.agency||'Federal agency');
+        var deadline=o.deadline?('Due '+esc(String(o.deadline).slice(0,10))):'Deadline TBD';
+        var naics=o.naics_code?('NAICS '+esc(o.naics_code)):'';
+        var fit=(o.fit_score!=null)?esc(o.fit_score):'';
+        var url=(typeof o.sam_url==='string'&&o.sam_url.indexOf('https://')===0)?o.sam_url:null;
+        var head=url?('<a href="'+esc(url)+'" target="_blank" rel="noopener">'+title+'</a>'):title;
+        return '<div class="pro"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem"><span class="fit">Fit '+fit+'</span><span style="font-size:.72rem;color:var(--muted)">'+naics+'</span></div><h3 style="font-size:1rem;font-weight:700">'+head+'</h3><p>'+agency+' · '+deadline+'</p></div>';
+      }).join('');
+    }else{feed.innerHTML='<p style="color:var(--muted)">No high-fit opportunities open right now — check back soon.</p>';}
+  }).catch(function(){var f=document.getElementById('live-feed');if(f)f.innerHTML='<p style="color:var(--muted)">Live feed temporarily unavailable.</p>';});
+})();
+</script>
 </body></html>`;
     return new Response(html, { headers: { ...HTML_SECURITY_HEADERS, "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public,max-age=300" } });
   },
