@@ -153,12 +153,7 @@ jobs:
               sys.exit(1)
           print("Posted successfully:", r.headers.get("x-restli-id", ""))
           PYEOF
-        env:
-          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
-          LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
-          POST_BODY: ${{ env.BODY }}
-
+        
   content-drafts:
     name: Content — Generate weekly drafts
     runs-on: ubuntu-latest
