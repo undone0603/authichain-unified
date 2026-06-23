@@ -166,6 +166,40 @@ export async function POST(req: NextRequest) {
             paid_at: new Date().toISOString(),
           });
         }
+
+        // Recurring affiliate commission — credit on renewals only.
+        // The first payment is handled by checkout.session.completed, so we skip
+        // billing_reason 'subscription_create' here to avoid double-counting.
+        // Event-level idempotency (stripe_events) prevents re-crediting a retry.
+        if (invoice.billing_reason === 'subscription_cycle' && subscriptionId && invoice.amount_paid > 0) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId);
+            const affiliateCode = sub.metadata?.affiliate_code;
+            if (affiliateCode) {
+              const { data: aff } = await getSupabase()
+                .from('affiliates')
+                .select('id, pending_payout, commission_rate, status')
+                .eq('affiliatecode', affiliateCode)
+                .maybeSingle();
+              if (aff && aff.status === 'active') {
+                const rate = Number(aff.commission_rate ?? 0.1);
+                const commission = Math.round((invoice.amount_paid / 100) * rate * 100) / 100;
+                if (commission > 0) {
+                  await getSupabase()
+                    .from('affiliates')
+                    .update({
+                      pending_payout: Number(aff.pending_payout ?? 0) + commission,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', aff.id)
+                    .eq('pending_payout', aff.pending_payout ?? 0);
+                }
+              }
+            }
+          } catch (e) {
+            console.error('[webhook] recurring affiliate accrual failed:', e);
+          }
+        }
         break;
       }
 

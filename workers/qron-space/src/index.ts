@@ -107,11 +107,20 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
 </div>
 
 <div class="stats-bar">
-  <div class="stat"><div class="stat-value">$4.2M</div><div class="stat-label">Total Value Locked</div></div>
-  <div class="stat"><div class="stat-value">42.1%</div><div class="stat-label">Max APY</div></div>
-  <div class="stat"><div class="stat-value">12,847</div><div class="stat-label">Token Holders</div></div>
-  <div class="stat"><div class="stat-value">99.97%</div><div class="stat-label">Bridge Uptime</div></div>
+  <div class="stat"><div class="stat-value" id="qs-auths">370</div><div class="stat-label">Authentications</div></div>
+  <div class="stat"><div class="stat-value" id="qs-certs">1,369</div><div class="stat-label">Valid Certificates</div></div>
+  <div class="stat"><div class="stat-value" id="qs-events">6,371</div><div class="stat-label">Chain Events</div></div>
+  <div class="stat"><div class="stat-value" id="qs-rewards">369</div><div class="stat-label">Rewards Issued</div></div>
 </div>
+<script>
+fetch('https://authichain-unified.vercel.app/api/qron/stats')
+  .then(r=>r.json()).then(function(d){
+    if(d.authentications_total!=null)document.getElementById('qs-auths').textContent=d.authentications_total.toLocaleString();
+    if(d.certificates_valid!=null)document.getElementById('qs-certs').textContent=d.certificates_valid.toLocaleString();
+    if(d.product_events_total!=null)document.getElementById('qs-events').textContent=d.product_events_total.toLocaleString();
+    if(d.rewards_issued!=null)document.getElementById('qs-rewards').textContent=d.rewards_issued.toLocaleString();
+  }).catch(function(){});
+</script>
 
 <section id="advantages">
   <h2>Why $QRON</h2>

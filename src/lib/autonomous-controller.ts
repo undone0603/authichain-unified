@@ -658,15 +658,31 @@ export class AutonomousController {
 
         // Update local status with score
         const score = lead.product_interest === 'authichain' ? 80 : 20; // Enterprise leads score higher
-        
+
         await admin
           .from('lead_captures')
-          .update({ 
-            status: 'contacted', 
+          .update({
+            status: 'contacted',
             score,
-            updated_at: new Date().toISOString() 
+            updated_at: new Date().toISOString()
           })
           .eq('id', lead.id);
+
+        // Enter the lead into the multi-stage drip nurture funnel. This is the
+        // entry point that makes runDripSequencer() fire — without it the drip
+        // stages never run. Each lead transitions new→contacted exactly once,
+        // so it gets exactly one sequence. next_action_at=now makes Stage 1
+        // eligible on the next daily cycle.
+        if (lead.email) {
+          await admin
+            .from('lead_sequences')
+            .insert({
+              lead_id: lead.id,
+              current_stage: 1,
+              status: 'active',
+              next_action_at: new Date().toISOString(),
+            });
+        }
       } catch (err) {
         console.error(`[autonomous] Lead sync failed for ${lead.email}:`, err);
       }
