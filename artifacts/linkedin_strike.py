@@ -135,7 +135,7 @@ def run_linkedin_strike():
 
             # Close any modal dialogs that may appear
             try:
-                page.locator("button[aria-label='Dismiss']").click(timeout=3000)
+                page.locator("button[aria-label='Dismiss']").first.click(timeout=3000)
                 page.wait_for_timeout(1000)
             except PlaywrightTimeoutError:
                 pass
