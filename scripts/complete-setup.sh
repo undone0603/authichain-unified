@@ -19,7 +19,7 @@ vercel whoami  &>/dev/null || { echo -e "${RED}✗ vercel not authenticated  —
 
 # ── Values already resolved by AgentZ ──────────────────────────────────────────
 SUPABASE_URL="https://nhdnkzhtadfkkluiulhs.supabase.co"
-SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8"
+SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:?Set NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment}"
 RESEND_FROM="noreply@authichain.com"
 
 # ── Values you must supply ──────────────────────────────────────────────────────
