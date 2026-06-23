@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
 AuthiChain LinkedIn Autonomous Strike Agent
-Posts via LinkedIn Voyager API using li_at session cookie.
-Skips feed fetch (causes redirect loop) - goes straight to API.
+Uses curl_cffi to impersonate Chrome TLS fingerprint, bypassing LinkedIn bot detection.
+Hits Voyager API directly with li_at session cookie.
 Runs daily via GitHub Actions Ghost Traffic Engine.
 """
 import os
 import sys
-import re
-import requests
+import hashlib
 from datetime import datetime
+
+try:
+    from curl_cffi import requests
+except ImportError:
+    import requests  # fallback
 
 POSTS = [
     """Product authentication is broken.
@@ -82,20 +86,6 @@ def get_post_content():
     return POSTS[day_index % len(POSTS)]
 
 
-def extract_csrf_from_cookie(li_at):
-    """
-    LinkedIn's JSESSIONID/csrf is derived from the li_at cookie.
-    When we can't fetch it from the page, we use the li_at value
-    directly as the ajax: prefixed CSRF token format.
-    """
-    # Extract numeric portion from li_at for csrf
-    # li_at format: AQEDxxxxxxxx (base64-like)
-    # Try to get csrf from the cookie value hash
-    import hashlib
-    h = hashlib.md5(li_at.encode()).hexdigest()[:16]
-    return f"ajax:{h}"
-
-
 def run_linkedin_strike():
     session_cookie = os.environ.get("LINKEDIN_SESSION_COOKIE")
     if not session_cookie:
@@ -108,17 +98,25 @@ def run_linkedin_strike():
     print(f"[INFO] Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"[DEBUG] Cookie: length={len(session_cookie)}, prefix={session_cookie[:6]}")
 
-    # Build CSRF token - use li_at-derived value
-    csrf = extract_csrf_from_cookie(session_cookie)
-    print(f"[INFO] Using CSRF: {csrf}")
+    # Derive CSRF token
+    csrf = "ajax:" + hashlib.md5(session_cookie.encode()).hexdigest()[:16]
+    print(f"[INFO] CSRF: {csrf}")
 
-    session = requests.Session()
-    session.cookies.set("li_at", session_cookie, domain=".linkedin.com", path="/")
-    # Also set JSESSIONID as CSRF
-    session.cookies.set("JSESSIONID", f'"{csrf}"', domain="www.linkedin.com", path="/")
+    # Use curl_cffi Session with Chrome impersonation to bypass TLS fingerprinting
+    try:
+        session = requests.Session(impersonate="chrome120")
+    except Exception:
+        # fallback if curl_cffi unavailable
+        import requests as req
+        session = req.Session()
 
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    cookies = {
+        "li_at": session_cookie,
+        "JSESSIONID": f'"{csrf}"',
+    }
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "application/json",
         "Accept-Language": "en-US,en;q=0.9",
         "csrf-token": csrf,
@@ -128,46 +126,53 @@ def run_linkedin_strike():
         "x-li-page-instance": "urn:li:page:d_flagship3_feed;0",
         "Referer": "https://www.linkedin.com/feed/",
         "Origin": "https://www.linkedin.com",
-    })
+    }
 
-    # Step 1: Get profile URN directly from Voyager API
-    print("[INFO] Fetching profile from Voyager API...")
+    # Step 1: Get profile URN
+    print("[INFO] Fetching profile...")
     try:
         resp = session.get(
             "https://www.linkedin.com/voyager/api/me",
-            timeout=20
+            cookies=cookies,
+            headers=headers,
+            timeout=20,
+            allow_redirects=False,
         )
-        print(f"[INFO] Profile status: {resp.status_code}")
-        print(f"[DEBUG] Profile response: {resp.text[:400]}")
+        print(f"[INFO] /me status: {resp.status_code}")
+        print(f"[DEBUG] /me response: {resp.text[:500]}")
 
-        if resp.status_code == 401 or resp.status_code == 403:
-            print("[ERROR] Auth failed - cookie or CSRF rejected")
+        if resp.status_code in (301, 302):
+            loc = resp.headers.get("Location", "")
+            print(f"[ERROR] Redirected to: {loc} - auth failed")
+            sys.exit(1)
+
+        if resp.status_code == 401:
+            print("[ERROR] 401 Unauthorized - invalid cookie or CSRF")
             sys.exit(1)
 
         if resp.status_code != 200:
-            print(f"[ERROR] Unexpected status {resp.status_code}")
+            print(f"[ERROR] Unexpected status: {resp.status_code}")
             sys.exit(1)
 
         data = resp.json()
-        # Try different response structures
         urn = None
         if "miniProfile" in data:
             urn = data["miniProfile"].get("entityUrn", "")
-        elif "elements" in data:
+        elif "elements" in data and data["elements"]:
             urn = data["elements"][0].get("miniProfile", {}).get("entityUrn", "")
 
         if not urn:
-            print(f"[ERROR] No URN. Response keys: {list(data.keys())}")
+            print(f"[ERROR] No URN found. Keys: {list(data.keys())}")
             sys.exit(1)
 
         person_urn = urn.replace("fs_miniProfile", "person")
-        print(f"[INFO] Author URN: {person_urn}")
+        print(f"[INFO] Author: {person_urn}")
 
     except Exception as e:
-        print(f"[ERROR] Profile fetch failed: {e}")
+        print(f"[ERROR] Profile fetch error: {e}")
         sys.exit(1)
 
-    # Step 2: Create the post via UGC API
+    # Step 2: Post via ugcPosts
     print("[INFO] Publishing post...")
     ugc_payload = {
         "author": person_urn,
@@ -187,54 +192,53 @@ def run_linkedin_strike():
         }
     }
 
+    post_headers = {**headers, "content-type": "application/json", "X-Restli-Method": "CREATE"}
+
     try:
-        post_resp = session.post(
+        pr = session.post(
             "https://www.linkedin.com/voyager/api/ugcPosts",
             json=ugc_payload,
-            headers={
-                "content-type": "application/json",
-                "X-Restli-Method": "CREATE",
-            },
-            timeout=20
+            cookies=cookies,
+            headers=post_headers,
+            timeout=20,
         )
-        print(f"[INFO] UGC post status: {post_resp.status_code}")
-        print(f"[INFO] UGC response: {post_resp.text[:400]}")
+        print(f"[INFO] ugcPosts status: {pr.status_code}")
+        print(f"[INFO] ugcPosts response: {pr.text[:400]}")
 
-        if post_resp.status_code in (200, 201):
+        if pr.status_code in (200, 201):
             print("[SUCCESS] Post published to LinkedIn!")
             print(f"[INFO] Preview: {post_content[:80]}...")
-        else:
-            # Try normShares fallback
-            print("[INFO] Trying normShares fallback...")
-            norm_payload = {
-                "visibleToGuest": True,
-                "commentaryV2": {
-                    "text": post_content,
-                    "inferredLocale": "en_US",
-                    "attributesV2": []
-                },
-                "origin": "MEMBER_SHARES",
-                "author": person_urn,
-                "lifecycleState": "PUBLISHED",
-                "visibility": {
-                    "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-                }
-            }
-            fb = session.post(
-                "https://www.linkedin.com/voyager/api/contentcreation/normShares",
-                json=norm_payload,
-                timeout=20
-            )
-            print(f"[INFO] normShares status: {fb.status_code}")
-            print(f"[INFO] normShares response: {fb.text[:400]}")
-            if fb.status_code in (200, 201):
-                print("[SUCCESS] Post published via normShares!")
-            else:
-                print("[ERROR] Both endpoints failed")
-                sys.exit(1)
-
+            return
     except Exception as e:
-        print(f"[ERROR] Post failed: {e}")
+        print(f"[WARN] ugcPosts failed: {e}")
+
+    # Fallback: normShares
+    print("[INFO] Trying normShares...")
+    norm_payload = {
+        "visibleToGuest": True,
+        "commentaryV2": {"text": post_content, "inferredLocale": "en_US", "attributesV2": []},
+        "origin": "MEMBER_SHARES",
+        "author": person_urn,
+        "lifecycleState": "PUBLISHED",
+        "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
+    }
+    try:
+        nr = session.post(
+            "https://www.linkedin.com/voyager/api/contentcreation/normShares",
+            json=norm_payload,
+            cookies=cookies,
+            headers=post_headers,
+            timeout=20,
+        )
+        print(f"[INFO] normShares status: {nr.status_code}")
+        print(f"[INFO] normShares response: {nr.text[:400]}")
+        if nr.status_code in (200, 201):
+            print("[SUCCESS] Post published via normShares!")
+        else:
+            print("[ERROR] All endpoints failed")
+            sys.exit(1)
+    except Exception as e:
+        print(f"[ERROR] normShares failed: {e}")
         sys.exit(1)
 
 
