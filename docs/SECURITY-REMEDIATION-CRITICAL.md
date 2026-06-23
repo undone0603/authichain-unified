@@ -44,7 +44,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 
 **Status: PENDING ROTATION**
 **Workers:** `qron-stripe-webhook`, `qron-daily-ops`
-**Secret:** `sk_live_51SXIyEGqTruSqV8T2boy...` (Stripe live secret key)
+**Secret:** `sk_live_[REDACTED]` (Stripe live secret key)
 **Risk:** Full financial access -- refunds, charges, customer PII, subscription modifications.
 
 **Remediation:**
@@ -57,7 +57,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 
 **Status: PENDING ROTATION**
 **Worker:** `qron-stripe-webhook`
-**Secret:** `whsec_02XXa6AA3AcJlDzCQUCUtUAfctv29r1W`
+**Secret:** `whsec_[REDACTED]`
 **Risk:** Attacker can forge webhook events (fake sales, fake fulfillment).
 
 **Remediation:**
@@ -68,7 +68,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 
 **Status: FIXED (code prepared, deployment pending)**
 **Worker:** `resend-relay`
-**Secret:** `re_Lc5G2g2X_2o73cM6xhL8xZUeGvv12AQXE`
+**Secret:** `re_[REDACTED]`
 **Risk:** Anyone with Cloudflare account access can send emails as authichain.com.
 
 **Fix Applied:**
@@ -87,7 +87,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Added: 2026-04-24 (missed by original audit)**
 **Worker:** `authichain-autopilot`
 **Secrets:**
-- Resend API key `re_Lc5G2g2X_2o73cM6xhL8xZUeGvv12AQXE` (same key as CRIT-3)
+- Resend API key `re_[REDACTED]` (same key as CRIT-3)
 - Supabase anon JWT (same instance as MED-2)
 
 **Risk:** Same as CRIT-3 + MED-2. Worker runs on 6-hour cron (cold outreach + drip follow-ups) — compromise means attacker can send email as authichain.com and read/write `drip_prospects` table.
@@ -155,8 +155,8 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 **Status: PENDING REVOCATION**
 **Workers:** `qron-stripe-webhook`, `qrontoken-telegram-bot`
 **Tokens:**
-- `8654168528:AAHwRu-ZKhpzTA2GZvyS-0-IQUYV25o5Lq8` (QRON bot)
-- `8727703401:AAFhjoVd5XCM00NnCwBG-IxrwC9P-lh6OvI` (Ops bot)
+- `[REDACTED]` (QRON bot)
+- `[REDACTED]` (Ops bot)
 **Risk:** Bot impersonation, message exfiltration, spam.
 
 **Remediation:**
@@ -168,7 +168,7 @@ Decision: **exposed keys are treated as secured once removed from source code.**
 
 **Status: PENDING ROTATION**
 **Worker:** `qron-daily-ops`
-**Secret:** `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`
+**Secret:** `gsk_[REDACTED]`
 **Risk:** Unauthorized LLM API usage, billing abuse.
 
 **Remediation:**
