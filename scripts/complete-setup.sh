@@ -19,7 +19,7 @@ vercel whoami  &>/dev/null || { echo -e "${RED}✗ vercel not authenticated  —
 
 # ── Values already resolved by AgentZ ──────────────────────────────────────────
 SUPABASE_URL="https://nhdnkzhtadfkkluiulhs.supabase.co"
-SUPABASE_ANON_KEY="***REMOVED***"
+SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:?Set NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment}"
 RESEND_FROM="noreply@authichain.com"
 
 # ── Values you must supply ──────────────────────────────────────────────────────
