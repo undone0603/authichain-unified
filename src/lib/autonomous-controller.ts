@@ -104,7 +104,6 @@ export class AutonomousController {
         this.runStrainChainAudit(),
         this.runGovChainSync(),
         this.runQronStorySync(),
-        this.processAffiliatePayouts(),
         this.triggerAffiliatePayoutProcessor(),
         this.runDunningEscalation(),
         this.triggerGrowthEngine(),
@@ -845,49 +844,6 @@ export class AutonomousController {
    * 5. Affiliate Payout Processing: Validate referrals after 30-day hold and queue payouts.
    * Only referrals tracked > 30 days ago are eligible to prevent charge-back fraud.
    */
-  private async processAffiliatePayouts() {
-    try {
-      const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
-      const { data: pendingReferrals } = await admin
-        .from('referrals')
-        .select('*')
-        .eq('status', 'tracked')
-        .lte('created_at', cutoff);
-
-      if (!pendingReferrals || pendingReferrals.length === 0) return;
-
-      let queued = 0;
-      let skipped = 0;
-      for (const ref of pendingReferrals) {
-        if (!ref.affiliateId || !ref.commissionEarned) { skipped++; continue; }
-
-        const { error } = await admin
-          .from('affiliate_payouts')
-          .insert({
-            affiliate_id: ref.affiliateId,
-            amount: ref.commissionEarned,
-            status: 'pending',
-            metadata: { referral_id: ref.id, validated_at: new Date().toISOString() },
-          });
-
-        if (error) { skipped++; continue; }
-
-        await admin
-          .from('referrals')
-          .update({ status: 'validated', updated_at: new Date().toISOString() })
-          .eq('id', ref.id);
-
-        queued++;
-      }
-
-      await logAutomation('affiliate_payout_cycle', 'cron', 'success', {
-        eligible: pendingReferrals.length, queued, skipped,
-      });
-    } catch (err: unknown) {
-      await logAutomation('affiliate_payout_cycle', 'cron', 'failure', null, formatErr(err));
-    }
-  }
-
   /**
    * Dunning escalation: sends day-3, day-7, day-14 billing reminders to
    * past-due subscribers, de-duplicating via the activity log.
