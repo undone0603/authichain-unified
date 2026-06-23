@@ -4,7 +4,6 @@ AuthiChain LinkedIn Autonomous Strike Agent
 Autonomously posts marketing content to LinkedIn using session cookie auth.
 Runs daily via GitHub Actions Ghost Traffic Engine.
 """
-
 import os
 import sys
 from datetime import datetime
@@ -25,7 +24,6 @@ AuthiChain fixes this with:
 Start authenticating your products for free: https://authichain-unified.vercel.app
 
 #ProductAuthentication #Blockchain #SupplyChain #Web3 #SaaS""",
-
     """The counterfeiting industry is worth $4.5 trillion.
 
 Every fake product sold kills brand trust, endangers consumers, and destroys margins.
@@ -37,7 +35,6 @@ One QR code. Instant blockchain verification. Powered by GPT-4 Vision AI.
 Free tier available: https://authichain-unified.vercel.app
 
 #AuthiChain #ProductAuthentication #QRCode #NFT #AI #Startups""",
-
     """AuthiChain is live.
 
 If you manufacture, brand, or distribute physical products - you need product authentication.
@@ -54,11 +51,9 @@ Built on Next.js + Cloudflare Workers + Supabase.
 Get started free: https://authichain-unified.vercel.app
 
 #ProductVerification #Blockchain #Web3 #SaaS #Startup""",
-
     """Most brands discover their products are being counterfeited AFTER the damage is done.
 
 AuthiChain gives you real-time alerts the moment a fake is detected.
-
 - Tamper-evident QR codes
 - Blockchain-anchored provenance
 - AI-powered visual verification
@@ -67,7 +62,6 @@ AuthiChain gives you real-time alerts the moment a fake is detected.
 Protect your brand now: https://authichain-unified.vercel.app
 
 #BrandProtection #AntiCounterfeit #SupplyChain #Blockchain""",
-
     """Cannabis. Pharmaceuticals. Luxury goods. Electronics. Apparel.
 
 Every industry has a counterfeiting problem.
@@ -88,9 +82,48 @@ def get_post_content():
     return POSTS[day_index % len(POSTS)]
 
 
+def click_start_post(page):
+    """Click the Start a post element using multiple fallback strategies."""
+    # Strategy 1: div with placeholder text (LinkedIn's current UI)
+    selectors = [
+        "div.share-box-feed-entry__top-bar",
+        "button.share-box-feed-entry__trigger",
+        "[data-placeholder='Start a post']",
+        "div[data-placeholder]",
+        ".share-creation-state__placeholder",
+        "button:has-text('Start a post')",
+        "[aria-label='Start a post']",
+        "div.feed-shared-news-module__href-link",
+    ]
+    for selector in selectors:
+        try:
+            el = page.locator(selector).first
+            if el.is_visible(timeout=3000):
+                el.click()
+                print(f"[INFO] Clicked start-post via selector: {selector}")
+                return True
+        except Exception:
+            continue
+    # Strategy 2: role-based
+    try:
+        btn = page.get_by_role("button", name="Start a post")
+        btn.click(timeout=5000)
+        print("[INFO] Clicked start-post via role button")
+        return True
+    except Exception:
+        pass
+    # Strategy 3: text match
+    try:
+        page.get_by_text("Start a post", exact=False).first.click(timeout=5000)
+        print("[INFO] Clicked start-post via text match")
+        return True
+    except Exception:
+        pass
+    return False
+
+
 def run_linkedin_strike():
     session_cookie = os.environ.get("LINKEDIN_SESSION_COOKIE")
-
     if not session_cookie:
         print("[WARN] LINKEDIN_SESSION_COOKIE not set. Running in dry-run mode.")
         print("[DRY RUN] Would post:")
@@ -103,12 +136,11 @@ def run_linkedin_strike():
     print(f"[INFO] Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-blink-features=AutomationControlled"])
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
             viewport={"width": 1280, "height": 800},
         )
-
         # Inject LinkedIn session cookie
         context.add_cookies([{
             "name": "li_at",
@@ -118,13 +150,11 @@ def run_linkedin_strike():
             "httpOnly": True,
             "secure": True,
         }])
-
         page = context.new_page()
-
         try:
             print("[INFO] Navigating to LinkedIn feed...")
             page.goto("https://www.linkedin.com/feed/", timeout=60000, wait_until="domcontentloaded")
-            page.wait_for_timeout(4000)
+            page.wait_for_timeout(5000)
 
             # Check if logged in
             if "login" in page.url or "authwall" in page.url or "checkpoint" in page.url:
@@ -140,29 +170,47 @@ def run_linkedin_strike():
             except PlaywrightTimeoutError:
                 pass
 
-            # Click 'Start a post' - use the text-based button selector
-            start_post = page.get_by_role("button", name="Start a post")
-            start_post.wait_for(timeout=15000)
-            start_post.click()
+            # Wait for feed to fully render
             page.wait_for_timeout(3000)
 
+            # Click start post
+            if not click_start_post(page):
+                print("[ERROR] Could not find Start a post button with any selector.")
+                page.screenshot(path="/tmp/linkedin_error.png")
+                sys.exit(1)
+
+            page.wait_for_timeout(3000)
             print("[INFO] Post dialog opened. Typing content...")
 
             # Find the content editor in the modal
-            editor = page.locator("div.ql-editor")
-            if not editor.is_visible():
-                editor = page.locator("[contenteditable='true'][role='textbox']")
-            if not editor.is_visible():
-                editor = page.locator("[contenteditable='true']").first
+            editor = None
+            editor_selectors = [
+                "div.ql-editor",
+                "[contenteditable='true'][role='textbox']",
+                "[contenteditable='true']",
+            ]
+            for sel in editor_selectors:
+                try:
+                    el = page.locator(sel).first
+                    el.wait_for(timeout=8000)
+                    if el.is_visible():
+                        editor = el
+                        print(f"[INFO] Found editor via: {sel}")
+                        break
+                except Exception:
+                    continue
 
-            editor.wait_for(timeout=10000)
+            if not editor:
+                print("[ERROR] Could not find post editor.")
+                page.screenshot(path="/tmp/linkedin_error.png")
+                sys.exit(1)
+
             editor.click()
             page.wait_for_timeout(500)
 
             # Type the post content
             page.keyboard.type(post_content, delay=15)
             page.wait_for_timeout(2000)
-
             print("[INFO] Content typed. Submitting post...")
 
             # Click the Post button
