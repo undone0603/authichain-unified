@@ -1,46 +1,57 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
+
+function getAdmin() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}
 
 /**
  * GET /api/affiliate/stats
  *
- * Fetch performance stats for the current affiliate.
+ * Performance + payout stats for the current affiliate, read from the
+ * `affiliates` table (the source of truth) plus Stripe-connection status.
  */
 export async function GET(_request: Request) {
   try {
     const supabase = await createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('affiliate_id')
-      .eq('id', session.user.id)
-      .single();
+    const admin = getAdmin();
 
-    if (!profile?.affiliate_id) {
+    const { data: affiliate } = await admin
+      .from('affiliates')
+      .select('affiliatecode, tier, commission_rate, total_referrals, total_conversions, total_earnings, pending_payout, status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!affiliate) {
       return NextResponse.json({ error: 'Not an affiliate' }, { status: 404 });
     }
 
-    const { data: referrals } = await supabase
-      .from('referrals')
-      .select('*')
-      .eq('affiliate_id', profile.affiliate_id);
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('stripe_account_id')
+      .eq('id', user.id)
+      .maybeSingle();
 
-    const totalEarned = (referrals || []).reduce(
-      (sum, r) => sum + parseFloat(r.commission_earned || '0'),
-      0
-    );
-
+    const a = affiliate as Record<string, unknown>;
     return NextResponse.json({
-      affiliateId: profile.affiliate_id,
-      totalReferrals: referrals?.length || 0,
-      totalEarned: totalEarned.toFixed(2),
+      affiliateCode: a.affiliatecode,
+      tier: a.tier,
+      status: a.status,
+      commissionRate: Number(a.commission_rate ?? 0),
+      totalReferrals: Number(a.total_referrals ?? 0),
+      totalConversions: Number(a.total_conversions ?? 0),
+      totalEarned: Number(a.total_earnings ?? 0).toFixed(2),
+      pendingPayout: Number(a.pending_payout ?? 0).toFixed(2),
+      payoutConnected: Boolean((profile as { stripe_account_id?: string } | null)?.stripe_account_id),
       currency: 'USD',
     });
   } catch (_err: unknown) {

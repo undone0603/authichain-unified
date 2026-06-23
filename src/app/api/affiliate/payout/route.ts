@@ -21,10 +21,20 @@ function getStripe() {
 
 /**
  * POST /api/affiliate/payout
- * Processes all pending affiliate_payouts by transferring via Stripe Connect.
- * Called by the autonomous controller daily cycle and by admin webhooks.
- * Requires STRIPE_CONNECT_ENABLED=true and each affiliate to have a
- * stripe_account_id stored on their profile.
+ *
+ * Pays out accrued affiliate commissions via Stripe Connect.
+ *
+ * Source of truth is the `affiliates` table: any affiliate with
+ * pending_payout >= the Stripe minimum and a connected Stripe account
+ * (profiles.stripe_account_id) is paid, an audit row is written to
+ * affiliate_payouts, and pending_payout is reset.
+ *
+ * Safety:
+ *  - Gated behind STRIPE_CONNECT_ENABLED=true.
+ *  - Stripe idempotency key (affiliate + amount + day) prevents a duplicate
+ *    transfer if the job runs twice in a day.
+ *  - The pending_payout reset is guarded on the exact amount read, so a
+ *    concurrent accrual is never silently zeroed.
  */
 export async function POST(request: Request) {
   const secret = request.headers.get('x-internal-secret');
@@ -38,102 +48,97 @@ export async function POST(request: Request) {
 
   const admin = getAdmin();
   const stripe = getStripe();
+  const day = new Date().toISOString().slice(0, 10);
 
-  // Fetch all pending payouts with their affiliate's Stripe account
-  const { data: pending, error: fetchErr } = await admin
-    .from('affiliate_payouts')
-    .select(`
-      id,
-      affiliate_id,
-      amount,
-      metadata,
-      profiles!affiliate_id (
-        stripe_account_id,
-        email
-      )
-    `)
-    .eq('status', 'pending')
-    .limit(50);
+  // Affiliates with money owed
+  const { data: owed, error: fetchErr } = await admin
+    .from('affiliates')
+    .select('id, user_id, affiliatecode, pending_payout, total_earnings, status')
+    .eq('status', 'active')
+    .gt('pending_payout', 0)
+    .limit(100);
 
   if (fetchErr) {
     await logAutomation('affiliate_payout_processor', 'event', 'failure', null, fetchErr.message);
     return NextResponse.json({ error: fetchErr.message }, { status: 500 });
   }
-
-  if (!pending || pending.length === 0) {
-    return NextResponse.json({ ok: true, processed: 0, message: 'No pending payouts' });
+  if (!owed || owed.length === 0) {
+    return NextResponse.json({ ok: true, processed: 0, message: 'No affiliates with pending payout' });
   }
 
-  let succeeded = 0;
-  let failed = 0;
+  let paid = 0, needsReview = 0, heldMinimum = 0, failed = 0;
   const errors: string[] = [];
 
-  for (const payout of pending) {
-    const profile = Array.isArray(payout.profiles) ? payout.profiles[0] : payout.profiles;
+  for (const a of owed) {
+    const amount = parseFloat(a.pending_payout as unknown as string);
+    const amountCents = Math.round(amount * 100);
+
+    // Resolve the affiliate's connected Stripe account from their profile
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('stripe_account_id, email')
+      .eq('id', a.user_id)
+      .maybeSingle();
     const stripeAccountId = (profile as { stripe_account_id?: string } | null)?.stripe_account_id;
 
-    // Without a connected Stripe account, queue for manual review
     if (!stripeAccountId) {
-      await admin
-        .from('affiliate_payouts')
-        .update({ status: 'needs_review', updated_at: new Date().toISOString() })
-        .eq('id', payout.id);
-      failed++;
-      errors.push(`affiliate ${payout.affiliate_id}: no stripe_account_id`);
+      await admin.from('affiliate_payouts').insert({
+        affiliate_id: String(a.user_id), amount, currency: 'usd', status: 'needs_review',
+        metadata: { affiliate_table_id: a.id, affiliatecode: a.affiliatecode, reason: 'no_stripe_account' },
+      });
+      needsReview++;
       continue;
     }
 
-    const amountCents = Math.round(parseFloat(payout.amount) * 100);
-    if (amountCents < 100) {
-      // Stripe minimum transfer is $1 — accumulate micro-amounts
-      await admin
-        .from('affiliate_payouts')
-        .update({ status: 'held_minimum', updated_at: new Date().toISOString() })
-        .eq('id', payout.id);
-      failed++;
+    if (amountCents < 100) { // Stripe minimum transfer is $1
+      heldMinimum++;
       continue;
     }
 
     try {
-      const transfer = await stripe.transfers.create({
-        amount: amountCents,
-        currency: 'usd',
-        destination: stripeAccountId,
-        metadata: {
-          payout_id: String(payout.id),
-          affiliate_id: String(payout.affiliate_id),
-          source: 'authichain_affiliate_program',
+      const transfer = await stripe.transfers.create(
+        {
+          amount: amountCents,
+          currency: 'usd',
+          destination: stripeAccountId,
+          metadata: { affiliate_table_id: String(a.id), user_id: String(a.user_id), source: 'authichain_affiliate' },
         },
+        { idempotencyKey: `affpayout_${a.id}_${amountCents}_${day}` },
+      );
+
+      await admin.from('affiliate_payouts').insert({
+        affiliate_id: String(a.user_id), amount, currency: 'usd', status: 'paid',
+        stripe_transfer_id: transfer.id, paid_at: new Date().toISOString(),
+        metadata: { affiliate_table_id: a.id, affiliatecode: a.affiliatecode },
       });
 
+      // Reset pending_payout, guarded on the exact amount we just paid so a
+      // concurrent accrual isn't lost.
       await admin
-        .from('affiliate_payouts')
+        .from('affiliates')
         .update({
-          status: 'paid',
-          stripe_transfer_id: transfer.id,
-          paid_at: new Date().toISOString(),
+          pending_payout: 0,
+          total_earnings: (parseFloat((a.total_earnings as unknown as string) || '0')) + amount,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', payout.id);
+        .eq('id', a.id)
+        .eq('pending_payout', a.pending_payout);
 
-      succeeded++;
+      paid++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      await admin
-        .from('affiliate_payouts')
-        .update({
-          status: 'failed',
-          error_message: msg,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', payout.id);
+      await admin.from('affiliate_payouts').insert({
+        affiliate_id: String(a.user_id), amount, currency: 'usd', status: 'failed',
+        error_message: msg, metadata: { affiliate_table_id: a.id },
+      });
       failed++;
-      errors.push(`payout ${payout.id}: ${msg}`);
+      errors.push(`affiliate ${a.id}: ${msg}`);
     }
   }
 
-  const status = succeeded > 0 || failed === 0 ? 'success' : 'failure';
-  await logAutomation('affiliate_payout_processor', 'event', status, { processed: pending.length, succeeded, failed });
+  const status = failed > 0 && paid === 0 ? 'failure' : 'success';
+  await logAutomation('affiliate_payout_processor', 'event', status,
+    { processed: owed.length, paid, needsReview, heldMinimum, failed });
 
-  return NextResponse.json({ ok: true, processed: pending.length, succeeded, failed, errors });
+  return NextResponse.json({ ok: true, processed: owed.length, paid, needsReview, heldMinimum, failed, errors });
 }
