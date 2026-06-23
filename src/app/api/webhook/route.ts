@@ -103,7 +103,9 @@ async function downgradeUser(stripeCustomerId: string) {
       .from('profiles')
       .update({
         tier: 'free',
-        generations_limit: 10,
+        // Free-gen grant removed — cancelled users revert to 0 and must start a
+        // new free trial or subscribe to regain generation access.
+        generations_limit: 0,
         updated_at: new Date().toISOString(),
       })
       .eq('stripe_customer_id', stripeCustomerId);

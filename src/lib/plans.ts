@@ -23,20 +23,20 @@ export interface Plan {
 export const PLANS: Plan[] = [
   {
     id: 'free',
-    name: 'Free',
+    name: 'Free Trial',
     price: 0,
-    description: 'Get started with AI QR codes',
-    generations: 10,
+    description: 'Try every Pro feature free for 7 days',
+    generations: 0,
     stripe_price_id: null,
     stripe_mode: null,
     tier: 'free',
     features: [
-      '10 generations / month',
-      'Static & Stereographic modes',
-      'Basic styles',
-      'Download as PNG',
+      '7-day free trial — full access',
+      'All Pro generation modes',
+      'Cancel anytime before it ends',
+      'Card required · no charge during trial',
     ],
-    cta: 'Get Started Free',
+    cta: 'Try Free for 7 Days',
   },
   {
     id: 'starter',

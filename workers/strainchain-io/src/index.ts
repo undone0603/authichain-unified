@@ -84,6 +84,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
   <div class="logo">StrainChain</div>
   <ul class="nav-links">
     <li><a href="#how">How It Works</a></li>
+    <li><a href="#advantages">Advantages</a></li>
     <li><a href="#compliance">Compliance</a></li>
     <li><a href="#audit">Audit Trail</a></li>
     <li><a href="#pricing">Pricing</a></li>
@@ -134,6 +135,17 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
       <div class="nft-row"><span class="nft-label">IPFS Proof</span><span class="nft-value" style="font-size:.8rem">ipfs://Qm...4d7f</span></div>
       <div class="nft-row"><span class="nft-label">Token ID</span><span class="nft-value">#SC-2847 · Polygon</span></div>
     </div>
+  </div>
+</section>
+
+<section id="advantages">
+  <h2>Why StrainChain</h2>
+  <p class="section-sub">The particular advantages over spreadsheets, generic seed-to-sale, and paper COAs.</p>
+  <div class="compliance-grid">
+    <div class="compliance-card"><h3>🌿 Unfakeable Strain Identity</h3><p>Each batch is an on-chain NFT carrying its genetic fingerprint and COA hash — relabeling or back-dating is mathematically impossible.</p></div>
+    <div class="compliance-card"><h3>⚡ Zero Manual Data Entry</h3><p>Bidirectional METRC &amp; BioTrack sync flows tags and manifests automatically — no double-keying, no transcription errors.</p></div>
+    <div class="compliance-card"><h3>🛡️ Regulator-Ready in One Click</h3><p>The 4-layer audit trail exports an inspection-ready evidence package on demand — turn an audit from days into minutes.</p></div>
+    <div class="compliance-card"><h3>🔎 Consumer Trust at the Shelf</h3><p>A QR on the package resolves to full on-chain provenance in under a second — proof in the buyer's hand, not a claim on a label.</p></div>
   </div>
 </section>
 

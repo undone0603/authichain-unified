@@ -33,8 +33,22 @@ export function middleware(req: NextRequest) {
   // own Cloudflare Workers (see workers/). This middleware still sets x-brand
   // for any preview URL that matches via Pass 3 of resolveBrand().
 
-  return NextResponse.next({
+  const out = NextResponse.next({
     request: { headers: reqHeaders },
     headers: res.headers,
   });
+
+  // Affiliate attribution: persist ?ref=CODE for 30 days so it survives until
+  // checkout, where it is read into the Stripe session metadata.
+  const ref = req.nextUrl.searchParams.get('ref');
+  if (ref && /^[A-Za-z0-9_-]{1,64}$/.test(ref)) {
+    out.cookies.set('aff_ref', ref, {
+      maxAge: 60 * 60 * 24 * 30,
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+  }
+
+  return out;
 }

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       );
     }
 
-    let body: { planId?: string; email?: string };
+    let body: { planId?: string; email?: string; affiliateCode?: string };
     try {
       body = await request.json();
     } catch {
@@ -26,6 +26,18 @@ export async function POST(request: Request) {
     if (!planId) {
       return NextResponse.json({ error: 'planId is required' }, { status: 400 });
     }
+
+    // Affiliate attribution: explicit body param wins, else the aff_ref cookie
+    // set by middleware when the buyer landed via ?ref=CODE.
+    const cookieHeader = request.headers.get('cookie') || '';
+    const cookieRef = cookieHeader
+      .split(';')
+      .map((c) => c.trim())
+      .find((c) => c.startsWith('aff_ref='))
+      ?.slice('aff_ref='.length);
+    const affiliateCode = (body.affiliateCode || (cookieRef ? decodeURIComponent(cookieRef) : '') || '')
+      .trim()
+      .slice(0, 64);
 
     const plan = PLANS.find((p) => p.id === planId);
     if (!plan) {
@@ -70,13 +82,18 @@ export async function POST(request: Request) {
       metadata: {
         plan: plan.id,
         ...(userId ? { user_id: userId } : {}),
+        ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
       },
       // For subscriptions, allow promo codes and show a cancel URL
       ...(plan.stripe_mode === 'subscription'
         ? {
             allow_promotion_codes: true,
             subscription_data: {
-              metadata: { plan: plan.id, ...(userId ? { user_id: userId } : {}) },
+              metadata: {
+                plan: plan.id,
+                ...(userId ? { user_id: userId } : {}),
+                ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
+              },
             },
           }
         : {}),
