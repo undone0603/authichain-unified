@@ -40,7 +40,8 @@ export const users = pgTable('users', {
   points: integer('points').default(0),
   // QRON specific fields
   generationsUsed: integer('generations_used').default(0).notNull(),
-  generationsLimit: integer('generations_limit').default(10).notNull(),
+  // Free-gen grant removed — access comes from a free trial or paid plan.
+  generationsLimit: integer('generations_limit').default(0).notNull(),
   affiliateId: text('affiliate_id').unique(),
   referredBy: text('referred_by'),
   storyModeEnabled: boolean('story_mode_enabled').default(false),

@@ -72,13 +72,23 @@ export async function POST(req: NextRequest) {
         const customerId = session.customer;
         const subscriptionId = session.subscription;
 
+        const isTrial = session.metadata?.trial === 'true';
+        const grantRaw = session.metadata?.grant;
+        const generationsGrant = grantRaw ? parseInt(grantRaw, 10) : undefined;
+
         if (userId) {
           await getSupabase().from('profiles').update({
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             subscription_plan: plan,
-            subscription_status: 'active',
+            subscription_status: isTrial ? 'trialing' : 'active',
             subscribed_at: new Date().toISOString(),
+            // Grant generation access for the trial/subscription. Reset usage so
+            // the new period starts clean. (Free-gen auto-grant was removed; access
+            // now comes from a trial or paid subscription.)
+            ...(generationsGrant !== undefined && !Number.isNaN(generationsGrant)
+              ? { generations_limit: generationsGrant, generations_used: 0 }
+              : {}),
           }).eq('id', userId);
 
           await getSupabase().from('checkout_sessions').update({ status: 'completed' })
