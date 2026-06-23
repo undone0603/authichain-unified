@@ -1,12 +1,11 @@
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
+// AuthiChain ships a single dark "Protocol" theme (see client/src/index.css :root),
+// so the toaster is pinned to dark rather than pulling in a theme provider.
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="dark"
       className="toaster group"
       style={
         {
