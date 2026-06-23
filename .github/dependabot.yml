@@ -50,12 +50,6 @@ updates:
     open-pull-requests-limit: 3
 
   - package-ecosystem: npm
-    directory: "/workers/authichain-verify-worker"
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
-
-  - package-ecosystem: npm
     directory: "/workers/authichain-license-issuer"
     schedule:
       interval: weekly
@@ -69,12 +63,6 @@ updates:
 
   - package-ecosystem: npm
     directory: "/workers/authichain-qron-provenance"
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
-
-  - package-ecosystem: npm
-    directory: "/workers/authichain-gateway"
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
