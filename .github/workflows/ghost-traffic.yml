@@ -21,8 +21,8 @@ jobs:
           
       - name: Install Arsenal
         run: |
-          pip install playwright
-          playwright install chromium
+          pip install playwright requests
+        
           
       - name: Execute Autonomous Strike
         run: python artifacts/linkedin_strike.py
