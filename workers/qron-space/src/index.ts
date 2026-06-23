@@ -87,6 +87,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
 <nav class="nav">
   <div class="logo">$QRON</div>
   <ul class="nav-links">
+    <li><a href="#advantages">Advantages</a></li>
     <li><a href="#staking">Staking</a></li>
     <li><a href="#governance">Governance</a></li>
     <li><a href="#bridge">Bridge</a></li>
@@ -111,6 +112,19 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
   <div class="stat"><div class="stat-value">12,847</div><div class="stat-label">Token Holders</div></div>
   <div class="stat"><div class="stat-value">99.97%</div><div class="stat-label">Bridge Uptime</div></div>
 </div>
+
+<section id="advantages">
+  <h2>Why $QRON</h2>
+  <p class="section-sub">The particular advantages that set $QRON apart from a generic utility token.</p>
+  <div class="grid-3">
+    <div class="card"><div class="card-icon">📈</div><h3>Real, On-Chain Yield</h3><p>Up to 42.1% APY from protocol fee revenue — not inflationary emissions. Rewards are paid by actual ecosystem usage.</p></div>
+    <div class="card"><div class="card-icon">🌉</div><h3>Sub-$0.10 Cross-Chain</h3><p>Move between Polygon, Ethereum, and Base with ~2s finality and fees under a dime — liquidity without lock-in.</p></div>
+    <div class="card"><div class="card-icon">🗳️</div><h3>Governance That Bites</h3><p>Holders vote on APY, treasury, and bridge deployments. Passed QIPs ship — governance with teeth, not theater.</p></div>
+    <div class="card"><div class="card-icon">🔥</div><h3>Deflationary by Design</h3><p>A share of every protocol fee buys back and burns $QRON, tightening supply as the AuthiChain economy grows.</p></div>
+    <div class="card"><div class="card-icon">🎨</div><h3>Backed by Real Utility</h3><p>$QRON powers AI QR-art generation, certificate minting, and verification across the AuthiChain ecosystem.</p></div>
+    <div class="card"><div class="card-icon">🔒</div><h3>Audited & Verified</h3><p>Staking secured by verified Polygon PoS contracts, publicly inspectable on Polygonscan.</p></div>
+  </div>
+</section>
 
 <section id="staking">
   <h2>Staking Tiers</h2>
