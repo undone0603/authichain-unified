@@ -39,7 +39,8 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
+  // Path-less middleware (Express 5 / path-to-regexp v8 reject a bare "*" path).
+  app.use(async (req, res, next) => {
     const url = req.originalUrl;
     const clientIp = req.ip || req.socket.remoteAddress || "unknown";
 
@@ -79,5 +80,19 @@ export function serveStatic(app: Express) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
+    return;
   }
+
+  // Serve the built client assets (JS/CSS/images).
+  app.use(express.static(distPath));
+
+  // SPA fallback: GET requests that weren't handled by an API route above and
+  // don't map to a static file return index.html so client-side routing
+  // (wouter) can take over. Path-less middleware (not "*") because Express 5 /
+  // path-to-regexp v8 reject a bare "*" path. /api and non-GET fall through to
+  // their handlers / proper 404s.
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api")) return next();
+    res.sendFile(path.resolve(distPath, "index.html"));
+  });
 }
