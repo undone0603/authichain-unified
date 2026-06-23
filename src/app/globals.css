@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* â”€â”€â”€â”€ Header Links â”€â”€â”€â”€ */
 .protocol-header-link {
@@ -74,13 +76,8 @@
   --accent: #f43f5e;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-gold: var(--primary); /* Maintain backward compatibility with class names */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* Tailwind token mapping (background/foreground/gold, fonts) lives in
+   tailwind.config.ts theme.extend for the v3 toolchain. */
 
 /* â”€â”€â”€â”€ Base â”€â”€â”€â”€ */
 *,
