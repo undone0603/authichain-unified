@@ -2,16 +2,13 @@
 """
 AuthiChain LinkedIn Autonomous Strike Agent
 Posts marketing content to LinkedIn using the unofficial cookie-based API.
-Much more reliable than Playwright - no browser automation detection.
 Runs daily via GitHub Actions Ghost Traffic Engine.
 """
 import os
 import sys
-import json
 import requests
 from datetime import datetime
 
-# ── Content Pool ──────────────────────────────────────────────────────────────
 POSTS = [
     """Product authentication is broken.
 
@@ -83,39 +80,106 @@ def get_post_content():
     return POSTS[day_index % len(POSTS)]
 
 
-def get_profile_urn(session):
-    """Get the current user's profile URN."""
-    resp = session.get(
-        "https://www.linkedin.com/voyager/api/me",
-        headers={"accept": "application/json"},
-    )
-    print(f"[INFO] Profile fetch status: {resp.status_code}")
-    if resp.status_code != 200:
-        print(f"[ERROR] Could not fetch profile: {resp.text[:200]}")
-        return None
-    data = resp.json()
-    # Extract the mini profile URN
+def run_linkedin_strike():
+    session_cookie = os.environ.get("LINKEDIN_SESSION_COOKIE")
+    if not session_cookie:
+        print("[WARN] No cookie set - dry run mode")
+        print(get_post_content())
+        sys.exit(0)
+
+    post_content = get_post_content()
+    print(f"[INFO] Selected post ({len(post_content)} chars)")
+    print(f"[INFO] Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"[DEBUG] Cookie length: {len(session_cookie)}, starts with: {session_cookie[:8]}...")
+
+    session = requests.Session()
+    # Set the cookie directly
+    session.cookies.set("li_at", session_cookie, domain=".linkedin.com", path="/")
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+    })
+
+    # Step 1: Fetch feed without following redirects to check if cookie is valid
+    print("[INFO] Checking session validity...")
     try:
-        urn = data["miniProfile"]["entityUrn"]
-        print(f"[INFO] Got profile URN: {urn}")
-        return urn
-    except (KeyError, TypeError) as e:
-        print(f"[ERROR] Could not parse profile URN: {e}")
-        print(f"[DEBUG] Response keys: {list(data.keys())}")
-        return None
+        r = session.get(
+            "https://www.linkedin.com/feed/",
+            allow_redirects=False,
+            timeout=15
+        )
+        print(f"[INFO] Feed response: status={r.status_code}, location={r.headers.get('Location', 'none')}")
+        print(f"[DEBUG] Cookies after feed request: {dict(session.cookies)}")
 
+        if r.status_code in (301, 302, 303):
+            loc = r.headers.get("Location", "")
+            if "login" in loc or "authwall" in loc or "signup" in loc:
+                print(f"[ERROR] Session cookie rejected - redirected to: {loc}")
+                sys.exit(1)
+            # Some redirects are OK (HTTPS upgrade etc)
+            print(f"[INFO] Redirect to: {loc} - following...")
+            r = session.get(loc, allow_redirects=True, timeout=15)
+            print(f"[INFO] Final URL: {r.url}, status: {r.status_code}")
 
-def post_to_linkedin(session, author_urn, content):
-    """Post content using LinkedIn Voyager API."""
-    # Convert urn:li:fs_miniProfile:XXX -> urn:li:person:XXX
-    person_urn = author_urn.replace("fs_miniProfile", "person")
-    print(f"[INFO] Posting as: {person_urn}")
+        if r.status_code == 999:
+            print("[ERROR] LinkedIn returned 999 - bot detection triggered")
+            sys.exit(1)
 
+    except Exception as e:
+        print(f"[ERROR] Feed request failed: {e}")
+        sys.exit(1)
+
+    # Step 2: Get CSRF token from cookies
+    csrf = session.cookies.get("JSESSIONID")
+    if not csrf:
+        # Try from response cookies
+        csrf = r.cookies.get("JSESSIONID")
+    if csrf:
+        csrf = csrf.strip('"')
+        print(f"[INFO] CSRF token: {csrf[:20]}...")
+    else:
+        print("[WARN] No JSESSIONID - generating fallback")
+        csrf = "ajax:" + "0" * 19
+
+    session.headers.update({
+        "csrf-token": csrf,
+        "x-li-lang": "en_US",
+        "x-li-track": '{"clientVersion":"1.13.10721","osName":"web","timezoneOffset":-5,"timezone":"America/Chicago","deviceFormFactor":"DESKTOP"}',
+        "x-restli-protocol-version": "2.0.0",
+    })
+
+    # Step 3: Get profile URN
+    print("[INFO] Fetching profile...")
+    try:
+        resp = session.get(
+            "https://www.linkedin.com/voyager/api/me",
+            headers={"accept": "application/json"},
+            timeout=15
+        )
+        print(f"[INFO] Profile status: {resp.status_code}")
+        if resp.status_code != 200:
+            print(f"[ERROR] Profile fetch failed: {resp.text[:300]}")
+            sys.exit(1)
+        data = resp.json()
+        urn = data.get("miniProfile", {}).get("entityUrn", "")
+        if not urn:
+            print(f"[ERROR] No URN in response. Keys: {list(data.keys())}")
+            sys.exit(1)
+        person_urn = urn.replace("fs_miniProfile", "person")
+        print(f"[INFO] Posting as: {person_urn}")
+    except Exception as e:
+        print(f"[ERROR] Profile request failed: {e}")
+        sys.exit(1)
+
+    # Step 4: Post content
     payload = {
         "visibleToGuest": True,
         "externalAudienceProviders": [],
         "commentaryV2": {
-            "text": content,
+            "text": post_content,
             "inferredLocale": "en_US",
             "attributesV2": []
         },
@@ -128,72 +192,23 @@ def post_to_linkedin(session, author_urn, content):
         }
     }
 
-    resp = session.post(
-        "https://www.linkedin.com/voyager/api/contentcreation/normShares",
-        json=payload,
-        headers={
-            "accept": "application/json",
-            "content-type": "application/json",
-            "x-restli-protocol-version": "2.0.0",
-        }
-    )
-    print(f"[INFO] Post response status: {resp.status_code}")
-    print(f"[INFO] Post response: {resp.text[:300]}")
-    return resp.status_code in (200, 201)
-
-
-def run_linkedin_strike():
-    session_cookie = os.environ.get("LINKEDIN_SESSION_COOKIE")
-    if not session_cookie:
-        print("[WARN] LINKEDIN_SESSION_COOKIE not set. Dry-run mode.")
-        print(get_post_content())
-        print("[SUCCESS] Dry run complete.")
-        sys.exit(0)
-
-    post_content = get_post_content()
-    print(f"[INFO] Selected post ({len(post_content)} chars)")
-    print(f"[INFO] Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
-    session = requests.Session()
-    session.cookies.set("li_at", session_cookie, domain=".linkedin.com")
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "csrf-token": "ajax:0000000000000000000",
-        "x-li-lang": "en_US",
-        "x-li-track": '{"clientVersion":"1.13.10721","mpVersion":"1.13.10721","osName":"web","timezoneOffset":-5,"timezone":"America/Chicago","deviceFormFactor":"DESKTOP","mpName":"voyager-web","displayDensity":1,"displayWidth":1920,"displayHeight":1080}',
-    })
-
-    print("[INFO] Fetching CSRF token from LinkedIn...")
-    # First, hit the feed to get JSESSIONID and csrf token from cookies
     try:
-        r = session.get("https://www.linkedin.com/feed/", timeout=30)
-        print(f"[INFO] Feed fetch status: {r.status_code}, final URL: {r.url}")
-        if "authwall" in r.url or "login" in r.url or r.status_code == 999:
-            print(f"[ERROR] Session invalid - got redirected to: {r.url}")
-            sys.exit(1)
-        # Extract CSRF from cookies
-        csrf = session.cookies.get("JSESSIONID", domain="www.linkedin.com")
-        if csrf:
-            csrf = csrf.strip('"')
-            session.headers.update({"csrf-token": csrf})
-            print(f"[INFO] Got CSRF token: {csrf[:20]}...")
+        post_resp = session.post(
+            "https://www.linkedin.com/voyager/api/contentcreation/normShares",
+            json=payload,
+            headers={"content-type": "application/json", "accept": "application/json"},
+            timeout=15
+        )
+        print(f"[INFO] Post status: {post_resp.status_code}")
+        print(f"[INFO] Post response: {post_resp.text[:300]}")
+        if post_resp.status_code in (200, 201):
+            print("[SUCCESS] Post published to LinkedIn!")
+            print(f"[INFO] Preview: {post_content[:80]}...")
         else:
-            print("[WARN] No JSESSIONID found, using default csrf")
+            print("[ERROR] Post failed")
+            sys.exit(1)
     except Exception as e:
-        print(f"[ERROR] Failed to fetch feed: {e}")
-        sys.exit(1)
-
-    author_urn = get_profile_urn(session)
-    if not author_urn:
-        print("[ERROR] Could not get author URN, aborting.")
-        sys.exit(1)
-
-    success = post_to_linkedin(session, author_urn, post_content)
-    if success:
-        print("[SUCCESS] Post published to LinkedIn!")
-        print(f"[INFO] Content preview: {post_content[:80]}...")
-    else:
-        print("[ERROR] Failed to publish post.")
+        print(f"[ERROR] Post request failed: {e}")
         sys.exit(1)
 
 
