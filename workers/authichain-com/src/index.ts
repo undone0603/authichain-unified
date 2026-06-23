@@ -2491,6 +2491,72 @@ const HTML = `<!DOCTYPE html>
     </div>
   </section>
 
+  <section style="padding:3rem 2rem;max-width:1100px;margin:0 auto">
+    <h2 style="font-size:clamp(1.6rem,3.5vw,2.2rem);font-weight:700;margin-bottom:.5rem">Public <span style="color:var(--primary)">Certificate Registry</span></h2>
+    <p style="color:var(--text-dim);margin-bottom:2rem;max-width:600px">Every AuthiChain certificate is publicly verifiable. Scan a QR code or enter a cert ID to instantly confirm product authenticity.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;text-align:center">
+        <div id="ac-cert-total" style="font-size:2rem;font-weight:700;color:var(--primary)">1,369</div>
+        <div style="font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem">Certificates Issued</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;text-align:center">
+        <div id="ac-cert-valid" style="font-size:2rem;font-weight:700;color:#22c55e">1,369</div>
+        <div style="font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem">Currently Valid</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;text-align:center">
+        <div style="font-size:2rem;font-weight:700;color:var(--primary)">413</div>
+        <div style="font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem">On-Chain Products</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;text-align:center">
+        <div style="font-size:2rem;font-weight:700;color:var(--primary)">2.1s</div>
+        <div style="font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem">Avg Verify Time</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
+      <input id="ac-cert-input" type="text" placeholder="Enter cert ID to verify…" style="flex:1;min-width:240px;padding:.7rem 1rem;border-radius:.5rem;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:.95rem;outline:none">
+      <button onclick="acVerify()" style="padding:.7rem 1.5rem;border-radius:.5rem;background:var(--primary);color:#000;font-weight:700;border:none;cursor:pointer;font-size:.95rem">Verify</button>
+      <a href="/api/authichain/certificates" target="_blank" style="padding:.7rem 1.5rem;border-radius:.5rem;border:1px solid var(--border);color:var(--text-dim);font-size:.9rem;text-decoration:none">Browse Registry →</a>
+    </div>
+    <div id="ac-verify-result" style="margin-top:1rem;display:none"></div>
+  </section>
+
+  <script>
+  (function(){
+    fetch('/api/authichain/certificates?limit=1&valid=true')
+      .then(r=>r.json()).then(d=>{
+        if(d.total){document.getElementById('ac-cert-valid').textContent=d.total.toLocaleString();}
+      }).catch(()=>{});
+    fetch('/api/authichain/certificates?limit=1')
+      .then(r=>r.json()).then(d=>{
+        if(d.total){document.getElementById('ac-cert-total').textContent=d.total.toLocaleString();}
+      }).catch(()=>{});
+  })();
+  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+  function acVerify(){
+    var id=(document.getElementById('ac-cert-input').value||'').trim();
+    var el=document.getElementById('ac-verify-result');
+    if(!id){el.style.display='none';return;}
+    el.style.display='block';
+    el.innerHTML='<p style="color:var(--text-dim)">Verifying…</p>';
+    fetch('/api/authichain/cert/'+encodeURIComponent(id))
+      .then(r=>r.json()).then(function(d){
+        if(d.is_authentic){
+          el.innerHTML='<div style="background:rgba(34,197,94,.1);border:1px solid #22c55e;border-radius:.75rem;padding:1.25rem">'
+            +'<div style="font-size:1.1rem;font-weight:700;color:#22c55e;margin-bottom:.5rem">✓ Authentic Product</div>'
+            +'<div style="color:var(--text-dim);font-size:.9rem"><b style="color:var(--text)">'+esc(d.certificate.brand)+'</b> — '+esc(d.certificate.product_name)+'</div>'
+            +'<div style="color:var(--text-dim);font-size:.85rem;margin-top:.4rem">SKU: '+esc(d.certificate.sku||'—')+' · Issued: '+esc((d.certificate.issued_at||'').slice(0,10))+' · Scans: '+esc(String(d.certificate.scan_count))+'</div>'
+            +'</div>';
+        } else {
+          el.innerHTML='<div style="background:rgba(239,68,68,.1);border:1px solid #ef4444;border-radius:.75rem;padding:1.25rem">'
+            +'<div style="font-size:1.1rem;font-weight:700;color:#ef4444">✗ '+(d.error||'Certificate not verified')+'</div>'
+            +'</div>';
+        }
+      }).catch(function(){
+        el.innerHTML='<div style="color:#ef4444">Verification failed — please try again</div>';
+      });
+  }
+  </script>
+
   ${foundersVision()}
   ${techStack()}
   ${communityHub(BRAND)}
