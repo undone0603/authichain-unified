@@ -57,15 +57,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Deploy authichain-verify-worker
-        # Core product worker: resolves QR/identifier → Supabase product lookup → authentic/counterfeit verdict
-        # Requires Cloudflare secrets set once via: wrangler secret put SUPABASE_URL / SUPABASE_ANON_KEY
-        run: pnpm exec wrangler deploy --config wrangler.toml
-        working-directory: workers/authichain-verify-worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
       - name: Deploy authichain-scan-validate
         # Core product worker: decodes QR from image URL, stores scan result to D1
         # Requires D1 database binding (authichain-provenance, id: ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5)
