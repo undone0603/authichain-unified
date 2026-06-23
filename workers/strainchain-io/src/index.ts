@@ -103,11 +103,19 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
 </div>
 
 <div class="stats-bar">
-  <div class="stat"><div class="stat-value">847K</div><div class="stat-label">Strain NFTs Minted</div></div>
-  <div class="stat"><div class="stat-value">38</div><div class="stat-label">Legal Markets</div></div>
-  <div class="stat"><div class="stat-value">100%</div><div class="stat-label">Compliance Rate</div></div>
+  <div class="stat"><div class="stat-value" id="sc-lab">1,000</div><div class="stat-label">Lab Tests Logged</div></div>
+  <div class="stat"><div class="stat-value" id="sc-chain">6,000</div><div class="stat-label">Chain Events</div></div>
+  <div class="stat"><div class="stat-value" id="sc-dispensary">1,000</div><div class="stat-label">Dispensary Receipts</div></div>
   <div class="stat"><div class="stat-value">$0.002</div><div class="stat-label">Per-Batch Audit Cost</div></div>
 </div>
+<script>
+fetch('https://authichain-unified.vercel.app/api/strainchain/stats')
+  .then(r=>r.json()).then(function(d){
+    if(d.lab_tests!=null)document.getElementById('sc-lab').textContent=d.lab_tests.toLocaleString();
+    if(d.total_chain_events!=null)document.getElementById('sc-chain').textContent=d.total_chain_events.toLocaleString();
+    if(d.dispensary_receipts!=null)document.getElementById('sc-dispensary').textContent=d.dispensary_receipts.toLocaleString();
+  }).catch(function(){});
+</script>
 
 <section id="how">
   <h2>From Seed to Shelf in 4 Steps</h2>
