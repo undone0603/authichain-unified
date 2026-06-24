@@ -1,14 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
 import { logAutomation, formatErr } from './automation';
 import { dispatchWebhook } from './webhooks';
 import { HubSpotDeliverableAgent } from './industrial/hubspot';
 import { sendEmail } from './email';
+import { supabaseAdmin as admin } from '@/lib/supabase-admin';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://authichain.com';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const admin = createClient(supabaseUrl, serviceKey);
 
 /**
  * Autonomous Controller for Platform Business Operations.

@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
-import { createClient } from '@supabase/supabase-js';
 import { validateQRScannability } from './vision';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // Canonical name is HF_TOKEN; legacy names kept as fallbacks.
 const HF_TOKEN =
@@ -11,9 +11,6 @@ const HF_TOKEN =
 const HF_MODEL = 'DionTimmer/controlnet_qrcode-control_v1p_sd15';
 const HF_API_URL = `https://router.huggingface.co/hf-inference/models/${HF_MODEL}`;
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabaseAdmin = createClient(supabaseUrl, serviceKey);
 
 /**
  * Generates a "Living QR" using Hugging Face Inference APIs.
