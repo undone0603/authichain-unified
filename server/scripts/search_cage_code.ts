@@ -3,8 +3,11 @@ import "dotenv/config";
 import nodemailer from "nodemailer";
 
 async function searchWithImap() {
-  const user = process.env.GMAIL_FROM_EMAIL || "authichain@gmail.com";
-  const pass = process.env.GMAIL_APP_PASSWORD || "bnqt gvgk rjpo dvkb";
+  const user = process.env.GMAIL_USER || process.env.GMAIL_FROM_EMAIL || "authichain@gmail.com";
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!pass) {
+    throw new Error("GMAIL_APP_PASSWORD is not set");
+  }
 
   console.log(`Attempting to search Gmail for 'CAGE code' via SMTP/App Password for ${user}...`);
   
