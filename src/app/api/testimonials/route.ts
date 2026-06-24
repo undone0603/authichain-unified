@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 
 const SEED_TESTIMONIALS = [
   { id: '1', name: 'Marcus T.', role: 'Marketing Director', company: 'RetailBrand Co.', avatar_initials: 'MT', rating: 5, text: 'QRON transformed how we track our in-store QR campaigns. The AI art styling alone is worth the upgrade — our scan rates doubled in the first month.', plan: 'pro', verified: true, created_at: '2026-03-12' },
