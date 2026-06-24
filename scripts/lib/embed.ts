@@ -77,9 +77,19 @@ const providers: Provider[] = [
   },
   {
     name: 'huggingface:sentence-transformers/all-mpnet-base-v2',
-    enabled: () => !!(process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN),
+    enabled: () =>
+      !!(
+        process.env.HF_TOKEN ||
+        process.env.HF_TOKEN_PRIMARY ||
+        process.env.HUGGINGFACE_TOKEN ||
+        process.env.HUGGINGFACE_API_KEY
+      ),
     run: async (text) => {
-      const key = process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN;
+      const key =
+        process.env.HF_TOKEN ||
+        process.env.HF_TOKEN_PRIMARY ||
+        process.env.HUGGINGFACE_TOKEN ||
+        process.env.HUGGINGFACE_API_KEY;
       // Current HF Inference path (router-based). Old api-inference.huggingface.co/pipeline/*
       // paths return 404 as of late 2025.
       const res = await fetch(

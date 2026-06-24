@@ -27,7 +27,24 @@ const nextConfig = {
   // Keep Node-only logging/wallet libs out of the bundles. pino uses __dirname
   // and worker threads; bundling it (or anything that transitively imports it)
   // is a known source of "__dirname is not defined" at the edge/runtime.
-  serverExternalPackages: ['pino', 'pino-pretty', '@walletconnect/sign-client'],
+  // playwright-core is a heavy Node-only lib (ships browser-driver binaries) that
+  // gets pulled transitively into the cron API route. Keep it external so webpack
+  // require()s it at runtime instead of trying to bundle it.
+  serverExternalPackages: ['pino', 'pino-pretty', '@walletconnect/sign-client', 'playwright-core'],
+
+  // The server/* code uses ESM `.js` import specifiers that actually point at
+  // `.ts` files (e.g. `from "../db.js"` → `../db.ts`). esbuild resolves these
+  // natively, but Next.js's webpack does not — it was failing with
+  // "Module not found: Can't resolve '../db.js'". extensionAlias tells webpack
+  // to try the TypeScript sources for a `.js`/`.mjs` request, fixing every such
+  // import at once without rewriting the ~135 import statements.
+  webpack: (config) => {
+    config.resolve.extensionAlias = {
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+      '.mjs': ['.mts', '.mjs'],
+    };
+    return config;
+  },
 
   images: {
     remotePatterns: [
@@ -74,6 +91,18 @@ const nextConfig = {
     STRIPE_SECRET_KEY:        process.env.STRIPE_SECRET_KEY        ?? 'sk_test_build_placeholder',
     OPENAI_API_KEY:           process.env.OPENAI_API_KEY           ?? 'build_placeholder',
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'build_placeholder',
+
+    // Bridge unprefixed dashboard vars to the client bundle. Supabase/Stripe
+    // public values are inlined at build time, so they must be NEXT_PUBLIC_*.
+    // Our env vault stores them unprefixed (SUPABASE_URL, etc.); map them here
+    // so a single canonical dashboard var feeds both server and browser.
+    // (URL + anon key are public-by-design — access is gated by RLS.)
+    NEXT_PUBLIC_SUPABASE_URL:
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY:
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? '',
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? process.env.STRIPE_PUBLISHABLE_KEY ?? '',
   },
 };
 
