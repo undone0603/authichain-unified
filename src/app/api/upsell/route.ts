@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 
 const PLAN_LIMITS: Record<string, { qr_codes: number; scans_per_month: number; ai_styles: boolean; custom_domains: number }> = {
   free: { qr_codes: 5, scans_per_month: 500, ai_styles: false, custom_domains: 0 },
