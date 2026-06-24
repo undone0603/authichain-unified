@@ -2,7 +2,12 @@ import QRCode from 'qrcode';
 import { createClient } from '@supabase/supabase-js';
 import { validateQRScannability } from './vision';
 
-const HF_TOKEN = process.env.HUGGINGFACE_TOKEN || process.env.HF_TOKEN;
+// Canonical name is HF_TOKEN; legacy names kept as fallbacks.
+const HF_TOKEN =
+  process.env.HF_TOKEN ||
+  process.env.HF_TOKEN_PRIMARY ||
+  process.env.HUGGINGFACE_TOKEN ||
+  process.env.HUGGINGFACE_API_KEY;
 const HF_MODEL = 'DionTimmer/controlnet_qrcode-control_v1p_sd15';
 const HF_API_URL = `https://router.huggingface.co/hf-inference/models/${HF_MODEL}`;
 

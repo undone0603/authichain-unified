@@ -7,8 +7,13 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  thirdwebClientId: process.env.VITE_THIRDWEB_CLIENT_ID ?? "",
-  thirdwebSecretKey: process.env.thirdweb_api_key ?? "",
+  thirdwebClientId:
+    process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID ??
+    process.env.VITE_THIRDWEB_CLIENT_ID ??
+    process.env.THIRDWEB_CLIENT_ID ??
+    "",
+  thirdwebSecretKey:
+    process.env.THIRDWEB_SECRET_KEY ?? process.env.thirdweb_api_key ?? "",
   hubspotServiceKey: process.env.HUBSPOT_SERVICE_KEY ?? "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
