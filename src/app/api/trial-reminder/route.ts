@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { resend } from '@/lib/resend';
 
 // Called daily by Vercel cron or n8n
 // Sends reminder emails to trial users at day 10 and day 13
