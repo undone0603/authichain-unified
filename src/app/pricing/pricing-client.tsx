@@ -36,14 +36,24 @@ export function CheckoutModal({
     setLoading(false);
   };
 
+  const className = `w-full py-4 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all ${
+    loading ? 'bg-zinc-800 text-zinc-500' : 'btn-gold shadow-gold'
+  }`;
+
+  // When a Stripe payment link exists, render a real anchor. This makes
+  // checkout work even if a client-side error prevents React hydration (the
+  // onClick handler would never fire in that case, but a plain <a> still
+  // navigates). The fallback API-checkout path keeps the onClick button.
+  if (paymentLink) {
+    return (
+      <a href={paymentLink} className={className} rel="noopener">
+        {`Get ${label}`}
+      </a>
+    );
+  }
+
   return (
-    <button
-      onClick={handleCheckout}
-      disabled={loading}
-      className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all ${
-        loading ? 'bg-zinc-800 text-zinc-500' : 'btn-gold shadow-gold'
-      }`}
-    >
+    <button onClick={handleCheckout} disabled={loading} className={className}>
       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Get ${label}`}
     </button>
   );
