@@ -365,6 +365,19 @@ export const leads = pgTable("leads", {
   nextActionAt: timestamp("nextActionAt"),
   lastContactedAt: timestamp("lastContactedAt"),
   assignedTo: integer("assignedTo"),
+  // A/B Testing Fields
+  abVariant: varchar("ab_variant", { length: 1 }),
+  abTestId: integer("ab_test_id"),
+  pricingTierAssigned: varchar("pricing_tier_assigned", { length: 64 }),
+  emailVariantAssigned: varchar("email_variant_assigned", { length: 64 }),
+  linkedinVariantAssigned: varchar("linkedin_variant_assigned", { length: 1 }),
+  // Inbound email reply tracking
+  sentiment: varchar("sentiment", { length: 32 }), // positive|neutral|negative|objection
+  lastReplyAt: timestamp("lastReplyAt"),
+  objectionType: varchar("objectionType", { length: 64 }), // budget|timeline|competitor|decision_maker|other
+  nurturePaused: boolean("nurturePaused").default(false),
+  proposalsSent: integer("proposalsSent").default(0),
+  repliesReceived: integer("repliesReceived").default(0),
   metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -505,6 +518,14 @@ export const abTests = pgTable("ab_tests", {
   description: text("description"),
   type: varchar("type", { length: 64 }).notNull(),
   status: varchar("status", { length: 50 }).default("draft"),
+  hypothesis: text("hypothesis"),
+  variantA: text("variant_a"),
+  variantB: text("variant_b"),
+  hypothesisType: varchar("hypothesis_type", { length: 64 }),
+  metricType: varchar("metric_type", { length: 64 }),
+  conversionA: numeric("conversion_a", { precision: 10, scale: 4 }).default("0"),
+  conversionB: numeric("conversion_b", { precision: 10, scale: 4 }).default("0"),
+  pValue: numeric("p_value", { precision: 5, scale: 4 }),
   variants: json("variants"),
   winnerVariant: varchar("winnerVariant", { length: 64 }),
   totalParticipants: integer("totalParticipants").default(0),
@@ -514,6 +535,77 @@ export const abTests = pgTable("ab_tests", {
 });
 
 export type AbTest = typeof abTests.$inferSelect;
+
+// ─── A/B Test Results (Detailed Tracking) ────────────────────────────────────
+export const abTestResults = pgTable("ab_test_results", {
+  id: serial("id").primaryKey(),
+  abTestId: integer("ab_test_id").notNull(),
+  leadId: integer("lead_id").notNull(),
+  variantAssigned: varchar("variant_assigned", { length: 1 }).notNull(),
+  emailSent: boolean("email_sent").default(false),
+  emailOpened: boolean("email_opened").default(false),
+  emailClicked: boolean("email_clicked").default(false),
+  emailReplied: boolean("email_replied").default(false),
+  linkedinImpression: integer("linkedin_impression").default(0),
+  linkedinLike: integer("linkedin_like").default(0),
+  linkedinComment: integer("linkedin_comment").default(0),
+  linkedinShare: integer("linkedin_share").default(0),
+  pricingViewed: boolean("pricing_viewed").default(false),
+  pricingSelected: varchar("pricing_selected", { length: 64 }),
+  pricingPurchased: boolean("pricing_purchased").default(false),
+  dealConverted: boolean("deal_converted").default(false),
+  dealSize: numeric("deal_size", { precision: 12, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  abTestResultsTestIdx: index("idx_ab_test_results_test_id").on(table.abTestId),
+  abTestResultsLeadIdx: index("idx_ab_test_results_lead_id").on(table.leadId),
+  abTestResultsVariantIdx: index("idx_ab_test_results_variant").on(table.variantAssigned),
+}));
+
+export type AbTestResult = typeof abTestResults.$inferSelect;
+
+// ─── A/B Test Variants (Template Versions) ────────────────────────────────────
+export const abTestVariants = pgTable("ab_test_variants", {
+  id: serial("id").primaryKey(),
+  abTestId: integer("ab_test_id").notNull(),
+  variantName: varchar("variant_name", { length: 1 }).notNull(),
+  variantType: varchar("variant_type", { length: 64 }).notNull(),
+  templateName: varchar("template_name", { length: 256 }),
+  subject: varchar("subject", { length: 512 }),
+  htmlContent: text("html_content"),
+  textContent: text("text_content"),
+  linkedinText: text("linkedin_text"),
+  linkedinImageUrl: text("linkedin_image_url"),
+  pricingJson: jsonb("pricing_json"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  abTestVariantsTestIdx: index("idx_ab_test_variants_test_id").on(table.abTestId),
+  abTestVariantsVariantIdx: index("idx_ab_test_variants_variant").on(table.variantName),
+}));
+
+export type AbTestVariant = typeof abTestVariants.$inferSelect;
+
+// ─── Daily A/B Test Metrics ──────────────────────────────────────────────────
+export const dailyAbTestMetrics = pgTable("daily_ab_test_metrics", {
+  id: serial("id").primaryKey(),
+  abTestId: integer("ab_test_id").notNull(),
+  metricDate: text("metric_date").notNull(),
+  variantAParticipants: integer("variant_a_participants").default(0),
+  variantBParticipants: integer("variant_b_participants").default(0),
+  variantAConversions: integer("variant_a_conversions").default(0),
+  variantBConversions: integer("variant_b_conversions").default(0),
+  variantARevenue: numeric("variant_a_revenue", { precision: 12, scale: 2 }).default("0"),
+  variantBRevenue: numeric("variant_b_revenue", { precision: 12, scale: 2 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  dailyMetricsTestIdx: index("idx_daily_metrics_test_id").on(table.abTestId),
+  dailyMetricsDateIdx: index("idx_daily_metrics_date").on(table.metricDate),
+}));
+
+export type DailyAbTestMetric = typeof dailyAbTestMetrics.$inferSelect;
 
 // ─── White Label Clients ─────────────────────────────────────────────────────
 export const whiteLabelClients = pgTable("white_label_clients", {
@@ -1142,3 +1234,66 @@ export const proposals = pgTable("proposals", {
   pilotPriceUsd: integer("pilotPriceUsd"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export type Proposal = typeof proposals.$inferSelect;
+export type InsertProposal = typeof proposals.$inferInsert;
+
+// ─── Inbound Email Replies ───────────────────────────────────────────────────────
+export const inboundReplies = pgTable("inbound_replies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  leadId: integer("leadId"), // FK to leads.id, null if unmatched
+  leadEmail: varchar("leadEmail", { length: 320 }).notNull(),
+  senderName: varchar("senderName", { length: 256 }),
+  subject: varchar("subject", { length: 512 }),
+  bodyPlaintext: text("bodyPlaintext"),
+  bodyHtml: text("bodyHtml"),
+  messageId: varchar("messageId", { length: 256 }).notNull().unique(), // Resend ID for deduplication
+  sentiment: varchar("sentiment", { length: 32 }), // positive|neutral|negative|objection
+  objectionType: varchar("objectionType", { length: 64 }), // budget|timeline|competitor|decision_maker|other
+  objectionDetails: text("objectionDetails"),
+  confidence: real("confidence"), // 0.0-1.0 from Claude
+  proposalMatchId: varchar("proposalMatchId", { length: 64 }), // FK to proposals.id
+  matchConfidence: real("matchConfidence"), // how sure we are about the match
+  status: varchar("status", { length: 32 }).default("new"), // new|contacted|deal_won|disqualified|nurture_paused
+  manualOverride: boolean("manualOverride").default(false),
+  manualSentiment: varchar("manualSentiment", { length: 32 }),
+  overriddenBy: integer("overriddenBy"), // userId who overrode
+  overriddenAt: timestamp("overriddenAt"),
+  metadata: jsonb("metadata").default({}), // raw headers, thread info
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+  inboundRepliesLeadIdx: index("idx_inbound_replies_lead").on(table.leadId),
+  inboundRepliesEmailIdx: index("idx_inbound_replies_email").on(table.leadEmail),
+  inboundRepliesStatusIdx: index("idx_inbound_replies_status").on(table.status),
+  inboundRepliesSentimentIdx: index("idx_inbound_replies_sentiment").on(table.sentiment),
+}));
+
+export type InboundReply = typeof inboundReplies.$inferSelect;
+export type InsertInboundReply = typeof inboundReplies.$inferInsert;
+
+// ─── Reply Nurture Sequences ────────────────────────────────────────────────────
+export const replySequences = pgTable("reply_sequences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  leadId: integer("leadId").notNull(), // FK to leads.id
+  replyId: uuid("replyId").notNull(), // FK to inbound_replies.id
+  templateType: varchar("templateType", { length: 64 }).notNull(), // objection_budget|objection_timeline|positive_followup|reminder|objection_competitor
+  sequenceNumber: integer("sequenceNumber").default(1), // 1,2,3... in sequence
+  status: varchar("status", { length: 32 }).default("pending"), // pending|sent|clicked|bounced|paused
+  sentAt: timestamp("sentAt"),
+  clickedAt: timestamp("clickedAt"),
+  nextScheduledAt: timestamp("nextScheduledAt"),
+  emailSubject: varchar("emailSubject", { length: 512 }),
+  emailBody: text("emailBody"),
+  metadata: jsonb("metadata").default({}), // tracking info, link info
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+  replySequencesLeadIdx: index("idx_reply_sequences_lead").on(table.leadId),
+  replySequencesReplyIdx: index("idx_reply_sequences_reply").on(table.replyId),
+  replySequencesStatusIdx: index("idx_reply_sequences_status").on(table.status),
+  replySequencesScheduledIdx: index("idx_reply_sequences_scheduled").on(table.nextScheduledAt),
+}));
+
+export type ReplySequence = typeof replySequences.$inferSelect;
+export type InsertReplySequence = typeof replySequences.$inferInsert;

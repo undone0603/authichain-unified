@@ -66,7 +66,7 @@ export function RedirectRulesManager({
       toast.error('Failed to fetch redirect rules: ' + error.message);
       console.error('Error fetching redirect rules:', error);
     } else {
-      const formattedData = (data || []).map((rule) => ({
+      const formattedData = (data || []).map((rule: RedirectRule) => ({
         ...rule,
         start_time: rule.start_time
           ? new Date(rule.start_time).toISOString().slice(0, 16)
@@ -94,7 +94,7 @@ export function RedirectRulesManager({
       if (error) {
         toast.error('Failed to fetch redirect rules: ' + error.message);
       } else {
-        const formattedData = (data || []).map((rule) => ({
+        const formattedData = (data || []).map((rule: RedirectRule) => ({
           ...rule,
           start_time: rule.start_time
             ? new Date(rule.start_time).toISOString().slice(0, 16)
