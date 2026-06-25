@@ -1,0 +1,81 @@
+# .github/workflows/email-proposals.yml
+name: Email Government Proposals
+
+on:
+  schedule:
+    # Every weekday (Mon-Fri) at 10 AM EST (15:00 UTC)
+    - cron: '0 15 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (log emails without sending)'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: email-proposals
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.28.2'
+
+jobs:
+  email-proposals:
+    name: Email Proposals to Agencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Email high-fit proposals to agency contacts
+        run: pnpm exec tsx scripts/email-proposals.ts
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
+          GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
+          EMAIL_FROM:           ${{ secrets.EMAIL_FROM || 'proposals@authichain.com' }}
+          CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://calendly.com/authichain/discovery' }}
+          SALES_EMAIL:          ${{ secrets.SALES_EMAIL || 'sales@authichain.com' }}
+          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+
+      - name: Report email job failure to Slack
+        if: failure()
+        continue-on-error: true
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "text": "Email Proposals workflow failed",
+              "attachments": [
+                {
+                  "color": "danger",
+                  "title": "Email Proposals Job Failed",
+                  "title_link": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "text": "Check the workflow run for details."
+                }
+              ]
+            }'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
