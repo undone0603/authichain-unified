@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 13 * * *' # Fires every day at 9:00 AM EST
   workflow_dispatch: # Allows you to click "Run" manually to test it
+    inputs:
+      dry_run:
+        description: 'Dry run (select + preview the post, no live publish)'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: read
@@ -18,14 +24,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          
-      - name: Install Arsenal
-        run: |
-          pip install playwright requests curl-cffi
-        
-          
+
+      - name: Install dependencies
+        run: pip install requests
+
       - name: Execute Autonomous Strike
         run: python artifacts/linkedin_strike.py
         env:
-          # Securely injects your session cookie to bypass login screens
-          LINKEDIN_SESSION_COOKIE: ${{ secrets.LINKEDIN_SESSION_COOKIE }}
+          # Official LinkedIn API via OAuth 2.0 (same proven mechanism as
+          # marketing-autonomous.yml). Mint/refresh with
+          # scripts/linkedin-oauth-setup.mjs. Missing creds => graceful skip.
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_PERSON_URN:   ${{ secrets.LINKEDIN_PERSON_URN }}
+          DRY_RUN:               ${{ inputs.dry_run || 'false' }}
