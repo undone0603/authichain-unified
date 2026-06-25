@@ -33,10 +33,21 @@ interface Proposal {
   deadline: string;
 }
 
+/**
+ * Append funnel-attribution params to a CTA URL so the FunnelTracker on the
+ * landing page can tie this click back to the originating proposal/email.
+ * Safely respects any query string the base URL already carries.
+ */
+function withAttribution(url: string, prospectId: string): string {
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}prospect_id=${encodeURIComponent(prospectId)}&utm_source=email&utm_medium=gov_proposal&utm_campaign=govchain_outreach`;
+}
+
 function generateEmailHtml(proposal: Proposal): string {
   const fitReason = generateFitReason(proposal.fit_score);
   const opportunityId = proposal.notice_id;
-  const detailsUrl = `${GOVCHAIN}/${opportunityId}`;
+  const detailsUrl = withAttribution(`${GOVCHAIN}/${opportunityId}`, opportunityId);
+  const calendarUrl = withAttribution(CALENDAR_LINK, opportunityId);
 
   return `
 <!DOCTYPE html>
@@ -214,7 +225,7 @@ function generateEmailHtml(proposal: Proposal): string {
 
       <div class="cta-section">
         <p style="margin-top: 0; font-size: 14px;"><strong>Ready to discuss this opportunity?</strong></p>
-        <a href="${CALENDAR_LINK}" class="btn btn-primary">Schedule Discovery Call</a>
+        <a href="${calendarUrl}" class="btn btn-primary">Schedule Discovery Call</a>
         <a href="${detailsUrl}" class="btn btn-secondary">View Full Details</a>
       </div>
 

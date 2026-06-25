@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ReferralTracker } from '@/components/ReferralTracker';
+import { FunnelTracker } from '@/components/FunnelTracker';
 import { ThemeManager } from '@/components/ThemeManager';
 import { TRPCProvider } from '@/components/TRPCProvider';
 import React, { Suspense } from 'react';
@@ -71,6 +72,12 @@ export default function RootLayout({
           <ThirdwebProvider>
             <Suspense fallback={null}>
               <ReferralTracker />
+            </Suspense>
+            {/* Attributes inbound campaign traffic (email/social) to the
+                conversion funnel. No-op unless the URL carries
+                ?prospect_id=&utm_source=, so it's safe on every page. */}
+            <Suspense fallback={null}>
+              <FunnelTracker stage="visit_landing_page" />
             </Suspense>
             {children}
           </ThirdwebProvider>
