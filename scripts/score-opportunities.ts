@@ -1,12 +1,13 @@
 // scripts/score-opportunities.ts
 import { createClient } from '@supabase/supabase-js';
-// @ts-ignore - package installed separately
-import { Pinecone } from '@pinecone-database/pinecone';
 import { chat } from './lib/llm.ts';
 
+// Scoring reads opportunities exclusively from Supabase (the source of truth);
+// it never queries Pinecone. The previous `new Pinecone(...)` client was unused
+// dead code and its static import aborted this job with ERR_MODULE_NOT_FOUND
+// when @pinecone-database/pinecone wasn't installed — removed.
 const isDryRun  = process.env.DRY_RUN === 'true';
 const supabase  = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
-const _pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
 const GOVCHAIN  = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
 const AUTHICHAIN_PROFILE = `
