@@ -365,6 +365,12 @@ export const leads = pgTable("leads", {
   nextActionAt: timestamp("nextActionAt"),
   lastContactedAt: timestamp("lastContactedAt"),
   assignedTo: integer("assignedTo"),
+  // A/B Testing Fields
+  abVariant: varchar("ab_variant", { length: 1 }),
+  abTestId: integer("ab_test_id"),
+  pricingTierAssigned: varchar("pricing_tier_assigned", { length: 64 }),
+  emailVariantAssigned: varchar("email_variant_assigned", { length: 64 }),
+  linkedinVariantAssigned: varchar("linkedin_variant_assigned", { length: 1 }),
   metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -505,6 +511,14 @@ export const abTests = pgTable("ab_tests", {
   description: text("description"),
   type: varchar("type", { length: 64 }).notNull(),
   status: varchar("status", { length: 50 }).default("draft"),
+  hypothesis: text("hypothesis"),
+  variantA: text("variant_a"),
+  variantB: text("variant_b"),
+  hypothesisType: varchar("hypothesis_type", { length: 64 }),
+  metricType: varchar("metric_type", { length: 64 }),
+  conversionA: numeric("conversion_a", { precision: 10, scale: 4 }).default("0"),
+  conversionB: numeric("conversion_b", { precision: 10, scale: 4 }).default("0"),
+  pValue: numeric("p_value", { precision: 5, scale: 4 }),
   variants: json("variants"),
   winnerVariant: varchar("winnerVariant", { length: 64 }),
   totalParticipants: integer("totalParticipants").default(0),
@@ -514,6 +528,77 @@ export const abTests = pgTable("ab_tests", {
 });
 
 export type AbTest = typeof abTests.$inferSelect;
+
+// ─── A/B Test Results (Detailed Tracking) ────────────────────────────────────
+export const abTestResults = pgTable("ab_test_results", {
+  id: serial("id").primaryKey(),
+  abTestId: integer("ab_test_id").notNull(),
+  leadId: integer("lead_id").notNull(),
+  variantAssigned: varchar("variant_assigned", { length: 1 }).notNull(),
+  emailSent: boolean("email_sent").default(false),
+  emailOpened: boolean("email_opened").default(false),
+  emailClicked: boolean("email_clicked").default(false),
+  emailReplied: boolean("email_replied").default(false),
+  linkedinImpression: integer("linkedin_impression").default(0),
+  linkedinLike: integer("linkedin_like").default(0),
+  linkedinComment: integer("linkedin_comment").default(0),
+  linkedinShare: integer("linkedin_share").default(0),
+  pricingViewed: boolean("pricing_viewed").default(false),
+  pricingSelected: varchar("pricing_selected", { length: 64 }),
+  pricingPurchased: boolean("pricing_purchased").default(false),
+  dealConverted: boolean("deal_converted").default(false),
+  dealSize: numeric("deal_size", { precision: 12, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  abTestResultsTestIdx: index("idx_ab_test_results_test_id").on(table.abTestId),
+  abTestResultsLeadIdx: index("idx_ab_test_results_lead_id").on(table.leadId),
+  abTestResultsVariantIdx: index("idx_ab_test_results_variant").on(table.variantAssigned),
+}));
+
+export type AbTestResult = typeof abTestResults.$inferSelect;
+
+// ─── A/B Test Variants (Template Versions) ────────────────────────────────────
+export const abTestVariants = pgTable("ab_test_variants", {
+  id: serial("id").primaryKey(),
+  abTestId: integer("ab_test_id").notNull(),
+  variantName: varchar("variant_name", { length: 1 }).notNull(),
+  variantType: varchar("variant_type", { length: 64 }).notNull(),
+  templateName: varchar("template_name", { length: 256 }),
+  subject: varchar("subject", { length: 512 }),
+  htmlContent: text("html_content"),
+  textContent: text("text_content"),
+  linkedinText: text("linkedin_text"),
+  linkedinImageUrl: text("linkedin_image_url"),
+  pricingJson: jsonb("pricing_json"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  abTestVariantsTestIdx: index("idx_ab_test_variants_test_id").on(table.abTestId),
+  abTestVariantsVariantIdx: index("idx_ab_test_variants_variant").on(table.variantName),
+}));
+
+export type AbTestVariant = typeof abTestVariants.$inferSelect;
+
+// ─── Daily A/B Test Metrics ──────────────────────────────────────────────────
+export const dailyAbTestMetrics = pgTable("daily_ab_test_metrics", {
+  id: serial("id").primaryKey(),
+  abTestId: integer("ab_test_id").notNull(),
+  metricDate: text("metric_date").notNull(),
+  variantAParticipants: integer("variant_a_participants").default(0),
+  variantBParticipants: integer("variant_b_participants").default(0),
+  variantAConversions: integer("variant_a_conversions").default(0),
+  variantBConversions: integer("variant_b_conversions").default(0),
+  variantARevenue: numeric("variant_a_revenue", { precision: 12, scale: 2 }).default("0"),
+  variantBRevenue: numeric("variant_b_revenue", { precision: 12, scale: 2 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  dailyMetricsTestIdx: index("idx_daily_metrics_test_id").on(table.abTestId),
+  dailyMetricsDateIdx: index("idx_daily_metrics_date").on(table.metricDate),
+}));
+
+export type DailyAbTestMetric = typeof dailyAbTestMetrics.$inferSelect;
 
 // ─── White Label Clients ─────────────────────────────────────────────────────
 export const whiteLabelClients = pgTable("white_label_clients", {

@@ -20,6 +20,9 @@ Strengths: blockchain provenance, anti-counterfeiting, supply chain visibility,
 IoT-linked authentication, zero-trust verification.
 `;
 
+const FIT_THRESHOLD_HIGH = 70;  // Only pursue high-fit opportunities
+const FIT_THRESHOLD_BORDERLINE = 60; // Manual review queue threshold
+
 async function scoreOpportunities(): Promise<{ scored: number; failed: number; total: number }> {
   const { data: opps, error } = await supabase
     .from('gov_opportunities')
@@ -68,6 +71,18 @@ Description: ${(opp.description ?? '').slice(0, 2000)}
 
       const result = JSON.parse(content || '{}');
 
+      // Determine recommended action based on fit_score thresholds
+      let finalAction = result.recommended_action;
+      if (result.fit_score >= FIT_THRESHOLD_HIGH) {
+        finalAction = 'pursue';
+      } else if (result.fit_score >= FIT_THRESHOLD_BORDERLINE) {
+        finalAction = 'qualify'; // Borderline — manual review queue
+      } else {
+        finalAction = 'skip';
+      }
+
+      const newStatus = finalAction === 'skip' ? 'skipped' : 'scored';
+
       if (!isDryRun) {
         await supabase
           .from('gov_opportunities')
@@ -75,15 +90,15 @@ Description: ${(opp.description ?? '').slice(0, 2000)}
             fit_score:            result.fit_score,
             ai_reasoning:         result.reasoning,
             key_requirements:     result.key_requirements,
-            recommended_action:   result.recommended_action,
-            status:               result.recommended_action === 'skip' ? 'skipped' : 'scored',
+            recommended_action:   finalAction,
+            status:               newStatus,
             scored_at:            new Date().toISOString(),
             govchain_detail_url:  `${GOVCHAIN}/opportunities/${opp.notice_id}`,
           })
           .eq('notice_id', opp.notice_id);
       }
 
-      console.log(`  [${result.fit_score}/100] ${opp.title?.slice(0, 60)} → ${result.recommended_action}`);
+      console.log(`  [${result.fit_score}/100] ${opp.title?.slice(0, 60)} → ${finalAction}`);
       scored++;
     } catch (err: any) {
       // Per-opportunity failure: log and continue so one bad call doesn't kill
