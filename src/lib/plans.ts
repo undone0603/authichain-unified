@@ -83,8 +83,7 @@ export const PLANS: Plan[] = [
     price_suffix: '/month',
     description: 'Industrial AgTech & StrainChain Provenance',
     generations: 5000,
-    stripe_price_id: 'price_theater_1',
-    stripe_payment_link: 'https://qron.space/contact',
+    stripe_price_id: 'price_1TmDKJGqTruSqV8TGwxK8oc5',
     stripe_mode: 'subscription',
     tier: 'enterprise',
     features: [
@@ -103,8 +102,7 @@ export const PLANS: Plan[] = [
     price_suffix: '/month',
     description: 'The Ultimate Industrial & Luxury Security',
     generations: 0,
-    stripe_price_id: 'price_theater_3',
-    stripe_payment_link: 'https://qron.space/contact',
+    stripe_price_id: 'price_1TmDKQGqTruSqV8TvSILgzXM',
     stripe_mode: 'subscription',
     tier: 'enterprise',
     features: [

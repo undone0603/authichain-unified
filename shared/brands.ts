@@ -4,6 +4,23 @@
 
 export type BrandId = 'authichain' | 'qron' | 'strainchain' | 'govchain';
 
+/**
+ * Per-brand billing + transactional-email config. Used by the shared billing
+ * code path (checkout, webhook provisioning, dunning, win-back, referral) so a
+ * single implementation serves every brand. Contains NO secrets — Stripe keys
+ * live in env and are referenced here by variable NAME only.
+ */
+export interface BrandBilling {
+  /** From header for transactional billing email, e.g. "QRON <billing@qron.space>" */
+  emailFrom:        string;
+  /** Where billing questions go, surfaced in email + dunning. */
+  supportEmail:     string;
+  /** Canonical https origin for links in emails/checkout returns. */
+  appUrl:           string;
+  /** Name of the env var holding this brand's Stripe webhook signing secret. */
+  webhookSecretEnv: string;
+}
+
 export interface Brand {
   id:           BrandId;
   displayName:  string;
@@ -18,6 +35,8 @@ export interface Brand {
   ctaLabel:     string;
   /** Relative path (`/dashboard`) or absolute URL */
   ctaHref:      string;
+  /** Billing + transactional-email config (single source for all brands). */
+  billing:      BrandBilling;
 }
 
 export const BRANDS: Record<BrandId, Brand> = {
@@ -32,6 +51,12 @@ export const BRANDS: Record<BrandId, Brand> = {
     accentHex:   '#00FFD1',
     ctaLabel:    'Start Authenticating',
     ctaHref:     '/dashboard',
+    billing: {
+      emailFrom:        'AuthiChain <billing@authichain.com>',
+      supportEmail:     'support@authichain.com',
+      appUrl:           'https://authichain.com',
+      webhookSecretEnv: 'STRIPE_WEBHOOK_AUTHICHAIN_SECRET',
+    },
   },
   qron: {
     id:          'qron',
@@ -44,6 +69,12 @@ export const BRANDS: Record<BrandId, Brand> = {
     accentHex:   '#F59E0B',
     ctaLabel:    'Generate QR Art',
     ctaHref:     '/qr-codes',
+    billing: {
+      emailFrom:        'QRON <billing@qron.space>',
+      supportEmail:     'support@qron.space',
+      appUrl:           'https://qron.space',
+      webhookSecretEnv: 'STRIPE_WEBHOOK_SECRET',
+    },
   },
   strainchain: {
     id:          'strainchain',
@@ -56,6 +87,12 @@ export const BRANDS: Record<BrandId, Brand> = {
     accentHex:   '#22C55E',
     ctaLabel:    'Explore StrainChain',
     ctaHref:     '/supply-chain',
+    billing: {
+      emailFrom:        'StrainChain <billing@strainchain.io>',
+      supportEmail:     'support@strainchain.io',
+      appUrl:           'https://strainchain.io',
+      webhookSecretEnv: 'STRIPE_WEBHOOK_SECRET',
+    },
   },
   govchain: {
     id:          'govchain',
@@ -68,6 +105,12 @@ export const BRANDS: Record<BrandId, Brand> = {
     accentHex:   '#1B4FD8',
     ctaLabel:    'View Opportunities',
     ctaHref:     '/grants',
+    billing: {
+      emailFrom:        'GovChain <billing@govchain.us>',
+      supportEmail:     'support@govchain.us',
+      appUrl:           'https://govchain.us',
+      webhookSecretEnv: 'STRIPE_WEBHOOK_SECRET',
+    },
   },
 };
 

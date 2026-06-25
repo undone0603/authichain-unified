@@ -5,7 +5,9 @@
     { "path": "/api/cron/pipeline",                           "schedule": "0 0 * * *" },
     { "path": "/api/automation/cron",                         "schedule": "0 6 * * *" },
     { "path": "/api/cron/jobs?job=subscription-health-check", "schedule": "0 3 * * *" },
-    { "path": "/api/cron/jobs?job=customer-health-score",     "schedule": "0 5 * * *" }
+    { "path": "/api/cron/jobs?job=customer-health-score",     "schedule": "0 5 * * *" },
+    { "path": "/api/cron/retention",                          "schedule": "0 9 * * *" },
+    { "path": "/api/trial-reminder",                          "schedule": "0 10 * * *" }
   ],
   "rewrites": [
     {
@@ -23,5 +25,5 @@
       ]
     }
   ],
-  "ignoreCommand": "bash -c 'case \"$VERCEL_GIT_COMMIT_AUTHOR_LOGIN\" in undone0603|claude) exit 1;; *) exit 0;; esac'"
+  "ignoreCommand": "bash -c 'if [ \"$VERCEL_ENV\" = \"production\" ]; then exit 1; fi; git diff --quiet HEAD~1 -- src/ pages/ public/ workers/ scripts/ lib/ shared/ next.config.js package.json vercel.json && exit 0 || exit 1'"
 }

@@ -1,11 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from './email';
+import { BRANDS, DEFAULT_BRAND, type BrandId } from '@shared/brands';
 
 function getAdmin() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
+}
+
+function brandOf(value: string | null | undefined): BrandId {
+  return value && value in BRANDS ? (value as BrandId) : DEFAULT_BRAND;
 }
 
 type Step = 'day_3' | 'day_7' | 'day_14';
@@ -16,12 +21,10 @@ const SUBJECTS: Record<Step, string> = {
   day_14: 'Final notice: account at risk of suspension',
 };
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://authichain.com';
-
-function buildBody(step: Step, name: string, plan: string): { html: string; text: string } {
+function buildBody(step: Step, name: string, plan: string, appUrl: string): { html: string; text: string } {
   const firstName = name || 'there';
   const planLabel = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'Pro';
-  const billingUrl = `${APP_URL}/dashboard/billing`;
+  const billingUrl = `${appUrl}/dashboard/billing`;
 
   const urgency: Record<Step, { color: string; headline: string; body: string }> = {
     day_3: {
@@ -65,7 +68,7 @@ export async function runDunningEscalation(): Promise<{ checked: number; reminde
   // Fetch past_due profiles with their last_payment_at
   const { data: pastDue } = await admin
     .from('profiles')
-    .select('id, email, full_name, subscription_plan, subscription_status, last_payment_at')
+    .select('id, email, full_name, subscription_plan, subscription_status, last_payment_at, brand')
     .eq('subscription_status', 'past_due')
     .limit(100);
 
@@ -92,12 +95,13 @@ export async function runDunningEscalation(): Promise<{ checked: number; reminde
 
     if (existing && existing.length > 0) continue;
 
-    const p = profile as { id: string; email?: string; full_name?: string; subscription_plan?: string };
+    const p = profile as { id: string; email?: string; full_name?: string; subscription_plan?: string; brand?: string };
     if (!p.email) continue;
 
-    const { html, text } = buildBody(step, p.full_name?.split(' ')[0] ?? '', p.subscription_plan ?? '');
+    const brand = BRANDS[brandOf(p.brand)];
+    const { html, text } = buildBody(step, p.full_name?.split(' ')[0] ?? '', p.subscription_plan ?? '', brand.billing.appUrl);
     const result = await sendEmail({
-      from: 'AuthiChain Billing <billing@qron.space>',
+      from: brand.billing.emailFrom,
       to: p.email,
       subject: SUBJECTS[step],
       html,
