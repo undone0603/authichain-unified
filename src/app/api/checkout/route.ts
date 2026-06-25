@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server';
 import { PLANS } from '@/lib/plans';
 import { createClient } from '@/utils/supabase/server';
 import { logAutomation } from '@/lib/automation';
+import { getBrandIdFromRequest } from '@/lib/brand-billing';
+
+/** Read a single cookie value from a Cookie header. */
+function readCookie(cookieHeader: string, name: string): string | undefined {
+  return cookieHeader
+    .split(';')
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${name}=`))
+    ?.slice(`${name}=`.length);
+}
 
 export const runtime = 'nodejs';
 
@@ -56,17 +66,22 @@ export async function POST(request: Request) {
     // Track checkout start
     await trackFunnelEvent(prospectId || null, 'start_checkout', source || 'direct');
 
+    // Active brand (Host header → x-brand) so the webhook provisions, emails,
+    // and duns under the right brand. Falls back to DEFAULT_BRAND.
+    const brand = getBrandIdFromRequest(request);
+
     // Affiliate attribution: explicit body param wins, else the aff_ref cookie
     // set by middleware when the buyer landed via ?ref=CODE.
     const cookieHeader = request.headers.get('cookie') || '';
-    const cookieRef = cookieHeader
-      .split(';')
-      .map((c) => c.trim())
-      .find((c) => c.startsWith('aff_ref='))
-      ?.slice('aff_ref='.length);
+    const cookieRef = readCookie(cookieHeader, 'aff_ref');
     const affiliateCode = (body.affiliateCode || (cookieRef ? decodeURIComponent(cookieRef) : '') || '')
       .trim()
       .slice(0, 64);
+
+    // User-to-user referral code (account-credit reward), distinct from the B2B
+    // affiliate code. Set client-side by ReferralTracker as the `ref_code` cookie.
+    const cookieReferral = readCookie(cookieHeader, 'ref_code');
+    const refCode = (cookieReferral ? decodeURIComponent(cookieReferral) : '').trim().slice(0, 64);
 
     const plan = PLANS.find((p) => p.id === planId);
     if (!plan) {
@@ -110,8 +125,10 @@ export async function POST(request: Request) {
       ...(email ? { customer_email: email } : {}),
       metadata: {
         plan: plan.id,
+        brand,
         ...(userId ? { user_id: userId } : {}),
         ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
+        ...(refCode ? { ref_code: refCode } : {}),
         ...(prospectId ? { prospect_id: prospectId } : {}),
         ...(source ? { source } : {}),
       },
@@ -122,8 +139,10 @@ export async function POST(request: Request) {
             subscription_data: {
               metadata: {
                 plan: plan.id,
+                brand,
                 ...(userId ? { user_id: userId } : {}),
                 ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
+                ...(refCode ? { ref_code: refCode } : {}),
                 ...(prospectId ? { prospect_id: prospectId } : {}),
                 ...(source ? { source } : {}),
               },
