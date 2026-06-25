@@ -516,6 +516,17 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
 // â”€â”€â”€ Webhook handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function POST(request: Request) {
+  // RETIRED: consolidated into /api/stripe/webhook. This handler had no
+  // idempotency guard and read a stale `planId` metadata key. Point the Stripe
+  // endpoint at /api/stripe/webhook. Set STRIPE_WEBHOOK_LEGACY_ENABLED=true to
+  // temporarily re-enable during cutover.
+  if (process.env.STRIPE_WEBHOOK_LEGACY_ENABLED !== 'true') {
+    return NextResponse.json(
+      { error: 'Endpoint retired — point Stripe at /api/stripe/webhook', deprecated: true },
+      { status: 410 },
+    );
+  }
+
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
