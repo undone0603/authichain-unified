@@ -4,5 +4,4 @@ Disallow: /api/
 Disallow: /admin/
 Disallow: /dashboard/
 
-Sitemap: https://authichain.com/sitemap.xml
-Sitemap: https://authichain.com/sitemap-index.xml
+Sitemap: https://qron.space/sitemap.xml

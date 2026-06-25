@@ -5,6 +5,32 @@ import { logAutomation } from '@/lib/automation';
 
 export const runtime = 'nodejs';
 
+async function trackFunnelEvent(
+  prospectId: string | null,
+  stage: 'start_checkout' | 'complete_checkout',
+  source: string
+) {
+  if (!prospectId) return; // Only track if we have prospect ID
+
+  try {
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+    const supabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    await supabase.from('funnel_events').insert({
+      prospect_id: prospectId,
+      stage,
+      source: source || 'direct',
+      metadata: {},
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(`[checkout] Failed to track funnel event (${stage}):`, error);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -15,17 +41,20 @@ export async function POST(request: Request) {
       );
     }
 
-    let body: { planId?: string; email?: string; affiliateCode?: string };
+    let body: { planId?: string; email?: string; affiliateCode?: string; prospectId?: string; source?: string };
     try {
       body = await request.json();
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const { planId, email } = body;
+    const { planId, email, prospectId, source } = body;
     if (!planId) {
       return NextResponse.json({ error: 'planId is required' }, { status: 400 });
     }
+
+    // Track checkout start
+    await trackFunnelEvent(prospectId || null, 'start_checkout', source || 'direct');
 
     // Affiliate attribution: explicit body param wins, else the aff_ref cookie
     // set by middleware when the buyer landed via ?ref=CODE.
@@ -76,13 +105,15 @@ export async function POST(request: Request) {
       mode: plan.stripe_mode,
       payment_method_types: ['card'],
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
-      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}${prospectId ? `&prospect_id=${prospectId}` : ''}${source ? `&utm_source=${source}` : ''}`,
       cancel_url: `${origin}/#pricing`,
       ...(email ? { customer_email: email } : {}),
       metadata: {
         plan: plan.id,
         ...(userId ? { user_id: userId } : {}),
         ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
+        ...(prospectId ? { prospect_id: prospectId } : {}),
+        ...(source ? { source } : {}),
       },
       // For subscriptions, allow promo codes and show a cancel URL
       ...(plan.stripe_mode === 'subscription'
@@ -93,6 +124,8 @@ export async function POST(request: Request) {
                 plan: plan.id,
                 ...(userId ? { user_id: userId } : {}),
                 ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
+                ...(prospectId ? { prospect_id: prospectId } : {}),
+                ...(source ? { source } : {}),
               },
             },
           }
