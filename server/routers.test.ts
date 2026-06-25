@@ -467,6 +467,25 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(Array.isArray(result)).toBe(true);
     });
 
+    it("admin router calls the injected admin repository when provided", async () => {
+      const mockRepo = {
+        getAdminDashboardMetrics: vi.fn(),
+        getAllUsers: vi.fn().mockResolvedValue([{ id: 1, email: "injected@admin.com" }]),
+        getRevenueAnalytics: vi.fn().mockResolvedValue([]),
+        getSubscriptionAnalytics: vi.fn().mockResolvedValue([]),
+        getOpenFraudAlerts: vi.fn(),
+        getAllHealthScores: vi.fn(),
+        getRecentActivity: vi.fn(),
+      };
+      const ctx = createAuthContext("admin");
+      ctx.adminRepo = mockRepo;
+
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.admin.users();
+      expect(result).toEqual([{ id: 1, email: "injected@admin.com" }]);
+      expect(mockRepo.getAllUsers).toHaveBeenCalled();
+    });
+
     it("whiteLabel.list returns array", async () => {
       const ctx = createAuthContext("admin");
       const caller = appRouter.createCaller(ctx);
