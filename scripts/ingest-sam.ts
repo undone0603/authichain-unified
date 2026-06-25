@@ -2,8 +2,6 @@
 // FIXED: proper ESM .ts file — replaces broken `tsx -e "..."` inline pattern
 // Top-level await works correctly here when invoked via `pnpm exec tsx scripts/ingest-sam.ts`
 import { createClient } from '@supabase/supabase-js';
-// @ts-ignore - package installed separately
-import { Pinecone } from '@pinecone-database/pinecone';
 import { embed } from './lib/embed.ts';
 
 const isDryRun = process.env.DRY_RUN === 'true';
@@ -14,15 +12,25 @@ const supabase = createClient(
 );
 
 // Pinecone is optional — Supabase is the source of truth for downstream
-// scoring/proposal jobs. A missing or misconfigured Pinecone index should
-// degrade gracefully rather than kill the whole pipeline.
-const pineconeIndex: ReturnType<Pinecone['index']> | null = (() => {
+// scoring/proposal jobs. The SDK is imported lazily (dynamic import inside a
+// try/catch) so a missing package or a misconfigured/unreachable index degrades
+// gracefully rather than killing the whole pipeline. A previous static
+// `import { Pinecone } from '@pinecone-database/pinecone'` aborted module load
+// with ERR_MODULE_NOT_FOUND whenever the package wasn't installed, taking the
+// entire ingest job (and the dependent score/propose jobs) down with it.
+const pineconeIndex: any = await (async () => {
   const { PINECONE_API_KEY, PINECONE_INDEX } = process.env;
   if (!PINECONE_API_KEY || !PINECONE_INDEX) {
     console.warn('⚠️  Pinecone not configured (PINECONE_API_KEY / PINECONE_INDEX missing) — vector writes will be skipped.');
     return null;
   }
-  return new Pinecone({ apiKey: PINECONE_API_KEY }).index(PINECONE_INDEX);
+  try {
+    const { Pinecone } = await import('@pinecone-database/pinecone');
+    return new Pinecone({ apiKey: PINECONE_API_KEY }).index(PINECONE_INDEX);
+  } catch (err: any) {
+    console.warn(`⚠️  Pinecone SDK unavailable (${(err?.message ?? String(err)).slice(0, 140)}) — vector writes will be skipped.`);
+    return null;
+  }
 })();
 let pineconeDisabled = pineconeIndex === null;
 
