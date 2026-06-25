@@ -14,6 +14,38 @@ from langchain_openai import ChatOpenAI
 from agentz.core.credentials import get
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
+import httpx
+
+class LMStudioManager:
+    """Manages model lifecycle using native LM Studio v1 REST API."""
+    def __init__(self, base_url="http://localhost:1234"):
+        self.base_url = base_url
+
+    def load_model(self, model_identifier: str):
+        """Loads a model via v1 API."""
+        url = f"{self.base_url}/api/v1/models/load"
+        try:
+            with httpx.Client() as client:
+                response = client.post(url, json={"model": model_identifier}, timeout=30.0)
+                response.raise_for_status()
+                logger.info(f"Successfully loaded model: {model_identifier}")
+        except Exception as e:
+            logger.error(f"Failed to load model {model_identifier}: {e}")
+
+    def unload_model(self, model_identifier: str):
+        """Unloads a model via v1 API."""
+        url = f"{self.base_url}/api/v1/models/unload"
+        try:
+            with httpx.Client() as client:
+                response = client.post(url, json={"model": model_identifier}, timeout=30.0)
+                response.raise_for_status()
+                logger.info(f"Successfully unloaded model: {model_identifier}")
+        except Exception as e:
+            logger.error(f"Failed to unload model {model_identifier}: {e}")
+
+# Global manager instance
+lm_manager = LMStudioManager()
+
 logger = logging.getLogger("agentz.llm")
 
 # Global provider health state to avoid repeated failures in the same session

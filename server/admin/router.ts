@@ -1,27 +1,32 @@
 import { adminProcedure, router } from "../_core/trpc";
-import * as db from "../db";
+import { DbAdminRepository } from "./db-repository";
+import { logActivity } from "../db";
 import { z } from "zod";
 
 export const adminRouter = router({
-  metrics: adminProcedure.query(async () => {
-    return await db.getAdminDashboardMetrics();
+  metrics: adminProcedure.query(async ({ ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getAdminDashboardMetrics();
   }),
-  users: adminProcedure.query(async () => {
-    return await db.getAllUsers();
+  users: adminProcedure.query(async ({ ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getAllUsers();
   }),
   revenue: adminProcedure.input(z.object({
     startDate: z.string().optional(),
     endDate: z.string().optional(),
-  }).optional()).query(async ({ input }) => {
-    return await db.getRevenueAnalytics(
+  }).optional()).query(async ({ input, ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getRevenueAnalytics(
       input?.startDate ? new Date(input.startDate) : undefined,
       input?.endDate ? new Date(input.endDate) : undefined,
     );
   }),
-  revenueStats: adminProcedure.query(async () => {
+  revenueStats: adminProcedure.query(async ({ ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
     const [allRevenue, allSubs] = await Promise.all([
-      db.getRevenueAnalytics(),
-      db.getSubscriptionAnalytics(),
+      repo.getRevenueAnalytics(),
+      repo.getSubscriptionAnalytics(),
     ]);
 
     // Revenue aggregations
@@ -77,17 +82,21 @@ export const adminRouter = router({
       pastDueSubs: subsByStatus["past_due"] || 0,
     };
   }),
-  fraudAlerts: adminProcedure.query(async () => {
-    return await db.getOpenFraudAlerts();
+  fraudAlerts: adminProcedure.query(async ({ ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getOpenFraudAlerts();
   }),
-  healthScores: adminProcedure.query(async () => {
-    return await db.getAllHealthScores();
+  healthScores: adminProcedure.query(async ({ ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getAllHealthScores();
   }),
-  activity: adminProcedure.input(z.object({ limit: z.number().min(1).max(500).optional().default(50) })).query(async ({ input }) => {
-    return await db.getRecentActivity(input.limit);
+  activity: adminProcedure.input(z.object({ limit: z.number().min(1).max(500).optional().default(50) })).query(async ({ input, ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getRecentActivity(input.limit);
   }),
-  subscriptions: adminProcedure.query(async () => {
-    return await db.getSubscriptionAnalytics();
+  subscriptions: adminProcedure.query(async ({ ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getSubscriptionAnalytics();
   }),
   platformStaking: adminProcedure.query(async () => {
     // stakingPositions schema table is scaffolded but not yet migrated;
@@ -100,7 +109,7 @@ export const adminRouter = router({
     value: z.number().min(0),
     description: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
-    await db.logActivity({
+    await logActivity({
       userId: ctx.user.id,
       action: 'sovereign_deal_created',
       entityType: 'deal',
