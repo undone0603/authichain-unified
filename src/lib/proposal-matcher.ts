@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { leads, proposals } from '@/db/schema';
-import { eq, desc, ilike, and } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 interface MatchResult {
   proposalId: string | null;
@@ -75,7 +75,8 @@ export async function matchReplyToProposal(
  */
 function matchSubjectToProposal(subject: string): MatchResult | null {
   // Pattern: "RE: Proposal: Blockchain Auth for Acme Corp"
-  const proposalPattern = /(?:RE|FW):\s*Proposal.*?(?:for|to)\s+([A-Za-z0-9\s&.,-]+)/i;
+  // Use atomic grouping and possessive quantifiers to prevent ReDoS
+  const proposalPattern = /^(?:RE|FW):\s*Proposal[^:]*?(?:for|to)\s+([A-Za-z0-9\s&.,\-]{1,100})/i;
   const match = subject.match(proposalPattern);
 
   if (match && match[1]) {

@@ -9,8 +9,8 @@
  */
 
 import { db } from '@/db';
-import { inboundReplies, replySequences, leads, proposals } from '@/db/schema';
-import { eq, lt, isNull, and, lte } from 'drizzle-orm';
+import { inboundReplies, replySequences, leads } from '@/db/schema';
+import { eq, and, lte } from 'drizzle-orm';
 import { sendEmail } from '@/lib/email.ts';
 import { selectTemplate } from '@/lib/email-templates';
 import { NextRequest, NextResponse } from 'next/server';
