@@ -371,6 +371,13 @@ export const leads = pgTable("leads", {
   pricingTierAssigned: varchar("pricing_tier_assigned", { length: 64 }),
   emailVariantAssigned: varchar("email_variant_assigned", { length: 64 }),
   linkedinVariantAssigned: varchar("linkedin_variant_assigned", { length: 1 }),
+  // Inbound email reply tracking
+  sentiment: varchar("sentiment", { length: 32 }), // positive|neutral|negative|objection
+  lastReplyAt: timestamp("lastReplyAt"),
+  objectionType: varchar("objectionType", { length: 64 }), // budget|timeline|competitor|decision_maker|other
+  nurturePaused: boolean("nurturePaused").default(false),
+  proposalsSent: integer("proposalsSent").default(0),
+  repliesReceived: integer("repliesReceived").default(0),
   metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -1227,3 +1234,66 @@ export const proposals = pgTable("proposals", {
   pilotPriceUsd: integer("pilotPriceUsd"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export type Proposal = typeof proposals.$inferSelect;
+export type InsertProposal = typeof proposals.$inferInsert;
+
+// ─── Inbound Email Replies ───────────────────────────────────────────────────────
+export const inboundReplies = pgTable("inbound_replies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  leadId: integer("leadId"), // FK to leads.id, null if unmatched
+  leadEmail: varchar("leadEmail", { length: 320 }).notNull(),
+  senderName: varchar("senderName", { length: 256 }),
+  subject: varchar("subject", { length: 512 }),
+  bodyPlaintext: text("bodyPlaintext"),
+  bodyHtml: text("bodyHtml"),
+  messageId: varchar("messageId", { length: 256 }).notNull().unique(), // Resend ID for deduplication
+  sentiment: varchar("sentiment", { length: 32 }), // positive|neutral|negative|objection
+  objectionType: varchar("objectionType", { length: 64 }), // budget|timeline|competitor|decision_maker|other
+  objectionDetails: text("objectionDetails"),
+  confidence: real("confidence"), // 0.0-1.0 from Claude
+  proposalMatchId: varchar("proposalMatchId", { length: 64 }), // FK to proposals.id
+  matchConfidence: real("matchConfidence"), // how sure we are about the match
+  status: varchar("status", { length: 32 }).default("new"), // new|contacted|deal_won|disqualified|nurture_paused
+  manualOverride: boolean("manualOverride").default(false),
+  manualSentiment: varchar("manualSentiment", { length: 32 }),
+  overriddenBy: integer("overriddenBy"), // userId who overrode
+  overriddenAt: timestamp("overriddenAt"),
+  metadata: jsonb("metadata").default({}), // raw headers, thread info
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+  inboundRepliesLeadIdx: index("idx_inbound_replies_lead").on(table.leadId),
+  inboundRepliesEmailIdx: index("idx_inbound_replies_email").on(table.leadEmail),
+  inboundRepliesStatusIdx: index("idx_inbound_replies_status").on(table.status),
+  inboundRepliesSentimentIdx: index("idx_inbound_replies_sentiment").on(table.sentiment),
+}));
+
+export type InboundReply = typeof inboundReplies.$inferSelect;
+export type InsertInboundReply = typeof inboundReplies.$inferInsert;
+
+// ─── Reply Nurture Sequences ────────────────────────────────────────────────────
+export const replySequences = pgTable("reply_sequences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  leadId: integer("leadId").notNull(), // FK to leads.id
+  replyId: uuid("replyId").notNull(), // FK to inbound_replies.id
+  templateType: varchar("templateType", { length: 64 }).notNull(), // objection_budget|objection_timeline|positive_followup|reminder|objection_competitor
+  sequenceNumber: integer("sequenceNumber").default(1), // 1,2,3... in sequence
+  status: varchar("status", { length: 32 }).default("pending"), // pending|sent|clicked|bounced|paused
+  sentAt: timestamp("sentAt"),
+  clickedAt: timestamp("clickedAt"),
+  nextScheduledAt: timestamp("nextScheduledAt"),
+  emailSubject: varchar("emailSubject", { length: 512 }),
+  emailBody: text("emailBody"),
+  metadata: jsonb("metadata").default({}), // tracking info, link info
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+  replySequencesLeadIdx: index("idx_reply_sequences_lead").on(table.leadId),
+  replySequencesReplyIdx: index("idx_reply_sequences_reply").on(table.replyId),
+  replySequencesStatusIdx: index("idx_reply_sequences_status").on(table.status),
+  replySequencesScheduledIdx: index("idx_reply_sequences_scheduled").on(table.nextScheduledAt),
+}));
+
+export type ReplySequence = typeof replySequences.$inferSelect;
+export type InsertReplySequence = typeof replySequences.$inferInsert;

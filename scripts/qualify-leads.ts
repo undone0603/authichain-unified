@@ -63,7 +63,7 @@ Generate a detailed lead scoring breakdown (JSON only) with four dimensions (eac
 `;
 
   try {
-    const { content, provider } = await chat({
+    const { content } = await chat({
       messages: [{ role: 'user', content: prompt }],
       jsonMode: true,
       temperature: 0.2,

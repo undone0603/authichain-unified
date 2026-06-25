@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Insert funnel event
-    const { data, error } = await supabase.from('funnel_events').insert({
+    const { error } = await supabase.from('funnel_events').insert({
       prospect_id: body.prospect_id,
       stage: body.stage,
       source: body.source,

@@ -198,7 +198,10 @@ async function handleInvoicePaymentSucceeded(supabase: any, event: Stripe.Event)
   const invoice = event.data.object as Stripe.Invoice;
 
   const customerId = invoice.customer as string;
-  const subscriptionId = invoice.subscription as string;
+  // Stripe SDK v18 removed `subscription` from the top-level Invoice type
+  // (it now lives on invoice lines / parent), but the field is still present
+  // on the wire for subscription invoices. Read it defensively via a cast.
+  const subscriptionId = (invoice as unknown as { subscription?: string }).subscription as string;
   const periodEndTs = invoice.period_end;
 
   console.log(`[stripe-webhook] invoice.payment_succeeded: ${invoice.id}, subscription: ${subscriptionId}`);
@@ -294,7 +297,8 @@ async function handleInvoicePaymentFailed(supabase: any, event: Stripe.Event) {
   const invoice = event.data.object as Stripe.Invoice;
 
   const customerId = invoice.customer as string;
-  const subscriptionId = invoice.subscription as string;
+  // See note above: read `subscription` defensively across Stripe SDK v18.
+  const subscriptionId = (invoice as unknown as { subscription?: string }).subscription as string;
   const invoiceId = invoice.id;
 
   console.log(`[stripe-webhook] invoice.payment_failed: ${invoiceId}, subscription: ${subscriptionId}`);

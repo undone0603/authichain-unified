@@ -71,8 +71,9 @@ Description: ${(opp.description ?? '').slice(0, 2000)}
 
       const result = JSON.parse(content || '{}');
 
-      // Determine recommended action based on fit_score thresholds
-      let finalAction = result.recommended_action;
+      // Determine recommended action based on fit_score thresholds.
+      // Every branch below assigns finalAction, so no initial value is needed.
+      let finalAction: string;
       if (result.fit_score >= FIT_THRESHOLD_HIGH) {
         finalAction = 'pursue';
       } else if (result.fit_score >= FIT_THRESHOLD_BORDERLINE) {
