@@ -136,10 +136,5 @@
     "vite": "^5.4.21",
     "vitest": "^3.2.6",
     "wrangler": "^3.114.17"
-  },
-  "pnpm": {
-    "overrides": {
-      "serialize-javascript": "7.0.3"
-    }
   }
 }
