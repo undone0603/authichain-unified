@@ -320,3 +320,24 @@ describe('missions.list — status filtering after mutations', () => {
     expect(planned.every((m: any) => m.id !== id)).toBe(true);
   });
 });
+
+describe('missions repository injection', () => {
+  it('calls the injected repository instead of the database implementation', async () => {
+    const mockRepo = {
+      getMissions: vi.fn().mockResolvedValue([{ id: 'injected-id', type: 'TECH_OS_LOCK', status: 'COMPLETED' }]),
+      getMissionById: vi.fn(),
+      createMission: vi.fn(),
+      createTask: vi.fn(),
+      updateMissionStatus: vi.fn(),
+      getTasksByMission: vi.fn(),
+      retryTask: vi.fn(),
+    };
+    const ctx = makeCtx('admin');
+    ctx.missionsRepo = mockRepo;
+
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.missions.list({});
+    expect(result).toEqual([{ id: 'injected-id', type: 'TECH_OS_LOCK', status: 'COMPLETED' }]);
+    expect(mockRepo.getMissions).toHaveBeenCalled();
+  });
+});

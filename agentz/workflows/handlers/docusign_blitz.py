@@ -11,12 +11,11 @@ from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.docusign import create_envelope_from_markdown
 
 def run(ctx: ExecutionContext) -> Optional[str]:
+    from agentz.core.credentials import get
     # 1. Check for token, but allow simulation if missing
     token = get("docusign_token", required=False)
     if not token:
         ctx.step("[!] docusign_token missing. Operating in SIMULATION MODE.")
-
-    ctx.step("Scanning for high-value agreements in logs/agreements...")
     agreements = glob.glob("agentz/logs/agreements/*.md")
     
     if not agreements:
