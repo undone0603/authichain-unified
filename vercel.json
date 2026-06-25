@@ -25,5 +25,5 @@
       ]
     }
   ],
-  "ignoreCommand": "bash -c 'case \"$VERCEL_GIT_COMMIT_AUTHOR_LOGIN\" in undone0603|claude) exit 1;; *) exit 0;; esac'"
+  "ignoreCommand": "bash -c 'git diff --quiet HEAD~1 -- src/ pages/ public/ workers/ scripts/ lib/ && exit 1; exit 0'"
 }
