@@ -25,5 +25,5 @@
       ]
     }
   ],
-  "ignoreCommand": "bash -c 'git diff --quiet HEAD~1 -- src/ pages/ public/ workers/ scripts/ lib/ && exit 1; exit 0'"
+  "ignoreCommand": "bash -c 'git diff --quiet HEAD~1 -- src/ pages/ public/ workers/ scripts/ lib/ shared/ next.config.js package.json vercel.json && exit 0 || exit 1'"
 }
