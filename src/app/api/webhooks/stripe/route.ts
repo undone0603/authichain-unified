@@ -42,6 +42,19 @@ function getSupabase(): any {
  * Logs all events to audit_log for compliance.
  */
 export async function POST(req: NextRequest) {
+  // RETIRED: consolidated into the canonical handler at /api/stripe/webhook,
+  // which now provisions + records payments + accrues referrals for every brand
+  // and accepts this endpoint's signing secret too. Keeping two handlers that
+  // share the `stripe_events` dedup table caused silent per-event skips. Point
+  // the Stripe endpoint at /api/stripe/webhook. Set
+  // STRIPE_WEBHOOK_LEGACY_ENABLED=true to temporarily re-enable during cutover.
+  if (process.env.STRIPE_WEBHOOK_LEGACY_ENABLED !== 'true') {
+    return NextResponse.json(
+      { error: 'Endpoint retired — point Stripe at /api/stripe/webhook', deprecated: true },
+      { status: 410 },
+    );
+  }
+
   const webhookSecret = process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET;
 
   if (!process.env.STRIPE_SECRET_KEY || !webhookSecret) {

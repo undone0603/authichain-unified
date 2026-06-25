@@ -1,9 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { provisionPurchase } from '@/lib/provisioning';
+import { renderBillingEmail } from '@/lib/billing-emails';
+import { getBrandIdFromMetadata } from '@/lib/brand-billing';
+import { sendEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const REFERRAL_REWARD_CREDITS = 100;
+
+/**
+ * Credit a user-to-user referrer with account credit on the referred buyer's
+ * first paid conversion. `ref_code` is the referrer's profile id (issued by
+ * ReferralTracker). Idempotent via the user_referrals table.
+ */
+async function creditReferral(
+  supabase: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  refCode: string | undefined,
+  referredEmail: string | null,
+  brand: string,
+): Promise<void> {
+  if (!refCode || !referredEmail) return;
+  const email = referredEmail.toLowerCase().trim();
+  if (refCode === email) return; // can't refer yourself by email
+
+  try {
+    const { data: existing } = await supabase
+      .from('user_referrals')
+      .select('id, status')
+      .eq('ref_code', refCode)
+      .eq('referred_email', email)
+      .maybeSingle();
+    if (existing && (existing.status === 'converted' || existing.status === 'rewarded')) {
+      return; // already credited
+    }
+
+    const { data: referrer } = await supabase
+      .from('profiles')
+      .select('id, generations_limit')
+      .eq('id', refCode)
+      .maybeSingle();
+
+    if (referrer?.id) {
+      await supabase
+        .from('profiles')
+        .update({ generations_limit: Number(referrer.generations_limit ?? 0) + REFERRAL_REWARD_CREDITS })
+        .eq('id', referrer.id);
+    }
+
+    await supabase.from('user_referrals').insert({
+      ref_code: refCode,
+      referrer_id: referrer?.id ?? null,
+      referred_email: email,
+      brand,
+      status: 'rewarded',
+      reward_credits: REFERRAL_REWARD_CREDITS,
+      converted_at: new Date().toISOString(),
+      rewarded_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error('[webhook] referral credit failed:', e);
+  }
+}
 
 // Lazy singletons — avoid build-time throw when env vars are absent.
 let _stripe: Stripe | null = null;
@@ -29,9 +89,16 @@ function getSupabase(): any {
 }
 
 export async function POST(req: NextRequest) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  // Single canonical endpoint for the whole (single-account) ecosystem. Accept
+  // either signing secret so consolidation doesn't depend on which secret the
+  // live Stripe endpoint was registered with. Brand is read from event metadata,
+  // not from the endpoint.
+  const secrets = [
+    process.env.STRIPE_WEBHOOK_SECRET,
+    process.env.STRIPE_WEBHOOK_AUTHICHAIN_SECRET,
+  ].filter((s): s is string => !!s);
 
-  if (!process.env.STRIPE_SECRET_KEY || !webhookSecret) {
+  if (!process.env.STRIPE_SECRET_KEY || secrets.length === 0) {
     return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
   }
 
@@ -40,12 +107,19 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get('stripe-signature')!;
 
-  let event: any;
-  try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-  } catch (err: any) {
-    console.error('Stripe webhook signature verification failed:', err.message);
-    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
+  let event: any = null;
+  let lastErr = '';
+  for (const secret of secrets) {
+    try {
+      event = stripe.webhooks.constructEvent(body, sig, secret);
+      break;
+    } catch (err: any) {
+      lastErr = err.message;
+    }
+  }
+  if (!event) {
+    console.error('Stripe webhook signature verification failed:', lastErr);
+    return NextResponse.json({ error: `Webhook Error: ${lastErr}` }, { status: 400 });
   }
 
   // Idempotency: Stripe retries deliveries. Skip events we've already recorded
@@ -67,39 +141,62 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-        const userId = session.metadata?.user_id;
-        const plan = session.metadata?.plan;
+        const md = session.metadata || {};
+        const userId = md.user_id;
+        const plan = md.plan;
+        const brand = getBrandIdFromMetadata(md);
         const customerId = session.customer;
         const subscriptionId = session.subscription;
 
-        const isTrial = session.metadata?.trial === 'true';
-        const grantRaw = session.metadata?.grant;
-        const generationsGrant = grantRaw ? parseInt(grantRaw, 10) : undefined;
+        const isTrial = md.trial === 'true';
+        const grantRaw = md.grant;
+        const grantParsed = grantRaw ? parseInt(grantRaw, 10) : NaN;
+        const generationsGrant = Number.isNaN(grantParsed) ? undefined : grantParsed;
+        const email = session.customer_email || session.customer_details?.email || null;
 
-        if (userId) {
-          await getSupabase().from('profiles').update({
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            subscription_plan: plan,
-            subscription_status: isTrial ? 'trialing' : 'active',
-            subscribed_at: new Date().toISOString(),
-            // Grant generation access for the trial/subscription. Reset usage so
-            // the new period starts clean. (Free-gen auto-grant was removed; access
-            // now comes from a trial or paid subscription.)
-            ...(generationsGrant !== undefined && !Number.isNaN(generationsGrant)
-              ? { generations_limit: generationsGrant, generations_used: 0 }
-              : {}),
-          }).eq('id', userId);
+        // Hands-off provisioning for BOTH authenticated and guest checkouts.
+        // Guests get a profile created/resolved by email so the purchase is
+        // never lost.
+        const prov = await provisionPurchase(getSupabase(), {
+          email,
+          userId,
+          plan,
+          brand,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          isTrial,
+          generationsGrant,
+        });
 
+        if (prov.profileId) {
           await getSupabase().from('checkout_sessions').update({ status: 'completed' })
             .eq('session_id', session.id);
 
-          // Trigger welcome/confirmation email
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/email`, {
-            method: 'POST',
-            headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET || '', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'subscription_confirmed', user_id: userId, email: session.customer_email, plan }),
-          }).catch(() => {});
+          // Brand-aware welcome email (replaces the cross-call to /api/email).
+          if (email) {
+            const mail = renderBillingEmail('subscription_confirmed', brand, { planName: plan || undefined });
+            await sendEmail({ to: email, from: mail.from, subject: mail.subject, html: mail.html, text: mail.text }).catch(() => {});
+          }
+        }
+
+        // complete_checkout funnel event — success is only known here.
+        if (md.prospect_id) {
+          try {
+            await getSupabase().from('funnel_events').insert({
+              prospect_id: md.prospect_id,
+              stage: 'complete_checkout',
+              source: md.source || 'direct',
+              metadata: { plan, brand },
+              timestamp: new Date().toISOString(),
+            });
+          } catch (e) {
+            console.error('[webhook] complete_checkout funnel insert failed:', e);
+          }
+        }
+
+        // User-to-user referral account credit (first paid conversion).
+        if (typeof session.amount_total === 'number' && session.amount_total > 0) {
+          await creditReferral(getSupabase(), md.ref_code, email, brand);
         }
 
         // Affiliate commission accrual — credit the referring affiliate's
@@ -209,7 +306,7 @@ export async function POST(req: NextRequest) {
 
         const { data: profile } = await getSupabase()
           .from('profiles')
-          .select('id')
+          .select('id, email, full_name, brand, subscription_plan')
           .eq('stripe_customer_id', customerId)
           .single() as any;
 
@@ -218,11 +315,14 @@ export async function POST(req: NextRequest) {
             subscription_status: 'past_due',
           }).eq('id', profile.id);
 
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/email`, {
-            method: 'POST',
-            headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET || '', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'payment_failed', user_id: profile.id }),
-          }).catch(() => {});
+          if (profile.email) {
+            const brand = getBrandIdFromMetadata({ brand: profile.brand });
+            const mail = renderBillingEmail('payment_failed', brand, {
+              name: profile.full_name || undefined,
+              planName: profile.subscription_plan || undefined,
+            });
+            await sendEmail({ to: profile.email, from: mail.from, subject: mail.subject, html: mail.html, text: mail.text }).catch(() => {});
+          }
         }
         break;
       }
@@ -257,16 +357,18 @@ export async function POST(req: NextRequest) {
 
         const { data: profile } = await getSupabase()
           .from('profiles')
-          .select('id')
+          .select('id, email, full_name, brand, subscription_plan')
           .eq('stripe_customer_id', customerId)
-          .single();
+          .single() as any;
 
-        if (profile) {
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/email`, {
-            method: 'POST',
-            headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET || '', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'trial_expiring', user_id: profile.id }),
-          }).catch(() => {});
+        if (profile?.email) {
+          const brand = getBrandIdFromMetadata({ brand: profile.brand });
+          const mail = renderBillingEmail('trial_expiring', brand, {
+            name: profile.full_name || undefined,
+            planName: profile.subscription_plan || undefined,
+            days: 3,
+          });
+          await sendEmail({ to: profile.email, from: mail.from, subject: mail.subject, html: mail.html, text: mail.text }).catch(() => {});
         }
         break;
       }

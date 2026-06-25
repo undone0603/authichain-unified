@@ -34,6 +34,34 @@ export async function POST(_request: Request) {
 
     if (error) throw error;
 
+    // 3. Create the payable affiliates row the rest of the system depends on
+    //    (connect/payout/stats + webhook accrual all look it up by affiliatecode).
+    //    Without this, "joining" never actually enrolled a payable affiliate.
+    //    Idempotent: skip if this user already has a row.
+    const { data: existingAff } = await supabase
+      .from('affiliates')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!existingAff) {
+      const { error: affErr } = await supabase.from('affiliates').insert({
+        user_id: userId,
+        affiliatecode: affiliateId,
+        email,
+        status: 'active',
+        commission_rate: 0.1,
+        pending_payout: 0,
+        total_referrals: 0,
+        total_conversions: 0,
+        total_earnings: 0,
+        created_at: new Date().toISOString(),
+      });
+      // Don't fail the join if the affiliates row insert hits a race/constraint;
+      // the profile.affiliate_id is already set. Log and continue.
+      if (affErr) console.warn('[affiliate/join] affiliates row insert warning:', affErr.message);
+    }
+
     return NextResponse.json({ ok: true, affiliateId });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

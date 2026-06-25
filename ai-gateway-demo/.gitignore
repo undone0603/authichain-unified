@@ -1,0 +1,7 @@
+node_modules/
+.env.local
+.env
+output*.png
+output*.jpg
+output*.jpeg
+output*.webp
