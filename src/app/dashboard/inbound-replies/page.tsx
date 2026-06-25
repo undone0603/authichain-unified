@@ -84,21 +84,6 @@ export default function InboundRepliesDashboard() {
     }
   };
 
-  const overrideSentiment = async (replyId: string, newSentiment: string) => {
-    try {
-      const response = await fetch(`/api/dashboard/replies`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: replyId, manualSentiment: newSentiment }),
-      });
-
-      if (!response.ok) throw new Error('Failed to override sentiment');
-      fetchReplies();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    }
-  };
-
   const getSentimentIcon = (sentiment: string) => {
     switch (sentiment) {
       case 'positive':

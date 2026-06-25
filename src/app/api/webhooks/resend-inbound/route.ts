@@ -32,7 +32,7 @@ interface ResendInboundPayload {
  * Parse email address from "Name <email@domain>" format
  */
 function parseEmailAddress(emailString: string): string {
-  const match = emailString.match(/<([^>]+)>/);
+  const match = emailString.match(/<([^>]{1,256})>/);
   return match ? match[1] : emailString;
 }
 
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     // Check if this is a legitimate reply (not auto-reply, bounce, etc.)
     if (!isProbablyLegitimateReply(payload.subject, emailBody)) {
-      console.log(`Skipping non-legitimate reply from ${senderEmail}: ${payload.subject}`);
+      console.log('Skipping non-legitimate reply', { senderEmail, subjectLength: payload.subject.length });
       return NextResponse.json({ skipped: true, reason: 'Auto-reply or bounce detected' }, { status: 200 });
     }
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const existing = await db.select().from(inboundReplies).where(eq(inboundReplies.messageId, payload.messageId)).limit(1);
 
     if (existing.length > 0) {
-      console.log(`Duplicate email detected: ${payload.messageId}`);
+      console.log('Duplicate email detected', { messageIdLength: payload.messageId.length });
       return NextResponse.json({ skipped: true, reason: 'Duplicate message ID' }, { status: 200 });
     }
 
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
         .where(eq(leads.id, leadId));
     }
 
-    console.log(`Processed inbound reply: ${senderEmail} - Sentiment: ${sentimentResult.sentiment}`);
+    console.log('Processed inbound reply', { senderEmailDomain: senderEmail.split('@')[1], sentiment: sentimentResult.sentiment });
 
     return NextResponse.json(
       {
