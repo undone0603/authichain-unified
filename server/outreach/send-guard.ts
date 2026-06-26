@@ -9,6 +9,7 @@ import { promises as dns } from "node:dns";
 
 export type VerificationSource =
   | "apollo_verified"
+  | "reacher_verified"   // deliverable + non-catch-all per self-hosted Reacher (free OSS)
   | "inbound_optin"
   | "confirmed_reply"
   | "pattern_guess"
@@ -17,6 +18,7 @@ export type VerificationSource =
 
 const TRUSTED_SOURCES: ReadonlySet<VerificationSource> = new Set([
   "apollo_verified",
+  "reacher_verified",
   "inbound_optin",
   "confirmed_reply",
 ]);
