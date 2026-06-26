@@ -12,7 +12,7 @@ import { createClient } from '@/utils/supabase/server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import {
   buildPaymentRequired, parsePaymentHeader, verifyPaymentProof,
-  wouldExceedCap, usdToAtomic, dailyCapUsd,
+  wouldExceedCap, usdToAtomic, dailyCapUsd, settlePayment,
 } from '@/lib/x402';
 
 export const dynamic = 'force-dynamic';
@@ -57,10 +57,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
   }
 
-  // 3. Verify the payment satisfies the requirement.
+  // 3. Verify the payment satisfies the requirement (structural pre-check).
   const verification = verifyPaymentProof(proof, required.body.accepts[0]);
   if (!verification.valid) {
     return NextResponse.json({ ...required.body, error: verification.reason }, { status: 402 });
+  }
+
+  // 3b. Trustless settlement via the x402 facilitator (on-chain EIP-3009).
+  // In production a facilitator MUST confirm settlement; dev-mode (no facilitator
+  // configured) is refused in production so a fake proof can never pass.
+  const settlement = await settlePayment(request.headers.get('x-payment') ?? '', required.body.accepts[0]);
+  if (!settlement.settled || (!settlement.trustless && process.env.NODE_ENV === 'production')) {
+    return NextResponse.json(
+      { ...required.body, error: settlement.reason ?? 'payment_not_settled' },
+      { status: 402 },
+    );
   }
 
   // 4. Enforce the per-payer daily spend cap.
@@ -89,7 +100,8 @@ export async function POST(request: Request) {
     settlement: {
       payer: proof.payer,
       amountAtomic: verification.amount.toString(),
-      txHash: proof.txHash ?? null,
+      txHash: settlement.txHash ?? proof.txHash ?? null,
+      trustless: settlement.trustless,
     },
     timestamp: new Date().toISOString(),
   });

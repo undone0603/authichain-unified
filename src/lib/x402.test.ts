@@ -1,7 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
+import { vi } from 'vitest';
 import {
   usdToAtomic, buildPaymentRequired, parsePaymentHeader,
-  verifyPaymentProof, wouldExceedCap, dailyCapUsd, type PaymentRequirement,
+  verifyPaymentProof, wouldExceedCap, dailyCapUsd, settlePayment, type PaymentRequirement,
 } from './x402';
 
 const PAYER = '0x1234567890abcdef1234567890abcdef12345678';
@@ -14,7 +15,7 @@ const req: PaymentRequirement = {
 const proofHeader = (p: Record<string, unknown>) =>
   Buffer.from(JSON.stringify(p)).toString('base64');
 
-afterEach(() => { delete process.env.X402_FACILITATOR_URL; });
+afterEach(() => { delete process.env.X402_FACILITATOR_URL; delete process.env.X402_NETWORK; vi.restoreAllMocks(); });
 
 describe('usdToAtomic', () => {
   it('converts USD to 6-decimal atomic units', () => {
@@ -29,7 +30,7 @@ describe('buildPaymentRequired', () => {
     const r = buildPaymentRequired({ resource: 'https://x/y', priceUsd: 0.05, payTo: '0xabc' });
     expect(r.status).toBe(402);
     expect(r.body.accepts[0].maxAmountRequired).toBe('50000');
-    expect(r.body.accepts[0].network).toBe('polygon');
+    expect(r.body.accepts[0].network).toBe('base');
   });
 });
 
@@ -68,6 +69,43 @@ describe('wouldExceedCap', () => {
   it('flags only when over the cap', () => {
     expect(wouldExceedCap(9_000000n, 50000n, 10_000000n)).toBe(false);
     expect(wouldExceedCap(9_990000n, 50000n, 10_000000n)).toBe(true);
+  });
+});
+
+describe('buildPaymentRequired network', () => {
+  it('defaults to base and honors X402_NETWORK', () => {
+    expect(buildPaymentRequired({ resource: 'r', priceUsd: 0.05, payTo: '0xabc' }).body.accepts[0].network).toBe('base');
+    process.env.X402_NETWORK = 'polygon';
+    expect(buildPaymentRequired({ resource: 'r', priceUsd: 0.05, payTo: '0xabc' }).body.accepts[0].network).toBe('polygon');
+  });
+});
+
+describe('settlePayment (facilitator)', () => {
+  it('is dev-mode (settled but NOT trustless) when no facilitator is configured', async () => {
+    delete process.env.X402_FACILITATOR_URL;
+    const s = await settlePayment('proof', req);
+    expect(s).toMatchObject({ settled: true, trustless: false });
+  });
+
+  it('settles trustlessly when the facilitator confirms', async () => {
+    process.env.X402_FACILITATOR_URL = 'https://facilitator.example';
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ success: true, txHash: '0xdead' }) } as Response);
+    const s = await settlePayment('proof', req);
+    expect(s).toMatchObject({ settled: true, trustless: true, txHash: '0xdead' });
+  });
+
+  it('refuses when the facilitator rejects the payment', async () => {
+    process.env.X402_FACILITATOR_URL = 'https://facilitator.example';
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ success: false, errorReason: 'insufficient_funds' }) } as Response);
+    const s = await settlePayment('proof', req);
+    expect(s.settled).toBe(false);
+    expect(s.reason).toBe('insufficient_funds');
+  });
+
+  it('refuses on a facilitator HTTP/network error', async () => {
+    process.env.X402_FACILITATOR_URL = 'https://facilitator.example';
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('down'));
+    expect((await settlePayment('proof', req)).settled).toBe(false);
   });
 });
 
