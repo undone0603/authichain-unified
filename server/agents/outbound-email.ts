@@ -13,6 +13,12 @@ import {
   bayesianPreamble,
   type EmailTone,
 } from '../_core/bayesian.js';
+import {
+  assessRecipient,
+  canSend,
+  domainAcceptsMail,
+  type VerificationSource,
+} from '../outreach/send-guard.js';
 
 interface OutboundEmailPayload {
   segment?: string;
@@ -22,6 +28,7 @@ interface OutboundEmailPayload {
   leadOrg?: string;
   leadTitle?: string;
   researchHook?: string;  // personalised opener injected by BROWSE_RESEARCH_LEAD
+  verificationSource?: VerificationSource;  // provenance gate; defaults to 'unknown' (blocked)
 }
 
 const segmentContext: Record<string, string> = {
@@ -135,6 +142,22 @@ Return JSON: { "subject": "...", "body": "..." }`;
   }
 
   if (!payload.leadEmail) throw new Error('No leadEmail in payload for direct send');
+
+  // ── Verified-only send guard ───────────────────────────────────────────────
+  // Provenance gate: only direct-send to trusted-source recipients. Pattern-
+  // guessed / scraped / unknown leads (and role inboxes) are blocked and routed
+  // to human review instead of blasted — this is what stops fabricated CRM
+  // contacts (e.g. guessed C-suite) from ever being emailed.
+  const source: VerificationSource = payload.verificationSource ?? 'unknown';
+  const assessment = assessRecipient(payload.leadEmail, source);
+  if (!canSend(assessment) || !(await domainAcceptsMail(assessment.email))) {
+    await logActivity({ userId: null, action: 'outbound_email_blocked_unverified', entityType: 'task', entityId: 0, details: {
+      taskId: task.id, segment, sequence, leadEmail: payload.leadEmail,
+      source, reasons: assessment.reasons.length ? assessment.reasons : ['no_mx'],
+    }});
+    await markTaskWaitingHuman(task.id);
+    return;
+  }
 
   const sendResult = await sendEmail({ to: payload.leadEmail, subject, body });
 

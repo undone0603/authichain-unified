@@ -78,6 +78,62 @@ server.tool(
   }
 );
 
+// Tool: Get pricing (lets autonomous agents discover what they can buy + the metered API)
+server.tool(
+  "get_pricing",
+  {},
+  async () => ({
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        meteredVerification: {
+          endpoint: "POST /api/v1/agent-verify",
+          protocol: "x402",
+          network: "polygon",
+          pricePerCall: "$0.05 USDC",
+          note: "Call with no payment to receive HTTP 402 payment requirements; pay and retry with an X-PAYMENT proof header.",
+        },
+        subscriptionPlans: {
+          authichain: { starter: "$49/mo", professional: "$199/mo", enterprise: "$799/mo" },
+          strainchain: { basic: "$199/mo", professional: "$499/mo", enterprise: "$999/mo" },
+          qron: { studioStarter: "$49/mo", studioPro: "$99/mo" },
+        },
+      }, null, 2),
+    }],
+  }),
+);
+
+// Tool: Paid autonomous verification via x402 (agent pays per call)
+server.tool(
+  "verify_paid",
+  {
+    subject: z.string().describe("Product ID, serial, or certificate to verify"),
+    payment: z.string().optional().describe("Base64-encoded x402 X-PAYMENT proof. Omit to receive payment requirements."),
+  },
+  async ({ subject, payment }) => {
+    if (!payment) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            status: 402,
+            x402Version: 1,
+            message: "Payment required for metered verification.",
+            pay: { endpoint: "POST /api/v1/agent-verify", network: "polygon", amount: "$0.05 USDC" },
+            then: "Retry POST /api/v1/agent-verify with header X-PAYMENT: <base64 proof> and body { productId: \"" + subject + "\" }.",
+          }),
+        }],
+      };
+    }
+    return {
+      content: [{
+        type: "text",
+        text: `Payment proof received for "${subject}". Submit POST /api/v1/agent-verify (header X-PAYMENT) for settlement + a 0-100 authenticity score.`,
+      }],
+    };
+  },
+);
+
 export async function startMcpServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
