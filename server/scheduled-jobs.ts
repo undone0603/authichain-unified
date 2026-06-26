@@ -147,6 +147,23 @@ registerJob({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// JOB 1b: Dunning Escalation (runs daily at 8 AM UTC) — recover failed payments
+// First-class, independently-monitored so revenue recovery never depends on the
+// flag-gated pipeline tick. Idempotent per step (day_3 / day_7 / day_14).
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "dunning-escalation",
+  description: "Escalate past-due subscriptions (day 3/7/14) to recover failed payments",
+  schedule: "0 8 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runDunningEscalation } = await import("./jobs/dunning");
+    const r = await runDunningEscalation();
+    return { itemsProcessed: r.remindersSent, details: { checked: r.checked, remindersSent: r.remindersSent } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // JOB 2: Certificate Expiry Checker (runs daily at 7 AM UTC)
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
@@ -688,6 +705,23 @@ registerJob({
     }));
     await db.insert(qronRewardLedger).values(rewards);
     return { itemsProcessed: activePositions.length, details: { status: "rewards_distributed" } };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 14: Founder Pay-Yourself-First (runs 09:00 UTC on the 1st of each month)
+// Reads last month's real collected revenue and computes the founder/tax/profit
+// /operating split. The actual bank transfer is a credential-gated next step.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "founder-payout",
+  description: "Monthly pay-yourself-first split from last month's collected revenue",
+  schedule: "0 9 1 * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runMonthlyFounderPayout } = await import("./jobs/founder-payout");
+    const plan = await runMonthlyFounderPayout();
+    return { itemsProcessed: 1, details: plan };
   },
 });
 

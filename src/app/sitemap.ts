@@ -1,10 +1,19 @@
 import type { MetadataRoute } from 'next';
+import { listSeoPages } from '@/lib/seo-pages';
 
 const BASE = 'https://qron.space';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
+  // Programmatic-SEO landing pages (generated + committed in content/seo).
+  const seoEntries: MetadataRoute.Sitemap = listSeoPages().map((page) => ({
+    url: `${BASE}/p/${page.slug}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }));
   return [
+    ...seoEntries,
     // Core pages
     { url: BASE, lastModified: now, changeFrequency: 'weekly', priority: 1.0 },
     {
