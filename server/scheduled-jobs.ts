@@ -708,6 +708,23 @@ registerJob({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 14: Founder Pay-Yourself-First (runs 09:00 UTC on the 1st of each month)
+// Reads last month's real collected revenue and computes the founder/tax/profit
+// /operating split. The actual bank transfer is a credential-gated next step.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "founder-payout",
+  description: "Monthly pay-yourself-first split from last month's collected revenue",
+  schedule: "0 9 1 * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runMonthlyFounderPayout } = await import("./jobs/founder-payout");
+    const plan = await runMonthlyFounderPayout();
+    return { itemsProcessed: 1, details: plan };
+  },
+});
+
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
 
 let _systemActive = true;

@@ -4,7 +4,7 @@
 // the remainder is the operating budget. The actual transfer (Stripe payout to
 // the founder's connected bank) is the credential-gated integration point: it
 // needs a verified bank + payout config before any money moves.
-import { logActivity } from "../db";
+import { logActivity, getRevenueAnalytics } from "../db";
 import { notifyOwner } from "../_core/notification";
 
 export interface PayoutSplit {
@@ -87,4 +87,28 @@ export async function runFounderPayout(grossCents: number): Promise<PayoutPlan> 
   }
 
   return plan;
+}
+
+/** UTC date range covering the entire previous calendar month. */
+export function lastMonthRange(now: Date = new Date()): { start: Date; end: Date } {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0) - 1);
+  return { start, end };
+}
+
+/** Sum real collected revenue (revenueRecords.amount is in dollars) for a window, in cents. */
+export async function collectedRevenueCents(start: Date, end: Date): Promise<number> {
+  const rows = await getRevenueAnalytics(start, end);
+  const dollarsTotal = (rows as Array<{ amount?: string | null }>).reduce(
+    (sum, r) => sum + (parseFloat(r?.amount ?? "0") || 0),
+    0,
+  );
+  return Math.round(dollarsTotal * 100);
+}
+
+/** Monthly entry point: read last month's collected revenue and run the split. */
+export async function runMonthlyFounderPayout(now: Date = new Date()): Promise<PayoutPlan> {
+  const { start, end } = lastMonthRange(now);
+  const grossCents = await collectedRevenueCents(start, end);
+  return runFounderPayout(grossCents);
 }
