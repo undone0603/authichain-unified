@@ -25,7 +25,7 @@ export default function ContactPage() {
       <section className="max-w-2xl mx-auto px-6 pb-32">
         <form
           className="space-y-6"
-          action="/api/contact"
+          action="/api/book"
           method="POST"
         >
           <div>
