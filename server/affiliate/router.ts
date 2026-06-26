@@ -1,7 +1,16 @@
 import { protectedProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { z } from "zod";
-import { generateAffiliateCode, AFFILIATE_BONUS_TIERS } from "../referral/core";
+import { generateAffiliateCode, AFFILIATE_BONUS_TIERS, COMMISSION_RATES } from "../referral/core";
+
+// Stored on the affiliate record as the BASE rate. Actual payout is per-plan and
+// recurring via commissionForPlan() (starter 10% → agency 25%) — see the
+// invoice.paid webhook. Override the base via AFFILIATE_BASE_RATE_PCT.
+const AFFILIATE_BASE_RATE = (() => {
+  const env = Number(process.env.AFFILIATE_BASE_RATE_PCT);
+  const pct = Number.isFinite(env) && env > 0 && env <= 100 ? env : COMMISSION_RATES.starter * 100;
+  return pct.toFixed(2);
+})();
 
 export const affiliateRouter = router({
   getStatus: protectedProcedure.query(async ({ ctx }) => {
@@ -34,7 +43,7 @@ export const affiliateRouter = router({
       userId: ctx.user.id,
       affiliateCode: code,
       status: "active",
-      commissionRate: "10.00",
+      commissionRate: AFFILIATE_BASE_RATE,
       payoutMethod: input.payoutMethod,
       payoutDetails: input.paypalEmail ? { paypalEmail: input.paypalEmail } : null,
     });
