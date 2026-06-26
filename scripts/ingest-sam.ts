@@ -55,7 +55,10 @@ async function fetchSAMOpportunities(): Promise<any[]> {
     postedFrom: samDate(weekAgo),
     postedTo:   samDate(now),
     ptype:      'o',
-    q:          'blockchain authentication provenance verification supply chain',
+    // Broad query captures blockchain + CMMC/FedRAMP compliance opportunities.
+    // CMMC 2.0 deadline Nov 10 2026 and FedRAMP CR26 Jan 1 2027 make
+    // supply-chain traceability the hottest procurement category right now.
+    q:          'blockchain authentication provenance verification supply chain CMMC FedRAMP cybersecurity compliance counterfeit',
   });
 
   const res = await fetch(`https://api.sam.gov/opportunities/v2/search?${params}`);
