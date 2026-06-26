@@ -1,0 +1,110 @@
+[
+  {
+    "slug": "blockchain-product-authentication",
+    "keyword": "blockchain product authentication",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Blockchain Product Authentication | AuthiChain",
+    "metaDescription": "AI + blockchain product authentication — 5-agent consensus, Bitcoin L1 anchoring, sub-2-second verification, EU DPP compliant. From $49/mo.",
+    "h1": "Blockchain Product Authentication, Verified in Under 2 Seconds",
+    "bodyHtml": "<p>AuthiChain combines AI image analysis with blockchain provenance to verify product authenticity in under two seconds. Every verification passes a 5-agent AI consensus before its result is anchored to Bitcoin L1, so the record cannot be altered after the fact.</p><h2>Why AuthiChain</h2><ul><li>5-agent AI security council screens every scan for anomalies before anchoring</li><li>W3C Verifiable Credentials — the manufacturer holds the keys, not us</li><li>Bitcoin L1 finality for tamper-proof provenance</li><li>EU DPP compliant for cross-border trade</li></ul><h2>Built for every vertical</h2><p>Luxury, pharmaceutical (DSCSA), electronics, agriculture, art, and cannabis brands use AuthiChain to prove authenticity to regulators and customers alike. Plans start at $49/mo.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "AuthiChain — Blockchain Product Authentication",
+      "brand": { "@type": "Brand", "name": "AuthiChain" },
+      "description": "AI + blockchain product authentication with 5-agent consensus and Bitcoin L1 anchoring.",
+      "url": "https://authichain.com/blockchain-product-authentication"
+    }
+  },
+  {
+    "slug": "anti-counterfeit-qr-verification",
+    "keyword": "anti-counterfeit qr verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Anti-Counterfeit QR Verification | AuthiChain",
+    "metaDescription": "Stop counterfeits with Ed25519-signed QR codes and AI confidence scoring. Tamper-evident provenance, verified in under 2 seconds. From $49/mo.",
+    "h1": "Anti-Counterfeit QR Verification That Customers Can Trust",
+    "bodyHtml": "<p>A cloned QR code fails instantly against AuthiChain. Each code is Ed25519-signed and checked against an on-chain record, so a copy can never reproduce a valid signature.</p><h2>How it works</h2><ul><li>Scan the product QR — no app required</li><li>AI analyzes the image and cross-references the signed on-chain record</li><li>Get a 0–100 authenticity score in under two seconds</li></ul><p>Brands in luxury, pharma, and electronics use AuthiChain to give customers a one-scan proof of authenticity and a tamper-evident provenance trail. From $49/mo.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "AuthiChain — Anti-Counterfeit QR Verification",
+      "brand": { "@type": "Brand", "name": "AuthiChain" },
+      "description": "Anti-counterfeit QR verification with Ed25519-signed codes and AI confidence scoring.",
+      "url": "https://authichain.com/anti-counterfeit-qr-verification"
+    }
+  },
+  {
+    "slug": "cannabis-blockchain-provenance",
+    "keyword": "cannabis blockchain provenance",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "Cannabis Blockchain Provenance | StrainChain",
+    "metaDescription": "Consumer-facing blockchain provenance for cannabis. Integrates with METRC & BioTrack; lab certs on Bitcoin Ordinals; QR-verified chain of custody.",
+    "h1": "Consumer-Facing Blockchain Provenance for Cannabis",
+    "bodyHtml": "<p>StrainChain turns compliance data into consumer trust. It integrates directly with METRC and BioTrack — no duplicate entry — and anchors lab certificates to Bitcoin Ordinals for a permanent chain of custody.</p><h2>What you get</h2><ul><li>State auditors verify chain of custody in ~10 seconds by QR scan</li><li>Dispensaries show customers verified lab results at point of sale</li><li>MSOs get unified provenance across jurisdictions</li></ul><p>It runs alongside your existing compliance — a brand and trust asset, not another compliance tool. Plans start at $199/mo.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "StrainChain — Cannabis Blockchain Provenance",
+      "brand": { "@type": "Brand", "name": "StrainChain" },
+      "description": "Consumer-facing cannabis provenance integrated with METRC/BioTrack and Bitcoin Ordinals.",
+      "url": "https://strainchain.io/cannabis-blockchain-provenance"
+    }
+  },
+  {
+    "slug": "metrc-compliance-blockchain",
+    "keyword": "metrc compliance blockchain",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "METRC Compliance on the Blockchain | StrainChain",
+    "metaDescription": "Layer blockchain provenance on your METRC compliance. Cultivation-to-dispensary events on-chain; lab certs on Bitcoin Ordinals. From $199/mo.",
+    "h1": "Turn METRC Compliance Into Consumer Trust",
+    "bodyHtml": "<p>METRC keeps you compliant; StrainChain makes that provenance visible to customers. It integrates directly with your METRC setup and records every stage — cultivation, processing, dispensary — as an on-chain event.</p><h2>Why operators choose StrainChain</h2><ul><li>No re-entry — it reads your existing METRC and BioTrack data</li><li>Lab certificates anchored to Bitcoin Ordinals, immutable and verifiable</li><li>A QR scan proves authenticity at the shelf</li></ul><p>Start on StrainChain Basic at $199/mo, scoped to one banner, and measure scan-through before scaling.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "StrainChain — METRC Compliance Blockchain",
+      "brand": { "@type": "Brand", "name": "StrainChain" },
+      "description": "Blockchain provenance layered on METRC compliance for cannabis operators.",
+      "url": "https://strainchain.io/metrc-compliance-blockchain"
+    }
+  },
+  {
+    "slug": "government-document-verification-blockchain",
+    "keyword": "government document verification blockchain",
+    "brand": "GovChain",
+    "domain": "govchain.us",
+    "title": "Blockchain Government Document Verification | GovChain",
+    "metaDescription": "Bitcoin-anchored verification for permits, certificates, and RFP awards. QR-checked in 2 seconds, works offline, no central authority. SBIR/SVIP eligible.",
+    "h1": "Verify Government Documents in 2 Seconds, Offline",
+    "bodyHtml": "<p>GovChain replaces paper-stamp verification with a Bitcoin-anchored hash for any government document — a permit, certificate, or RFP award. The document itself never changes; its provenance becomes immutable.</p><h2>How verification works</h2><ul><li>Scan the document QR — no login, no database call, no phone call to the agency</li><li>Hash validation confirms authenticity in about two seconds</li><li>Works offline — no central authority required</li></ul><p>GovChain is SBIR/SVIP eligible and built for the propose → pilot → statewide-contract path.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "GovChain — Blockchain Document Verification",
+      "brand": { "@type": "Brand", "name": "GovChain" },
+      "description": "Bitcoin-anchored government document verification, QR-checked in seconds, works offline.",
+      "url": "https://govchain.us/government-document-verification-blockchain"
+    }
+  },
+  {
+    "slug": "ai-qr-code-art-generator",
+    "keyword": "ai qr code art generator",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "AI QR Code Art Generator | QRON",
+    "metaDescription": "QRON generates scannable AI QR art with ControlNet. Ed25519-signed, Polygon-anchored, editable redirects (no reprinting), built-in scan analytics. From $5.",
+    "h1": "Generate Scannable AI QR Art People Actually Scan",
+    "bodyHtml": "<p>QRON turns a plain QR code into a living brand asset — AI-generated art that stays fully scannable. Each code is Ed25519-signed and anchored to Polygon, so brands can verify authenticity at scan time.</p><h2>Why QRON</h2><ul><li>ControlNet-generated art across styles, with L4 error correction for reliable scans</li><li>Editable redirects — change the destination anytime, zero reprinting</li><li>Built-in scan analytics: device, location, and time</li></ul><p>Start from a $5 one-off generation or scale to a $99/mo studio plan with unlimited generations and analytics.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "QRON — AI QR Code Art Generator",
+      "brand": { "@type": "Brand", "name": "QRON" },
+      "description": "AI living QR art generator: ControlNet art, Ed25519-signed, Polygon-anchored, editable redirects.",
+      "url": "https://qron.space/ai-qr-code-art-generator"
+    }
+  }
+]
