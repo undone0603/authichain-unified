@@ -10,9 +10,6 @@ NEXT_PUBLIC_SITE_URL = "https://authichain.com"
 binding = "DB"
 database_name = "authichain-provenance"
 database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
-
-[[routes]]
-pattern = "authichain.com/api/qron/scan-validate*"
 [env.production]
 name = "authichain-scan-validate"
 
