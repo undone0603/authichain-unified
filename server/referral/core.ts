@@ -16,6 +16,13 @@ export const AFFILIATE_BONUS_TIERS = [
   { threshold: 25, bonus: 7500,  tier: "platinum" }, // $75 bonus at 25 referrals
 ];
 
+/** Pure recurring-commission calculator (in cents). Unknown plans fall back to starter. */
+export function commissionForPlan(plan: string, grossCents: number): number {
+  if (!Number.isFinite(grossCents) || grossCents < 0) return 0;
+  const rate = COMMISSION_RATES[plan] ?? COMMISSION_RATES.starter;
+  return Math.round(grossCents * rate);
+}
+
 export function generateReferralCode(userId: number): string {
   return `REF-${userId}-${nanoid(6).toUpperCase()}`;
 }
