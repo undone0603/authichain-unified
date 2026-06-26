@@ -22,7 +22,52 @@ const supabase = createClient(
 );
 const resend   = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const FROM     = process.env.OUTREACH_FROM_EMAIL ?? 'hello@authichain.com';
-const CALENDLY = process.env.CALENDLY_LINK       ?? 'https://calendly.com/authichain/discovery';
+// Falls back to the built-in /book page — Calendly is optional, not required
+const CALENDLY = process.env.CALENDLY_LINK ?? 'https://app.authichain.com/book';
+
+// ── Apollo.io people-search: find work email by name + company domain ─────────
+// Uses /v1/mixed_people/search (not /v1/people/match which requires an email).
+// Returns empty string when APOLLO_API_KEY is absent or API returns no result.
+async function apolloFindEmail(name: string, company: string, website: string): Promise<string> {
+  const key = process.env.APOLLO_API_KEY;
+  if (!key) return '';
+
+  try {
+    const domain = website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+    const [firstName, ...rest] = name.split(' ');
+    const lastName = rest.join(' ');
+
+    const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+      body: JSON.stringify({
+        api_key:              key,
+        q_organization_name:  company,
+        person_titles:        [],          // broad — let name filter do the work
+        contact_email_status: ['verified', 'guessed'],
+        organization_domains: [domain],
+        page:                 1,
+        per_page:             5,
+      }),
+    });
+    if (!res.ok) return '';
+    const data = await res.json() as any;
+    const people: any[] = data.people ?? [];
+
+    // Find best name match
+    const match = people.find(p => {
+      const full = `${p.first_name ?? ''} ${p.last_name ?? ''}`.toLowerCase();
+      return full.includes(firstName.toLowerCase()) && (!lastName || full.includes(lastName.toLowerCase()));
+    }) ?? people[0];
+
+    const email: string = match?.email ?? '';
+    if (email) console.log(`  🔎 Apollo found: ${name} @ ${company} → ${email}`);
+    return email;
+  } catch (err: any) {
+    console.warn(`  ⚠️  Apollo lookup failed for ${name}: ${err.message?.slice(0, 80)}`);
+    return '';
+  }
+}
 
 // ── Verified real contacts from research (June 2026) ─────────────────────────
 
@@ -287,55 +332,117 @@ function qronEmail(t: typeof QRON_TARGETS[0]): { subject: string; html: string }
 
 // ── Save drafts to Supabase + optionally send ─────────────────────────────────
 
-async function processTargets<T extends { company: string; email: string; name?: string }>(
+async function processTargets<T extends { company: string; email: string; name?: string; website?: string }>(
   targets: T[],
   buildEmail: (t: T) => { subject: string; html: string },
   segmentName: string,
 ) {
-  let sent = 0; let saved = 0; let skipped = 0;
+  let sent = 0; let saved = 0; let queued = 0;
+
+  if (!resend && !isDryRun) {
+    console.warn(`  ⚠️  RESEND_API_KEY not set — emails will be queued in Supabase (status=queued) and sent on next run when key is present`);
+  }
 
   for (const t of targets) {
+    // Auto-populate email via Apollo if missing
+    let email = t.email;
+    if (!email && (t as any).linkedin !== undefined) {
+      email = await apolloFindEmail((t as any).name ?? t.company, t.company, t.website ?? '');
+      if (email) (t as any).email = email; // mutate for DB save
+    }
+
     const { subject, html } = buildEmail(t);
 
-    // Always save draft to leads table for review
+    // Determine initial status
+    const dbStatus = isDryRun ? 'draft'
+      : !email              ? 'pending_email'   // Apollo found nothing; manual lookup needed
+      : !resend             ? 'queued'           // Has email but no Resend key yet
+      :                       'draft';           // Ready to send
+
     const { error: dbErr } = await supabase.from('leads').upsert({
-      email:    t.email || `[find-via-apollo]@${t.company.toLowerCase().replace(/\s+/g, '')}.com`,
+      email:    email || `[pending]@${t.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
       name:     (t as any).name ?? t.company,
       company:  t.company,
       source:   `b2b_outreach_${segmentName}`,
-      status:   'draft',
+      status:   dbStatus,
       metadata: { subject, html_preview: html.slice(0, 500), target: t },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }, { onConflict: 'email' });
 
-    if (dbErr) console.warn(`  ⚠️  DB save failed for ${t.company}: ${dbErr.message}`);
-    else { saved++; console.log(`  💾 Saved draft: ${t.company} — "${subject}"`); }
+    if (dbErr) {
+      console.warn(`  ⚠️  DB save failed for ${t.company}: ${dbErr.message}`);
+    } else {
+      saved++;
+      console.log(`  💾 [${dbStatus}] ${t.company} — "${subject}"`);
+    }
 
-    // Only send if we have a real email AND Resend is configured AND not dry-run
-    if (!t.email || !resend || isDryRun) {
-      if (!t.email)  console.log(`     ℹ️  No email for ${t.company} — find via Apollo then update leads table`);
-      if (isDryRun)  console.log(`     [DRY RUN] Would send to: ${t.email}`);
-      skipped++;
+    if (isDryRun) {
+      console.log(`     [DRY RUN] Would send to: ${email || '(no email)'}`);
+      queued++;
+      continue;
+    }
+
+    if (!email) {
+      console.log(`     ℹ️  No email found for ${t.company} — update leads table manually or set APOLLO_API_KEY`);
+      queued++;
+      continue;
+    }
+
+    if (!resend) {
+      console.log(`     📬 Queued: ${email} — will send when RESEND_API_KEY is set`);
+      queued++;
       continue;
     }
 
     try {
-      const res = await resend.emails.send({ from: FROM, to: t.email, subject, html });
+      const res = await resend.emails.send({ from: FROM, to: email, subject, html });
       if (res.data?.id) {
         sent++;
-        console.log(`  ✉️  Sent: ${t.email} — "${subject}"`);
-        await supabase.from('leads').update({ status: 'contacted', updatedAt: new Date().toISOString() })
-          .eq('email', t.email);
+        console.log(`  ✉️  Sent: ${email} — "${subject}"`);
+        await supabase.from('leads')
+          .update({ status: 'contacted', updatedAt: new Date().toISOString() })
+          .eq('email', email);
       } else {
         console.warn(`  ⚠️  Resend error for ${t.company}:`, res.error);
+        queued++;
       }
     } catch (err: any) {
       console.warn(`  ⚠️  Send failed for ${t.company}: ${err.message}`);
+      queued++;
     }
   }
 
-  console.log(`\n[${segmentName}] Saved: ${saved} | Sent: ${sent} | Skipped (no email): ${skipped}`);
+  console.log(`\n[${segmentName}] Saved: ${saved} | Sent: ${sent} | Queued/Pending: ${queued}`);
+}
+
+// ── Flush queued leads: send emails that were saved with status=queued ─────────
+// Run this after setting RESEND_API_KEY to drain the queue without re-running
+// the full outreach script and risking duplicate outreach.
+export async function flushQueuedLeads(): Promise<void> {
+  if (!resend) { console.warn('RESEND_API_KEY still not set — nothing to flush'); return; }
+
+  const { data: leads } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('status', 'queued')
+    .like('source', 'b2b_outreach_%');
+
+  if (!leads?.length) { console.log('No queued leads to flush.'); return; }
+
+  for (const lead of leads) {
+    const meta = lead.metadata as any;
+    if (!meta?.subject || !meta?.html_preview) continue;
+    try {
+      const res = await resend.emails.send({ from: FROM, to: lead.email, subject: meta.subject, html: meta.html_preview });
+      if (res.data?.id) {
+        await supabase.from('leads').update({ status: 'contacted', updatedAt: new Date().toISOString() }).eq('email', lead.email);
+        console.log(`  ✉️  Flushed: ${lead.email}`);
+      }
+    } catch (err: any) {
+      console.warn(`  ⚠️  Flush failed for ${lead.email}: ${err.message?.slice(0, 80)}`);
+    }
+  }
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -360,8 +467,12 @@ if (segment === 'all' || segment === 'qron') {
 
 console.log('\n✅ OUTREACH COMPLETE');
 console.log('Next steps:');
-console.log('  1. For contacts with empty email: find via Apollo.io free tier (50/mo)');
-console.log('     Apollo search: https://app.apollo.io/#/people?organizationNames[]=<company>');
-console.log('  2. Update leads table email field, then re-run with actual email to send');
-console.log('  3. Follow up at day 3, 7, 14 with: DRY_RUN=false pnpm exec tsx scripts/b2b-followup.ts');
-console.log('  4. Book demo calls via Calendly; link: ' + CALENDLY);
+if (!resend) {
+  console.log('  ⚡ Set RESEND_API_KEY then flush queued leads:');
+  console.log('     pnpm exec tsx -e "import { flushQueuedLeads } from \'./scripts/b2b-cold-outreach.ts\'; await flushQueuedLeads()"');
+}
+if (!process.env.APOLLO_API_KEY) {
+  console.log('  ⚡ Set APOLLO_API_KEY to auto-find emails for pending contacts on next run');
+}
+console.log('  📅 Demo booking page (no Calendly needed): ' + CALENDLY);
+console.log('  📋 View all leads in Supabase: select * from leads where source like \'b2b_outreach_%\' order by created_at desc');
