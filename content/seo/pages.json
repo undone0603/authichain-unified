@@ -106,5 +106,23 @@
       "description": "AI living QR art generator: ControlNet art, Ed25519-signed, Polygon-anchored, editable redirects.",
       "url": "https://qron.space/ai-qr-code-art-generator"
     }
+  },
+  {
+    "slug": "partner-program",
+    "keyword": "affiliate partner program",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Affiliate & Partner Program | AuthiChain",
+    "metaDescription": "Earn recurring commission promoting AuthiChain, StrainChain, QRON & GovChain. Up to 25% recurring + milestone bonuses. Self-serve signup, real-time tracking.",
+    "h1": "Earn Recurring Commission as an AuthiChain Partner",
+    "bodyHtml": "<p>Promote the AuthiChain family — AuthiChain, StrainChain, QRON, and GovChain — and earn <strong>recurring commission on every customer you refer</strong>, for as long as they stay subscribed. One program, four products, multiple ways to earn.</p><h2>Commission</h2><ul><li>Up to <strong>25% recurring</strong> commission (agency tier)</li><li>Milestone bonuses: $10 at 5 referrals, $25 at 10, $75 at 25</li><li>Real-time click + conversion tracking on your unique link</li></ul><h2>Who it's for</h2><p>Cannabis and compliance consultants, POS and packaging vendors, marketing and design agencies, grant writers, and anyone with an audience of brands or dispensaries that need provenance and anti-counterfeit tooling. Cannabis can't run paid ads — so for dispensaries, your referral is the channel.</p><h2>How it works</h2><ul><li>Sign up free and get your unique referral link instantly</li><li>Share it — every click and signup is attributed to you automatically</li><li>Get paid recurring commission on confirmed paid conversions</li></ul><p>Join the partner program at authichain.com/affiliate.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "AuthiChain Affiliate & Partner Program",
+      "brand": { "@type": "Brand", "name": "AuthiChain" },
+      "description": "Recurring-commission affiliate program across AuthiChain, StrainChain, QRON, and GovChain.",
+      "url": "https://authichain.com/partner-program"
+    }
   }
 ]
