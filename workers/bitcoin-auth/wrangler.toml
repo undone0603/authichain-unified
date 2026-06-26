@@ -7,10 +7,5 @@ workers_dev = false
 [[routes]]
 pattern = "bitcoin-auth.authichain.com/*"
 zone_name = "authichain.com"
-
-[[kv_namespaces]]
-binding = "AUTH_KV"
-id = "AUTH_KV_ID_REPLACE_ME"
-
 [vars]
 BITCOIN_NETWORK = "mainnet"
