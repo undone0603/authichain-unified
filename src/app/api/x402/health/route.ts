@@ -10,7 +10,7 @@ import { NextResponse } from 'next/server';
 import { usdToAtomic, dailyCapUsd } from '@/lib/x402';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+// export const runtime = 'nodejs';
 
 const PRICE_USD = Number(process.env.X402_PRICE_USD) > 0 ? Number(process.env.X402_PRICE_USD) : 0.05;
 
