@@ -11,13 +11,30 @@ const supabase  = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_S
 const GOVCHAIN  = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
 const AUTHICHAIN_PROFILE = `
-AuthiChain is a blockchain-powered product authentication platform.
-Products: AuthiChain (product seals/NFTs), QRON (QR code generation),
-StrainChain (cannabis supply chain), GovChain (government provenance).
-Target agencies: DoD, DHS, FDA, USDA, CBP, GSA.
-NAICS: 541511, 541512, 541519, 334111.
-Strengths: blockchain provenance, anti-counterfeiting, supply chain visibility,
-IoT-linked authentication, zero-trust verification.
+AuthiChain is a blockchain-powered product authentication and compliance platform.
+Products:
+- GovChain (govchain.us): Federal opportunity pipeline, CMMC supply-chain traceability,
+  blockchain-anchored past-performance proof, automated RFP proposals.
+- AuthiChain (authichain.com): Enterprise product authentication, NFT certificates,
+  AI counterfeit detection, EU Digital Product Passport (DPP) compliance.
+- StrainChain (strainchain.io): Cannabis seed-to-sale blockchain provenance, METRC integration,
+  EU DPP-compliant COA hashing.
+- QRON (qron.space): AI-generated signed QR codes for brand packaging and labeling.
+
+Target agencies: DoD, DHS, FDA, USDA, CBP, GSA, NIST, CISA, Army, Navy, Air Force.
+NAICS: 541511, 541512, 541519, 334111, 336413, 332710, 339999.
+
+Strengths:
+- CMMC 2.0 Level 2/3 supply-chain traceability (hard deadline: Nov 10, 2026)
+- FedRAMP-ready blockchain audit trail (hard deadline: Jan 1, 2027 CR26)
+- EU Digital Product Passport (DPP) compliance for battery/textile manufacturers
+- Anti-counterfeiting with cryptographic Ed25519 seals
+- Zero-trust verification, IoT-linked authentication
+- Immutable audit ledger for contracting officer scrutiny
+
+CMMC KEYWORDS (high-fit signal): CMMC, CUI, FCI, supply chain risk, DFARS 252.204-7012,
+NIST 800-171, zero trust, provenance, chain of custody, counterfeit parts,
+counterfeit detection, SCRM, ITAR, FedRAMP, ATO, cybersecurity maturity.
 `;
 
 const FIT_THRESHOLD_HIGH = 70;  // Only pursue high-fit opportunities
@@ -38,18 +55,31 @@ async function scoreOpportunities(): Promise<{ scored: number; failed: number; t
   const providerHits: Record<string, number> = {};
 
   for (const opp of opps) {
+    // Boost CMMC/FedRAMP/supply-chain urgency keywords for Nov 2026 deadline
+    const cmmcKeywords = ['cmmc', 'cui', 'fci', 'dfars', 'nist 800-171', 'supply chain risk',
+      'scrm', 'zero trust', 'itar', 'fedramp', 'ato', 'provenance', 'counterfeit',
+      'chain of custody', 'cybersecurity maturity'];
+    const descLower = (opp.description ?? '').toLowerCase();
+    const titleLower = (opp.title ?? '').toLowerCase();
+    const hasCmmcSignal = cmmcKeywords.some(kw => descLower.includes(kw) || titleLower.includes(kw));
+    const cmmcBoostNote = hasCmmcSignal
+      ? '\n⚡ CMMC/FedRAMP/supply-chain keywords detected — apply +10 urgency boost to fit_score.'
+      : '';
+
     const prompt = `
 You are a government contracting analyst for AuthiChain.
 
 Company profile:
 ${AUTHICHAIN_PROFILE}
+${cmmcBoostNote}
 
 Evaluate this opportunity and respond with JSON only:
 {
   "fit_score": <0-100>,
   "reasoning": "<2 sentences>",
   "key_requirements": ["<req1>", "<req2>"],
-  "recommended_action": "pursue" | "monitor" | "skip"
+  "recommended_action": "pursue" | "monitor" | "skip",
+  "cmmc_urgent": <true|false>
 }
 
 Opportunity:
