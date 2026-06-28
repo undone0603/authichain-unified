@@ -75,3 +75,24 @@ AUTHENTICITY_INDEX.md
 SIGNATURE_MANIFEST.md
 SYSTEM_STATE.md
 .open-next/
+.next/
+dist/
+
+# Externally cloned repos (exploration only)
+authichain_premium/
+qron-platform/
+qron/
+govchain.us/
+maison-elite-ai-dropship/
+
+# Debug/lint output artifacts
+eslint_errors.txt
+*.errors.txt
+test-output.txt
+
+# Patch artifacts
+PATCH_EOF
+
+# Wrangler local cache
+.wrangler/
+.env*

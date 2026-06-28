@@ -172,17 +172,24 @@ async def prioritize_leads_by_sentiment(deals: List[Dict[str, Any]]) -> List[Dic
     try:
         logger.info(f"Prioritizing {len(candidates)} leads via sentiment analysis...")
         res = llm.invoke(prompt).content.strip()
-        # Extract JSON
-        if "```json" in res:
-            res = res.split("```json")[1].split("```")[0].strip()
+        
+        # Robust JSON extraction
+        json_start = res.find('[')
+        json_end = res.rfind(']') + 1
+        if json_start != -1 and json_end != -1:
+            res = res[json_start:json_end]
         
         scores = json.loads(res)
-        score_map = {s["id"]: s for s in scores}
+        
+        if not isinstance(scores, list):
+            raise ValueError("LLM did not return a list")
+            
+        score_map = {str(s["id"]): s for s in scores}
         
         for d in candidates:
-            meta = score_map.get(d["id"], {"score": 5.0, "rationale": "Baseline priority"})
-            d["sentiment_score"] = meta["score"]
-            d["priority_rationale"] = meta["rationale"]
+            meta = score_map.get(str(d["id"]), {"score": 5.0, "rationale": "Baseline priority"})
+            d["sentiment_score"] = float(meta.get("score", 5.0))
+            d["priority_rationale"] = meta.get("rationale", "Baseline priority")
             
         # Sort candidates by score
         candidates.sort(key=lambda x: x.get("sentiment_score", 0), reverse=True)
@@ -191,4 +198,7 @@ async def prioritize_leads_by_sentiment(deals: List[Dict[str, Any]]) -> List[Dic
         
     except Exception as e:
         logger.error(f"Sentiment prioritization failed: {e}")
-        return deals
+        # Default all to 10.0 to ensure they are processed
+        for d in candidates:
+            d["sentiment_score"] = 10.0
+        return candidates + deals[10:]

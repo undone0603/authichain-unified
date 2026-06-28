@@ -52,6 +52,23 @@ export async function GET(request: Request) {
     results.pipelineTick = { error: err instanceof Error ? err.message : String(err) };
   }
 
+  // Autonomous programmatic-SEO generation (owned-property content; no ToS gate).
+  try {
+    const { runProgrammaticSeoBatch } = await import('../../../../../server/agents/seo-content');
+    const seoJobs = [
+      { brandKey: 'authichain', keyword: 'blockchain product authentication' },
+      { brandKey: 'authichain', keyword: 'anti-counterfeit qr verification' },
+      { brandKey: 'strainchain', keyword: 'cannabis blockchain provenance' },
+      { brandKey: 'strainchain', keyword: 'metrc compliance blockchain' },
+      { brandKey: 'govchain', keyword: 'government document verification blockchain' },
+      { brandKey: 'qron', keyword: 'ai qr code art generator' },
+    ] as const;
+    const pages = await runProgrammaticSeoBatch([...seoJobs]);
+    results.seo = { generated: pages.length, slugs: pages.map((p) => p.slug) };
+  } catch (err) {
+    results.seo = { error: err instanceof Error ? err.message : String(err) };
+  }
+
   return NextResponse.json({
     ok: true,
     results,

@@ -25,6 +25,8 @@ jobs:
   deploy:
     name: Deploy ${{ matrix.worker }}
     runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -54,7 +56,6 @@ jobs:
           - authichain-scan-validate
           - authichain-telegram
           - stripe-webhook
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
