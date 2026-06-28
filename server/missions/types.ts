@@ -73,3 +73,14 @@ export type LeadStatus =
   | 'PILOT_PROPOSED'
   | 'CLOSED_WON'
   | 'CLOSED_LOST';
+
+// ─── Repository contract ──────────────────────────────────────────────────────
+// Implemented by DbMissionsRepository (real DB) and injectable for tests.
+export interface IMissionsRepository {
+  getMissions(status?: MissionStatus): Promise<any[]>;
+  getMissionById(id: string): Promise<any | null>;
+  createMission(type: MissionType): Promise<string>;
+  updateMissionStatus(id: string, status: MissionStatus): Promise<void>;
+  getTasksByMission(missionId: string): Promise<any[]>;
+  retryTask(id: string): Promise<void>;
+}
