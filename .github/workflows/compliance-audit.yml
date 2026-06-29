@@ -24,8 +24,7 @@ jobs:
       - name: Run Compliance Audit
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # Point to your local LM Studio instance
-          LOCAL_MODEL_URL: http://192.168.254.10:1234
+          # Use the secret that points to your Ngrok tunnel
+          LOCAL_MODEL_URL: ${{ secrets.LOCAL_MODEL_URL }}
         run: |
-          # Execute the handler, which will now look for the model at your local IP
           python -m agentz.workflows.runner --handler authichain_compliance_audit
