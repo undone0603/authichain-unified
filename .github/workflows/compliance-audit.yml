@@ -11,6 +11,19 @@ jobs:
   compliance-audit:
     name: Run EU DPP Compliance Audit
     runs-on: ubuntu-latest
+    
+    # Resolves Connection Refused error
+    services:
+      ollama:
+        image: ollama/ollama:latest
+        ports:
+          - 11434:11434
+        options: >-
+          --health-cmd "curl -f http://localhost:11434"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -19,9 +32,14 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install -r requirements-agentz.txt
+      
       - name: Run Compliance Audit
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          # Assuming the runner handles mode detection or defaults to a safe mode
-        run: python -m agentz.workflows.runner --handler authichain_compliance_audit
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          LOCAL_MODEL_URL: http://localhost:11434
+        run: |
+          # Ensure model is ready
+          curl http://localhost:11434/api/pull -d '{"name": "gemma"}'
+          # Execute the handler
+          python -m agentz.workflows.runner --handler authichain_compliance_audit
