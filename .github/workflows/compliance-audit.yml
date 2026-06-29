@@ -12,18 +12,6 @@ jobs:
     name: Run EU DPP Compliance Audit
     runs-on: ubuntu-latest
     
-    # Resolves Connection Refused error
-    services:
-      ollama:
-        image: ollama/ollama:latest
-        ports:
-          - 11434:11434
-        options: >-
-          --health-cmd "curl -f http://localhost:11434"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -35,11 +23,9 @@ jobs:
       
       - name: Run Compliance Audit
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          LOCAL_MODEL_URL: http://localhost:11434
+          # Point to your local LM Studio instance
+          LOCAL_MODEL_URL: http://192.168.254.10:1234
         run: |
-          # Ensure model is ready
-          curl http://localhost:11434/api/pull -d '{"name": "gemma"}'
-          # Execute the handler
+          # Execute the handler, which will now look for the model at your local IP
           python -m agentz.workflows.runner --handler authichain_compliance_audit
