@@ -2,21 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-/* â”€â”€â”€â”€ Header Links â”€â”€â”€â”€ */
+/* ---- Header Links ---- */
 .protocol-header-link {
   color: #9e9e9e;
   transition: color 0.2s ease;
 }
 .protocol-header-link:hover {
-  color: #c9a227;
+  color: #00FFD1;
 }
 
-/* â”€â”€â”€â”€ AuthiChain Protocol Brand Tokens â”€â”€â”€â”€ */
+/* ---- AuthiChain Protocol Brand Tokens ---- */
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;
 
-  /* DEFAULT: Gold palette (AuthiChain) */
+  /* DEFAULT: AuthiChain Protocol palette */
   --primary: #c9a227;
   --primary-light: #e8c547;
   --primary-glow: #ffd700;
@@ -25,6 +25,10 @@
   --primary-border: rgba(201, 162, 39, 0.3);
   --primary-bg-subtle: rgba(201, 162, 39, 0.05);
   --primary-gradient: linear-gradient(135deg, #e8c547 0%, #c9a227 50%, #a07d10 100%);
+
+  /* AuthiChain brand accent (teal) — maps to Tailwind `accent` token */
+  --accent: #00FFD1;
+  --accent-foreground: #0a0a0a;
 
   /* Steel/silver palette */
   --steel: #9e9e9e;
@@ -48,6 +52,7 @@
   --primary-bg-subtle: rgba(59, 130, 246, 0.05);
   --primary-gradient: linear-gradient(135deg, #ef4444 0%, #ffffff 50%, #3b82f6 100%); /* Red White Blue */
   --accent: #ef4444;
+  --accent-foreground: #ffffff;
 }
 
 /* AGRICULTURAL THEME (StrainChain) */
@@ -60,7 +65,8 @@
   --primary-border: rgba(16, 185, 129, 0.3);
   --primary-bg-subtle: rgba(16, 185, 129, 0.05);
   --primary-gradient: linear-gradient(135deg, #10b981 0%, #582f0e 50%, #064e3b 100%); /* Green Earth Forest */
-  --accent: #d97706; /* Amber/Soil */
+  --accent: #22C55E;
+  --accent-foreground: #0a0a0a;
 }
 
 /* ARTISTIC THEME (QRON.space) */
@@ -73,19 +79,16 @@
   --primary-border: rgba(139, 92, 246, 0.3);
   --primary-bg-subtle: rgba(139, 92, 246, 0.05);
   --primary-gradient: linear-gradient(135deg, #f43f5e 0%, #8b5cf6 50%, #06b6d4 100%); /* Rose Violet Cyan */
-  --accent: #f43f5e;
+  --accent: #F59E0B;
+  --accent-foreground: #0a0a0a;
 }
 
-/* Tailwind token mapping (background/foreground/gold, fonts) lives in
-   tailwind.config.ts theme.extend for the v3 toolchain. */
+/* Tailwind token mapping (background/foreground/gold, fonts) lives in tailwind.config.ts theme.extend for the v3 toolchain. */
 
-/* â”€â”€â”€â”€ Base â”€â”€â”€â”€ */
-*,
-*::before,
-*::after {
+/* ---- Base ---- */
+*, *::before, *::after {
   box-sizing: border-box;
 }
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -93,7 +96,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* â”€â”€â”€â”€ THEME UTILITIES - Unified and Dynamic â”€â”€â”€â”€ */
+/* ---- THEME UTILITIES - Unified and Dynamic ---- */
 
 /* Dynamic gradient text */
 .gold-text,
@@ -106,43 +109,46 @@ body {
 }
 
 /* Solid theme primary text */
-.text-gold, .text-primary {
+.text-gold,
+.text-primary {
   color: var(--primary);
 }
 
 /* Dynamic primary backgrounds */
-.bg-gold-gradient, .bg-primary-gradient {
+.bg-gold-gradient,
+.bg-primary-gradient {
   background: var(--primary-gradient);
 }
-
-.bg-gold-subtle, .bg-primary-subtle {
+.bg-gold-subtle,
+.bg-primary-subtle {
   background: var(--primary-bg-subtle);
 }
 
 /* Dynamic borders and effects */
-.border-gold, .border-primary {
+.border-gold,
+.border-primary {
   border: 1px solid var(--primary-border);
 }
-
-.ring-gold, .ring-primary {
+.ring-gold,
+.ring-primary {
   box-shadow: 0 0 0 2px var(--primary-border);
 }
-
-.glow-gold, .glow-primary {
-  box-shadow:
-    0 0 20px var(--primary-muted),
-    0 0 40px var(--primary-bg-subtle);
+.glow-gold,
+.glow-primary {
+  box-shadow: 0 0 20px var(--primary-muted), 0 0 40px var(--primary-bg-subtle);
 }
 
 /* Dynamic divider */
-.gold-divider, .primary-divider {
+.gold-divider,
+.primary-divider {
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--primary), transparent);
   margin: 3rem 0;
 }
 
 /* Buttons */
-.btn-gold, .btn-primary {
+.btn-gold,
+.btn-primary {
   background: var(--primary-gradient);
   color: #0a0a0a;
   font-weight: 700;
@@ -155,14 +161,14 @@ body {
   text-decoration: none;
   display: inline-block;
 }
-
-.btn-gold:hover, .btn-primary:hover {
+.btn-gold:hover,
+.btn-primary:hover {
   opacity: 0.9;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px var(--primary-muted);
 }
-
-.btn-outline-gold, .btn-outline-primary {
+.btn-outline-gold,
+.btn-outline-primary {
   background: transparent;
   border: 2px solid var(--primary);
   color: var(--primary);
@@ -174,8 +180,8 @@ body {
   text-decoration: none;
   display: inline-block;
 }
-
-.btn-outline-gold:hover, .btn-outline-primary:hover {
+.btn-outline-gold:hover,
+.btn-outline-primary:hover {
   background: var(--primary-bg-subtle);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px var(--primary-muted);
@@ -196,7 +202,6 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-
 .protocol-card {
   background: var(--surface-2);
   border: 1px solid var(--steel-deeper);
@@ -204,13 +209,11 @@ body {
   padding: 1.5rem;
   transition: all 0.3s ease;
 }
-
 .protocol-card:hover {
   border-color: var(--primary-border);
   box-shadow: 0 8px 30px var(--primary-muted);
   transform: translateY(-2px);
 }
-
 .protocol-input {
   background: var(--surface-1);
   border: 1px solid var(--steel-deeper);
@@ -218,7 +221,6 @@ body {
   border-radius: 0.5rem;
   transition: all 0.2s ease;
 }
-
 .protocol-input:focus {
   outline: none;
   border-color: var(--primary-border);
@@ -226,7 +228,8 @@ body {
 }
 
 /* Card with primary accent */
-.card-gold, .card-primary {
+.card-gold,
+.card-primary {
   background: rgba(10, 10, 10, 0.8);
   border: 1px solid var(--primary-border);
   box-shadow: 0 4px 20px var(--primary-muted);
@@ -234,8 +237,8 @@ body {
   border-radius: 1rem;
   padding: 1.5rem;
 }
-
-.card-gold:hover, .card-primary:hover {
+.card-gold:hover,
+.card-primary:hover {
   border-color: var(--primary-border);
   box-shadow: 0 8px 30px var(--primary-muted);
   transform: translateY(-2px);
@@ -243,29 +246,19 @@ body {
 
 /* Animations */
 @keyframes primaryPulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
-
-.animate-gold-pulse, .animate-primary-pulse {
+.animate-gold-pulse,
+.animate-primary-pulse {
   animation: primaryPulse 2s ease-in-out infinite;
 }
-
 @keyframes primaryShimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
 }
-
-.shimmer-gold, .shimmer-primary {
+.shimmer-gold,
+.shimmer-primary {
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
@@ -276,53 +269,27 @@ body {
   animation: primaryShimmer 2s infinite;
 }
 
-/* â”€â”€â”€ Animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* --- Animations ---------------------------------------------------------------------- */
 @keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
 }
 @keyframes shimmer {
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 @keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 @keyframes primary-border-flow {
-  0% {
-    border-color: var(--primary-border);
-  }
-  50% {
-    border-color: var(--primary);
-  }
-  100% {
-    border-color: var(--primary-border);
-  }
+  0% { border-color: var(--primary-border); }
+  50% { border-color: var(--primary); }
+  100% { border-color: var(--primary-border); }
 }
-
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-.animate-spin-slow {
-  animation: spin-slow 14s linear infinite;
-}
-.animate-border-flow {
-  animation: primary-border-flow 3s ease-in-out infinite;
-}
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-spin-slow { animation: spin-slow 14s linear infinite; }
+.animate-border-flow { animation: primary-border-flow 3s ease-in-out infinite; }
 .animate-shimmer {
   background: linear-gradient(
     90deg,
@@ -333,4 +300,3 @@ body {
   background-size: 200% 100%;
   animation: shimmer 2.2s linear infinite;
 }
-
