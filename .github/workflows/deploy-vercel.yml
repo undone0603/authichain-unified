@@ -11,11 +11,18 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
-  deploy-vercel-root:
+  deploy:
     runs-on: ubuntu-latest
-    name: deploy (root - authichain.com)
-    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
+      - name: Validate Vercel IDs
+        run: |
+          if [ -z "${{ env.VERCEL_ORG_ID }}" ] || [ -z "${{ env.VERCEL_PROJECT_ID }}" ]; then
+            echo "Error: VERCEL_ORG_ID or VERCEL_PROJECT_ID is missing."
+            exit 1
+          fi
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Setup pnpm
