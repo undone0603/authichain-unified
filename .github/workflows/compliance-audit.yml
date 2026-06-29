@@ -1,0 +1,27 @@
+name: Compliance Audit
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  compliance-audit:
+    name: Run EU DPP Compliance Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements-agentz.txt
+      - name: Run Compliance Audit
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # Assuming the runner handles mode detection or defaults to a safe mode
+        run: python -m agentz.workflows.runner --handler authichain_compliance_audit
