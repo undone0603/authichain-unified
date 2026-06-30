@@ -35,10 +35,16 @@ async def research_dpp_requirements(vertical: str, ctx: Optional[ExecutionContex
     provider = os.getenv("LLM_PROVIDER", "groq").lower()
     
     if provider == "groq":
-        from langchain_groq import ChatGroq
-        # Defaulting to Groq's fast versatile model, can be overridden by env var
+        # Use ChatOpenAI pointing to Groq's endpoint to bypass the browser-use attribute bug
+        from langchain_openai import ChatOpenAI
+        
         active_model = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
-        llm = ChatGroq(model=active_model, api_key=os.getenv("GROQ_API_KEY"))
+        
+        llm = ChatOpenAI(
+            api_key=os.getenv("GROQ_API_KEY"),
+            base_url="https://api.groq.com/openai/v1",
+            model=active_model
+        )
         llm_parser = llm
     else:
         active_model = os.getenv("LLM_MODEL", "gpt-4o")
