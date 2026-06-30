@@ -1,0 +1,44 @@
+name: GovChain – Mint Opportunity NFTs
+
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        required: false
+        type: string
+    secrets:
+      ALCHEMY_API_KEY:
+        required: true
+      POLYGON_PRIVATE_KEY:
+        required: true
+      GOVCHAIN_NFT_CONTRACT:
+        required: true
+      SUPABASE_URL:
+        required: true
+      SUPABASE_SERVICE_KEY:
+        required: true
+      GOVCHAIN_URL:
+        required: false
+
+jobs:
+  mint:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Node + pnpm setup
+        uses: ./.github/workflows/node-pnpm-setup.yml
+        with:
+          node_version: '22'
+          pnpm_version: '10.28.2'
+
+      - name: Mint GovChain NFTs
+        run: pnpm exec tsx scripts/mint-govchain-nfts.ts
+        env:
+          ALCHEMY_API_KEY:       ${{ secrets.ALCHEMY_API_KEY }}
+          WALLET_PRIVATE_KEY:    ${{ secrets.POLYGON_PRIVATE_KEY }}
+          CONTRACT_ADDRESS:      ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
+          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GOVCHAIN_URL:          ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
+          DRY_RUN:               ${{ inputs.dry_run || 'false' }}
