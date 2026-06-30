@@ -238,7 +238,7 @@ jobs:
           GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
           DRY_RUN:              ${{ inputs.dry_run || 'false' }}
 
-      - name: Report pipeline failure to Slack
+            - name: Report pipeline failure to Slack
         if: failure()
         continue-on-error: true
         run: pnpm exec tsx scripts/report-failure.ts
