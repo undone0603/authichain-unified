@@ -349,9 +349,9 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
 const { sent, failed, total } = await emailProposals();
 console.log(`✅ Sent ${sent}/${total} proposal emails (${failed} failed)`);
 
-// Only fail the job if we had work to do but accomplished none of it.
-if (total > 0 && sent === 0) {
+if (total > 0 && sent === 0 && failed > 0) {
   console.error('❌ All email attempts failed — see errors above.');
   process.exit(1);
 }
+
 process.exit(0);
