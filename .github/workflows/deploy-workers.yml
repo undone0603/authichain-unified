@@ -75,8 +75,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Deploy Worker
+        # Guard: Only run if Account ID and Compatibility Date are present
+        if: env.CLOUDFLARE_ACCOUNT_ID != '' && env.COMPATIBILITY_DATE != ''
         run: npx wrangler deploy --minify --config wrangler.toml
         working-directory: workers/${{ matrix.worker }}
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          COMPATIBILITY_DATE: '2026-06-29'

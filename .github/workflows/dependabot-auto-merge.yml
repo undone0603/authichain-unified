@@ -5,13 +5,19 @@ name: Dependabot Auto Merge
 # which matches how we triaged the recent batch). Picked up from the
 # abandoned codex/fix-authichain.com-issues-and-match-theme branch.
 
-on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-
 permissions:
   contents: write
   pull-requests: write
+
+concurrency:
+  group: dependabot-auto-merge
+  cancel-in-progress: true
+
+on:
+  pull_request_target:
+    paths:
+      - '**/package*.json'
+      - '**/pnpm-lock.yaml'
 
 jobs:
   auto-merge:
