@@ -1,3 +1,4 @@
+# Direction: push GitHub Secrets → Vercel
 name: Sync Env to Vercel
 on:
   push:
@@ -15,11 +16,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Vercel CLI
         run: npm install --global vercel
-      - name: Sync Envs
+      - name: Sync Envs to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          # 1. ADDED: Define the variable here so it exists in the shell
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
-          # Automatically syncs GitHub Secrets down to Vercel production environment
-          vercel env pull .env.production.local --environment production --token=$VERCEL_TOKEN --yes
+          # 2. ADDED: --force to overwrite existing variables
+          # 3. ADDED: --git-branch=main to specify the target environment if needed
+          echo "$API_KEY" | vercel env add API_KEY production \
+            --token=$VERCEL_TOKEN \
+            --scope=$VERCEL_ORG_ID \
+            --force \
+            --yes

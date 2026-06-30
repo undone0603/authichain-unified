@@ -10,6 +10,7 @@ ctx-aware orchestration shell so it composes with the runner's modes.
 from __future__ import annotations
 
 import asyncio
+import os
 
 from supabase import Client, create_client
 
@@ -23,7 +24,17 @@ from agentz.core.modes import ExecutionContext, Mode
 
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
+    # 1. Smarter Initialization: Check the environment first
+    active_provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    use_local_model = active_provider == "local"
+
+    # Only load the local model if we explicitly requested it, preventing Errno 111 in the cloud
+    if use_local_model:
+        try:
+            lm_manager.load_model("local-model")
+        except Exception as e:
+            ctx.step(f"Warning: Local model could not be loaded: {e}")
+
     try:
         supabase_url = get_or_placeholder("supabase_url", ctx)
         supabase_key = get_or_placeholder("supabase_service_key", ctx)
@@ -79,4 +90,9 @@ def run(ctx: ExecutionContext) -> str:
             f"{compliant}/{len(results)} compliant, {len(flagged)} flagged."
         )
     finally:
-        lm_manager.unload_model("local-model")
+        # Only attempt to unload if we tried to load it
+        if use_local_model:
+            try:
+                lm_manager.unload_model("local-model")
+            except Exception:
+                pass
