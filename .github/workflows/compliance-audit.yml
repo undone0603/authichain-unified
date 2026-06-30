@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  actions: read
 
 jobs:
   compliance-audit:
@@ -32,11 +30,11 @@ jobs:
 
       - name: Run Compliance Audit (Groq-only)
         env:
-          # Force Groq-only mode
           LLM_PROVIDER: groq
+          LLM_MODEL: llama-3.3-70b-versatile
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-
-          # Disable all other providers explicitly
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENAI_API_KEY: ""
           GEMINI_API_KEY: ""
           OPENROUTER_API_KEY: ""
@@ -44,8 +42,5 @@ jobs:
           DEEPSEEK_API_KEY: ""
           LMSTUDIO_API_KEY: ""
           OLLAMA_API_KEY: ""
-
-          # Disable healer fallback
           AGENTZ_DISABLE_HEALER: "true"
-
         run: python -m agentz.workflows.runner --handler authichain_compliance_audit
