@@ -1,16 +1,32 @@
 name: Deploy Vercel App
+
 on:
   push:
     branches:
       - main
+    paths:
+      - "app/**"
+      - "src/**"
+      - "pages/**"
+      - "components/**"
+      - "public/**"
+      - "scripts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "next.config.*"
+      - "tsconfig.json"
+      - "vercel.json"
   workflow_dispatch:
+
 permissions:
   contents: read
   id-token: write
   deployments: write
+
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -21,24 +37,32 @@ jobs:
             echo "Error: VERCEL_ORG_ID or VERCEL_PROJECT_ID is missing."
             exit 1
           fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
           version: '10.28.2'
+
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
       - name: Install Vercel CLI
         run: pnpm add --global vercel@latest
+
       - name: Pull Vercel Environment Information
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
       - name: Build Project Artifacts
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
       - name: Deploy Project Artifacts to Vercel
         run: vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }}
