@@ -46,5 +46,4 @@ jobs:
       - name: Deploy Project Artifacts to Vercel
         # Added --archive=tgz to bypass the 15,000 file limit
         run: vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }}
-  
   # ... deploy-worker job remains unchanged ...
