@@ -1,0 +1,38 @@
+name: Node + pnpm Setup
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        required: true
+        type: string
+      pnpm_version:
+        required: true
+        type: string
+    secrets:
+      SUPABASE_URL:
+        required: false
+      SUPABASE_SERVICE_KEY:
+        required: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
