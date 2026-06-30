@@ -51,7 +51,6 @@ async def research_dpp_requirements(vertical: str, ctx: Optional[ExecutionContex
             base_url="https://api.groq.com/openai/v1",
             model=active_model
         )
-        # Wrap the LLM to provide the 'provider' attribute expected by browser-use
         llm = ProviderWrapper(raw_llm, "groq")
         llm_parser = llm
     else:
@@ -77,4 +76,47 @@ async def research_dpp_requirements(vertical: str, ctx: Optional[ExecutionContex
     except:
         return ["origin_country", "material_composition", "carbon_footprint_total", "circularity_index"]
 
-# ... keep scan_product_compliance and run_global_compliance_audit as they were ...
+async def scan_product_compliance(supabase, product_id: str, requirements: List[str]) -> Dict[str, Any]:
+    """
+    Checks a specific product against DPP requirements.
+    """
+    product_res = supabase.table("products").select("metadata").eq("id", product_id).single().execute()
+    metadata = product_res.data.get("metadata", {})
+    
+    missing_fields = [req for req in requirements if req not in metadata]
+    
+    status = "COMPLIANT" if not missing_fields else "NON_COMPLIANT"
+    
+    supabase.table("products").update({
+        "metadata": {
+            **metadata,
+            "dpp_compliance": {
+                "status": status,
+                "missing_fields": missing_fields,
+                "last_checked": "now()"
+            }
+        }
+    }).eq("id", product_id).execute()
+    
+    return {
+        "product_id": product_id,
+        "status": status,
+        "missing": missing_fields
+    }
+
+async def run_global_compliance_audit(supabase, ctx: Optional[ExecutionContext] = None):
+    """
+    Runs a full-ledger audit against EU mandates.
+    """
+    # 1. Fetch requirements
+    reqs = await research_dpp_requirements("luxury", ctx)
+    
+    # 2. Audit products
+    products = supabase.table("products").select("id").limit(10).execute().data
+    
+    results = []
+    for p in products:
+        res = await scan_product_compliance(supabase, p["id"], reqs)
+        results.append(res)
+        
+    return results
