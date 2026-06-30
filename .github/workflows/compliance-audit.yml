@@ -25,6 +25,7 @@ jobs:
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          LOCAL_MODEL_URL: ${{ secrets.LOCAL_MODEL_URL }}
+          # ADD THE KEY HERE
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} 
         run: |
           python -m agentz.workflows.runner --handler authichain_compliance_audit
