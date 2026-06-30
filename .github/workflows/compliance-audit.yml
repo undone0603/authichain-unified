@@ -24,7 +24,7 @@ jobs:
       - name: Run Compliance Audit
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # Use the secret that points to your Ngrok tunnel
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           LOCAL_MODEL_URL: ${{ secrets.LOCAL_MODEL_URL }}
         run: |
           python -m agentz.workflows.runner --handler authichain_compliance_audit
