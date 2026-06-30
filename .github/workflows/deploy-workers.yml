@@ -1,5 +1,4 @@
 name: Deploy Workers (workers/*)
-
 on:
   push:
     branches: [main]
@@ -12,15 +11,10 @@ on:
         description: 'Specific worker dir to deploy (e.g. authichain-api). Leave blank for all.'
         required: false
         type: string
-
 permissions:
   contents: read
   id-token: write
   deployments: write
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   deploy:
     name: Deploy ${{ matrix.worker }}
@@ -59,23 +53,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
           version: '10.28.2'
-
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Deploy Worker
-        # Guard: Only run if Account ID and Compatibility Date are present
         if: env.CLOUDFLARE_ACCOUNT_ID != '' && env.COMPATIBILITY_DATE != ''
         run: npx wrangler deploy --minify --config wrangler.toml
         working-directory: workers/${{ matrix.worker }}
