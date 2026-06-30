@@ -21,12 +21,13 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          # Add your specific secret mapping here, e.g.:
-          # API_KEY: ${{ secrets.API_KEY }}
+          # 1. ADDED: Define the variable here so it exists in the shell
+          API_KEY: ${{ secrets.API_KEY }}
         run: |
-          # Push specific secret to Vercel
-          # Replace 'MY_SECRET_NAME' with the actual secret key name
+          # 2. ADDED: --force to overwrite existing variables
+          # 3. ADDED: --git-branch=main to specify the target environment if needed
           echo "$API_KEY" | vercel env add API_KEY production \
             --token=$VERCEL_TOKEN \
             --scope=$VERCEL_ORG_ID \
+            --force \
             --yes
