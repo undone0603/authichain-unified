@@ -9,19 +9,23 @@ on:
 
 permissions:
   contents: read
+  id-token: write    # required for OIDC
+  actions: read
 
 jobs:
   compliance-audit:
     name: Run EU DPP Compliance Audit
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: pip install -r requirements-agentz.txt
