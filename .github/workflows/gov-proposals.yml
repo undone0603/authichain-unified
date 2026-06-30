@@ -1,0 +1,52 @@
+name: GovChain – Generate Proposal Drafts
+
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        required: false
+        type: string
+    secrets:
+      OPENAI_API_KEY:
+        required: false
+      GROQ_API_KEY:
+        required: false
+      GEMINI_API_KEY:
+        required: false
+      MISTRAL_API_KEY:
+        required: false
+      SUPABASE_URL:
+        required: true
+      SUPABASE_SERVICE_KEY:
+        required: true
+      AIRTABLE_API_KEY:
+        required: true
+      AIRTABLE_BASE_ID:
+        required: true
+      GOVCHAIN_URL:
+        required: false
+
+jobs:
+  proposals:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Node + pnpm setup
+        uses: ./.github/workflows/node-pnpm-setup.yml
+        with:
+          node_version: '22'
+          pnpm_version: '10.28.2'
+
+      - name: Generate AI proposal drafts
+        run: pnpm exec tsx scripts/generate-proposals.ts
+        env:
+          OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
+          MISTRAL_API_KEY:      ${{ secrets.MISTRAL_API_KEY }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          AIRTABLE_API_KEY:     ${{ secrets.AIRTABLE_API_KEY }}
+          AIRTABLE_BASE_ID:     ${{ secrets.AIRTABLE_BASE_ID }}
+          GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
+          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
