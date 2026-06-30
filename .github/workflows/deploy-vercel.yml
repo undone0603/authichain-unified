@@ -9,15 +9,12 @@ permissions:
   id-token: write
   deployments: write
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  # Added Vercel configuration to env
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # Added validation step to fail early if missing
       - name: Validate Vercel IDs
         run: |
           if [ -z "${{ env.VERCEL_ORG_ID }}" ] || [ -z "${{ env.VERCEL_PROJECT_ID }}" ]; then
@@ -44,6 +41,4 @@ jobs:
       - name: Build Project Artifacts
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
       - name: Deploy Project Artifacts to Vercel
-        # Added --archive=tgz to bypass the 15,000 file limit
         run: vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }}
-  # ... deploy-worker job remains unchanged ...
