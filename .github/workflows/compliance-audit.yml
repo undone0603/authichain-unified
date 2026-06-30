@@ -9,7 +9,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write    # required for OIDC
+  id-token: write
   actions: read
 
 jobs:
@@ -30,10 +30,22 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-agentz.txt
 
-      - name: Run Compliance Audit
+      - name: Run Compliance Audit (Groq-only)
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # Force Groq-only mode
           LLM_PROVIDER: groq
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+          # Disable all other providers explicitly
+          OPENAI_API_KEY: ""
+          GEMINI_API_KEY: ""
+          OPENROUTER_API_KEY: ""
+          CEREBRAS_API_KEY: ""
+          DEEPSEEK_API_KEY: ""
+          LMSTUDIO_API_KEY: ""
+          OLLAMA_API_KEY: ""
+
+          # Disable healer fallback
+          AGENTZ_DISABLE_HEALER: "true"
+
         run: python -m agentz.workflows.runner --handler authichain_compliance_audit
