@@ -7,6 +7,7 @@ and flags products for metadata gaps.
 from __future__ import annotations
 import json
 import logging
+import os
 from typing import Dict, Any, List, Optional
 from agentz.core.llm import get_llm
 from agentz.core.modes import ExecutionContext
@@ -30,7 +31,21 @@ async def research_dpp_requirements(vertical: str, ctx: Optional[ExecutionContex
         "Extract a list of mandatory data fields (e.g., origin, recycled content, carbon footprint)."
     )
     
-    llm = get_llm(model="gpt-4o")
+    # --- DYNAMIC PROVIDER CONFIGURATION ---
+    provider = os.getenv("LLM_PROVIDER", "groq").lower()
+    
+    if provider == "groq":
+        from langchain_groq import ChatGroq
+        # Defaulting to Groq's fast versatile model, can be overridden by env var
+        active_model = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+        llm = ChatGroq(model=active_model, api_key=os.getenv("GROQ_API_KEY"))
+        llm_parser = llm
+    else:
+        active_model = os.getenv("LLM_MODEL", "gpt-4o")
+        llm = get_llm(model=active_model)
+        llm_parser = get_llm(model=active_model)
+    # --------------------------------------
+
     agent = Agent(task=task, llm=llm, controller=controller)
     
     if not ctx:
@@ -38,8 +53,7 @@ async def research_dpp_requirements(vertical: str, ctx: Optional[ExecutionContex
     else:
         history = await run_with_healing(agent, ctx)
         
-    # Extract list from response
-    llm_parser = get_llm(model="gpt-4o")
+    # Extract list from response using the dynamically assigned parser
     prompt = f"Convert this browser history into a clean JSON list of mandatory DPP fields: {history.final_result()}"
     res = llm_parser.invoke(prompt)
     
