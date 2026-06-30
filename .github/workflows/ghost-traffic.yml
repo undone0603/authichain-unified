@@ -2,13 +2,13 @@ name: Ghost Traffic Engine
 
 on:
   schedule:
-    - cron: '0 13 * * *' # Fires every day at 9:00 AM EST
-  workflow_dispatch: # Allows you to click "Run" manually to test it
+    - cron: '0 13 * * *'   # Fires every day at 9:00 AM EST
+  workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run (select + preview the post, no live publish)'
+        description: "Dry run (select + preview the post, no live publish)"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
 
 permissions:
@@ -18,22 +18,44 @@ jobs:
   run-strike:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install -r requirements-agentz.txt
 
-      - name: Execute Autonomous Strike
-        run: python artifacts/linkedin_strike.py
+      - name: Run Ghost Traffic Engine
         env:
-          # Official LinkedIn API via OAuth 2.0 (same proven mechanism as
-          # marketing-autonomous.yml). Mint/refresh with
-          # scripts/linkedin-oauth-setup.mjs. Missing creds => graceful skip.
-          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
-          LINKEDIN_PERSON_URN:   ${{ secrets.LINKEDIN_PERSON_URN }}
-          DRY_RUN:               ${{ inputs.dry_run || 'false' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+
+          # Cloudflare Worker credentials
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+          # Supabase
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+          # Stripe
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+
+          # Groq-only LLM mode
+          LLM_PROVIDER: groq
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENAI_API_KEY: ""
+          GEMINI_API_KEY: ""
+          OPENROUTER_API_KEY: ""
+          CEREBRAS_API_KEY: ""
+          DEEPSEEK_API_KEY: ""
+          LMSTUDIO_API_KEY: ""
+          OLLAMA_API_KEY: ""
+          AGENTZ_DISABLE_HEALER: "true"
+
+        run: python -m agentz.workflows.runner --handler ghost_traffic_engine
