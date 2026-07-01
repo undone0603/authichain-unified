@@ -22,7 +22,8 @@ export function useTryForFree() {
       });
 
       if (res.status === 401) {
-        window.location.assign('/login?next=trial');
+        const next = encodeURIComponent('/pricing?startTrial=1');
+        window.location.assign(`/login?next=${next}`);
         return;
       }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 
 /**
  * THEME MANAGER
@@ -12,7 +12,7 @@ import { useEffect } from 'react';
  * 3. Artistic (QRON.space): /, /gallery, /dashboard
  * 4. AuthiChain (Gold): /admin, /legal, /login
  */
-export function ThemeManager() {
+export function ThemeManager({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
@@ -66,5 +66,5 @@ export function ThemeManager() {
     // No class added, uses :root variables
   }, [pathname]);
 
-  return null;
+  return children;
 }

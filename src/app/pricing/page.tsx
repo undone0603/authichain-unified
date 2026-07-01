@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { PLANS } from '@/lib/plans';
-import { CheckoutModal } from './pricing-client';
+import { CheckoutModal, TrialButton } from './pricing-client';
 import { 
   Check, 
   Coins
@@ -63,12 +63,7 @@ export default function PricingPage() {
               </div>
 
               {plan.tier === 'free' ? (
-                <Link 
-                  href="/login" 
-                  className="w-full py-4 rounded-xl border border-zinc-800 font-black uppercase tracking-widest text-xs text-center hover:bg-zinc-900 transition-colors"
-                >
-                  Start Free
-                </Link>
+                <TrialButton />
               ) : (
                 <CheckoutModal 
                   planId={plan.id} 
