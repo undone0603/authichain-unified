@@ -65,7 +65,9 @@ export default function RootLayout({
             <Suspense fallback={null}>
               <SiteNav />
             </Suspense>
-            <ReferralTracker />
+            <Suspense fallback={null}>
+              <ReferralTracker />
+            </Suspense>
             <FunnelTracker />
             <ThirdwebProvider>
               {children}
