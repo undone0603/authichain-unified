@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt 2>/dev/null || pip install groq supabase python-dotenv 2>/dev/null || true
+          pip install -r requirements-agentz.txt
 
       - name: Check GROQ_API_KEY availability
         id: check-key
