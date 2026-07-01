@@ -8,8 +8,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { name, email, company, message, interest, prospect_id, utm_campaign } = body;
 
-    if (!name || !email || !company) {
-      return NextResponse.json({ error: 'name, email, and company are required' }, { status: 400 });
+    if (!name || !email) {
+      return NextResponse.json({ error: 'name and email are required' }, { status: 400 });
     }
 
     const supabase = createClient(
