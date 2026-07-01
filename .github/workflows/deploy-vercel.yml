@@ -16,6 +16,7 @@ on:
       - "next.config.*"
       - "tsconfig.json"
       - "vercel.json"
+      - ".github/workflows/deploy-vercel.yml"
   workflow_dispatch:
 
 concurrency:
