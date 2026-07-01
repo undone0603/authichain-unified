@@ -1,0 +1,86 @@
+# .github/workflows/autonomous-business-cycle.yml
+#
+# Redundant trigger for /api/automation/cron (AutonomousController.runDailyCycle():
+# lead-drip sequencer, dunning escalation, affiliate payouts, growth engine,
+# GovChain sync, programmatic SEO, and more — see src/lib/autonomous-controller.ts).
+#
+# vercel.json configures this same path as a Vercel Cron Job at the same schedule,
+# but production runtime logs show zero requests to it over the last 7 days —
+# it has never actually fired. Vercel Cron Jobs require a paid plan and an
+# explicit per-project entitlement; this workflow does not depend on that, so
+# the daily business cycle runs regardless of Vercel's cron configuration.
+#
+# Setup required (one-time):
+#   1. Set CRON_SECRET in the Vercel project's environment variables (the app
+#      returns 401 without it — see src/app/api/automation/cron/route.ts).
+#   2. Add the SAME value as a GitHub Actions repo secret named CRON_SECRET.
+#   3. Optionally set an APP_URL repo variable/secret if the canonical domain
+#      isn't authichain.com.
+name: Autonomous Business Cycle
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # Daily 6 AM UTC — matches the (currently non-firing) Vercel cron entry
+  workflow_dispatch:
+
+concurrency:
+  group: autonomous-business-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    name: Trigger daily business cycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Call /api/automation/cron
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ secrets.APP_URL || vars.APP_URL || 'https://authichain.com' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set as a repo secret — skipping."
+            echo "Set it to the same value configured for CRON_SECRET in the Vercel project's env vars."
+            exit 0
+          fi
+
+          status=$(curl -sS -o /tmp/cron-response.json -w "%{http_code}" \
+            --max-time 600 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${APP_URL}/api/automation/cron")
+
+          echo "HTTP status: $status"
+          cat /tmp/cron-response.json
+          echo ""
+
+          if [ "$status" != "200" ]; then
+            echo "::error::/api/automation/cron returned $status"
+            exit 1
+          fi
+
+      - name: Report failure to Slack
+        if: failure()
+        continue-on-error: true
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL}" ]; then
+            exit 0
+          fi
+          curl -X POST "${SLACK_WEBHOOK_URL}" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "text": "Autonomous Business Cycle workflow failed",
+              "attachments": [
+                {
+                  "color": "danger",
+                  "title": "Autonomous Business Cycle Failed",
+                  "title_link": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "text": "Check the workflow run for details."
+                }
+              ]
+            }'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
