@@ -24,9 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # fetch full history only on scheduled runs and main-branch pushes
-          # for PRs just fetch the PR commits (faster + avoids historical noise)
-          fetch-depth: ${{ github.event_name == 'schedule' && 0 || github.event_name == 'pull_request' && 1 || 0 }}
+          # gitleaks diffs <sha>^..<sha>, which needs the parent commit present —
+          # fetch-depth: 1 leaves it unresolvable ("ambiguous argument ... unknown
+          # revision"), so fetch full history on every trigger.
+          fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
