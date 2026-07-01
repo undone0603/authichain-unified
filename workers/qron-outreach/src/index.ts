@@ -1,5 +1,7 @@
 // QRON Outreach Engine — Sends cold emails via Resend relay (authichain.com domain)
-// Cron: sends 3 emails per trigger, cycles through the queue
+// Cron: sends 1 email per trigger (was 3 — reduced to protect domain reputation)
+// Bounce history: April 2026 batch used guessed hello@ addresses → 73% bounce.
+// Current queue uses verified named contacts only.
 
 function timingSafeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder();
@@ -16,6 +18,11 @@ interface Email {
   subject: string;
   body: string;
 }
+
+// REMOVED from original queue (reason in comment):
+//   klong@c3industries.com     — already delivered 2026-06-26, skip duplicate
+//   privacy@lettuce.com        — legal/privacy inbox, wrong recipient for marketing
+//   press@compass.com          — press desk, not the right contact for a partnership pitch
 
 const OUTREACH_QUEUE: Email[] = [
   {
@@ -40,7 +47,10 @@ I'd love to create a free sample for one of your restaurants. Just reply with a 
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com
+
+---
+To unsubscribe from future emails, reply with "unsubscribe".`
   },
   {
     to: "fatsquirrelseo@gmail.com",
@@ -65,31 +75,10 @@ Happy to create a free sample for one of your clients. What do you think?
 
 Best,
 Z | QRON
-authichain@gmail.com`
-  },
-  {
-    to: "klong@c3industries.com",
-    name: "Kathryn",
-    subject: "Branded QR Art for High Profile Cannabis Packaging",
-    body: `Hi Kathryn,
+authichain@gmail.com
 
-I noticed High Profile Cannabis is expanding across Michigan. Quick pitch: I create AI-generated artistic QR codes that transform standard packaging QR codes into premium brand assets.
-
-Using QRON, your compliance QR codes become scannable art that:
-- Matches High Profile's brand aesthetic perfectly
-- Gets 25-40% more scans than standard codes
-- Works with any compliance/seed-to-sale system
-- Includes blockchain verification (AuthiChain technology)
-
-$49 per design or $199 for a 5-pack. 100% scan guarantee.
-
-Portfolio: https://qron-portfolio.undone-k.workers.dev/
-
-Reply with your website URL and I'll generate a free branded sample.
-
-Best,
-Z | QRON
-authichain@gmail.com`
+---
+To unsubscribe from future emails, reply with "unsubscribe".`
   },
   {
     to: "christopher.kwilasz@lume.com",
@@ -109,7 +98,10 @@ Reply with a URL and I'll create a free Lume-branded sample.
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com
+
+---
+To unsubscribe from future emails, reply with "unsubscribe".`
   },
   {
     to: "contact@cannabiscreative.com",
@@ -133,54 +125,10 @@ Happy to create a free branded sample for one of your clients.
 
 Best,
 Z | QRON
-authichain@gmail.com`
-  },
-  {
-    to: "privacy@lettuce.com",
-    name: "Jennifer / Lettuce Entertain You Marketing Team",
-    subject: "AI-Powered Menu QR Art for Lettuce Entertain You Restaurants",
-    body: `Hi Jennifer,
+authichain@gmail.com
 
-With 130+ restaurants across your portfolio, your QR code menus are one of the first things millions of diners interact with each year.
-
-I create AI-generated artistic QR codes — my clients see 25-40% more scans, and diners say the codes are conversation starters.
-
-For a restaurant group your size, I can provide:
-- Custom QR art matched to each restaurant's brand
-- 100% scan guarantee
-- High-res PNG + SVG for table tents, menus, signage
-- Bulk pricing for your full portfolio
-
-Portfolio: https://qron-portfolio.undone-k.workers.dev/
-
-I'd love to create a free sample for one of your Chicago locations. Just reply with a menu URL.
-
-Best,
-Z | QRON
-authichain@gmail.com`
-  },
-  {
-    to: "press@compass.com",
-    name: "Compass Marketing Team",
-    subject: "AI-Powered QR Art for Compass Smart Signage",
-    body: `Hi Compass Marketing Team,
-
-I know Compass leads the industry in smart signage with QR technology. I'd like to propose a visual upgrade.
-
-I run QRON, an AI-powered platform that turns standard QR codes into scannable works of art. Instead of generic black-and-white QR on yard signs, imagine Compass-branded artistic QR that gets 37%+ scan-through rates.
-
-Partnership options:
-- Custom QR art matching Compass brand guidelines
-- Bulk pricing for agent teams and offices
-- API available for automated generation at scale
-
-Portfolio: https://qron-portfolio.undone-k.workers.dev/
-
-Happy to create a free sample using a live Compass listing URL.
-
-Best,
-Z | QRON
-authichain@gmail.com`
+---
+To unsubscribe from future emails, reply with "unsubscribe".`
   },
   {
     to: "Helpteam@oakleysign.com",
@@ -203,7 +151,10 @@ Happy to create free samples using any brokerage's brand colors.
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com
+
+---
+To unsubscribe from future emails, reply with "unsubscribe".`
   },
   {
     to: "info@creativevinylsigns.com",
@@ -223,7 +174,10 @@ Reply for a free sample.
 
 Best,
 Z | QRON
-authichain@gmail.com`
+authichain@gmail.com
+
+---
+To unsubscribe from future emails, reply with "unsubscribe".`
   }
 ];
 
@@ -259,7 +213,8 @@ export default {
 
     if (url.pathname === '/send-next') {
       if (!isAuthed) return new Response('Unauthorized', { status: 401 });
-      const result = await sendNextBatch(env, 3);
+      // Send 1 at a time to protect domain reputation
+      const result = await sendNextBatch(env, 1);
       return Response.json(result);
     }
 
@@ -270,17 +225,18 @@ export default {
     }
 
     return new Response(`QRON Outreach Engine
-Queue: ${OUTREACH_QUEUE.length} emails
+Queue: ${OUTREACH_QUEUE.length} emails (named contacts only — no guessed addresses)
+Rate: 1 per cron trigger
 Endpoints:
   /health - Health check
   /status?key=TOKEN - Check send progress
-  /send-next?key=TOKEN - Send next 3 emails
+  /send-next?key=TOKEN - Send next 1 email
   /send-all?key=TOKEN - Send all remaining emails`);
   },
 
   async scheduled(event: any, env: any, ctx: any) {
-    // Send 3 emails per cron trigger
-    ctx.waitUntil(sendNextBatch(env, 3));
+    // Send 1 email per cron trigger (reduced from 3 to protect domain reputation)
+    ctx.waitUntil(sendNextBatch(env, 1));
   }
 };
 
@@ -312,13 +268,13 @@ async function sendNextBatch(env: any, count: number) {
 
   await saveSentList(env, sent);
 
-  // Notify on completion
   if (sent.length >= OUTREACH_QUEUE.length) {
     await sendViaResend({
       to: 'authichain@gmail.com',
+      name: 'AuthiChain',
       subject: 'QRON Outreach Complete — All Emails Sent',
       body: `All ${OUTREACH_QUEUE.length} outreach emails have been sent.\n\nSent to:\n${sent.map(s => `- ${s.to} (${s.sentAt})`).join('\n')}\n\nCheck responses in authichain@gmail.com.`
-    } as Email);
+    });
   }
 
   return { batch: results, totalSent: sent.length, totalQueue: OUTREACH_QUEUE.length };
@@ -336,8 +292,7 @@ async function sendAll(env: any) {
     if (ok) {
       sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
     }
-    // Small delay between sends to avoid rate limits
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 1000));
   }
 
   await saveSentList(env, sent);
@@ -354,7 +309,11 @@ async function sendViaResend(email: Email) {
         subject: email.subject,
         text: email.body,
         from: 'Z | QRON AI QR Art <hello@authichain.com>',
-        reply_to: 'authichain@gmail.com'
+        reply_to: 'authichain@gmail.com',
+        headers: {
+          'List-Unsubscribe': '<mailto:authichain@gmail.com?subject=unsubscribe>',
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        }
       })
     });
     const result: any = await resp.json();

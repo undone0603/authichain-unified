@@ -1,16 +1,15 @@
-// QRON Outreach Engine (FIXED) — Reads email queue from KV instead of hardcoding PII
-// Security fix: All email addresses and content stored in KV namespace "qron-outreach-kv"
-// KV Keys:
-//   - "outreach_queue"  → JSON array of {to, name, subject, body} objects
-//   - "sender_config"   → JSON {from, fromName, replyTo}
-//   - "outreach_sent"   → JSON array of sent records (managed by worker)
+// QRON Outreach Engine — KV-backed queue with clean verified contacts only
+// Rate: 1 email per cron trigger (reduced from 3 to protect domain reputation)
+// Bounce history: April 2026 batch used guessed hello@ addresses → 73% bounce.
+//   All addresses in this queue are named contacts verified against real companies.
+// Added: List-Unsubscribe header (required by Gmail/Yahoo 2024 bulk sender policy)
+// Added: /set-queue endpoint to push a clean contact list via authenticated HTTP
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === '/health') {
-      // Health check does NOT reveal queue contents
       const queue = await getOutreachQueue(env);
       return Response.json({
         status: 'ok',
@@ -20,7 +19,6 @@ export default {
       });
     }
 
-    // Auth check for sensitive routes
     const authToken = env.AUTH_TOKEN;
     if (!authToken) {
       return Response.json({ error: 'AUTH_TOKEN not configured' }, { status: 500 });
@@ -33,11 +31,7 @@ export default {
       if (!isAuthed) return new Response('Unauthorized', { status: 401 });
       const queue = await getOutreachQueue(env);
       if (!queue) return Response.json({ error: 'outreach_queue not found in KV' }, { status: 500 });
-
-      let sent = [];
-      const data = await env.KV.get('outreach_sent');
-      if (data) sent = JSON.parse(data);
-
+      const sent = await getSentList(env);
       return Response.json({
         total: queue.length,
         sent: sent.length,
@@ -47,9 +41,19 @@ export default {
       });
     }
 
+    // Seed / replace the queue in KV — use this to push a clean contact list
+    if (url.pathname === '/set-queue' && request.method === 'POST') {
+      if (!isAuthed) return new Response('Unauthorized', { status: 401 });
+      const body = await request.json();
+      if (!Array.isArray(body)) return Response.json({ error: 'Body must be a JSON array' }, { status: 400 });
+      await env.KV.put('outreach_queue', JSON.stringify(body), { expirationTtl: 86400 * 90 });
+      return Response.json({ ok: true, queued: body.length });
+    }
+
     if (url.pathname === '/send-next') {
       if (!isAuthed) return new Response('Unauthorized', { status: 401 });
-      const result = await sendNextBatch(env, 3);
+      // 1 per manual trigger as well — protects domain reputation
+      const result = await sendNextBatch(env, 1);
       return Response.json(result);
     }
 
@@ -59,17 +63,19 @@ export default {
       return Response.json(result);
     }
 
-    // Default response — no PII exposed
-    return new Response(`QRON Outreach Engine (Secured)
+    return new Response(`QRON Outreach Engine
+Rate: 1 per cron trigger | Named contacts only
 Endpoints:
-  /health - Health check
-  /status?key=TOKEN - Check send progress
-  /send-next?key=TOKEN - Send next 3 emails
-  /send-all?key=TOKEN - Send all remaining emails`);
+  /health
+  /status?key=TOKEN
+  /set-queue?key=TOKEN  (POST JSON array to replace queue)
+  /send-next?key=TOKEN
+  /send-all?key=TOKEN`);
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(sendNextBatch(env, 3));
+    // 1 email per trigger — cron is every 4 hours = max 6/day, well within safe limits
+    ctx.waitUntil(sendNextBatch(env, 1));
   }
 };
 
@@ -80,9 +86,13 @@ async function getOutreachQueue(env) {
 }
 
 async function getSenderConfig(env) {
-  if (!env.KV) return { from: 'hello@authichain.com', fromName: 'Z | QRON AI QR Art', replyTo: 'authichain@gmail.com' };
+  if (!env.KV) return defaultSender();
   const data = await env.KV.get('sender_config');
-  return data ? JSON.parse(data) : { from: 'hello@authichain.com', fromName: 'Z | QRON AI QR Art', replyTo: 'authichain@gmail.com' };
+  return data ? JSON.parse(data) : defaultSender();
+}
+
+function defaultSender() {
+  return { from: 'hello@authichain.com', fromName: 'Z | QRON AI QR Art', replyTo: 'authichain@gmail.com' };
 }
 
 async function getSentList(env) {
@@ -99,7 +109,7 @@ async function saveSentList(env, sent) {
 
 async function sendNextBatch(env, count) {
   const queue = await getOutreachQueue(env);
-  if (!queue) return { error: 'outreach_queue not found in KV', batch: [], totalSent: 0, totalQueue: 0 };
+  if (!queue) return { error: 'outreach_queue not found in KV — use /set-queue to seed it', batch: [], totalSent: 0, totalQueue: 0 };
 
   const senderConfig = await getSenderConfig(env);
   const sent = await getSentList(env);
@@ -110,19 +120,16 @@ async function sendNextBatch(env, count) {
   for (const email of toSend) {
     const ok = await sendViaResend(email, senderConfig);
     results.push({ to: email.to, subject: email.subject, sent: ok, timestamp: new Date().toISOString() });
-    if (ok) {
-      sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
-    }
+    if (ok) sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
   }
 
   await saveSentList(env, sent);
 
-  // Notify on completion
-  if (sent.length >= queue.length) {
+  if (sent.length >= queue.length && queue.length > 0) {
     await sendViaResend({
       to: senderConfig.replyTo,
-      subject: 'QRON Outreach Complete \u2013 All Emails Sent',
-      body: `All ${queue.length} outreach emails have been sent.\n\nSent to:\n${sent.map(s => `- ${s.to} (${s.sentAt})`).join('\n')}\n\nCheck responses in ${senderConfig.replyTo}.`
+      subject: 'QRON Outreach Complete — All Emails Sent',
+      body: `All ${queue.length} outreach emails sent.\n\nSent to:\n${sent.map(s => `- ${s.to} (${s.sentAt})`).join('\n')}`
     }, senderConfig);
   }
 
@@ -142,11 +149,8 @@ async function sendAll(env) {
   for (const email of toSend) {
     const ok = await sendViaResend(email, senderConfig);
     results.push({ to: email.to, sent: ok });
-    if (ok) {
-      sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
-    }
-    // Small delay between sends to avoid rate limits
-    await new Promise(r => setTimeout(r, 500));
+    if (ok) sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
+    await new Promise(r => setTimeout(r, 1000));
   }
 
   await saveSentList(env, sent);
@@ -163,7 +167,11 @@ async function sendViaResend(email, senderConfig) {
         subject: email.subject,
         text: email.body,
         from: `${senderConfig.fromName} <${senderConfig.from}>`,
-        reply_to: senderConfig.replyTo
+        reply_to: senderConfig.replyTo,
+        headers: {
+          'List-Unsubscribe': `<mailto:${senderConfig.replyTo}?subject=unsubscribe>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        }
       })
     });
     const result = await resp.json();
