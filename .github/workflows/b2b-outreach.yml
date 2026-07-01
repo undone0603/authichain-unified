@@ -1,0 +1,89 @@
+# .github/workflows/b2b-outreach.yml
+name: B2B Cold Outreach
+
+on:
+  schedule:
+    # Every Monday at 9 AM EST (14:00 UTC) — weekly cadence
+    - cron: '0 14 * * 1'
+  workflow_dispatch:
+    inputs:
+      segment:
+        description: 'Which segment to target (govchain | strainchain | qron | all)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - govchain
+          - strainchain
+          - qron
+      dry_run:
+        description: 'Dry run (save to Supabase, skip email send)'
+        required: false
+        default: 'false'
+        type: boolean
+      flush_queued:
+        description: 'Only flush already-queued leads (no new prospecting)'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: b2b-outreach
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.28.2'
+
+jobs:
+  outreach:
+    name: B2B Cold Outreach — ${{ inputs.segment || 'all' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run B2B cold outreach
+        run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
+        env:
+          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY:        ${{ secrets.RESEND_API_KEY }}
+          APOLLO_API_KEY:        ${{ secrets.APOLLO_API_KEY }}
+          HUBSPOT_TOKEN:         ${{ secrets.HUBSPOT_TOKEN }}
+          OUTREACH_FROM_EMAIL:   ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
+          SALES_NOTIFY_EMAIL:    ${{ secrets.SALES_NOTIFY_EMAIL || 'hello@authichain.com' }}
+          CALENDLY_LINK:         ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
+          AUTHICHAIN_BOOK_URL:   ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
+          DRY_RUN:               ${{ inputs.dry_run || 'false' }}
+          FLUSH_QUEUED_ONLY:     ${{ inputs.flush_queued || 'false' }}
+
+      - name: Flush queued leads (if RESEND_API_KEY available)
+        if: ${{ inputs.flush_queued == 'true' }}
+        run: pnpm exec tsx -e "import { flushQueuedLeads } from './scripts/b2b-cold-outreach.ts'; flushQueuedLeads().then(n => console.log('Flushed', n, 'leads'));"
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
+          OUTREACH_FROM_EMAIL:  ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
+          CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}

@@ -6,87 +6,37 @@ and flags products for metadata gaps.
 """
 from __future__ import annotations
 
-import json
 import logging
-import os
 from typing import Dict, Any, List, Optional
 
-from agentz.core.llm import get_llm
 from agentz.core.modes import ExecutionContext
 
 logger = logging.getLogger("agentz.compliance")
 
+# Mandatory DPP fields by vertical, per the EU Ecodesign for Sustainable
+# Products Regulation (ESPR) and its sector-specific delegated acts. These
+# change on a regulatory timescale (months/years), not per CI run, so they're
+# maintained here as a static table rather than re-derived via a live LLM/
+# browser-automation lookup on every workflow execution — that path required
+# a paid LLM key and was failing regardless of key validity (browser-use
+# navigation errors). Update this table when the EU Commission publishes new
+# delegated acts for a vertical (see CLAUDE.md for the enforcement calendar:
+# battery Feb 18 2027, cannabis/textile Q2 2027).
+_BASELINE_FIELDS = ["origin_country", "material_composition", "carbon_footprint_total", "circularity_index"]
 
-class ProviderWrapper:
-    def __init__(self, llm, provider_name: str):
-        self.llm = llm
-        self.provider = provider_name
-
-    def __getattr__(self, name):
-        return getattr(self.llm, name)
-
-    def invoke(self, *args, **kwargs):
-        return self.llm.invoke(*args, **kwargs)
-
-
-def _extract_json(text: str):
-    text = text.strip()
-    if "```json" in text:
-        text = text.split("```json", 1).split("```", 1).strip()[1]
-    return json.loads(text)
+EU_DPP_REQUIREMENTS: Dict[str, List[str]] = {
+    "luxury":    [*_BASELINE_FIELDS, "reparability_score", "substances_of_concern"],
+    "textile":   [*_BASELINE_FIELDS, "fiber_composition", "microplastic_release", "recyclability_score"],
+    "battery":   [*_BASELINE_FIELDS, "battery_chemistry", "recycled_content_cobalt", "recycled_content_lithium", "capacity_fade_rating"],
+    "cannabis":  [*_BASELINE_FIELDS, "cultivation_method", "lab_test_reference"],
+    "electronics": [*_BASELINE_FIELDS, "repairability_index", "software_support_duration"],
+}
 
 
 async def research_dpp_requirements(vertical: str, ctx: Optional[ExecutionContext] = None) -> List[str]:
-    from browser_use import Agent, Controller
-    from agentz.core.browser import attach_interceptor, run_with_healing
-
-    controller = Controller()
     if ctx:
-        attach_interceptor(controller, ctx)
-
-    task = (
-        f"Search official EU Commission websites for the latest 2026/2027 mandates regarding "
-        f"the Digital Product Passport (DPP) for the {vertical} industry. "
-        "Extract a list of mandatory data fields (e.g., origin, recycled content, carbon footprint)."
-    )
-
-    provider = os.getenv("LLM_PROVIDER", "groq").lower()
-
-    if provider == "groq":
-        from langchain_openai import ChatOpenAI
-
-        active_model = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
-        groq_key = os.getenv("GROQ_API_KEY")
-        if not groq_key:
-            raise RuntimeError("Missing GROQ_API_KEY")
-
-        raw_llm = ChatOpenAI(
-            api_key=groq_key,
-            base_url="https://api.groq.com/openai/v1",
-            model=active_model,
-            temperature=0,
-        )
-        llm = ProviderWrapper(raw_llm, "groq")
-    else:
-        active_model = os.getenv("LLM_MODEL", "gpt-4o")
-        llm = get_llm(model=active_model)
-
-    agent = Agent(task=task, llm=llm, controller=controller)
-
-    if not ctx:
-        history = await agent.run()
-    else:
-        history = await run_with_healing(agent, ctx)
-
-    prompt = f"Convert this browser history into a clean JSON list of mandatory DPP fields: {history.final_result()}"
-    res = llm.invoke(prompt)
-    content = getattr(res, "content", str(res))
-
-    try:
-        data = _extract_json(content)
-        return data if isinstance(data, list) else ["origin_country", "material_composition", "carbon_footprint_total", "circularity_index"]
-    except Exception:
-        return ["origin_country", "material_composition", "carbon_footprint_total", "circularity_index"]
+        ctx.step(f"Looked up static EU DPP mandate table for vertical='{vertical}'")
+    return EU_DPP_REQUIREMENTS.get(vertical.lower(), _BASELINE_FIELDS)
 
 
 async def scan_product_compliance(supabase, product_id: str, requirements: List[str]) -> Dict[str, Any]:
