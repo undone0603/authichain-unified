@@ -1,13 +1,13 @@
-# Direction: push GitHub Secrets → Vercel
+# Direction: push GitHub Secrets -> Vercel
 name: Sync Env to Vercel
 on:
   push:
     branches: [main]
+    paths:
+      - ".github/workflows/sync-env.yml"
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -21,13 +21,19 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          # 1. ADDED: Define the variable here so it exists in the shell
           API_KEY: ${{ secrets.API_KEY }}
         run: |
-          # 2. ADDED: --force to overwrite existing variables
-          # 3. ADDED: --git-branch=main to specify the target environment if needed
+          if [ -z "$API_KEY" ]; then
+            echo "::warning::API_KEY secret is empty - skipping sync"
+            exit 0
+          fi
+          # Remove existing env var if it exists, then re-add with current value
+          vercel env rm API_KEY production \
+            --token="$VERCEL_TOKEN" \
+            --scope="$VERCEL_ORG_ID" \
+            --yes 2>/dev/null || true
           echo "$API_KEY" | vercel env add API_KEY production \
-            --token=$VERCEL_TOKEN \
-            --scope=$VERCEL_ORG_ID \
-            --force \
+            --token="$VERCEL_TOKEN" \
+            --scope="$VERCEL_ORG_ID" \
             --yes
+          echo "API_KEY synced to Vercel production environment"
