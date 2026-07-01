@@ -7,6 +7,7 @@ import { ThemeManager } from '@/components/ThemeManager';
 import { TRPCProvider } from '@/components/TRPCProvider';
 import React, { Suspense } from 'react';
 import { ThirdwebProvider } from 'thirdweb/react';
+import { SiteNav } from '@/components/SiteNav';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -48,11 +49,6 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'QRON | Verified AI QR Art',
     description: 'Transform your brand with cryptographically-signed AI QR codes.',
-    images: ['/media/samples/01_flux_qron_space.png'],
-    creator: '@AuthiChain',
-  },
-  icons: {
-    icon: '/favicon.ico',
   },
 };
 
@@ -62,26 +58,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <ThemeManager />
-        <TRPCProvider>
-          <ThirdwebProvider>
+    <html lang="en">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ThemeManager>
+          <TRPCProvider>
+            <Suspense fallback={null}>
+              <SiteNav />
+            </Suspense>
             <Suspense fallback={null}>
               <ReferralTracker />
             </Suspense>
-            {/* Attributes inbound campaign traffic (email/social) to the
-                conversion funnel. No-op unless the URL carries
-                ?prospect_id=&utm_source=, so it's safe on every page. */}
-            <Suspense fallback={null}>
-              <FunnelTracker stage="visit_landing_page" />
-            </Suspense>
-            {children}
-          </ThirdwebProvider>
-        </TRPCProvider>
+            <FunnelTracker />
+            <ThirdwebProvider>
+              {children}
+            </ThirdwebProvider>
+          </TRPCProvider>
+        </ThemeManager>
       </body>
     </html>
   );

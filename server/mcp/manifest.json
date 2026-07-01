@@ -1,0 +1,22 @@
+{
+  "name": "authichain-trust-engine",
+  "displayName": "AuthiChain Trust Engine",
+  "version": "1.0.0",
+  "description": "Verification/trust layer for the agentic economy. Agents verify product authenticity, classify verticals, and pay per verification via x402.",
+  "homepage": "https://authichain.com",
+  "transport": "stdio",
+  "command": "npx",
+  "args": ["tsx", "server/mcp/index.ts"],
+  "tools": [
+    { "name": "verify_authenticity", "description": "Verify a product by AuthiChain certificate number." },
+    { "name": "mint_certificate", "description": "Initiate a trust certificate mint (5-agent consensus)." },
+    { "name": "classify_product", "description": "Classify a product into an industry vertical + suggested workflow." },
+    { "name": "verify_sovereign_deal", "description": "Verify a sovereign deal by TrueMark ID." },
+    { "name": "get_pricing", "description": "Discover metered verification price + subscription plans." },
+    { "name": "verify_paid", "description": "Pay-per-call verification via x402 (returns 402 requirements until paid)." }
+  ],
+  "pricing": {
+    "meteredVerification": { "protocol": "x402", "network": "polygon", "pricePerCall": "$0.05 USDC", "endpoint": "POST /api/v1/agent-verify" }
+  },
+  "keywords": ["authentication", "provenance", "blockchain", "x402", "agent-commerce", "verification", "trust"]
+}

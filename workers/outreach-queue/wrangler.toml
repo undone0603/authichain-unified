@@ -8,10 +8,5 @@ workers_dev = false
 queue = "outreach-jobs"
 max_batch_size = 25
 max_batch_timeout = 10
-
-[[kv_namespaces]]
-binding = "OUTREACH_KV"
-id = "OUTREACH_KV_ID_REPLACE_ME"
-
 [vars]
 OUTREACH_FROM_EMAIL = "noreply@qron.space"

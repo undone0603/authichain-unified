@@ -29,7 +29,10 @@ interface ApolloSearchParams {
   per_page?: number;
 }
 
-const APOLLO_BASE = "https://api.apollo.io/v1";
+// Current API base + the credit-free, API-optimized people search endpoint.
+// NOTE: api_search requires a PAID Apollo plan + master API key; free keys get
+// HTTP 403 API_INACCESSIBLE. Emails come from the enrichment endpoints (credits).
+const APOLLO_BASE = "https://api.apollo.io/api/v1";
 
 const SEGMENT_PARAMS: Record<string, ApolloSearchParams> = {
   GOV: {
@@ -92,7 +95,7 @@ export async function apolloSearchLeads(segment: string, count: number): Promise
     per_page: Math.min(count, 25),
   };
 
-  const res = await fetch(`${APOLLO_BASE}/mixed_people/search`, {
+  const res = await fetch(`${APOLLO_BASE}/mixed_people/api_search`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

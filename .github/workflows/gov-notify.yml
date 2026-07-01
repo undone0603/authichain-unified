@@ -1,0 +1,51 @@
+name: GovChain – Daily Digest & Notifications
+
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        required: false
+        type: string
+    secrets:
+      SLACK_BOT_TOKEN:
+        required: true
+      SLACK_GOV_CHANNEL_ID:
+        required: true
+      SUPABASE_URL:
+        required: true
+      SUPABASE_SERVICE_KEY:
+        required: true
+      GOVCHAIN_URL:
+        required: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Node + pnpm setup
+        uses: ./.github/workflows/node-pnpm-setup.yml
+        with:
+          node_version: '22'
+          pnpm_version: '10.28.2'
+
+      - name: Send Slack digest
+        continue-on-error: true
+        run: pnpm exec tsx scripts/send-digest.ts
+        env:
+          SLACK_BOT_TOKEN:      ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID:     ${{ secrets.SLACK_GOV_CHANNEL_ID }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
+          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+
+      - name: Report pipeline failure to Slack
+        if: failure()
+        continue-on-error: true
+        run: pnpm exec tsx scripts/report-failure.ts
+        env:
+          SLACK_BOT_TOKEN:     ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID:    ${{ secrets.SLACK_GOV_CHANNEL_ID }}
+          WORKFLOW_RUN_URL:    ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

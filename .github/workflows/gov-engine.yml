@@ -19,230 +19,42 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  NODE_VERSION: '22'
-  PNPM_VERSION: '10.28.2'
-
 jobs:
-  # ── Job 1: Ingest SAM.gov ───────────────────────────────────────────────────
-  ingest-opportunities:
-    name: Ingest SAM.gov Opportunities
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    outputs:
-      opportunity_count: ${{ steps.ingest.outputs.count }}
+  # ── Phase 1: Ingest SAM.gov ────────────────────────────────────────────────
+  ingest:
+    uses: ./.github/workflows/gov-ingest.yml
+    with:
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  # ── Phase 2: AI Scoring ────────────────────────────────────────────────────
+  score:
+    needs: ingest
+    uses: ./.github/workflows/gov-score.yml
+    with:
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
+  # ── Phase 3: Proposal Drafts ───────────────────────────────────────────────
+  proposals:
+    needs: score
+    uses: ./.github/workflows/gov-proposals.yml
+    with:
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+  # ── Phase 4: NFT Minting (non-critical) ────────────────────────────────────
+  mint:
+    needs: proposals
+    uses: ./.github/workflows/gov-mint.yml
+    with:
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Ingest SAM.gov opportunities into vector store
-        id: ingest
-        # Embedding uses a cascading provider chain (scripts/lib/embed.ts):
-        # OpenAI -> Cloudflare Workers AI (free 10k neurons/day) -> Gemini ->
-        # HuggingFace -> Cohere -> Jina -> Mistral -> Voyage. Whichever key is
-        # set gets tried in order until one succeeds. Missing keys are skipped.
-        run: pnpm exec tsx scripts/ingest-sam.ts
-        env:
-          SAM_GOV_API_KEY:        ${{ secrets.SAM_API_KEY }}
-          OPENAI_API_KEY:         ${{ secrets.OPENAI_API_KEY }}
-          CLOUDFLARE_ACCOUNT_ID:  ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN:   ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          GEMINI_API_KEY:         ${{ secrets.GEMINI_API_KEY }}
-          HUGGINGFACE_API_KEY:    ${{ secrets.HUGGINGFACE_API_KEY }}
-          COHERE_API_KEY:         ${{ secrets.COHERE_API_KEY }}
-          JINA_API_KEY:           ${{ secrets.JINA_API_KEY }}
-          MISTRAL_API_KEY:        ${{ secrets.MISTRAL_API_KEY }}
-          VOYAGE_API_KEY:         ${{ secrets.VOYAGE_API_KEY }}
-          # Set repo var EMBED_HASH_FALLBACK=false to force failure when no
-          # real provider is configured (useful for catching regressions).
-          EMBED_HASH_FALLBACK:    ${{ vars.EMBED_HASH_FALLBACK || 'true' }}
-          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
-          PINECONE_API_KEY:       ${{ secrets.PINECONE_API_KEY }}
-          PINECONE_INDEX:         ${{ secrets.PINECONE_INDEX }}
-          GOVCHAIN_URL:           ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN:                ${{ inputs.dry_run || 'false' }}
-
-  # ── Job 2: AI Scoring ───────────────────────────────────────────────────────
-  score-and-rank:
-    name: Score & Rank Opportunities
-    runs-on: ubuntu-latest
-    needs: ingest-opportunities
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Score opportunities with AI
-        # LLM uses a cascading provider chain (scripts/lib/llm.ts):
-        # OpenAI -> Groq (llama-3.3-70b, free 14.4k/day) -> Gemini -> Mistral.
-        run: pnpm exec tsx scripts/score-opportunities.ts
-        env:
-          OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
-          GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
-          MISTRAL_API_KEY:      ${{ secrets.MISTRAL_API_KEY }}
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          PINECONE_API_KEY:     ${{ secrets.PINECONE_API_KEY }}
-          PINECONE_INDEX:       ${{ secrets.PINECONE_INDEX }}
-          GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
-
-  # ── Job 3: Proposal Drafts ──────────────────────────────────────────────────
-  generate-proposals:
-    name: Generate Proposal Drafts
-    runs-on: ubuntu-latest
-    needs: score-and-rank
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Generate AI proposal drafts
-        # LLM cascade (scripts/lib/llm.ts): OpenAI -> Groq -> Gemini -> Mistral.
-        run: pnpm exec tsx scripts/generate-proposals.ts
-        env:
-          OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
-          GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
-          MISTRAL_API_KEY:      ${{ secrets.MISTRAL_API_KEY }}
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          AIRTABLE_API_KEY:     ${{ secrets.AIRTABLE_API_KEY }}
-          AIRTABLE_BASE_ID:     ${{ secrets.AIRTABLE_BASE_ID }}
-          GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
-
-  # ── Job 4: NFT Minting (non-critical) ──────────────────────────────────────
-  mint-govchain-nfts:
-    name: Mint GovChain Opportunity NFTs
-    runs-on: ubuntu-latest
-    needs: generate-proposals
-    timeout-minutes: 20
-    # FIXED: continue-on-error prevents a failed mint from killing the pipeline
-    continue-on-error: true
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Mint opportunity proof NFTs on GovChain
-        run: pnpm exec tsx scripts/mint-govchain-nfts.ts
-        env:
-          ALCHEMY_API_KEY:       ${{ secrets.ALCHEMY_API_KEY }}
-          WALLET_PRIVATE_KEY:    ${{ secrets.POLYGON_PRIVATE_KEY }}
-          CONTRACT_ADDRESS:      ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
-          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
-          GOVCHAIN_URL:          ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN:               ${{ inputs.dry_run || 'false' }}
-
-  # ── Job 5: Notify & Digest ──────────────────────────────────────────────────
-  notify-and-report:
-    name: Notify & Send Daily Digest
-    runs-on: ubuntu-latest
-    needs: [ingest-opportunities, score-and-rank, generate-proposals]
-    if: always()
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      # Slack notification is best-effort — a dead/expired SLACK_BOT_TOKEN
-      # should not mark the whole pipeline run as failed when ingest/score/
-      # generate all succeeded. The step still shows red in the UI so the
-      # token can be rotated, but the run conclusion reflects pipeline work.
-      - name: Send Slack digest
-        continue-on-error: true
-        run: pnpm exec tsx scripts/send-digest.ts
-        env:
-          SLACK_BOT_TOKEN:      ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL_ID:     ${{ secrets.SLACK_GOV_CHANNEL_ID }}
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
-
-      - name: Report pipeline failure to Slack
-        if: failure()
-        continue-on-error: true
-        run: pnpm exec tsx scripts/report-failure.ts
-        env:
-          SLACK_BOT_TOKEN:     ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL_ID:    ${{ secrets.SLACK_GOV_CHANNEL_ID }}
-          WORKFLOW_RUN_URL:    ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  # ── Phase 5: Notify & Daily Digest ─────────────────────────────────────────
+  notify:
+    needs: [ingest, score, proposals]
+    uses: ./.github/workflows/gov-notify.yml
+    with:
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit

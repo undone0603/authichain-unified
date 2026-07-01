@@ -1,0 +1,34 @@
+name: GovChain – Ingest SAM.gov
+
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        required: false
+        type: string
+    secrets:
+      SAM_API_KEY:
+        required: true
+      SUPABASE_URL:
+        required: true
+      SUPABASE_SERVICE_KEY:
+        required: true
+
+jobs:
+  ingest-opportunities:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Reuse Node + pnpm setup
+        uses: ./.github/workflows/node-pnpm-setup.yml
+        with:
+          node_version: '22'
+          pnpm_version: '10.28.2'
+
+      - name: Ingest SAM.gov opportunities into vector store
+        run: pnpm exec tsx scripts/ingest-sam.ts
+        env:
+          SAM_GOV_API_KEY:        ${{ secrets.SAM_API_KEY }}
+          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
+          DRY_RUN:                ${{ inputs.dry_run || 'false' }}
