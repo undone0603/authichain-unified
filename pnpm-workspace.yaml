@@ -1,12 +1,12 @@
 allowBuilds:
-  '@clerk/shared': set this to true or false
-  bufferutil: set this to true or false
-  esbuild: set this to true or false
-  keccak: set this to true or false
-  sharp: set this to true or false
-  unrs-resolver: set this to true or false
-  utf-8-validate: set this to true or false
-  workerd: set this to true or false
+  '@clerk/shared': true
+  bufferutil: true
+  esbuild: true
+  keccak: true
+  sharp: true
+  unrs-resolver: true
+  utf-8-validate: true
+  workerd: true
 # pnpm settings (pnpm 10+ reads overrides from here, not package.json).
 # Scoped security overrides: each selector targets only the vulnerable range,
 # so unaffected versions (e.g. ws@7.x) are left untouched.
