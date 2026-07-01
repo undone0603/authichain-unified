@@ -1,16 +1,18 @@
 export const dynamic = 'force-dynamic';
+import type { Metadata } from 'next';
 import { createClient } from '@/utils/supabase/server';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { 
-  ShieldCheck, 
-  ShieldAlert, 
-  Clock, 
-  Package, 
-  Leaf, 
-  Recycle, 
-  Hammer, 
+import { getSeoPageBySlug, listSeoSlugs } from '@/lib/seo-pages';
+import {
+  ShieldCheck,
+  ShieldAlert,
+  Clock,
+  Package,
+  Leaf,
+  Recycle,
+  Hammer,
   FileText,
   Truck,
   Sparkles
@@ -26,8 +28,48 @@ interface SupplyChainEvent {
   date: string;
 }
 
+// /p/<value> serves two disjoint things at the same route: committed
+// programmatic-SEO pages (known slugs, checked first) and live certificate
+// lookups (everything else). They can't live in separate [slug]/[serial]
+// sibling folders — Next.js requires one dynamic-segment name per position.
+export function generateStaticParams(): { serial: string }[] {
+  return listSeoSlugs().map((slug) => ({ serial: slug }));
+}
+
+export async function generateMetadata(
+  { params }: PageProps,
+): Promise<Metadata> {
+  const { serial } = await params;
+  const seoPage = getSeoPageBySlug(serial);
+  if (!seoPage) return {};
+  const canonical = typeof seoPage.jsonLd.url === 'string' ? seoPage.jsonLd.url : undefined;
+  return {
+    title: seoPage.title,
+    description: seoPage.metaDescription,
+    alternates: canonical ? { canonical } : undefined,
+    openGraph: { title: seoPage.title, description: seoPage.metaDescription, type: 'website' },
+  };
+}
+
 export default async function CertificationPage({ params }: PageProps) {
   const { serial } = await params;
+
+  const seoPage = getSeoPageBySlug(serial);
+  if (seoPage) {
+    return (
+      <main className="mx-auto max-w-3xl px-6 py-12 prose prose-invert">
+        {/* JSON-LD structured data — the signal AI search engines cite. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(seoPage.jsonLd) }}
+        />
+        <h1>{seoPage.h1}</h1>
+        {/* bodyHtml is sanitized at generation time (script tags stripped). */}
+        <div dangerouslySetInnerHTML={{ __html: seoPage.bodyHtml }} />
+      </main>
+    );
+  }
+
   const supabase = await createClient();
   const { data: cert, error } = await supabase
     .from('certifications')
