@@ -259,7 +259,7 @@ async function sendNextBatch(env: any, count: number) {
 
   const results = [];
   for (const email of toSend) {
-    const ok = await sendViaResend(email);
+    const ok = await sendViaResend(email, env);
     results.push({ to: email.to, subject: email.subject, sent: ok, timestamp: new Date().toISOString() });
     if (ok) {
       sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
@@ -274,7 +274,7 @@ async function sendNextBatch(env: any, count: number) {
       name: 'AuthiChain',
       subject: 'QRON Outreach Complete — All Emails Sent',
       body: `All ${OUTREACH_QUEUE.length} outreach emails have been sent.\n\nSent to:\n${sent.map(s => `- ${s.to} (${s.sentAt})`).join('\n')}\n\nCheck responses in authichain@gmail.com.`
-    });
+    }, env);
   }
 
   return { batch: results, totalSent: sent.length, totalQueue: OUTREACH_QUEUE.length };
@@ -287,7 +287,7 @@ async function sendAll(env: any) {
 
   const results = [];
   for (const email of toSend) {
-    const ok = await sendViaResend(email);
+    const ok = await sendViaResend(email, env);
     results.push({ to: email.to, sent: ok });
     if (ok) {
       sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
@@ -299,13 +299,21 @@ async function sendAll(env: any) {
   return { sent: results.filter(r => r.sent).length, failed: results.filter(r => !r.sent).length, results };
 }
 
-async function sendViaResend(email: Email) {
+async function sendViaResend(email: Email, env: any) {
+  const apiKey = env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error('RESEND_API_KEY not set on qron-outreach worker');
+    return false;
+  }
   try {
-    const resp = await fetch('https://resend-relay.undone-k.workers.dev/emails', {
+    const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        to: email.to,
+        to: [email.to],
         subject: email.subject,
         text: email.body,
         from: 'Z | QRON AI QR Art <hello@authichain.com>',
@@ -317,8 +325,9 @@ async function sendViaResend(email: Email) {
       })
     });
     const result: any = await resp.json();
-    console.log(`Email to ${email.to}: ${result.ok ? 'sent' : 'failed'}`);
-    return result.ok || false;
+    const ok = resp.ok && !!result.id;
+    console.log(`Email to ${email.to}: ${ok ? 'sent' : 'failed'} ${result.id ?? result.message ?? ''}`);
+    return ok;
   } catch (e: any) {
     console.error(`Email error for ${email.to}:`, e.message);
     return false;
