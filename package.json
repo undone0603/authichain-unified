@@ -115,18 +115,6 @@
     "wouter": "^3.10.0",
     "zod": "^3.23.8"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@clerk/shared",
-      "bufferutil",
-      "esbuild",
-      "keccak",
-      "sharp",
-      "unrs-resolver",
-      "utf-8-validate",
-      "workerd"
-    ]
-  },
   "devDependencies": {
     "@types/node": "^22.5.0",
     "@types/nodemailer": "^8.0.0",
