@@ -3,6 +3,71 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
+const HS_BASE = 'https://api.hubapi.com';
+
+async function upsertHubSpotDeal(
+  { name, email, company, message, interest }: Record<string, string | undefined>,
+  token: string,
+  ownerId: string,
+) {
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const [firstName, ...rest] = (name ?? '').split(' ');
+  const lastName = rest.join(' ');
+
+  // Create contact — handle 409 (already exists) gracefully
+  let contactId: string | undefined;
+  const cRes = await fetch(`${HS_BASE}/crm/v3/objects/contacts`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ properties: { email, firstname: firstName, lastname: lastName, company: company ?? '' } }),
+  });
+  if (cRes.ok) {
+    contactId = (await cRes.json()).id;
+  } else if (cRes.status === 409) {
+    const err = await cRes.json();
+    const m = (err.message as string)?.match(/ID:\s*(\d+)/);
+    if (m) {
+      contactId = m[1];
+    } else {
+      const sRes = await fetch(`${HS_BASE}/crm/v3/objects/contacts/search`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: email }] }], limit: 1 }),
+      });
+      const sData = await sRes.json();
+      contactId = sData.results?.[0]?.id;
+    }
+  } else {
+    console.warn('[api/book] HubSpot contact error:', cRes.status);
+  }
+
+  // Create deal
+  const dRes = await fetch(`${HS_BASE}/crm/v3/objects/deals`, {
+    method: 'POST', headers,
+    body: JSON.stringify({
+      properties: {
+        dealname: `Demo Request — ${name} @ ${company ?? 'Unknown'}`,
+        dealstage: 'appointmentscheduled',
+        hubspot_owner_id: ownerId,
+        pipeline: 'default',
+        ...(message ? { description: message } : {}),
+      },
+    }),
+  });
+  if (!dRes.ok) {
+    console.warn('[api/book] HubSpot deal error:', dRes.status);
+    return;
+  }
+  const deal = await dRes.json();
+
+  // Associate deal → contact (associationTypeId 3 = deal_to_contact)
+  if (contactId) {
+    await fetch(`${HS_BASE}/crm/v4/objects/deals/${deal.id}/associations/contacts/${contactId}/3`, {
+      method: 'PUT', headers,
+    }).catch((e: any) => console.warn('[api/book] HubSpot association error:', e?.message));
+  }
+
+  return deal.id as string;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -35,6 +100,14 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     }, { onConflict: 'email' });
 
+    // Create HubSpot contact + deal (optional — degrades gracefully, fire-and-forget)
+    const hsToken = process.env.HUBSPOT_TOKEN ?? process.env.HUBSPOT_PRIVATE_APP_TOKEN;
+    const hsOwner = process.env.HUBSPOT_OWNER_ID ?? '87978084';
+    if (hsToken) {
+      upsertHubSpotDeal({ name, email, company, message, interest }, hsToken, hsOwner)
+        .catch((e: any) => console.warn('[api/book] HubSpot pipeline error:', e?.message));
+    }
+
     // Send notification to team via Resend (optional — degrades gracefully)
     if (process.env.RESEND_API_KEY) {
       const { Resend } = await import('resend');
@@ -45,7 +118,7 @@ export async function POST(req: NextRequest) {
       await resend.emails.send({
         from,
         to: notify,
-        subject: `🗓 Demo request: ${name} @ ${company}`,
+        subject: `Demo request: ${name} @ ${company}`,
         html: `
           <p><strong>${name}</strong> (${email}) at <strong>${company}</strong> requested a demo call.</p>
           ${interest ? `<p><strong>Interest:</strong> ${interest}</p>` : ''}
