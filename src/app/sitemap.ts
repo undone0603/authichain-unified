@@ -1,9 +1,11 @@
 import type { MetadataRoute } from 'next';
+import { headers } from 'next/headers';
 import { listSeoPages } from '@/lib/seo-pages';
 
-const BASE = 'https://qron.space';
-
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const headersList = await headers();
+  const host = headersList.get('host') || 'qron.space';
+  const BASE = `https://${host}`;
   const now = new Date();
   // Programmatic-SEO landing pages (generated + committed in content/seo).
   const seoEntries: MetadataRoute.Sitemap = listSeoPages().map((page) => ({
