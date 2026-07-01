@@ -30,25 +30,8 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements-agentz.txt
 
-      - name: Check GROQ_API_KEY availability
-        id: check-key
+      - name: Run Compliance Audit
         env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        run: |
-          if [ -z "$GROQ_API_KEY" ]; then
-            echo "::warning::GROQ_API_KEY secret is not set. Skipping compliance audit. Add a valid Groq API key at Settings > Secrets and Variables > Actions."
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run Compliance Audit (Groq-only)
-        if: steps.check-key.outputs.skip == 'false'
-        env:
-          LLM_PROVIDER: groq
-          LLM_MODEL: llama-3.3-70b-versatile
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          OPENAI_API_KEY: " "
         run: python -m agentz.workflows.runner --handler authichain_compliance_audit
