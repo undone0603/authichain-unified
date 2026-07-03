@@ -1,7 +1,8 @@
-// QRON Outreach Engine — Sends cold emails via Resend relay (authichain.com domain)
-// Cron: sends 1 email per trigger (was 3 — reduced to protect domain reputation)
+// QRON Outreach Engine — Sends cold emails via Resend (authichain.com domain)
+// Rate: 1 email per GH Actions trigger (every 4h). Cron removed — CF free plan limit hit.
 // Bounce history: April 2026 batch used guessed hello@ addresses → 73% bounce.
 // Current queue uses verified named contacts only.
+// KV stores: outreach_sent (sent list), outreach_bounced (bounce suppression list)
 
 function timingSafeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder();
@@ -19,10 +20,10 @@ interface Email {
   body: string;
 }
 
-// REMOVED from original queue (reason in comment):
+// REMOVED from original queue:
 //   klong@c3industries.com     — already delivered 2026-06-26, skip duplicate
-//   privacy@lettuce.com        — legal/privacy inbox, wrong recipient for marketing
-//   press@compass.com          — press desk, not the right contact for a partnership pitch
+//   privacy@lettuce.com        — legal/privacy inbox, wrong recipient
+//   press@compass.com          — press desk, not the right contact
 
 const OUTREACH_QUEUE: Email[] = [
   {
@@ -189,7 +190,11 @@ export default {
       return Response.json({ status: 'ok', worker: 'qron-outreach', queue: OUTREACH_QUEUE.length });
     }
 
-    // Auth check for sensitive routes
+    // Resend bounce/complaint webhook — no auth key required (payload is self-describing)
+    if (url.pathname === '/webhook' && request.method === 'POST') {
+      return handleBounceWebhook(request, env);
+    }
+
     const authToken = env.AUTH_TOKEN;
     const isAuthed = !!authToken && (
       timingSafeEqual(url.searchParams.get('key') ?? '', authToken)
@@ -197,23 +202,19 @@ export default {
 
     if (url.pathname === '/status') {
       if (!isAuthed) return new Response('Unauthorized', { status: 401 });
-      let sent: any[] = [];
-      if (env.KV) {
-        const data = await env.KV.get('outreach_sent');
-        if (data) sent = JSON.parse(data);
-      }
+      const [sent, bounced] = await Promise.all([getSentList(env), getBouncedList(env)]);
       return Response.json({
         total: OUTREACH_QUEUE.length,
         sent: sent.length,
         remaining: OUTREACH_QUEUE.length - sent.length,
         sentEmails: sent,
+        suppressedBounces: bounced,
         timestamp: new Date().toISOString()
       });
     }
 
     if (url.pathname === '/send-next') {
       if (!isAuthed) return new Response('Unauthorized', { status: 401 });
-      // Send 1 at a time to protect domain reputation
       const result = await sendNextBatch(env, 1);
       return Response.json(result);
     }
@@ -226,19 +227,21 @@ export default {
 
     return new Response(`QRON Outreach Engine
 Queue: ${OUTREACH_QUEUE.length} emails (named contacts only — no guessed addresses)
-Rate: 1 per cron trigger
+Rate: 1 per GH Actions trigger (every 4h)
 Endpoints:
-  /health - Health check
-  /status?key=TOKEN - Check send progress
-  /send-next?key=TOKEN - Send next 1 email
-  /send-all?key=TOKEN - Send all remaining emails`);
+  /health              — Health check
+  /status?key=TOKEN    — Queue + bounce suppression status
+  /send-next?key=TOKEN — Send next 1 email (skips bounced/sent)
+  /send-all?key=TOKEN  — Send all remaining emails
+  /webhook             — Resend bounce/complaint webhook (POST)`);
   },
 
   async scheduled(event: any, env: any, ctx: any) {
-    // Send 1 email per cron trigger (reduced from 3 to protect domain reputation)
     ctx.waitUntil(sendNextBatch(env, 1));
   }
 };
+
+// ── KV helpers ───────────────────────────────────────────────────────────────
 
 async function getSentList(env: any): Promise<any[]> {
   if (!env.KV) return [];
@@ -247,23 +250,65 @@ async function getSentList(env: any): Promise<any[]> {
 }
 
 async function saveSentList(env: any, sent: any[]) {
-  if (env.KV) {
-    await env.KV.put('outreach_sent', JSON.stringify(sent), { expirationTtl: 86400 * 30 });
+  if (env.KV) await env.KV.put('outreach_sent', JSON.stringify(sent), { expirationTtl: 86400 * 90 });
+}
+
+async function getBouncedList(env: any): Promise<string[]> {
+  if (!env.KV) return [];
+  const data = await env.KV.get('outreach_bounced');
+  return data ? JSON.parse(data) : [];
+}
+
+async function addBounced(env: any, email: string) {
+  const bounced = await getBouncedList(env);
+  if (!bounced.includes(email.toLowerCase())) {
+    bounced.push(email.toLowerCase());
+    if (env.KV) await env.KV.put('outreach_bounced', JSON.stringify(bounced), { expirationTtl: 86400 * 365 });
   }
 }
 
+// ── Bounce webhook ────────────────────────────────────────────────────────────
+
+async function handleBounceWebhook(request: Request, env: any): Promise<Response> {
+  try {
+    const payload: any = await request.json();
+    const eventType: string = payload?.type ?? '';
+
+    if (eventType === 'email.bounced' || eventType === 'email.complained') {
+      const recipients: string[] = payload?.data?.to ?? [];
+      for (const addr of recipients) {
+        await addBounced(env, addr);
+        console.log(`Suppressed ${addr} (${eventType})`);
+      }
+    }
+
+    return Response.json({ received: true, type: eventType });
+  } catch (e: any) {
+    return Response.json({ error: e.message }, { status: 400 });
+  }
+}
+
+// ── Send logic ────────────────────────────────────────────────────────────────
+
 async function sendNextBatch(env: any, count: number) {
-  const sent = await getSentList(env);
-  const sentEmails = new Set(sent.map(s => s.to));
-  const toSend = OUTREACH_QUEUE.filter(e => !sentEmails.has(e.to)).slice(0, count);
+  const [sent, bounced] = await Promise.all([getSentList(env), getBouncedList(env)]);
+  const sentEmails = new Set(sent.map((s: any) => s.to.toLowerCase()));
+  const bouncedSet = new Set(bounced);
+
+  const toSend = OUTREACH_QUEUE
+    .filter(e => !sentEmails.has(e.to.toLowerCase()) && !bouncedSet.has(e.to.toLowerCase()))
+    .slice(0, count);
+
+  if (toSend.length === 0) {
+    const skippedBounced = OUTREACH_QUEUE.filter(e => bouncedSet.has(e.to.toLowerCase())).map(e => e.to);
+    return { batch: [], totalSent: sent.length, totalQueue: OUTREACH_QUEUE.length, skippedBounced };
+  }
 
   const results = [];
   for (const email of toSend) {
     const ok = await sendViaResend(email, env);
     results.push({ to: email.to, subject: email.subject, sent: ok, timestamp: new Date().toISOString() });
-    if (ok) {
-      sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
-    }
+    if (ok) sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
   }
 
   await saveSentList(env, sent);
@@ -273,7 +318,7 @@ async function sendNextBatch(env: any, count: number) {
       to: 'authichain@gmail.com',
       name: 'AuthiChain',
       subject: 'QRON Outreach Complete — All Emails Sent',
-      body: `All ${OUTREACH_QUEUE.length} outreach emails have been sent.\n\nSent to:\n${sent.map(s => `- ${s.to} (${s.sentAt})`).join('\n')}\n\nCheck responses in authichain@gmail.com.`
+      body: `All ${OUTREACH_QUEUE.length} outreach emails have been sent.\n\nSent to:\n${sent.map((s: any) => `- ${s.to} (${s.sentAt})`).join('\n')}\n\nCheck responses in authichain@gmail.com.`
     }, env);
   }
 
@@ -281,17 +326,17 @@ async function sendNextBatch(env: any, count: number) {
 }
 
 async function sendAll(env: any) {
-  const sent = await getSentList(env);
-  const sentEmails = new Set(sent.map(s => s.to));
-  const toSend = OUTREACH_QUEUE.filter(e => !sentEmails.has(e.to));
+  const [sent, bounced] = await Promise.all([getSentList(env), getBouncedList(env)]);
+  const sentEmails = new Set(sent.map((s: any) => s.to.toLowerCase()));
+  const bouncedSet = new Set(bounced);
+  const toSend = OUTREACH_QUEUE.filter(e =>
+    !sentEmails.has(e.to.toLowerCase()) && !bouncedSet.has(e.to.toLowerCase()));
 
   const results = [];
   for (const email of toSend) {
     const ok = await sendViaResend(email, env);
     results.push({ to: email.to, sent: ok });
-    if (ok) {
-      sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
-    }
+    if (ok) sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
     await new Promise(r => setTimeout(r, 1000));
   }
 
@@ -299,7 +344,7 @@ async function sendAll(env: any) {
   return { sent: results.filter(r => r.sent).length, failed: results.filter(r => !r.sent).length, results };
 }
 
-async function sendViaResend(email: Email, env: any) {
+async function sendViaResend(email: Email, env: any): Promise<boolean> {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) {
     console.error('RESEND_API_KEY not set on qron-outreach worker');
