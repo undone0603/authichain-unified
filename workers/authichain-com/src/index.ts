@@ -2772,6 +2772,10 @@ const DPP_HTML = `<!DOCTYPE html>
 export default {
   async fetch(request: Request) {
     const url = new URL(request.url);
+    if (url.hostname === 'www.authichain.com') {
+      url.hostname = 'authichain.com';
+      return Response.redirect(url.toString(), 301);
+    }
     const p = url.pathname;
     if (p === '/og-image.png' || p === '/og.png') {
       return pngResponse(OG_IMAGE_PNG_B64);
