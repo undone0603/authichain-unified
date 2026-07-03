@@ -182,12 +182,128 @@ To unsubscribe from future emails, reply with "unsubscribe".`
   }
 ];
 
+// ── EU DPP Outreach Queue ─────────────────────────────────────────────────────
+// Targets: luxury/textile (ESPR 2028-29) and battery (Feb 2027) sectors.
+// KV keys: dpp_sent, outreach_bounced (shared suppression list).
+
+const DPP_QUEUE: Email[] = [
+  {
+    to: "axel.dumas@hermes.com",
+    name: "Axel",
+    subject: "EU Digital Product Passport — Hermès Compliance Before July 19",
+    body: `Hi Axel,
+
+The EU Digital Product Passport registry opens July 19 — 16 days from now. For Hermès, this is the beginning of mandatory traceability across textiles, leather goods, and accessories under ESPR.
+
+AuthiChain is the only blockchain-native DPP platform built specifically for luxury supply chains:
+- One integration covers ESPR, EUDR (deforestation), and CSRD reporting
+- Each product gets an immutable digital certificate — scannable by EU customs, retailers, and end consumers
+- Full provenance chain: raw material → tannery → atelier → point of sale
+- $0.004 per seal at scale; enterprise SLA
+
+Hermès' reputation for provenance is unmatched. The DPP mandate is an opportunity to make that provenance machine-verifiable and EU-compliant ahead of competitors.
+
+I'd welcome 20 minutes to walk through how this works for a leather goods catalog. No sales pitch — just the technical architecture and compliance timeline.
+
+More at: https://authichain.com/digital-product-passport
+
+Best,
+Z | AuthiChain
+authichain@gmail.com
+
+To unsubscribe, reply "unsubscribe".`
+  },
+  {
+    to: "g.deseynes@hermes.com",
+    name: "Guillaume",
+    subject: "EU DPP Compliance for Hermès Supply Chain — Registry Opens July 19",
+    body: `Hi Guillaume,
+
+With your oversight of Hermès' supply chain and sustainability initiatives, I wanted to reach out directly about the EU Digital Product Passport.
+
+The ESPR registry opens July 19. While textiles and leather have until 2028-29 for full compliance, early registration positions Hermès as the standard-setter — the brand that made provenance the industry benchmark, not the one scrambling to meet a mandate.
+
+AuthiChain delivers:
+- Blockchain-anchored DPP records (ERC-721 on Polygon — immutable, auditable)
+- Full ESPR + EUDR + CSRD coverage in one integration
+- Supply chain event tracking: 22 event types from raw material to retail
+- Verified by AI provenance agents (Guardian/Archivist/Sentinel)
+
+We're already in conversations with several luxury groups about pre-registry implementation. Happy to share the technical spec if useful.
+
+https://authichain.com/digital-product-passport
+
+Best,
+Z | AuthiChain
+authichain@gmail.com
+
+To unsubscribe, reply "unsubscribe".`
+  },
+  {
+    to: "bernard.arnault@lvmh.com",
+    name: "Bernard",
+    subject: "EU Digital Product Passport — LVMH Compliance Infrastructure",
+    body: `Dear Bernard,
+
+The EU Digital Product Passport registry opens July 19. With 75 Maisons across fashion, leather, watches, spirits, and cosmetics, LVMH faces the broadest DPP surface area of any luxury group.
+
+AuthiChain provides the compliance infrastructure:
+- Single blockchain integration covers all 75 Maisons via multi-tenant routing
+- ESPR (textiles/leather 2028-29), EUDR (sustainable sourcing), CSRD (ESG reporting) in one system
+- NFT-backed product certificates — scannable at any EU customs point or retail location
+- $0.004/seal at LVMH scale with an enterprise SLA
+
+The DPP mandate can be LVMH's moment to set the global standard for luxury provenance, or a compliance checkbox. AuthiChain makes it the former.
+
+I'd welcome a brief introduction to the right person on your sustainability or digital transformation team.
+
+https://authichain.com/digital-product-passport
+
+Best,
+Z | AuthiChain
+authichain@gmail.com
+
+To unsubscribe, reply "unsubscribe".`
+  },
+  {
+    to: "digital@bulgari.com",
+    name: "Bulgari Digital team",
+    subject: "Gemstone & Jewelry DPP Compliance — AuthiChain for Bulgari",
+    body: `Hi Bulgari Digital team,
+
+The EU Digital Product Passport registry opens July 19. For jewelry and high-end accessories, DPP compliance means traceable gemstone sourcing — from mine to setting to customer.
+
+AuthiChain delivers blockchain-native provenance for luxury goods:
+- Immutable certificate per piece: origin, materials, certifications, custody chain
+- Covers EUDR (responsible sourcing), ESPR (product lifecycle), and CSRD (ESG)
+- QR-scannable by EU customs, retail staff, and end customers
+- Built on Polygon — the same infrastructure used for digital fashion and NFT collectibles
+
+Bulgari's craftsmanship story is extraordinary. AuthiChain makes it cryptographically verifiable and EU-compliant.
+
+Happy to put together a proof-of-concept for a single collection.
+
+https://authichain.com/digital-product-passport
+
+Best,
+Z | AuthiChain
+authichain@gmail.com
+
+To unsubscribe, reply "unsubscribe".`
+  }
+];
+
 export default {
   async fetch(request: Request, env: any) {
     const url = new URL(request.url);
 
     if (url.pathname === '/health') {
-      return Response.json({ status: 'ok', worker: 'qron-outreach', queue: OUTREACH_QUEUE.length });
+      return Response.json({
+        status: 'ok',
+        worker: 'qron-outreach',
+        qron_queue: OUTREACH_QUEUE.length,
+        dpp_queue: DPP_QUEUE.length
+      });
     }
 
     // Resend bounce/complaint webhook — no auth key required (payload is self-describing)
@@ -225,15 +341,44 @@ export default {
       return Response.json(result);
     }
 
-    return new Response(`QRON Outreach Engine
-Queue: ${OUTREACH_QUEUE.length} emails (named contacts only — no guessed addresses)
+    // EU DPP campaign endpoints
+    if (url.pathname === '/dpp-status') {
+      if (!isAuthed) return new Response('Unauthorized', { status: 401 });
+      const [sent, bounced] = await Promise.all([getDppSentList(env), getBouncedList(env)]);
+      return Response.json({
+        total: DPP_QUEUE.length,
+        sent: sent.length,
+        remaining: DPP_QUEUE.length - sent.length,
+        sentEmails: sent,
+        suppressedBounces: bounced,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (url.pathname === '/send-dpp-next') {
+      if (!isAuthed) return new Response('Unauthorized', { status: 401 });
+      const result = await sendNextDpp(env, 1);
+      return Response.json(result);
+    }
+
+    if (url.pathname === '/send-dpp-all') {
+      if (!isAuthed) return new Response('Unauthorized', { status: 401 });
+      const result = await sendAllDpp(env);
+      return Response.json(result);
+    }
+
+    return new Response(`QRON + AuthiChain Outreach Engine
+QRON queue: ${OUTREACH_QUEUE.length} | DPP queue: ${DPP_QUEUE.length}
 Rate: 1 per GH Actions trigger (every 4h)
 Endpoints:
-  /health              — Health check
-  /status?key=TOKEN    — Queue + bounce suppression status
-  /send-next?key=TOKEN — Send next 1 email (skips bounced/sent)
-  /send-all?key=TOKEN  — Send all remaining emails
-  /webhook             — Resend bounce/complaint webhook (POST)`);
+  /health                — Health check
+  /status?key=TOKEN      — QRON queue + bounce status
+  /send-next?key=TOKEN   — Send next QRON email
+  /send-all?key=TOKEN    — Send all remaining QRON emails
+  /dpp-status?key=TOKEN  — EU DPP queue status
+  /send-dpp-next?key=TOKEN — Send next DPP email
+  /send-dpp-all?key=TOKEN  — Send all remaining DPP emails
+  /webhook               — Resend bounce/complaint webhook (POST)`);
   },
 
   async scheduled(event: any, env: any, ctx: any) {
@@ -341,6 +486,61 @@ async function sendAll(env: any) {
   }
 
   await saveSentList(env, sent);
+  return { sent: results.filter(r => r.sent).length, failed: results.filter(r => !r.sent).length, results };
+}
+
+// ── DPP KV helpers ────────────────────────────────────────────────────────────
+
+async function getDppSentList(env: any): Promise<any[]> {
+  if (!env.KV) return [];
+  const data = await env.KV.get('dpp_sent');
+  return data ? JSON.parse(data) : [];
+}
+
+async function saveDppSentList(env: any, sent: any[]) {
+  if (env.KV) await env.KV.put('dpp_sent', JSON.stringify(sent), { expirationTtl: 86400 * 90 });
+}
+
+async function sendNextDpp(env: any, count: number) {
+  const [sent, bounced] = await Promise.all([getDppSentList(env), getBouncedList(env)]);
+  const sentEmails = new Set(sent.map((s: any) => s.to.toLowerCase()));
+  const bouncedSet = new Set(bounced);
+
+  const toSend = DPP_QUEUE
+    .filter(e => !sentEmails.has(e.to.toLowerCase()) && !bouncedSet.has(e.to.toLowerCase()))
+    .slice(0, count);
+
+  if (toSend.length === 0) {
+    return { batch: [], totalSent: sent.length, totalQueue: DPP_QUEUE.length, done: true };
+  }
+
+  const results = [];
+  for (const email of toSend) {
+    const ok = await sendViaResend(email, env);
+    results.push({ to: email.to, subject: email.subject, sent: ok, timestamp: new Date().toISOString() });
+    if (ok) sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
+  }
+
+  await saveDppSentList(env, sent);
+  return { batch: results, totalSent: sent.length, totalQueue: DPP_QUEUE.length };
+}
+
+async function sendAllDpp(env: any) {
+  const [sent, bounced] = await Promise.all([getDppSentList(env), getBouncedList(env)]);
+  const sentEmails = new Set(sent.map((s: any) => s.to.toLowerCase()));
+  const bouncedSet = new Set(bounced);
+  const toSend = DPP_QUEUE.filter(e =>
+    !sentEmails.has(e.to.toLowerCase()) && !bouncedSet.has(e.to.toLowerCase()));
+
+  const results = [];
+  for (const email of toSend) {
+    const ok = await sendViaResend(email, env);
+    results.push({ to: email.to, sent: ok });
+    if (ok) sent.push({ to: email.to, subject: email.subject, sentAt: new Date().toISOString() });
+    await new Promise(r => setTimeout(r, 1500));
+  }
+
+  await saveDppSentList(env, sent);
   return { sent: results.filter(r => r.sent).length, failed: results.filter(r => !r.sent).length, results };
 }
 
