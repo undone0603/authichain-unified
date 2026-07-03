@@ -2565,6 +2565,206 @@ const HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const DPP_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EU Digital Product Passport Compliance | AuthiChain</title>
+  <meta name="description" content="AuthiChain delivers EU Digital Product Passport (DPP) compliance via blockchain. Batteries Feb 2027, textiles 2028-29. One integration covers ESPR, EUDR, CSRD. Registry opens July 19, 2026.">
+  <meta name="keywords" content="EU Digital Product Passport, DPP compliance, digital product passport 2026, DPP blockchain, ESPR regulation, EU battery regulation, supply chain compliance, product passport">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://authichain.com/digital-product-passport">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="theme-color" content="#c9a227">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="EU Digital Product Passport Compliance | AuthiChain">
+  <meta property="og:description" content="Blockchain-native DPP platform. Registry opens July 19, 2026. Batteries due Feb 2027. AuthiChain is live now.">
+  <meta property="og:url" content="https://authichain.com/digital-product-passport">
+  <meta property="og:image" content="https://authichain.com/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="EU Digital Product Passport | AuthiChain">
+  <meta name="twitter:description" content="ESPR DPP compliance via blockchain. Batteries Feb 2027. Live now.">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport compliance for brands via blockchain certificates.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
+  ${FONTS_LINK}
+  <style>
+    ${cssVars(BRAND)}
+    ${BASE_CSS}
+    .dpp-timeline { display: grid; gap: 0; max-width: 700px; margin: 0 auto; }
+    .dpp-phase { display: grid; grid-template-columns: 140px 1fr; gap: 0; align-items: stretch; }
+    .dpp-date { font-family: var(--mono); font-size: 12px; color: var(--primary); padding: 14px 16px 14px 0; border-right: 2px solid var(--border); text-align: right; line-height: 1.4; }
+    .dpp-content { padding: 14px 0 14px 20px; }
+    .dpp-phase-title { font-weight: 600; font-size: 15px; color: var(--text); margin-bottom: 2px; }
+    .dpp-phase-sub { font-size: 13px; color: var(--text-dim); }
+    .dpp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); margin-left: -25px; margin-right: 15px; vertical-align: middle; flex-shrink: 0; }
+    .dpp-phase.live .dpp-date { color: #22c55e; }
+    .dpp-phase.live .dpp-dot { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+    .dpp-phase.urgent .dpp-date { color: #f59e0b; }
+    .dpp-phase.urgent .dpp-dot { background: #f59e0b; }
+    .feature-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 40px; }
+    .feature-item { background: var(--bg2); border: 1px solid var(--border-dim); border-radius: 12px; padding: 24px; }
+    .feature-icon { font-size: 28px; margin-bottom: 12px; }
+    .feature-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; }
+    .feature-desc { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+    .badge-live { display: inline-block; background: rgba(34,197,94,.15); border: 1px solid #22c55e; color: #22c55e; font-family: var(--mono); font-size: 11px; padding: 3px 10px; border-radius: 20px; margin-bottom: 16px; letter-spacing: .05em; }
+    .industries { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 32px; }
+    .industry-card { background: var(--bg2); border: 1px solid var(--border-dim); border-radius: 10px; padding: 20px; }
+    .industry-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+    .industry-deadline { font-family: var(--mono); font-size: 12px; color: var(--primary); }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="/">
+      ${svgLogo(BRAND)}
+      <span class="nav-logo-text">AUTHI<span>CHAIN</span></span>
+    </a>
+    <div class="nav-links">
+      <a class="nav-link" href="/">Home</a>
+      <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
+      <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/onboard">Start DPP Onboarding</a>
+    </div>
+  </nav>
+
+  <section class="hero" id="hero" style="min-height:70vh">
+    <div class="hero-content">
+      <div class="badge-live">● REGISTRY OPENS JULY 19, 2026</div>
+      <h1 class="hero-title" style="font-size: clamp(2.4rem, 6vw, 4.5rem)">
+        EU DIGITAL<br><span class="accent">PRODUCT PASSPORT</span>
+      </h1>
+      <p class="hero-sub" style="max-width:600px">
+        The EU's Ecodesign for Sustainable Products Regulation (ESPR) requires a blockchain-readable product passport for every item sold in Europe. AuthiChain is live — ERC-721 certificates, audit-ready exports, one integration.
+      </p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
+        <a class="btn btn-primary" href="https://authichain-unified.vercel.app/onboard">Get DPP Compliant</a>
+        <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20Compliance%20Demo">Book a Demo</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="regulation">
+    <div class="container">
+      <div class="section-label">REGULATION TIMELINE</div>
+      <h2 class="section-title">When Does Your Industry Need DPP?</h2>
+      <p class="section-sub">ESPR rolls out in phases. The EU registry opens July 2026 — deadlines by product category follow through 2030.</p>
+
+      <div class="dpp-timeline" style="margin-top:48px">
+        <div class="dpp-phase live">
+          <div class="dpp-date">JULY 19<br>2026</div>
+          <div class="dpp-content">
+            <span class="dpp-dot"></span>
+            <span class="dpp-phase-title">EU DPP Registry Launch</span>
+            <div class="dpp-phase-sub">Official EU registry goes live. Brands can begin voluntary DPP issuance. AuthiChain onboarding open now.</div>
+          </div>
+        </div>
+        <div class="dpp-phase urgent">
+          <div class="dpp-date">FEB 18<br>2027</div>
+          <div class="dpp-content">
+            <span class="dpp-dot"></span>
+            <span class="dpp-phase-title">Industrial Batteries (≥2 kWh)</span>
+            <div class="dpp-phase-sub">Mandatory DPP for EV batteries, industrial storage, LMT batteries. Carbon footprint, material declaration, recycled content required.</div>
+          </div>
+        </div>
+        <div class="dpp-phase">
+          <div class="dpp-date">Q3–Q4<br>2027</div>
+          <div class="dpp-content">
+            <span class="dpp-dot"></span>
+            <span class="dpp-phase-title">Electronics & ICT Products</span>
+            <div class="dpp-phase-sub">Smartphones, tablets, laptops. Repairability scores, spare parts availability, recycled material content.</div>
+          </div>
+        </div>
+        <div class="dpp-phase">
+          <div class="dpp-date">2028–<br>2029</div>
+          <div class="dpp-content">
+            <span class="dpp-dot"></span>
+            <span class="dpp-phase-title">Textiles, Apparel & Footwear</span>
+            <div class="dpp-phase-sub">Fashion brands must declare fiber composition, recycled content, country of origin, and care instructions via DPP QR codes.</div>
+          </div>
+        </div>
+        <div class="dpp-phase">
+          <div class="dpp-date">2029–<br>2030</div>
+          <div class="dpp-content">
+            <span class="dpp-dot"></span>
+            <span class="dpp-phase-title">Furniture, Steel, Chemicals & More</span>
+            <div class="dpp-phase-sub">ESPR expands to construction products, furniture, agricultural products, and bulk chemicals. Full economic coverage by 2030.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="solution" style="background:var(--bg2)">
+    <div class="container">
+      <div class="section-label">THE AUTHICHAIN SOLUTION</div>
+      <h2 class="section-title">One Integration. Every Standard.</h2>
+      <p class="section-sub">AuthiChain's blockchain certificates are the DPP. No retrofitting, no middleware — the NFT <em>is</em> the passport.</p>
+
+      <div class="feature-row">
+        <div class="feature-item">
+          <div class="feature-icon">🔗</div>
+          <div class="feature-title">ERC-721 = DPP</div>
+          <div class="feature-desc">Each product gets an on-chain NFT containing all ESPR-required data fields: materials, carbon footprint, recycled content, supplier chain, repair information.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📱</div>
+          <div class="feature-title">QR Scan → Instant Passport</div>
+          <div class="feature-desc">A single QR code on the product label opens the full DPP. Consumers, regulators, and resellers all see the same immutable, real-time record.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📊</div>
+          <div class="feature-title">Audit-Ready Exports</div>
+          <div class="feature-desc">One-click compliance exports for EU CSRD, EUDR, FDA DSCSA, USMCA, and ISO 22005. Formatted for EU customs authorities and DPP registry submission.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">⛓️</div>
+          <div class="feature-title">22 Supply Chain Events</div>
+          <div class="feature-desc">Full provenance trail: manufacturing, customs clearance, quality inspection, distribution, retail receipt — every event logged immutably on Polygon.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🤖</div>
+          <div class="feature-title">AI Provenance Verification</div>
+          <div class="feature-desc">5-agent consensus (Guardian, Archivist, Sentinel, Scout, Arbiter) verifies authenticity in 2.1 seconds. Counterfeit detection built in.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🌍</div>
+          <div class="feature-title">Multi-Standard Coverage</div>
+          <div class="feature-desc">EU DPP + CSRD + EUDR + FDA DSCSA + USMCA + ISO 22005. A single AuthiChain integration satisfies every major sustainability compliance framework.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="industries">
+    <div class="container">
+      <div class="section-label">INDUSTRIES SERVED</div>
+      <h2 class="section-title">Already Working With</h2>
+      <div class="industries">
+        <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory Feb 2027</div></div>
+        <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
+        <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">FDA DSCSA + DPP</div></div>
+        <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
+        <div class="industry-card"><div class="industry-name">💎 Luxury Goods</div><div class="industry-deadline">Anti-counterfeit + DPP</div></div>
+        <div class="industry-card"><div class="industry-name">🌿 Cannabis</div><div class="industry-deadline">State + EU compliance</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section cta-section" style="background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); text-align:center">
+    <div class="container" style="max-width:700px">
+      <div class="badge-live" style="background:rgba(201,162,39,.12); border-color:var(--primary); color:var(--primary)">16 DAYS TO REGISTRY LAUNCH</div>
+      <h2 class="section-title">Start DPP Compliance Today</h2>
+      <p class="section-sub">Brands that register before July 19 get early-mover advantage in the EU market. Setup takes under 30 minutes.</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
+        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="https://authichain-unified.vercel.app/onboard">Start Free — Get DPP Compliant</a>
+      </div>
+      <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">No credit card required. First DPP certificate included.</p>
+    </div>
+  </section>
+
+  ${ecosystemFooter()}
+</body>
+</html>`;
+
 export default {
   async fetch(request: Request) {
     const url = new URL(request.url);
@@ -2593,6 +2793,9 @@ export default {
     }
     if (p === '/demo' || p.startsWith('/demo/')) {
       return Response.redirect('https://authichain-unified.vercel.app/subscriptions', 302);
+    }
+    if (p === '/digital-product-passport' || p === '/dpp') {
+      return new Response(DPP_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     // Proxy app routes to the Vercel deployment instead of serving marketing HTML.
     // Prefixes must NOT have a trailing slash so the startsWith check works correctly
