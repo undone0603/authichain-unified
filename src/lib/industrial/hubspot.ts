@@ -51,23 +51,9 @@ export class HubSpotDeliverableAgent {
   }
 
   private async fetchPendingDeals(): Promise<HubSpotDeal[]> {
-    // In a real environment, this would call:
-    // https://api.hubapi.com/crm/v3/objects/deals?properties=dealname,dealstage,metadata
-    // For this operational sprint, we simulate the pending deals, prioritizing the V2 Supplement FTC deal.
-    return [
-      { 
-        id: 'deal_ftc_001', 
-        dealname: 'AuthiChain Pilot (Enforcement / Brand)', 
-        dealstage: 'deliverable_pending', 
-        amount: '10000',
-        metadata: { type: 'qron_design', style: 'Made in USA / American Products' } 
-      },
-      { id: 'deal_001', dealname: 'BMW Battery Provenance Pilot', dealstage: 'deliverable_pending', metadata: { type: 'anchor_proof', identity: 'BMW-BAT-992' } },
-      { id: 'deal_002', dealname: 'Gilmore Museum Donald Dust-Off', dealstage: 'deliverable_pending', metadata: { type: 'qron_design', style: 'brushed_aluminum' } },
-      { id: 'deal_003', dealname: 'Trulieve StrainChain Shadow Audit', dealstage: 'deliverable_pending', metadata: { type: 'state_hash_report', batch: 'TRU-420-X' } },
-      { id: 'deal_004', dealname: 'Tesla Energy Sync Integration', dealstage: 'deliverable_pending', metadata: { type: 'living_qron', style: 'minimalist_circuit' } },
-      { id: 'deal_005', dealname: 'Metrc RFID Compliance Test', dealstage: 'deliverable_pending', metadata: { type: 'industrial_cert', rfid: 'RFID-MET-101' } },
-    ];
+    // Placeholder deals were removed — they generated phantom automation_logs entries.
+    // Wire up to HubSpot CRM API when real deliverable-pending deals exist.
+    return [];
   }
 
   private async processDeal(deal: HubSpotDeal) {
