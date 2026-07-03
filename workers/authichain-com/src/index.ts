@@ -2581,6 +2581,13 @@ export default {
     if (p === '/apple-touch-icon.svg' || p === '/apple-touch-icon.png' || p === '/apple-touch-icon-precomposed.png') {
       return assetResponse(FAVICON_SVG);
     }
+    if (p === '/sitemap.xml') {
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://authichain.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url><url><loc>https://authichain.com/digital-product-passport</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain/technology</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/authichain/pilots</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/book</loc><changefreq>monthly</changefreq><priority>0.8</priority></url></urlset>`;
+      return new Response(sitemap, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
+    }
+    if (p === '/robots.txt') {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n', { headers: { 'Content-Type': 'text/plain' } });
+    }
     if (p === '/dapp' || p.startsWith('/dapp/')) {
       return Response.redirect('https://authichain-unified.vercel.app/dashboard', 302);
     }
