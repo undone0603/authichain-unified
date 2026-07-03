@@ -256,7 +256,7 @@ export class AutonomousController {
       const prompt = `A highly detailed, cinematic QR art inspired by ${currentTrend}, hyper-realistic, gold accents, 8k resolution, AuthiChain signature style.`;
 
       // 3. Autonomous Generation (Calling internal API logic or worker directly)
-      const CF_WORKER_URL = process.env.QRON_WORKER_URL || 'https://qron-ai-api.undone-k.workers.dev';
+      const CF_WORKER_URL = process.env.QRON_WORKER_URL || 'https://qron-image-gen.undone-k.workers.dev';
       const genRes = await fetch(`${CF_WORKER_URL}/v1/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
