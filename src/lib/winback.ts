@@ -37,6 +37,9 @@ function stepForAge(age: number): WinbackStep | null {
 }
 
 export async function runWinbackCampaign(): Promise<{ checked: number; sent: number }> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { checked: 0, sent: 0 };
+  }
   const admin = getAdmin();
 
   const { data: cancelled } = await admin

@@ -63,6 +63,9 @@ function daysSince(isoDate: string | null): number {
 }
 
 export async function runDunningEscalation(): Promise<{ checked: number; remindersSent: number }> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { checked: 0, remindersSent: 0 };
+  }
   const admin = getAdmin();
 
   // Fetch past_due profiles with their last_payment_at
