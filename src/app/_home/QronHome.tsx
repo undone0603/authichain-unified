@@ -344,6 +344,7 @@ export function QronHome() {
 
           <h1 className="text-5xl md:text-7xl font-extrabold mb-4 leading-tight tracking-tight">
             <span className="gold-text">QRON</span>
+            <span className="sr-only"> — AI-Generated QR Art That Scans</span>
           </h1>
           <p
             className="text-xl md:text-2xl font-light mb-3"
