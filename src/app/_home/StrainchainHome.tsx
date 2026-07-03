@@ -12,10 +12,10 @@ export function StrainchainHome() {
       themeClass="theme-agricultural"
       eyebrow="Seed-to-Sale Provenance"
       stats={[
-        { value: 'METRC', label: 'Integrated' },
-        { value: 'BioTrack', label: 'Integrated' },
-        { value: 'Lab-cert', label: 'Hashing' },
-        { value: 'Strain', label: 'NFTs' },
+        { value: '38', label: 'Legal Markets' },
+        { value: '$199', label: 'Per Location / Mo' },
+        { value: '4', label: 'Audit Layers' },
+        { value: '<1 s', label: 'Verify Time' },
       ]}
       features={[
         {
@@ -49,7 +49,7 @@ export function StrainchainHome() {
           desc: 'Every package carries a verifiable DPP — origin, test results, and handling history — ready for EU and US disclosure rules.',
         },
       ]}
-      closingLine="Seed-to-Sale Provenance for Cannabis."
+      closingLine="Turn Compliance Into a Competitive Edge."
     />
   );
 }

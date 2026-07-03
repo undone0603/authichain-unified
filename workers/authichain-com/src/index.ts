@@ -2468,6 +2468,9 @@ const HTML = `<!DOCTYPE html>
   </style>
 </head>
 <body>
+  <div style="background:linear-gradient(90deg,#c9a227 0%,#00ffd1 100%);text-align:center;padding:.6rem 1rem;font-size:.82rem;font-weight:700;color:#000;letter-spacing:.03em">
+    ⚡ EU Digital Product Passport Registry opens <strong>July 19, 2026</strong> — <a href="/digital-product-passport" style="color:#000;text-decoration:underline;font-weight:800">Get Compliant Now →</a>
+  </div>
   <nav>
     <a class="nav-logo" href="/">
       ${svgLogo(BRAND)}
@@ -2476,6 +2479,7 @@ const HTML = `<!DOCTYPE html>
     <div class="nav-links">
       <a class="nav-link" href="#community">$QRON</a>
       <a class="nav-link" href="#technology">Technology</a>
+      <a class="nav-link" href="/digital-product-passport" style="color:var(--accent)">EU DPP</a>
       <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
       <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/auth">Get Started</a>
     </div>

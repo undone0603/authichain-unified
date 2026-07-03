@@ -12,9 +12,9 @@ export function GovchainHome() {
       themeClass="theme-patriotic"
       eyebrow="Government Opportunities"
       stats={[
-        { value: 'SAM.gov', label: 'Auto-ingest' },
-        { value: 'AI', label: 'Bid scoring' },
-        { value: 'Proof', label: 'On-chain wins' },
+        { value: '$770B', label: 'Federal Market' },
+        { value: '92', label: 'Max Fit Score' },
+        { value: 'FAR/DFARS', label: 'Compliant' },
         { value: '24/7', label: 'Monitoring' },
       ]}
       features={[
@@ -49,7 +49,7 @@ export function GovchainHome() {
           desc: 'Every action is recorded to an immutable ledger, giving you an audit trail for contracting-officer scrutiny.',
         },
       ]}
-      closingLine="Government Opportunities, Proven On-Chain."
+      closingLine="Pursue Smarter. Prove Everything."
     />
   );
 }

@@ -22,9 +22,26 @@ async function currentBrand(): Promise<BrandId> {
 
 export async function generateMetadata(): Promise<Metadata> {
   const brand = BRANDS[await currentBrand()];
+  const url = `https://${brand.domain}`;
   return {
     title: `${brand.displayName} | ${brand.tagline}`,
     description: brand.description,
+    metadataBase: new URL(url),
+    alternates: { canonical: url },
+    openGraph: {
+      title: `${brand.displayName} | ${brand.tagline}`,
+      description: brand.description,
+      url,
+      siteName: brand.displayName,
+      locale: 'en_US',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${brand.displayName} | ${brand.tagline}`,
+      description: brand.description,
+      creator: '@AuthiChain',
+    },
   };
 }
 

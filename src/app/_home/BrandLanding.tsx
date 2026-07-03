@@ -179,7 +179,7 @@ export function BrandLanding({
 
       <footer className="px-6 py-12">
         <p className="text-center text-[10px] font-bold uppercase tracking-widest text-zinc-700">
-          {brand.displayName} · part of the AuthiChain Protocol · Settlement on Polygon &amp; Bitcoin
+          © 2026 {brand.displayName} · part of the AuthiChain Protocol · Settlement on Polygon &amp; Bitcoin
         </p>
       </footer>
     </div>
