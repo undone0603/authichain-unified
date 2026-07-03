@@ -7,11 +7,13 @@ allowBuilds:
   unrs-resolver: true
   utf-8-validate: true
   workerd: true
+minimumReleaseAgeExclude:
+  - miniflare@4.20260701.0
+  - wrangler@4.107.0
 # pnpm settings (pnpm 10+ reads overrides from here, not package.json).
 # Scoped security overrides: each selector targets only the vulnerable range,
 # so unaffected versions (e.g. ws@7.x) are left untouched.
 overrides:
-  # Migrated from package.json "pnpm.overrides" (no longer read by pnpm 11).
   serialize-javascript: 7.0.3
   # GHSA high: form-data CRLF injection in multipart field/filenames.
   'form-data@>=4.0.0 <4.0.6': 4.0.6
@@ -19,3 +21,7 @@ overrides:
   'js-cookie@<=3.0.5': 3.0.7
   # GHSA high: ws memory-exhaustion DoS from tiny fragments (8.x only).
   'ws@>=8.0.0 <8.21.0': 8.21.0
+  # GHSA: vite server.fs.deny bypass + NTLMv2 hash disclosure (vitest peer pulls 5.x).
+  'vite@<6.4.3': 6.4.3
+  # GHSA moderate: postcss XSS via unescaped </style> (transitive via next).
+  'postcss@<8.5.10': 8.5.10
