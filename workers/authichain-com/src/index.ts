@@ -2445,7 +2445,7 @@ function ecosystemFooter() {
     </div>
   </div>
   <div style="max-width:1200px; margin:40px auto 0; padding-top:32px; border-top:1px solid var(--border-dim); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px">
-    <p style="font-size:12px; color:var(--text-dim)">© ${new Date().getFullYear()} AuthiChain. All rights reserved.</p>
+    <p style="font-size:12px; color:var(--text-dim)">© 2026 AuthiChain. All rights reserved.</p>
     <p style="font-family:var(--mono); font-size:11px; color:var(--text-dim)">Polygon · ERC-721 · IPFS · BTC Ordinals</p>
   </div>
 </footer>`;
