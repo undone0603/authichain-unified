@@ -794,7 +794,7 @@ export const promptCache = pgTable("prompt_cache", {
 // ─── Scheduled Job Runs ──────────────────────────────────────────────────────
 export const scheduledJobRuns = pgTable("scheduled_job_runs", {
   id: serial("id").primaryKey(),
-  jobName: varchar("jobName", { length: 128 }).notNull(),
+  jobName: varchar("job_name", { length: 128 }).notNull(),
   status: varchar("status", { length: 50 }).notNull(),
   startedAt: timestamp("startedAt").defaultNow().notNull(),
   completedAt: timestamp("completedAt"),
