@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Copy, CheckCircle, ExternalLink, Zap, TrendingUp, DollarSign, Users } from 'lucide-react';
 
@@ -23,7 +23,7 @@ interface ConnectStatus {
   details_submitted?: boolean;
 }
 
-export default function AffiliateDashboard() {
+function AffiliateDashboardInner() {
   const searchParams = useSearchParams();
   const justJoined = searchParams.get('joined') === '1';
   const connectResult = searchParams.get('connect');
@@ -230,5 +230,17 @@ export default function AffiliateDashboard() {
 
       </div>
     </div>
+  );
+}
+
+export default function AffiliateDashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-zinc-500 text-sm">Loading…</div>
+      </div>
+    }>
+      <AffiliateDashboardInner />
+    </Suspense>
   );
 }
