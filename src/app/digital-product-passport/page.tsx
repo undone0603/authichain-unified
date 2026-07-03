@@ -2,20 +2,24 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { 
-  ShieldCheck, 
-  BarChart3, 
-  Leaf, 
-  Hammer, 
-  Truck, 
-  Recycle, 
+import {
+  ShieldCheck,
+  BarChart3,
+  Leaf,
+  Hammer,
+  Truck,
+  Recycle,
   ArrowRight,
   Sparkles,
   Zap,
   Lock,
   Activity,
   CheckCircle,
-  Database
+  Database,
+  Globe,
+  WifiOff,
+  AlertTriangle,
+  Battery,
 } from 'lucide-react';
 
 export default function DPPPage() {
@@ -40,32 +44,41 @@ export default function DPPPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-gold/5 blur-[120px] rounded-full opacity-50" />
         
         <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-[0.2em] mb-8">
-            <ShieldCheck className="w-4 h-4" />
-            StrainChain.io — Industrial Provenance
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+            <Globe className="w-4 h-4" />
+            EU ESPR Compliant · Registry Live July 19, 2026
           </div>
-          
+
+          {/* Battery urgency banner */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            Battery Mandate: Feb 2027 — 7 months to compliance
+          </div>
+
           <h1 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter uppercase leading-[0.9]">
             The Standard For <br />
             <span className="gold-text">Industrial</span> Passports
           </h1>
-          
-          <p className="max-w-2xl mx-auto text-zinc-500 text-lg md:text-xl font-medium mb-12 leading-relaxed">
-            The EU Digital Product Passport (DPP) registry opens July 2026. 
-            QRON provides the cryptographically-signed data carrier required for compliance, 
-            wrapped in world-class AI art.
+
+          <p className="max-w-2xl mx-auto text-zinc-400 text-lg md:text-xl font-medium mb-4 leading-relaxed">
+            The EU Digital Product Passport registry opens July 19, 2026.
+            AuthiChain is the only platform that meets every ESPR requirement —
+            including <span className="text-white font-bold">full verification with zero internet</span>.
+          </p>
+          <p className="max-w-xl mx-auto text-zinc-600 text-sm font-bold uppercase tracking-widest mb-12">
+            Works at factory floors, border crossings, and disconnected industrial sites.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
+            <button
                 onClick={startDemo}
                 disabled={isSimulating}
                 className="btn-gold px-12 py-5 font-black uppercase tracking-widest text-xs shadow-gold"
             >
               {isSimulating ? 'Processing Compliance...' : 'Simulate BMW Battery Passport'}
             </button>
-            <Link href="/elite" className="btn-outline-gold px-12 py-5 font-black uppercase tracking-widest text-xs border-zinc-800">
-              Join Elite Waitlist
+            <Link href="/book" className="btn-outline-gold px-12 py-5 font-black uppercase tracking-widest text-xs border-zinc-800">
+              Apply for Pilot <ArrowRight className="inline w-4 h-4 ml-2" />
             </Link>
           </div>
 
@@ -146,21 +159,141 @@ export default function DPPPage() {
 
         <div className="space-y-4">
           {[
-            { date: 'July 2026', label: 'Central DPP Registry Opens', active: true },
-            { date: 'Feb 2027', label: 'Battery Passport Mandatory (EV, Industrial)', active: false },
-            { date: '2028', label: 'Textiles & Electronics Delegation', active: false },
-            { date: '2030', label: 'Mandatory for All EU Physical Goods', active: false },
+            { date: 'July 19, 2026', label: 'Central DPP Registry Opens', active: true, urgent: false },
+            { date: 'Feb 2027', label: 'Battery Passport Mandatory (EV, Industrial)', active: true, urgent: true },
+            { date: '2028–2029', label: 'Textiles & Apparel Delegation', active: false, urgent: false },
+            { date: '2029–2030', label: 'Electronics & Construction Products', active: false, urgent: false },
           ].map((item, i) => (
-            <div key={i} className={`protocol-card p-6 flex justify-between items-center ${item.active ? 'bg-gold/5 border-gold/20' : 'opacity-50'}`}>
+            <div key={i} className={`protocol-card p-6 flex justify-between items-center ${item.urgent ? 'bg-red-500/5 border-red-500/30' : item.active ? 'bg-gold/5 border-gold/20' : 'opacity-40'}`}>
               <div className="flex items-center gap-6">
-                <span className={`text-sm font-black uppercase tracking-widest ${item.active ? 'text-gold' : 'text-zinc-600'}`}>
+                <span className={`text-sm font-black uppercase tracking-widest ${item.urgent ? 'text-red-400' : item.active ? 'text-gold' : 'text-zinc-600'}`}>
                   {item.date}
                 </span>
                 <span className="text-sm font-bold text-zinc-300 uppercase">{item.label}</span>
               </div>
-              {item.active && <Sparkles className="w-4 h-4 text-gold animate-pulse" />}
+              {item.urgent && <div className="flex items-center gap-2 text-red-400 text-[9px] font-black uppercase tracking-widest"><AlertTriangle className="w-3.5 h-3.5" />Buy Now</div>}
+              {item.active && !item.urgent && <Sparkles className="w-4 h-4 text-gold animate-pulse" />}
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── ESPR Requirements ─────────────────────────────────────── */}
+      <section className="bg-zinc-950 border-y border-zinc-900 py-24 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gold mb-4">ESPR Compliance</p>
+            <h2 className="text-4xl font-black uppercase tracking-tighter">
+              Every Requirement. <span className="gold-text">Checked.</span>
+            </h2>
+            <p className="text-zinc-500 text-sm mt-4 max-w-lg mx-auto">
+              EU ESPR mandates that DPP data be accessible, verifiable, and tamper-evident.
+              AuthiChain exceeds the spec — adding what no competitor can match.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 mb-20">
+            {[
+              {
+                label: 'Accessible',
+                desc: 'GS1 Digital Link–compatible unique product identifier, queryable via the EU Central Registry from day one.',
+                exclusive: false,
+              },
+              {
+                label: 'Verifiable',
+                desc: 'Ed25519 cryptographic signature on every data record — mathematically provable, no central trust required.',
+                exclusive: false,
+              },
+              {
+                label: 'Tamper-Evident',
+                desc: 'Every passport hashed and anchored on Polygon — any alteration is permanently detectable on-chain.',
+                exclusive: false,
+              },
+              {
+                label: 'Offline-Capable',
+                desc: 'AuthiChain-exclusive: full cryptographic verification with zero internet. Works at mines, factories, and border crossings where competitors fail.',
+                exclusive: true,
+              },
+            ].map((req) => (
+              <div key={req.label} className={`protocol-card p-8 ${req.exclusive ? 'border-gold/30 bg-gold/5' : ''}`}>
+                <div className="flex items-start gap-4">
+                  <CheckCircle className={`w-6 h-6 mt-0.5 flex-shrink-0 ${req.exclusive ? 'text-gold' : 'text-green-500'}`} />
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-black uppercase tracking-tight text-white">{req.label}</h3>
+                      {req.exclusive && (
+                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-gold/20 text-gold border border-gold/30">
+                          Exclusive
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-zinc-500 text-sm leading-relaxed">{req.desc}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Offline callout */}
+          <div className="flex flex-col md:flex-row items-center gap-10 p-10 rounded-3xl border border-gold/20 bg-gold/5">
+            <div className="flex-shrink-0 text-center">
+              <WifiOff className="w-16 h-16 text-gold mx-auto mb-3" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-gold">Only AuthiChain</p>
+            </div>
+            <div>
+              <h3 className="text-2xl font-black uppercase tracking-tighter mb-4">
+                Verification Breaks Without Signal. <span className="gold-text">Not Anymore.</span>
+              </h3>
+              <p className="text-zinc-400 text-sm leading-relaxed mb-4">
+                Every competitor's DPP solution requires a cloud call to complete verification. Battery factories,
+                mining operations, and logistics hubs often have no signal — scans complete but verification silently fails.
+              </p>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                AuthiChain's Ed25519 embedded verification runs entirely on-device. No server. No connectivity.
+                Full ESPR-compliant proof in under 2.5 seconds, anywhere on Earth.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Competitor Comparison ──────────────────────────────────── */}
+      <section className="max-w-5xl mx-auto px-6 py-24">
+        <div className="text-center mb-16">
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gold mb-4">Competitive Landscape</p>
+          <h2 className="text-4xl font-black uppercase tracking-tighter">
+            Why AuthiChain <span className="gold-text">Wins</span>
+          </h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-800">
+                <th className="text-left py-4 pr-8 text-[10px] font-black uppercase tracking-widest text-zinc-500">Provider</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">Offline Verify</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">Industrial</th>
+                <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">AI Layer</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { name: 'Scantrust', focus: 'Consumer QR / Brand Protection', offline: false, industrial: false, ai: false, highlight: false },
+                { name: 'VeChain', focus: 'Enterprise Blockchain', offline: false, industrial: true, ai: false, highlight: false },
+                { name: 'Circularise', focus: 'Circular Economy / Plastics', offline: false, industrial: false, ai: false, highlight: false },
+                { name: 'AuthiChain', focus: 'Industrial Supply Chain AI + Blockchain', offline: true, industrial: true, ai: true, highlight: true },
+              ].map((c) => (
+                <tr key={c.name} className={`border-b ${c.highlight ? 'border-gold/20 bg-gold/5' : 'border-zinc-900'}`}>
+                  <td className="py-5 pr-8">
+                    <p className={`font-black uppercase tracking-tight ${c.highlight ? 'text-gold text-base' : 'text-zinc-400 text-sm'}`}>{c.name}</p>
+                    <p className="text-[10px] text-zinc-600 uppercase tracking-tighter mt-0.5">{c.focus}</p>
+                  </td>
+                  <td className="py-5 px-4 text-center">{c.offline ? <CheckCircle className="w-5 h-5 text-green-400 mx-auto" /> : <span className="text-zinc-700 font-black text-lg">—</span>}</td>
+                  <td className="py-5 px-4 text-center">{c.industrial ? <CheckCircle className="w-5 h-5 text-green-400 mx-auto" /> : <span className="text-zinc-700 font-black text-lg">—</span>}</td>
+                  <td className="py-5 px-4 text-center">{c.ai ? <CheckCircle className="w-5 h-5 text-green-400 mx-auto" /> : <span className="text-zinc-700 font-black text-lg">—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -227,16 +360,29 @@ export default function DPPPage() {
       {/* CTA Section */}
       <section className="bg-zinc-950 border-y border-zinc-900 py-24 px-6 text-center">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-4xl font-black mb-8 uppercase tracking-tighter leading-none">
-            Scale Your <span className="gold-text">Compliance</span> <br />
-            With Our Industrial API
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-[0.3em] mb-8">
+            <Battery className="w-4 h-4" />
+            Battery Compliance Pilot — 10 Slots Available
+          </div>
+          <h2 className="text-4xl font-black mb-6 uppercase tracking-tighter leading-none">
+            Be Compliant <br />
+            <span className="gold-text">Before Feb 2027</span>
           </h2>
-          <p className="text-zinc-500 mb-12 uppercase tracking-widest text-xs font-bold">
+          <p className="text-zinc-400 mb-4 max-w-xl mx-auto leading-relaxed">
+            We're onboarding battery manufacturers and tier-1 suppliers for our EU DPP pilot.
+            Full ESPR compliance, offline verification, and GS1 registry integration — operational in 90 days.
+          </p>
+          <p className="text-zinc-600 mb-12 uppercase tracking-widest text-xs font-bold">
             Programmatic generation for 1M+ units per day.
           </p>
-          <Link href="/dashboard" className="btn-gold inline-flex items-center gap-3 px-10 py-4 font-black uppercase tracking-widest text-xs shadow-gold">
-            API Documentation <ArrowRight className="w-4 h-4" />
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/book" className="btn-gold inline-flex items-center gap-3 px-10 py-4 font-black uppercase tracking-widest text-xs shadow-gold">
+              Apply for the Pilot <ArrowRight className="w-4 h-4" />
+            </Link>
+            <a href="mailto:z@authichain.com?subject=EU DPP Pilot" className="btn-outline-gold inline-flex items-center gap-3 px-10 py-4 font-black uppercase tracking-widest text-xs border-zinc-800">
+              Email Directly
+            </a>
+          </div>
         </div>
       </section>
 
