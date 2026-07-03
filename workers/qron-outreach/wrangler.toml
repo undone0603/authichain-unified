@@ -6,3 +6,7 @@ workers_dev = true
 # Cron removed — CF free plan limit is 5 total cron triggers (account full, code 10072).
 # Outreach is triggered via GitHub Actions scheduled workflow (outreach-trigger.yml) instead.
 # workers_dev = true exposes /send-next?key=TOKEN for the GH Actions cron caller.
+
+[[kv_namespaces]]
+binding = "KV"
+id = "291baff0863044998e9ba716dfc06085"
