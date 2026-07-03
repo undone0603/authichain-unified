@@ -43,7 +43,6 @@ jobs:
           - analytics
           - auth
           - authichain-autopilot
-          - authichain-bridge
           - authichain-chain-data
           - authichain-license-issuer
           - authichain-qron-provenance
