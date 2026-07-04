@@ -863,18 +863,9 @@ export class AutonomousController {
   private async runDunningEscalation() {
     const workflowName = 'dunning_escalation';
     try {
-      const apiUrl = `${APP_URL}/api/cron/dunning`;
-      const internalSecret = process.env.INTERNAL_API_SECRET;
-      if (!internalSecret) {
-        await logAutomation(workflowName, 'cron', 'failure', null, 'INTERNAL_API_SECRET not set');
-        return;
-      }
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'x-internal-secret': internalSecret, 'Content-Type': 'application/json' },
-      });
-      const data = res.ok ? await res.json() as { checked?: number; remindersSent?: number } : null;
-      await logAutomation(workflowName, 'cron', res.ok ? 'success' : 'failure', data ?? { status: res.status });
+      const { runDunningEscalation } = await import('@/lib/dunning');
+      const data = await runDunningEscalation();
+      await logAutomation(workflowName, 'cron', 'success', data);
     } catch (err: unknown) {
       await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }
