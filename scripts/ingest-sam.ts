@@ -121,17 +121,23 @@ async function embedAndStore(opportunities: any[]): Promise<number> {
         }
       }
 
+      const poc = opp.pointOfContact?.[0];
+      const contactEmail: string | null = poc?.email || poc?.emailAddress || null;
+
       await supabase.from('gov_opportunities').upsert({
-        notice_id:    opp.noticeId,
-        title:        opp.title,
-        agency:       opp.fullParentPathName,
-        deadline:     opp.responseDeadLine,
-        naics_code:   opp.naicsCode,
-        description:  opp.description?.slice(0, 5000),
-        sam_url:      `https://sam.gov/opp/${opp.noticeId}/view`,
-        govchain_url: `${GOVCHAIN_URL}/opportunities/${opp.noticeId}`,
-        ingested_at:  new Date().toISOString(),
-        status:       'new',
+        notice_id:       opp.noticeId,
+        title:           opp.title,
+        agency:          opp.fullParentPathName,
+        deadline:        opp.responseDeadLine,
+        naics_code:      opp.naicsCode,
+        description:     opp.description?.slice(0, 5000),
+        contact_email:   contactEmail,
+        estimated_value: opp.award?.amount ?? null,
+        raw:             opp,
+        sam_url:         `https://sam.gov/opp/${opp.noticeId}/view`,
+        govchain_url:    `${GOVCHAIN_URL}/opportunities/${opp.noticeId}`,
+        ingested_at:     new Date().toISOString(),
+        status:          'new',
       });
     }
 
