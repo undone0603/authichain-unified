@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { BRANDS, resolveBrand, type BrandId } from '@shared/brands';
+import { JsonLd } from '@/components/JsonLd';
+import {
+  organizationSchema,
+  softwareApplicationSchema,
+} from '@/lib/structured-data';
 import { QronHome } from './_home/QronHome';
 import { AuthichainHome } from './_home/AuthichainHome';
 import { StrainchainHome } from './_home/StrainchainHome';
@@ -46,15 +51,41 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  switch (await currentBrand()) {
-    case 'authichain':
-      return <AuthichainHome />;
-    case 'strainchain':
-      return <StrainchainHome />;
-    case 'govchain':
-      return <GovchainHome />;
-    case 'qron':
-    default:
-      return <QronHome />;
-  }
+  const brandId = await currentBrand();
+  const brand = BRANDS[brandId];
+
+  // Organization schema on every brand home page; QRON also gets
+  // SoftwareApplication (it is a self-serve app product).
+  const schemas = [
+    organizationSchema(brand),
+    ...(brandId === 'qron'
+      ? [
+          softwareApplicationSchema(brand, {
+            category: 'DesignApplication',
+            lowPrice: '0',
+          }),
+        ]
+      : []),
+  ];
+
+  const home = (() => {
+    switch (brandId) {
+      case 'authichain':
+        return <AuthichainHome />;
+      case 'strainchain':
+        return <StrainchainHome />;
+      case 'govchain':
+        return <GovchainHome />;
+      case 'qron':
+      default:
+        return <QronHome />;
+    }
+  })();
+
+  return (
+    <>
+      <JsonLd data={schemas} />
+      {home}
+    </>
+  );
 }

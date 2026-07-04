@@ -12,7 +12,10 @@
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "AuthiChain — Blockchain Product Authentication",
-      "brand": { "@type": "Brand", "name": "AuthiChain" },
+      "brand": {
+        "@type": "Brand",
+        "name": "AuthiChain"
+      },
       "description": "AI + blockchain product authentication with 5-agent consensus and Bitcoin L1 anchoring.",
       "url": "https://authichain.com/blockchain-product-authentication"
     }
@@ -30,7 +33,10 @@
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "AuthiChain — Anti-Counterfeit QR Verification",
-      "brand": { "@type": "Brand", "name": "AuthiChain" },
+      "brand": {
+        "@type": "Brand",
+        "name": "AuthiChain"
+      },
       "description": "Anti-counterfeit QR verification with Ed25519-signed codes and AI confidence scoring.",
       "url": "https://authichain.com/anti-counterfeit-qr-verification"
     }
@@ -48,7 +54,10 @@
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "StrainChain — Cannabis Blockchain Provenance",
-      "brand": { "@type": "Brand", "name": "StrainChain" },
+      "brand": {
+        "@type": "Brand",
+        "name": "StrainChain"
+      },
       "description": "Consumer-facing cannabis provenance integrated with METRC/BioTrack and Bitcoin Ordinals.",
       "url": "https://strainchain.io/cannabis-blockchain-provenance"
     }
@@ -66,7 +75,10 @@
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "StrainChain — METRC Compliance Blockchain",
-      "brand": { "@type": "Brand", "name": "StrainChain" },
+      "brand": {
+        "@type": "Brand",
+        "name": "StrainChain"
+      },
       "description": "Blockchain provenance layered on METRC compliance for cannabis operators.",
       "url": "https://strainchain.io/metrc-compliance-blockchain"
     }
@@ -84,7 +96,10 @@
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "GovChain — Blockchain Document Verification",
-      "brand": { "@type": "Brand", "name": "GovChain" },
+      "brand": {
+        "@type": "Brand",
+        "name": "GovChain"
+      },
       "description": "Bitcoin-anchored government document verification, QR-checked in seconds, works offline.",
       "url": "https://govchain.us/government-document-verification-blockchain"
     }
@@ -102,7 +117,10 @@
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "QRON — AI QR Code Art Generator",
-      "brand": { "@type": "Brand", "name": "QRON" },
+      "brand": {
+        "@type": "Brand",
+        "name": "QRON"
+      },
       "description": "AI living QR art generator: ControlNet art, Ed25519-signed, Polygon-anchored, editable redirects.",
       "url": "https://qron.space/ai-qr-code-art-generator"
     }
@@ -120,9 +138,2104 @@
       "@context": "https://schema.org",
       "@type": "Product",
       "name": "AuthiChain Affiliate & Partner Program",
-      "brand": { "@type": "Brand", "name": "AuthiChain" },
+      "brand": {
+        "@type": "Brand",
+        "name": "AuthiChain"
+      },
       "description": "Recurring-commission affiliate program across AuthiChain, StrainChain, QRON, and GovChain.",
       "url": "https://authichain.com/partner-program"
+    }
+  },
+  {
+    "slug": "blockchain-qr-code-for-cannabis",
+    "keyword": "blockchain qr code for cannabis",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "Blockchain QR Code For Cannabis | StrainChain",
+    "metaDescription": "Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof, blockchain-anchored record of that product’s journey.",
+    "h1": "Blockchain QR Code For Cannabis",
+    "bodyHtml": "<p>Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof, blockchain-anchored record of that product’s journey from seed to sale.</p><h2>Why StrainChain</h2><ul><li>METRC and BioTrack sync — no duplicate data entry</li><li>Lab certificates hashed to Bitcoin Ordinals for permanent proof</li><li>State auditors verify chain of custody in ~10 seconds by scan</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $199/mo.</p><h2>FAQ</h2><h3>Does it replace METRC?</h3><p>No — it runs alongside METRC/BioTrack and turns that compliance data into a consumer-facing trust asset.</p><h3>What does the consumer see?</h3><p>A scan opens verified lab results, strain provenance, and an immutable chain of custody.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "StrainChain — Blockchain QR Code For Cannabis",
+          "brand": {
+            "@type": "Brand",
+            "name": "StrainChain"
+          },
+          "description": "Print a single QR code on every package and give regulators, dispensaries, and consumers a tamper-proof, blockchain-anchored record of that product’s journey from seed to sale.",
+          "url": "https://strainchain.io/p/blockchain-qr-code-for-cannabis"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "StrainChain",
+              "item": "https://strainchain.io"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain QR Code For Cannabis",
+              "item": "https://strainchain.io/p/blockchain-qr-code-for-cannabis"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does it replace METRC?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it runs alongside METRC/BioTrack and turns that compliance data into a consumer-facing trust asset."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does the consumer see?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A scan opens verified lab results, strain provenance, and an immutable chain of custody."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "blockchain-qr-code-for-luxury",
+    "keyword": "blockchain qr code for luxury",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Blockchain QR Code For Luxury | AuthiChain",
+    "metaDescription": "Attach a cryptographically-signed QR code to each luxury item so buyers can confirm authenticity in under two seconds — on the shelf, in resale, or at.",
+    "h1": "Blockchain QR Code For Luxury",
+    "bodyHtml": "<p>Attach a cryptographically-signed QR code to each luxury item so buyers can confirm authenticity in under two seconds — on the shelf, in resale, or at customs.</p><h2>Why AuthiChain</h2><ul><li>5-agent AI consensus screens every scan for anomalies</li><li>NFT certificate of authenticity travels with the item on resale</li><li>Bitcoin L1 anchoring makes the provenance record unforgeable</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the QR work after resale?</h3><p>Yes — ownership and provenance transfer with the item, protecting secondary-market value.</p><h3>Can counterfeiters copy the QR?</h3><p>Copying the image is useless: verification is cryptographic and checked against the blockchain record.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Blockchain QR Code For Luxury",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Attach a cryptographically-signed QR code to each luxury item so buyers can confirm authenticity in under two seconds — on the shelf, in resale, or at customs.",
+          "url": "https://authichain.com/p/blockchain-qr-code-for-luxury"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain QR Code For Luxury",
+              "item": "https://authichain.com/p/blockchain-qr-code-for-luxury"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the QR work after resale?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — ownership and provenance transfer with the item, protecting secondary-market value."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can counterfeiters copy the QR?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Copying the image is useless: verification is cryptographic and checked against the blockchain record."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "blockchain-qr-code-for-pharma",
+    "keyword": "blockchain qr code for pharma",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Blockchain QR Code For Pharma | AuthiChain",
+    "metaDescription": "Meet DSCSA serialization and give patients, pharmacists, and inspectors an instant, blockchain-verified check that a medicine is genuine and unexpired.",
+    "h1": "Blockchain QR Code For Pharma",
+    "bodyHtml": "<p>Meet DSCSA serialization and give patients, pharmacists, and inspectors an instant, blockchain-verified check that a medicine is genuine and unexpired.</p><h2>Why AuthiChain</h2><ul><li>DSCSA-aligned serialization and lot-level tracking</li><li>Tamper-evident QR anchored to an immutable ledger</li><li>Recall targeting down to the individual unit</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is this DSCSA compliant?</h3><p>The data model maps to DSCSA serialization and interoperable data-exchange requirements.</p><h3>How fast is verification?</h3><p>Sub-two-second cryptographic verification from any smartphone camera.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Blockchain QR Code For Pharma",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Meet DSCSA serialization and give patients, pharmacists, and inspectors an instant, blockchain-verified check that a medicine is genuine and unexpired.",
+          "url": "https://authichain.com/p/blockchain-qr-code-for-pharma"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain QR Code For Pharma",
+              "item": "https://authichain.com/p/blockchain-qr-code-for-pharma"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is this DSCSA compliant?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The data model maps to DSCSA serialization and interoperable data-exchange requirements."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How fast is verification?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sub-two-second cryptographic verification from any smartphone camera."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "blockchain-qr-code-for-electronics",
+    "keyword": "blockchain qr code for electronics",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Blockchain QR Code For Electronics | AuthiChain",
+    "metaDescription": "Protect electronics and components against grey-market and counterfeit parts with a blockchain QR code that proves origin, warranty, and firmware integrity.",
+    "h1": "Blockchain QR Code For Electronics",
+    "bodyHtml": "<p>Protect electronics and components against grey-market and counterfeit parts with a blockchain QR code that proves origin, warranty, and firmware integrity.</p><h2>Why AuthiChain</h2><ul><li>Component-level provenance for BOM integrity</li><li>Warranty and firmware attestation tied to each serial</li><li>EU DPP-ready material and repairability data</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can it cover components, not just finished goods?</h3><p>Yes — provenance can be issued at component, module, and finished-product level.</p><h3>Does it help with EU DPP?</h3><p>Electronics fall under upcoming EU DPP scope; AuthiChain exports the required data out of the box.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Blockchain QR Code For Electronics",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Protect electronics and components against grey-market and counterfeit parts with a blockchain QR code that proves origin, warranty, and firmware integrity.",
+          "url": "https://authichain.com/p/blockchain-qr-code-for-electronics"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain QR Code For Electronics",
+              "item": "https://authichain.com/p/blockchain-qr-code-for-electronics"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can it cover components, not just finished goods?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — provenance can be issued at component, module, and finished-product level."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does it help with EU DPP?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Electronics fall under upcoming EU DPP scope; AuthiChain exports the required data out of the box."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "blockchain-qr-code-for-food",
+    "keyword": "blockchain qr code for food",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Blockchain QR Code For Food | AuthiChain",
+    "metaDescription": "Give shoppers and food-safety auditors a scannable, blockchain-anchored history of where a food product was grown, processed, and shipped. AuthiChain — Plans.",
+    "h1": "Blockchain QR Code For Food",
+    "bodyHtml": "<p>Give shoppers and food-safety auditors a scannable, blockchain-anchored history of where a food product was grown, processed, and shipped.</p><h2>Why AuthiChain</h2><ul><li>Farm-to-shelf traceability in a single scan</li><li>Rapid, unit-level recall targeting</li><li>Cold-chain and certification data attached per lot</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does it support recalls?</h3><p>Yes — you can trace and isolate affected lots in seconds instead of days.</p><h3>What data can I attach?</h3><p>Origin, processing steps, certifications, cold-chain readings, and lab results.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Blockchain QR Code For Food",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Give shoppers and food-safety auditors a scannable, blockchain-anchored history of where a food product was grown, processed, and shipped.",
+          "url": "https://authichain.com/p/blockchain-qr-code-for-food"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain QR Code For Food",
+              "item": "https://authichain.com/p/blockchain-qr-code-for-food"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does it support recalls?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — you can trace and isolate affected lots in seconds instead of days."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What data can I attach?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Origin, processing steps, certifications, cold-chain readings, and lab results."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "blockchain-qr-code-for-automotive",
+    "keyword": "blockchain qr code for automotive",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Blockchain QR Code For Automotive | AuthiChain",
+    "metaDescription": "Fight counterfeit auto parts and prove OEM authenticity with a blockchain QR code that carries part provenance, warranty, and service history. AuthiChain —.",
+    "h1": "Blockchain QR Code For Automotive",
+    "bodyHtml": "<p>Fight counterfeit auto parts and prove OEM authenticity with a blockchain QR code that carries part provenance, warranty, and service history.</p><h2>Why AuthiChain</h2><ul><li>OEM vs aftermarket authenticity in one scan</li><li>Immutable service and warranty history per part</li><li>Supply-chain provenance for safety-critical components</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can dealers verify parts?</h3><p>Any dealer or technician can confirm a part is genuine OEM by scanning it.</p><h3>Does history survive resale?</h3><p>Yes — the on-chain record persists across owners and service events.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Blockchain QR Code For Automotive",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Fight counterfeit auto parts and prove OEM authenticity with a blockchain QR code that carries part provenance, warranty, and service history.",
+          "url": "https://authichain.com/p/blockchain-qr-code-for-automotive"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain QR Code For Automotive",
+              "item": "https://authichain.com/p/blockchain-qr-code-for-automotive"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can dealers verify parts?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Any dealer or technician can confirm a part is genuine OEM by scanning it."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does history survive resale?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — the on-chain record persists across owners and service events."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "blockchain-qr-code-for-aerospace",
+    "keyword": "blockchain qr code for aerospace",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Blockchain QR Code For Aerospace | AuthiChain",
+    "metaDescription": "Ensure every aerospace component is traceable and genuine with blockchain QR codes that anchor certification, provenance, and maintenance records. AuthiChain.",
+    "h1": "Blockchain QR Code For Aerospace",
+    "bodyHtml": "<p>Ensure every aerospace component is traceable and genuine with blockchain QR codes that anchor certification, provenance, and maintenance records.</p><h2>Why AuthiChain</h2><ul><li>Certificate-of-conformance hashing for each part</li><li>Full genealogy for safety-critical components</li><li>Audit-ready, tamper-proof maintenance history</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the record tamper-proof?</h3><p>Records are hashed and anchored on-chain, so certification data cannot be altered after the fact.</p><h3>Can it track maintenance events?</h3><p>Yes — each inspection or repair can be appended immutably to the part’s genealogy.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Blockchain QR Code For Aerospace",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Ensure every aerospace component is traceable and genuine with blockchain QR codes that anchor certification, provenance, and maintenance records.",
+          "url": "https://authichain.com/p/blockchain-qr-code-for-aerospace"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain QR Code For Aerospace",
+              "item": "https://authichain.com/p/blockchain-qr-code-for-aerospace"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the record tamper-proof?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Records are hashed and anchored on-chain, so certification data cannot be altered after the fact."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can it track maintenance events?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — each inspection or repair can be appended immutably to the part’s genealogy."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "blockchain-qr-code-for-defense",
+    "keyword": "blockchain qr code for defense",
+    "brand": "GovChain",
+    "domain": "govchain.us",
+    "title": "Blockchain QR Code For Defense | GovChain",
+    "metaDescription": "Deliver in-transit visibility and anti-tamper assurance for defense supply chains with blockchain QR codes that meet federal traceability expectations.",
+    "h1": "Blockchain QR Code For Defense",
+    "bodyHtml": "<p>Deliver in-transit visibility and anti-tamper assurance for defense supply chains with blockchain QR codes that meet federal traceability expectations.</p><h2>Why GovChain</h2><ul><li>Chain-of-custody proof for controlled items</li><li>SAM.gov / FAR-aligned traceability records</li><li>Cryptographic anti-tamper verification in the field</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Is it suitable for federal contracts?</h3><p>GovChain is built for federal procurement workflows and on-chain proof-of-custody.</p><h3>Does it work offline?</h3><p>Verification uses signed records that can be validated even in low-connectivity environments.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "GovChain — Blockchain QR Code For Defense",
+          "provider": {
+            "@type": "Organization",
+            "name": "GovChain",
+            "url": "https://govchain.us"
+          },
+          "description": "Deliver in-transit visibility and anti-tamper assurance for defense supply chains with blockchain QR codes that meet federal traceability expectations.",
+          "url": "https://govchain.us/p/blockchain-qr-code-for-defense"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "GovChain",
+              "item": "https://govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain QR Code For Defense",
+              "item": "https://govchain.us/p/blockchain-qr-code-for-defense"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is it suitable for federal contracts?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "GovChain is built for federal procurement workflows and on-chain proof-of-custody."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does it work offline?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Verification uses signed records that can be validated even in low-connectivity environments."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "blockchain-qr-code-for-cosmetics",
+    "keyword": "blockchain qr code for cosmetics",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Blockchain QR Code For Cosmetics | AuthiChain",
+    "metaDescription": "Protect cosmetics and skincare brands from counterfeits with blockchain QR codes that prove batch authenticity and ingredient provenance. AuthiChain — Plans.",
+    "h1": "Blockchain QR Code For Cosmetics",
+    "bodyHtml": "<p>Protect cosmetics and skincare brands from counterfeits with blockchain QR codes that prove batch authenticity and ingredient provenance.</p><h2>Why AuthiChain</h2><ul><li>Batch-level authenticity and expiry verification</li><li>Ingredient sourcing and cruelty-free claims on-chain</li><li>Consumer engagement through verified product stories</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can I prove ingredient claims?</h3><p>Yes — sourcing and certification data are anchored and verifiable by consumers.</p><h3>Does it help against fakes?</h3><p>Counterfeit packaging fails cryptographic verification instantly.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Blockchain QR Code For Cosmetics",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Protect cosmetics and skincare brands from counterfeits with blockchain QR codes that prove batch authenticity and ingredient provenance.",
+          "url": "https://authichain.com/p/blockchain-qr-code-for-cosmetics"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain QR Code For Cosmetics",
+              "item": "https://authichain.com/p/blockchain-qr-code-for-cosmetics"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can I prove ingredient claims?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — sourcing and certification data are anchored and verifiable by consumers."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does it help against fakes?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Counterfeit packaging fails cryptographic verification instantly."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "blockchain-qr-code-for-jewelry",
+    "keyword": "blockchain qr code for jewelry",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Blockchain QR Code For Jewelry | AuthiChain",
+    "metaDescription": "Give fine jewelry and watches a blockchain-backed digital passport so provenance, materials, and ownership are provable for a lifetime. AuthiChain — Plans.",
+    "h1": "Blockchain QR Code For Jewelry",
+    "bodyHtml": "<p>Give fine jewelry and watches a blockchain-backed digital passport so provenance, materials, and ownership are provable for a lifetime.</p><h2>Why AuthiChain</h2><ul><li>Diamond and gemstone provenance on-chain</li><li>Ownership transfer for insurance and resale</li><li>NFT certificate paired to each piece</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does it support resale?</h3><p>Ownership and provenance transfer securely, preserving resale and insurance value.</p><h3>Can I record gemstone origin?</h3><p>Yes — conflict-free sourcing and grading reports can be anchored to the piece.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Blockchain QR Code For Jewelry",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Give fine jewelry and watches a blockchain-backed digital passport so provenance, materials, and ownership are provable for a lifetime.",
+          "url": "https://authichain.com/p/blockchain-qr-code-for-jewelry"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Blockchain QR Code For Jewelry",
+              "item": "https://authichain.com/p/blockchain-qr-code-for-jewelry"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does it support resale?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Ownership and provenance transfer securely, preserving resale and insurance value."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I record gemstone origin?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — conflict-free sourcing and grading reports can be anchored to the piece."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "product-authentication-for-luxury-goods",
+    "keyword": "product authentication for luxury goods",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Product Authentication For Luxury Goods | AuthiChain",
+    "metaDescription": "Authenticate luxury goods with AI image analysis plus blockchain provenance so buyers and resale platforms can verify genuineness in seconds. AuthiChain —.",
+    "h1": "Product Authentication For Luxury Goods",
+    "bodyHtml": "<p>Authenticate luxury goods with AI image analysis plus blockchain provenance so buyers and resale platforms can verify genuineness in seconds.</p><h2>Why AuthiChain</h2><ul><li>AI + blockchain dual verification</li><li>Resale-safe ownership transfer</li><li>Brand-controlled Verifiable Credentials</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>How is it different from a hologram?</h3><p>Holograms can be copied; cryptographic verification against a blockchain record cannot.</p><h3>Who holds the keys?</h3><p>The brand does — AuthiChain uses W3C Verifiable Credentials, not a custodial database.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Product Authentication For Luxury Goods",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Authenticate luxury goods with AI image analysis plus blockchain provenance so buyers and resale platforms can verify genuineness in seconds.",
+          "url": "https://authichain.com/p/product-authentication-for-luxury-goods"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Product Authentication For Luxury Goods",
+              "item": "https://authichain.com/p/product-authentication-for-luxury-goods"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How is it different from a hologram?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Holograms can be copied; cryptographic verification against a blockchain record cannot."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who holds the keys?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The brand does — AuthiChain uses W3C Verifiable Credentials, not a custodial database."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "product-authentication-for-cannabis-dispensary",
+    "keyword": "product authentication for cannabis dispensary",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "Product Authentication For Cannabis Dispensary | StrainChain",
+    "metaDescription": "Let dispensary customers scan any product to confirm verified lab results and an unbroken chain of custody — turning compliance into a point-of-sale trust.",
+    "h1": "Product Authentication For Cannabis Dispensary",
+    "bodyHtml": "<p>Let dispensary customers scan any product to confirm verified lab results and an unbroken chain of custody — turning compliance into a point-of-sale trust signal.</p><h2>Why StrainChain</h2><ul><li>Verified COAs displayed at point of sale</li><li>METRC/BioTrack-synced provenance</li><li>Builds customer trust and repeat purchase</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $199/mo.</p><h2>FAQ</h2><h3>Do budtenders need training?</h3><p>No — customers self-scan, and staff can pull the same verified record instantly.</p><h3>Does it integrate with my POS?</h3><p>It runs alongside existing compliance and POS systems without duplicate entry.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "StrainChain — Product Authentication For Cannabis Dispensary",
+          "brand": {
+            "@type": "Brand",
+            "name": "StrainChain"
+          },
+          "description": "Let dispensary customers scan any product to confirm verified lab results and an unbroken chain of custody — turning compliance into a point-of-sale trust signal.",
+          "url": "https://strainchain.io/p/product-authentication-for-cannabis-dispensary"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "StrainChain",
+              "item": "https://strainchain.io"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Product Authentication For Cannabis Dispensary",
+              "item": "https://strainchain.io/p/product-authentication-for-cannabis-dispensary"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do budtenders need training?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — customers self-scan, and staff can pull the same verified record instantly."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does it integrate with my POS?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It runs alongside existing compliance and POS systems without duplicate entry."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "product-authentication-for-government-supply-chain",
+    "keyword": "product authentication for government supply chain",
+    "brand": "GovChain",
+    "domain": "govchain.us",
+    "title": "Product Authentication For Government Supply Chain | GovChain",
+    "metaDescription": "Authenticate goods across government supply chains with on-chain proof of origin, custody, and delivery that auditors can verify without a vendor call.",
+    "h1": "Product Authentication For Government Supply Chain",
+    "bodyHtml": "<p>Authenticate goods across government supply chains with on-chain proof of origin, custody, and delivery that auditors can verify without a vendor call.</p><h2>Why GovChain</h2><ul><li>On-chain proof of custody and delivery</li><li>FAR / SAM.gov-aligned records</li><li>Auditor self-service verification</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Can auditors verify independently?</h3><p>Yes — verification is self-service against the public record, no vendor gatekeeping.</p><h3>Is it procurement-ready?</h3><p>GovChain is designed around federal procurement and traceability requirements.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "GovChain — Product Authentication For Government Supply Chain",
+          "provider": {
+            "@type": "Organization",
+            "name": "GovChain",
+            "url": "https://govchain.us"
+          },
+          "description": "Authenticate goods across government supply chains with on-chain proof of origin, custody, and delivery that auditors can verify without a vendor call.",
+          "url": "https://govchain.us/p/product-authentication-for-government-supply-chain"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "GovChain",
+              "item": "https://govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Product Authentication For Government Supply Chain",
+              "item": "https://govchain.us/p/product-authentication-for-government-supply-chain"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can auditors verify independently?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — verification is self-service against the public record, no vendor gatekeeping."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is it procurement-ready?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "GovChain is designed around federal procurement and traceability requirements."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "product-authentication-for-medical-devices",
+    "keyword": "product authentication for medical devices",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Product Authentication For Medical Devices | AuthiChain",
+    "metaDescription": "Authenticate medical devices with UDI-aligned serialization and blockchain provenance to stop counterfeits and speed recalls. AuthiChain — Plans start at.",
+    "h1": "Product Authentication For Medical Devices",
+    "bodyHtml": "<p>Authenticate medical devices with UDI-aligned serialization and blockchain provenance to stop counterfeits and speed recalls.</p><h2>Why AuthiChain</h2><ul><li>UDI-compatible serialization</li><li>Unit-level recall and expiry tracking</li><li>Tamper-evident authenticity for clinicians</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does it align with UDI?</h3><p>The serialization model is compatible with FDA UDI requirements.</p><h3>Can hospitals verify devices?</h3><p>Any clinician can confirm authenticity and status by scanning the device.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Product Authentication For Medical Devices",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Authenticate medical devices with UDI-aligned serialization and blockchain provenance to stop counterfeits and speed recalls.",
+          "url": "https://authichain.com/p/product-authentication-for-medical-devices"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Product Authentication For Medical Devices",
+              "item": "https://authichain.com/p/product-authentication-for-medical-devices"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does it align with UDI?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The serialization model is compatible with FDA UDI requirements."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can hospitals verify devices?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Any clinician can confirm authenticity and status by scanning the device."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "product-authentication-for-collectibles",
+    "keyword": "product authentication for collectibles",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Product Authentication For Collectibles | AuthiChain",
+    "metaDescription": "Authenticate collectibles, memorabilia, and limited editions with a blockchain certificate that proves genuineness and ownership across every resale.",
+    "h1": "Product Authentication For Collectibles",
+    "bodyHtml": "<p>Authenticate collectibles, memorabilia, and limited editions with a blockchain certificate that proves genuineness and ownership across every resale.</p><h2>Why AuthiChain</h2><ul><li>NFT certificate of authenticity per item</li><li>Provenance that survives every resale</li><li>Grading and edition data anchored on-chain</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does provenance transfer on sale?</h3><p>Yes — ownership and history move with the item, protecting collector value.</p><h3>Can I record grading?</h3><p>Grading and edition details can be anchored to the certificate.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Product Authentication For Collectibles",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Authenticate collectibles, memorabilia, and limited editions with a blockchain certificate that proves genuineness and ownership across every resale.",
+          "url": "https://authichain.com/p/product-authentication-for-collectibles"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Product Authentication For Collectibles",
+              "item": "https://authichain.com/p/product-authentication-for-collectibles"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does provenance transfer on sale?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — ownership and history move with the item, protecting collector value."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I record grading?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Grading and edition details can be anchored to the certificate."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "product-authentication-for-electronics",
+    "keyword": "product authentication for electronics",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Product Authentication For Electronics | AuthiChain",
+    "metaDescription": "Authenticate consumer and industrial electronics to eliminate counterfeit and grey-market units, with blockchain-verified origin and warranty. AuthiChain —.",
+    "h1": "Product Authentication For Electronics",
+    "bodyHtml": "<p>Authenticate consumer and industrial electronics to eliminate counterfeit and grey-market units, with blockchain-verified origin and warranty.</p><h2>Why AuthiChain</h2><ul><li>Genuine-vs-grey-market verification</li><li>Warranty and firmware attestation</li><li>EU DPP-ready product data</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can customers check warranty?</h3><p>Yes — warranty status is tied to the authenticated serial and visible on scan.</p><h3>Does it deter grey-market resale?</h3><p>Region and channel data on-chain make diversion easy to detect.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Product Authentication For Electronics",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Authenticate consumer and industrial electronics to eliminate counterfeit and grey-market units, with blockchain-verified origin and warranty.",
+          "url": "https://authichain.com/p/product-authentication-for-electronics"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Product Authentication For Electronics",
+              "item": "https://authichain.com/p/product-authentication-for-electronics"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can customers check warranty?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — warranty status is tied to the authenticated serial and visible on scan."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does it deter grey-market resale?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Region and channel data on-chain make diversion easy to detect."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-textiles",
+    "keyword": "eu digital product passport textiles",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Textiles | AuthiChain",
+    "metaDescription": "Issue registry-ready EU Digital Product Passports for textiles and apparel — fiber composition, recycled content, and care data anchored and exportable to.",
+    "h1": "EU Digital Product Passport Textiles",
+    "bodyHtml": "<p>Issue registry-ready EU Digital Product Passports for textiles and apparel — fiber composition, recycled content, and care data anchored and exportable to the EU registry.</p><h2>Why AuthiChain</h2><ul><li>Fiber and recycled-content declarations</li><li>Care, durability, and repairability data</li><li>EPCIS 2.0 + JSON-LD registry export</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When do textiles need a DPP?</h3><p>Textiles are a priority category, with delegated regulations expected from 2028.</p><h3>How is the passport delivered?</h3><p>Via a unique QR/NFC identifier per garment linking to the anchored passport.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Textiles",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Issue registry-ready EU Digital Product Passports for textiles and apparel — fiber composition, recycled content, and care data anchored and exportable to the EU registry.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-textiles"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Textiles",
+              "item": "https://authichain.com/p/eu-digital-product-passport-textiles"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When do textiles need a DPP?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Textiles are a priority category, with delegated regulations expected from 2028."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How is the passport delivered?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Via a unique QR/NFC identifier per garment linking to the anchored passport."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-batteries",
+    "keyword": "eu digital product passport batteries",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Batteries | AuthiChain",
+    "metaDescription": "Generate compliant EU Battery Passports with carbon footprint, state-of-health, and material recovery data — anchored on-chain and ready for the EU registry.",
+    "h1": "EU Digital Product Passport Batteries",
+    "bodyHtml": "<p>Generate compliant EU Battery Passports with carbon footprint, state-of-health, and material recovery data — anchored on-chain and ready for the EU registry.</p><h2>Why AuthiChain</h2><ul><li>Carbon footprint and material composition</li><li>State-of-health and recycled-content tracking</li><li>Ready for the Feb 2027 battery mandate</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When is the battery passport mandatory?</h3><p>EV and industrial battery passports become mandatory in February 2027.</p><h3>What data is required?</h3><p>Carbon footprint, material composition, state-of-health, and recycled content, among others.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Batteries",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Generate compliant EU Battery Passports with carbon footprint, state-of-health, and material recovery data — anchored on-chain and ready for the EU registry.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-batteries"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Batteries",
+              "item": "https://authichain.com/p/eu-digital-product-passport-batteries"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When is the battery passport mandatory?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "EV and industrial battery passports become mandatory in February 2027."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What data is required?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Carbon footprint, material composition, state-of-health, and recycled content, among others."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-electronics",
+    "keyword": "eu digital product passport electronics",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Electronics | AuthiChain",
+    "metaDescription": "Create EU Digital Product Passports for electronics with repairability scores, hazardous-substance declarations, and spare-parts availability built in.",
+    "h1": "EU Digital Product Passport Electronics",
+    "bodyHtml": "<p>Create EU Digital Product Passports for electronics with repairability scores, hazardous-substance declarations, and spare-parts availability built in.</p><h2>Why AuthiChain</h2><ul><li>Repairability and spare-parts data</li><li>Hazardous-substance (RoHS/REACH) declarations</li><li>Registry-ready EPCIS 2.0 export</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Which electronics are covered?</h3><p>ICT and consumer electronics are priority categories under the ESPR.</p><h3>Can I include repair data?</h3><p>Yes — repairability scores and spare-part availability are part of the passport.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Electronics",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Create EU Digital Product Passports for electronics with repairability scores, hazardous-substance declarations, and spare-parts availability built in.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-electronics"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Electronics",
+              "item": "https://authichain.com/p/eu-digital-product-passport-electronics"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Which electronics are covered?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "ICT and consumer electronics are priority categories under the ESPR."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I include repair data?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — repairability scores and spare-part availability are part of the passport."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-furniture",
+    "keyword": "eu digital product passport furniture",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Furniture | AuthiChain",
+    "metaDescription": "Issue EU Digital Product Passports for furniture with material sourcing, durability, and end-of-life recycling data anchored for registry submission.",
+    "h1": "EU Digital Product Passport Furniture",
+    "bodyHtml": "<p>Issue EU Digital Product Passports for furniture with material sourcing, durability, and end-of-life recycling data anchored for registry submission.</p><h2>Why AuthiChain</h2><ul><li>Material sourcing and FSC/PEFC claims</li><li>Durability and disassembly guidance</li><li>End-of-life and recyclability data</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is furniture in scope?</h3><p>Furniture is among the priority product groups under the ESPR framework.</p><h3>Can I prove sustainable sourcing?</h3><p>Yes — certification and sourcing claims are anchored and verifiable.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Furniture",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Issue EU Digital Product Passports for furniture with material sourcing, durability, and end-of-life recycling data anchored for registry submission.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-furniture"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Furniture",
+              "item": "https://authichain.com/p/eu-digital-product-passport-furniture"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is furniture in scope?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Furniture is among the priority product groups under the ESPR framework."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I prove sustainable sourcing?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — certification and sourcing claims are anchored and verifiable."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-steel",
+    "keyword": "eu digital product passport steel",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Steel | AuthiChain",
+    "metaDescription": "Provide EU Digital Product Passports for iron and steel products with embodied-carbon, recycled-content, and grade data ready for the EU registry. AuthiChain.",
+    "h1": "EU Digital Product Passport Steel",
+    "bodyHtml": "<p>Provide EU Digital Product Passports for iron and steel products with embodied-carbon, recycled-content, and grade data ready for the EU registry.</p><h2>Why AuthiChain</h2><ul><li>Embodied-carbon and scope 1–3 data</li><li>Recycled content and grade certification</li><li>Auditable at batch level</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Why steel first?</h3><p>Iron and steel are high-impact priority categories for carbon and circularity reporting.</p><h3>Can I attach mill certificates?</h3><p>Yes — mill test certificates can be hashed and anchored per batch.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Steel",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Provide EU Digital Product Passports for iron and steel products with embodied-carbon, recycled-content, and grade data ready for the EU registry.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-steel"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Steel",
+              "item": "https://authichain.com/p/eu-digital-product-passport-steel"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Why steel first?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Iron and steel are high-impact priority categories for carbon and circularity reporting."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I attach mill certificates?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — mill test certificates can be hashed and anchored per batch."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-tyres",
+    "keyword": "eu digital product passport tyres",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Tyres | AuthiChain",
+    "metaDescription": "Generate EU Digital Product Passports for tyres with rolling-resistance, material, and retread data anchored and exportable to the EU registry. AuthiChain —.",
+    "h1": "EU Digital Product Passport Tyres",
+    "bodyHtml": "<p>Generate EU Digital Product Passports for tyres with rolling-resistance, material, and retread data anchored and exportable to the EU registry.</p><h2>Why AuthiChain</h2><ul><li>Material composition and recycled content</li><li>Performance and rolling-resistance data</li><li>Retread and end-of-life tracking</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Are tyres in DPP scope?</h3><p>Tyres are among the priority product categories under the ESPR.</p><h3>Can I track retreads?</h3><p>Yes — lifecycle events including retreading can be appended to the passport.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Tyres",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Generate EU Digital Product Passports for tyres with rolling-resistance, material, and retread data anchored and exportable to the EU registry.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-tyres"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Tyres",
+              "item": "https://authichain.com/p/eu-digital-product-passport-tyres"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Are tyres in DPP scope?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Tyres are among the priority product categories under the ESPR."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I track retreads?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — lifecycle events including retreading can be appended to the passport."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "anti-counterfeit-wine",
+    "keyword": "anti-counterfeit wine",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Anti-Counterfeit Wine | AuthiChain",
+    "metaDescription": "Stop wine counterfeiting with tamper-evident blockchain seals that prove vintage, estate, and bottle authenticity from cellar to collector. AuthiChain —.",
+    "h1": "Anti-Counterfeit Wine",
+    "bodyHtml": "<p>Stop wine counterfeiting with tamper-evident blockchain seals that prove vintage, estate, and bottle authenticity from cellar to collector.</p><h2>Why AuthiChain</h2><ul><li>Bottle-level authenticity and provenance</li><li>Tamper-evident seal tied to on-chain record</li><li>Estate and vintage verification for collectors</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does it protect resale value?</h3><p>Yes — verifiable provenance underpins collector and auction value.</p><h3>What if the seal is broken?</h3><p>A broken seal invalidates verification, exposing tampering or refilling.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Anti-Counterfeit Wine",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Stop wine counterfeiting with tamper-evident blockchain seals that prove vintage, estate, and bottle authenticity from cellar to collector.",
+          "url": "https://authichain.com/p/anti-counterfeit-wine"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Anti-Counterfeit Wine",
+              "item": "https://authichain.com/p/anti-counterfeit-wine"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does it protect resale value?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — verifiable provenance underpins collector and auction value."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What if the seal is broken?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A broken seal invalidates verification, exposing tampering or refilling."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "anti-counterfeit-spirits",
+    "keyword": "anti-counterfeit spirits",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Anti-Counterfeit Spirits | AuthiChain",
+    "metaDescription": "Protect premium spirits from refilling and counterfeiting with blockchain-anchored bottle authentication and tamper-evident closures. AuthiChain — Plans.",
+    "h1": "Anti-Counterfeit Spirits",
+    "bodyHtml": "<p>Protect premium spirits from refilling and counterfeiting with blockchain-anchored bottle authentication and tamper-evident closures.</p><h2>Why AuthiChain</h2><ul><li>Anti-refill tamper-evident verification</li><li>Distillery and batch provenance on-chain</li><li>Consumer engagement through verified stories</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can it detect refilled bottles?</h3><p>Tamper-evident closures tied to on-chain records reveal refilling attempts.</p><h3>Does it work internationally?</h3><p>Verification is global and works from any smartphone.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Anti-Counterfeit Spirits",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Protect premium spirits from refilling and counterfeiting with blockchain-anchored bottle authentication and tamper-evident closures.",
+          "url": "https://authichain.com/p/anti-counterfeit-spirits"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Anti-Counterfeit Spirits",
+              "item": "https://authichain.com/p/anti-counterfeit-spirits"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can it detect refilled bottles?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Tamper-evident closures tied to on-chain records reveal refilling attempts."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does it work internationally?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Verification is global and works from any smartphone."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "anti-counterfeit-pharmaceutical",
+    "keyword": "anti-counterfeit pharmaceutical",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Anti-Counterfeit Pharmaceutical | AuthiChain",
+    "metaDescription": "Eliminate counterfeit medicines with DSCSA-aligned serialization and blockchain verification that patients and pharmacists can trust instantly. AuthiChain —.",
+    "h1": "Anti-Counterfeit Pharmaceutical",
+    "bodyHtml": "<p>Eliminate counterfeit medicines with DSCSA-aligned serialization and blockchain verification that patients and pharmacists can trust instantly.</p><h2>Why AuthiChain</h2><ul><li>DSCSA-aligned unit serialization</li><li>Tamper-evident, blockchain-verified packaging</li><li>Unit-level recall and expiry checks</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is it DSCSA aligned?</h3><p>Yes — serialization and data exchange map to DSCSA requirements.</p><h3>Who can verify a pack?</h3><p>Patients, pharmacists, and inspectors can all verify authenticity by scan.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Anti-Counterfeit Pharmaceutical",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Eliminate counterfeit medicines with DSCSA-aligned serialization and blockchain verification that patients and pharmacists can trust instantly.",
+          "url": "https://authichain.com/p/anti-counterfeit-pharmaceutical"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Anti-Counterfeit Pharmaceutical",
+              "item": "https://authichain.com/p/anti-counterfeit-pharmaceutical"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is it DSCSA aligned?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — serialization and data exchange map to DSCSA requirements."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who can verify a pack?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Patients, pharmacists, and inspectors can all verify authenticity by scan."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "anti-counterfeit-luxury-handbags",
+    "keyword": "anti-counterfeit luxury handbags",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Anti-Counterfeit Luxury Handbags | AuthiChain",
+    "metaDescription": "Authenticate luxury handbags with AI image analysis and a blockchain certificate that proves genuineness through every resale. AuthiChain — Plans start at.",
+    "h1": "Anti-Counterfeit Luxury Handbags",
+    "bodyHtml": "<p>Authenticate luxury handbags with AI image analysis and a blockchain certificate that proves genuineness through every resale.</p><h2>Why AuthiChain</h2><ul><li>AI + blockchain authentication</li><li>Resale-safe digital certificate</li><li>Brand-controlled Verifiable Credentials</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does it help resale platforms?</h3><p>Yes — resellers and buyers verify authenticity instantly, reducing fraud.</p><h3>Can the certificate be faked?</h3><p>No — it is cryptographically bound to the item and checked on-chain.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Anti-Counterfeit Luxury Handbags",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Authenticate luxury handbags with AI image analysis and a blockchain certificate that proves genuineness through every resale.",
+          "url": "https://authichain.com/p/anti-counterfeit-luxury-handbags"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Anti-Counterfeit Luxury Handbags",
+              "item": "https://authichain.com/p/anti-counterfeit-luxury-handbags"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does it help resale platforms?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — resellers and buyers verify authenticity instantly, reducing fraud."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can the certificate be faked?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it is cryptographically bound to the item and checked on-chain."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "anti-counterfeit-sneakers",
+    "keyword": "anti-counterfeit sneakers",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Anti-Counterfeit Sneakers | AuthiChain",
+    "metaDescription": "Beat sneaker counterfeits with blockchain-verified authentication that proves a pair is genuine and tracks ownership across the resale market. AuthiChain —.",
+    "h1": "Anti-Counterfeit Sneakers",
+    "bodyHtml": "<p>Beat sneaker counterfeits with blockchain-verified authentication that proves a pair is genuine and tracks ownership across the resale market.</p><h2>Why AuthiChain</h2><ul><li>Pair-level authenticity verification</li><li>Resale ownership transfer on-chain</li><li>Limited-edition drop protection</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does it support resale markets?</h3><p>Yes — provenance and ownership move with the pair through every sale.</p><h3>Can it protect drops?</h3><p>Limited editions can be authenticated and tracked from the first sale.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Anti-Counterfeit Sneakers",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Beat sneaker counterfeits with blockchain-verified authentication that proves a pair is genuine and tracks ownership across the resale market.",
+          "url": "https://authichain.com/p/anti-counterfeit-sneakers"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Anti-Counterfeit Sneakers",
+              "item": "https://authichain.com/p/anti-counterfeit-sneakers"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does it support resale markets?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — provenance and ownership move with the pair through every sale."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can it protect drops?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Limited editions can be authenticated and tracked from the first sale."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "anti-counterfeit-cosmetics",
+    "keyword": "anti-counterfeit cosmetics",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Anti-Counterfeit Cosmetics | AuthiChain",
+    "metaDescription": "Protect cosmetics brands and consumers from counterfeits with blockchain-verified batch authenticity and tamper-evident packaging. AuthiChain — Plans start.",
+    "h1": "Anti-Counterfeit Cosmetics",
+    "bodyHtml": "<p>Protect cosmetics brands and consumers from counterfeits with blockchain-verified batch authenticity and tamper-evident packaging.</p><h2>Why AuthiChain</h2><ul><li>Batch authenticity and expiry verification</li><li>Tamper-evident, scan-to-verify packaging</li><li>Ingredient and safety claims on-chain</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can consumers verify safety?</h3><p>Yes — batch, expiry, and safety data are verifiable by scanning the product.</p><h3>Does it stop counterfeit packaging?</h3><p>Counterfeit packaging fails cryptographic verification instantly.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Anti-Counterfeit Cosmetics",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Protect cosmetics brands and consumers from counterfeits with blockchain-verified batch authenticity and tamper-evident packaging.",
+          "url": "https://authichain.com/p/anti-counterfeit-cosmetics"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Anti-Counterfeit Cosmetics",
+              "item": "https://authichain.com/p/anti-counterfeit-cosmetics"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can consumers verify safety?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — batch, expiry, and safety data are verifiable by scanning the product."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does it stop counterfeit packaging?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Counterfeit packaging fails cryptographic verification instantly."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "supply-chain-traceability-food-safety",
+    "keyword": "supply chain traceability food safety",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Supply Chain Traceability Food Safety | AuthiChain",
+    "metaDescription": "Achieve end-to-end food-safety traceability with blockchain records that make recalls precise and audits instant, from farm to shelf. AuthiChain — Plans.",
+    "h1": "Supply Chain Traceability Food Safety",
+    "bodyHtml": "<p>Achieve end-to-end food-safety traceability with blockchain records that make recalls precise and audits instant, from farm to shelf.</p><h2>Why AuthiChain</h2><ul><li>Unit-level recall targeting in seconds</li><li>Cold-chain and certification data per lot</li><li>FSMA-friendly audit trail</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>How fast are recalls?</h3><p>Affected lots can be isolated in seconds rather than days.</p><h3>Does it help with audits?</h3><p>Auditors verify an immutable, timestamped trail without manual reconciliation.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Supply Chain Traceability Food Safety",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Achieve end-to-end food-safety traceability with blockchain records that make recalls precise and audits instant, from farm to shelf.",
+          "url": "https://authichain.com/p/supply-chain-traceability-food-safety"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Supply Chain Traceability Food Safety",
+              "item": "https://authichain.com/p/supply-chain-traceability-food-safety"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How fast are recalls?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Affected lots can be isolated in seconds rather than days."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does it help with audits?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Auditors verify an immutable, timestamped trail without manual reconciliation."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "supply-chain-traceability-defense",
+    "keyword": "supply chain traceability defense",
+    "brand": "GovChain",
+    "domain": "govchain.us",
+    "title": "Supply Chain Traceability Defense | GovChain",
+    "metaDescription": "Deliver defense supply-chain traceability with immutable chain-of-custody records and anti-tamper verification aligned to federal requirements. GovChain — No.",
+    "h1": "Supply Chain Traceability Defense",
+    "bodyHtml": "<p>Deliver defense supply-chain traceability with immutable chain-of-custody records and anti-tamper verification aligned to federal requirements.</p><h2>Why GovChain</h2><ul><li>Immutable chain of custody for controlled items</li><li>FAR / SAM.gov-aligned traceability</li><li>Field-ready anti-tamper verification</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Is it federal-ready?</h3><p>GovChain is built around federal procurement and traceability workflows.</p><h3>Can it verify in the field?</h3><p>Yes — signed records validate even in low-connectivity environments.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "GovChain — Supply Chain Traceability Defense",
+          "provider": {
+            "@type": "Organization",
+            "name": "GovChain",
+            "url": "https://govchain.us"
+          },
+          "description": "Deliver defense supply-chain traceability with immutable chain-of-custody records and anti-tamper verification aligned to federal requirements.",
+          "url": "https://govchain.us/p/supply-chain-traceability-defense"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "GovChain",
+              "item": "https://govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Supply Chain Traceability Defense",
+              "item": "https://govchain.us/p/supply-chain-traceability-defense"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is it federal-ready?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "GovChain is built around federal procurement and traceability workflows."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can it verify in the field?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — signed records validate even in low-connectivity environments."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "supply-chain-traceability-aerospace",
+    "keyword": "supply chain traceability aerospace",
+    "brand": "GovChain",
+    "domain": "govchain.us",
+    "title": "Supply Chain Traceability Aerospace | GovChain",
+    "metaDescription": "Provide aerospace supply-chain traceability with part genealogy, certificate hashing, and immutable maintenance history for airworthiness assurance. GovChain.",
+    "h1": "Supply Chain Traceability Aerospace",
+    "bodyHtml": "<p>Provide aerospace supply-chain traceability with part genealogy, certificate hashing, and immutable maintenance history for airworthiness assurance.</p><h2>Why GovChain</h2><ul><li>Full part genealogy and provenance</li><li>Certificate-of-conformance hashing</li><li>Immutable, audit-ready maintenance records</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Can it track airworthiness data?</h3><p>Yes — certifications and maintenance events are anchored per part.</p><h3>Is the record tamper-proof?</h3><p>Records are hashed on-chain and cannot be altered after submission.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "GovChain — Supply Chain Traceability Aerospace",
+          "provider": {
+            "@type": "Organization",
+            "name": "GovChain",
+            "url": "https://govchain.us"
+          },
+          "description": "Provide aerospace supply-chain traceability with part genealogy, certificate hashing, and immutable maintenance history for airworthiness assurance.",
+          "url": "https://govchain.us/p/supply-chain-traceability-aerospace"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "GovChain",
+              "item": "https://govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Supply Chain Traceability Aerospace",
+              "item": "https://govchain.us/p/supply-chain-traceability-aerospace"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can it track airworthiness data?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — certifications and maintenance events are anchored per part."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is the record tamper-proof?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Records are hashed on-chain and cannot be altered after submission."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "supply-chain-traceability-pharmaceutical",
+    "keyword": "supply chain traceability pharmaceutical",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Supply Chain Traceability Pharmaceutical | AuthiChain",
+    "metaDescription": "Trace pharmaceuticals across the supply chain with DSCSA-aligned serialization and blockchain records that make provenance and recalls verifiable. AuthiChain.",
+    "h1": "Supply Chain Traceability Pharmaceutical",
+    "bodyHtml": "<p>Trace pharmaceuticals across the supply chain with DSCSA-aligned serialization and blockchain records that make provenance and recalls verifiable.</p><h2>Why AuthiChain</h2><ul><li>DSCSA-aligned serialization and lot tracking</li><li>Immutable chain of custody</li><li>Unit-level recall and diversion detection</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does it support DSCSA?</h3><p>Yes — the data model maps to DSCSA serialization and interoperability rules.</p><h3>Can it detect diversion?</h3><p>Channel and region data on-chain make diversion easy to spot.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Supply Chain Traceability Pharmaceutical",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Trace pharmaceuticals across the supply chain with DSCSA-aligned serialization and blockchain records that make provenance and recalls verifiable.",
+          "url": "https://authichain.com/p/supply-chain-traceability-pharmaceutical"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Supply Chain Traceability Pharmaceutical",
+              "item": "https://authichain.com/p/supply-chain-traceability-pharmaceutical"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does it support DSCSA?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — the data model maps to DSCSA serialization and interoperability rules."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can it detect diversion?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Channel and region data on-chain make diversion easy to spot."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "supply-chain-traceability-automotive",
+    "keyword": "supply chain traceability automotive",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Supply Chain Traceability Automotive | AuthiChain",
+    "metaDescription": "Trace automotive parts and vehicles across the supply chain with blockchain provenance that proves origin, quality, and safety-critical genealogy. AuthiChain.",
+    "h1": "Supply Chain Traceability Automotive",
+    "bodyHtml": "<p>Trace automotive parts and vehicles across the supply chain with blockchain provenance that proves origin, quality, and safety-critical genealogy.</p><h2>Why AuthiChain</h2><ul><li>Safety-critical part genealogy</li><li>Supplier quality and recall targeting</li><li>Warranty and service history on-chain</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can it target recalls?</h3><p>Yes — affected parts and vehicles can be identified precisely and fast.</p><h3>Does it cover suppliers?</h3><p>Multi-tier supplier provenance is supported down to the component.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Supply Chain Traceability Automotive",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Trace automotive parts and vehicles across the supply chain with blockchain provenance that proves origin, quality, and safety-critical genealogy.",
+          "url": "https://authichain.com/p/supply-chain-traceability-automotive"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Supply Chain Traceability Automotive",
+              "item": "https://authichain.com/p/supply-chain-traceability-automotive"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can it target recalls?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — affected parts and vehicles can be identified precisely and fast."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does it cover suppliers?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Multi-tier supplier provenance is supported down to the component."
+              }
+            }
+          ]
+        }
+      ]
     }
   }
 ]
