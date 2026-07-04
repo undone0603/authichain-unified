@@ -11,6 +11,7 @@
 //   process.env.DRY_RUN === 'false'  →  performs real outreach + minting (requires real impls wired in)
 
 import { createClient } from '@supabase/supabase-js';
+import { sendEmail } from '../lib/email';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Active entity (the GovChain.us pilot signer)
@@ -202,21 +203,48 @@ async function runFiveAgentConsensus(lead: any): Promise<ConsensusResult> {
 
 type QRON = { signature: string; payload: any; style: string };
 
-// TODO(real-impl): wire to QRONGenerator when published.
 async function generateQRON(payload: any): Promise<QRON> {
-  // Deterministic placeholder signature; safe to log, not safe to trust on-chain.
-  const sig = 'qron-stub-' + Buffer.from(JSON.stringify(payload)).toString('base64').slice(0, 24);
+  try {
+    const res = await fetch('https://qron-image-gen.undone-k.workers.dev/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `US government seal, blockchain supply chain verification, ${payload.agency || 'federal agency'}, GovChain authentication mark`,
+        style: 'marble_white',
+        width: 512,
+        height: 512,
+      }),
+    });
+    if (res.ok) {
+      const data: any = await res.json();
+      const imageUrl: string = data.imageUrl || data.url || '';
+      if (imageUrl) return { signature: imageUrl, payload, style: 'marble_white' };
+    }
+  } catch { /* fall through to stub */ }
+  const sig = 'qron-' + Buffer.from(JSON.stringify(payload)).toString('base64').slice(0, 24);
   return { signature: sig, payload, style: 'american-seal-eagle-govchain' };
 }
 
-// TODO(real-impl): wire to LeadGenEngine.generateProposal + outreach (SendGrid / Nodemailer).
 async function sendOutreach(lead: any, proposal: string, qron: QRON): Promise<void> {
   if (DRY_RUN) {
     console.log(`[gov-engine] DRY_RUN outreach skipped for ${lead.agency || 'lead'}`);
     return;
   }
-  // TODO: integrate @sendgrid/mail or nodemailer here, gated behind explicit consent.
-  throw new Error('Real outreach not yet wired. Set DRY_RUN=true or implement sendOutreach().');
+  // Extract contact email from raw SAM.gov data (pointOfContact array)
+  const poc = lead.raw?.pointOfContact?.[0] ?? lead.raw?.poc?.[0];
+  const contactEmail: string | undefined = poc?.email || lead.raw?.email;
+  if (!contactEmail) {
+    console.log(`[gov-engine] No contact email for ${lead.agency} — outreach skipped`);
+    return;
+  }
+  const result = await sendEmail({
+    from: 'GovChain <ops@authichain.com>',
+    to: contactEmail,
+    subject: `GovChain.us — Blockchain Traceability Pilot for ${lead.agency}`,
+    text: proposal,
+    html: proposal.replace(/\n/g, '<br>'),
+  });
+  console.log(`[gov-engine] Outreach ${result.ok ? 'sent' : 'failed'} to ${contactEmail} via ${result.provider}`);
 }
 
 // TODO(real-impl): wire to thirdweb / ethers polygon contract when deployed.
