@@ -51,9 +51,34 @@ export class HubSpotDeliverableAgent {
   }
 
   private async fetchPendingDeals(): Promise<HubSpotDeal[]> {
-    // Placeholder deals were removed — they generated phantom automation_logs entries.
-    // Wire up to HubSpot CRM API when real deliverable-pending deals exist.
-    return [];
+    if (!this.hubspotToken) return [];
+    try {
+      const res = await fetch('https://api.hubapi.com/crm/v3/objects/deals/search', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.hubspotToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filterGroups: [{ filters: [{ propertyName: 'hs_is_closed', operator: 'EQ', value: 'false' }] }],
+          properties: ['dealname', 'dealstage', 'amount', 'deliverable_type'],
+          limit: 10,
+          sorts: [{ propertyName: 'hs_lastmodifieddate', direction: 'DESCENDING' }],
+        }),
+      });
+      if (!res.ok) { console.warn('[HubSpot-Agent] search API error:', res.status); return []; }
+      const data = await res.json();
+      return (data.results || []).map((d: any) => ({
+        id: d.id,
+        dealname: d.properties?.dealname || 'Unnamed Deal',
+        dealstage: d.properties?.dealstage || '',
+        amount: d.properties?.amount,
+        metadata: { type: d.properties?.deliverable_type || 'qron_design' },
+      }));
+    } catch (err) {
+      console.error('[HubSpot-Agent] fetchPendingDeals error:', err);
+      return [];
+    }
   }
 
   private async processDeal(deal: HubSpotDeal) {
@@ -107,19 +132,16 @@ export class HubSpotDeliverableAgent {
   }
 
   private async updateHubSpotDeal(dealId: string, artifactUrl: string) {
-    // In a real environment:
-    /*
-    await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}`, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${this.hubspotToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        properties: {
-          deliverable_link: artifactUrl,
-          dealstage: 'deliverable_provided' // Move deal forward in sequence
-        }
-      })
-    });
-    */
-    console.log(`[HubSpot-Agent] Deal ${dealId} updated with deliverable: ${artifactUrl}`);
+    if (!this.hubspotToken || !artifactUrl) return;
+    try {
+      await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${this.hubspotToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: { deliverable_link: artifactUrl } }),
+      });
+      console.log(`[HubSpot-Agent] Deal ${dealId} updated with deliverable: ${artifactUrl}`);
+    } catch (err) {
+      console.error(`[HubSpot-Agent] updateHubSpotDeal ${dealId} error:`, err);
+    }
   }
 }

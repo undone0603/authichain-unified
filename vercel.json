@@ -8,6 +8,7 @@
     { "path": "/api/automation/cron",                         "schedule": "0 6 * * *" },
     { "path": "/api/cron/jobs?job=subscription-health-check", "schedule": "0 3 * * *" },
     { "path": "/api/cron/jobs?job=customer-health-score",     "schedule": "0 5 * * *" },
+    { "path": "/api/cron/govchain",                           "schedule": "0 7 * * *" },
     { "path": "/api/cron/jobs?job=dunning-escalation",        "schedule": "0 8 * * *" },
     { "path": "/api/cron/retention",                          "schedule": "0 9 * * *" },
     { "path": "/api/trial-reminder",                          "schedule": "0 10 * * *" },
