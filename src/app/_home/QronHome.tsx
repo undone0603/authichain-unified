@@ -30,6 +30,10 @@ import Image from 'next/image';
 import { FeaturedQRONs } from '@/components/FeaturedQRONs';
 import { LeadCapturePopup } from '@/components/LeadCapturePopup';
 import { SocialShareCTA } from '@/components/SocialShareCTA';
+import { TrustRail } from '@/components/TrustRail';
+import { RoiCalculator } from '@/components/RoiCalculator';
+import { LiveStatsCounter } from '@/components/LiveStatsCounter';
+import { StickyConversionBar } from '@/components/StickyConversionBar';
 
 const StaticImageGallery = dynamic(
   () =>
@@ -442,7 +446,10 @@ export function QronHome() {
           </div>
         </div>
 
-        <div className="gold-divider mb-12" />
+        {/* Social-proof / trust rail — directly below the hero */}
+        <div className="mb-12 -mx-4 md:mx-0 md:rounded-2xl md:overflow-hidden">
+          <TrustRail accent="#F59E0B" />
+        </div>
 
         {/* Generator */}
         <div id="generator-section" className="protocol-card p-8 mb-12 relative overflow-hidden">
@@ -986,6 +993,13 @@ export function QronHome() {
 
         <div className="gold-divider my-12" />
 
+        {/* Animated live-stats counter band */}
+        <div className="mb-12 -mx-4 md:mx-0 md:rounded-2xl md:overflow-hidden">
+          <LiveStatsCounter accent="#F59E0B" />
+        </div>
+
+        <div className="gold-divider my-12" />
+
         {/* Elite Capabilities Section */}
         <section className="mb-16">
           <div className="text-center mb-12">
@@ -1279,6 +1293,11 @@ export function QronHome() {
             ))}
           </div>
         </section>
+
+        {/* ROI calculator — how much counterfeit loss a QRON plan prevents */}
+        <div className="-mx-4 md:mx-0">
+          <RoiCalculator accent="#F59E0B" subscriptionCost={29} planLabel="Starter Pack" />
+        </div>
 
         <div className="gold-divider my-12" />
 
@@ -1614,6 +1633,9 @@ export function QronHome() {
 
         <LeadCapturePopup />
       </div>
+
+      {/* Sticky conversion bar */}
+      <StickyConversionBar accent="#F59E0B" href="/login" />
     </div>
   );
 }
