@@ -24,11 +24,12 @@ jobs:
     if: always()
 
     steps:
-      - name: Node + pnpm setup
-        uses: ./.github/workflows/node-pnpm-setup.yml
-        with:
-          node_version: '22'
-          pnpm_version: '10.28.2'
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+        with: { version: '10.28.2' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile
 
       - name: Send Slack digest
         continue-on-error: true
