@@ -135,8 +135,8 @@ Description: ${(opp.description ?? '').slice(0, 2000)}
       // Per-opportunity failure: log and continue so one bad call doesn't kill
       // the whole batch. Opp stays at status='new' so it gets retried next run.
       failed++;
-      const shortMsg = (err?.message || String(err)).split('\n')[0].slice(0, 200);
-      console.warn(`  ⚠️  skipped ${opp.notice_id} (${opp.title?.slice(0, 40)}): ${shortMsg}`);
+      const fullMsg = (err?.message || String(err)).slice(0, 600);
+      console.warn(`  ⚠️  skipped ${opp.notice_id} (${opp.title?.slice(0, 40)}): ${fullMsg}`);
     }
   }
 
