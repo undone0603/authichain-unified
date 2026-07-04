@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { PLANS } from '@/lib/plans';
 import { CheckoutModal, TrialButton } from './pricing-client';
-import { 
-  Check, 
+import {
+  Check,
   Coins
 } from 'lucide-react';
 import Link from 'next/link';
+import { JsonLd } from '@/components/JsonLd';
+import { productSchema, brandById, breadcrumbSchema } from '@/lib/structured-data';
 
 export const metadata: Metadata = {
   title: 'Pricing | QRON Protocol',
@@ -13,8 +15,28 @@ export const metadata: Metadata = {
 };
 
 export default function PricingPage() {
+  const qron = brandById('qron');
+  const productLd = productSchema({
+    name: 'QRON Protocol — AI QR Art & Product Passports',
+    description:
+      'Cryptographically-verified AI QR art generation and industrial product passports. Plans from free to enterprise.',
+    brand: qron,
+    offers: PLANS.filter((p) => p.price > 0).map((p) => ({
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      priceCurrency: 'USD',
+      url: 'https://qron.space/pricing',
+    })),
+  });
+  const breadcrumbLd = breadcrumbSchema([
+    { name: 'Home', url: 'https://qron.space' },
+    { name: 'Pricing', url: 'https://qron.space/pricing' },
+  ]);
+
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
+      <JsonLd data={[productLd, breadcrumbLd]} />
       {/* Header */}
       <section className="pt-32 pb-20 px-6 text-center">
         <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter uppercase leading-none">
