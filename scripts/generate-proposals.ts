@@ -75,8 +75,8 @@ AI Reasoning: ${opp.ai_reasoning}
       // Per-opportunity failure: log and continue. Opp stays at status='scored'
       // so it's picked up again on the next cron run.
       failed++;
-      const shortMsg = (err?.message || String(err)).split('\n')[0].slice(0, 200);
-      console.warn(`  ⚠️  skipped ${opp.notice_id} (${opp.title?.slice(0, 40)}): ${shortMsg}`);
+      const fullMsg = (err?.message || String(err)).slice(0, 600);
+      console.warn(`  ⚠️  skipped ${opp.notice_id} (${opp.title?.slice(0, 40)}): ${fullMsg}`);
     }
   }
 
