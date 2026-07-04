@@ -9,8 +9,9 @@
 //   2. Groq llama-3.3-70b-versatile — FREE, ~100k tokens/day, fastest inference
 //   3. Groq llama-3.1-8b-instant    — FREE, ~500k tokens/day (separate bucket),
 //                                     fallback when 70B's daily limit is hit
-//   4. Gemini Flash (latest)        — free tier
-//   5. Mistral open-mixtral-8x7b    — free tier
+//   4. Claude Haiku (Anthropic)     — $0.25/MTok, separate rate limit pool from Gemini
+//   5. Gemini Flash (latest)        — free tier
+//   6. Mistral open-mixtral-8x7b    — free tier
 //
 // Enable a provider by setting its env var. Missing keys are silently skipped.
 // Groq 70B and 8B both use GROQ_API_KEY but consume separate rate-limit pools,
@@ -85,6 +86,33 @@ const providers: Provider[] = [
   },
   makeGroqProvider('llama-3.3-70b-versatile'),
   makeGroqProvider('llama-3.1-8b-instant'),
+  {
+    name: 'anthropic:claude-haiku-4-5',
+    enabled: () => !!process.env.ANTHROPIC_API_KEY,
+    run: async ({ messages, jsonMode, temperature, maxTokens }) => {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': process.env.ANTHROPIC_API_KEY!,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: maxTokens ?? 1024,
+          temperature: temperature ?? 0.2,
+          system: messages.find((m) => m.role === 'system')?.content,
+          messages: messages
+            .filter((m) => m.role !== 'system')
+            .map((m) => ({ role: m.role, content: m.content })),
+          ...(jsonMode ? { system: (messages.find((m) => m.role === 'system')?.content ?? '') + '\nRespond with valid JSON only.' } : {}),
+        }),
+      });
+      if (!res.ok) throw new Error(`Anthropic ${res.status} ${(await res.text()).slice(0, 200)}`);
+      const json = (await res.json()) as any;
+      return json.content?.[0]?.text ?? '';
+    },
+  },
   {
     name: 'google:gemini-flash-latest',
     enabled: () => !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
