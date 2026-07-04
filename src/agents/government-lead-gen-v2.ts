@@ -1,16 +1,16 @@
 // src/agents/government-lead-gen-v2.ts
-// v2.4 — FULL FEDERAL INTEGRATION
+// v2.5 — FULL FEDERAL INTEGRATION
 //   • SAM.gov Opportunities v2 (real)
 //   • SAM.gov Contract Awards v1 (real, FPDS replacement)
 //   • USAspending v2 (real, public, no key)
-//   • Pinecone vector match via @authichain/vector-store (real)
+//   • Supabase pgvector semantic match (replaces Pinecone)
 //   • 5-agent consensus / QRON / outreach / on-chain mint  (STUBBED behind DRY_RUN)
 //
 // DRY_RUN behavior:
 //   process.env.DRY_RUN !== 'false'  →  no emails sent, no NFTs minted, no chain writes
 //   process.env.DRY_RUN === 'false'  →  performs real outreach + minting (requires real impls wired in)
 
-import { vectorStoreUtils, type GovernmentOpportunity } from '../../packages/vector-store/index';
+import { createClient } from '@supabase/supabase-js';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Active entity (the GovChain.us pilot signer)
@@ -26,20 +26,56 @@ const ACTIVE_ENTITY = {
 const DRY_RUN = process.env.DRY_RUN !== 'false'; // default TRUE for safety
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Lazy Pinecone init (so import doesn't crash environments without the key)
+// Supabase pgvector semantic search — embeddings via HuggingFace (free)
+// Model: BAAI/bge-small-en-v1.5 (384 dims)
 // ──────────────────────────────────────────────────────────────────────────────
-let _pineconeIndex: any = null;
-async function getPineconeIndex() {
-  if (_pineconeIndex) return _pineconeIndex;
-  if (!process.env.PINECONE_API_KEY) {
-    console.warn('[gov-engine] PINECONE_API_KEY not set — Pinecone disabled');
-    return null;
+const HF_EMBED_URL = 'https://router.huggingface.co/hf-inference/models/BAAI/bge-small-en-v1.5';
+
+async function embedText(text: string): Promise<number[] | null> {
+  const token = process.env.HF_TOKEN_PRIMARY;
+  if (!token) return null;
+  try {
+    const res = await fetch(HF_EMBED_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inputs: text.slice(0, 2000), options: { wait_for_model: true } }),
+    });
+    if (!res.ok) return null;
+    const data: any = await res.json();
+    return Array.isArray(data[0]) ? data[0] : data;
+  } catch { return null; }
+}
+
+async function findSupabaseOpportunities(queryText: string, limit = 8): Promise<any[]> {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn('[gov-engine] Supabase env not set — skipping vector match');
+    return [];
   }
-  // @ts-ignore - package installed separately
-  const { Pinecone } = await import('@pinecone-database/pinecone');
-  const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
-  _pineconeIndex = pinecone.index(process.env.PINECONE_INDEX || 'authichain-gov-leads');
-  return _pineconeIndex;
+  try {
+    const embedding = await embedText(queryText);
+    if (!embedding) {
+      console.warn('[gov-engine] HF embedding failed — skipping vector match');
+      return [];
+    }
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const { data, error } = await supabase.rpc('match_gov_opportunities', {
+      query_embedding: embedding,
+      match_count: limit,
+      min_score: 0.5,
+    });
+    if (error) { console.warn('[gov-engine] pgvector RPC error:', error.message); return []; }
+    return (data ?? []).map((r: any) => ({
+      ...r,
+      id: r.notice_id,
+      relevanceScore: Math.round((r.similarity ?? 0.5) * 100),
+      source: 'supabase-pgvector',
+    }));
+  } catch (err) {
+    console.warn('[gov-engine] vector match skipped:', (err as Error).message);
+    return [];
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -229,11 +265,8 @@ function normalizeLead(raw: any, source: string) {
 // ──────────────────────────────────────────────────────────────────────────────
 export async function runAdvancedGovernmentLeadGen() {
   console.log(
-    `🚀 GovChain autonomous lead-gen v2.4 starting (DRY_RUN=${DRY_RUN}) — SAM Opps + Contract Awards v1 + USAspending + 5-agent consensus`
+    `🚀 GovChain autonomous lead-gen v2.5 starting (DRY_RUN=${DRY_RUN}) — SAM Opps + Contract Awards v1 + USAspending + pgvector`
   );
-
-  // Touch Pinecone lazily; ok if missing.
-  await getPineconeIndex();
 
   // 1. Pull federal data sources in parallel
   const [opportunities, awards] = await Promise.all([
@@ -268,35 +301,17 @@ export async function runAdvancedGovernmentLeadGen() {
     });
   }
 
-  // 4. Pull semantic matches from Pinecone via the existing vector-store package
-  let pineconeLeads: GovernmentOpportunity[] = [];
-  try {
-    pineconeLeads = await vectorStoreUtils.findMatchingOpportunities({
-      companyProfile: {
-        id: 'govchain-us',
-        entityName: ACTIVE_ENTITY.name,
-        description: ACTIVE_ENTITY.mission,
-        capabilities: [
-          'document authentication',
-          'product verification',
-          'QR/QRON traceability',
-          'on-chain provenance',
-          'Buy American compliance',
-        ],
-        naicsCodes: ['541611', '541512', '541519'],
-      },
-      limit: 8,
-    });
-  } catch (err) {
-    console.warn('[gov-engine] vector-store match skipped:', (err as Error).message);
-  }
+  // 4. Pull semantic matches from Supabase pgvector
+  const queryText = [
+    ACTIVE_ENTITY.name, ACTIVE_ENTITY.mission,
+    'document authentication product verification QR traceability on-chain provenance Buy American compliance',
+    'NAICS 541611 541512 541519',
+  ].join(' ');
+  const vectorLeads = await findSupabaseOpportunities(queryText, 8);
 
   const allLeads = [
     ...enrichedLeads,
-    ...pineconeLeads.map(p => ({
-      ...normalizeLead(p, 'pinecone-vector'),
-      relevanceScore: Math.round((p.score ?? 0.5) * 100),
-    })),
+    ...vectorLeads.map((v: any) => normalizeLead(v, 'supabase-pgvector')),
   ];
 
   // 5. Process each lead through consensus → QRON → outreach → mint
