@@ -16,7 +16,8 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "sync-secrets": "bash scripts/sync-secrets.sh"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.65",
