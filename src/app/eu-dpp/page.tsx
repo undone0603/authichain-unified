@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { JsonLd } from '@/components/JsonLd';
+import { faqSchema, breadcrumbSchema, type FaqItem } from '@/lib/structured-data';
 import {
   ArrowRight,
   ShieldCheck,
@@ -79,9 +81,49 @@ const COMPARISON = [
   { feature: 'US federal procurement (FAR/SAM.gov)', govchain: true, scantrust: false, vechain: false, circularise: false },
 ];
 
+const FAQ: FaqItem[] = [
+  {
+    question: 'What is the EU Digital Product Passport?',
+    answer:
+      'The EU Digital Product Passport (DPP) is a structured digital record — mandated by the Ecodesign for Sustainable Products Regulation (ESPR, Regulation 2024/1781) — that stores a product’s identity, materials, carbon footprint, repairability, and end-of-life data. Each physical product carries a unique identifier (typically a QR code or NFC tag) that links to its passport, letting consumers, customs, and recyclers verify the data instantly.',
+  },
+  {
+    question: 'When does the EU DPP regulation take effect?',
+    answer:
+      'The central EU DPP registry opens July 19, 2026. Battery passports become mandatory for EV and industrial batteries in February 2027, textiles and electronics follow under delegated regulations from 2028, and by 2030 nearly all physical goods sold in the EU will require a Digital Product Passport.',
+  },
+  {
+    question: 'Which products need a Digital Product Passport?',
+    answer:
+      'Priority categories are batteries, textiles and apparel, electronics and ICT equipment, furniture, iron and steel, aluminium, tyres, and construction products. Scope expands through delegated acts until virtually every non-food physical product placed on the EU market is covered by 2030.',
+  },
+  {
+    question: 'How does AuthiChain implement EU DPP?',
+    answer:
+      'AuthiChain (via its GovChain compliance layer) maps your product data directly to the EU DPP framework — unique identifier, material bill of materials, carbon footprint, and repairability score. Every passport is hashed and anchored on Polygon for tamper-proof integrity, and we auto-generate the EPCIS 2.0 and JSON-LD payloads required for EU registry submission. No manual data entry, no compliance consultant.',
+  },
+  {
+    question: 'What is the cost of EU DPP compliance?',
+    answer:
+      'AuthiChain offers transparent, self-serve pricing with no enterprise contract required — a stark contrast to legacy vendors that quote six-figure annual deals. Plans start well below the cost of a single compliance consultant, and there is no per-scan fee for verification.',
+  },
+  {
+    question: 'How long does AuthiChain DPP setup take?',
+    answer:
+      'Setup takes less than one business day. You import your product catalog, map fields to the DPP schema, and issue registry-ready passports the same day — versus the 3–6 month onboarding typical of enterprise compliance platforms.',
+  },
+];
+
 export default function EuDppPage() {
+  const faqLd = faqSchema(FAQ);
+  const breadcrumbLd = breadcrumbSchema([
+    { name: 'Home', url: 'https://govchain.us' },
+    { name: 'EU Digital Product Passport', url: 'https://govchain.us/eu-dpp' },
+  ]);
+
   return (
     <div className="min-h-screen bg-black text-white selection:bg-blue-600 selection:text-white">
+      <JsonLd data={[faqLd, breadcrumbLd]} />
       {/* HERO */}
       <section className="relative px-6 pt-32 pb-24 text-center overflow-hidden">
         <div
@@ -347,6 +389,38 @@ export default function EuDppPage() {
             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             All Systems Operational
           </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="max-w-3xl mx-auto px-6 py-24">
+        <h2 className="text-center text-3xl md:text-4xl font-black uppercase tracking-tighter mb-4">
+          EU DPP <span style={{ color: ACCENT_LIGHT }}>Frequently Asked</span>
+        </h2>
+        <p className="text-center text-sm text-zinc-500 mb-12 max-w-xl mx-auto leading-relaxed">
+          Everything brands need to know about the Digital Product Passport
+          regulation and how AuthiChain gets you compliant before July 19, 2026.
+        </p>
+        <div className="space-y-4">
+          {FAQ.map((item) => (
+            <details
+              key={item.question}
+              className="protocol-card group p-6 [&_summary::-webkit-details-marker]:hidden"
+            >
+              <summary className="flex cursor-pointer items-center justify-between gap-4 text-sm font-black uppercase tracking-tight text-white">
+                {item.question}
+                <span
+                  className="text-lg transition-transform group-open:rotate-45"
+                  style={{ color: ACCENT_LIGHT }}
+                >
+                  +
+                </span>
+              </summary>
+              <p className="mt-4 text-[13px] leading-relaxed text-zinc-400">
+                {item.answer}
+              </p>
+            </details>
+          ))}
         </div>
       </section>
 
