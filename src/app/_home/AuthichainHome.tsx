@@ -1,5 +1,7 @@
 import { ShieldCheck, ScanLine, Award, Boxes, Eye, Lock } from 'lucide-react';
 import { BrandLanding } from './BrandLanding';
+import { CompetitorTable } from '@/components/CompetitorTable';
+import { RoiCalculator } from '@/components/RoiCalculator';
 
 /**
  * AuthiChain (authichain.com) — the flagship B2B product-authentication brand
@@ -50,6 +52,10 @@ export function AuthichainHome() {
         },
       ]}
       closingLine="Protect Every Product. Verify Every Transaction."
-    />
+    >
+      {/* AuthiChain-only conversion sections */}
+      <RoiCalculator accent="#00FFD1" subscriptionCost={199} planLabel="AuthiChain" />
+      <CompetitorTable />
+    </BrandLanding>
   );
 }

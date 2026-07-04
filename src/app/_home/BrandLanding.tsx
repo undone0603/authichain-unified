@@ -2,6 +2,10 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 import { BRANDS, type BrandId } from '@shared/brands';
+import { TrustRail } from '@/components/TrustRail';
+import { LiveStatsCounter } from '@/components/LiveStatsCounter';
+import { StickyConversionBar } from '@/components/StickyConversionBar';
+import { ExitIntentGuide } from '@/components/ExitIntentGuide';
 
 export interface LandingFeature {
   icon: ReactNode;
@@ -39,6 +43,11 @@ export interface BrandLandingProps {
   primaryCta?: LandingCta;
   /** Secondary hero CTA (defaults to View Pricing → /pricing). */
   secondaryCta?: LandingCta;
+  /**
+   * Extra conversion sections rendered between the feature grid and the
+   * closing CTA (e.g. competitor table, ROI calculator on AuthiChain).
+   */
+  children?: ReactNode;
 }
 
 /**
@@ -59,6 +68,7 @@ export function BrandLanding({
   closingLine,
   primaryCta,
   secondaryCta,
+  children,
 }: BrandLandingProps) {
   const brand = BRANDS[brandId];
   const accent = brand.accentHex;
@@ -107,6 +117,9 @@ export function BrandLanding({
         </div>
       </section>
 
+      {/* Social-proof / trust rail — directly below the hero */}
+      <TrustRail accent={accent} />
+
       {/* Stat strip */}
       {stats && stats.length > 0 && (
         <section className="border-y border-zinc-900 bg-zinc-950/40">
@@ -142,6 +155,12 @@ export function BrandLanding({
           ))}
         </div>
       </section>
+
+      {/* Brand-specific conversion sections (competitor table, ROI calc, …) */}
+      {children}
+
+      {/* Animated live-stats counter band */}
+      <LiveStatsCounter accent={accent} />
 
       {/* Closing CTA → pricing (revenue) */}
       <section className="border-t border-zinc-900 px-6 py-24 text-center">
@@ -182,6 +201,10 @@ export function BrandLanding({
           © 2026 {brand.displayName} · part of the AuthiChain Protocol · Settlement on Polygon &amp; Bitcoin
         </p>
       </footer>
+
+      {/* Sticky conversion bar + exit-intent EU DPP guide */}
+      <StickyConversionBar accent={accent} href={primary.href} />
+      <ExitIntentGuide accent={accent} productInterest={brandId} />
     </div>
   );
 }
