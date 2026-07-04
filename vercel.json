@@ -12,7 +12,8 @@
     { "path": "/api/cron/jobs?job=dunning-escalation",        "schedule": "0 8 * * *" },
     { "path": "/api/cron/retention",                          "schedule": "0 9 * * *" },
     { "path": "/api/trial-reminder",                          "schedule": "0 10 * * *" },
-    { "path": "/api/cron/jobs?job=founder-payout",            "schedule": "0 9 1 * *" }
+    { "path": "/api/cron/jobs?job=founder-payout",            "schedule": "0 9 1 * *" },
+    { "path": "/api/cron/competitive-monitor",               "schedule": "0 6 * * 1" }
   ],
   "rewrites": [
     {
