@@ -49,14 +49,9 @@ export interface PaymentFailedEvent {
   occurred_at?: string;
 }
 
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-if (!SUPABASE_URL || !SERVICE_ROLE) {
-  console.warn("Revenue engine: SUPABASE_URL or SERVICE_ROLE missing from env");
-}
-
 async function supabaseInsert(table: string, row: any) {
+    const SUPABASE_URL = process.env.SUPABASE_URL!;
+  const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method: "POST",
     headers: {
@@ -75,6 +70,8 @@ async function supabaseInsert(table: string, row: any) {
 }
 
 async function supabaseUpsert(table: string, row: any, conflictKey = "stripe_subscription_id") {
+    const SUPABASE_URL = process.env.SUPABASE_URL!;
+  const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method: "POST",
     headers: {
