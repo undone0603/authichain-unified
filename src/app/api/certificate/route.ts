@@ -3,11 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { onCertificateMint } from '../../../../server/revenue-engine/loop';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
+function getSupabase() {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Supabase env vars not configured');
+  return createClient(url, key);
+}
 /** Simple rarity score: 0-100 based on seal age + input entropy */
 function computeRarity(rarity_input: unknown): number {
   const entropy = JSON.stringify(rarity_input ?? {}).length;
