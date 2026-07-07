@@ -70,8 +70,8 @@ export async function POST(req: NextRequest) {
         polygon_tx: seal.polygon_tx,
       },
     });
-  } catch (err) {\r
-    console.error('[verify] Unexpected error:', err);\r
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });\r
-  }\r
+  } catch (err) {
+    console.error('[verify] Unexpected error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
