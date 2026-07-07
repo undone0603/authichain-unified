@@ -38,6 +38,16 @@ jobs:
         if: steps.secrets_check.outputs.skip != 'true'
         run: npm install -g wrangler@latest
 
+      - name: Install pnpm
+        if: steps.secrets_check.outputs.skip != 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install dependencies
+        if: steps.secrets_check.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+
       - name: Upload secrets
         if: steps.secrets_check.outputs.skip != 'true'
         env:
