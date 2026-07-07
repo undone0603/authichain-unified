@@ -61,16 +61,12 @@ jobs:
           echo "${{ secrets.STRIPE_PRICE_BASIC }}" | wrangler secret put STRIPE_PRICE_BASIC --name authichain-revenue-worker
           echo "${{ secrets.STRIPE_PRICE_PRO }}" | wrangler secret put STRIPE_PRICE_PRO --name authichain-revenue-worker
           echo "${{ secrets.STRIPE_PRICE_ENTERPRISE }}" | wrangler secret put STRIPE_PRICE_ENTERPRISE --name authichain-revenue-worker
-      - name: Create dist/public placeholder
-        if: steps.secrets_check.outputs.skip != 'true'
-        run: mkdir -p dist/public
-
       - name: Deploy worker
         if: steps.secrets_check.outputs.skip != 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: wrangler deploy api/worker.ts --name authichain-revenue-worker --compatibility-date 2024-01-01
+        run: wrangler deploy --config api/wrangler.toml
 
       - name: Deploy skipped
         if: steps.secrets_check.outputs.skip == 'true'
