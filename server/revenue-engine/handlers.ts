@@ -1,5 +1,5 @@
 // server/revenue-engine/handlers.ts
-import { emitCrmNewSubscription, emitCrmVerificationMetric, emitCrmCertificateOpportunity, emitCrmDispensaryMetric } from "@/server/crm/client";
+import { emitCrmNewSubscription, emitCrmVerificationMetric, emitCrmCertificateOpportunity, emitCrmDispensaryMetric } from "../crm/client";
 
 type UUID = string;
 
