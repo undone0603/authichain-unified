@@ -1,54 +1,159 @@
-/**
- * Stripe configuration and singleton client.
- */
-import Stripe from 'stripe';
+// server/config/stripe.ts
+// Centralized Stripe price ID mapping for all AuthiChain brands and plans.
+// All getPriceId calls resolve from environment variables set at runtime.
 
-export const STRIPE_CONFIG = {
-  secret_key: process.env.STRIPE_SECRET_KEY!,
-  webhook_secret: process.env.STRIPE_WEBHOOK_SECRET!,
-  api_version: '2024-04-10' as const,
+export type PlanId =
+  | 'authichain_basic'
+  | 'authichain_pro'
+  | 'authichain_enterprise'
+  | 'strainchain_basic'
+  | 'strainchain_pro'
+  | 'strainchain_enterprise'
+  | 'govchain_basic'
+  | 'govchain_pro'
+  | 'govchain_enterprise'
+  | 'qron_basic'
+  | 'qron_pro';
+
+export interface PlanConfig {
+  id: PlanId;
+  name: string;
+  brand: string;
+  mrr_usd: number;
+  scan_limit: number | null; // null = unlimited
+  features: string[];
+}
+
+export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
+  authichain_basic: {
+    id: 'authichain_basic',
+    name: 'Basic',
+    brand: 'authichain.com',
+    mrr_usd: 49,
+    scan_limit: 500,
+    features: ['500 scans/mo', 'QR seals', 'Basic analytics', 'Email support'],
+  },
+  authichain_pro: {
+    id: 'authichain_pro',
+    name: 'Pro',
+    brand: 'authichain.com',
+    mrr_usd: 149,
+    scan_limit: 5000,
+    features: ['5,000 scans/mo', 'NFT certificates', 'Polygon anchoring', 'API access', 'Priority support'],
+  },
+  authichain_enterprise: {
+    id: 'authichain_enterprise',
+    name: 'Enterprise',
+    brand: 'authichain.com',
+    mrr_usd: 499,
+    scan_limit: null,
+    features: ['Unlimited scans', 'Custom branding', 'Dedicated CSM', 'SLA', 'SSO', 'Bulk onboarding'],
+  },
+  strainchain_basic: {
+    id: 'strainchain_basic',
+    name: 'Basic',
+    brand: 'strainchain.io',
+    mrr_usd: 79,
+    scan_limit: 1000,
+    features: ['METRC integration', '1,000 scans/mo', 'Batch tracking', 'Compliance reports'],
+  },
+  strainchain_pro: {
+    id: 'strainchain_pro',
+    name: 'Pro',
+    brand: 'strainchain.io',
+    mrr_usd: 199,
+    scan_limit: 10000,
+    features: ['Full METRC sync', '10,000 scans/mo', 'Multi-facility', 'API', 'Audit trail'],
+  },
+  strainchain_enterprise: {
+    id: 'strainchain_enterprise',
+    name: 'Enterprise',
+    brand: 'strainchain.io',
+    mrr_usd: 599,
+    scan_limit: null,
+    features: ['Unlimited', 'White-label', 'DSCSA-ready', 'Dedicated support'],
+  },
+  govchain_basic: {
+    id: 'govchain_basic',
+    name: 'Basic',
+    brand: 'govchain.us',
+    mrr_usd: 99,
+    scan_limit: 1000,
+    features: ['FedRAMP-aligned', '1,000 verifications/mo', 'Audit logs', 'SBIR-ready docs'],
+  },
+  govchain_pro: {
+    id: 'govchain_pro',
+    name: 'Pro',
+    brand: 'govchain.us',
+    mrr_usd: 299,
+    scan_limit: 10000,
+    features: ['10,000 verifications/mo', 'DoD-grade chain of custody', 'API', 'Compliance exports'],
+  },
+  govchain_enterprise: {
+    id: 'govchain_enterprise',
+    name: 'Enterprise',
+    brand: 'govchain.us',
+    mrr_usd: 999,
+    scan_limit: null,
+    features: ['Unlimited', 'Custom integrations', 'Dedicated infra', 'SLA'],
+  },
+  qron_basic: {
+    id: 'qron_basic',
+    name: 'Basic',
+    brand: 'qron.space',
+    mrr_usd: 29,
+    scan_limit: 2000,
+    features: ['2,000 QR scans/mo', 'Dynamic QR', 'Analytics', 'Custom redirects'],
+  },
+  qron_pro: {
+    id: 'qron_pro',
+    name: 'Pro',
+    brand: 'qron.space',
+    mrr_usd: 79,
+    scan_limit: 20000,
+    features: ['20,000 QR scans/mo', 'Blockchain anchor', 'Webhooks', 'API', 'White-label'],
+  },
 };
 
 /**
- * Stripe Price IDs — canonical IDs from Stripe Dashboard.
- * Map: plan_id -> Stripe Price ID (monthly recurring)
- * Fallback to actual price IDs if env vars not set.
+ * Returns the Stripe Price ID for a given plan.
+ * Reads from environment variables at call time (safe for edge runtime).
  */
-export const STRIPE_PRICE_IDS: Record<string, string> = {
-  authichain_basic: process.env.STRIPE_PRICE_BASIC ?? 'price_1TqPJfGqTruSqV8TAjbmz3jw',
-  authichain_pro: process.env.STRIPE_PRICE_PRO ?? 'price_1TqPNvGqTruSqV8TirjBDQiY',
-  authichain_enterprise: process.env.STRIPE_PRICE_ENTERPRISE ?? 'price_1TqPR8GqTruSqV8T5UvdFJ2q',
-};
+export function getPriceId(planId: PlanId | string): string {
+  const map: Record<string, string | undefined> = {
+    authichain_basic: process.env.STRIPE_PRICE_AUTHICHAIN_BASIC || process.env.STRIPE_PRICE_BASIC,
+    authichain_pro: process.env.STRIPE_PRICE_AUTHICHAIN_PRO || process.env.STRIPE_PRICE_PRO,
+    authichain_enterprise: process.env.STRIPE_PRICE_AUTHICHAIN_ENTERPRISE || process.env.STRIPE_PRICE_ENTERPRISE,
+    strainchain_basic: process.env.STRIPE_PRICE_STRAINCHAIN_BASIC,
+    strainchain_pro: process.env.STRIPE_PRICE_STRAINCHAIN_PRO,
+    strainchain_enterprise: process.env.STRIPE_PRICE_STRAINCHAIN_ENTERPRISE,
+    govchain_basic: process.env.STRIPE_PRICE_GOVCHAIN_BASIC,
+    govchain_pro: process.env.STRIPE_PRICE_GOVCHAIN_PRO,
+    govchain_enterprise: process.env.STRIPE_PRICE_GOVCHAIN_ENTERPRISE,
+    qron_basic: process.env.STRIPE_PRICE_QRON_BASIC,
+    qron_pro: process.env.STRIPE_PRICE_QRON_PRO,
+  };
 
-// Stripe Product IDs (for reference / metadata)
-export const STRIPE_PRODUCT_IDS: Record<string, string> = {
-  authichain_basic: 'prod_Uq5UN8KH4jK7iZ',
-  authichain_pro: 'prod_Uq5ZuyAvjO09wl',
-  authichain_enterprise: 'prod_Uq5cMaGKff2j5y',
-};
-
-// Webhook destination
-export const STRIPE_WEBHOOK_URL = 'https://authichain.com/api/stripe/webhook';
-export const STRIPE_WEBHOOK_DESTINATION_ID = 'we_1TqPVPGqTruSqV8Tg6AIYbsb';
-
-// Lazy singleton — safe in serverless / edge environments
-let _stripe: Stripe | null = null;
-export function getStripe(): Stripe {
-  if (!_stripe) {
-    _stripe = new Stripe(STRIPE_CONFIG.secret_key, {
-      apiVersion: STRIPE_CONFIG.api_version,
-    });
+  const priceId = map[planId];
+  if (!priceId) {
+    throw new Error(`No Stripe price ID configured for plan: ${planId}. Set STRIPE_PRICE_${planId.toUpperCase()} env var.`);
   }
-  return _stripe;
+  return priceId;
 }
 
-export function getPriceIdForPlan(planId: string): string {
-  const id = STRIPE_PRICE_IDS[planId];
-  if (!id) throw new Error(`Unknown plan: ${planId}`);
-  return id;
+/** Get MRR for a plan (used for CRM deal value). */
+export function getMrr(planId: PlanId | string): number {
+  return PLAN_CONFIGS[planId as PlanId]?.mrr_usd ?? 0;
 }
 
-export function getPlanFromPriceId(priceId: string): string | null {
-  const entry = Object.entries(STRIPE_PRICE_IDS).find(([, v]) => v === priceId);
-  return entry ? entry[0] : null;
+/** Map Stripe Price ID back to a plan ID. */
+export function getPlanFromPriceId(priceId: string): PlanId | null {
+  for (const [planId, config] of Object.entries(PLAN_CONFIGS)) {
+    try {
+      if (getPriceId(planId) === priceId) return planId as PlanId;
+    } catch {
+      // env var not set for this plan, skip
+    }
+  }
+  return null;
 }
