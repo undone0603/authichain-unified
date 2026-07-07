@@ -1,183 +1,292 @@
-/**
- * Revenue Engine — Pure handler functions.
- * Each handler writes to Supabase, emits CRM tasks, and triggers Stripe checks.
- * All functions are side-effectful but isolated and testable.
- */
-import type {
-  VerificationEvent,
-  CertificateMintedEvent,
-  ScanEvent,
-  SubscriptionCreatedEvent,
-  PaymentFailedEvent,
-} from './events';
+// server/revenue-engine/handlers.ts
+import { emitCrmNewSubscription, emitCrmVerificationMetric, emitCrmCertificateOpportunity, emitCrmDispensaryMetric } from "@/server/crm/client";
 
-// ---------------------------------------------------------------------------
-// Supabase client (lazy singleton — works in Workers & Node)
-// ---------------------------------------------------------------------------
-function getSupabase() {
-  const { createClient } = require('@supabase/supabase-js');
-  return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
+type UUID = string;
+
+export interface VerificationEvent {
+  id?: UUID;
+  seal_id: UUID;
+  brand: string;
+  status: "valid" | "invalid" | "unknown";
+  scan_context?: Record<string, any>;
+  created_at?: string;
 }
 
-// ---------------------------------------------------------------------------
-// CRM client (thin wrapper — see server/crm/client.ts)
-// ---------------------------------------------------------------------------
-async function emitCrmTask(action: string, payload: Record<string, unknown>) {
-  try {
-    const { crmClient } = require('../crm/client');
-    await crmClient.emit(action, payload);
-  } catch (err) {
-    console.error('[revenue-engine] CRM emit failed', action, err);
-  }
+export interface CertificateMintedEvent {
+  id?: UUID;
+  product_id: string;
+  seal_id: UUID;
+  rarity_score?: number;
+  polygon_nft_tx?: string;
+  brand: string;
+  created_at?: string;
 }
 
-// ---------------------------------------------------------------------------
-// handleVerificationEvent
-// ---------------------------------------------------------------------------
-export async function handleVerificationEvent(event: VerificationEvent) {
-  const supabase = getSupabase();
-
-  // 1. Write to verification_events
-  const { error: dbError } = await supabase.from('verification_events').insert({
-    id: event.id,
-    seal_id: event.seal_id,
-    brand: event.brand,
-    scan_context: event.scan_context,
-    status: event.status,
-    created_at: event.created_at,
-  });
-  if (dbError) console.error('[handleVerificationEvent] db insert failed', dbError);
-
-  // 2. Log usage event for per-scan billing
-  await supabase.from('usage_events').insert({
-    event_type: 'verification',
-    event_ref: event.id,
-    brand: event.brand,
-  });
-
-  // 3. CRM: advance deal on valid scans
-  if (event.status === 'valid') {
-    await emitCrmTask('advanceDeal', {
-      brand: event.brand,
-      deal_type: event.brand === 'strainchain.io' ? 'StrainChain Pilot' : 'Brand Protection',
-      metric: 'scan_volume',
-      value: 1,
-      ref_id: event.seal_id,
-    });
-  }
+export interface ScanEvent {
+  id?: UUID;
+  seal_id: UUID;
+  brand: string;
+  scan_context?: Record<string, any>;
+  created_at?: string;
 }
 
-// ---------------------------------------------------------------------------
-// handleCertificateMint
-// ---------------------------------------------------------------------------
-export async function handleCertificateMint(event: CertificateMintedEvent) {
-  const supabase = getSupabase();
-
-  // 1. Write to certificates (already inserted by /certificate Worker route,
-  //    this handler adds post-mint side effects)
-  await supabase.from('usage_events').insert({
-    event_type: 'certificate_minted',
-    event_ref: event.certificate_id,
-    brand: event.brand,
-  });
-
-  // 2. CRM: create marketplace opportunity
-  await emitCrmTask('createOpportunity', {
-    brand: event.brand,
-    deal_type: 'Certificate Marketplace',
-    certificate_id: event.certificate_id,
-    product_id: event.product_id,
-    rarity_score: event.rarity_score,
-    polygon_nft_tx: event.polygon_nft_tx,
-  });
+export interface SubscriptionCreatedEvent {
+  stripe_customer_id: string;
+  stripe_subscription_id: string;
+  plan_id: string;
+  brand: string;
+  email: string;
+  status: string;
+  current_period_end?: string;
 }
 
-// ---------------------------------------------------------------------------
-// handleDispensaryScan
-// ---------------------------------------------------------------------------
-export async function handleDispensaryScan(event: ScanEvent) {
-  const supabase = getSupabase();
-
-  await supabase.from('usage_events').insert({
-    event_type: 'dispensary_scan',
-    event_ref: event.batch_id as unknown as string,
-    brand: event.brand,
-  });
-
-  // CRM: update StrainChain Pilot deal metrics
-  await emitCrmTask('updateDealMetric', {
-    brand: event.brand,
-    deal_type: 'StrainChain Pilot',
-    dispensary_id: event.dispensary_id,
-    batch_id: event.batch_id,
-    metric: 'scan_volume',
-    value: 1,
-  });
+export interface PaymentFailedEvent {
+  stripe_subscription_id: string;
+  stripe_customer_id?: string;
+  brand?: string;
+  reason?: string;
+  invoice_id?: string;
+  occurred_at?: string;
 }
 
-// ---------------------------------------------------------------------------
-// handleSubscriptionCreated
-// ---------------------------------------------------------------------------
-export async function handleSubscriptionCreated(event: SubscriptionCreatedEvent) {
-  const supabase = getSupabase();
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-  // 1. Upsert subscriptions row
-  const { error } = await supabase.from('subscriptions').upsert(
-    {
-      id: event.id,
-      stripe_customer_id: event.stripe_customer_id,
-      stripe_subscription_id: event.stripe_subscription_id,
-      plan_id: event.plan_id,
-      brand: event.brand,
-      email: event.email,
-      status: 'active',
-      current_period_end: event.current_period_end,
-      created_at: event.created_at,
+if (!SUPABASE_URL || !SERVICE_ROLE) {
+  console.warn("Revenue engine: SUPABASE_URL or SERVICE_ROLE missing from env");
+}
+
+async function supabaseInsert(table: string, row: any) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: {
+      apikey: SERVICE_ROLE,
+      Authorization: `Bearer ${SERVICE_ROLE}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
     },
-    { onConflict: 'stripe_subscription_id' },
-  );
-  if (error) console.error('[handleSubscriptionCreated] upsert failed', error);
-
-  // 2. CRM: create contact + subscription deal
-  await emitCrmTask('onNewSubscription', {
-    brand: event.brand,
-    email: event.email,
-    stripe_customer_id: event.stripe_customer_id,
-    plan_id: event.plan_id,
-    mrr_usd: getMrrFromPlanId(event.plan_id),
+    body: JSON.stringify(row),
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase insert ${table} failed: ${res.status} ${text}`);
+  }
+  return res.json();
 }
 
-// ---------------------------------------------------------------------------
-// handlePaymentFailed
-// ---------------------------------------------------------------------------
-export async function handlePaymentFailed(event: PaymentFailedEvent) {
-  const supabase = getSupabase();
-
-  await supabase.from('usage_events').insert({
-    event_type: 'payment_failed',
-    event_ref: null,
-    brand: event.brand,
+async function supabaseUpsert(table: string, row: any, conflictKey = "stripe_subscription_id") {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: {
+      apikey: SERVICE_ROLE,
+      Authorization: `Bearer ${SERVICE_ROLE}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=representation",
+      "Prefer-Conflict": conflictKey,
+    },
+    body: JSON.stringify(row),
   });
-
-  console.warn('[revenue-engine] Payment failed', {
-    customer: event.stripe_customer_id,
-    invoice: event.invoice_id,
-    amount_due: event.amount_due,
-  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase upsert ${table} failed: ${res.status} ${text}`);
+  }
+  return res.json();
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-function getMrrFromPlanId(plan_id: string): number {
-  const map: Record<string, number> = {
-    authichain_basic: 14900,
-    authichain_pro: 49900,
-    authichain_enterprise: 149900,
+export async function handleVerificationEvent(ev: VerificationEvent) {
+  try {
+    const verificationRow = {
+      seal_id: ev.seal_id,
+      brand: ev.brand,
+      scan_context: ev.scan_context || {},
+      status: ev.status,
+    };
+    const inserted = await supabaseInsert("verification_events", verificationRow);
+    const verificationId = inserted[0]?.id;
+
+    await supabaseInsert("usage_events", {
+      subscription_id: null,
+      event_type: "verification",
+      event_ref: verificationId,
+      brand: ev.brand,
+    });
+
+    try {
+      await emitCrmVerificationMetric({
+        seal_id: ev.seal_id,
+        brand: ev.brand,
+        verification_id: verificationId,
+        status: ev.status,
+        scan_context: ev.scan_context || {},
+      });
+    } catch (crmErr) {
+      console.error("handleVerificationEvent: CRM emit failed", crmErr);
+    }
+
+    return { ok: true, verificationId };
+  } catch (err) {
+    console.error("handleVerificationEvent error:", err);
+    throw err;
+  }
+}
+
+export async function handleCertificateMint(ev: CertificateMintedEvent) {
+  try {
+    const certRow = {
+      product_id: ev.product_id,
+      seal_id: ev.seal_id,
+      rarity_score: ev.rarity_score ?? null,
+      polygon_nft_tx: ev.polygon_nft_tx ?? null,
+      brand: ev.brand,
+    };
+    const inserted = await supabaseInsert("certificates", certRow);
+    const certId = inserted[0]?.id;
+
+    await supabaseInsert("usage_events", {
+      subscription_id: null,
+      event_type: "certificate_mint",
+      event_ref: certId,
+      brand: ev.brand,
+    });
+
+    try {
+      await emitCrmCertificateOpportunity({
+        certificate_id: certId,
+        product_id: ev.product_id,
+        brand: ev.brand,
+        rarity_score: ev.rarity_score ?? null,
+      });
+    } catch (crmErr) {
+      console.error("handleCertificateMint: CRM emit failed", crmErr);
+    }
+
+    return { ok: true, certificateId: certId };
+  } catch (err) {
+    console.error("handleCertificateMint error:", err);
+    throw err;
+  }
+}
+
+export async function handleDispensaryScan(ev: ScanEvent) {
+  try {
+    const usage = await supabaseInsert("usage_events", {
+      subscription_id: null,
+      event_type: "dispensary_scan",
+      event_ref: ev.id ?? null,
+      brand: ev.brand,
+    });
+
+    try {
+      await emitCrmDispensaryMetric({
+        seal_id: ev.seal_id,
+        brand: ev.brand,
+        scan_context: ev.scan_context ?? {},
+        usage_id: usage[0]?.id,
+      });
+    } catch (crmErr) {
+      console.error("handleDispensaryScan: CRM emit failed", crmErr);
+    }
+
+    return { ok: true, usageId: usage[0]?.id };
+  } catch (err) {
+    console.error("handleDispensaryScan error:", err);
+    throw err;
+  }
+}
+
+export async function upsertSubscription(session: any) {
+  const ev: SubscriptionCreatedEvent = {
+    stripe_customer_id: session.customer,
+    stripe_subscription_id: session.subscription,
+    plan_id: session.metadata?.plan_id,
+    brand: session.metadata?.brand,
+    email: session.customer_details?.email || session.customer_email,
+    status: "active",
+    current_period_end: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : undefined,
   };
-  return map[plan_id] ?? 0;
+  return handleSubscriptionCreated(ev);
+}
+
+export async function handleSubscriptionCreated(ev: SubscriptionCreatedEvent) {
+  try {
+    const row = {
+      stripe_customer_id: ev.stripe_customer_id,
+      stripe_subscription_id: ev.stripe_subscription_id,
+      plan_id: ev.plan_id,
+      brand: ev.brand,
+      email: ev.email,
+      status: ev.status,
+      current_period_end: ev.current_period_end ?? null,
+    };
+
+    const upserted = await supabaseUpsert("subscriptions", row, "stripe_subscription_id");
+
+    try {
+      await emitCrmNewSubscription(row);
+    } catch (crmErr) {
+      console.error("handleSubscriptionCreated: CRM emit failed", crmErr);
+    }
+
+    return { ok: true, subscription: upserted[0] };
+  } catch (err) {
+    console.error("handleSubscriptionCreated error:", err);
+    throw err;
+  }
+}
+
+export async function handlePaymentFailed(ev: PaymentFailedEvent) {
+  try {
+    if (!ev.stripe_subscription_id) {
+      console.warn("handlePaymentFailed: missing stripe_subscription_id");
+    } else {
+      const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/subscriptions?stripe_subscription_id=eq.${ev.stripe_subscription_id}`, {
+        method: "PATCH",
+        headers: {
+          apikey: SERVICE_ROLE,
+          Authorization: `Bearer ${SERVICE_ROLE}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({ status: "past_due" }),
+      });
+      if (!updateRes.ok) {
+        const txt = await updateRes.text();
+        console.error("handlePaymentFailed: subscription update failed", updateRes.status, txt);
+      }
+    }
+
+    try {
+      await supabaseInsert("payment_failures", {
+        stripe_subscription_id: ev.stripe_subscription_id ?? null,
+        stripe_customer_id: ev.stripe_customer_id ?? null,
+        brand: ev.brand ?? null,
+        reason: ev.reason ?? null,
+        invoice_id: ev.invoice_id ?? null,
+        occurred_at: ev.occurred_at ?? new Date().toISOString(),
+      });
+    } catch (pfErr) {
+      console.warn("handlePaymentFailed: could not insert payment_failures", pfErr);
+    }
+
+    try {
+      await fetch(`${process.env.CRM_BASE_URL}/events/emit`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.CRM_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "payment_failed",
+          stripe_subscription_id: ev.stripe_subscription_id,
+          stripe_customer_id: ev.stripe_customer_id,
+          brand: ev.brand,
+          reason: ev.reason,
+        }),
+      });
+    } catch (crmErr) {
+      console.error("handlePaymentFailed: CRM emit failed", crmErr);
+    }
+
+    return { ok: true };
+  } catch (err) {
+    console.error("handlePaymentFailed error:", err);
+    throw err;
+  }
 }
