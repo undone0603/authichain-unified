@@ -4,14 +4,10 @@ import { createHash, randomUUID } from 'crypto';
 import { onDispensaryScan } from '../../../../server/revenue-engine/loop';
 import { onDispensaryBatchCreated } from '../../../../server/crm/events';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
 export async function POST(req: NextRequest) {
   try {
     const { dispensary_id, batch_id, events, brand } = await req.json();
+        const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     if (!dispensary_id || !batch_id) {
       return NextResponse.json({ error: 'dispensary_id and batch_id are required' }, { status: 400 });
