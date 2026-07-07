@@ -3,15 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { onVerificationEvent } from '../../../../server/revenue-engine/loop';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
 export async function POST(req: NextRequest) {
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
   try {
     const { seal_id, scan_context } = await req.json();
-
     if (!seal_id) {
       return NextResponse.json({ error: 'seal_id is required' }, { status: 400 });
     }
@@ -71,8 +70,8 @@ export async function POST(req: NextRequest) {
         polygon_tx: seal.polygon_tx,
       },
     });
-  } catch (err) {
-    console.error('[verify] Unexpected error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+  } catch (err) {\r
+    console.error('[verify] Unexpected error:', err);\r
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });\r
+  }\r
 }
