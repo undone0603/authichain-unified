@@ -1,39 +1,64 @@
 name: Deploy Cloudflare Edge Worker
+
 on:
   push:
-    branches: [main]
-    paths:
-      - 'src/edge.ts'
-      - 'wrangler.toml'
-      - '.github/workflows/deploy-edge-worker.yml'
+    branches:
+      - main
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
   deploy:
+    name: Deploy Revenue Worker
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required secrets
+        id: secrets_check
+        run: |
+          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN not set — skipping edge worker deploy. Set in repo secrets to enable."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node
+        if: steps.secrets_check.outputs.skip != 'true'
+        uses: actions/setup-node@v4
         with:
-          version: '10.28.2'
-          run_install: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Deploy with Wrangler
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          secrets: |
-            NEXT_PUBLIC_SUPABASE_URL
-            SUPABASE_SERVICE_ROLE_KEY
+          node-version: '22'
+
+      - name: Install wrangler
+        if: steps.secrets_check.outputs.skip != 'true'
+        run: npm install -g wrangler@latest
+
+      - name: Upload secrets
+        if: steps.secrets_check.outputs.skip != 'true'
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "${{ secrets.SUPABASE_URL }}" | wrangler secret put SUPABASE_URL --name authichain-revenue-worker
+          echo "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" | wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name authichain-revenue-worker
+          echo "${{ secrets.STRIPE_SECRET_KEY }}" | wrangler secret put STRIPE_SECRET_KEY --name authichain-revenue-worker
+          echo "${{ secrets.STRIPE_WEBHOOK_SECRET }}" | wrangler secret put STRIPE_WEBHOOK_SECRET --name authichain-revenue-worker
+          echo "${{ secrets.STRIPE_PRICE_BASIC }}" | wrangler secret put STRIPE_PRICE_BASIC --name authichain-revenue-worker
+          echo "${{ secrets.STRIPE_PRICE_PRO }}" | wrangler secret put STRIPE_PRICE_PRO --name authichain-revenue-worker
+          echo "${{ secrets.STRIPE_PRICE_ENTERPRISE }}" | wrangler secret put STRIPE_PRICE_ENTERPRISE --name authichain-revenue-worker
+
+      - name: Deploy worker
+        if: steps.secrets_check.outputs.skip != 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy api/worker.ts --name authichain-revenue-worker --compatibility-date 2024-01-01
+
+      - name: Deploy skipped
+        if: steps.secrets_check.outputs.skip == 'true'
+        run: echo "Edge worker deploy skipped — configure CLOUDFLARE_API_TOKEN in GitHub repo secrets."
