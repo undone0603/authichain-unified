@@ -51,6 +51,9 @@ jobs:
           echo "${{ secrets.STRIPE_PRICE_BASIC }}" | wrangler secret put STRIPE_PRICE_BASIC --name authichain-revenue-worker
           echo "${{ secrets.STRIPE_PRICE_PRO }}" | wrangler secret put STRIPE_PRICE_PRO --name authichain-revenue-worker
           echo "${{ secrets.STRIPE_PRICE_ENTERPRISE }}" | wrangler secret put STRIPE_PRICE_ENTERPRISE --name authichain-revenue-worker
+      - name: Create dist/public placeholder
+        if: steps.secrets_check.outputs.skip != 'true'
+        run: mkdir -p dist/public
 
       - name: Deploy worker
         if: steps.secrets_check.outputs.skip != 'true'
