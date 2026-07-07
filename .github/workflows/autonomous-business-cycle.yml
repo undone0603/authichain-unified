@@ -1,0 +1,89 @@
+name: Autonomous Business Cycle (Vercel Cron backup)
+
+# Vercel Cron reliability for this project's plan tier can't be verified from
+# CI, and a prior audit (PR #438, 2026-07-01) found zero production hits to
+# any of these paths despite vercel.json declaring them. This workflow is a
+# redundant trigger: it calls the same endpoints on the same UTC schedule
+# vercel.json declares, authenticated with CRON_SECRET. If Vercel's own cron
+# is working, these calls are harmless duplicates (handlers should be
+# idempotent). If Vercel's cron is silently dead, this is what keeps the
+# business running: lead-nurture drip, dunning, retention, affiliate/founder
+# payouts, GovChain sync, competitive monitoring, subscription health.
+#
+# Setup required (one-time, founder action):
+#   1. Set CRON_SECRET in the Vercel project's environment variables.
+#   2. Add the SAME value as a GitHub Actions repo secret named CRON_SECRET.
+#   3. Optionally set APP_URL as a repo variable if the canonical domain
+#      isn't https://authichain.com.
+# Until CRON_SECRET is set as a repo secret, the job below skips gracefully.
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # pipeline
+    - cron: '0 3 * * *'   # subscription-health-check
+    - cron: '0 5 * * *'   # customer-health-score
+    - cron: '0 6 * * *'   # automation/cron
+    - cron: '0 6 * * 1'   # competitive-monitor (Mondays)
+    - cron: '0 7 * * *'   # govchain
+    - cron: '0 8 * * *'   # dunning-escalation
+    - cron: '0 9 * * *'   # retention
+    - cron: '0 9 1 * *'   # founder-payout (1st of month)
+    - cron: '0 10 * * *'  # trial-reminder
+  workflow_dispatch: {}
+
+concurrency:
+  group: autonomous-business-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
+
+jobs:
+  run-due-cron-paths:
+    name: Call all cron paths (backup trigger)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip if CRON_SECRET not configured yet
+        id: check
+        run: |
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "CRON_SECRET repo secret not set — skipping (see workflow header for setup steps)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Call every cron path (safe no-ops if not due / already run by Vercel)
+        if: steps.check.outputs.skip == 'false'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -uo pipefail
+          paths=(
+            "/api/cron/pipeline"
+            "/api/automation/cron"
+            "/api/cron/jobs?job=subscription-health-check"
+            "/api/cron/jobs?job=customer-health-check"
+            "/api/cron/govchain"
+            "/api/cron/jobs?job=dunning-escalation"
+            "/api/cron/retention"
+            "/api/trial-reminder"
+            "/api/cron/jobs?job=founder-payout"
+            "/api/cron/competitive-monitor"
+          )
+          fail=0
+          for p in "${paths[@]}"; do
+            url="${APP_URL}${p}"
+            code=$(curl -s -o /tmp/resp.txt -w '%{http_code}' -X POST "$url" -H "Authorization: Bearer ${CRON_SECRET}")
+            if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+              echo "OK  [$code] $p"
+            else
+              echo "ERR [$code] $p"
+              cat /tmp/resp.txt
+              fail=1
+            fi
+          done
+          exit $fail
