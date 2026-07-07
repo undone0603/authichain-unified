@@ -10,23 +10,31 @@ export const STRIPE_CONFIG = {
 };
 
 /**
- * Stripe Price IDs — set these after creating products in Stripe Dashboard.
+ * Stripe Price IDs — canonical IDs from Stripe Dashboard.
  * Map: plan_id -> Stripe Price ID (monthly recurring)
+ * Fallback to actual price IDs if env vars not set.
  */
 export const STRIPE_PRICE_IDS: Record<string, string> = {
-  authichain_basic: process.env.STRIPE_PRICE_BASIC ?? '',
-  authichain_pro: process.env.STRIPE_PRICE_PRO ?? '',
-  authichain_enterprise: process.env.STRIPE_PRICE_ENTERPRISE ?? '',
+  authichain_basic: process.env.STRIPE_PRICE_BASIC ?? 'price_1TqPJfGqTruSqV8TAjbmz3jw',
+  authichain_pro: process.env.STRIPE_PRICE_PRO ?? 'price_1TqPNvGqTruSqV8TirjBDQiY',
+  authichain_enterprise: process.env.STRIPE_PRICE_ENTERPRISE ?? 'price_1TqPR8GqTruSqV8T5UvdFJ2q',
 };
+
+// Stripe Product IDs (for reference / metadata)
+export const STRIPE_PRODUCT_IDS: Record<string, string> = {
+  authichain_basic: 'prod_Uq5UN8KH4jK7iZ',
+  authichain_pro: 'prod_Uq5ZuyAvjO09wl',
+  authichain_enterprise: 'prod_Uq5cMaGKff2j5y',
+};
+
+// Webhook destination
+export const STRIPE_WEBHOOK_URL = 'https://authichain.com/api/stripe/webhook';
+export const STRIPE_WEBHOOK_DESTINATION_ID = 'we_1TqPVPGqTruSqV8Tg6AIYbsb';
 
 // Lazy singleton — safe in serverless / edge environments
 let _stripe: Stripe | null = null;
-
 export function getStripe(): Stripe {
   if (!_stripe) {
-    if (!STRIPE_CONFIG.secret_key) {
-      throw new Error('STRIPE_SECRET_KEY env var is not set');
-    }
     _stripe = new Stripe(STRIPE_CONFIG.secret_key, {
       apiVersion: STRIPE_CONFIG.api_version,
     });
@@ -34,17 +42,13 @@ export function getStripe(): Stripe {
   return _stripe;
 }
 
-/**
- * Resolves a plan_id to its Stripe Price ID.
- * Throws if the mapping is missing (misconfigured env).
- */
-export function getPriceId(plan_id: string): string {
-  const priceId = STRIPE_PRICE_IDS[plan_id];
-  if (!priceId) {
-    throw new Error(
-      `No Stripe Price ID configured for plan_id: ${plan_id}. ` +
-      `Set STRIPE_PRICE_${plan_id.toUpperCase().replace('AUTHICHAIN_', '')} env var.`,
-    );
-  }
-  return priceId;
+export function getPriceIdForPlan(planId: string): string {
+  const id = STRIPE_PRICE_IDS[planId];
+  if (!id) throw new Error(`Unknown plan: ${planId}`);
+  return id;
+}
+
+export function getPlanFromPriceId(priceId: string): string | null {
+  const entry = Object.entries(STRIPE_PRICE_IDS).find(([, v]) => v === priceId);
+  return entry ? entry[0] : null;
 }
