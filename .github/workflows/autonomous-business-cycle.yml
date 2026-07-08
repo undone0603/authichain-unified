@@ -77,7 +77,7 @@ jobs:
           fail=0
           for p in "${paths[@]}"; do
             url="${APP_URL}${p}"
-            code=$(curl -s -o /tmp/resp.txt -w '%{http_code}' -X POST "$url" -H "Authorization: Bearer ${CRON_SECRET}")
+            code=$(curl -s -o /tmp/resp.txt -w '%{http_code}' -X GET "$url" -H "Authorization: Bearer ${CRON_SECRET}")
             if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
               echo "OK  [$code] $p"
             else
