@@ -39,8 +39,8 @@ jobs:
       - name: Validate Supabase connectivity
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "apikey: ${SUPABASE_SERVICE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             "${SUPABASE_URL}/rest/v1/")
           if [ "$STATUS" != "200" ]; then
             echo "❌ Supabase unreachable (HTTP $STATUS)"
@@ -49,7 +49,7 @@ jobs:
           echo "✅ Supabase reachable (HTTP $STATUS)"
         env:
           SUPABASE_URL:        ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
   # ── Phase 1: Ingest SAM.gov ────────────────────────────────────────────────
   ingest:

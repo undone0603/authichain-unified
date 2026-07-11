@@ -19,7 +19,7 @@ on:
         required: false
       SUPABASE_URL:
         required: true
-      SUPABASE_SERVICE_KEY:
+      SUPABASE_SERVICE_ROLE_KEY:
         required: true
       AIRTABLE_API_KEY:
         required: true
@@ -49,7 +49,7 @@ jobs:
           GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
           MISTRAL_API_KEY:      ${{ secrets.MISTRAL_API_KEY }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           AIRTABLE_API_KEY:     ${{ secrets.AIRTABLE_API_KEY }}
           AIRTABLE_BASE_ID:     ${{ secrets.AIRTABLE_BASE_ID }}
           GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}

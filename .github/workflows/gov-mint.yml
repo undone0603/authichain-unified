@@ -15,7 +15,7 @@ on:
         required: true
       SUPABASE_URL:
         required: true
-      SUPABASE_SERVICE_KEY:
+      SUPABASE_SERVICE_ROLE_KEY:
         required: true
       GOVCHAIN_URL:
         required: false
@@ -40,6 +40,6 @@ jobs:
           WALLET_PRIVATE_KEY:    ${{ secrets.POLYGON_PRIVATE_KEY }}
           CONTRACT_ADDRESS:      ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
           SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GOVCHAIN_URL:          ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
           DRY_RUN:               ${{ inputs.dry_run || 'false' }}
