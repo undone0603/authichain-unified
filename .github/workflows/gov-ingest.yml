@@ -11,7 +11,7 @@ on:
         required: true
       SUPABASE_URL:
         required: true
-      SUPABASE_SERVICE_KEY:
+      SUPABASE_SERVICE_ROLE_KEY:
         required: true
 
 jobs:
@@ -31,5 +31,5 @@ jobs:
         env:
           SAM_GOV_API_KEY:        ${{ secrets.SAM_API_KEY }}
           SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY:   ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           DRY_RUN:                ${{ inputs.dry_run || 'false' }}
