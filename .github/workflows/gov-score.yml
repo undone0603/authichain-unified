@@ -19,7 +19,7 @@ on:
         required: false
       SUPABASE_URL:
         required: true
-      SUPABASE_SERVICE_KEY:
+      SUPABASE_SERVICE_ROLE_KEY:
         required: true
       GOVCHAIN_URL:
         required: false
@@ -45,6 +45,6 @@ jobs:
           GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
           MISTRAL_API_KEY:      ${{ secrets.MISTRAL_API_KEY }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
           DRY_RUN:              ${{ inputs.dry_run || 'false' }}

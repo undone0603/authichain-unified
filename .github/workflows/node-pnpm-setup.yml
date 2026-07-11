@@ -12,7 +12,7 @@ on:
     secrets:
       SUPABASE_URL:
         required: false
-      SUPABASE_SERVICE_KEY:
+      SUPABASE_SERVICE_ROLE_KEY:
         required: false
 
 jobs:
