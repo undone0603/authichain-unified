@@ -2,7 +2,7 @@
  * CRM Events — high-level event handlers that translate revenue events
  * into CRM contact + deal operations.
  */
-import { crmClient } from './client';
+import { crmPost } from './client';
 
 // ---------------------------------------------------------------------------
 // onNewSubscription
@@ -16,14 +16,14 @@ export async function onNewSubscription(params: {
   mrr_usd: number;
 }): Promise<void> {
   // 1. Upsert CRM contact
-  await crmClient.upsertContact({
+  await crmPost('/contacts/upsert', {
     email: params.email,
     stripe_customer_id: params.stripe_customer_id,
     domain: params.brand,
   });
 
   // 2. Create deal
-  await crmClient.createDeal({
+  await crmPost('/deals/create', {
     brand: params.brand,
     deal_type:
       params.brand === 'strainchain.io'
@@ -47,11 +47,13 @@ export async function onDispensaryBatchCreated(params: {
   dispensary_id: string;
   batch_id: string;
 }): Promise<void> {
-  await crmClient.updateDeal({
-    brand: params.brand,
-    deal_type: 'StrainChain Pilot',
-    dispensary_id: params.dispensary_id,
-    stage: 'Active',
+  await crmPost('/deals/update', {
+    filter: { brand: params.brand, deal_type: 'StrainChain Pilot' },
+    update: {
+      dispensary_id: params.dispensary_id,
+      batch_id: params.batch_id,
+      stage: 'Active',
+    },
   });
 }
 
@@ -64,10 +66,12 @@ export async function onHighValueVerification(params: {
   seal_id: string;
   scan_count: number;
 }): Promise<void> {
-  await crmClient.updateDeal({
-    brand: params.brand,
-    deal_type: 'Brand Protection',
-    scan_volume: params.scan_count,
-    stage: 'Engaged',
+  await crmPost('/deals/update', {
+    filter: { brand: params.brand, deal_type: 'Brand Protection' },
+    update: {
+      seal_id: params.seal_id,
+      scan_volume: params.scan_count,
+      stage: 'Engaged',
+    },
   });
 }

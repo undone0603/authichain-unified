@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Insert certificate row
-    const { error: dbError } = await supabase.from('certificates').insert({
+    const { error: dbError } = await getSupabase().from('certificates').insert({
       id: certificate_id,
       product_id,
       seal_id,
