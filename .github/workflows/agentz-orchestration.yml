@@ -41,6 +41,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
           GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
           HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN }}
           DRY_RUN:              ${{ inputs.dry_run || 'false' }}
 

@@ -114,6 +114,7 @@ class LimitProofLLM:
             ("openrouter-auto", self._get_openrouter),
             ("cerebras-llama3.1", self._get_cerebras),
             ("deepseek-chat", self._get_deepseek),
+            ("claude-3-5-sonnet", self._get_claude),
             ("local-lmstudio", self._get_lmstudio),
             ("local-ollama", self._get_ollama),
         ]
@@ -162,9 +163,18 @@ class LimitProofLLM:
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
+    def _get_claude(self):
+        from langchain_anthropic import ChatAnthropic
+        api_key = get("anthropic_api_key", required=False) or os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key: raise RuntimeError("Missing Anthropic Key")
+        llm = ChatAnthropic(
+            model="claude-3-5-sonnet-20241022", temperature=self.temperature, anthropic_api_key=api_key
+        )
+        return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
+
     def _get_lmstudio(self):
         llm = ChatOpenAI(
-            model="local-model", temperature=self.temperature, api_key="not-needed",
+            model="mistralai/mistral-7b-instruct-v0.3", temperature=self.temperature, api_key="not-needed",
             base_url="http://localhost:1234/v1", max_retries=0
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
