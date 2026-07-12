@@ -108,7 +108,7 @@
     "resend": "^6.12.3",
     "sonner": "^1.5.0",
     "streamdown": "^2.5.0",
-    "stripe": "^22.1.1",
+    "stripe": "^22.3.1",
     "superjson": "^2.2.6",
     "tailwind-merge": "^2.5.2",
     "thirdweb": "^5.120.0",
