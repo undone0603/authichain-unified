@@ -19,6 +19,10 @@
     {
       "source": "/gov",
       "destination": "https://govchain.us"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
