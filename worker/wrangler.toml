@@ -1,9 +1,6 @@
-name = "authichain-sync-worker"
+name = "qron-ai-api"
 main = "index.ts"
 compatibility_date = "2024-01-01"
-
-[triggers]
-crons = ["0 * * * *"]
 
 [vars]
 GITHUB_REPO = "undone0603/authichain-unified"
