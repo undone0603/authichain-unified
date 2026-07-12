@@ -20,6 +20,8 @@ on:
     - cron: '0 9 1 * *'   # founder-payout (1st of month)
     - cron: '0 10 * * *'  # trial-reminder
     - cron: '0 11 * * *'  # live-systems-check
+    - cron: '0 12 * * *'  # token-metrics
+    - cron: '0 13 * * *'  # ecosystem-health
   workflow_dispatch: {}
 
 concurrency:
@@ -65,6 +67,8 @@ jobs:
             "/api/cron/jobs?job=founder-payout"
             "/api/cron/competitive-monitor"
             "/api/cron/jobs?job=live-systems-check"
+            "/api/cron/jobs?job=token-metrics"
+            "/api/cron/jobs?job=ecosystem-health"
           )
           fail=0
           for p in "${paths[@]}"; do

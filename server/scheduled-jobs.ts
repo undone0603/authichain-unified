@@ -754,6 +754,55 @@ registerJob({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 16: Token Metrics Snapshot (runs daily) — real on-chain $QRON supply,
+// block number, and gas price via raw Polygon RPC. workers/authichain-chain-data
+// serves this on-demand but nothing tracked it as a historical trend.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "token-metrics",
+  description: "Snapshot on-chain $QRON supply/block/gas metrics for trend tracking",
+  schedule: "0 12 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runTokenMetrics } = await import("./jobs/token-metrics");
+    const snapshot = await runTokenMetrics();
+    return { itemsProcessed: 1, details: snapshot };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 17: Ecosystem Health Check (runs daily) — external uptime check across
+// the four live customer-facing domains (authichain.com, qron.space,
+// strainchain.io, govchain.us) plus a $QRON on-chain liveness check.
+// Distinct from live-systems-check, which only checks internal SaaS
+// integrations (Stripe/HubSpot/etc) — this checks the actual public sites.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "ecosystem-health",
+  description: "External uptime check across all product domains + on-chain token liveness",
+  schedule: "0 13 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runEcosystemHealthCheck } = await import("./jobs/ecosystem-health");
+    const result = await runEcosystemHealthCheck();
+    if (result.overallStatus === "DEGRADED") {
+      try {
+        await notifyOwner({
+          title: "Ecosystem health check: domain(s) down",
+          content: `${result.domainsHealthy}/${result.domainsTotal} domains healthy. ${result.domains
+            .filter((d) => !d.healthy)
+            .map((d) => `${d.name} (${d.url}): ${d.error ?? `HTTP ${d.status}`}`)
+            .join("; ")}`,
+        });
+      } catch {
+        // Non-fatal — notification failure must not fail the check itself.
+      }
+    }
+    return { itemsProcessed: result.domainsTotal, details: result };
+  },
+});
+
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
 
 let _systemActive = true;
