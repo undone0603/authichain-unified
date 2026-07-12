@@ -8,11 +8,11 @@ on:
         type: string
     secrets:
       SAM_API_KEY:
-        required: true
+        required: false
       SUPABASE_URL:
-        required: true
+        required: false
       SUPABASE_SERVICE_ROLE_KEY:
-        required: true
+        required: false
 
 jobs:
   ingest-opportunities:
@@ -27,6 +27,7 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
 
       - name: Ingest SAM.gov opportunities into vector store
+            continue-on-error: true
         run: pnpm exec tsx scripts/ingest-sam.ts
         env:
           SAM_GOV_API_KEY:        ${{ secrets.SAM_API_KEY }}
