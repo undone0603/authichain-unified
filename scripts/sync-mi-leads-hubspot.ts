@@ -28,7 +28,8 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-const CSV_FILE = path.join(process.cwd(), "authichain-unified", "scripts", "mi_cannabis_leads.csv");
+// Resolve relative to this script so it works from any cwd (CI runs from the repo root).
+const CSV_FILE = path.join(import.meta.dirname, "mi_cannabis_leads.csv");
 
 async function runSync() {
   console.log("🟠 Starting HubSpot CRM Lead Sync...");
