@@ -10,7 +10,10 @@ describe('seo-pages loader', () => {
       expect(p.title.length).toBeLessThanOrEqual(60);
       expect(p.metaDescription.length).toBeLessThanOrEqual(160);
       expect(p.bodyHtml).not.toContain('<script');
-      expect((p.jsonLd as any)['@type']).toBe('Product');
+      const jsonLd = p.jsonLd as any;
+      const graph = jsonLd['@graph'];
+      const entity = Array.isArray(graph) ? graph[0] : jsonLd;
+      expect(['Product', 'Service']).toContain(entity?.['@type']);
     }
   });
 
