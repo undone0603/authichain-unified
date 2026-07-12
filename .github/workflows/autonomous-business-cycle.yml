@@ -50,8 +50,7 @@ jobs:
           fi
 
       - name: Call every cron path (safe no-ops if not due / already run by Vercel)
-            continue-on-error: true
-        if: steps.check.outputs.skip == 'false'
+      if: steps.check.outputs.skip == 'false'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
