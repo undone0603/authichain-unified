@@ -1,5 +1,33 @@
 name: Autonomous Business Cycle (Vercel Cron backup)
 
+# Redundant trigger for the same paths vercel.json declares as Vercel Cron
+# jobs, authenticated with CRON_SECRET. If Vercel's cron is silently dead,
+# this is what keeps the business running: lead-nurture drip, dunning,
+# retention, affiliate/founder payouts, GovChain sync, competitive
+# monitoring, subscription health. Until CRON_SECRET is set as a repo
+# secret, the job below skips gracefully.
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # pipeline
+    - cron: '0 3 * * *'   # subscription-health-check
+    - cron: '0 5 * * *'   # customer-health-score
+    - cron: '0 6 * * *'   # automation/cron
+    - cron: '0 6 * * 1'   # competitive-monitor (Mondays)
+    - cron: '0 7 * * *'   # govchain
+    - cron: '0 8 * * *'   # dunning-escalation
+    - cron: '0 9 * * *'   # retention
+    - cron: '0 9 1 * *'   # founder-payout (1st of month)
+    - cron: '0 10 * * *'  # trial-reminder
+    - cron: '0 11 * * *'  # live-systems-check
+    - cron: '0 12 * * *'  # token-metrics
+    - cron: '0 13 * * *'  # ecosystem-health
+  workflow_dispatch: {}
+
+concurrency:
+  group: autonomous-business-cycle
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -31,13 +59,16 @@ jobs:
             "/api/cron/pipeline"
             "/api/automation/cron"
             "/api/cron/jobs?job=subscription-health-check"
-            "/api/cron/jobs?job=customer-health-check"
+            "/api/cron/jobs?job=customer-health-score"
             "/api/cron/govchain"
             "/api/cron/jobs?job=dunning-escalation"
             "/api/cron/retention"
             "/api/trial-reminder"
             "/api/cron/jobs?job=founder-payout"
             "/api/cron/competitive-monitor"
+            "/api/cron/jobs?job=live-systems-check"
+            "/api/cron/jobs?job=token-metrics"
+            "/api/cron/jobs?job=ecosystem-health"
           )
           fail=0
           for p in "${paths[@]}"; do
