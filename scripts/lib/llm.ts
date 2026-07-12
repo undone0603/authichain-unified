@@ -11,7 +11,13 @@
 //                                     fallback when 70B's daily limit is hit
 //   4. Claude Haiku (Anthropic)     — $0.25/MTok, separate rate limit pool from Gemini
 //   5. Gemini Flash (latest)        — free tier
-//   6. Mistral open-mixtral-8x7b    — free tier
+//   6. HF router Llama-3.3-70B      — free monthly credits (HUGGINGFACE_API_KEY)
+//   7. Mistral open-mixtral-8x7b    — free tier
+//
+// A provider that fails hard is skipped so later calls don't re-pay its
+// retry/backoff cost: auth errors disable it for the rest of the process,
+// quota 429s put it on a short cooldown (Gemini uses the same wording for
+// per-minute rate limits and daily caps).
 //
 // Enable a provider by setting its env var. Missing keys are silently skipped.
 // Groq 70B and 8B both use GROQ_API_KEY but consume separate rate-limit pools,
@@ -38,6 +44,18 @@ type Provider = {
 const MAX_ATTEMPTS_PER_PROVIDER = 3;
 // Exponential backoff (ms) with jitter added on top.
 const BACKOFF_SCHEDULE_MS = [2000, 5000, 10000];
+
+// Circuit breaker: providers that failed hard are skipped instead of
+// re-eating their retry/backoff budget on every chat() call (~18s per call
+// when OpenAI is out of quota).
+//  - Auth errors (bad key) never recover within a run -> disabled forever.
+//  - Quota 429s get a cooldown, not a permanent ban: Gemini uses the same
+//    "exceeded your current quota" wording for per-minute rate limits (which
+//    recover in seconds) and daily caps (which don't).
+const providerCooldown = new Map<string, { until: number; reason: string }>();
+const AUTH_ERROR_RE = /invalid_api_key|authentication|unauthorized|\b401\b|\b403\b/i;
+const QUOTA_ERROR_RE = /insufficient_quota|exceeded your current quota|check your plan and billing/i;
+const QUOTA_COOLDOWN_MS = 120_000;
 
 let warnedSkippedProviders = false;
 
@@ -73,7 +91,8 @@ const providers: Provider[] = [
     enabled: () => !!process.env.OPENAI_API_KEY,
     run: async ({ messages, jsonMode, temperature, maxTokens, openaiModel }) => {
       const { default: OpenAI } = await import('openai');
-      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      // The cascade owns retry logic; the SDK's internal retries only add latency.
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 });
       const res = await client.chat.completions.create({
         model: openaiModel ?? 'gpt-4o-mini',
         messages,
@@ -153,6 +172,33 @@ const providers: Provider[] = [
     },
   },
   {
+    // Hugging Face Inference Providers router (OpenAI-compatible). Uses the
+    // HUGGINGFACE_API_KEY that already exists as a repo secret; free monthly
+    // inference credits make this a working fallback when Gemini rate-limits.
+    name: 'huggingface:llama-3.3-70b',
+    enabled: () => !!(process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN),
+    run: async ({ messages, jsonMode, temperature, maxTokens }) => {
+      const key = process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN;
+      const res = await fetch('https://router.huggingface.co/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'meta-llama/Llama-3.3-70B-Instruct',
+          messages,
+          temperature: temperature ?? 0.2,
+          max_tokens: maxTokens,
+          response_format: jsonMode ? { type: 'json_object' } : undefined,
+        }),
+      });
+      if (!res.ok) throw new Error(`HuggingFace ${res.status} ${(await res.text()).slice(0, 200)}`);
+      const json = (await res.json()) as any;
+      return json.choices?.[0]?.message?.content ?? '';
+    },
+  },
+  {
     name: 'mistral:open-mixtral-8x7b',
     enabled: () => !!process.env.MISTRAL_API_KEY,
     run: async ({ messages, jsonMode, temperature, maxTokens }) => {
@@ -180,10 +226,15 @@ const providers: Provider[] = [
 export async function chat(
   options: ChatOptions
 ): Promise<{ content: string; provider: string }> {
-  const enabled = providers.filter((p) => p.enabled());
+  const now = Date.now();
+  const enabled = providers.filter(
+    (p) => p.enabled() && (providerCooldown.get(p.name)?.until ?? 0) <= now
+  );
   if (enabled.length === 0) {
+    const dead = [...providerCooldown.entries()].map(([n, e]) => `${n}: ${e.reason}`).join('\n  - ');
     throw new Error(
-      'No LLM providers configured. Set at least one of: OPENAI_API_KEY, GROQ_API_KEY, GEMINI_API_KEY, MISTRAL_API_KEY.'
+      'No usable LLM providers. Set at least one of: OPENAI_API_KEY, GROQ_API_KEY, GEMINI_API_KEY, HUGGINGFACE_API_KEY, MISTRAL_API_KEY.' +
+        (dead ? `\nProviders currently disabled after hard failures:\n  - ${dead}` : '')
     );
   }
 
@@ -204,14 +255,30 @@ export async function chat(
         return { content, provider: p.name };
       } catch (err: any) {
         const msg = err?.message || String(err);
-        const transient = /429|rate.?limit|quota|5\d{2}|timeout|ETIMEDOUT|ECONNRESET/i.test(msg);
         errors.push(`${p.name} (try ${attempt + 1}): ${msg.slice(0, 160)}`);
+        // Bad key never recovers within a run: disable the provider outright.
+        if (AUTH_ERROR_RE.test(msg)) {
+          providerCooldown.set(p.name, { until: Infinity, reason: msg.slice(0, 120) });
+          console.warn(`⚠️  Disabling provider ${p.name} for this run (auth error).`);
+          break;
+        }
+        const quota = QUOTA_ERROR_RE.test(msg);
+        const transient = /429|rate.?limit|5\d{2}|timeout|ETIMEDOUT|ECONNRESET/i.test(msg);
         // Only retry on transient errors, and only if we have attempts left.
-        if (transient && attempt < MAX_ATTEMPTS_PER_PROVIDER - 1) {
+        if (transient && !quota && attempt < MAX_ATTEMPTS_PER_PROVIDER - 1) {
           const base = BACKOFF_SCHEDULE_MS[attempt] ?? 10000;
           const jitter = Math.random() * 500;
           await new Promise((r) => setTimeout(r, base + jitter));
           continue;
+        }
+        // Quota-style 429s (OpenAI billing, Gemini per-minute/daily caps) fail
+        // fast and cool the provider down instead of burning the retry budget.
+        if (quota) {
+          providerCooldown.set(p.name, {
+            until: Date.now() + QUOTA_COOLDOWN_MS,
+            reason: msg.slice(0, 120),
+          });
+          console.warn(`⚠️  Cooling down provider ${p.name} for ${QUOTA_COOLDOWN_MS / 1000}s (quota).`);
         }
         break;
       }
