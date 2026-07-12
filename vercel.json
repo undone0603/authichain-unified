@@ -1,6 +1,7 @@
 {
   "version": 2,
   "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
   "installCommand": "pnpm install --no-frozen-lockfile",
   "crons": [
     { "path": "/api/cron/pipeline",                           "schedule": "0 0 * * *" },
