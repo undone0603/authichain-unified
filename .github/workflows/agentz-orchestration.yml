@@ -64,9 +64,9 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
           # sync-mi-leads-hubspot.ts reads HUBSPOT_SERVICE_KEY; without it the
-          # sync "succeeds" as a silent no-op.
-          HUBSPOT_SERVICE_KEY:  ${{ secrets.HUBSPOT_SERVICE_KEY || secrets.HUBSPOT_ACCESS_TOKEN }}
-          HUBSPOT_SERVICE_KEY:  ${{ secrets.HUBSPOT_SERVICE_KEY || secrets.HUBSPOT_TOKEN }}
+          # sync "succeeds" as a silent no-op. HUBSPOT_ACCESS_TOKEN is the only
+          # HubSpot secret that actually exists in this repo.
+          HUBSPOT_SERVICE_KEY:  ${{ secrets.HUBSPOT_SERVICE_KEY || secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
           AIRTABLE_API_KEY:     ${{ secrets.AIRTABLE_API_KEY }}
           AIRTABLE_BASE_ID:     ${{ secrets.AIRTABLE_BASE_ID }}
           DRY_RUN:              ${{ inputs.dry_run || 'false' }}
