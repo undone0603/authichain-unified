@@ -69,6 +69,11 @@ vi.mock('./hubspot-service.js', () => ({
   isHubSpotConfigured:  vi.fn().mockReturnValue(false),
 }));
 
+vi.mock('./outreach/send-guard.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./outreach/send-guard.js')>();
+  return { ...actual, domainAcceptsMail: vi.fn().mockResolvedValue(true) };
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeTask(kind: string, payload: Record<string, unknown> = {}): MissionTask {
@@ -226,6 +231,7 @@ describe('runOutboundEmail', () => {
     const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', sequence: 1, leadEmail: 'lead@gov.com', leadName: 'Alice', leadOrg: 'GovCorp',
+      verificationSource: 'apollo_verified',
     }));
 
     expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: 'lead@gov.com' }));
@@ -284,7 +290,7 @@ describe('runOutboundEmail', () => {
 
     const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
-      segment: 'GOV', leadEmail: 'a@b.com',
+      segment: 'GOV', leadEmail: 'a@b.com', verificationSource: 'apollo_verified',
     }));
 
     expect(logActivity).toHaveBeenCalledWith(

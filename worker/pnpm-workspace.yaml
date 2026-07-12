@@ -1,0 +1,8 @@
+# Marks this directory as its own pnpm workspace root. Without this, `pnpm
+# install` run from inside worker/ silently walks up to the repo root's
+# pnpm-workspace.yaml and installs the ROOT project's dependencies instead of
+# this Worker's own (hono, wrangler, etc.) — which is what broke the
+# qron-ai-api Cloudflare Workers Build (hono was never installed, and
+# esbuild/wrangler failed to resolve it).
+packages:
+  - "."

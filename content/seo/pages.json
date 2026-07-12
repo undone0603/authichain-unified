@@ -908,7 +908,7 @@
     "keyword": "product authentication for government supply chain",
     "brand": "GovChain",
     "domain": "govchain.us",
-    "title": "Product Authentication For Government Supply Chain | GovChain",
+    "title": "Government Supply Chain Product Authentication | GovChain",
     "metaDescription": "Authenticate goods across government supply chains with on-chain proof of origin, custody, and delivery that auditors can verify without a vendor call.",
     "h1": "Product Authentication For Government Supply Chain",
     "bodyHtml": "<p>Authenticate goods across government supply chains with on-chain proof of origin, custody, and delivery that auditors can verify without a vendor call.</p><h2>Why GovChain</h2><ul><li>On-chain proof of custody and delivery</li><li>FAR / SAM.gov-aligned records</li><li>Auditor self-service verification</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Can auditors verify independently?</h3><p>Yes — verification is self-service against the public record, no vendor gatekeeping.</p><h3>Is it procurement-ready?</h3><p>GovChain is designed around federal procurement and traceability requirements.</p>",

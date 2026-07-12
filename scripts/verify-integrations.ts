@@ -53,7 +53,7 @@ async function main() {
   });
 
   // --- Supabase QRON (service_role) ---
-  await run('Supabase QRON (service_role)', ['SUPABASE_SERVICE_KEY'], async () => {
+  await run('Supabase QRON (service_role)', ['SUPABASE_SERVICE_ROLE_KEY'], async () => {
     const { getSupabaseAdmin } = await import('../libs/integrations/supabase');
     const sb = getSupabaseAdmin();
     // listUsers with page size 1 — safe, admin-only read
