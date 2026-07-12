@@ -74,7 +74,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "cookie": "^1.1.1",
-    "crisp-api": "^10.10.2",
+    "crisp-api": "^10.10.6",
     "date-fns": "^4.4.0",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.45.2",
