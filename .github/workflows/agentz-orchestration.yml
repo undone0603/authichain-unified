@@ -42,7 +42,7 @@ jobs:
           OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
           GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
-          HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN }}
+          HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
           DRY_RUN:              ${{ inputs.dry_run || 'false' }}
 
   # ── Phase 2: Sync MI cannabis leads to HubSpot ──────────────────────────────
@@ -62,7 +62,10 @@ jobs:
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN }}
+          HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
+          # sync-mi-leads-hubspot.ts reads HUBSPOT_SERVICE_KEY; without it the
+          # sync "succeeds" as a silent no-op.
+          HUBSPOT_SERVICE_KEY:  ${{ secrets.HUBSPOT_SERVICE_KEY || secrets.HUBSPOT_ACCESS_TOKEN }}
           HUBSPOT_SERVICE_KEY:  ${{ secrets.HUBSPOT_SERVICE_KEY || secrets.HUBSPOT_TOKEN }}
           AIRTABLE_API_KEY:     ${{ secrets.AIRTABLE_API_KEY }}
           AIRTABLE_BASE_ID:     ${{ secrets.AIRTABLE_BASE_ID }}
@@ -85,7 +88,7 @@ jobs:
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN }}
+          HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
           DRY_RUN:              ${{ inputs.dry_run || 'false' }}
 
