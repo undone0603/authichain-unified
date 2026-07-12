@@ -726,14 +726,16 @@ registerJob({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// JOB 15: Live Systems Check (runs every 6 hours) — pings Stripe/HubSpot/
-// Gmail/PostHog/GA4 with real API calls and reports which revenue-critical
+// JOB 15: Live Systems Check (runs daily) — pings Stripe/HubSpot/Gmail/
+// PostHog/GA4 with real API calls and reports which revenue-critical
 // integrations are actually configured and reachable right now.
+// Daily, not more frequent: the Vercel Cron trigger for this job is on the
+// Hobby plan, which rejects any schedule that fires more than once a day.
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "live-systems-check",
   description: "Verify revenue-critical integrations (Stripe, HubSpot, Gmail, PostHog, GA4) are live",
-  schedule: "0 */6 * * *",
+  schedule: "0 11 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
     const { runLiveSystemsCheck } = await import("./jobs/live-systems-check");

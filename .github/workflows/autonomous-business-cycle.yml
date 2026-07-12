@@ -19,7 +19,7 @@ on:
     - cron: '0 9 * * *'   # retention
     - cron: '0 9 1 * *'   # founder-payout (1st of month)
     - cron: '0 10 * * *'  # trial-reminder
-    - cron: '0 */6 * * *' # live-systems-check
+    - cron: '0 11 * * *'  # live-systems-check
   workflow_dispatch: {}
 
 concurrency:
