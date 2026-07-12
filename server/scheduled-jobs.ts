@@ -725,6 +725,33 @@ registerJob({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 15: Live Systems Check (runs every 6 hours) — pings Stripe/HubSpot/
+// Gmail/PostHog/GA4 with real API calls and reports which revenue-critical
+// integrations are actually configured and reachable right now.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "live-systems-check",
+  description: "Verify revenue-critical integrations (Stripe, HubSpot, Gmail, PostHog, GA4) are live",
+  schedule: "0 */6 * * *",
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const { runLiveSystemsCheck } = await import("./jobs/live-systems-check");
+    const result = await runLiveSystemsCheck();
+    if (!result.ready) {
+      try {
+        await notifyOwner({
+          title: "Live systems check: blockers found",
+          content: `Blocked integrations: ${result.blockers.join(", ")}`,
+        });
+      } catch {
+        // Non-fatal — notification failure must not fail the check itself.
+      }
+    }
+    return { itemsProcessed: 1, details: result };
+  },
+});
+
 // ─── Global Kill Switch ─────────────────────────────────────────────────────
 
 let _systemActive = true;

@@ -13,7 +13,8 @@
     { "path": "/api/cron/retention",                          "schedule": "0 9 * * *" },
     { "path": "/api/trial-reminder",                          "schedule": "0 10 * * *" },
     { "path": "/api/cron/jobs?job=founder-payout",            "schedule": "0 9 1 * *" },
-    { "path": "/api/cron/competitive-monitor",               "schedule": "0 6 * * 1" }
+    { "path": "/api/cron/competitive-monitor",               "schedule": "0 6 * * 1" },
+    { "path": "/api/cron/jobs?job=live-systems-check",        "schedule": "0 */6 * * *" }
   ],
   "rewrites": [
     {

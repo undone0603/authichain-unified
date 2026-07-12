@@ -19,6 +19,7 @@ on:
     - cron: '0 9 * * *'   # retention
     - cron: '0 9 1 * *'   # founder-payout (1st of month)
     - cron: '0 10 * * *'  # trial-reminder
+    - cron: '0 */6 * * *' # live-systems-check
   workflow_dispatch: {}
 
 concurrency:
@@ -63,6 +64,7 @@ jobs:
             "/api/trial-reminder"
             "/api/cron/jobs?job=founder-payout"
             "/api/cron/competitive-monitor"
+            "/api/cron/jobs?job=live-systems-check"
           )
           fail=0
           for p in "${paths[@]}"; do
