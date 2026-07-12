@@ -54,6 +54,7 @@ CRED_KEY_TO_ENV = {
     "polygon_rpc_url":      "POLYGON_RPC_URL",
     "polygon_private_key":  "POLYGON_PRIVATE_KEY",
     "deepseek_api_key":      "DEEPSEEK_API_KEY",
+    "anthropic_api_key":     "ANTHROPIC_API_KEY",
     "pi_api_key":            "PI_API_KEY",
     "cerebras_api_key":      "CEREBRAS_API_KEY",
     # ── Ollama ──

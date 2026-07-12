@@ -85,11 +85,14 @@ Generate a detailed lead scoring breakdown (JSON only) with four dimensions (eac
 }
 
 async function qualifyLeads(): Promise<{ qualified: number; failed: number; total: number }> {
-  // Fetch all opportunities with fit_score >= threshold and status='scored'
+  // Fetch high-fit opportunities not yet qualified. Qualification is tracked via
+  // qualified_at (not status) so this pipeline never competes with
+  // generate-proposals.ts, which consumes status='scored'.
   const { data: opps, error } = await supabase
     .from('gov_opportunities')
     .select('*')
-    .eq('status', 'scored')
+    .in('status', ['scored', 'proposal_drafted'])
+    .is('qualified_at', null)
     .gte('fit_score', FIT_THRESHOLD)
     .order('fit_score', { ascending: false })
     .limit(20);
@@ -145,12 +148,11 @@ async function qualifyLeads(): Promise<{ qualified: number; failed: number; tota
           continue;
         }
 
-        // Mark opportunity as qualified
+        // Mark opportunity as qualified (leaves lifecycle status untouched)
         const { error: updateError } = await supabase
           .from('gov_opportunities')
           .update({
-            status: 'qualified',
-            scored_at: new Date().toISOString(),
+            qualified_at: new Date().toISOString(),
           })
           .eq('notice_id', opp.notice_id);
 
