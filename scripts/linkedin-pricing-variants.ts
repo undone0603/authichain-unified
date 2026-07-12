@@ -220,7 +220,7 @@ export const pricingVariants: Record<string, PricingVariant> = {
 export async function seedLinkedInAndPricingVariants(testId: number, variantType: 'linkedin' | 'pricing' | 'all' = 'all') {
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
   console.log(`\n📊 Seeding variants for test #${testId}...`);
