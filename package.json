@@ -81,7 +81,7 @@
     "embla-carousel-react": "^8.6.0",
     "ethers": "^6.16.0",
     "express": "^5.2.1",
-    "framer-motion": "^11.3.30",
+    "framer-motion": "^12.42.2",
     "helmet": "^8.2.0",
     "input-otp": "^1.4.2",
     "jimp": "^1.6.1",
