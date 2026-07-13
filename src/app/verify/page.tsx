@@ -11,8 +11,10 @@ import {
   Sparkles,
   ScanLine,
   Clock,
+  Bitcoin,
 } from 'lucide-react';
 import { verifyHash, type QRVerificationRecord } from '../../../server/_core/verification';
+import { getInscriptionStatus } from '../../../server/ordinals-service';
 
 interface PageProps {
   searchParams: Promise<{ id?: string; hash?: string }>;
@@ -31,13 +33,18 @@ export default async function VerifyPage({ searchParams }: PageProps) {
 
   const { data: product, error: productError } = await supabase
     .from('products')
-    .select('id, name, brand, category, description, imageUrl, status, serialNumber, manufacturer, metadata, createdAt')
+    .select('id, name, brand, category, description, imageUrl, status, serialNumber, manufacturer, metadata, createdAt, blockchainTxHash')
     .eq('id', productId)
     .single();
 
   if (productError || !product) {
     return <ErrorState message="Product not found on AuthiChain registry." />;
   }
+
+  const INSCRIPTION_ID_RE = /^[0-9a-f]{64}i\d+$/i;
+  const ordinalStatus = product.blockchainTxHash && INSCRIPTION_ID_RE.test(product.blockchainTxHash)
+    ? await getInscriptionStatus(product.blockchainTxHash).catch(() => null)
+    : null;
 
   const { data: qrRows } = await supabase
     .from('qr_codes')
@@ -177,6 +184,37 @@ export default async function VerifyPage({ searchParams }: PageProps) {
             </div>
           </div>
         </div>
+
+        {/* Bitcoin Ordinals Proof */}
+        {ordinalStatus && (
+          <div className={`protocol-card p-6 mb-8 ${ordinalStatus.status === 'pending' ? 'border-zinc-700/40' : 'border-amber-500/20 bg-amber-500/5'}`}>
+            <div className="flex items-center gap-3 mb-4">
+              <Bitcoin className="w-4 h-4 text-amber-400" />
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                Bitcoin Ordinals Proof
+              </h3>
+            </div>
+            {ordinalStatus.status === 'pending' ? (
+              <p className="text-zinc-400 text-sm">
+                Inscription submitted — confirmation pending on the Bitcoin network.
+              </p>
+            ) : (
+              <>
+                <p className="text-amber-300 text-sm font-bold mb-3">
+                  This product's authenticity record is permanently inscribed on Bitcoin L1.
+                </p>
+                <a
+                  href={`https://ordinals.com/inscription/${product.blockchainTxHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-xs text-amber-400 hover:underline break-all"
+                >
+                  {product.blockchainTxHash}
+                </a>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Storymode Narrative */}
         {(() => {

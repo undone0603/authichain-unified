@@ -37,6 +37,7 @@ const GrowthEngine = lazy(() => import("./pages/GrowthEngine"));
 const Blockchain = lazy(() => import("./pages/Blockchain"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const CRM = lazy(() => import("./pages/CRM"));
+const ExecutiveAssistant = lazy(() => import("./pages/ExecutiveAssistant"));
 const HeyGen = lazy(() => import("./pages/HeyGen"));
 const Macrohard = lazy(() => import("./pages/Macrohard"));
 const CharacterDashboard = lazy(() => import("./pages/CharacterDashboard"));
@@ -79,6 +80,7 @@ function DashboardRoutes() {
           <WRoute path="/blockchain" component={Blockchain} />
           <WRoute path="/notifications" component={Notifications} />
           <WRoute path="/crm" component={CRM} />
+          <WRoute path="/executive-assistant" component={ExecutiveAssistant} />
           <WRoute path="/heygen" component={HeyGen} />
           <WRoute path="/macrohard" component={Macrohard} />
           <WRoute path="/character" component={CharacterDashboard} />
