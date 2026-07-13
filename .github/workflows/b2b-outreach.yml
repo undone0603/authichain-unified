@@ -67,7 +67,7 @@ jobs:
         run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
         env:
           SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY:        ${{ secrets.RESEND_API_KEY }}
           APOLLO_API_KEY:        ${{ secrets.APOLLO_API_KEY }}
           HUBSPOT_TOKEN:         ${{ secrets.HUBSPOT_TOKEN }}
@@ -83,7 +83,7 @@ jobs:
         run: pnpm exec tsx -e "import { flushQueuedLeads } from './scripts/b2b-cold-outreach.ts'; flushQueuedLeads().then(n => console.log('Flushed', n, 'leads'));"
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
           OUTREACH_FROM_EMAIL:  ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
           CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}

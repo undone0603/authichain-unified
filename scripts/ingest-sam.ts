@@ -8,7 +8,7 @@ const isDryRun = process.env.DRY_RUN === 'true';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 // Pinecone is optional — Supabase is the source of truth for downstream

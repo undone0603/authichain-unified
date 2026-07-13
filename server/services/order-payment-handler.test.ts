@@ -5,6 +5,7 @@ vi.mock("../db", () => ({
   updateServiceOrderStatus: vi.fn(),
   logActivity: vi.fn(),
   createSystemNotification: vi.fn(),
+  recordRevenue: vi.fn(),
 }));
 
 import * as db from "../db";
@@ -60,6 +61,19 @@ describe("handleServiceOrderPayment", () => {
       "success",
       "/orders",
     );
+    expect(db.recordRevenue).toHaveBeenCalledWith({
+      source: "stripe",
+      amount: "199.00",
+      currency: "USD",
+      type: "service_order",
+      userId: 7,
+      metadata: {
+        sessionId: "cs_test_001",
+        orderId: 42,
+        serviceType: "authenticity_audit",
+        stripePaymentIntentId: "pi_test_xyz",
+      },
+    });
   });
 
   it("skips notification when the order has no associated user", async () => {
@@ -80,6 +94,9 @@ describe("handleServiceOrderPayment", () => {
     expect(db.updateServiceOrderStatus).toHaveBeenCalled();
     expect(db.logActivity).toHaveBeenCalled();
     expect(db.createSystemNotification).not.toHaveBeenCalled();
+    expect(db.recordRevenue).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: "99.00", userId: null }),
+    );
   });
 
   it("is idempotent — ignores an already-paid order without side effects", async () => {
@@ -100,5 +117,6 @@ describe("handleServiceOrderPayment", () => {
     expect(db.updateServiceOrderStatus).not.toHaveBeenCalled();
     expect(db.logActivity).not.toHaveBeenCalled();
     expect(db.createSystemNotification).not.toHaveBeenCalled();
+    expect(db.recordRevenue).not.toHaveBeenCalled();
   });
 });

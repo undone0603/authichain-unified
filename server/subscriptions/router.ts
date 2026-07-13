@@ -18,7 +18,13 @@ export const subscriptionsRouter = router({
     const sub = await db.getUserSubscription(ctx.user.id);
     return sub ?? null;
   }),
-  create: protectedProcedure.input(z.object({
+  // Admin-only: grants a subscription without going through Stripe/Paddle checkout
+  // (e.g. complimentary/partner accounts). Paying customers are activated by the
+  // billing webhooks (server/webhooks/stripe.ts, server/paddle/webhook.ts) once
+  // payment is confirmed — this endpoint must never be reachable by a plain user,
+  // or anyone could grant themselves a free paid plan.
+  create: adminProcedure.input(z.object({
+    userId: z.number(),
     plan: z.enum(["starter", "professional", "enterprise", "medtech"]),
     billingCycle: z.enum(["monthly", "annual"]).optional().default("monthly"),
   })).mutation(async ({ ctx, input }) => {
@@ -29,12 +35,12 @@ export const subscriptionsRouter = router({
       medtech: SUBSCRIPTION_PLANS.medtech.monthlyQuota,
     };
     const result = await db.createSubscription({
-      userId: ctx.user.id, plan: input.plan as any, monthlyQuota: quotas[input.plan] ?? 0,
+      userId: input.userId, plan: input.plan as any, monthlyQuota: quotas[input.plan] ?? 0,
       usedQuota: 0, billingCycle: input.billingCycle, status: "active",
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + (input.billingCycle === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000),
     });
-    await db.logActivity({ userId: ctx.user.id, action: "subscription_created", entityType: "subscription", entityId: result.id });
+    await db.logActivity({ userId: ctx.user.id, action: "subscription_granted_by_admin", entityType: "subscription", entityId: result.id, details: { grantedTo: input.userId, plan: input.plan } });
     return result;
   }),
   invoices: protectedProcedure.query(async ({ ctx }) => {
