@@ -61,6 +61,7 @@ const adminMenuItems = [
   { icon: TrendingUp, label: "Growth Engine", path: "/growth" },
   { icon: Users, label: "Manage Users", path: "/admin/users" },
   { icon: DollarSign, label: "CRM (HubSpot)", path: "/crm" },
+  { icon: Sparkles, label: "Executive Assistant", path: "/executive-assistant" },
   { icon: Video, label: "AI Avatar Videos", path: "/heygen" },
   { icon: Cpu, label: "MACROHARD", path: "/macrohard" },
   { icon: Activity, label: "Network Stats", path: "/network-stats" },

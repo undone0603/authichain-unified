@@ -112,34 +112,32 @@ async def get_lead_contact_info(deal_id: str) -> Optional[Dict[str, str]]:
         logger.error(f"Failed to fetch contact info for deal {deal_id}: {e}")
     return None
 
-async def get_deal_notes(deal_id: str) -> str:
-    """
-    Fetches engagement notes associated with a deal.
-    """
+async def add_deal_note(deal_id: str, content: str) -> bool:
+    """Creates a note and associates it with a deal."""
     token = get("hubspot_token")
-    if not token: 
-        return "Mock note: Client expressed interest in pilot expansion."
-
-    headers = {"Authorization": f"Bearer {token}"}
+    if not token: return False
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    
+    note_payload = {
+        "properties": {
+            "hs_note_body": content,
+            "hs_timestamp": "2026-07-12T12:00:00Z" # Simple fallback timestamp
+        },
+        "associations": [
+            {
+                "to": {"id": deal_id},
+                "types": [{"associationCategory": "HUBSPOT_DEFINED", "associationTypeId": 214}]
+            }
+        ]
+    }
+    
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.get(f"https://api.hubapi.com/crm/v3/objects/deals/{deal_id}/associations/notes", headers=headers)
-            if r.status_code == 200:
-                note_ids = [res["id"] for res in r.json().get("results", [])]
-                if not note_ids: return ""
-                
-                notes_text = []
-                for nid in note_ids[:5]:
-                    r2 = await client.get(f"https://api.hubapi.com/crm/v3/objects/notes/{nid}?properties=hs_note_body", headers=headers)
-                    if r2.status_code == 200:
-                        body = r2.json().get("properties", {}).get("hs_note_body", "")
-                        notes_text.append(body)
-                
-                return "\n---\n".join(notes_text)
+            r = await client.post("https://api.hubapi.com/crm/v3/objects/notes", headers=headers, json=note_payload)
+            return r.status_code == 201
     except Exception as e:
-        logger.error(f"Failed to fetch notes for deal {deal_id}: {e}")
-    
-    return ""
+        logger.error(f"Failed to add note to deal {deal_id}: {e}")
+        return False
 
 async def prioritize_leads_by_sentiment(deals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
