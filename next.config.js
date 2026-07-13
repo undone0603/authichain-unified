@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
-import { withSentryConfig } from "@sentry/nextjs";
+// Sentry is optional: @sentry/nextjs is not a dependency yet (zero-budget),
+// and `next build` must not fail when it's absent. If the SDK is installed
+// later, the wrapper activates automatically.
+let withSentryConfig = (config, _opts) => config;
+try {
+  ({ withSentryConfig } = await import("@sentry/nextjs"));
+} catch {
+  // SDK not installed — export the config unwrapped.
+}
 
 // A production-safe CSP that:
 //   - Allows 'unsafe-eval' for bundled JS (Vite/Rollup source maps, WalletConnect, etc.)

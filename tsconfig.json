@@ -65,6 +65,9 @@
     "server/src/**/*",
     "server/scripts/**/*",
     "app/**/*",
-    "src/db/qron_schema.ts"
+    "src/db/qron_schema.ts",
+    "sentry.client.config.ts",
+    "sentry.edge.config.ts",
+    "sentry.server.config.ts"
   ]
 }
