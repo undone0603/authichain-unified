@@ -22,18 +22,28 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           API_KEY: ${{ secrets.API_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          if [ -z "$API_KEY" ]; then
-            echo "::warning::API_KEY secret is empty - skipping sync"
-            exit 0
-          fi
-          # Remove existing env var if it exists, then re-add with current value
-          vercel env rm API_KEY production \
-            --token="$VERCEL_TOKEN" \
-            --scope="$VERCEL_ORG_ID" \
-            --yes 2>/dev/null || true
-          echo "$API_KEY" | vercel env add API_KEY production \
-            --token="$VERCEL_TOKEN" \
-            --scope="$VERCEL_ORG_ID" \
-            --yes
-          echo "API_KEY synced to Vercel production environment"
+          # Push each GitHub secret to the Vercel production env.
+          # Vercel Cron reads CRON_SECRET from the project env and sends it as
+          # the Bearer token, and the API routes validate against the same var —
+          # so GitHub's value is the source of truth for both sides once synced.
+          sync_var() {
+            local name="$1" value="$2"
+            if [ -z "$value" ]; then
+              echo "::warning::$name secret is empty - skipping sync"
+              return 0
+            fi
+            # Remove existing env var if it exists, then re-add with current value
+            vercel env rm "$name" production \
+              --token="$VERCEL_TOKEN" \
+              --scope="$VERCEL_ORG_ID" \
+              --yes 2>/dev/null || true
+            printf '%s' "$value" | vercel env add "$name" production \
+              --token="$VERCEL_TOKEN" \
+              --scope="$VERCEL_ORG_ID" \
+              --yes
+            echo "$name synced to Vercel production environment"
+          }
+          sync_var API_KEY "$API_KEY"
+          sync_var CRON_SECRET "$CRON_SECRET"
