@@ -117,6 +117,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@types/node": "^22.5.0",
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
