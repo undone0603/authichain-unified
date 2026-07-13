@@ -22,7 +22,43 @@ type Provider = {
   run: (text: string) => Promise<number[]>;
 };
 
+// Local LM Studio embeddings (zero-budget primary). One network failure or
+// timeout marks the local server dead for the rest of the process so a hung
+// server doesn't stall every embed call.
+let localEmbedDead = false;
+
 const providers: Provider[] = [
+  {
+    name: 'local:nomic-embed-text-v1.5',
+    enabled: () => !!process.env.LOCAL_MODEL_URL && !localEmbedDead,
+    run: async (text) => {
+      let base = (process.env.LOCAL_MODEL_URL ?? '').replace(/\/+$/, '');
+      if (base && !/\/v1$/.test(base)) base += '/v1';
+      try {
+        const res = await fetch(`${base}/embeddings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: process.env.LOCAL_EMBED_MODEL_ID || 'text-embedding-nomic-embed-text-v1.5',
+            input: text,
+          }),
+          signal: AbortSignal.timeout(Number(process.env.LOCAL_MODEL_TIMEOUT_MS ?? 60_000)),
+        });
+        if (!res.ok) throw new Error(`Local ${res.status} ${(await res.text()).slice(0, 200)}`);
+        const json = (await res.json()) as any;
+        const vec = json.data?.[0]?.embedding;
+        if (!Array.isArray(vec)) throw new Error(`Local malformed: ${JSON.stringify(json).slice(0, 200)}`);
+        return vec;
+      } catch (err: any) {
+        const msg = err?.message || String(err);
+        if (/ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|fetch failed|abort|timed?\s?out|TimeoutError/i.test(msg)) {
+          localEmbedDead = true;
+          console.warn('⚠️  Local embedding server unreachable/hung — disabled for this run.');
+        }
+        throw err;
+      }
+    },
+  },
   {
     name: 'openai:text-embedding-3-small',
     enabled: () => !!process.env.OPENAI_API_KEY,

@@ -100,23 +100,25 @@ class LLMProxy:
 
 class LimitProofLLM:
     """
-    Indestructible LLM wrapper that implements a Waterfall Failover Strategy:
-    GPT-4o -> Gemini Pro -> Cerebras -> DeepSeek -> LM Studio -> Ollama.
+    Indestructible LLM wrapper that implements a Waterfall Failover Strategy.
+    Zero-budget order: local models first, free cloud tiers next, paid APIs
+    (OpenAI / OpenRouter / DeepSeek / Anthropic) only as a last resort.
     """
     def __init__(self, temperature: float = 0.0):
         self.temperature = temperature
         self._tools = []
         self._bind_kwargs = {}
-        
+
         self.providers = [
-            ("gpt-4o", self._get_openai),
-            ("gemini-2.0-flash", self._get_gemini),
-            ("openrouter-auto", self._get_openrouter),
-            ("cerebras-llama3.1", self._get_cerebras),
-            ("deepseek-chat", self._get_deepseek),
-            ("claude-3-5-sonnet", self._get_claude),
             ("local-lmstudio", self._get_lmstudio),
+            ("local-lmstudio-fallback", self._get_lmstudio_fallback),
             ("local-ollama", self._get_ollama),
+            ("gemini-2.0-flash", self._get_gemini),
+            ("cerebras-llama3.1", self._get_cerebras),
+            ("openrouter-auto", self._get_openrouter),
+            ("deepseek-chat", self._get_deepseek),
+            ("gpt-4o", self._get_openai),
+            ("claude-3-5-sonnet", self._get_claude),
         ]
 
     @property
@@ -172,10 +174,26 @@ class LimitProofLLM:
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
+    @staticmethod
+    def _local_base_url() -> str:
+        base = os.environ.get("LOCAL_MODEL_URL", "http://localhost:1234").rstrip("/")
+        if not base.endswith("/v1"):
+            base += "/v1"
+        return base
+
     def _get_lmstudio(self):
         llm = ChatOpenAI(
-            model="mistralai/mistral-7b-instruct-v0.3", temperature=self.temperature, api_key="not-needed",
-            base_url="http://localhost:1234/v1", max_retries=0
+            model=os.environ.get("LOCAL_MODEL_ID", "google/gemma-4-e4b"),
+            temperature=self.temperature, api_key="not-needed",
+            base_url=self._local_base_url(), max_retries=0, timeout=120
+        )
+        return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
+
+    def _get_lmstudio_fallback(self):
+        llm = ChatOpenAI(
+            model=os.environ.get("LOCAL_MODEL_ID_FALLBACK", "nvidia/nemotron-3-nano-4b"),
+            temperature=self.temperature, api_key="not-needed",
+            base_url=self._local_base_url(), max_retries=0, timeout=120
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
