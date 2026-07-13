@@ -10,11 +10,9 @@ import asyncio
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.grants import draft_federal_proposal, save_proposal
 from agentz.core.grants_pipeline import qualified_opportunities, status_of, update_status
-from agentz.core.llm import lm_manager
 
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
     try:
         ctx.step("🎖️ --- INITIALIZING FEDERAL RFP CAPTURE MACHINE --- 🎖️")
 
@@ -66,5 +64,3 @@ def run(ctx: ExecutionContext) -> str:
             f"Federal Capture complete: {drafted} drafted, {skipped} already in pipeline, "
             f"{len(opportunities)} qualified total."
         )
-    finally:
-        lm_manager.unload_model("local-model")

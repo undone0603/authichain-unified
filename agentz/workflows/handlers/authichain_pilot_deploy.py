@@ -15,12 +15,10 @@ from agentz.core.media import generate_story_mode
 from agentz.core.trust import monitor_scans
 from agentz.core.growth import reward_repeat_scans
 from agentz.core.pages import generate_living_page_config, publish_living_page
-from agentz.core.llm import lm_manager
 
 from supabase import create_client, Client
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -96,5 +94,3 @@ def run(ctx: ExecutionContext) -> str:
         )
         
         return f"Pilot successfully deployed for {top_pilot.get('name')}. QR: {qr_id}, Product: {product_id}"
-    finally:
-        lm_manager.unload_model("local-model")

@@ -12,10 +12,8 @@ from agentz.core.redemption import burn_qron_for_discount
 from agentz.core.analytics import publish_index_to_web
 from supabase import create_client, Client
 
-from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -64,5 +62,3 @@ def run(ctx: ExecutionContext) -> str:
         ctx.step(f"   -> Industry Leader: {index[0]['industry']} ({index[0]['avg_score']}%)")
         
         return "Terminal ecosystem evolutions operationalized. Kill chain is active."
-    finally:
-        lm_manager.unload_model("local-model")

@@ -8,11 +8,9 @@ import asyncio
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.credentials import get_or_placeholder
 from agentz.core.seo import update_platform_sitemaps, ping_indexnow
-from agentz.core.llm import lm_manager
 from supabase import create_client, Client
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -45,5 +43,3 @@ def run(ctx: ExecutionContext) -> str:
             )
             
         return "SEO Optimization complete. All platforms verified, sitemaps generated, and IndexNow pinged."
-    finally:
-        lm_manager.unload_model("local-model")
