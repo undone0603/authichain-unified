@@ -179,8 +179,8 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1
       crisp-api:
-        specifier: ^10.10.2
-        version: 10.10.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+        specifier: ^10.10.6
+        version: 10.10.6(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       date-fns:
         specifier: ^4.4.0
         version: 4.4.0
@@ -5563,8 +5563,8 @@ packages:
     engines: {node: '>=0.8'}
     hasBin: true
 
-  crisp-api@10.10.2:
-    resolution: {integrity: sha512-5FCNUt0J1SU2Om2QzwmJXL+bTlUrQt238F8s3g2lel3mVq6RW615I7wxnT08UaDY7VTvqNyhXDHE4a3jpn6zlw==}
+  crisp-api@10.10.6:
+    resolution: {integrity: sha512-tWSjCXGOZ51DKWEsNdJJ7rLt7Oe/wo7/3/O+HuU6iSbWsD9/dhx7pMVVyLIUt1uT5zfgo0OuSB9SZePlVYwAdQ==}
     engines: {node: '>= 16.0.0'}
 
   cross-fetch@3.2.0:
@@ -5791,6 +5791,15 @@ packages:
 
   debug@4.3.4:
     resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
+    engines: {node: '>=6.0'}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+
+  debug@4.3.7:
+    resolution: {integrity: sha512-Er2nc/H7RrMXZBFCEim6TCmMk02Z8vLC2Rbi1KEBggpo0fS6l0S1nnapwmIi3yW/+GOJap1Krg4w0Hg80oCqgQ==}
     engines: {node: '>=6.0'}
     peerDependencies:
       supports-color: '*'
@@ -15983,7 +15992,7 @@ snapshots:
 
   crc-32@1.2.2: {}
 
-  crisp-api@10.10.2(bufferutil@4.1.0)(utf-8-validate@5.0.10):
+  crisp-api@10.10.6(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     dependencies:
       got: 11.8.5
       mitt: 3.0.1
@@ -16247,6 +16256,10 @@ snapshots:
     dependencies:
       ms: 2.1.2
 
+  debug@4.3.7:
+    dependencies:
+      ms: 2.1.3
+
   debug@4.4.3:
     dependencies:
       ms: 2.1.3
@@ -16411,7 +16424,7 @@ snapshots:
   engine.io-client@6.5.4(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.3.4
+      debug: 4.3.7
       engine.io-parser: 5.2.3
       ws: 8.18.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       xmlhttprequest-ssl: 2.0.0
@@ -19662,7 +19675,7 @@ snapshots:
   socket.io-client@4.7.2(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.3.4
+      debug: 4.3.7
       engine.io-client: 6.5.4(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       socket.io-parser: 4.2.6
     transitivePeerDependencies:
