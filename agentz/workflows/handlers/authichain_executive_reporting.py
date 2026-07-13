@@ -15,10 +15,8 @@ from agentz.core.reports import (
     save_report,
     get_llm
 )
-from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
     try:
         ctx.step("--- EXECUTIVE REPORTING: SCALE-UP PHASE ---")
         
@@ -94,5 +92,3 @@ def run(ctx: ExecutionContext) -> str:
         ctx.step(f"Merchant ROI Report saved to: {path_roi}")
         
         return f"Executive reporting complete. 3 high-fidelity documents generated for {city} and {brand}."
-    finally:
-        lm_manager.unload_model("local-model")

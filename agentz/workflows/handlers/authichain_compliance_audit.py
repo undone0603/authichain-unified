@@ -19,7 +19,6 @@ from agentz.core.compliance import (
     run_global_compliance_audit,
 )
 from agentz.core.credentials import get_or_placeholder
-from agentz.core.llm import lm_manager
 from agentz.core.modes import ExecutionContext, Mode
 
 
@@ -31,7 +30,6 @@ def run(ctx: ExecutionContext) -> str:
     # Only load the local model if we explicitly requested it, preventing Errno 111 in the cloud
     if use_local_model:
         try:
-            lm_manager.load_model("local-model")
         except Exception as e:
             ctx.step(f"Warning: Local model could not be loaded: {e}")
 
@@ -89,10 +87,3 @@ def run(ctx: ExecutionContext) -> str:
             f"DPP audit run against {len(requirements)} field(s); "
             f"{compliant}/{len(results)} compliant, {len(flagged)} flagged."
         )
-    finally:
-        # Only attempt to unload if we tried to load it
-        if use_local_model:
-            try:
-                lm_manager.unload_model("local-model")
-            except Exception:
-                pass
