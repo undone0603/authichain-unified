@@ -7,9 +7,10 @@ email follow-up for Authichain, and queues it or sends via Gmail.
 import httpx
 from agentz.core.modes import ExecutionContext
 from agentz.core.credentials import get_or_placeholder, get
-from agentz.core.llm import get_llm
+from agentz.core.llm import get_llm, lm_manager
 
 def run(ctx: ExecutionContext) -> str:
+    lm_manager.load_model("local-model")
     try:
         token = get_or_placeholder("hubspot_token", ctx)
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -106,3 +107,5 @@ def run(ctx: ExecutionContext) -> str:
                 ctx.step(f"Failed to send email: {res}")
             
         return f"Sent {sent} Authichain follow-up emails"
+    finally:
+        lm_manager.unload_model("local-model")
