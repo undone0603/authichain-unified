@@ -6,3 +6,7 @@
 # esbuild/wrangler failed to resolve it).
 packages:
   - "."
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true
