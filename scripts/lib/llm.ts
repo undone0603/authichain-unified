@@ -4,15 +4,17 @@
 // / auth errors / missing keys. All providers support JSON mode when
 // `jsonMode: true` is requested.
 //
-// Provider order is cost-optimized for the gov-engine pipeline:
-//   1. OpenAI                       — best quality, paid
-//   2. Groq llama-3.3-70b-versatile — FREE, ~100k tokens/day, fastest inference
-//   3. Groq llama-3.1-8b-instant    — FREE, ~500k tokens/day (separate bucket),
-//                                     fallback when 70B's daily limit is hit
-//   4. Claude Haiku (Anthropic)     — $0.25/MTok, separate rate limit pool from Gemini
+// Provider order is zero-budget-first: local model, then free tiers, then
+// paid APIs only as a last resort (the startup runs on $0 until sales).
+//   1. Local gemma-4-e4b            — FREE, LOCAL_MODEL_URL (LM Studio)
+//   2. Local nemotron-3-nano-4b     — FREE, same server, fallback model
+//   3. Groq llama-3.3-70b-versatile — FREE, ~100k tokens/day, fastest inference
+//   4. Groq llama-3.1-8b-instant    — FREE, ~500k tokens/day (separate bucket)
 //   5. Gemini Flash (latest)        — free tier
 //   6. HF router Llama-3.3-70B      — free monthly credits (HUGGINGFACE_API_KEY)
 //   7. Mistral open-mixtral-8x7b    — free tier
+//   8. OpenAI                       — PAID, last resort
+//   9. Claude Haiku (Anthropic)     — PAID, last resort
 //
 // A provider that fails hard is skipped so later calls don't re-pay its
 // retry/backoff cost: auth errors disable it for the rest of the process,
@@ -85,53 +87,63 @@ function makeGroqProvider(model: string): Provider {
   };
 }
 
-const providers: Provider[] = [
-  {
-    name: 'openai',
-    enabled: () => !!process.env.OPENAI_API_KEY,
-    run: async ({ messages, jsonMode, temperature, maxTokens, openaiModel }) => {
-      const { default: OpenAI } = await import('openai');
-      // The cascade owns retry logic; the SDK's internal retries only add latency.
-      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 });
-      const res = await client.chat.completions.create({
-        model: openaiModel ?? 'gpt-4o-mini',
-        messages,
-        temperature: temperature ?? 0.2,
-        max_tokens: maxTokens,
-        response_format: jsonMode ? { type: 'json_object' } : undefined,
+// Local OpenAI-compatible server (LM Studio). Free and unlimited, so it runs
+// first. This LM Studio build rejects response_format json_object, so JSON
+// mode is enforced by instruction plus fence-stripping. A hung local server
+// is a real observed failure mode — every request carries a hard timeout, and
+// network failures disable the provider for the rest of the run (see chat()).
+function localModelBase(): string {
+  let base = (process.env.LOCAL_MODEL_URL ?? '').replace(/\/+$/, '');
+  if (base && !/\/v1$/.test(base)) base += '/v1';
+  return base;
+}
+const LOCAL_MODEL_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_TIMEOUT_MS ?? 120_000);
+
+// Two local entries against the same server (mirrors the two-Groq-model
+// pattern): if the primary model fails to load or misbehaves, the fallback
+// model gets a shot. A server-level failure (unreachable/hung) disables every
+// local: entry at once in chat().
+function makeLocalProvider(displayName: string, envKey: string, defaultModel: string): Provider {
+  return {
+    name: `local:${displayName}`,
+    enabled: () => !!process.env.LOCAL_MODEL_URL,
+    run: async ({ messages, jsonMode, temperature, maxTokens }) => {
+      const msgs = jsonMode
+        ? [
+            {
+              role: 'system' as const,
+              content: 'Respond with ONLY valid JSON. No markdown fences, no commentary.',
+            },
+            ...messages,
+          ]
+        : messages;
+      const res = await fetch(`${localModelBase()}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: process.env[envKey] || defaultModel,
+          messages: msgs,
+          temperature: temperature ?? 0.2,
+          max_tokens: maxTokens,
+        }),
+        signal: AbortSignal.timeout(LOCAL_MODEL_TIMEOUT_MS),
       });
-      return res.choices[0]?.message?.content ?? '';
+      if (!res.ok) throw new Error(`Local ${res.status} ${(await res.text()).slice(0, 200)}`);
+      const json = (await res.json()) as any;
+      let content: string = json.choices?.[0]?.message?.content ?? '';
+      if (jsonMode) {
+        content = content.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '');
+      }
+      return content;
     },
-  },
+  };
+}
+
+const providers: Provider[] = [
+  makeLocalProvider('gemma-4-e4b', 'LOCAL_MODEL_ID', 'google/gemma-4-e4b'),
+  makeLocalProvider('nemotron-3-nano-4b', 'LOCAL_MODEL_ID_FALLBACK', 'nvidia/nemotron-3-nano-4b'),
   makeGroqProvider('llama-3.3-70b-versatile'),
   makeGroqProvider('llama-3.1-8b-instant'),
-  {
-    name: 'anthropic:claude-haiku-4-5',
-    enabled: () => !!process.env.ANTHROPIC_API_KEY,
-    run: async ({ messages, jsonMode, temperature, maxTokens }) => {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': process.env.ANTHROPIC_API_KEY!,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: maxTokens ?? 1024,
-          temperature: temperature ?? 0.2,
-          system: messages.find((m) => m.role === 'system')?.content,
-          messages: messages
-            .filter((m) => m.role !== 'system')
-            .map((m) => ({ role: m.role, content: m.content })),
-          ...(jsonMode ? { system: (messages.find((m) => m.role === 'system')?.content ?? '') + '\nRespond with valid JSON only.' } : {}),
-        }),
-      });
-      if (!res.ok) throw new Error(`Anthropic ${res.status} ${(await res.text()).slice(0, 200)}`);
-      const json = (await res.json()) as any;
-      return json.content?.[0]?.text ?? '';
-    },
-  },
   {
     name: 'google:gemini-flash-latest',
     enabled: () => !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
@@ -221,6 +233,51 @@ const providers: Provider[] = [
       return json.choices?.[0]?.message?.content ?? '';
     },
   },
+  // ── Paid providers: last resort only (zero-budget policy) ─────────────────
+  {
+    name: 'openai',
+    enabled: () => !!process.env.OPENAI_API_KEY,
+    run: async ({ messages, jsonMode, temperature, maxTokens, openaiModel }) => {
+      const { default: OpenAI } = await import('openai');
+      // The cascade owns retry logic; the SDK's internal retries only add latency.
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 });
+      const res = await client.chat.completions.create({
+        model: openaiModel ?? 'gpt-4o-mini',
+        messages,
+        temperature: temperature ?? 0.2,
+        max_tokens: maxTokens,
+        response_format: jsonMode ? { type: 'json_object' } : undefined,
+      });
+      return res.choices[0]?.message?.content ?? '';
+    },
+  },
+  {
+    name: 'anthropic:claude-haiku-4-5',
+    enabled: () => !!process.env.ANTHROPIC_API_KEY,
+    run: async ({ messages, jsonMode, temperature, maxTokens }) => {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': process.env.ANTHROPIC_API_KEY!,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: maxTokens ?? 1024,
+          temperature: temperature ?? 0.2,
+          system: messages.find((m) => m.role === 'system')?.content,
+          messages: messages
+            .filter((m) => m.role !== 'system')
+            .map((m) => ({ role: m.role, content: m.content })),
+          ...(jsonMode ? { system: (messages.find((m) => m.role === 'system')?.content ?? '') + '\nRespond with valid JSON only.' } : {}),
+        }),
+      });
+      if (!res.ok) throw new Error(`Anthropic ${res.status} ${(await res.text()).slice(0, 200)}`);
+      const json = (await res.json()) as any;
+      return json.content?.[0]?.text ?? '';
+    },
+  },
 ];
 
 export async function chat(
@@ -256,6 +313,25 @@ export async function chat(
       } catch (err: any) {
         const msg = err?.message || String(err);
         errors.push(`${p.name} (try ${attempt + 1}): ${msg.slice(0, 160)}`);
+        if (p.name.startsWith('local:')) {
+          if (/ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|fetch failed/i.test(msg)) {
+            // Server unreachable: every local entry shares it — disable them all.
+            for (const lp of providers) {
+              if (lp.name.startsWith('local:')) {
+                providerCooldown.set(lp.name, { until: Infinity, reason: msg.slice(0, 120) });
+              }
+            }
+            console.warn('⚠️  Local model server unreachable — disabling all local providers for this run.');
+            break;
+          }
+          if (/abort|timed?\s?out|TimeoutError/i.test(msg)) {
+            // Timeout may be model-specific (JIT load hang): disable only this
+            // entry so the fallback local model still gets a shot.
+            providerCooldown.set(p.name, { until: Infinity, reason: msg.slice(0, 120) });
+            console.warn(`⚠️  Disabling provider ${p.name} for this run (request timed out).`);
+            break;
+          }
+        }
         // Bad key never recovers within a run: disable the provider outright.
         if (AUTH_ERROR_RE.test(msg)) {
           providerCooldown.set(p.name, { until: Infinity, reason: msg.slice(0, 120) });

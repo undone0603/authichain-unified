@@ -44,6 +44,10 @@ jobs:
           GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
           HUGGINGFACE_API_KEY:  ${{ secrets.HUGGINGFACE_API_KEY }}
+          # Reaches the founder's local model only when the tunnel URL secret
+          # points somewhere routable from CI; otherwise disabled in one fast
+          # connection error by the cascade's circuit breaker.
+          LOCAL_MODEL_URL:      ${{ secrets.LOCAL_MODEL_URL }}
           HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
           DRY_RUN:              ${{ inputs.dry_run || 'false' }}
 
