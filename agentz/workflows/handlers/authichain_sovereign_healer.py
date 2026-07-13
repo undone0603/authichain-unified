@@ -9,10 +9,12 @@ import logging
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.pulse import PulseAgent
 from agentz.workflows.handlers import vercel_fix_preset
+from agentz.core.llm import lm_manager
 
 logger = logging.getLogger("agentz.sovereign_healer")
 
 def run(ctx: ExecutionContext) -> str:
+    lm_manager.load_model("local-model")
     try:
         ctx.step("[^] --- INITIALIZING SOVEREIGN INFRASTRUCTURE HEALER --- [^]")
         
@@ -47,3 +49,5 @@ def run(ctx: ExecutionContext) -> str:
             return "Infrastructure is stable. No healing required."
         else:
             return f"Infrastructure in state '{infra_status}'. No automated recovery path defined."
+    finally:
+        lm_manager.unload_model("local-model")

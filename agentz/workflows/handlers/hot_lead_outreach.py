@@ -12,8 +12,10 @@ from agentz.core.hubspot import get_hot_leads, get_lead_contact_info
 from agentz.core.microsites import deploy_sales_microsite
 from agentz.core.social import generate_social_post
 from agentz.core.hubspot import get_hot_leads, get_lead_contact_info, prioritize_leads_by_sentiment, add_deal_note
+from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
+    lm_manager.load_model("local-model")
     try:
         ctx.step("--- REVENUE BLITZ: HOT LEAD ACTIVATION (DEEP RESEARCH) ---")
 
@@ -107,3 +109,5 @@ def run(ctx: ExecutionContext) -> str:
                 continue
             
         return f"Revenue Blitz complete. {activated} hot leads activated with deep research and custom microsites."
+    finally:
+        lm_manager.unload_model("local-model")
