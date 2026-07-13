@@ -55,6 +55,9 @@ jobs:
           for project in "$VERCEL_PROJECT_ID" "$LIVE_PROJECT_ID"; do
             sync_var "$project" API_KEY "$API_KEY"
             sync_var "$project" CRON_SECRET "$CRON_SECRET"
+            # Master switch for the autonomous business pipeline (pipeline-tick,
+            # AgentZ supervisor, cron jobs). Not a secret — plain "true".
+            sync_var "$project" AUTONOMOUS_PIPELINE_ENABLED "true"
           done
           # Env changes only apply to new deployments — redeploy the live
           # project's current production deployment so the sync takes effect.
