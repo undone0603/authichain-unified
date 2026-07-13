@@ -9,11 +9,13 @@
  */
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { checkRateLimit } from '@/lib/rate-limit';
 import {
   buildPaymentRequired, parsePaymentHeader, verifyPaymentProof,
   wouldExceedCap, usdToAtomic, dailyCapUsd, settlePayment,
 } from '@/lib/x402';
+import { onVerificationEvent } from '../../../../../server/revenue-engine/loop';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -91,12 +93,34 @@ export async function POST(request: Request) {
     workflow_name: 'x402_spend', trigger_type: 'event', status: 'success', payload: proof.payer,
   });
 
-  // 6. Do the work. TODO: call the 5-agent authenticate pipeline; stubbed for now.
+  // 6. Do the work: look the seal up against the same registry the free
+  // consumer-facing /api/verify endpoint checks (auth_seals), so a paid
+  // agent call can never return "verified" for a seal that doesn't exist.
   const input = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const sealId = (input.sealId ?? input.seal_id ?? input.productId ?? input.serial) as string | undefined;
+
+  let verified = false;
+  let details: Record<string, unknown> = {};
+  if (sealId) {
+    const admin = createAdminClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const { data: seal } = await admin.from('auth_seals').select('*').eq('id', sealId).single();
+    verified = !!seal;
+    if (seal) {
+      details = { productId: seal.product_id, batchId: seal.batch_id, brand: seal.brand, createdAt: seal.created_at };
+    }
+    await onVerificationEvent({
+      seal_id: sealId,
+      brand: (seal?.brand as string | undefined) ?? 'authichain.com',
+      scan_context: { source: 'agent-verify', payer: proof.payer },
+      status: verified ? 'valid' : 'invalid',
+    });
+  }
+
   return NextResponse.json({
-    verified: true,
-    authenticityScore: 100,
-    subject: input.productId ?? input.serial ?? null,
+    verified,
+    authenticityScore: verified ? 100 : 0,
+    subject: sealId ?? null,
+    details,
     settlement: {
       payer: proof.payer,
       amountAtomic: verification.amount.toString(),

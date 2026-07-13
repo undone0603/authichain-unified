@@ -62,6 +62,7 @@ export interface SubscriptionCreatedEvent extends BaseEvent {
   stripe_subscription_id: string;
   plan_id: string;
   email: string;
+  status: string;
   current_period_end: string;
 }
 
@@ -71,6 +72,8 @@ export interface PaymentFailedEvent extends BaseEvent {
   stripe_subscription_id: string;
   invoice_id: string;
   amount_due: number;
+  reason?: string;
+  occurred_at?: string;
 }
 
 // ---------------------------------------------------------------------------

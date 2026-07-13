@@ -60,11 +60,11 @@ async function getFunnelReport(
   daysBack: number = 30,
   filterSource?: string
 ): Promise<FunnelReport[]> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set');
+    throw new Error('SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) or SUPABASE_SERVICE_ROLE_KEY is not set');
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);

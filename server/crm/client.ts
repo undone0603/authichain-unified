@@ -19,7 +19,7 @@ function planToMrr(plan_id: string): number {
   }
 }
 
-async function crmPost(path: string, body: any): Promise<void> {
+export async function crmPost(path: string, body: any): Promise<void> {
   if (!CRM_BASE_URL) {
     console.warn(`CRM: CRM_BASE_URL not set, skipping ${path}`);
     return;
@@ -102,7 +102,8 @@ export async function emitCrmCertificateOpportunity(ev: {
 }
 
 export async function emitCrmDispensaryMetric(ev: {
-  seal_id: string;
+  dispensary_id: string;
+  batch_id: string;
   brand: string;
   scan_context: Record<string, any>;
   usage_id: string;
@@ -110,6 +111,8 @@ export async function emitCrmDispensaryMetric(ev: {
   await crmPost('/deals/update', {
     filter: { brand: ev.brand },
     update: {
+      dispensary_id: ev.dispensary_id,
+      batch_id: ev.batch_id,
       increment_dispensary_scan_volume: 1,
       last_dispensary_scan_at: new Date().toISOString(),
     },

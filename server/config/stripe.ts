@@ -2,6 +2,20 @@
 // Centralized Stripe price ID mapping for all AuthiChain brands and plans.
 // All getPriceId calls resolve from environment variables set at runtime.
 
+import Stripe from 'stripe';
+
+let _stripe: Stripe | null = null;
+
+/** Lazy singleton Stripe client — reads STRIPE_SECRET_KEY at call time (safe for edge/build). */
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('STRIPE_SECRET_KEY not configured');
+    _stripe = new Stripe(secretKey, { apiVersion: '2026-05-27.dahlia' as const });
+  }
+  return _stripe;
+}
+
 export type PlanId =
   | 'authichain_basic'
   | 'authichain_pro'

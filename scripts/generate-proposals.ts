@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { chat } from './lib/llm.ts';
 
 const isDryRun = process.env.DRY_RUN === 'true';
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const GOVCHAIN = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
 async function generateProposals(): Promise<{ generated: number; failed: number; total: number }> {

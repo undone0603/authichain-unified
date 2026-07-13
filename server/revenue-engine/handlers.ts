@@ -1,53 +1,14 @@
 // server/revenue-engine/handlers.ts
 import { emitCrmNewSubscription, emitCrmVerificationMetric, emitCrmCertificateOpportunity, emitCrmDispensaryMetric } from "../crm/client";
+import type {
+  VerificationEvent,
+  CertificateMintedEvent,
+  ScanEvent,
+  SubscriptionCreatedEvent,
+  PaymentFailedEvent,
+} from "./events";
 
-type UUID = string;
-
-export interface VerificationEvent {
-  id?: UUID;
-  seal_id: UUID;
-  brand: string;
-  status: "valid" | "invalid" | "unknown";
-  scan_context?: Record<string, any>;
-  created_at?: string;
-}
-
-export interface CertificateMintedEvent {
-  id?: UUID;
-  product_id: string;
-  seal_id: UUID;
-  rarity_score?: number;
-  polygon_nft_tx?: string;
-  brand: string;
-  created_at?: string;
-}
-
-export interface ScanEvent {
-  id?: UUID;
-  seal_id: UUID;
-  brand: string;
-  scan_context?: Record<string, any>;
-  created_at?: string;
-}
-
-export interface SubscriptionCreatedEvent {
-  stripe_customer_id: string;
-  stripe_subscription_id: string;
-  plan_id: string;
-  brand: string;
-  email: string;
-  status: string;
-  current_period_end?: string;
-}
-
-export interface PaymentFailedEvent {
-  stripe_subscription_id: string;
-  stripe_customer_id?: string;
-  brand?: string;
-  reason?: string;
-  invoice_id?: string;
-  occurred_at?: string;
-}
+export type { VerificationEvent, CertificateMintedEvent, ScanEvent, SubscriptionCreatedEvent, PaymentFailedEvent };
 
 async function supabaseInsert(table: string, row: any) {
     const SUPABASE_URL = process.env.SUPABASE_URL!;
@@ -175,7 +136,8 @@ export async function handleDispensaryScan(ev: ScanEvent) {
 
     try {
       await emitCrmDispensaryMetric({
-        seal_id: ev.seal_id,
+        dispensary_id: ev.dispensary_id,
+        batch_id: ev.batch_id,
         brand: ev.brand,
         scan_context: ev.scan_context ?? {},
         usage_id: usage[0]?.id,
@@ -189,19 +151,6 @@ export async function handleDispensaryScan(ev: ScanEvent) {
     console.error("handleDispensaryScan error:", err);
     throw err;
   }
-}
-
-export async function upsertSubscription(session: any) {
-  const ev: SubscriptionCreatedEvent = {
-    stripe_customer_id: session.customer,
-    stripe_subscription_id: session.subscription,
-    plan_id: session.metadata?.plan_id,
-    brand: session.metadata?.brand,
-    email: session.customer_details?.email || session.customer_email,
-    status: "active",
-    current_period_end: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : undefined,
-  };
-  return handleSubscriptionCreated(ev);
 }
 
 export async function handleSubscriptionCreated(ev: SubscriptionCreatedEvent) {
@@ -236,6 +185,8 @@ export async function handlePaymentFailed(ev: PaymentFailedEvent) {
     if (!ev.stripe_subscription_id) {
       console.warn("handlePaymentFailed: missing stripe_subscription_id");
     } else {
+      const SUPABASE_URL = process.env.SUPABASE_URL!;
+      const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
       const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/subscriptions?stripe_subscription_id=eq.${ev.stripe_subscription_id}`, {
         method: "PATCH",
         headers: {
