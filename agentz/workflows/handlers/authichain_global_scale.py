@@ -8,8 +8,10 @@ import asyncio
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.pi import deploy_to_pi_studio
 from agentz.core.marketing import execute_viral_campaign
+from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
+    lm_manager.load_model("local-model")
     try:
         ctx.step("🚀 --- GLOBAL SCALE & ACCESSIBILITY PHASE --- 🚀")
         
@@ -45,3 +47,5 @@ def run(ctx: ExecutionContext) -> str:
         ctx.step("🚀 --- THE AUTHENTIC ECONOMY HAS REACHED GLOBAL SCALE --- 🚀")
         
         return "Scale-up phase complete. API, Pi Network, and Mobile infrastructure are live."
+    finally:
+        lm_manager.unload_model("local-model")

@@ -9,9 +9,11 @@ from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.credentials import get_or_placeholder
 from agentz.core.scout import scout_businesses
 from agentz.core.campaigns import optimize_campaigns
+from agentz.core.llm import lm_manager
 from supabase import create_client, Client
 
 def run(ctx: ExecutionContext) -> str:
+    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -53,3 +55,5 @@ def run(ctx: ExecutionContext) -> str:
                 ctx.step("No optimizations needed (high engagement detected).")
                 
         return "Autonomous growth loop completed successfully."
+    finally:
+        lm_manager.unload_model("local-model")
