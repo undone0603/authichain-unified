@@ -28,22 +28,37 @@ jobs:
           # Vercel Cron reads CRON_SECRET from the project env and sends it as
           # the Bearer token, and the API routes validate against the same var —
           # so GitHub's value is the source of truth for both sides once synced.
+          #
+          # Two Vercel projects deploy this repo: the VERCEL_PROJECT_ID secret
+          # (authichain-unified-v2, microsite subdomains) and authichain-unified
+          # (prj_tt39…), which owns authichain-unified.vercel.app — the origin the
+          # authichain.com worker proxies /api/* to. Both need the same env or the
+          # cron endpoints 401 on one of them.
+          LIVE_PROJECT_ID="prj_tt39I3tljDqlhXFfAC1fbeieajNO"
           sync_var() {
-            local name="$1" value="$2"
+            local project="$1" name="$2" value="$3"
             if [ -z "$value" ]; then
               echo "::warning::$name secret is empty - skipping sync"
               return 0
             fi
             # Remove existing env var if it exists, then re-add with current value
-            vercel env rm "$name" production \
+            VERCEL_PROJECT_ID="$project" vercel env rm "$name" production \
               --token="$VERCEL_TOKEN" \
               --scope="$VERCEL_ORG_ID" \
               --yes 2>/dev/null || true
-            printf '%s' "$value" | vercel env add "$name" production \
+            printf '%s' "$value" | VERCEL_PROJECT_ID="$project" vercel env add "$name" production \
               --token="$VERCEL_TOKEN" \
               --scope="$VERCEL_ORG_ID" \
               --yes
-            echo "$name synced to Vercel production environment"
+            echo "$name synced to Vercel production environment (project $project)"
           }
-          sync_var API_KEY "$API_KEY"
-          sync_var CRON_SECRET "$CRON_SECRET"
+          for project in "$VERCEL_PROJECT_ID" "$LIVE_PROJECT_ID"; do
+            sync_var "$project" API_KEY "$API_KEY"
+            sync_var "$project" CRON_SECRET "$CRON_SECRET"
+          done
+          # Env changes only apply to new deployments — redeploy the live
+          # project's current production deployment so the sync takes effect.
+          VERCEL_PROJECT_ID="$LIVE_PROJECT_ID" vercel redeploy authichain-unified.vercel.app \
+            --token="$VERCEL_TOKEN" \
+            --scope="$VERCEL_ORG_ID" \
+            || echo "::warning::redeploy failed - trigger a production deploy manually so the env change takes effect"
