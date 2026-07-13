@@ -43,6 +43,22 @@ export async function handleServiceOrderPayment(session: SessionWithId): Promise
     },
   });
 
+  if (order.amount) {
+    await db.recordRevenue({
+      source: "stripe",
+      amount: (order.amount / 100).toFixed(2),
+      currency: "USD",
+      type: "service_order",
+      userId: order.userId ?? null,
+      metadata: {
+        sessionId: session.id,
+        orderId: order.id,
+        serviceType: order.serviceType,
+        stripePaymentIntentId: decision.updates.stripePaymentIntentId,
+      },
+    });
+  }
+
   if (order.userId) {
     await db.createSystemNotification(
       order.userId,

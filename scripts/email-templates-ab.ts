@@ -290,7 +290,7 @@ https://authichain.io`,
 export async function seedEmailTemplates(testId: number) {
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
   console.log(`\n📧 Seeding email templates for test #${testId}...`);

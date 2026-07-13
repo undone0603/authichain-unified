@@ -40,6 +40,7 @@ import { feedbackRouter } from "./feedback/router";
 import { personalizationRouter } from "./personalization/router";
 import { stripeConnectRouter } from "./stripe-connect-router";
 import { metrcRouter } from "./routers/metrc";
+import { qronRouter } from "./qron/router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -84,6 +85,7 @@ export const appRouter = router({
   personalization: personalizationRouter,
   stripeConnect: stripeConnectRouter,
   metrc: metrcRouter,
+  qron: qronRouter,
 });
 
 export type AppRouter = typeof appRouter;

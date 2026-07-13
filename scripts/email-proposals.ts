@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 
 const isDryRun = process.env.DRY_RUN === 'true';
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const GOVCHAIN = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 const FROM_EMAIL = process.env.EMAIL_FROM ?? 'proposals@authichain.com';
 const CALENDAR_LINK = process.env.CALENDLY_LINK ?? 'https://calendly.com/authichain/discovery';

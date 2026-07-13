@@ -10,11 +10,9 @@ import asyncio
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.grants_pipeline import read_ledger, update_status
 from agentz.core.submission import submit_proposal_via_browser
-from agentz.core.llm import lm_manager
 
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
     try:
         ctx.step("🎖️ --- INITIALIZING AUTONOMOUS RFP SUBMISSION LOOP --- 🎖️")
 
@@ -71,5 +69,3 @@ def run(ctx: ExecutionContext) -> str:
                 failed += 1
 
         return f"RFP Submission Loop complete. {submitted} submitted, {failed} failed."
-    finally:
-        lm_manager.unload_model("local-model")

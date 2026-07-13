@@ -265,21 +265,14 @@ app.use("*", async (c, next) => {
 });
 
 // ---------------------------------------------------------------------------
-// Apex marketing page + fallback proxy to primary app
+// Fallback proxy to primary app (apex included — authichain.com is served by
+// the primary app, so "/" proxies like every other path)
 // ---------------------------------------------------------------------------
 app.all("*", async (c) => {
   const url = new URL(c.req.url);
   const { pathname, search } = url;
-  const hostname = url.hostname;
 
-  const isApex =
-    hostname === "authichain.com" || hostname === "www.authichain.com";
-
-  if (pathname === "/" && isApex) {
-    return c.html(MARKETING_HTML);
-  }
-
-  // Proxy everything else to the primary Vite/Express app
+  // Proxy to the primary Vite/Express app
   if (c.env.PRIMARY_APP_URL) {
     return fetch(
       new Request(`${c.env.PRIMARY_APP_URL}${pathname}${search}`, c.req.raw)

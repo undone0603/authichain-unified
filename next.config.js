@@ -1,5 +1,13 @@
-// next.config.js
 /** @type {import('next').NextConfig} */
+// Sentry is optional: @sentry/nextjs is not a dependency yet (zero-budget),
+// and `next build` must not fail when it's absent. If the SDK is installed
+// later, the wrapper activates automatically.
+let withSentryConfig = (config, _opts) => config;
+try {
+  ({ withSentryConfig } = await import("@sentry/nextjs"));
+} catch {
+  // SDK not installed — export the config unwrapped.
+}
 
 // A production-safe CSP that:
 //   - Allows 'unsafe-eval' for bundled JS (Vite/Rollup source maps, WalletConnect, etc.)
@@ -21,6 +29,9 @@ const CSP = [
 ].join('; ');
 
 const nextConfig = {
+  experimental: {
+    outputFileTracingRoot: process.cwd(),
+  },
   // Messy multi-architecture codebase — type errors are gated in CI, not here.
   typescript: { ignoreBuildErrors: true },
 
@@ -106,4 +117,12 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+    org: "authichain",
+    project: "javascript-nextjs",
+    silent: !process.env.CI,
+    widenClientFileUpload: true,
+    tunnelRoute: "/monitoring",
+    hideSourceMaps: true,
+    disableLogger: true,
+});

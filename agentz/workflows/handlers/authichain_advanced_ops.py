@@ -13,10 +13,8 @@ from agentz.core.microsites import deploy_sales_microsite
 from agentz.core.oracle import update_timeline_via_oracle
 from agentz.core.aggregator import generate_marketplace_manifest, publish_manifest
 from supabase import create_client, Client
-from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -102,5 +100,3 @@ def run(ctx: ExecutionContext) -> str:
         ctx.step(f"Aggregated {len(manifest)} brands for directory.")
     
         return "Advanced operations cycle complete. Ecosystem is now dynamic, chat-enabled, and logistics-aware."
-    finally:
-        lm_manager.unload_model("local-model")
