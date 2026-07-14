@@ -29,9 +29,7 @@ const CSP = [
 ].join('; ');
 
 const nextConfig = {
-  experimental: {
-    outputFileTracingRoot: process.cwd(),
-  },
+outputFileTracingRoot: process.cwd(),
   // Messy multi-architecture codebase — type errors are gated in CI, not here.
   typescript: { ignoreBuildErrors: true },
 
