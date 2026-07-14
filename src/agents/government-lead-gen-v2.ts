@@ -243,6 +243,10 @@ async function sendOutreach(lead: any, proposal: string, qron: QRON): Promise<vo
     subject: `GovChain.us — Blockchain Traceability Pilot for ${lead.agency}`,
     text: proposal,
     html: proposal.replace(/\n/g, '<br>'),
+    headers: {
+      'X-Proposal-ID': `pilot-${lead.id}`,
+      'X-Prospect-Email': contactEmail,
+    },
   });
   console.log(`[gov-engine] Outreach ${result.ok ? 'sent' : 'failed'} to ${contactEmail} via ${result.provider}`);
 }
