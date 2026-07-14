@@ -3403,7 +3403,8 @@ export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
-      return Response.json({ status: "ok", domain: "govchain.us", ts: Date.now() }
+      return Response.json({ status: "ok", domain: "govchain.us", ts: Date.now() });
+    }
     const p = url.pathname;
     if (p === '/og-image.png') return pngResponse(OG_IMAGE_PNG_B64);
     if (p === '/og-image.svg') return assetResponse(OG_IMAGE_SVG);
@@ -3425,7 +3426,6 @@ export default {
       return new Response('User-agent: *\nAllow: /\nSitemap: https://govchain.us/sitemap.xml\n', {
         headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
-    });
     }
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
