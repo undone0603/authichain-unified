@@ -3,14 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 
 // Lazy singletons — avoid build-time throw when env vars are absent.
 let _stripe: Stripe | null = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function getStripe(): Stripe {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error('STRIPE_SECRET_KEY not set');
     // Pinned to legacy API version because subscriptionItems.createUsageRecord
     // is only available on pre-meterEvents Stripe API versions.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     _stripe = new Stripe(key, { apiVersion: '2026-05-27.dahlia' as const });
   }
   return _stripe;

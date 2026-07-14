@@ -10,8 +10,10 @@ from agentz.core.marketplace import MarketplaceAgent
 from agentz.core.legal import scout_marketplace_infringement, draft_enforcement_notice
 from supabase import create_client, Client
 from agentz.core.credentials import get_or_placeholder
+from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
+    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -57,3 +59,5 @@ def run(ctx: ExecutionContext) -> str:
             ctx.step(f"Legal Enforcement Drafted. Logging to HubSpot deal room.")
 
         return "Apex evolution complete. Infrastructure is now transactional and legally self-defending."
+    finally:
+        lm_manager.unload_model("local-model")

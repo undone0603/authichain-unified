@@ -1,14 +1,16 @@
+"""Controller wrapping an LLM callable, normalizing results into AgentOutput."""
+
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
 
 from ..models import AgentOutput
 
 
 class AgentzController:
-    """Wraps an LLM callable and normalizes its output into AgentOutput."""
+    """Thin adapter around an LLM callable (e.g. LMStudioClient.chat)."""
 
-    def __init__(self, llm: Callable[..., Any]) -> None:
+    def __init__(self, llm: Any) -> None:
         self.llm = llm
 
     def run_llm(self, *args, **kwargs) -> AgentOutput | Any:

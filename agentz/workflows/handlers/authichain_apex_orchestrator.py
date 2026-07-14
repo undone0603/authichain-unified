@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.credentials import get_or_placeholder
+from agentz.core.llm import lm_manager
 from agentz.core.legal import scout_marketplace_infringement, draft_enforcement_notice
 from agentz.core.partnership import scout_strategic_partners, draft_partnership_proposal
 from agentz.core.marketplace import MarketplaceAgent
@@ -14,6 +15,7 @@ from agentz.core.extension import publish_extension_config
 from supabase import create_client, Client
 
 def run(ctx: ExecutionContext) -> str:
+    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -84,3 +86,5 @@ def run(ctx: ExecutionContext) -> str:
         ctx.step("[^] --- APEX ORCHESTRATION CYCLE COMPLETE --- [^]")
         
         return "Ecosystem is now legally protected, strategically aligned, and transaction-ready."
+    finally:
+        lm_manager.unload_model("local-model")
