@@ -74,26 +74,30 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
+      
       - name: Deploy Project Artifacts to Vercel
-        if: steps.secrets_check.outputs.skip != 'true'
         id: deploy
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        shell: bash
         run: |
-          DEPLOY_OUTPUT=$(vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }} 2>&1) || true
+          set +e
+          DEPLOY_OUTPUT=$(vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
+          DEPLOY_EXIT=$?
+          set -e
+
           echo "$DEPLOY_OUTPUT"
+
+          if [ "$DEPLOY_EXIT" -eq 0 ]; then
+            echo "Deployment successful"
+            exit 0
+          fi
+
           if echo "$DEPLOY_OUTPUT" | grep -q "api-deployments-free-per-day"; then
             echo "::warning::Vercel free-tier daily deployment limit reached (100/day). Deployment skipped - will retry on next push."
             exit 0
           fi
-          if echo "$DEPLOY_OUTPUT" | grep -q "Error:"; then
-            echo "::error::Deployment failed: $DEPLOY_OUTPUT"
-            exit 1
-          fi
-          echo "Deployment successful"
 
-      - name: Deploy skipped
-        if: steps.secrets_check.outputs.skip == 'true'
-        run: echo "Vercel deploy skipped — configure required Vercel secrets in repo settings."
+          echo "::error::Deployment failed with exit code $DEPLOY_EXIT"
+          exit "$DEPLOY_EXIT"
