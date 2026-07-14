@@ -220,14 +220,14 @@ export async function runAutoFix(task: Task): Promise<void> {
     responseFormat: { type: 'json_object' },
   });
 
-  let diagnosis: {
+  type Diagnosis = {
     diagnosis: string;
     filesToFix: string[];
     fixDescription: string;
     isHotfix: boolean;
   };
 
-  diagnosis = parseLLMContent<typeof diagnosis>(result.choices[0].message.content);
+  const diagnosis = parseLLMContent<Diagnosis>(result.choices[0].message.content);
 
   const targetBranch = diagnosis.isHotfix
     ? `agentz/hotfix-${task.id.slice(0, 8)}`

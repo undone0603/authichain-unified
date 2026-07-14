@@ -8,10 +8,12 @@ import asyncio
 import random
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.credentials import get_or_placeholder
+from agentz.core.llm import lm_manager
 from agentz.core.media import generate_story_mode
 from supabase import create_client, Client
 
 def run(ctx: ExecutionContext) -> str:
+    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -47,3 +49,5 @@ def run(ctx: ExecutionContext) -> str:
         ctx.step(f"Video enqueued. Distribution scheduled for YouTube/TikTok.")
         
         return f"Daily Provenance cycle complete. Featured: {product_name}. Video: {video_url}"
+    finally:
+        lm_manager.unload_model("local-model")

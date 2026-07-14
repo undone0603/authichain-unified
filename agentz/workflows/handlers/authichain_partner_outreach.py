@@ -10,8 +10,10 @@ from typing import Optional
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.social import generate_social_post
 from agentz.core.partnership import register_partner
+from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> Optional[str]:
+    lm_manager.load_model("local-model")
     try:
         ctx.step("--- INITIALIZING PARTNERSHIP OUTREACH BLITZ ---")
         
@@ -64,3 +66,5 @@ def run(ctx: ExecutionContext) -> Optional[str]:
                 continue
                 
         return f"Partnership Blitz complete. {activated} high-leverage proposals drafted and queued."
+    finally:
+        lm_manager.unload_model("local-model")

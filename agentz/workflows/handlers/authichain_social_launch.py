@@ -9,8 +9,10 @@ import asyncio
 from pathlib import Path
 from agentz.core.modes import ExecutionContext
 from agentz.core.social import distribute_content
+from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
+    lm_manager.load_model("local-model")
     try:
         ctx.step("--- REVENUE BLITZ: SOCIAL SIPHON ---")
         
@@ -32,3 +34,5 @@ def run(ctx: ExecutionContext) -> str:
         asyncio.run(distribute_content(ctx, copy_content[:200] + "...", platforms))
         
         return "Social Siphon complete. Monitoring for engagement..."
+    finally:
+        lm_manager.unload_model("local-model")
