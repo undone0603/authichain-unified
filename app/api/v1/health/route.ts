@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "edge";
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
