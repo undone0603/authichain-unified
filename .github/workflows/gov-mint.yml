@@ -23,6 +23,7 @@ on:
 jobs:
   mint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     continue-on-error: true
 
     steps:
@@ -31,7 +32,7 @@ jobs:
         with: { version: '10.28.2' }
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: pnpm }
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
       - name: Mint GovChain NFTs
         run: pnpm exec tsx scripts/mint-govchain-nfts.ts
