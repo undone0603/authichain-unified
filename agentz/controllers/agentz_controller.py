@@ -1,3 +1,16 @@
+from __future__ import annotations
+
+from typing import Any, Callable
+
+from ..models import AgentOutput
+
+
+class AgentzController:
+    """Wraps an LLM callable and normalizes its output into AgentOutput."""
+
+    def __init__(self, llm: Callable[..., Any]) -> None:
+        self.llm = llm
+
     def run_llm(self, *args, **kwargs) -> AgentOutput | Any:
         """
         Executes the LLM with the provided arguments and attempts to parse the result
