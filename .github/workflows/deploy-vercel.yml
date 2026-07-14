@@ -27,43 +27,56 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
-      - name: Validate secrets
+      - name: Check required secrets
+        id: secrets_check
+        shell: bash
         run: |
           if [ -z "${{ secrets.VERCEL_ORG_ID }}" ] || [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ] || [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "ERROR: Missing required Vercel secrets"
-            exit 1
+            echo "::notice::Vercel secrets missing — skipping deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v4
+        if: steps.secrets_check.outputs.skip != 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.secrets_check.outputs.skip != 'true'
         with:
           node-version: 22
 
       - uses: pnpm/action-setup@v4
+        if: steps.secrets_check.outputs.skip != 'true'
         with:
           version: latest
 
       - name: Install dependencies
+        if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Install Vercel CLI
+        if: steps.secrets_check.outputs.skip != 'true'
         run: npm install -g vercel
 
       - name: Pull Vercel Environment Information
+        if: steps.secrets_check.outputs.skip != 'true'
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Project Artifacts
+        if: steps.secrets_check.outputs.skip != 'true'
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Project Artifacts to Vercel
+        if: steps.secrets_check.outputs.skip != 'true'
         id: deploy
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -80,3 +93,7 @@ jobs:
             exit 1
           fi
           echo "Deployment successful"
+
+      - name: Deploy skipped
+        if: steps.secrets_check.outputs.skip == 'true'
+        run: echo "Vercel deploy skipped — configure required Vercel secrets in repo settings."
