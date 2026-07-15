@@ -691,10 +691,44 @@ export async function incrementScanCount(id: number) {
   await db.update(qrCodes).set({ scanCount: sql`${qrCodes.scanCount} + 1`, lastScannedAt: new Date() }).where(eq(qrCodes.id, id));
 }
 
-export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string }) {
+export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string; userId?: number }) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(qrScanEvents).values(data);
+  await db.insert(qrScanEvents).values({
+    qrCodeId: data.qrCodeId,
+    productId: data.productId,
+    isAuthentic: data.isAuthentic,
+    userAgent: data.userAgent,
+  });
+
+  if (data.userId && data.isAuthentic) {
+    await recordReputationEvent(data.userId, "scan_authenticity_confirmed", 1);
+  }
+}
+
+export async function recordReputationEvent(userId: number, eventType: string, pointsDelta: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`
+    INSERT INTO reputation_events (user_id, event_type, points_delta)
+    VALUES (${userId}, ${eventType}, ${pointsDelta})
+  `);
+  await db.execute(sql`
+    INSERT INTO user_reputation (user_id, points, trust_level)
+    VALUES (${userId}, ${pointsDelta}, 'novice')
+    ON CONFLICT (user_id) DO UPDATE SET
+      points = user_reputation.points + EXCLUDED.points,
+      last_updated_at = now()
+  `);
+}
+
+export async function resolveFraudAlert(alertId: number, userId: number, isVerifiedCounterfeit: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(fraudAlerts).set({ status: "resolved" }).where(eq(fraudAlerts.id, alertId));
+  if (isVerifiedCounterfeit) {
+    await recordReputationEvent(userId, "counterfeit_verified", 50);
+  }
 }
 
 export async function getRecentScanEvents(productId: number, limit = 20) {
