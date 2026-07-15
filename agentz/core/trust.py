@@ -1,14 +1,41 @@
-"""
-agentz.core.trust
------------------
-Trust Agent: Computes authenticity scores and detects counterfeit patterns.
-Enhanced with Geospatial Anomaly Detection (Phase 19).
-"""
-from __future__ import annotations
+from typing import Dict, Any
 import logging
-from typing import List, Dict, Any
 
 logger = logging.getLogger("agentz.trust")
+
+async def record_reputation_event(supabase, user_id: str, event_type: str, points_delta: int) -> bool:
+    """
+    Records a reputation event for a user and updates their total points.
+    """
+    try:
+        # 1. Insert event log
+        supabase.table("reputation_events").insert({
+            "user_id": user_id,
+            "event_type": event_type,
+            "points_delta": points_delta
+        }).execute()
+
+        # 2. Update user_reputation points
+        # First, fetch current points
+        res = supabase.table("user_reputation").select("points").eq("user_id", user_id).maybeSingle().execute()
+        
+        if res.data:
+            new_points = res.data["points"] + points_delta
+            supabase.table("user_reputation").update({
+                "points": new_points,
+                "last_updated_at": "now()"
+            }).eq("user_id", user_id).execute()
+        else:
+            # Initialize reputation for new user
+            supabase.table("user_reputation").insert({
+                "user_id": user_id,
+                "points": points_delta,
+                "trust_level": "novice"
+            }).execute()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to record reputation event for {user_id}: {e}")
+        return False
 
 def calculate_authenticity(scan_history: Dict[str, Any]) -> float:
     """

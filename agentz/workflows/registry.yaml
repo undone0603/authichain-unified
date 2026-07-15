@@ -787,3 +787,21 @@ workflows:
     estimated_minutes: 15
     requires: [reddit_session] # twitter for simulation
     prerequisites: [gsc_setup_govchain, pinecone_trial_decision]
+
+  # =================================================================
+  # AUTONOMOUS GROWTH
+  # =================================================================
+
+  - id: reinvestment_handler
+    title: "Sovereign Flywheel: Autonomous Growth and Reinvestment"
+    priority: critical
+    blocks_revenue: false
+    handler: handlers.reinvestment_handler
+    type: api
+    estimated_minutes: 5
+    requires: []
+    prerequisites: []
+    description: |
+      The AuthiChain Sovereign Flywheel: Autonomously scales outreach and
+      reinvests revenue into new market capability development.
+    confirm_before_run: true
