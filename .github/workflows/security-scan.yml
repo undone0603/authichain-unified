@@ -16,7 +16,6 @@ jobs:
   gitleaks:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
-    # Skip Dependabot PRs - its GITHUB_TOKEN is read-only on PR events
     if: github.actor != 'dependabot[bot]'
     permissions:
       contents: read
@@ -24,13 +23,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # gitleaks diffs <sha>^..<sha>, which needs the parent commit present —
-          # fetch-depth: 1 leaves it unresolvable ("ambiguous argument ... unknown
-          # revision"), so fetch full history on every trigger.
           fetch-depth: 0
+
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: ${{ github.event_name == 'pull_request' }}
-        with:
-          config: .gitleaksignore
