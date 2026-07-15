@@ -6,6 +6,15 @@ name: Autonomous Business Cycle (Vercel Cron backup)
 # retention, affiliate/founder payouts, GovChain sync, competitive
 # monitoring, subscription health. Until CRON_SECRET is set as a repo
 # secret, the job below skips gracefully.
+#
+# Also the ONLY external trigger for 10 registered jobs (certificate-expiry,
+# lead-nurturing, database-cleanup, weekly-analytics-digest, hubspot-crm-sync,
+# fraud-detection-sweep, vertical-cloner, strainchain-metrc-sync,
+# newsjacking-monitor, staking-rewards) that vercel.json never lists —
+# node-cron's in-process schedule never persists in a serverless Vercel
+# function, so without this loop they'd never run at all. Each is
+# min-interval-gated in scheduled-jobs.ts so calling them on every firing here
+# is safe; they no-op until actually due.
 
 on:
   schedule:
@@ -22,6 +31,15 @@ on:
     - cron: '0 11 * * *'  # live-systems-check
     - cron: '0 12 * * *'  # token-metrics
     - cron: '0 13 * * *'  # ecosystem-health
+    # The 13 entries above leave an ~11h gap (13:00-00:00 UTC) with zero
+    # firings. The sub-daily jobs added below (vertical-cloner, fraud-sweep,
+    # strainchain-metrc-sync, hubspot-crm-sync, newsjacking-monitor) rely on
+    # this workflow firing regularly through that window to get anywhere
+    # close to their intended cadence, so fill it in without adding a
+    # separate high-frequency workflow (cost/complexity trade-off).
+    - cron: '0 16 * * *'
+    - cron: '0 19 * * *'
+    - cron: '0 22 * * *'
   workflow_dispatch: {}
 
 concurrency:
@@ -69,6 +87,24 @@ jobs:
             "/api/cron/jobs?job=live-systems-check"
             "/api/cron/jobs?job=token-metrics"
             "/api/cron/jobs?job=ecosystem-health"
+            # These 10 were registered in server/scheduled-jobs.ts but had no
+            # external trigger anywhere (not in vercel.json, not in this
+            # workflow) — node-cron's in-process schedule set up by
+            # initializeScheduler() never fires in a serverless Vercel
+            # function, so they never ran in production. Each is now
+            # min-interval-gated server-side (see scheduled-jobs.ts), so it's
+            # safe to call them here on every run of this daily backup loop —
+            # they'll no-op until they're actually due.
+            "/api/cron/jobs?job=certificate-expiry-check"
+            "/api/cron/jobs?job=lead-nurturing"
+            "/api/cron/jobs?job=database-cleanup"
+            "/api/cron/jobs?job=weekly-analytics-digest"
+            "/api/cron/jobs?job=hubspot-crm-sync"
+            "/api/cron/jobs?job=fraud-detection-sweep"
+            "/api/cron/jobs?job=vertical-cloner"
+            "/api/cron/jobs?job=strainchain-metrc-sync"
+            "/api/cron/jobs?job=newsjacking-monitor"
+            "/api/cron/jobs?job=staking-rewards"
           )
           fail=0
           for p in "${paths[@]}"; do
