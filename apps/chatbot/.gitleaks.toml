@@ -1,0 +1,50 @@
+# =============================================================================
+# .gitleaks.toml — browser-native-chatbot-v3
+# Extends global config at C:\Users\rac\Scripts\secrets-scanner\gitleaks.toml
+# Stack: TypeScript + Rust, Anthropic Claude SDK, Playwright, GitHub Actions
+# =============================================================================
+
+title = "browser-native-chatbot-v3 secret scanner"
+
+[extend]
+path = "C:\\Users\\rac\\Scripts\\secrets-scanner\\gitleaks.toml"
+
+[allowlist]
+  description = "browser-native-chatbot-v3 specific allowlist"
+
+  # ── Paths to skip ───────────────────────────────────────────────────────────
+  paths = [
+    '''bin/''',
+    '''target/''',
+    '''dist/''',
+    '''test/fixtures''',
+    '''\.test\.(ts|js)$''',
+    '''\.spec\.(ts|js)$''',
+    '''docker/''',
+    '''\.changeset/''',
+    '''.github/workflows/''',
+    '''skills/''',
+    '''.agents/''',
+    # Documentation examples — ENCRYPTION_KEY in README / MDX are illustrative
+    '''README\.md''',
+    '''\.mdx$''',
+    # .env.local is gitignored in docs/ — confirmed safe
+    '''\.env\.local''',
+  ]
+
+  # ── Patterns to skip ────────────────────────────────────────────────────────
+  regexes = [
+    # Rust Cargo checksums
+    '''checksum = "[0-9a-f]{64}"''',
+    # Node.js integrity hashes
+    '''sha512-[A-Za-z0-9+/=]{80,}''',
+    # GitHub Actions expression syntax (not a real token)
+    '''\$\{\{\s*secrets\.\w+\s*\}\}''',
+    # Example/placeholder tokens in docs
+    '''(?i)(example|sample|placeholder|your)[_-]?(api[_-]?key|token|secret)''',
+    # Function parameters named apiKey, password — not hardcoded secrets
+    # e.g. `closeBrowserbaseSession(sessionId: string, apiKey: string)`
+    '''(?:apiKey|password|secret)\s*:\s*(?:string|REDACTED|\w+\s*\|)''',
+    # Rust struct field declarations (field name, not value)
+    '''password\s*=\s*\w+\s*;''',
+  ]

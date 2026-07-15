@@ -1,0 +1,14 @@
+pnpm lint-staged
+node scripts/sync-version.js
+git add cli/Cargo.toml cli/Cargo.lock
+
+# Secret scan (setup-hooks.ps1)
+GITLEAKS_BIN="C:/Users/rac/AppData/Local/Microsoft/WinGet/Packages/Gitleaks.Gitleaks_Microsoft.Winget.Source_8wekyb3d8bbwe/gitleaks.exe"
+GITLEAKS_CONFIG="C:/Users/rac/Scripts/secrets-scanner/gitleaks.toml"
+if [ -f "$GITLEAKS_BIN" ]; then
+  "$GITLEAKS_BIN" protect --config "$GITLEAKS_CONFIG" --staged --no-banner --verbose
+  if [ $? -eq 1 ]; then
+    echo "Commit blocked: secrets detected"
+    exit 1
+  fi
+fi
