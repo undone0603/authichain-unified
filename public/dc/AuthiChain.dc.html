@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+@font-face{font-family:'Sora';src:local('Sora');}
+body{margin:0;background:#0a0a0a;color:#eef3fb;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#00FFD1}a:hover{color:#7cc4ff}
+.wrap{max-width:1280px;margin:0 auto;padding:0 48px}
+.hex{fill:none;stroke:#00FFD1}
+.grain{position:fixed;inset:0;pointer-events:none;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");z-index:999}
+.bggrid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,255,209,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,209,.06) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,black,transparent)}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.tag{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid rgba(0,255,209,.35);border-radius:999px;background:rgba(0,255,209,.08);color:#5cf5dc;letter-spacing:.06em}
+.acc{color:var(--accent,#00FFD1)}
+.btnp{background:linear-gradient(135deg,var(--accent,#00b89c),#00FFD1)!important}
+.grad{background:linear-gradient(135deg,var(--accent,#00FFD1),#00b89c 60%,#c9a227);-webkit-background-clip:text;background-clip:text;color:transparent}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:10px;font-weight:600;cursor:pointer;border:none;font-size:15px;transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px)}
+.btnp{background:linear-gradient(135deg,#00b89c,#00FFD1);color:#04101f;box-shadow:0 8px 30px -8px rgba(47,127,255,.6)}
+.btnp:hover{box-shadow:0 14px 36px -6px rgba(47,127,255,.75)}
+.btns{background:rgba(255,255,255,.05);color:#eef3fb;border:1px solid rgba(255,255,255,.14)}
+.btns:hover{background:rgba(255,255,255,.09)}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.08);border-radius:16px}
+.section{padding:120px 0}
+.eyebrow{color:#3ddcc0;letter-spacing:.14em;font-weight:600;font-size:13px}
+.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(16px);background:rgba(6,10,20,.7);border-bottom:1px solid rgba(255,255,255,.06)}
+.navin{display:flex;align-items:center;justify-content:space-between;padding:18px 48px;max-width:1280px;margin:0 auto}
+.navlinks{display:flex;gap:36px;font-size:14px;color:#a9b8cf}
+.navlinks a{color:#a9b8cf;text-decoration:none}
+.navlinks a:hover{color:#fff}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:.02em}
+.feat{padding:28px;transition:border-color .2s,transform .2s}
+.feat:hover{border-color:rgba(0,255,209,.4);transform:translateY(-4px)}
+.iconbox{width:44px;height:44px;border-radius:10px;background:rgba(0,255,209,.12);display:flex;align-items:center;justify-content:center;margin-bottom:18px;color:#00FFD1}
+.stat{text-align:center}
+.statn{font-size:44px;font-weight:800;letter-spacing:-.02em}
+.statl{color:#8b9bb3;font-size:13px;margin-top:6px}
+.qrbox{width:230px;height:230px;border-radius:20px;position:relative;cursor:pointer;overflow:hidden;border:1px solid rgba(255,255,255,.1);background:#0a1120}
+.qrimg{position:absolute;inset:0;background-size:cover}
+.scanline{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#00FFD1,transparent);box-shadow:0 0 14px 2px #00FFD1}
+.phone{width:288px;border-radius:36px;border:8px solid #111a2c;background:#04070e;box-shadow:0 30px 80px -20px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.05);position:relative}
+.phone::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:90px;height:18px;background:#111a2c;border-radius:0 0 14px 14px;z-index:5}
+.phonescreen{border-radius:28px;overflow:hidden;background:#070d18;min-height:560px;padding:18px;display:flex;flex-direction:column;gap:12px;position:relative}
+.chip{font-size:11px;padding:4px 10px;border-radius:999px;background:rgba(52,211,153,.15);color:#34d399;font-weight:700;letter-spacing:.05em;display:inline-flex;align-items:center;gap:5px;transition:background .3s,color .3s}
+.chip.scanning{background:rgba(0,255,209,.15);color:#5cf5dc}
+.viewfinder{position:relative;border-radius:16px;overflow:hidden;height:240px;background:#0a1120}
+.vf-img{position:absolute;inset:0;background-size:cover;background-position:center;transition:filter .5s}
+.viewfinder.auth .vf-img{filter:brightness(.55) saturate(1.2)}
+.viewfinder.result .vf-img{filter:brightness(.4)}
+.corner{position:absolute;width:22px;height:22px;border:2.5px solid rgba(0,255,209,.85);z-index:2;transition:opacity .3s}
+.c-tl{top:10px;left:10px;border-right:none;border-bottom:none;border-radius:6px 0 0 0}
+.c-tr{top:10px;right:10px;border-left:none;border-bottom:none;border-radius:0 6px 0 0}
+.c-bl{bottom:10px;left:10px;border-right:none;border-top:none;border-radius:0 0 0 6px}
+.c-br{bottom:10px;right:10px;border-left:none;border-top:none;border-radius:0 0 6px 0}
+.scan-sweep{position:absolute;left:0;right:0;height:46%;background:linear-gradient(180deg,transparent,rgba(0,255,209,.28),rgba(0,255,209,.05) 70%,transparent);pointer-events:none;transition:top .05s linear}
+.sheen{position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.16) 45%,rgba(140,200,255,.22) 50%,rgba(255,255,255,.16) 55%,transparent 70%);animation:sheen 3.2s linear infinite;pointer-events:none}
+@keyframes sheen{0%{transform:translateX(-30%) translateY(-10%)}100%{transform:translateX(30%) translateY(10%)}}
+.hudtext{position:absolute;left:16px;right:16px;bottom:14px;font-family:'JetBrains Mono',monospace;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;color:#bfe0ff;background:rgba(6,12,24,.55);padding:4px 8px;border-radius:6px;letter-spacing:.02em;z-index:3}
+.pulsering{position:absolute;top:50%;left:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;border:2px solid rgba(0,255,209,.6);animation:pulsering 1.6s ease-out infinite}
+@keyframes pulsering{0%{transform:scale(.4);opacity:1}100%{transform:scale(1.8);opacity:0}}
+.arstack{display:flex;flex-direction:column;gap:8px}
+.arcard{background:rgba(10,18,36,.85);border:1px solid rgba(0,255,209,.25);border-radius:10px;padding:9px 12px;opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s}
+.arcard.in{opacity:1;transform:translateY(0)}
+.arhead{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:12.5px}
+.checkrow{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#a9b8cf;opacity:0;transform:translateX(-6px);transition:opacity .35s,transform .35s}
+.checkrow.in{opacity:1;transform:translateX(0)}
+.checkico{width:15px;height:15px;border-radius:50%;background:#1a2e1f;color:#34d399;display:flex;align-items:center;justify-content:center;font-size:10px;flex:none}
+.verifiedshield{width:52px;height:52px;margin:2px auto 0;position:relative}
+.storydots{display:flex;gap:6px;justify-content:center;margin-top:2px}
+.sdot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18);transition:background .3s,width .3s}
+.sdot.on{background:#00FFD1;width:16px;border-radius:3px}
+.flagstripe{display:inline-block;width:22px;height:14px;border-radius:2px;background:linear-gradient(180deg,#3c3b6e 0 5px,#fff 5px 7px,#b22234 7px 9px,#fff 9px 11px,#b22234 11px 14px);vertical-align:middle;margin-right:6px;flex:none}
+.prodhead{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s,max-height .4s}
+.prodhead.in{opacity:1;max-height:60px}
+.storyline{font-size:12px;color:#c7d4e6;line-height:1.5;opacity:0;transform:translateY(4px);transition:opacity .4s,transform .4s;display:flex;align-items:flex-start;gap:6px}
+.storyline.in{opacity:1;transform:translateY(0)}
+.storyline .dotcursor{color:#00FFD1}
+.footer{border-top:1px solid rgba(255,255,255,.07);padding:56px 0;color:#7386a3;font-size:13px}
+.footgrid{display:flex;justify-content:space-between;flex-wrap:wrap;gap:32px}
+.marq{display:flex;gap:64px;white-space:nowrap;animation:mv 26s linear infinite;color:#4b5c78;font-weight:600;letter-spacing:.08em}
+@keyframes mv{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.marqwrap{overflow:hidden;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);padding:18px 0}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .6s cubic-bezier(.2,.7,.3,1),transform .6s cubic-bezier(.2,.7,.3,1)}
+.reveal.in{opacity:1;transform:translateY(0)}
+.qrbox:hover{box-shadow:0 0 0 1px rgba(0,255,209,.5),0 20px 50px -20px rgba(0,255,209,.5)}
+@media(max-width:900px){.wrap{padding:0 22px}.navin{padding:16px 22px}.hero-grid{grid-template-columns:1fr!important}.navlinks{display:none}}
+</style></helmet>
+<div class="grain"></div>
+<div style="{{ rootStyle }}">
+<nav class="nav"><div class="navin">
+<div class="logo"><svg width="26" height="26" viewBox="0 0 100 100"><polygon points="50,4 93,27 93,73 50,96 7,73 7,27" class="hex" stroke-width="6"/><polygon points="50,26 76,40 76,60 50,74 24,60 24,40" fill="#00FFD1"/></svg>AUTHICHAIN</div>
+<div class="navlinks"><a href="#platform">Platform</a><a href="#qron">QRON Codes</a><a href="#trace">Provenance</a><a href="#pricing">Pricing</a></div>
+<button class="btn btnp" style="padding:10px 22px">Book a Demo</button>
+</div></nav>
+
+<header class="section" style="padding-top:90px;padding-bottom:70px;position:relative;overflow:hidden">
+<div class="bggrid" style="height:640px"></div>
+<div class="wrap hero-grid" style="display:grid;grid-template-columns:1.1fr .9fr;gap:60px;align-items:center;position:relative">
+<div>
+<span class="tag mono" style="font-size:12px">● LIVE ON POLYGON</span>
+<h1 style="font-size:64px;line-height:1.03;font-weight:800;letter-spacing:-.02em;margin:26px 0 22px">The future of trust is <span class="grad">verifiable.</span></h1>
+<p style="font-size:19px;color:#9fb0c8;line-height:1.6;max-width:520px;margin:0 0 34px">AI-powered product authentication and digital provenance for brands who can't afford to be faked. Scan. Trace. Verify.</p>
+<div style="display:flex;gap:14px;margin-bottom:46px"><button class="btn btnp">Verify a Product ↗</button><button class="btn btns">See it in Action</button></div>
+<div style="display:flex;gap:40px">
+<sc-for list="{{ heroStats }}" as="s"><div><div class="statn mono" style="font-size:26px">{{ s.n }}</div><div class="statl">{{ s.l }}</div></div></sc-for>
+</div>
+</div>
+<div style="display:flex;justify-content:center">
+<div class="phone">
+<div class="phonescreen">
+<div style="display:flex;justify-content:space-between;align-items:center"><div class="mono" style="font-size:11px;color:#5b6c87">{{ clock }}</div><div class="chip {{ chipClass }}">{{ chipLabel }}</div></div>
+<div class="viewfinder {{ phase }}">
+<div class="vf-img" style="{{ vfImgStyle }}"></div>
+<sc-if value="{{ showSheen }}" hint-placeholder-val="{{ true }}"><div class="sheen"></div></sc-if>
+<div class="corner c-tl" style="opacity:{{ cornerOpacity }}"></div>
+<div class="corner c-tr" style="opacity:{{ cornerOpacity }}"></div>
+<div class="corner c-bl" style="opacity:{{ cornerOpacity }}"></div>
+<div class="corner c-br" style="opacity:{{ cornerOpacity }}"></div>
+<sc-if value="{{ isScan }}" hint-placeholder-val="{{ true }}"><div class="scan-sweep" style="top:{{ scanY }}%"></div></sc-if>
+<sc-if value="{{ isAuth }}" hint-placeholder-val="{{ false }}"><div class="pulsering"></div></sc-if>
+<div class="hudtext">{{ hudText }}</div>
+</div>
+<div class="prodhead {{ prodHeadCls }}"><div style="font-weight:700;font-size:14px">{{ productName }}</div><div style="font-size:11px;color:#7386a3;margin-top:2px;display:flex;align-items:center"><span class="flagstripe"></span>{{ productOrigin }}</div></div>
+<sc-if value="{{ isStory }}" hint-placeholder-val="{{ false }}">
+<div class="arstack">
+<sc-for list="{{ storyLines }}" as="l" hint-placeholder-count="4">
+<div class="storyline {{ l.cls }}"><span class="dotcursor">›</span>{{ l.text }}</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ isResult }}" hint-placeholder-val="{{ false }}">
+<div class="arstack">
+<sc-for list="{{ arChecks }}" as="c" hint-placeholder-count="4">
+<div class="checkrow {{ c.cls }}"><div class="checkico">✓</div>{{ c.label }}</div>
+</sc-for>
+</div>
+</sc-if>
+<div class="storydots"><sc-for list="{{ dots }}" as="d" hint-placeholder-count="4"><div class="sdot {{ d.cls }}"></div></sc-for></div>
+</div>
+</div>
+</div>
+</div>
+</header>
+
+
+
+<section class="section" id="platform">
+<div class="wrap">
+<div class="eyebrow">PLATFORM</div>
+<h2 style="font-size:38px;font-weight:800;margin:12px 0 50px;max-width:640px">Everything a brand needs to prove authenticity, end to end.</h2>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px">
+<sc-for list="{{ features }}" as="f">
+<div class="card feat reveal"><div class="iconbox" dangerouslySetInnerHTML="{{ f.iconHtml }}"></div><div style="font-weight:700;font-size:17px;margin-bottom:8px">{{ f.title }}</div><div style="color:#8b9bb3;font-size:14px;line-height:1.6">{{ f.desc }}</div></div>
+</sc-for>
+</div>
+</div>
+</section>
+
+<section class="section" id="qron" style="background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(0,255,209,.07),transparent);border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)">
+<div class="wrap" style="display:grid;grid-template-columns:.9fr 1.1fr;gap:70px;align-items:center">
+<div style="display:flex;justify-content:center">
+<div class="qrbox" onClick="{{ cycleQr }}">
+<div class="qrimg" style="{{ qrStyle }}"></div>
+<div class="scanline" style="top:{{ scanY }}%"></div>
+</div>
+</div>
+<div>
+<div class="eyebrow">QRON CODES</div>
+<h2 style="font-size:36px;font-weight:800;margin:12px 0 18px">Beautiful, AI-generated codes that scan better than they look.</h2>
+<p style="color:#9fb0c8;line-height:1.7;font-size:16px;margin-bottom:26px;max-width:520px">Every QRON code is generated by AuthiChain's model to match your brand's palette and materials — then cryptographically bound to the product it's printed on. Click the code to preview a style.</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px">
+<sc-for list="{{ qrStyles }}" as="q" hint-placeholder-count="4"><button class="btn" style="{{ q.btnStyle }};padding:9px 16px;font-size:13px" onClick="{{ q.onClick }}">{{ q.label }}</button></sc-for>
+</div>
+
+</div>
+</div>
+</section>
+
+<sc-if value="{{ showEnforcementStats }}" hint-placeholder-val="{{ true }}">
+<section class="section" id="trace">
+<div class="wrap">
+<div class="eyebrow" style="text-align:center">ENFORCEMENT-READY INTELLIGENCE</div>
+<h2 style="font-size:36px;font-weight:800;margin:12px 0 50px;text-align:center">Real-time visibility from factory floor to front door.</h2>
+<div class="card" style="padding:34px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px">
+<div class="stat"><div class="statn">Every scan</div><div class="statl">Logged to the ledger</div></div>
+<div class="stat"><div class="statn" style="color:#f87171">Instant</div><div class="statl">Anomaly alerts</div></div>
+<div class="stat"><div class="statn">End to end</div><div class="statl">Factory to customer</div></div>
+</div>
+</div>
+</section>
+</sc-if>
+
+<section class="section" style="text-align:center">
+<div class="wrap">
+<h2 style="font-size:42px;font-weight:800;margin:0 0 20px">Ready to make your products <span class="grad">unfakeable?</span></h2>
+<p style="color:#9fb0c8;font-size:17px;margin-bottom:34px">Talk to our team about rolling out AuthiChain across your supply chain.</p>
+<div style="display:flex;gap:14px;justify-content:center"><button class="btn btnp">Book a Demo</button><button class="btn btns">Read the Docs</button></div>
+</div>
+</section>
+
+<footer class="footer"><div class="wrap footgrid">
+<div><div class="logo" style="margin-bottom:10px"><svg width="20" height="20" viewBox="0 0 100 100"><polygon points="50,4 93,27 93,73 50,96 7,73 7,27" class="hex" stroke-width="6"/><polygon points="50,26 76,40 76,60 50,74 24,60 24,40" fill="#00FFD1"/></svg>AUTHICHAIN</div>The truth layer for the physical world.</div>
+<div style="display:flex;gap:60px"><div><div style="color:#a9b8cf;margin-bottom:10px">Product</div>Platform<br/>QRON Codes<br/>Pricing</div><div><div style="color:#a9b8cf;margin-bottom:10px">Company</div>About<br/>Careers<br/>Contact</div></div>
+</div><div style="display:flex;gap:60px"><div class="wrap" style="padding:0"><div style="color:#a9b8cf;margin-bottom:10px">Ecosystem</div><a href="https://qron.space" style="color:#7386a3">QRON Studio</a><br/><a href="https://strainchain.io" style="color:#7386a3">StrainChain</a><br/><a href="https://govchain.us" style="color:#7386a3">GovChain</a></div></div>
+</div><div class="wrap" style="margin-top:30px;font-size:12px">© 2026 AuthiChain. Powered by Polygon. Part of the AuthiChain Protocol family.</div></footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#f5c56b&quot;,&quot;options&quot;:[&quot;#00FFD1&quot;,&quot;#f5c56b&quot;,&quot;#34d399&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Brand&quot;},&quot;qronDefaultStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Heritage Eagle&quot;,&quot;options&quot;:[&quot;Medallion&quot;,&quot;World Dragon&quot;,&quot;Heritage Eagle&quot;,&quot;Marine&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;QRON Codes&quot;},&quot;showEnforcementStats&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sections&quot;}}">
+class Component extends DCLogic {
+  state = { qrIndex: 0, scanY: 8, phase: 'scan', checkIdx: 0, clock: '08:07' };
+  qrStyles = [
+    {label:'Medallion', img:'assets/authichain-qron-medallion.png'},
+    {label:'World Dragon', img:'assets/qron-style-worlddragon.png'},
+    {label:'Heritage Eagle', img:'assets/qron-style-eagleflag.png'},
+    {label:'Marine', img:'assets/qron-style-turtle.png'}
+  ];
+  arCheckDefs = [
+    {label:'Blockchain ledger match confirmed'},
+    {label:'Steganographic thread pattern verified'},
+    {label:'No duplicate serial found, network-wide'},
+    {label:'Sealed permanently on Polygon'}
+  ];
+  storyDefs = [
+    {text:'Full-grain leather, tanned in Chicago, Illinois'},
+    {text:'Hand-stitched by Marcus Webb — 14 years at the bench'},
+    {text:'Sole cast from reclaimed Oregon rubber'},
+    {text:'One of 40 pairs made this week'}
+  ];
+  runStory() {
+    this.setState({ phase: 'scan', checkIdx: 0, storyIdx: 0 });
+    this._story = setTimeout(() => {
+      this.setState({ phase: 'auth' });
+      this._story = setTimeout(() => {
+        this.setState({ phase: 'story', storyIdx: 0 });
+        const revealStory = (n) => {
+          this._story = setTimeout(() => {
+            this.setState({ storyIdx: n });
+            if (n < this.storyDefs.length) revealStory(n + 1);
+            else this._story = setTimeout(() => {
+              this.setState({ phase: 'result', checkIdx: 0 });
+              const revealNext = (m) => {
+                this._story = setTimeout(() => {
+                  this.setState({ checkIdx: m });
+                  if (m < this.arCheckDefs.length) revealNext(m + 1);
+                  else this._story = setTimeout(() => this.runStory(), 2400);
+                }, 380);
+              };
+              revealNext(1);
+            }, 900);
+          }, 550);
+        };
+        revealStory(1);
+      }, 900);
+    }, 2200);
+  }
+  componentDidMount() {
+    this._t = setInterval(() => this.setState(s => ({ scanY: (s.scanY + 4) % 96 })), 90);
+    this._clk = setInterval(() => {
+      const d = new Date();
+      this.setState({ clock: d.toTimeString().slice(0,5) });
+    }, 15000);
+    this.runStory();
+    this._io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+    }, { threshold: 0.15 });
+    setTimeout(() => { document.querySelectorAll('.reveal').forEach(el => this._io.observe(el)); }, 50);
+  }
+  componentWillUnmount() { clearInterval(this._t); clearInterval(this._clk); clearTimeout(this._story); if (this._io) this._io.disconnect(); }
+  renderVals() {
+    const defaultIdx = Math.max(0, this.qrStyles.findIndex(q => q.label === (this.props.qronDefaultStyle ?? 'Medallion')));
+    const i = this.state.qrIndex ?? defaultIdx;
+    const cur = this.qrStyles[i] || this.qrStyles[0];
+    const accent = this.props.accentColor ?? '#00FFD1';
+    const phase = this.state.phase;
+    const checkIdx = this.state.checkIdx;
+    const storyIdx = this.state.storyIdx || 0;
+    const phaseCopy = {
+      scan: 'Scanning steganographic markers…',
+      auth: 'Verifying on-chain record…',
+      story: 'AI is telling this product\'s story…',
+      result: 'Authentic — sealed on Polygon'
+    };
+    return {
+      rootStyle: { ['--accent']: accent },
+      heroStats: [{n:'AI',l:'Anomaly detection'},{n:'On-chain',l:'Provenance records'},{n:'Custom',l:'QRON codes'}],
+      clock: this.state.clock,
+      phase: phase,
+      isScan: phase === 'scan',
+      isAuth: phase === 'auth',
+      isStory: phase === 'story',
+      isResult: phase === 'result',
+      showSheen: phase === 'scan' || phase === 'auth',
+      cornerOpacity: (phase === 'story' || phase === 'result') ? 0.35 : 1,
+      chipLabel: phase === 'result' ? '✓ VERIFIED' : (phase === 'auth' ? '◐ VERIFYING' : (phase === 'story' ? '✦ AI STORY' : '◎ SCANNING')),
+      chipClass: phase === 'result' ? '' : 'scanning',
+      hudText: phaseCopy[phase],
+      scanY: this.state.scanY,
+      productName: 'Cascade Trail Boot',
+      productOrigin: 'Portland, Oregon · Made in USA',
+      prodHeadCls: (phase === 'story' || phase === 'result') ? 'in' : '',
+      vfImgStyle: { backgroundImage: `url(assets/qron-style-eagleflag.png)`, backgroundSize: 'cover', backgroundPosition: 'center' },
+      storyLines: this.storyDefs.map((s, idx) => ({ text: s.text, cls: (phase === 'story' || phase === 'result') && idx < storyIdx ? 'in' : '' })),
+      arChecks: this.arCheckDefs.map((c, idx) => ({ label: c.label, cls: (phase === 'result' && idx < checkIdx) ? 'in' : '' })),
+      dots: ['scan','auth','story','result'].map(p => ({ cls: p === phase ? 'on' : '' })),
+      features: [
+        {title:'AI-Driven Anomaly Detection', desc:'Models trained on billions of scans flag counterfeits and diversion in real time.', iconHtml:{__html:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>'}},
+        {title:'Blockchain-Secured Records', desc:'Every scan, transfer, and check-in is written to an immutable ledger on Polygon.', iconHtml:{__html:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'}},
+        {title:'QRON Beautiful Codes', desc:'AI-generated verification codes styled to match your brand, still cryptographically airtight.', iconHtml:{__html:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM19 19h2v2h-2z"/></svg>'}},
+        {title:'Real-Time Analytics', desc:'Dashboards for scan volume, geography, and risk — built for brand and legal teams.', iconHtml:{__html:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>'}},
+        {title:'Enforcement-Ready Reports', desc:'Export legally admissible provenance trails for customs, legal, and brand protection teams.', iconHtml:{__html:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>'}},
+        {title:'Customer Engagement', desc:'Turn every scan into a moment — provenance stories, rewards, and registration.', iconHtml:{__html:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21a8 8 0 10-16 0"/><circle cx="12" cy="8" r="4"/></svg>'}}
+      ],
+      qrStyle: { backgroundImage: `url(${cur.img})`, backgroundSize: 'cover', backgroundPosition: 'center' },
+      qrStyles: this.qrStyles.map((q, idx) => ({
+        label: q.label,
+        onClick: () => this.setState({ qrIndex: idx }),
+        btnStyle: idx === i ? 'background:rgba(0,255,209,.18);color:#5cf5dc;border:1px solid rgba(0,255,209,.5)' : 'background:rgba(255,255,255,.05);color:#eef3fb;border:1px solid rgba(255,255,255,.14)'
+      })),
+      scanY: this.state.scanY,
+      showEnforcementStats: this.props.showEnforcementStats ?? true,
+      cycleQr: () => this.setState(s => ({ qrIndex: ((s.qrIndex ?? defaultIdx) + 1) % this.qrStyles.length }))
+    };
+  }
+}
+</script>
+</body>
+</html>
