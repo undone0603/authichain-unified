@@ -1,28 +1,28 @@
-import path from 'node:path';
-import { createRequire } from 'node:module';
 import { defineConfig, globalIgnores } from 'eslint/config';
-import { FlatCompat } from '@eslint/eslintrc';
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
+import nextTypescript from 'eslint-config-next/typescript';
 
-const require = createRequire(import.meta.url);
-
-// eslint-config-next 15.x only ships legacy eslintrc-style configs (objects
-// with `extends`), not flat-config arrays — importing
-// 'eslint-config-next/core-web-vitals' directly crashes ESLint 9 with
-// ERR_MODULE_NOT_FOUND (no exports map / missing .js), and even with the
-// extension the result isn't spreadable. Bridge through FlatCompat, per the
-// official Next.js ESLint 9 setup. Plugins must resolve from
-// eslint-config-next's own directory: pnpm doesn't hoist its transitive
-// eslint-plugin-* deps to the root node_modules.
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-  resolvePluginsRelativeTo: path.dirname(
-    require.resolve('eslint-config-next/package.json'),
-  ),
-});
+// eslint-config-next 16.x ships native flat-config arrays at these subpaths
+// (./core-web-vitals, ./typescript), so we spread them directly. The previous
+// FlatCompat bridge resolved plugins via require.resolve(
+// 'eslint-config-next/package.json'), which 16.x's "exports" map no longer
+// exposes — that crashed ESLint 9 with ERR_PACKAGE_PATH_NOT_EXPORTED and
+// silently disabled linting during `next build`.
+// Reuse the exact plugin instances the Next flat configs already registered
+// (react, @typescript-eslint, @next/next, …) so our rule overrides below can
+// reference their namespaces without re-importing/version-pinning each plugin.
+const nextPlugins = Object.assign(
+  {},
+  ...[...nextCoreWebVitals, ...nextTypescript]
+    .map((c) => c.plugins)
+    .filter(Boolean),
+);
 
 const eslintConfig = defineConfig([
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  ...nextCoreWebVitals,
+  ...nextTypescript,
   {
+    plugins: nextPlugins,
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'warn',
@@ -45,6 +45,17 @@ const eslintConfig = defineConfig([
       '@typescript-eslint/no-this-alias': 'warn',
       'react/jsx-no-comment-textnodes': 'warn',
       '@typescript-eslint/no-empty-object-type': 'warn',
+      // React Compiler rules (new in eslint-plugin-react-hooks v6, pulled in by
+      // eslint-config-next 16.x) default to 'error'. This React 18 app doesn't
+      // run the compiler, so treat them as advisory warnings — otherwise these
+      // pre-existing patterns would newly fail `next build`'s lint step. Fix
+      // and promote back to 'error' incrementally.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/error-boundaries': 'warn',
+      'react-hooks/use-memo': 'warn',
     },
   },
   // Override default ignores of eslint-config-next.
@@ -53,9 +64,15 @@ const eslintConfig = defineConfig([
     '.next/**',
     'out/**',
     'build/**',
+    'dist/**',
     'next-env.d.ts',
     // Separate Expo mobile app lives here with its own toolchain.
     'mobile/**',
+    // Standalone Cloudflare Workers: each has its own toolchain/lockfile and
+    // ships large single-file bundles (src/index.ts up to ~380 KB) that blow
+    // ESLint's parser stack. They are deployed via `wrangler deploy`, not the
+    // Next build, so they are out of scope for this config.
+    'workers/**',
   ]),
 ]);
 
