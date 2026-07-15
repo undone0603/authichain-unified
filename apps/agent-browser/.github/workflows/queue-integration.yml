@@ -1,0 +1,185 @@
+name: Queue Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      backends:
+        description: Comma-separated backends to run (redis,postgres,nats,sqs)
+        required: false
+        default: redis,postgres,nats,sqs
+        type: string
+      fail_fast:
+        description: Stop after the first backend failure
+        required: false
+        default: true
+        type: boolean
+      upload_artifacts:
+        description: Upload queue integration diagnostics artifacts
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  queue-integration:
+    name: Queue Integration
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: agent_browser
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d agent_browser"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      nats:
+        image: nats:2
+        ports:
+          - 4222:4222
+      localstack:
+        image: localstack/localstack:3
+        env:
+          SERVICES: sqs
+          AWS_DEFAULT_REGION: us-east-1
+        ports:
+          - 4566:4566
+        options: >-
+          --health-cmd "curl -f http://localhost:4566/_localstack/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: actions/cache@v5.0.3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            cli/target/
+          key: ${{ runner.os }}-queue-integration-cargo-${{ hashFiles('cli/Cargo.lock', 'cli/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-queue-integration-cargo-
+
+      - name: Install integration test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq postgresql-client redis-tools python3-pip pipx
+          if ! command -v aws >/dev/null 2>&1; then
+            pipx install awscli
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..20}; do
+            pg_isready -h 127.0.0.1 -p 5432 -U postgres -d agent_browser && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Wait for Redis
+        run: |
+          for i in {1..20}; do
+            redis-cli -h 127.0.0.1 -p 6379 ping | grep PONG && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Wait for NATS
+        run: |
+          for i in {1..20}; do
+            (echo > /dev/tcp/127.0.0.1/4222) >/dev/null 2>&1 && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Wait for LocalStack
+        run: |
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4566/_localstack/health >/dev/null && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Verify required CLI tools
+        run: |
+          command -v aws
+          command -v jq
+
+      - name: Setup LocalStack SQS queues
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          aws --endpoint-url=http://127.0.0.1:4566 sqs create-queue --queue-name agent-browser-it-main > /tmp/main-queue.json
+          aws --endpoint-url=http://127.0.0.1:4566 sqs create-queue --queue-name agent-browser-it-dlq > /tmp/dlq-queue.json
+          echo "AGENT_BROWSER_SQS_QUEUE_URL=$(jq -r '.QueueUrl' /tmp/main-queue.json)" >> "$GITHUB_ENV"
+          echo "AGENT_BROWSER_SQS_DLQ_URL=$(jq -r '.QueueUrl' /tmp/dlq-queue.json)" >> "$GITHUB_ENV"
+
+      - name: Run queue integration tests
+        shell: pwsh
+        env:
+          AGENT_BROWSER_REDIS_URL: redis://127.0.0.1:6379/
+          AGENT_BROWSER_PG_QUEUE_DSN: host=127.0.0.1 port=5432 user=postgres password=postgres dbname=agent_browser
+          AGENT_BROWSER_NATS_URL: nats://127.0.0.1:4222
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ENDPOINT_URL: http://127.0.0.1:4566
+          AWS_ENDPOINT_URL_SQS: http://127.0.0.1:4566
+        run: |
+          $backendArg = "${{ inputs.backends }}"
+          if ([string]::IsNullOrWhiteSpace($backendArg)) {
+            $backendArg = "redis,postgres,nats,sqs"
+          }
+          $args = @(
+            "-ExecutionPolicy", "Bypass",
+            "-File", ".\scripts\run-queue-integration-tests.ps1",
+            "-Backend"
+          )
+          $args += ($backendArg -split ',')
+          if ("${{ inputs.fail_fast }}" -eq "true") {
+            $args += "-FailFast"
+          }
+          & pwsh @args *>&1 | Tee-Object -FilePath queue-integration.log
+
+      - name: Capture queue integration diagnostics
+        if: always()
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          mkdir -p queue-integration-artifacts
+          cp /tmp/main-queue.json queue-integration-artifacts/main-queue.json 2>/dev/null || true
+          cp /tmp/dlq-queue.json queue-integration-artifacts/dlq-queue.json 2>/dev/null || true
+          cp queue-integration.log queue-integration-artifacts/queue-integration.log 2>/dev/null || true
+          aws --endpoint-url=http://127.0.0.1:4566 sqs list-queues > queue-integration-artifacts/sqs-list-queues.json || true
+          curl -fsS http://127.0.0.1:4566/_localstack/health > queue-integration-artifacts/localstack-health.json || true
+
+      - name: Upload queue integration artifacts
+        if: always() && inputs.upload_artifacts == true
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: queue-integration-artifacts
+          path: queue-integration-artifacts
+          if-no-files-found: warn
