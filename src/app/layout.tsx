@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'QRON | Cryptographically Verified AI QR Art',
+        default: 'AuthiChain | Protect Every Product. Verify Every Transaction.',
     template: '%s | AuthiChain Protocol',
   },
   description: 'The global standard for cryptographically-verified product identity, industrial provenance, and AI-generated QR art.',
