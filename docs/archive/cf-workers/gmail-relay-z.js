@@ -8,7 +8,7 @@ Content-Disposition: form-data; name="index.js"
 // Routes all outbound email through z@authichain.com
 
 let   Z_MAIL    = 'https://nhdnkzhtadfkkluiulhs.supabase.co/functions/v1/z-mail';
-let   SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8';
+let   SUPA_ANON = 'JWT_REDACTED_anon_key';
 const CORS = {'Access-Control-Allow-Origin':'*','Content-Type':'application/json'};
 
 export default {

@@ -7,7 +7,7 @@ Content-Disposition: form-data; name="index.js"
 // /health returns 200 always
 
 const SUPA   = 'https://nhdnkzhtadfkkluiulhs.supabase.co/functions/v1';
-const SUPA_A = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8';
+const SUPA_A = 'JWT_REDACTED_anon_key';
 const CORS   = {'Access-Control-Allow-Origin':'*','Content-Type':'application/json'};
 
 export default {

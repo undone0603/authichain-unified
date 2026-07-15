@@ -15,3 +15,17 @@ f31f331232ac613318a73092621646358bdc72f9:generic-api-key
 8d95634563888689a1ad369fa8e41c33253b7da6:generic-api-key
 2f4f3c4c49745d66174a64c36116cc0b528803a9:airtable-api-key
 a6fdb4d15ead69d327678f51c2c8025441cb8a7f:openai-api-key
+# 2026-07-15 network consolidation — verified false positives / dead keys:
+# 4x Supabase ANON-role JWTs in archived dead worker bundles (public-by-design,
+# also redacted in a follow-up commit), 1x QRON token contract address (public),
+# 5x mock key previews in qron-platform demo API routes.
+6779f3cdcbfa1b5f0d24784bf7b2880a2e63979e:docs/archive/cf-workers/authichain-verify.js:jwt:10
+6779f3cdcbfa1b5f0d24784bf7b2880a2e63979e:docs/archive/cf-workers/gmail-relay-z.js:jwt:11
+6779f3cdcbfa1b5f0d24784bf7b2880a2e63979e:docs/archive/cf-workers/qron-daily-ops.js:jwt:9
+6779f3cdcbfa1b5f0d24784bf7b2880a2e63979e:docs/archive/cf-workers/qron-stripe-webhook.js:jwt:14
+6779f3cdcbfa1b5f0d24784bf7b2880a2e63979e:docs/archive/cf-workers/qrontoken-telegram-bot.js:generic-api-key:6
+9e59750598e537448cae92ec0b0022a8a7a56c3a:apps/qron-platform/src/app/api/mcp/route.ts:generic-api-key:12
+9e59750598e537448cae92ec0b0022a8a7a56c3a:apps/qron-platform/src/app/api/mcp/route.ts:generic-api-key:13
+9e59750598e537448cae92ec0b0022a8a7a56c3a:apps/qron-platform/src/app/api/v1/apikey/route.ts:generic-api-key:14
+9e59750598e537448cae92ec0b0022a8a7a56c3a:apps/qron-platform/src/app/api/v1/apikey/route.ts:generic-api-key:30
+9e59750598e537448cae92ec0b0022a8a7a56c3a:apps/qron-platform/src/app/api/v1/apikey/route.ts:generic-api-key:46

@@ -11,7 +11,7 @@ let   TG_OPS         = 'https://api.telegram.org/bot' + OPS_BOT;
 let   GROUP_ID       = -1003982585243;
 let   GMAIL          = 'https://gmail-relay.undone-k.workers.dev/emails';
 let   SUPA           = 'https://nhdnkzhtadfkkluiulhs.supabase.co';
-let   SUPA_KEY       = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8';
+let   SUPA_KEY       = 'JWT_REDACTED_anon_key';
 
 async function tgSend(botUrl, chatId, text, extra) {
   if (!chatId) return;

@@ -6,7 +6,7 @@ Content-Disposition: form-data; name="index.js"
 
 let GROQ  = 'gsk_REDACTED_dead_key';
 let SUPA  = 'https://nhdnkzhtadfkkluiulhs.supabase.co/functions/v1';
-let SUPA_A= 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZG5remh0YWRma2tsdWl1bGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzgyNTUsImV4cCI6MjA4OTUxNDI1NX0.akaWgxRilnjavzpsLqU149nBJqxDjbYOnRdAqrwz4J8';
+let SUPA_A= 'JWT_REDACTED_anon_key';
 let STRIPE= 'sk_live_REDACTED_expired_key';
 let GMAIL = 'https://gmail-relay.undone-k.workers.dev/emails';
 let RESEND_RELAY = 'https://resend-relay.undone-k.workers.dev/emails';
