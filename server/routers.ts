@@ -40,12 +40,14 @@ import { feedbackRouter } from "./feedback/router";
 import { personalizationRouter } from "./personalization/router";
 import { stripeConnectRouter } from "./stripe-connect-router";
 import { metrcRouter } from "./routers/metrc";
+import { reputationRouter } from "./routers/reputation";
 import { qronRouter } from "./qron/router";
 import { executiveRouter } from "./executive/router";
 
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
+  reputation: reputationRouter,
   products: productsRouter,
   authenticate: authenticateRouter,
   certificates: certificatesRouter,
