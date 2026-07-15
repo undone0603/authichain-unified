@@ -7,7 +7,7 @@ Content-Disposition: form-data; name="index.js"
 // /health returns 200 always
 
 const SUPA   = 'https://nhdnkzhtadfkkluiulhs.supabase.co/functions/v1';
-const SUPA_A = '***REMOVED***';
+const SUPA_A = 'JWT_REDACTED_anon_key';
 const CORS   = {'Access-Control-Allow-Origin':'*','Content-Type':'application/json'};
 
 export default {

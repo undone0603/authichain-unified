@@ -11,7 +11,7 @@ let   TG_OPS         = 'https://api.telegram.org/bot' + OPS_BOT;
 let   GROUP_ID       = -1003982585243;
 let   GMAIL          = 'https://gmail-relay.undone-k.workers.dev/emails';
 let   SUPA           = 'https://nhdnkzhtadfkkluiulhs.supabase.co';
-let   SUPA_KEY       = '***REMOVED***';
+let   SUPA_KEY       = 'JWT_REDACTED_anon_key';
 
 async function tgSend(botUrl, chatId, text, extra) {
   if (!chatId) return;

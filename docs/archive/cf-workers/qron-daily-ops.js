@@ -6,7 +6,7 @@ Content-Disposition: form-data; name="index.js"
 
 let GROQ  = 'gsk_REDACTED_dead_key';
 let SUPA  = 'https://nhdnkzhtadfkkluiulhs.supabase.co/functions/v1';
-let SUPA_A= '***REMOVED***';
+let SUPA_A= 'JWT_REDACTED_anon_key';
 let STRIPE= 'sk_live_REDACTED_expired_key';
 let GMAIL = 'https://gmail-relay.undone-k.workers.dev/emails';
 let RESEND_RELAY = 'https://resend-relay.undone-k.workers.dev/emails';

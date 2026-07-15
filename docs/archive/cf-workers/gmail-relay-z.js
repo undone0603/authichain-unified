@@ -8,7 +8,7 @@ Content-Disposition: form-data; name="index.js"
 // Routes all outbound email through z@authichain.com
 
 let   Z_MAIL    = 'https://nhdnkzhtadfkkluiulhs.supabase.co/functions/v1/z-mail';
-let   SUPA_ANON = '***REMOVED***';
+let   SUPA_ANON = 'JWT_REDACTED_anon_key';
 const CORS = {'Access-Control-Allow-Origin':'*','Content-Type':'application/json'};
 
 export default {
