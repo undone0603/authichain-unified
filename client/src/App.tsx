@@ -24,6 +24,7 @@ const EmailCampaigns = lazy(() => import("./pages/EmailCampaigns"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const Referrals = lazy(() => import("./pages/Referrals"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const OpsDashboard = lazy(() => import("./pages/OpsDashboard"));
 const Services = lazy(() => import("./pages/Services"));
 const Storymode = lazy(() => import("./pages/Storymode"));
 const ROICalculator = lazy(() => import("./pages/ROICalculator"));
@@ -74,6 +75,7 @@ function DashboardRoutes() {
           <WRoute path="/referrals" component={Referrals} />
           <WRoute path="/admin" component={AdminDashboard} />
           <WRoute path="/admin/users" component={AdminDashboard} />
+          <WRoute path="/admin/ops" component={OpsDashboard} />
           <WRoute path="/white-label" component={WhiteLabel} />
           <WRoute path="/grants" component={GrantHub} />
           <WRoute path="/growth" component={GrowthEngine} />
