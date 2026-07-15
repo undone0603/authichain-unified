@@ -1,0 +1,11 @@
+{
+  "name": "@authichain/vector-store",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "openai": "^4.0.0",
+    "vectra": "^0.4.0"
+  }
+}

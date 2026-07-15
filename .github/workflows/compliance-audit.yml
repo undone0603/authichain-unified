@@ -24,8 +24,8 @@ jobs:
         id: secrets_check
         shell: bash
         run: |
-          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
-            echo "::notice::SUPABASE_URL not set — skipping compliance audit. Configure repo secrets to enable."
+          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
+            echo "::notice::Required Supabase secrets not set — skipping compliance audit. Configure repo secrets to enable."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
