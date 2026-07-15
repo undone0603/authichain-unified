@@ -64,6 +64,38 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Deploy authichain-autopilot
+        if: steps.secrets_check.outputs.skip != 'true'
+        run: npx wrangler deploy --minify --config wrangler.toml
+        working-directory: workers/authichain-autopilot
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy authichain-chain-data
+        if: steps.secrets_check.outputs.skip != 'true'
+        run: npx wrangler deploy --minify --config wrangler.toml
+        working-directory: workers/authichain-chain-data
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy authichain-license-issuer
+        if: steps.secrets_check.outputs.skip != 'true'
+        run: npx wrangler deploy --minify --config wrangler.toml
+        working-directory: workers/authichain-license-issuer
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy authichain-qron-provenance
+        if: steps.secrets_check.outputs.skip != 'true'
+        run: npx wrangler deploy --minify --config wrangler.toml
+        working-directory: workers/authichain-qron-provenance
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy authichain-scan-validate
         if: steps.secrets_check.outputs.skip != 'true'
         run: npx wrangler deploy --minify --config wrangler.toml
