@@ -1,0 +1,49 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" fill="#000000" />
+  <g stroke="#00ffcc" stroke-width="1">
+    <line x1="0" y1="25" x2="200" y2="25">
+      <animate attributeName="stroke" values="#00ffcc;#00ff00;#00ffcc" dur="2s" repeatCount="indefinite" />
+    </line>
+    <line x1="0" y1="50" x2="200" y2="50">
+      <animate attributeName="stroke" values="#00ff00;#00ffff;#00ff00" dur="3s" repeatCount="indefinite" />
+    </line>
+    <line x1="0" y1="75" x2="200" y2="75">
+      <animate attributeName="stroke" values="#00ffff;#00ffcc;#00ffff" dur="4s" repeatCount="indefinite" />
+    </line>
+    <line x1="0" y1="100" x2="200" y2="100">
+      <animate attributeName="stroke" values="#00ffcc;#00ff00;#00ffcc" dur="2.5s" repeatCount="indefinite" />
+    </line>
+    <line x1="0" y1="125" x2="200" y2="125">
+      <animate attributeName="stroke" values="#00ff00;#00ffff;#00ff00" dur="3.5s" repeatCount="indefinite" />
+    </line>
+    <line x1="0" y1="150" x2="200" y2="150">
+      <animate attributeName="stroke" values="#00ffff;#00ffcc;#00ffff" dur="4.5s" repeatCount="indefinite" />
+    </line>
+    <line x1="0" y1="175" x2="200" y2="175">
+      <animate attributeName="stroke" values="#00ffcc;#00ff00;#00ffcc" dur="5s" repeatCount="indefinite" />
+    </line>
+  </g>
+  <g stroke="#00ffcc" stroke-width="1">
+    <line x1="25" y1="0" x2="25" y2="200">
+      <animate attributeName="stroke" values="#00ffcc;#00ff00;#00ffcc" dur="2s" repeatCount="indefinite" />
+    </line>
+    <line x1="50" y1="0" x2="50" y2="200">
+      <animate attributeName="stroke" values="#00ff00;#00ffff;#00ff00" dur="3s" repeatCount="indefinite" />
+    </line>
+    <line x1="75" y1="0" x2="75" y2="200">
+      <animate attributeName="stroke" values="#00ffff;#00ffcc;#00ffff" dur="4s" repeatCount="indefinite" />
+    </line>
+    <line x1="100" y1="0" x2="100" y2="200">
+      <animate attributeName="stroke" values="#00ffcc;#00ff00;#00ffcc" dur="2.5s" repeatCount="indefinite" />
+    </line>
+    <line x1="125" y1="0" x2="125" y2="200">
+      <animate attributeName="stroke" values="#00ff00;#00ffff;#00ff00" dur="3.5s" repeatCount="indefinite" />
+    </line>
+    <line x1="150" y1="0" x2="150" y2="200">
+      <animate attributeName="stroke" values="#00ffff;#00ffcc;#00ffff" dur="4.5s" repeatCount="indefinite" />
+    </line>
+    <line x1="175" y1="0" x2="175" y2="200">
+      <animate attributeName="stroke" values="#00ffcc;#00ff00;#00ffcc" dur="5s" repeatCount="indefinite" />
+    </line>
+  </g>
+</svg>  

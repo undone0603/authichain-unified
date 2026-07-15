@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff6b6b" />
+      <stop offset="50%" stop-color="#9eff6b" />
+      <stop offset="100%" stop-color="#6bfff7" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="15" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Main background -->
+  <rect width="800" height="800" fill="url(#bg-gradient)" opacity="0.8" />
+  
+  <!-- Decorative brick pattern background -->
+  <g opacity="0.15">
+    <path d="M0,0 h800 v800 h-800 z" fill="none" stroke="#ffffff" stroke-width="3" />
+    <path d="M0,80 h800 M0,160 h800 M0,240 h800 M0,320 h800 M0,400 h800 M0,480 h800 M0,560 h800 M0,640 h800 M0,720 h800" stroke="#ffffff" stroke-width="1" />
+    <path d="M80,0 v800 M160,0 v800 M240,0 v800 M320,0 v800 M400,0 v800 M480,0 v800 M560,0 v800 M640,0 v800 M720,0 v800" stroke="#ffffff" stroke-width="1" />
+  </g>
+  
+  <!-- Main content area -->
+  <rect x="120" y="120" width="560" height="560" rx="20" ry="20" fill="#ffffff" opacity="0.9" />
+  
+  <!-- Product name -->
+  <g transform="translate(150, 220)">
+    <rect x="0" y="0" width="500" height="80" rx="10" ry="10" fill="#71d16e" />
+    <text x="250" y="55" font-family="Arial, sans-serif" font-size="40" font-weight="bold" text-anchor="middle" fill="#ffffff">WATERMELON ZMARTINI</text>
+  </g>
+  
+  <!-- Strain info -->
+  <g transform="translate(150, 320)">
+    <text x="250" y="0" font-family="Arial, sans-serif" font-size="20" text-anchor="middle" fill="#333333">(WATERMELON MIMOSA X ZOAP)</text>
+  </g>
+  
+  <!-- Attributes -->
+  <g transform="translate(150, 370)">
+    <text x="250" y="0" font-family="Arial, sans-serif" font-size="18" text-anchor="middle" fill="#333333">ATTRIBUTES: SMARTIES, SOUR PATCH</text>
+    <text x="250" y="30" font-family="Arial, sans-serif" font-size="18" text-anchor="middle" fill="#333333">WATERMELON, AND IRISH SPRING</text>
+  </g>
+  
+  <!-- Cartoon characters -->
+  <g transform="translate(400, 480)">
+    <!-- Watermelon character -->
+    <g transform="translate(-120, 0)">
+      <path d="M0,0 a50,50 0 1,0 100,0 a50,50 0 1,0 -100,0" fill="#ff6b6b" />
+      <path d="M10,0 a40,40 0 1,0 80,0 a40,40 0 1,0 -80,0" fill="#91f086" />
+      <circle cx="35" cy="-15" r="5" fill="#222222" />
+      <circle cx="65" cy="-15" r="5" fill="#222222" />
+      <path d="M35,15 q15,20 30,0" fill="none" stroke="#222222" stroke-width="3" />
+      <path d="M20,-15 l-10,-10 M80,-15 l10,-10" stroke="#91f086" stroke-width="3" />
+    </g>
+    
+    <!-- Lab flask character -->
+    <g transform="translate(70, 0)">
+      <path d="M-20,-50 h40 v30 l25,50 a10,10 0 0,1 -90,0 l25,-50 z" fill="#f7f7f7" stroke="#444444" stroke-width="2" />
+      <path d="M-15,-10 l30,0 l15,30 a30,30 0 0,1 -60,0 z" fill="#ff6b6b" opacity="0.8" />
+      <circle cx="-5" cy="5" r="5" fill="#ffffff" opacity="0.7" />
+      <circle cx="15" cy="-5" r="3" fill="#ffffff" opacity="0.7" />
+      <circle cx="-10" cy="15" r="4" fill="#ffffff" opacity="0.7" />
+      <circle cx="-5" cy="-25" r="5" fill="#222222" />
+      <circle cx="5" cy="-25" r="5" fill="#222222" />
+      <path d="M-5,-10 q10,10 10,0" fill="none" stroke="#222222" stroke-width="2" />
+    </g>
+  </g>
+  
+  <!-- Quote -->
+  <g transform="translate(400, 600)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-style="italic" font-size="18" text-anchor="middle" fill="#333333">"IN THE END, WE'RE ALL JUST LOOKING</text>
+    <text x="0" y="25" font-family="Arial, sans-serif" font-style="italic" font-size="18" text-anchor="middle" fill="#333333">FOR A SPARK."</text>
+  </g>
+  
+  <!-- Company info -->
+  <g transform="translate(400, 680)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#444444">VOYAGE BLOOM EXCLUSIVE • NFT #000665</text>
+  </g>
+  
+  <!-- Border -->
+  <rect x="120" y="120" width="560" height="560" rx="20" ry="20" fill="none" stroke="#71d16e" stroke-width="5" />
+  
+  <!-- Dr. Dankenstein label -->
+  <g transform="translate(600, 220)">
+    <rect x="-75" y="-25" width="150" height="50" rx="5" ry="5" fill="#71d16e" />
+    <text x="0" y="5" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#ffffff">DR. DANKENSTEIN</text>
+  </g>
+  
+  <!-- NFT label glow effect -->
+  <g filter="url(#glow)">
+    <path d="M150,100 h80 l15,40 h-110 z" fill="#ffd700" />
+    <text x="190" y="125" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#333333">NFT</text>
+  </g>
+
+  <!-- Lab equipment decorations -->
+  <g transform="translate(700, 700)" opacity="0.3">
+    <path d="M0,0 l-20,-40 l-10,0 l-10,-20 l-15,0 l-10,-20" fill="none" stroke="#444444" stroke-width="3" />
+    <circle cx="-20" cy="-40" r="5" fill="none" stroke="#444444" stroke-width="1" />
+    <circle cx="-40" cy="-60" r="5" fill="none" stroke="#444444" stroke-width="1" />
+    <circle cx="-65" cy="-80" r="5" fill="none" stroke="#444444" stroke-width="1" />
+  </g>
+</svg>

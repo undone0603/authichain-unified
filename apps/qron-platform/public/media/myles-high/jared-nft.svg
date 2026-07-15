@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9575cd;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7e57c2;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="jellyGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#f48fb1;stop-opacity:0.7" />
+      <stop offset="100%" style="stop-color:#f48fb1;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Main background -->
+  <rect width="800" height="800" fill="url(#bgGradient)"/>
+  
+  <!-- Glow effect behind jar -->
+  <circle cx="400" cy="400" r="200" fill="url(#jellyGlow)">
+    <animate attributeName="opacity" values="0.5;0.8;0.5" dur="4s" repeatCount="indefinite" />
+  </circle>
+  
+  <!-- Jar base -->
+  <path d="M300 250 L300 550 C300 600 500 600 500 550 L500 250 Z" fill="#e8eaf6" opacity="0.7" stroke="#7986cb" stroke-width="5"/>
+  
+  <!-- Jar lid -->
+  <path d="M290 250 L510 250 L510 230 L290 230 Z" fill="#ef5350" stroke="#c62828" stroke-width="3"/>
+  <ellipse cx="400" cy="230" rx="110" ry="15" fill="#ef5350" stroke="#c62828" stroke-width="3"/>
+  
+  <!-- Jelly substance -->
+  <path d="M320 270 L320 520 C320 560 480 560 480 520 L480 270 Z" fill="#f48fb1" opacity="0.9">
+    <animate attributeName="d" 
+             values="M320 270 L320 520 C320 560 480 560 480 520 L480 270 Z;
+                     M320 270 L320 520 C320 565 480 565 480 520 L480 270 Z;
+                     M320 270 L320 520 C320 560 480 560 480 520 L480 270 Z" 
+             dur="6s" 
+             repeatCount="indefinite"/>
+  </path>
+  
+  <!-- Jelly chunks/kiwi pieces -->
+  <circle cx="360" cy="350" r="15" fill="#aed581" opacity="0.9" />
+  <circle cx="420" cy="380" r="20" fill="#aed581" opacity="0.9" />
+  <circle cx="380" cy="450" r="18" fill="#aed581" opacity="0.9" />
+  <circle cx="440" cy="470" r="12" fill="#aed581" opacity="0.9" />
+  <circle cx="350" cy="420" r="10" fill="#aed581" opacity="0.9" />
+  
+  <!-- Face - eyes -->
+  <ellipse cx="370" cy="380" rx="20" ry="25" fill="white" stroke="#7986cb" stroke-width="2">
+    <animate attributeName="ry" values="25;20;25" dur="5s" repeatCount="indefinite" />
+  </ellipse>
+  <ellipse cx="430" cy="380" rx="20" ry="25" fill="white" stroke="#7986cb" stroke-width="2">
+    <animate attributeName="ry" values="25;20;25" dur="5s" repeatCount="indefinite" />
+  </ellipse>
+  
+  <!-- Pupils -->
+  <circle cx="370" cy="380" r="8" fill="#333">
+    <animate attributeName="cy" values="380;375;380" dur="5s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="430" cy="380" r="8" fill="#333">
+    <animate attributeName="cy" values="380;375;380" dur="5s" repeatCount="indefinite" />
+  </circle>
+  
+  <!-- Cheeks -->
+  <circle cx="345" cy="415" r="15" fill="#e91e63" opacity="0.5" />
+  <circle cx="455" cy="415" r="15" fill="#e91e63" opacity="0.5" />
+  
+  <!-- Mouth -->
+  <path d="M370 440 Q400 470 430 440" fill="none" stroke="#333" stroke-width="5" stroke-linecap="round">
+    <animate attributeName="d" 
+             values="M370 440 Q400 470 430 440;
+                     M370 445 Q400 480 430 445;
+                     M370 440 Q400 470 430 440" 
+             dur="6s" 
+             repeatCount="indefinite"/>
+  </path>
+  <!-- Teeth -->
+  <rect x="385" y="440" width="10" height="10" fill="white" rx="2" ry="2" />
+  <rect x="405" y="440" width="10" height="10" fill="white" rx="2" ry="2" />
+  
+  <!-- Droplets/bubbles -->
+  <circle cx="330" cy="300" r="4" fill="#f8bbd0" opacity="0.8">
+    <animate attributeName="cy" values="300;310;300" dur="4s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="470" cy="330" r="5" fill="#f8bbd0" opacity="0.8">
+    <animate attributeName="cy" values="330;340;330" dur="5s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="360" cy="500" r="6" fill="#f8bbd0" opacity="0.8">
+    <animate attributeName="cy" values="500;510;500" dur="6s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="440" cy="510" r="3" fill="#f8bbd0" opacity="0.8">
+    <animate attributeName="cy" values="510;520;510" dur="3.5s" repeatCount="indefinite" />
+  </circle>
+  
+  <!-- NFT text -->
+  <text x="400" y="630" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">JARED #001</text>
+  
+  <!-- Attribute data -->
+  <text x="400" y="670" font-family="Arial, sans-serif" font-size="18" fill="#e0e0e0" text-anchor="middle">ATTRIBUTES: GRAPE JELLO, KIWI, AND TIRES</text>
+  <text x="400" y="700" font-family="Arial, sans-serif" font-size="18" fill="#e0e0e0" text-anchor="middle">ORIGIN: HUMBOLDT SEED COMPANY</text>
+  
+  <!-- Caption -->
+  <text x="400" y="130" font-family="Arial, sans-serif" font-size="24" font-style="italic" fill="white" text-anchor="middle">"ROLL WITH THE BEST–YOU CAN'T SQUASH THIS VIBE."</text>
+</svg>

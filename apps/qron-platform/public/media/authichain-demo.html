@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AuthiChain — Product Authentication Demo</title>
+<style>
+/* ── RESET & TOKENS ── */
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#c9a227;--gold-dim:rgba(201,162,39,0.12);--gold-border:rgba(201,162,39,0.28);
+  --green:#22c55e;--green-dim:rgba(34,197,94,0.10);--green-border:rgba(34,197,94,0.25);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.10);--purple-border:rgba(167,139,250,0.25);
+  --blue:#38bdf8;--orange:#fb923c;
+  --bg:#060608;--surface:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.07);
+  --text:#e5e5e5;--muted:rgba(255,255,255,0.40);--dim:rgba(255,255,255,0.25);
+  --mono:'DM Mono','Courier New',Courier,monospace;
+  --display:'Syne','Arial Black',Arial,sans-serif;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);height:100%;overflow-x:hidden;}
+
+/* ── TYPOGRAPHY ── */
+.syne{font-family:var(--display);}
+.gt-gold{background:linear-gradient(135deg,var(--gold),#ffe082);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.gt-green{background:linear-gradient(135deg,var(--green),#86efac);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.gt-purple{background:linear-gradient(135deg,var(--purple),#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+/* ── KEYFRAMES ── */
+@keyframes ripple{0%{transform:scale(.4);opacity:.85;}100%{transform:scale(2.8);opacity:0;}}
+@keyframes pulse{0%,100%{opacity:.35;transform:scale(1);}50%{opacity:.9;transform:scale(1.12);}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+@keyframes scanbeam{0%{top:6%;}100%{top:88%;}}
+@keyframes fadein{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+
+/* ── LAYOUT ── */
+.app{display:flex;flex-direction:column;min-height:100vh;}
+
+/* NAV */
+nav{
+  height:52px;padding:0 24px;display:flex;align-items:center;gap:14px;
+  border-bottom:.5px solid var(--border);background:rgba(6,6,8,.97);
+  backdrop-filter:blur(16px);position:sticky;top:0;z-index:50;flex-shrink:0;
+}
+.nav-logo{font-family:var(--display);font-weight:800;font-size:.95rem;letter-spacing:.15em;color:var(--gold);text-decoration:none;}
+.nav-sep{color:var(--dim);font-size:12px;}
+.nav-label{font-size:11px;color:rgba(255,255,255,.38);}
+.nav-spacer{flex:1;}
+.btn-verify{
+  font-size:12px;color:var(--gold);text-decoration:none;padding:6px 12px;
+  border:1px solid var(--gold-border);border-radius:8px;
+  display:inline-flex;align-items:center;gap:4px;transition:all .2s;
+  font-family:var(--mono);cursor:pointer;background:transparent;
+}
+.btn-verify:hover{background:var(--gold-dim);border-color:var(--gold);}
+
+/* MOBILE STEP STRIP */
+.step-strip{
+  display:none;overflow-x:auto;gap:7px;padding:10px 12px 8px;
+  flex-shrink:0;scrollbar-width:none;border-bottom:.5px solid var(--border);
+}
+.step-strip::-webkit-scrollbar{display:none;}
+.step-pill{
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  color:rgba(255,255,255,.45);padding:6px 12px;border-radius:20px;
+  cursor:pointer;font-size:11px;white-space:nowrap;flex-shrink:0;
+  font-family:var(--mono);transition:all .2s;
+}
+.step-pill.active{border-color:rgba(201,162,39,.5);color:var(--gold);background:var(--gold-dim);}
+
+/* BODY */
+.body-wrap{
+  flex:1;display:flex;gap:0;padding:20px;
+  max-width:1400px;margin:0 auto;width:100%;
+}
+
+/* SIDEBAR */
+.sidebar{width:200px;flex-shrink:0;margin-right:18px;display:flex;flex-direction:column;gap:0;}
+.sidebar-label{font-size:10px;color:var(--dim);letter-spacing:.15em;margin-bottom:10px;}
+.step-list{display:flex;flex-direction:column;gap:5px;}
+.step-btn{
+  background:var(--surface);border:1px solid var(--border);color:rgba(255,255,255,.45);
+  padding:7px 10px;border-radius:8px;cursor:pointer;font-size:10px;
+  transition:all .2s;font-family:var(--mono);text-align:left;width:100%;
+  display:flex;align-items:center;gap:7px;
+}
+.step-btn:hover{border-color:rgba(255,255,255,.2);color:#fff;}
+.step-btn.active{border-color:rgba(201,162,39,.5);color:var(--gold);background:var(--gold-dim);}
+.step-num{
+  width:17px;height:17px;border-radius:50%;border:1px solid rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;font-size:9px;
+  color:rgba(255,255,255,.28);flex-shrink:0;transition:all .2s;
+}
+.step-btn.active .step-num{border-color:var(--gold);color:var(--gold);}
+.specs-box{
+  margin-top:18px;padding:14px;background:var(--surface);
+  border:1px solid var(--border);border-radius:12px;
+}
+.specs-title{font-size:10px;color:var(--dim);letter-spacing:.1em;margin-bottom:10px;}
+.spec-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:.5px solid var(--border);}
+.spec-k{color:rgba(255,255,255,.3);}
+.spec-v{color:rgba(255,255,255,.65);}
+
+/* MAIN */
+.main-col{flex:1;display:flex;flex-direction:column;gap:14px;}
+.step-title-row{display:flex;gap:9px;align-items:center;}
+.step-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex-shrink:0;}
+.step-dot.playing{animation:pulse 1.5s infinite;background:var(--green);}
+.step-heading{font-family:var(--display);font-weight:700;font-size:1rem;color:rgba(255,255,255,.9);}
+
+/* BROWSER MOCK */
+.browser{
+  flex:1;background:#0c0c10;border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;display:flex;flex-direction:column;
+  min-height:380px;
+}
+.chrome-bar{
+  padding:9px 14px;border-bottom:.5px solid var(--border);
+  display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.02);flex-shrink:0;
+}
+.chrome-dots{display:flex;gap:5px;}
+.chrome-dot{width:9px;height:9px;border-radius:50%;}
+.url-bar{
+  flex:1;background:rgba(255,255,255,.04);border:.5px solid var(--border);
+  border-radius:6px;padding:3px 10px;font-size:10px;color:rgba(255,255,255,.28);
+  display:flex;align-items:center;gap:5px;
+}
+.ssl{color:var(--green);font-size:8px;}
+.screen-area{flex:1;position:relative;overflow:hidden;}
+.progress-bar{
+  position:absolute;bottom:0;left:0;height:2px;background:var(--gold);
+  transition:width .1s linear;box-shadow:0 0 8px var(--gold);z-index:10;
+}
+
+/* SCREEN CONTENTS */
+.screen{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;transition:opacity .35s;overflow:hidden;
+}
+.screen.visible{opacity:1;pointer-events:auto;animation:fadein .35s ease;}
+
+/* Landing screen */
+.landing-inner{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center;}
+.landing-tag{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.15em;}
+.landing-h{font-family:var(--display);font-weight:800;font-size:clamp(1.4rem,4vw,2.2rem);line-height:1.1;}
+.landing-sub{font-size:12px;color:rgba(255,255,255,.45);max-width:260px;line-height:1.7;}
+.landing-btn{background:var(--gold);color:#000;padding:10px 24px;border-radius:8px;font-size:12px;font-weight:700;cursor:default;}
+.landing-stats{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;}
+.stat-v{color:var(--gold);font-weight:700;font-size:14px;text-align:center;}
+.stat-l{font-size:10px;color:rgba(255,255,255,.3);text-align:center;}
+
+/* Scanning screen */
+.scan-inner{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;}
+.qr-wrap{
+  position:relative;width:140px;height:140px;
+  border:1.5px solid rgba(201,162,39,.4);border-radius:10px;overflow:hidden;flex-shrink:0;
+}
+.qr-corner{position:absolute;width:16px;height:16px;}
+.qr-corner.tl{top:7px;left:7px;border-top:2px solid var(--gold);border-left:2px solid var(--gold);}
+.qr-corner.tr{top:7px;right:7px;border-top:2px solid var(--gold);border-right:2px solid var(--gold);}
+.qr-corner.bl{bottom:7px;left:7px;border-bottom:2px solid var(--gold);border-left:2px solid var(--gold);}
+.qr-corner.br{bottom:7px;right:7px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold);}
+.scan-beam{
+  position:absolute;left:0;right:0;height:2px;
+  background:linear-gradient(to right,transparent,var(--gold),transparent);
+  box-shadow:0 0 10px var(--gold);top:6%;
+  animation:scanbeam 1.8s ease-in-out infinite alternate;
+}
+.qr-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;padding:14px;}
+.qr-cell{aspect-ratio:1;border-radius:2px;background:rgba(201,162,39,.08);}
+.qr-cell.on{background:var(--gold);}
+.scan-id{font-size:11px;color:rgba(255,255,255,.5);text-align:center;line-height:1.7;}
+.scan-dots{display:flex;gap:5px;}
+.scan-dot-ani{width:6px;height:6px;border-radius:50%;background:var(--gold);}
+.scan-dot-ani:nth-child(1){animation:pulse .9s 0s infinite;}
+.scan-dot-ani:nth-child(2){animation:pulse .9s .3s infinite;}
+.scan-dot-ani:nth-child(3){animation:pulse .9s .6s infinite;}
+
+/* Consensus screen */
+.consensus-inner{flex:1;display:flex;flex-direction:column;padding:16px;gap:8px;overflow-y:auto;}
+.consensus-label{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.15em;margin-bottom:4px;flex-shrink:0;}
+.agent-card{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px;flex-shrink:0;}
+.agent-top{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+.agent-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.12);transition:all .5s;flex-shrink:0;}
+.agent-dot.lit{box-shadow:0 0 8px currentColor;}
+.agent-name{font-family:var(--display);font-size:12px;font-weight:600;color:rgba(255,255,255,.45);transition:color .5s;flex:1;}
+.agent-pct{font-size:10px;color:rgba(255,255,255,.25);}
+.agent-bar-wrap{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;}
+.agent-bar{height:100%;width:0%;border-radius:2px;transition:width 1.2s ease;}
+.agent-desc{font-size:10px;color:rgba(255,255,255,.28);margin-top:4px;}
+.consensus-verdict{text-align:center;font-family:var(--display);font-size:13px;font-weight:600;color:var(--green);padding:4px 0;flex-shrink:0;opacity:0;transition:opacity .5s;}
+.consensus-verdict.show{opacity:1;}
+
+/* Certificate screen */
+.cert-inner{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px;}
+.cert-icon{width:52px;height:52px;border-radius:50%;border:2px solid var(--green);display:flex;align-items:center;justify-content:center;box-shadow:0 0 24px rgba(34,197,94,.4);flex-shrink:0;}
+.cert-check{font-size:22px;color:var(--green);}
+.cert-auth{font-family:var(--display);font-weight:800;font-size:1.3rem;color:var(--green);}
+.cert-table{background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;width:100%;}
+.cert-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--border);font-size:11px;}
+.cert-k{color:rgba(255,255,255,.3);}
+.cert-v{color:rgba(255,255,255,.72);text-align:right;max-width:60%;}
+.cert-dl{background:var(--gold);color:#000;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:700;cursor:default;}
+
+/* Blockchain screen */
+.chain-inner{flex:1;display:flex;flex-direction:column;padding:16px;gap:10px;overflow-y:auto;}
+.chain-label{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.15em;flex-shrink:0;}
+.chain-box{background:var(--surface);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;flex-shrink:0;}
+.chain-box-title{font-size:10px;margin-bottom:7px;}
+.chain-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:.5px solid var(--border);}
+.chain-k{color:rgba(255,255,255,.3);}
+.chain-v{color:rgba(255,255,255,.7);}
+.chain-link{text-align:center;font-size:12px;cursor:default;}
+
+/* DPP screen */
+.dpp-inner{flex:1;display:flex;flex-direction:column;padding:16px;gap:10px;}
+.dpp-header{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.dpp-flag{font-size:18px;}
+.dpp-label{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.15em;}
+.dpp-table{background:var(--surface);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px;flex:1;overflow:auto;}
+.dpp-reg{font-size:10px;color:var(--green);margin-bottom:8px;}
+.dpp-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:.5px solid var(--border);}
+.dpp-k{color:rgba(255,255,255,.3);}
+.dpp-v{color:rgba(255,255,255,.7);}
+.dpp-export{background:var(--green);color:#000;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:700;cursor:default;text-align:center;flex-shrink:0;}
+
+/* CLICK RIPPLE */
+.ripple-wrap{position:absolute;pointer-events:none;z-index:20;transform:translate(-50%,-50%);}
+.ripple-ring{
+  position:absolute;inset:0;border-radius:50%;border:2px solid var(--gold);
+  animation:ripple 1.3s ease-out infinite;opacity:0;
+}
+.ripple-ring:nth-child(2){animation-delay:.3s;}
+.ripple-ring:nth-child(3){animation-delay:.6s;}
+.ripple-core{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+}
+.ripple-dot{width:12px;height:12px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold);}
+.ripple-label{
+  position:absolute;top:-24px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.85);border:1px solid rgba(201,162,39,.5);
+  border-radius:6px;padding:3px 8px;font-size:10px;color:var(--gold);
+  white-space:nowrap;font-family:var(--mono);
+}
+
+/* CONTROLS */
+.controls{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 16px;flex-shrink:0;
+}
+.controls-top{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
+.play-btn{
+  width:40px;height:40px;border-radius:50%;border:1px solid rgba(201,162,39,.4);
+  background:rgba(201,162,39,.12);color:var(--gold);cursor:pointer;
+  font-size:18px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .2s;
+}
+.play-btn:hover{background:rgba(201,162,39,.2);}
+.scrubber-wrap{flex:1;}
+input[type=range]{
+  -webkit-appearance:none;width:100%;height:3px;border-radius:2px;
+  outline:none;cursor:pointer;border:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--gold);cursor:pointer;box-shadow:0 0 8px rgba(201,162,39,.6);
+}
+input[type=range]::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;background:var(--gold);
+  cursor:pointer;border:none;box-shadow:0 0 8px rgba(201,162,39,.6);
+}
+.time-label{font-size:11px;color:rgba(255,255,255,.32);min-width:52px;text-align:right;flex-shrink:0;}
+.seg-bar{display:flex;gap:3px;}
+.seg{height:3px;border-radius:2px;cursor:pointer;transition:background .3s;background:rgba(255,255,255,.06);}
+.seg.past{background:var(--gold);}
+.seg.current{background:rgba(201,162,39,.5);}
+
+/* PiP VIDEO */
+.pip{
+  position:fixed;bottom:74px;right:14px;
+  width:200px;height:136px;
+  border-radius:12px;overflow:hidden;
+  border:1.5px solid rgba(201,162,39,.32);
+  box-shadow:0 6px 36px rgba(0,0,0,.75);
+  z-index:100;background:#000;
+  cursor:grab;user-select:none;
+}
+.pip:active{cursor:grabbing;}
+.pip-bar{
+  position:absolute;top:0;left:0;right:0;height:24px;z-index:5;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 8px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.55),transparent);
+}
+.pip-status{display:flex;gap:4px;align-items:center;}
+.pip-led{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .3s;}
+.pip-led.live{background:var(--green);animation:pulse 1.5s infinite;}
+.pip-presenter{font-size:8px;color:rgba(255,255,255,.5);letter-spacing:.08em;}
+.pip-hint{font-size:8px;color:rgba(255,255,255,.3);}
+.pip video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;}
+.pip-border{position:absolute;inset:0;border:1.5px solid rgba(201,162,39,.22);border-radius:12px;pointer-events:none;}
+
+/* CTA BAR */
+.cta-bar{
+  padding:12px 24px;border-top:.5px solid var(--border);
+  background:rgba(6,6,8,.96);display:flex;align-items:center;
+  gap:16px;flex-shrink:0;
+}
+.cta-text-wrap{}
+.cta-headline{font-family:var(--display);font-weight:700;font-size:1rem;color:var(--gold);}
+.cta-sub{font-size:12px;color:rgba(255,255,255,.35);}
+.cta-spacer{flex:1;}
+.btn-gold{
+  background:var(--gold);color:#000;padding:10px 22px;border-radius:10px;
+  text-decoration:none;font-weight:700;font-size:13px;flex-shrink:0;
+  font-family:var(--mono);border:none;cursor:pointer;transition:all .2s;
+}
+.btn-gold:hover{background:#ffe082;}
+.btn-outline{
+  border:1px solid rgba(255,255,255,.18);color:var(--text);padding:10px 18px;
+  border-radius:10px;font-size:13px;background:transparent;cursor:pointer;
+  font-family:var(--mono);flex-shrink:0;transition:all .2s;
+}
+.btn-outline:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.05);}
+
+/* ── MOBILE ── */
+@media(max-width:640px){
+  nav{padding:0 14px;}
+  .sidebar{display:none;}
+  .step-strip{display:flex;}
+  .body-wrap{padding:12px;}
+  .main-col{gap:10px;}
+  .browser{min-height:300px;}
+  .step-heading{font-size:.88rem;}
+  .pip{bottom:70px;right:10px;width:136px;height:96px;border-radius:9px;}
+  .cta-bar{padding:10px 14px;gap:10px;}
+  .cta-text-wrap{display:none;}
+  .btn-gold,.btn-outline{padding:9px 14px;font-size:12px;}
+  .spec-row{font-size:10px;}
+}
+@media(max-width:400px){
+  .pip{width:110px;height:78px;}
+  .btn-gold{padding:9px 12px;font-size:11px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">◆ AUTHICHAIN</span>
+  <span class="nav-sep">/</span>
+  <span class="nav-label">Product Demo</span>
+  <div class="nav-spacer"></div>
+  <button class="btn-verify" onclick="window.open('https://authichain.com/verify/AC-1829577CED8F6BFBB0BC667CDE33DF0E','_blank')">Try Live Verify →</button>
+</nav>
+
+<!-- MOBILE STEP STRIP -->
+<div class="step-strip" id="stepStrip"></div>
+
+<!-- BODY -->
+<div class="body-wrap">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-label">WALKTHROUGH</div>
+    <div class="step-list" id="stepList"></div>
+    <div class="specs-box">
+      <div class="specs-title">DEMO SPECS</div>
+      <div class="spec-row"><span class="spec-k">Total</span><span class="spec-v">~24s</span></div>
+      <div class="spec-row"><span class="spec-k">AI Agents</span><span class="spec-v">5</span></div>
+      <div class="spec-row"><span class="spec-k">Blockchain</span><span class="spec-v">Polygon</span></div>
+      <div class="spec-row"><span class="spec-k">Per Seal</span><span class="spec-v">$0.004</span></div>
+      <div class="spec-row"><span class="spec-k">Verify</span><span class="spec-v">2.1 seconds</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN COLUMN -->
+  <div class="main-col">
+
+    <!-- Step title -->
+    <div class="step-title-row">
+      <div class="step-dot" id="stepDot"></div>
+      <h2 class="step-heading syne" id="stepHeading">Step 1 — AuthiChain Portal</h2>
+    </div>
+
+    <!-- Browser mock -->
+    <div class="browser">
+      <div class="chrome-bar">
+        <div class="chrome-dots">
+          <div class="chrome-dot" style="background:#ff5f57"></div>
+          <div class="chrome-dot" style="background:#ffbd2e"></div>
+          <div class="chrome-dot" style="background:#28ca41"></div>
+        </div>
+        <div class="url-bar"><span class="ssl">🔒</span><span id="urlText">authichain.com/</span></div>
+      </div>
+      <div class="screen-area" id="screenArea">
+
+        <!-- Screen 1: Landing -->
+        <div class="screen" id="screen-landing">
+          <div style="padding:10px 14px;border-bottom:.5px solid var(--border);display:flex;gap:10px;align-items:center;flex-shrink:0;">
+            <span class="syne" style="color:var(--gold);font-size:11px;font-weight:700;">◆ AUTHICHAIN</span>
+            <div style="flex:1"></div>
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);"></span>
+            <span style="font-size:10px;color:var(--green);">LIVE</span>
+          </div>
+          <div class="landing-inner">
+            <div class="landing-tag">BLOCKCHAIN PRODUCT AUTHENTICATION</div>
+            <div class="landing-h syne"><span style="color:var(--gold);">Truth</span> as<br>infrastructure</div>
+            <div class="landing-sub">Scan your QRON QR code to instantly verify blockchain authenticity</div>
+            <div class="landing-btn">Scan Product →</div>
+            <div class="landing-stats">
+              <div><div class="stat-v">$0.004</div><div class="stat-l">per seal</div></div>
+              <div><div class="stat-v">2.1s</div><div class="stat-l">verify</div></div>
+              <div><div class="stat-v">EU DPP</div><div class="stat-l">compliant</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screen 2: Scanning -->
+        <div class="screen" id="screen-scanning">
+          <div class="scan-inner">
+            <div style="font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.15em;">QR CODE DETECTED</div>
+            <div class="qr-wrap">
+              <div class="qr-corner tl"></div>
+              <div class="qr-corner tr"></div>
+              <div class="qr-corner bl"></div>
+              <div class="qr-corner br"></div>
+              <div class="scan-beam"></div>
+              <div class="qr-grid" id="qrGrid"></div>
+            </div>
+            <div class="scan-id">
+              AC-1829577CED8F6BFBB0BC667CDE33DF0E<br>
+              <span style="color:rgba(255,255,255,.25);font-size:10px;">Querying Polygon blockchain...</span>
+            </div>
+            <div class="scan-dots">
+              <div class="scan-dot-ani"></div>
+              <div class="scan-dot-ani"></div>
+              <div class="scan-dot-ani"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screen 3: Consensus -->
+        <div class="screen" id="screen-consensus">
+          <div class="consensus-inner" id="consensusInner">
+            <div class="consensus-label">5-AGENT CONSENSUS ENGINE</div>
+            <!-- agents injected by JS -->
+            <div class="consensus-verdict" id="consensusVerdict">✓ CONSENSUS REACHED — 2.1s</div>
+          </div>
+        </div>
+
+        <!-- Screen 4: Certificate -->
+        <div class="screen" id="screen-certificate">
+          <div class="cert-inner">
+            <div class="cert-icon"><span class="cert-check">✓</span></div>
+            <div class="cert-auth syne">AUTHENTIC</div>
+            <div class="cert-table">
+              <div class="cert-row"><span class="cert-k">Product</span><span class="cert-v">Heritage Sneaker Drop #0042</span></div>
+              <div class="cert-row"><span class="cert-k">Brand</span><span class="cert-v">Verified Manufacturer</span></div>
+              <div class="cert-row"><span class="cert-k">Batch</span><span class="cert-v">AC-1829577...</span></div>
+              <div class="cert-row"><span class="cert-k">NFT</span><span class="cert-v">#16 · Polygon</span></div>
+              <div class="cert-row" id="certDate"><span class="cert-k">Verified</span><span class="cert-v"></span></div>
+              <div class="cert-row"><span class="cert-k">Time</span><span class="cert-v">2.1 seconds</span></div>
+            </div>
+            <div class="cert-dl">Download Certificate →</div>
+          </div>
+        </div>
+
+        <!-- Screen 5: Blockchain -->
+        <div class="screen" id="screen-blockchain">
+          <div class="chain-inner">
+            <div class="chain-label">POLYGON MAINNET · CHAIN ID: 137</div>
+            <div class="chain-box">
+              <div class="chain-box-title" style="color:var(--purple);">TRANSACTION</div>
+              <div class="chain-row"><span class="chain-k">Hash</span><span class="chain-v">0x4d8f...9a2c</span></div>
+              <div class="chain-row"><span class="chain-k">Block</span><span class="chain-v">#58,234,441</span></div>
+              <div class="chain-row"><span class="chain-k">Status</span><span class="chain-v" style="color:var(--green);">✓ Success</span></div>
+              <div class="chain-row"><span class="chain-k">Gas</span><span class="chain-v">0.000021 MATIC</span></div>
+            </div>
+            <div class="chain-box">
+              <div class="chain-box-title" style="color:var(--gold);">NFT TRANSFER</div>
+              <div class="chain-row"><span class="chain-k">Token</span><span class="chain-v">#16</span></div>
+              <div class="chain-row"><span class="chain-k">Contract</span><span class="chain-v">0x4da4...72BE</span></div>
+              <div class="chain-row"><span class="chain-k">Standard</span><span class="chain-v">ERC-721</span></div>
+              <div class="chain-row"><span class="chain-k">To</span><span class="chain-v">0xAebf...E437</span></div>
+            </div>
+            <div class="chain-link" style="color:var(--purple);">View on PolygonScan →</div>
+          </div>
+        </div>
+
+        <!-- Screen 6: DPP -->
+        <div class="screen" id="screen-dpp">
+          <div class="dpp-inner">
+            <div class="dpp-header">
+              <span class="dpp-flag">🇪🇺</span>
+              <div class="dpp-label">EU DIGITAL PRODUCT PASSPORT</div>
+            </div>
+            <div class="dpp-table">
+              <div class="dpp-reg">REGULATION (EU) 2024/1781 — ECODESIGN</div>
+              <div class="dpp-row"><span class="dpp-k">Product Type</span><span class="dpp-v">Footwear</span></div>
+              <div class="dpp-row"><span class="dpp-k">Batch ID</span><span class="dpp-v">AC-182957</span></div>
+              <div class="dpp-row"><span class="dpp-k">Manufacturer</span><span class="dpp-v">Verified Entity</span></div>
+              <div class="dpp-row"><span class="dpp-k">Country</span><span class="dpp-v">United States</span></div>
+              <div class="dpp-row"><span class="dpp-k">Carbon Score</span><span class="dpp-v">A+ (94/100)</span></div>
+              <div class="dpp-row"><span class="dpp-k">Recyclable</span><span class="dpp-v">Yes — 78%</span></div>
+              <div class="dpp-row"><span class="dpp-k">Compliance</span><span class="dpp-v" style="color:var(--green);">EU DPP ✓</span></div>
+              <div class="dpp-row"><span class="dpp-k">Valid Until</span><span class="dpp-v">2029-12-31</span></div>
+            </div>
+            <div class="dpp-export">Export DPP PDF →</div>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+
+        <!-- Ripple container -->
+        <div id="rippleContainer"></div>
+
+      </div><!-- /screen-area -->
+    </div><!-- /browser -->
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <div class="controls-top">
+        <button class="play-btn" id="playBtn" aria-label="Play">▶</button>
+        <div class="scrubber-wrap">
+          <input type="range" id="scrubber" min="0" max="25000" value="0"/>
+        </div>
+        <div class="time-label" id="timeLabel">0s/25s</div>
+      </div>
+      <div class="seg-bar" id="segBar"></div>
+    </div>
+
+  </div><!-- /main-col -->
+</div><!-- /body-wrap -->
+
+<!-- PiP VIDEO -->
+<div class="pip" id="pip">
+  <div class="pip-bar">
+    <div class="pip-status">
+      <div class="pip-led" id="pipLed"></div>
+      <span class="pip-presenter">PRESENTER</span>
+    </div>
+    <span class="pip-hint" id="pipHint">drag</span>
+  </div>
+  <video id="pipVideo" src="Avatar_Video_720p.mp4" playsinline loop muted></video>
+  <div class="pip-border"></div>
+</div>
+
+<!-- CTA BAR -->
+<div class="cta-bar">
+  <div class="cta-text-wrap">
+    <div class="cta-headline">Seen enough?</div>
+    <div class="cta-sub">Deploy AuthiChain in 48 hours. $0.004 per seal.</div>
+  </div>
+  <div class="cta-spacer"></div>
+  <button class="btn-gold" onclick="window.open('https://authichain.com/portal','_blank')">Get Started →</button>
+  <button class="btn-outline" id="founderBtn">Talk to Founder</button>
+</div>
+
+</div><!-- /app -->
+
+<script>
+/* ── DATA ── */
+const AGENTS=[
+  {name:'Guardian', weight:35, color:'#22c55e', desc:'Validating cryptographic hash'},
+  {name:'Archivist',weight:20, color:'#c9a227', desc:'Cross-referencing provenance'},
+  {name:'Sentinel', weight:25, color:'#a78bfa', desc:'Anomaly detection scan'},
+  {name:'Scout',    weight:8,  color:'#38bdf8', desc:'Market listing verification'},
+  {name:'Arbiter',  weight:12, color:'#fb923c', desc:'Final consensus adjudication'},
+];
+const STEPS=[
+  {id:'landing',     title:'AuthiChain Portal',       url:'authichain.com/',           duration:4500, click:{x:62,y:78,label:'Scan Product'}},
+  {id:'scanning',    title:'QR Code Detected',         url:'authichain.com/scan',       duration:3200, click:{x:50,y:50,label:'QR Captured'}},
+  {id:'consensus',   title:'5-Agent AI Consensus',     url:'authichain.com/verify',     duration:4500, click:null},
+  {id:'certificate', title:'Certificate Issued',       url:'authichain.com/certificate',duration:5000, click:{x:50,y:86,label:'Download Cert'}},
+  {id:'blockchain',  title:'On-Chain Proof',           url:'polygonscan.com/tx/...',    duration:3800, click:{x:50,y:90,label:'View on Chain'}},
+  {id:'dpp',         title:'EU Product Passport',      url:'authichain.com/dpp',        duration:4000, click:{x:50,y:88,label:'Export DPP PDF'}},
+];
+const TOTAL=STEPS.reduce((s,t)=>s+t.duration,0);
+
+/* ── STATE ── */
+let elapsed=0, stepIdx=0, playing=false, animId=null, lastTs=null;
+let agentStep=0, agentTimers=[];
+let rippleVisible=false;
+
+/* ── DOM REFS ── */
+const stepList=document.getElementById('stepList');
+const stepStrip=document.getElementById('stepStrip');
+const stepDot=document.getElementById('stepDot');
+const stepHeading=document.getElementById('stepHeading');
+const urlText=document.getElementById('urlText');
+const progressBar=document.getElementById('progressBar');
+const scrubber=document.getElementById('scrubber');
+const timeLabel=document.getElementById('timeLabel');
+const segBar=document.getElementById('segBar');
+const playBtn=document.getElementById('playBtn');
+const pipEl=document.getElementById('pip');
+const pipVideo=document.getElementById('pipVideo');
+const pipLed=document.getElementById('pipLed');
+const pipHint=document.getElementById('pipHint');
+const rippleContainer=document.getElementById('rippleContainer');
+const consensusVerdict=document.getElementById('consensusVerdict');
+
+/* ── BUILD QR GRID ── */
+(()=>{
+  const pat=[1,1,1,1,1,1,0,1,0,0,0,0,1,0,1,0,1,1,0,1,0,1,0,0,0,0,1,0,1,1,1,1,1,1,0,0,0,1,0,0,0,1];
+  const g=document.getElementById('qrGrid');
+  for(let i=0;i<36;i++){
+    const d=document.createElement('div');
+    d.className='qr-cell'+(pat[i%pat.length]?'':'')+((i+Math.floor(i/6))%2===0?' on':'');
+    g.appendChild(d);
+  }
+})();
+
+/* ── BUILD AGENT CARDS ── */
+(()=>{
+  const c=document.getElementById('consensusInner');
+  AGENTS.forEach((a,i)=>{
+    const card=document.createElement('div');
+    card.className='agent-card';
+    card.innerHTML=`
+      <div class="agent-top">
+        <div class="agent-dot" id="adot${i}" style="color:${a.color}"></div>
+        <div class="agent-name" id="aname${i}">${a.name}</div>
+        <div class="agent-pct">${a.weight}%</div>
+      </div>
+      <div class="agent-bar-wrap">
+        <div class="agent-bar" id="abar${i}" style="background:${a.color}"></div>
+      </div>
+      <div class="agent-desc">${a.desc}</div>`;
+    c.insertBefore(card,consensusVerdict);
+  });
+  document.getElementById('certDate').querySelector('.cert-v').textContent=new Date().toLocaleDateString();
+})();
+
+/* ── BUILD SIDEBAR & STRIP ── */
+STEPS.forEach((s,i)=>{
+  const btn=document.createElement('button');
+  btn.className='step-btn'+(i===0?' active':'');
+  btn.innerHTML=`<div class="step-num">${i+1}</div><span>${s.title}</span>`;
+  btn.onclick=()=>jumpTo(i);
+  stepList.appendChild(btn);
+
+  const pill=document.createElement('button');
+  pill.className='step-pill'+(i===0?' active':'');
+  pill.textContent=`${i+1}. ${s.title}`;
+  pill.onclick=()=>jumpTo(i);
+  stepStrip.appendChild(pill);
+});
+
+/* ── BUILD SEG BAR ── */
+STEPS.forEach((s,i)=>{
+  const seg=document.createElement('div');
+  seg.className='seg'+(i===0?' current':'');
+  seg.style.flex=s.duration/TOTAL;
+  seg.onclick=()=>jumpTo(i);
+  segBar.appendChild(seg);
+});
+
+/* ── SCREENS ── */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('visible'));
+  const el=document.getElementById('screen-'+id);
+  if(el) el.classList.add('visible');
+}
+
+function updateUI(){
+  const s=STEPS[stepIdx];
+  stepHeading.textContent=`Step ${stepIdx+1} — ${s.title}`;
+  urlText.textContent=s.url;
+  showScreen(s.id);
+
+  // sidebar
+  document.querySelectorAll('.step-btn').forEach((b,i)=>b.classList.toggle('active',i===stepIdx));
+  document.querySelectorAll('.step-pill').forEach((b,i)=>b.classList.toggle('active',i===stepIdx));
+
+  // seg bar
+  let acc=0;
+  document.querySelectorAll('.seg').forEach((seg,i)=>{
+    acc+=STEPS[i].duration;
+    seg.classList.remove('past','current');
+    if(i<stepIdx) seg.classList.add('past');
+    else if(i===stepIdx) seg.classList.add('current');
+  });
+}
+
+/* ── STEP ELAPSED ── */
+function getStepElapsed(){
+  let acc=0;
+  for(let i=0;i<stepIdx;i++) acc+=STEPS[i].duration;
+  return elapsed-acc;
+}
+function getStepPct(){return Math.min(getStepElapsed()/STEPS[stepIdx].duration,1);}
+
+/* ── PROGRESS BAR ── */
+function updateProgress(){
+  progressBar.style.width=(getStepPct()*100)+'%';
+}
+
+/* ── RIPPLE ── */
+let currentRipple=null;
+function showRipple(click){
+  if(!click||rippleVisible) return;
+  rippleVisible=true;
+  if(currentRipple) currentRipple.remove();
+  const w=document.createElement('div');
+  w.className='ripple-wrap';
+  w.style.left=click.x+'%';
+  w.style.top=click.y+'%';
+  w.style.width='40px';
+  w.style.height='40px';
+  w.innerHTML=`<div class="ripple-ring"></div><div class="ripple-ring"></div><div class="ripple-ring"></div>
+    <div class="ripple-core"><div class="ripple-dot"></div></div>
+    <div class="ripple-label">${click.label}</div>`;
+  rippleContainer.appendChild(w);
+  currentRipple=w;
+}
+function hideRipple(){
+  rippleVisible=false;
+  if(currentRipple){currentRipple.remove();currentRipple=null;}
+}
+
+/* ── CONSENSUS ANIMATION ── */
+function startConsensusAnim(){
+  agentStep=0;
+  AGENTS.forEach((_,i)=>{
+    const dot=document.getElementById('adot'+i);
+    const name=document.getElementById('aname'+i);
+    const bar=document.getElementById('abar'+i);
+    dot.classList.remove('lit');
+    dot.style.background='rgba(255,255,255,.12)';
+    name.style.color='rgba(255,255,255,.45)';
+    bar.style.width='0%';
+  });
+  consensusVerdict.classList.remove('show');
+  agentTimers.forEach(clearTimeout);
+  agentTimers=[];
+  AGENTS.forEach((a,i)=>{
+    agentTimers.push(setTimeout(()=>{
+      agentStep=i+1;
+      const dot=document.getElementById('adot'+i);
+      const name=document.getElementById('aname'+i);
+      const bar=document.getElementById('abar'+i);
+      dot.classList.add('lit');
+      dot.style.background=a.color;
+      name.style.color=a.color;
+      bar.style.width=(a.weight*2.5)+'%';
+      if(i===AGENTS.length-1) setTimeout(()=>consensusVerdict.classList.add('show'),400);
+    },i*650));
+  });
+}
+
+/* ── STEP CHANGE HANDLER ── */
+let lastStepIdx=-1;
+function onStepChange(){
+  if(stepIdx===lastStepIdx) return;
+  lastStepIdx=stepIdx;
+  updateUI();
+  hideRipple();
+  if(STEPS[stepIdx].id==='consensus') startConsensusAnim();
+}
+
+/* ── ANIMATION LOOP ── */
+function tick(ts){
+  if(!playing){animId=null;return;}
+  if(lastTs===null) lastTs=ts;
+  const dt=Math.min(ts-lastTs,200);
+  lastTs=ts;
+  elapsed=Math.min(elapsed+dt,TOTAL);
+
+  // find step
+  let acc=0;
+  for(let i=0;i<STEPS.length;i++){
+    acc+=STEPS[i].duration;
+    if(elapsed<acc){stepIdx=i;break;}
+    if(i===STEPS.length-1){stepIdx=STEPS.length-1;}
+  }
+  onStepChange();
+
+  // click ripple: show between 28%-72% of each step
+  const pct=getStepPct();
+  const cl=STEPS[stepIdx].click;
+  if(cl && pct>0.28 && pct<0.72) showRipple(cl);
+  else hideRipple();
+
+  updateProgress();
+  scrubber.value=elapsed;
+  timeLabel.textContent=Math.floor(elapsed/1000)+'s/'+Math.round(TOTAL/1000)+'s';
+  scrubber.style.background=`linear-gradient(to right,#c9a227 ${(elapsed/TOTAL)*100}%,rgba(255,255,255,.1) 0%)`;
+
+  if(elapsed>=TOTAL){
+    playing=false;
+    playBtn.textContent='▶';
+    stepDot.classList.remove('playing');
+    pipLed.classList.remove('live');
+    pipVideo.pause();
+    lastTs=null;
+    animId=null;
+    return;
+  }
+  animId=requestAnimationFrame(tick);
+}
+
+/* ── PLAYBACK ── */
+function startPlay(){
+  if(elapsed>=TOTAL) elapsed=0;
+  playing=true;
+  playBtn.textContent='⏸';
+  stepDot.classList.add('playing');
+  pipLed.classList.add('live');
+  pipVideo.muted=true;
+  pipVideo.play().catch(()=>{});
+  lastTs=null;
+  if(!animId) animId=requestAnimationFrame(tick);
+}
+function pausePlay(){
+  playing=false;
+  playBtn.textContent='▶';
+  stepDot.classList.remove('playing');
+  pipLed.classList.remove('live');
+  pipVideo.pause();
+  lastTs=null;
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+}
+playBtn.onclick=()=>playing?pausePlay():startPlay();
+
+function jumpTo(i){
+  let acc=0;
+  for(let j=0;j<i;j++) acc+=STEPS[j].duration;
+  elapsed=acc+50;
+  stepIdx=i;
+  lastStepIdx=-1;
+  hideRipple();
+  onStepChange();
+  updateProgress();
+  scrubber.value=elapsed;
+  timeLabel.textContent=Math.floor(elapsed/1000)+'s/'+Math.round(TOTAL/1000)+'s';
+  scrubber.style.background=`linear-gradient(to right,#c9a227 ${(elapsed/TOTAL)*100}%,rgba(255,255,255,.1) 0%)`;
+  if(playing){lastTs=null;}
+}
+
+scrubber.addEventListener('input',()=>{
+  elapsed=+scrubber.value;
+  let acc=0;
+  for(let i=0;i<STEPS.length;i++){
+    acc+=STEPS[i].duration;
+    if(elapsed<acc){stepIdx=i;break;}
+    if(i===STEPS.length-1) stepIdx=STEPS.length-1;
+  }
+  lastStepIdx=-1;
+  hideRipple();
+  onStepChange();
+  updateProgress();
+  timeLabel.textContent=Math.floor(elapsed/1000)+'s/'+Math.round(TOTAL/1000)+'s';
+  scrubber.style.background=`linear-gradient(to right,#c9a227 ${(elapsed/TOTAL)*100}%,rgba(255,255,255,.1) 0%)`;
+  if(playing){lastTs=null;}
+});
+
+/* ── PiP DRAG (desktop) ── */
+let dragging=false,dx=0,dy=0;
+let pipRight=14,pipBottom=74; // track from right/bottom
+pipEl.addEventListener('mousedown',(e)=>{
+  if(window.innerWidth<=640) return; // mobile: no drag
+  dragging=true;
+  const r=pipEl.getBoundingClientRect();
+  dx=e.clientX-r.left;
+  dy=e.clientY-r.top;
+  pipEl.style.transition='none';
+  e.preventDefault();
+});
+document.addEventListener('mousemove',(e)=>{
+  if(!dragging) return;
+  const x=e.clientX-dx;
+  const y=e.clientY-dy;
+  pipEl.style.left=Math.max(0,Math.min(window.innerWidth-pipEl.offsetWidth,x))+'px';
+  pipEl.style.top=Math.max(0,Math.min(window.innerHeight-pipEl.offsetHeight,y))+'px';
+  pipEl.style.right='auto';
+  pipEl.style.bottom='auto';
+});
+document.addEventListener('mouseup',()=>{dragging=false;});
+
+/* ── PiP TAP (mobile: toggle side) ── */
+let pipSide='right';
+pipEl.addEventListener('click',()=>{
+  if(window.innerWidth>640) return;
+  pipSide=pipSide==='right'?'left':'right';
+  pipEl.style.right=pipSide==='right'?'10px':'auto';
+  pipEl.style.left=pipSide==='left'?'10px':'auto';
+  document.getElementById('pipHint').textContent=pipSide==='right'?'tap ←':'tap →';
+});
+// Update hint for mobile
+if(window.innerWidth<=640) pipHint.textContent='tap ←';
+
+/* ── FOUNDER BUTTON ── */
+document.getElementById('founderBtn').onclick=()=>{
+  const e=['z','@','authichain','.','com'].join('');
+  window.open('mailto:'+e);
+};
+
+/* ── INIT ── */
+showScreen('landing');
+updateUI();
+scrubber.style.background='linear-gradient(to right,#c9a227 0%,rgba(255,255,255,.1) 0%)';
+</script>
+</body>
+</html>

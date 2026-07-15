@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="cityBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#020814"/>
+      <stop offset="50%" stop-color="#050c1e"/>
+      <stop offset="100%" stop-color="#0a0510"/>
+    </linearGradient>
+    <radialGradient id="nightGlow1" cx="30%" cy="70%" r="40%">
+      <stop offset="0%" stop-color="#4400ff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#4400ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nightGlow2" cx="70%" cy="60%" r="35%">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="qrGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c9a227" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow5">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow10">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#cityBg)"/>
+  <rect width="1080" height="1080" fill="url(#nightGlow1)"/>
+  <rect width="1080" height="1080" fill="url(#nightGlow2)"/>
+  <g fill="#0d0d18" opacity="0.95">
+    <rect x="0" y="680" width="80" height="400"/><rect x="40" y="620" width="50" height="460"/>
+    <rect x="90" y="700" width="60" height="380"/><rect x="150" y="730" width="70" height="350"/>
+    <rect x="200" y="680" width="55" height="400"/><rect x="230" y="610" width="80" height="470"/>
+    <rect x="750" y="690" width="60" height="390"/><rect x="790" y="640" width="75" height="440"/>
+    <rect x="840" y="710" width="55" height="370"/><rect x="870" y="650" width="85" height="430"/>
+    <rect x="930" y="700" width="60" height="380"/><rect x="960" y="630" width="70" height="450"/>
+    <rect x="1010" y="720" width="70" height="360"/>
+  </g>
+  <g fill="#c9a227" opacity="0.6">
+    <rect x="50" y="640" width="6" height="8"/><rect x="62" y="640" width="6" height="8"/>
+    <rect x="50" y="658" width="6" height="8"/><rect x="100" y="720" width="6" height="8"/>
+    <rect x="160" y="750" width="6" height="8"/><rect x="800" y="660" width="6" height="8"/>
+    <rect x="812" y="672" width="6" height="8"/><rect x="880" y="670" width="6" height="8"/>
+    <rect x="970" y="648" width="6" height="8"/><rect x="1020" y="740" width="6" height="8"/>
+  </g>
+  <g fill="#4466ff" opacity="0.5">
+    <rect x="56" y="670" width="5" height="7"/><rect x="240" y="630" width="5" height="7"/>
+    <rect x="808" y="680" width="5" height="7"/><rect x="940" y="720" width="5" height="7"/>
+  </g>
+  <text x="540" y="130" text-anchor="middle" font-family="system-ui,sans-serif" font-size="28" font-weight="900" fill="#c9a227" letter-spacing="12" filter="url(#glow10)">SCAN  ME</text>
+  <g transform="translate(390, 155)">
+    <rect x="-20" y="-20" width="320" height="320" rx="20" fill="url(#qrGlow)" filter="url(#glow10)"/>
+    <rect x="0" y="0" width="280" height="280" rx="12" fill="#050505" stroke="#c9a227" stroke-width="3" filter="url(#glow5)"/>
+    <rect x="14" y="14" width="50" height="50" rx="3" fill="none" stroke="#c9a227" stroke-width="2.5"/>
+    <rect x="21" y="21" width="36" height="36" rx="1" fill="#c9a227"/>
+    <rect x="28" y="28" width="22" height="22" rx="1" fill="#050505"/>
+    <rect x="33" y="33" width="12" height="12" fill="#c9a227"/>
+    <rect x="216" y="14" width="50" height="50" rx="3" fill="none" stroke="#c9a227" stroke-width="2.5"/>
+    <rect x="223" y="21" width="36" height="36" rx="1" fill="#c9a227"/>
+    <rect x="230" y="28" width="22" height="22" rx="1" fill="#050505"/>
+    <rect x="235" y="33" width="12" height="12" fill="#c9a227"/>
+    <rect x="14" y="216" width="50" height="50" rx="3" fill="none" stroke="#c9a227" stroke-width="2.5"/>
+    <rect x="21" y="223" width="36" height="36" rx="1" fill="#c9a227"/>
+    <rect x="28" y="230" width="22" height="22" rx="1" fill="#050505"/>
+    <rect x="33" y="235" width="12" height="12" fill="#c9a227"/>
+    <g fill="#c9a227" opacity="0.75">
+      <rect x="78" y="14" width="9" height="9"/><rect x="95" y="14" width="9" height="9"/>
+      <rect x="112" y="14" width="9" height="9"/><rect x="129" y="14" width="9" height="9"/>
+      <rect x="146" y="14" width="9" height="9"/><rect x="180" y="14" width="9" height="9"/>
+      <rect x="78" y="31" width="9" height="9"/><rect x="112" y="31" width="9" height="9"/>
+      <rect x="163" y="31" width="9" height="9"/><rect x="78" y="48" width="9" height="9"/>
+      <rect x="95" y="48" width="9" height="9"/><rect x="129" y="48" width="9" height="9"/>
+      <rect x="14" y="78" width="9" height="9"/><rect x="78" y="78" width="9" height="9"/>
+      <rect x="112" y="78" width="9" height="9"/><rect x="146" y="78" width="9" height="9"/>
+      <rect x="216" y="78" width="9" height="9"/><rect x="250" y="78" width="9" height="9"/>
+      <rect x="14" y="95" width="9" height="9"/><rect x="65" y="95" width="9" height="9"/>
+      <rect x="95" y="95" width="9" height="9"/><rect x="129" y="95" width="9" height="9"/>
+      <rect x="14" y="112" width="9" height="9"/><rect x="48" y="112" width="9" height="9"/>
+      <rect x="78" y="112" width="9" height="9"/><rect x="112" y="112" width="9" height="9"/>
+      <rect x="14" y="129" width="9" height="9"/><rect x="95" y="129" width="9" height="9"/>
+      <rect x="129" y="129" width="9" height="9"/><rect x="197" y="129" width="9" height="9"/>
+      <rect x="14" y="146" width="9" height="9"/><rect x="65" y="146" width="9" height="9"/>
+      <rect x="163" y="146" width="9" height="9"/><rect x="257" y="146" width="9" height="9"/>
+      <rect x="78" y="163" width="9" height="9"/><rect x="112" y="163" width="9" height="9"/>
+      <rect x="216" y="163" width="9" height="9"/><rect x="250" y="163" width="9" height="9"/>
+      <rect x="78" y="197" width="9" height="9"/><rect x="216" y="197" width="9" height="9"/>
+      <rect x="250" y="197" width="9" height="9"/>
+    </g>
+    <text x="140" y="220" text-anchor="middle" font-family="monospace" font-size="9" fill="#c9a227" opacity="0.5">QRON | AuthiChain Protocol</text>
+  </g>
+  <text x="540" y="486" text-anchor="middle" font-family="monospace" font-size="14" fill="#c9a227" opacity="0.5" letter-spacing="1">qron.space/v/tsmt2026</text>
+  <text x="540" y="560" text-anchor="middle" font-family="system-ui,sans-serif" font-size="62" font-weight="900" fill="white" filter="url(#glow5)">NIGHT CITY</text>
+  <text x="540" y="614" text-anchor="middle" font-family="system-ui,sans-serif" font-size="24" fill="#c9a227" letter-spacing="8">BLOCKCHAIN SUMMIT</text>
+  <line x1="150" y1="640" x2="440" y2="640" stroke="#c9a22744" stroke-width="1"/>
+  <line x1="640" y1="640" x2="930" y2="640" stroke="#c9a22744" stroke-width="1"/>
+  <text x="540" y="645" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#c9a22788">&#9670;</text>
+  <g transform="translate(240, 662)">
+    <rect width="120" height="30" rx="15" fill="#0d0a00" stroke="#c9a22766" stroke-width="1"/>
+    <text x="60" y="20" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#c9a227">#QRON</text>
+  </g>
+  <g transform="translate(375, 662)">
+    <rect width="160" height="30" rx="15" fill="#0a0010" stroke="#4400ff66" stroke-width="1"/>
+    <text x="80" y="20" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#8855ff">#AuthiChain</text>
+  </g>
+  <g transform="translate(550, 662)">
+    <rect width="140" height="30" rx="15" fill="#0d0a00" stroke="#c9a22766" stroke-width="1"/>
+    <text x="70" y="20" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#c9a227">#Web3Auth</text>
+  </g>
+  <g transform="translate(705, 662)">
+    <rect width="130" height="30" rx="15" fill="#0a0010" stroke="#4400ff66" stroke-width="1"/>
+    <text x="65" y="20" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#8855ff">#Verified</text>
+  </g>
+  <rect x="0" y="990" width="1080" height="90" fill="#030308"/>
+  <rect x="0" y="990" width="1080" height="1" fill="#c9a22744"/>
+  <text x="540" y="1028" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#c9a227">QRON | AI Living QR Art</text>
+  <text x="540" y="1055" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#444" letter-spacing="2">qron.space | AuthiChain Protocol | Cryptographically Verified</text>
+</svg>

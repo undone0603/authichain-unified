@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <defs>
+    <radialGradient id="bg2" cx="50%" cy="50%" r="65%">
+      <stop offset="0%" stop-color="#0d1a0d"/>
+      <stop offset="100%" stop-color="#060a06"/>
+    </radialGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#50c878"/>
+      <stop offset="50%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#228b22"/>
+    </linearGradient>
+    <filter id="glow2"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="600" height="600" fill="url(#bg2)"/>
+  <!-- QR finder patterns -->
+  <g filter="url(#glow2)">
+    <rect x="40" y="40" width="130" height="130" rx="14" fill="none" stroke="#50c878" stroke-width="7"/>
+    <rect x="58" y="58" width="94" height="94" rx="8" fill="none" stroke="#c9a227" stroke-width="3.5"/>
+    <rect x="78" y="78" width="54" height="54" rx="4" fill="url(#g2)"/>
+    <rect x="430" y="40" width="130" height="130" rx="14" fill="none" stroke="#50c878" stroke-width="7"/>
+    <rect x="448" y="58" width="94" height="94" rx="8" fill="none" stroke="#c9a227" stroke-width="3.5"/>
+    <rect x="468" y="78" width="54" height="54" rx="4" fill="url(#g2)"/>
+    <rect x="40" y="430" width="130" height="130" rx="14" fill="none" stroke="#50c878" stroke-width="7"/>
+    <rect x="58" y="448" width="94" height="94" rx="8" fill="none" stroke="#c9a227" stroke-width="3.5"/>
+    <rect x="78" y="468" width="54" height="54" rx="4" fill="url(#g2)"/>
+  </g>
+  <!-- Organic leaf/vine QR data pattern -->
+  <g opacity="0.75">
+    <!-- Vine paths through data modules -->
+    <path d="M200,200 Q250,180 280,220 T350,200 Q380,240 400,220" fill="none" stroke="#228b22" stroke-width="2" opacity="0.5"/>
+    <path d="M200,350 Q250,330 300,370 T380,340" fill="none" stroke="#50c878" stroke-width="2" opacity="0.4"/>
+    <!-- Data modules with organic shapes -->
+    <rect x="200" y="200" width="22" height="22" rx="6" fill="#50c878" opacity="0.8"/>
+    <rect x="240" y="210" width="22" height="22" rx="6" fill="#c9a227" opacity="0.7"/>
+    <rect x="280" y="200" width="22" height="22" rx="6" fill="#228b22" opacity="0.8"/>
+    <rect x="320" y="220" width="22" height="22" rx="6" fill="#50c878" opacity="0.6"/>
+    <rect x="360" y="200" width="22" height="22" rx="6" fill="#c9a227" opacity="0.7"/>
+    <rect x="200" y="250" width="22" height="22" rx="6" fill="#228b22" opacity="0.7"/>
+    <rect x="250" y="260" width="22" height="22" rx="6" fill="#50c878" opacity="0.8"/>
+    <rect x="300" y="250" width="22" height="22" rx="6" fill="#c9a227" opacity="0.6"/>
+    <rect x="350" y="260" width="22" height="22" rx="6" fill="#228b22" opacity="0.7"/>
+    <rect x="200" y="300" width="22" height="22" rx="6" fill="#50c878" opacity="0.7"/>
+    <rect x="260" y="310" width="22" height="22" rx="6" fill="#c9a227" opacity="0.8"/>
+    <rect x="310" y="300" width="22" height="22" rx="6" fill="#228b22" opacity="0.6"/>
+    <rect x="370" y="310" width="22" height="22" rx="6" fill="#50c878" opacity="0.7"/>
+    <rect x="210" y="350" width="22" height="22" rx="6" fill="#c9a227" opacity="0.7"/>
+    <rect x="260" y="340" width="22" height="22" rx="6" fill="#228b22" opacity="0.8"/>
+    <rect x="320" y="350" width="22" height="22" rx="6" fill="#50c878" opacity="0.6"/>
+    <rect x="370" y="340" width="22" height="22" rx="6" fill="#c9a227" opacity="0.7"/>
+    <rect x="200" y="390" width="22" height="22" rx="6" fill="#228b22" opacity="0.7"/>
+    <rect x="280" y="390" width="22" height="22" rx="6" fill="#50c878" opacity="0.8"/>
+    <rect x="350" y="400" width="22" height="22" rx="6" fill="#c9a227" opacity="0.6"/>
+  </g>
+  <!-- Central botanical element -->
+  <g transform="translate(300,300)" filter="url(#glow2)" opacity="0.7">
+    <circle r="60" fill="none" stroke="#50c878" stroke-width="1.5" stroke-dasharray="8 4"/>
+    <circle r="40" fill="none" stroke="#c9a227" stroke-width="1" stroke-dasharray="4 6"/>
+    <!-- Leaf shapes -->
+    <path d="M0,-25 Q15,-40 0,-55 Q-15,-40 0,-25Z" fill="#50c878" opacity="0.5"/>
+    <path d="M25,0 Q40,-15 55,0 Q40,15 25,0Z" fill="#228b22" opacity="0.5"/>
+    <path d="M0,25 Q-15,40 0,55 Q15,40 0,25Z" fill="#50c878" opacity="0.5"/>
+    <path d="M-25,0 Q-40,15 -55,0 Q-40,-15 -25,0Z" fill="#228b22" opacity="0.5"/>
+  </g>
+  <!-- Edge data -->
+  <g opacity="0.45">
+    <rect x="40" y="210" width="16" height="16" rx="4" fill="#50c878"/>
+    <rect x="40" y="240" width="16" height="16" rx="4" fill="#c9a227"/>
+    <rect x="40" y="290" width="16" height="16" rx="4" fill="#228b22"/>
+    <rect x="40" y="340" width="16" height="16" rx="4" fill="#50c878"/>
+    <rect x="40" y="390" width="16" height="16" rx="4" fill="#c9a227"/>
+    <rect x="544" y="210" width="16" height="16" rx="4" fill="#50c878"/>
+    <rect x="544" y="260" width="16" height="16" rx="4" fill="#228b22"/>
+    <rect x="544" y="310" width="16" height="16" rx="4" fill="#c9a227"/>
+    <rect x="544" y="370" width="16" height="16" rx="4" fill="#50c878"/>
+    <rect x="544" y="400" width="16" height="16" rx="4" fill="#228b22"/>
+  </g>
+  <!-- Bottom row alignment -->
+  <g opacity="0.5">
+    <rect x="430" y="430" width="24" height="24" rx="4" fill="#50c878"/>
+    <rect x="470" y="440" width="24" height="24" rx="4" fill="#c9a227"/>
+    <rect x="510" y="430" width="24" height="24" rx="4" fill="#228b22"/>
+    <rect x="430" y="470" width="24" height="24" rx="4" fill="#c9a227"/>
+    <rect x="470" y="480" width="24" height="24" rx="4" fill="#50c878"/>
+    <rect x="510" y="470" width="24" height="24" rx="4" fill="#228b22"/>
+    <rect x="430" y="520" width="24" height="24" rx="4" fill="#50c878"/>
+    <rect x="510" y="520" width="24" height="24" rx="4" fill="#c9a227"/>
+  </g>
+</svg>
