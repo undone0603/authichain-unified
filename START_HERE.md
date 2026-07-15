@@ -43,7 +43,7 @@ Plus:
   ├─ funnel-email-example.md     ← Email integration examples
   └─ ...
 
-/FUNNEL_TRACKING_SUMMARY.md
+/docs/strategy/FUNNEL_TRACKING_SUMMARY.md
   └─ Complete overview of entire system
 ```
 
@@ -208,7 +208,7 @@ Use `addFunnelParams()` to build these automatically.
 
 **For Complete Understanding:**
 4. `docs/funnel-tracking.md` (complete reference)
-5. `FUNNEL_TRACKING_SUMMARY.md` (architecture overview)
+5. `docs/strategy/FUNNEL_TRACKING_SUMMARY.md` (architecture overview)
 
 ## Commands You'll Use
 
@@ -304,7 +304,7 @@ await trackFunnelEvent({
 - Complete reference: `docs/funnel-tracking.md`
 - Email examples: `docs/funnel-email-example.md`
 - Quick setup: `docs/FUNNEL_QUICKSTART.md`
-- Architecture: `FUNNEL_TRACKING_SUMMARY.md`
+- Architecture: `docs/strategy/FUNNEL_TRACKING_SUMMARY.md`
 - Code: `/src/lib/funnel-tracking.ts`
 
 ---
