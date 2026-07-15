@@ -23,23 +23,23 @@ jobs:
       matrix:
         include:
           - language: javascript-typescript
+            build-mode: none
           - language: python
           - language: actions
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode || 'autobuild' }}
           queries: security-and-quality
           config: |
             paths-ignore:
               - apps
               - docs/archive
               - scripts/ops
-
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
