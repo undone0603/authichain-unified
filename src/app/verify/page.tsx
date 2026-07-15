@@ -12,6 +12,8 @@ import {
   ScanLine,
   Clock,
   Bitcoin,
+  Truck,
+  MapPin,
 } from 'lucide-react';
 import { verifyHash, type QRVerificationRecord } from '../../../server/_core/verification';
 import { getInscriptionStatus } from '../../../server/ordinals-service';
@@ -45,6 +47,12 @@ export default async function VerifyPage({ searchParams }: PageProps) {
   const ordinalStatus = product.blockchainTxHash && INSCRIPTION_ID_RE.test(product.blockchainTxHash)
     ? await getInscriptionStatus(product.blockchainTxHash).catch(() => null)
     : null;
+
+  const { data: provenanceEvents } = await supabase
+    .from('supply_chain_events')
+    .select('id, eventType, location, createdAt')
+    .eq('productId', productId)
+    .order('createdAt', { ascending: true });
 
   const { data: qrRows } = await supabase
     .from('qr_codes')
@@ -213,6 +221,45 @@ export default async function VerifyPage({ searchParams }: PageProps) {
                 </a>
               </>
             )}
+          </div>
+        )}
+
+        {/* Supply-Chain Provenance Timeline */}
+        {provenanceEvents && provenanceEvents.length > 0 && (
+          <div className="protocol-card p-8 mb-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Truck className="w-5 h-5 text-gold" />
+              <h3 className="text-sm font-black uppercase tracking-widest text-zinc-500">
+                Supply-Chain Provenance
+              </h3>
+            </div>
+            <div className="space-y-4">
+              {provenanceEvents.map((event, i) => (
+                <div key={event.id} className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="w-2 h-2 rounded-full bg-gold shrink-0 mt-1.5" />
+                    {i < provenanceEvents.length - 1 && (
+                      <div className="w-px flex-1 bg-zinc-800 mt-1" />
+                    )}
+                  </div>
+                  <div className="pb-4">
+                    <p className="font-bold text-zinc-200 text-sm capitalize">
+                      {event.eventType.replace(/_/g, ' ')}
+                    </p>
+                    {event.location && (
+                      <p className="text-zinc-500 text-xs flex items-center gap-1 mt-1">
+                        <MapPin className="w-3 h-3" /> {event.location}
+                      </p>
+                    )}
+                    <p className="text-zinc-600 text-[10px] font-mono mt-1">
+                      {new Date(event.createdAt).toLocaleString(undefined, {
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
