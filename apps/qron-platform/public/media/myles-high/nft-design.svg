@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+  <!-- Background with cosmic gradient -->
+  <defs>
+    <linearGradient id="cosmicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A1E2E" />
+      <stop offset="50%" stop-color="#1B3045" />
+      <stop offset="100%" stop-color="#0A1E2E" />
+    </linearGradient>
+    <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#3DF5B3" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#3DF5B3" stop-opacity="0" />
+    </radialGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="15" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- Cosmic background -->
+  <rect width="800" height="800" fill="url(#cosmicGradient)" />
+  
+  <!-- Stars -->
+  <g id="stars">
+    <circle cx="100" cy="100" r="2" fill="white" />
+    <circle cx="200" cy="150" r="1.5" fill="white" />
+    <circle cx="300" cy="90" r="2" fill="white" />
+    <circle cx="400" cy="130" r="1" fill="white" />
+    <circle cx="500" cy="200" r="1.5" fill="white" />
+    <circle cx="600" cy="120" r="2" fill="white" />
+    <circle cx="700" cy="180" r="1" fill="white" />
+    <circle cx="150" cy="250" r="1.5" fill="white" />
+    <circle cx="250" cy="220" r="1" fill="white" />
+    <circle cx="350" cy="270" r="2" fill="white" />
+    <circle cx="450" cy="320" r="1" fill="white" />
+    <circle cx="550" cy="290" r="1.5" fill="white" />
+    <circle cx="650" cy="350" r="2" fill="white" />
+    <circle cx="750" cy="310" r="1" fill="white" />
+    
+    <!-- Twinkling stars (with animation effect) -->
+    <circle cx="120" cy="330" r="3" fill="white" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.2;0.8" dur="3s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="420" cy="210" r="3" fill="white" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2.5s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="680" cy="280" r="3" fill="white" opacity="0.7">
+      <animate attributeName="opacity" values="0.7;0.2;0.7" dur="4s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="230" cy="400" r="3" fill="white" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;0.4;0.9" dur="3.5s" repeatCount="indefinite" />
+    </circle>
+  </g>
+
+  <!-- Distant mountains silhouette -->
+  <path d="M0,550 L100,500 L200,530 L300,480 L400,520 L500,470 L600,520 L700,490 L800,530 L800,800 L0,800 Z" fill="#152238" />
+  
+  <!-- Glow effect behind UFO -->
+  <circle cx="400" cy="350" r="150" fill="url(#glowGradient)" opacity="0.5" />
+
+  <!-- UFO Body -->
+  <g filter="url(#glow)">
+    <!-- Saucer bottom -->
+    <ellipse cx="400" cy="370" rx="120" ry="35" fill="#D8D8D8" stroke="#212121" stroke-width="2" />
+    
+    <!-- Saucer dome -->
+    <ellipse cx="400" cy="350" rx="80" ry="30" fill="#8c8c8c" stroke="#212121" stroke-width="2" />
+    
+    <!-- Cockpit -->
+    <ellipse cx="400" cy="330" rx="40" ry="25" fill="#3DF5B3" stroke="#212121" stroke-width="2" opacity="0.7" />
+    
+    <!-- UFO details/lights -->
+    <circle cx="340" cy="370" r="8" fill="#3DF5B3" opacity="0.9" />
+    <circle cx="370" cy="375" r="8" fill="#3DF5B3" opacity="0.9" />
+    <circle cx="400" cy="375" r="8" fill="#3DF5B3" opacity="0.9" />
+    <circle cx="430" cy="375" r="8" fill="#3DF5B3" opacity="0.9" />
+    <circle cx="460" cy="370" r="8" fill="#3DF5B3" opacity="0.9" />
+
+    <!-- UFO beam -->
+    <path d="M370,370 L320,600 L480,600 L430,370" fill="#3DF5B3" opacity="0.3" />
+  </g>
+
+  <!-- Cookies in UFO beam -->
+  <g id="cookies">
+    <circle cx="380" cy="480" r="30" fill="#C87137" />
+    <circle cx="385" cy="475" r="5" fill="#341C0C" />
+    <circle cx="370" cy="490" r="5" fill="#341C0C" />
+    <circle cx="395" cy="495" r="5" fill="#341C0C" />
+    <circle cx="375" cy="465" r="5" fill="#341C0C" />
+    
+    <circle cx="420" cy="530" r="25" fill="#C87137" />
+    <circle cx="425" cy="525" r="4" fill="#341C0C" />
+    <circle cx="415" cy="540" r="4" fill="#341C0C" />
+    <circle cx="430" cy="545" r="4" fill="#341C0C" />
+    <circle cx="410" cy="520" r="4" fill="#341C0C" />
+    
+    <!-- White marshmallow/mint -->
+    <rect x="385" cy="440" width="20" height="10" rx="3" fill="white" />
+    <rect x="405" cy="500" width="15" height="8" rx="2" fill="white" />
+  </g>
+
+  <!-- Title Elements -->
+  <g id="title" filter="url(#glow)">
+    <path id="titleBanner" d="M200,110 Q400,70 600,110 Q600,140 400,160 Q200,140 200,110 Z" fill="#1B3045" stroke="#3DF5B3" stroke-width="3" />
+    <text x="400" y="130" font-family="Arial, sans-serif" font-size="44" font-weight="bold" fill="#3DF5B3" text-anchor="middle" filter="url(#glow)">COSMIC COOKIE</text>
+    
+    <path id="subtitleBanner" d="M250,650 Q400,620 550,650 Q550,670 400,690 Q250,670 250,650 Z" fill="#1B3045" stroke="#3DF5B3" stroke-width="3" />
+    <text x="400" y="665" font-family="Arial, sans-serif" font-size="38" font-weight="bold" fill="#3DF5B3" text-anchor="middle" filter="url(#glow)">COLLECTOR #042</text>
+  </g>
+  
+  <!-- NFT blockchain metadata visual element -->
+  <g id="metadata" transform="translate(30, 730)">
+    <rect x="0" y="0" width="200" height="40" rx="5" fill="#0A1E2E" stroke="#3DF5B3" stroke-width="1" />
+    <text x="10" y="25" font-family="Courier, monospace" font-size="14" fill="#3DF5B3">MINT: 0x42F...</text>
+  </g>
+</svg>

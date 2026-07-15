@@ -1,0 +1,34 @@
+{
+  "name": "AuthiChain Protocol",
+  "short_name": "AuthiChain",
+  "description": "The global standard for cryptographically-verified product identity and industrial provenance.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#c9a227",
+  "icons": [
+    {
+      "src": "/media/hero-qron-art.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/media/hero-qron-art.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Create QRON",
+      "url": "/?utm_source=pwa_shortcut",
+      "icons": [{ "src": "/media/hero-qron-art.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Industrial Dashboard",
+      "url": "/dashboard?utm_source=pwa_shortcut",
+      "icons": [{ "src": "/media/hero-qron-art.png", "sizes": "192x192" }]
+    }
+  ]
+}

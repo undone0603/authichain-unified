@@ -1,0 +1,127 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d3748;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1a202c;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="circleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a5568;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2d3748;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bagGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bagAccent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#dc2626;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b91c1c;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="400" fill="url(#bgGradient)"/>
+  
+  <!-- Main Circle Background -->
+  <circle cx="200" cy="180" r="120" fill="url(#circleGradient)" opacity="0.8"/>
+  
+  <!-- Character Head (Simple Circular) -->
+  <circle cx="200" cy="140" r="25" fill="#f7fafc" stroke="#e2e8f0" stroke-width="2"/>
+  
+  <!-- Eyes with Glasses -->
+  <g>
+    <!-- Left Eye -->
+    <circle cx="190" cy="135" r="6" fill="#3182ce"/>
+    <circle cx="188" cy="133" r="2" fill="#ffffff"/>
+    
+    <!-- Right Eye -->
+    <circle cx="210" cy="135" r="6" fill="#3182ce"/>
+    <circle cx="208" cy="133" r="2" fill="#ffffff"/>
+    
+    <!-- Glasses Frame -->
+    <circle cx="190" cy="135" r="8" fill="none" stroke="#f59e0b" stroke-width="2"/>
+    <circle cx="210" cy="135" r="8" fill="none" stroke="#f59e0b" stroke-width="2"/>
+    <line x1="198" y1="135" x2="202" y2="135" stroke="#f59e0b" stroke-width="2"/>
+    
+    <!-- Nose Bridge -->
+    <line x1="182" y1="133" x2="178" y2="131" stroke="#f59e0b" stroke-width="2"/>
+    <line x1="218" y1="133" x2="222" y2="131" stroke="#f59e0b" stroke-width="2"/>
+  </g>
+  
+  <!-- Smile -->
+  <path d="M 190 145 Q 200 152 210 145" fill="none" stroke="#2d3748" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Money Bag Body -->
+  <g transform="translate(200,190)">
+    <!-- Main bag shape -->
+    <ellipse cx="0" cy="0" rx="35" ry="45" fill="url(#bagGradient)"/>
+    
+    <!-- Bag top cinch -->
+    <rect x="-25" y="-35" width="50" height="8" fill="url(#bagAccent)" rx="4"/>
+    <circle cx="-15" cy="-31" r="2" fill="#8b5cf6"/>
+    <circle cx="15" cy="-31" r="2" fill="#8b5cf6"/>
+    
+    <!-- Dollar sign -->
+    <g fill="#065f46" font-family="Arial, sans-serif" font-size="24" font-weight="bold">
+      <text x="0" y="8" text-anchor="middle">$</text>
+    </g>
+    
+    <!-- Shine effect -->
+    <ellipse cx="-12" cy="-15" rx="6" ry="12" fill="#fef3c7" opacity="0.6"/>
+  </g>
+  
+  <!-- Arms -->
+  <line x1="165" y1="175" x2="145" y2="185" stroke="#f7fafc" stroke-width="4" stroke-linecap="round"/>
+  <line x1="235" y1="175" x2="255" y2="185" stroke="#f7fafc" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Hands -->
+  <circle cx="145" cy="185" r="5" fill="#f7fafc"/>
+  <circle cx="255" cy="185" r="5" fill="#f7fafc"/>
+  
+  <!-- Diamond accent (like in original) -->
+  <g transform="translate(200,270)">
+    <polygon points="0,-8 6,0 0,8 -6,0" fill="#06d6a0" filter="url(#glow)"/>
+    <circle cx="0" cy="-15" r="2" fill="#06d6a0" opacity="0.6"/>
+    <circle cx="-10" cy="0" r="1" fill="#06d6a0" opacity="0.6"/>
+    <circle cx="10" cy="0" r="1" fill="#06d6a0" opacity="0.6"/>
+    <circle cx="0" cy="15" r="2" fill="#06d6a0" opacity="0.6"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="200" y="320" text-anchor="middle" fill="#f7fafc" 
+        font-family="Arial, sans-serif" font-size="32" font-weight="bold" filter="url(#glow)">
+    BAG EZ
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="200" y="345" text-anchor="middle" fill="#a0aec0" 
+        font-family="Arial, sans-serif" font-size="12" font-weight="normal">
+    NFT COLLECTION
+  </text>
+  
+  <!-- Top quote -->
+  <text x="200" y="40" text-anchor="middle" fill="#a0aec0" 
+        font-family="Arial, sans-serif" font-size="14" font-style="italic">
+    "SECURE THE BAG"
+  </text>
+  
+  <!-- Money symbols floating around -->
+  <g fill="#fbbf24" opacity="0.6" font-family="Arial, sans-serif" font-size="16">
+    <text x="100" y="120">💰</text>
+    <text x="320" y="140">💳</text>
+    <text x="80" y="220">💎</text>
+    <text x="330" y="240">🏦</text>
+  </g>
+  
+  <!-- Border frame -->
+  <rect x="10" y="10" width="380" height="380" fill="none" stroke="#4a5568" stroke-width="2" rx="10"/>
+  <rect x="20" y="20" width="360" height="360" fill="none" stroke="#6b7280" stroke-width="1" rx="8" opacity="0.5"/>
+</svg>

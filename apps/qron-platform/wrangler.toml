@@ -1,0 +1,6 @@
+name = "qron-edge-fleet"
+main = "src/edge.ts"
+compatibility_date = "2024-04-29"
+
+[vars]
+MAX_TEMP_F = "75"
