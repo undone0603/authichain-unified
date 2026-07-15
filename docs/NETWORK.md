@@ -5,13 +5,15 @@ _Consolidation spec: docs/superpowers/specs/2026-07-15-network-consolidation-des
 
 ## Live apps
 
+_Verified against the Vercel API 2026-07-15. All six team projects are linked to THIS repo (undone0603/authichain-unified); the old undone0603/qron-platform repo deploys nothing._
+
 | What | Folder | Deploys via | Domain(s) |
 |---|---|---|---|
-| AuthiChain app | `client/` + `server/` + `src/` (root build, `next build`) | Vercel `authichain-unified-v2` (team authichain-6389) | app.authichain.com, authichain-unified-v2.vercel.app |
-| QRON platform | `apps/qron-platform/` (source) | ⚠ Vercel `qron-platform` still builds from the old repo `undone0603/qron-platform` | qron.space, app.qron.space (hosts a registered Stripe webhook) |
-| GovChain site | `apps/brand-sites/govchain/` + `workers/govchain-us/` | Vercel `govchain-us` / CF worker | govchain.us |
-| StrainChain site | `apps/brand-sites/strainchain/` + `workers/strainchain-io/` | Vercel `strainchain-io` / CF worker | strainchain.io |
-| Apex landing | `workers/authichain-com/` | CF worker (owns `authichain.com/*` + `www` route globs) | authichain.com |
+| **The network app** (one Next.js app serves every brand) | repo root (`src/` + `client/` + `server/`, `next build`) | Vercel **`qron-platform`** (prj_GD9ypyGrjibx4Ab88M52xufUf1ph, repo root, linked 2026-06-19) | qron.space, app.qron.space, authichain.com, app.authichain.com, govchain.us, strainchain.io (+ www variants). Hosts the registered Stripe webhooks and the `/api/cron/nurture-replies` cron. |
+| Brand-pitch microsites | repo root (same build, multi-tenant) | Vercel `authichain-unified-v2` | ~50 `<pitch>.authichain.com` subdomains (diageo, lvmh, pfizer, …) |
+| Edge worker | `worker/` | Vercel `authichain-unified` (rootDirectory `worker`) | none attached |
+| Spares (linked, no domains) | — | Vercel `govchain-us`, `strainchain-io`, `authichain-portfolio` | none — candidates for deletion |
+| Apex landing / SEO layer | `workers/authichain-com/`, `workers/{govchain-us,strainchain-io,qron-space}/` | CF workers (route globs, where DNS is proxied through Cloudflare) | fronting authichain.com/* et al. |
 
 ## Cloudflare workers
 
@@ -41,7 +43,8 @@ _Consolidation spec: docs/superpowers/specs/2026-07-15-network-consolidation-des
 
 ## Follow-ups owed
 
-- Re-point Vercel `qron-platform` to build from `apps/qron-platform/` (careful: live Stripe webhook host), then archive the old repo.
-- Run `supabase/migrations/20260715000001_create_reputation_tables.sql` against live Supabase (owner action; needed before the reputation router returns data).
-- Wire a real `/api/admin/ops` endpoint for `client/src/pages/OpsDashboard.tsx` (`/admin/ops` renders its error state until then).
+- ~~Re-point Vercel `qron-platform` to the monorepo~~ — MOOT: it already builds this repo's root (since 2026-06-19) and serves ALL principal domains. `apps/qron-platform/` is the archival source of the old standalone app; do NOT set it as rootDirectory (that would replace the live network app). The old undone0603/qron-platform GitHub repo can be archived.
+- ~~Reputation migration~~ — DONE 2026-07-15 (owner-approved): `user_reputation` + `reputation_events` created on live; `scheduled_job_runs` already existed. Runner: `scripts/ops/apply-reputation-migration.cjs`.
+- ~~`/api/admin/ops`~~ — DONE 2026-07-15: admin-gated endpoint aggregating `scheduled_job_runs`; `/admin/ops` is live.
+- Vercel spares `govchain-us`, `strainchain-io`, `authichain-portfolio` have no domains — confirm and delete to free slots (owner call).
 - Owner: review + delete `/home/zac/_absorbed-*` folders; review `_absorbed-agentz_backup-HAS-KEY-FILES/{live_keys,backup_keys}.txt` and the excluded `_setenv_oauth.sh` (contains a live Google OAuth client secret — consider rotating it).
