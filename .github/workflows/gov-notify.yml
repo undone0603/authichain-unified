@@ -21,6 +21,7 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: always()
 
     steps:
@@ -29,7 +30,7 @@ jobs:
         with: { version: '10.28.2' }
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: pnpm }
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
       - name: Send Slack digest
         continue-on-error: true

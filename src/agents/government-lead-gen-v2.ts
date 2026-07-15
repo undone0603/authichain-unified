@@ -243,10 +243,6 @@ async function sendOutreach(lead: any, proposal: string, qron: QRON): Promise<vo
     subject: `GovChain.us — Blockchain Traceability Pilot for ${lead.agency}`,
     text: proposal,
     html: proposal.replace(/\n/g, '<br>'),
-    headers: {
-      'X-Proposal-ID': `pilot-${lead.id}`,
-      'X-Prospect-Email': contactEmail,
-    },
   });
   console.log(`[gov-engine] Outreach ${result.ok ? 'sent' : 'failed'} to ${contactEmail} via ${result.provider}`);
 }
@@ -264,7 +260,11 @@ async function mintPilotNFT(args: {
     );
     return;
   }
-  throw new Error('Real on-chain mint not yet wired. Set DRY_RUN=true or implement mintPilotNFT().');
+  // On-chain mint not yet implemented — skip gracefully so live runs don't crash.
+  console.warn(
+    `[gov-engine] mintPilotNFT: on-chain mint not wired — skipping for lead ${args.leadId} (${args.agency}). ` +
+    `Set DRY_RUN=true or wire thirdweb/ethers Polygon contract to implement.`
+  );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

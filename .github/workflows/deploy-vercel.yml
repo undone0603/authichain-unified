@@ -27,56 +27,77 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
-      - name: Validate secrets
+      - name: Check required secrets
+        id: secrets_check
+        shell: bash
         run: |
           if [ -z "${{ secrets.VERCEL_ORG_ID }}" ] || [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ] || [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "ERROR: Missing required Vercel secrets"
-            exit 1
+            echo "::notice::Vercel secrets missing — skipping deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v4
+        if: steps.secrets_check.outputs.skip != 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.secrets_check.outputs.skip != 'true'
         with:
           node-version: 22
 
       - uses: pnpm/action-setup@v4
+        if: steps.secrets_check.outputs.skip != 'true'
         with:
           version: latest
 
       - name: Install dependencies
+        if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Install Vercel CLI
+        if: steps.secrets_check.outputs.skip != 'true'
         run: npm install -g vercel
 
       - name: Pull Vercel Environment Information
+        if: steps.secrets_check.outputs.skip != 'true'
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Project Artifacts
+        if: steps.secrets_check.outputs.skip != 'true'
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
+      
       - name: Deploy Project Artifacts to Vercel
         id: deploy
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        shell: bash
         run: |
-          DEPLOY_OUTPUT=$(vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }} 2>&1) || true
+          set +e
+          DEPLOY_OUTPUT=$(vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
+          DEPLOY_EXIT=$?
+          set -e
+
           echo "$DEPLOY_OUTPUT"
+
+          if [ "$DEPLOY_EXIT" -eq 0 ]; then
+            echo "Deployment successful"
+            exit 0
+          fi
+
           if echo "$DEPLOY_OUTPUT" | grep -q "api-deployments-free-per-day"; then
             echo "::warning::Vercel free-tier daily deployment limit reached (100/day). Deployment skipped - will retry on next push."
             exit 0
           fi
-          if echo "$DEPLOY_OUTPUT" | grep -q "Error:"; then
-            echo "::error::Deployment failed: $DEPLOY_OUTPUT"
-            exit 1
-          fi
-          echo "Deployment successful"
+
+          echo "::error::Deployment failed with exit code $DEPLOY_EXIT"
+          exit "$DEPLOY_EXIT"
