@@ -55,6 +55,7 @@
     "node_modules",
     "build",
     "dist",
+    "apps/**/*",
     "workers/**/*",
     "worker/**/*",
     "mobile/**/*",
