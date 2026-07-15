@@ -1,0 +1,43 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "agent-browser",
+  "description": "Headless browser automation for AI agents",
+  "owner": {
+    "name": "Vercel",
+    "email": "support@vercel.com"
+  },
+  "plugins": [
+    {
+      "name": "agent-browser",
+      "description": "Automates browser interactions for web testing, form filling, screenshots, and data extraction",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/agent-browser"],
+      "category": "development"
+    },
+    {
+      "name": "authichain",
+      "description": "AI authentication, provenance verification, and adversarial detection for the AuthiChain authentic economy platform",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/authichain"],
+      "category": "security"
+    },
+    {
+      "name": "strainchain",
+      "description": "Cannabis product authenticity verification for StrainChain — the AuthiChain vertical for licensed cannabis brands. Verifies COA, batch numbers, lab licenses, and brand signatures for products like Cookies, Stiiizy, and Jeeter.",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/strainchain"],
+      "category": "security"
+    },
+    {
+      "name": "qron",
+      "description": "QRON code generation, batch management, and consumer scan orchestration for the AuthiChain Authentic Economy. Automates QRON code creation, Shopify integration, consumer scan flows, and reward minting.",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/qron"],
+      "category": "development"
+    }
+  ]
+}
