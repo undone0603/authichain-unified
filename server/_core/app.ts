@@ -17,6 +17,8 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { sdk } from "./sdk";
+import { getOpsSummary } from "../db";
 import { createInternalRouter } from "../internal-api";
 import { brandMiddleware } from "./brand-middleware";
 import contactRouter from "../contact";
@@ -157,6 +159,20 @@ export function createApp() {
 
   app.use(express.json({ limit: "5mb" }));
   app.use(express.urlencoded({ limit: "5mb", extended: true }));
+
+  // ─── Admin ops console (client/src/pages/OpsDashboard.tsx) ───────────────
+  app.get("/api/admin/ops", async (req, res) => {
+    const user = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user || user.role !== "admin") {
+      return res.status(user ? 403 : 401).json({ error: user ? "Admin only" : "Not signed in" });
+    }
+    try {
+      const summary = await getOpsSummary();
+      res.json(summary);
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "ops query failed" });
+    }
+  });
 
   // ─── OAuth callback: stricter rate limit ─────────────────────────────────
   app.use("/api/oauth", oauthRateLimit);
