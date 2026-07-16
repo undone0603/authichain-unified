@@ -37,11 +37,12 @@ async function apolloFindEmail(name: string, company: string, website: string): 
     const [firstName, ...rest] = name.split(' ');
     const lastName = rest.join(' ');
 
+    // Apollo auth goes in the X-Api-Key header — body api_key is no longer
+    // accepted for current keys (verified: header auth returns 200, body 401).
     const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'X-Api-Key': key },
       body: JSON.stringify({
-        api_key:              key,
         q_organization_name:  company,
         person_titles:        [],          // broad — let name filter do the work
         contact_email_status: ['verified', 'guessed'],
@@ -50,7 +51,10 @@ async function apolloFindEmail(name: string, company: string, website: string): 
         per_page:             5,
       }),
     });
-    if (!res.ok) return '';
+    if (!res.ok) {
+      console.warn(`  ⚠️  Apollo search HTTP ${res.status} for ${company}`);
+      return '';
+    }
     const data = await res.json() as any;
     const people: any[] = data.people ?? [];
 
