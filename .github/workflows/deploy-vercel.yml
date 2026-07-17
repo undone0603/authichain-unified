@@ -55,7 +55,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.secrets_check.outputs.skip != 'true'
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Install Vercel CLI
         if: steps.secrets_check.outputs.skip != 'true'
