@@ -30,26 +30,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # FIX: Setup pnpm MUST come before setup-node to enable caching properly
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "9.15.4"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "pnpm"
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: "9.15.4"
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build app
-        run: pnpm run build
-
+      # FIX: Pull environment variables, removed redundant manual build, and added --yes
       - name: Deploy to Vercel
         run: |
-          npx vercel build --prod \
-            --token "$VERCEL_TOKEN"
-          npx vercel deploy --prebuilt --prod \
-            --token "$VERCEL_TOKEN"
+          npx vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+          npx vercel build --prod --yes --token "$VERCEL_TOKEN"
+          npx vercel deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
