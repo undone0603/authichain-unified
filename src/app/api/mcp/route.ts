@@ -60,7 +60,17 @@ export async function POST(req: NextRequest) {
     const apiKey = req.headers.get('X-API-Key');
     const { method, params } = await req.json();
 
-    // 1. Handle listTools
+        // Auth guard: require API key for all non-handshake MCP methods (fixes CodeQL #438, #439)
+        const isHandshake = method === 'notifications/initialized' || method === 'initialize';
+        if (!isHandshake) {
+                if (!apiKey) {
+                          return NextResponse.json({ error: 'X-API-Key required' }, { status: 401 });
+                        }
+                const authUserId = await verifyApiKey(apiKey);
+                if (!authUserId) {
+                          return NextResponse.json({ error: 'Invalid or inactive API Key' }, { status: 401 });
+                        }
+              }
     if (method === "notifications/initialized" || method === "initialize") {
         return NextResponse.json({
             protocolVersion: "2024-11-05",
@@ -75,12 +85,8 @@ export async function POST(req: NextRequest) {
 
     // 2. Handle callTool (Requires Authentication for Billing)
     if (method === "tools/call") {
-      if (!apiKey) {
-        return NextResponse.json({ error: "X-API-Key required for tool execution" }, { status: 401 });
-      }
-
-      const userId = await verifyApiKey(apiKey);
-      if (!userId) {
+              const userId = authUserId; // Already verified by auth guard above
+if (!userId) {
         return NextResponse.json({ error: "Invalid or inactive API Key" }, { status: 401 });
       }
 
