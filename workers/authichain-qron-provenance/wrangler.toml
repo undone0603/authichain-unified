@@ -15,9 +15,6 @@ database_id = "5a6672a7-b3cb-43d4-85d4-d675451e58cb"
 pattern = "authichain.com/api/qron-register*"
 custom_domain = true
 
-[build]
-command = "npm run build"
-
 [env.production]
 name = "authichain-qron-provenance"
 
