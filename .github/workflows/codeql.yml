@@ -41,7 +41,9 @@ jobs:
             paths-ignore:
               - apps
               - docs/archive
-              - scripts/ops
+              - scripts/ops              
+              - api/server.js
+              - '**/*.min.js'
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
