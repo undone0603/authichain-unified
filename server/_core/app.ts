@@ -28,6 +28,7 @@ import {
   contactRateLimit,
   gptRateLimit,
   globalApiRateLimit,
+    adminRateLimit,
 } from "./rate-limit";
 
 /**
@@ -161,7 +162,7 @@ export function createApp() {
   app.use(express.urlencoded({ limit: "5mb", extended: true }));
 
   // ─── Admin ops console (client/src/pages/OpsDashboard.tsx) ───────────────
-  app.get("/api/admin/ops", async (req, res) => {
+  app.get("/api/admin/ops", adminRateLimit, async (req, res) => {
     const user = await sdk.authenticateRequest(req).catch(() => null);
     if (!user || user.role !== "admin") {
       return res.status(user ? 403 : 401).json({ error: user ? "Admin only" : "Not signed in" });
