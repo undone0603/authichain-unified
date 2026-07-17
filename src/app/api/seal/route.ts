@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createHash, randomUUID } from 'crypto';
+import { verifyApiKey } from '@/lib/auth-api';
 
 export async function POST(req: NextRequest) {
+  const apiKey = req.headers.get('X-API-Key');
+  if (!apiKey || !(await verifyApiKey(apiKey))) {
+    return NextResponse.json({ error: 'Invalid or missing API key' }, { status: 401 });
+  }
+
   const supabase = createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
