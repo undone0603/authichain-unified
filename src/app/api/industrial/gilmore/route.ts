@@ -6,9 +6,9 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
-
-    // In a real scenario, we might want to restrict this to Theater 3/Enterprise users
-    // For the demo, we'll allow authenticated users.
+    if (!session) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
 
     const body: GilmoreArtRequest = await request.json();
     const { carModel, year, destinationUrl } = body;

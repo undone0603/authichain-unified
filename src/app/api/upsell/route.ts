@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
+import { createClient } from '@/utils/supabase/server';
 
 const PLAN_LIMITS: Record<string, { qr_codes: number; scans_per_month: number; ai_styles: boolean; custom_domains: number }> = {
   free: { qr_codes: 5, scans_per_month: 500, ai_styles: false, custom_domains: 0 },
@@ -8,10 +9,13 @@ const PLAN_LIMITS: Record<string, { qr_codes: number; scans_per_month: number; a
   enterprise: { qr_codes: 999999, scans_per_month: 999999, ai_styles: true, custom_domains: 999 },
 };
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const user_id = searchParams.get('user_id');
-  if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 });
+export async function GET(_req: NextRequest) {
+  // Scope strictly to the authenticated caller — a query-string user_id
+  // would let anyone read another user's subscription plan and usage stats.
+  const session = await createClient();
+  const { data: { user } } = await session.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const user_id = user.id;
 
   const [subResult, usageResult] = await Promise.all([
     supabase.from('subscriptions').select('plan, status').eq('user_id', user_id).single(),
