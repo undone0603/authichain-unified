@@ -8,12 +8,23 @@ import {
   Box
 } from 'lucide-react';
 
+interface ProductRow {
+  id: string;
+  name: string;
+  model_number: string | null;
+  manufacturer: string | null;
+  category: string | null;
+}
+
 export default async function AdminProductsPage() {
   const supabase = await createClient();
-  const { data: products, error } = await supabase
+  const { data: products, error } = (await supabase
     .from('products')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })) as {
+    data: ProductRow[] | null;
+    error: { message: string } | null;
+  };
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">

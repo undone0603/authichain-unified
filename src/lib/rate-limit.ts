@@ -47,7 +47,7 @@ export async function checkRateLimit(
       status: 'success',
       payload: identifier
     })
-    .then(undefined, (err) => {
+    .then(undefined, (err: unknown) => {
       console.error('[rate-limit] Failed to log hit:', err);
     });
 
