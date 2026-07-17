@@ -60,25 +60,24 @@ export async function POST(req: NextRequest) {
     const apiKey = req.headers.get('X-API-Key');
     const { method, params } = await req.json();
 
-        // Auth guard: require API key for all non-handshake MCP methods (fixes CodeQL #438, #439)
-        const isHandshake = method === 'notifications/initialized' || method === 'initialize';
-        if (!isHandshake) {
-                if (!apiKey) {
-                          return NextResponse.json({ error: 'X-API-Key required' }, { status: 401 });
-                        }
-                const authUserId = await verifyApiKey(apiKey);
-                if (!authUserId) {
-                          return NextResponse.json({ error: 'Invalid or inactive API Key' }, { status: 401 });
-                        }
-              }
-    if (method === "notifications/initialized" || method === "initialize") {
-        return NextResponse.json({
+        // Handle MCP handshake methods without auth (CodeQL #5361: no user-controlled bypass)
+        // Handshake response is returned immediately before any auth check
+        if (method === 'notifications/initialized' || method === 'initialize') {
+          return NextResponse.json({
             protocolVersion: "2024-11-05",
             capabilities: { tools: {} },
             serverInfo: { name: "authichain-mcp-server", version: "1.0.0" }
-        });
-    }
+          });
+        }
 
+        // Auth guard: unconditionally require API key for all non-handshake methods
+        if (!apiKey) {
+          return NextResponse.json({ error: 'X-API-Key required' }, { status: 401 });
+        }
+        const authUserId = await verifyApiKey(apiKey);
+        if (!authUserId) {
+          return NextResponse.json({ error: 'Invalid or inactive API Key' }, { status: 401 });
+        }
     if (method === "tools/list") {
       return NextResponse.json({ tools: TOOLS });
     }
