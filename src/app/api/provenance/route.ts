@@ -3,9 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 import { createHash, randomUUID } from 'crypto';
 import { onDispensaryScan } from '../../../../server/revenue-engine/loop';
 import { onDispensaryBatchCreated } from '../../../../server/crm/events';
+import { verifyApiKey } from '@/lib/auth-api';
 
 export async function POST(req: NextRequest) {
   try {
+    const apiKey = req.headers.get('X-API-Key');
+    if (!apiKey || !(await verifyApiKey(apiKey))) {
+      return NextResponse.json({ error: 'Invalid or missing API key' }, { status: 401 });
+    }
+
     const { dispensary_id, batch_id, events, brand } = await req.json();
         const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 

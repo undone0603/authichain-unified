@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createSessionClient } from '@/utils/supabase/server';
+import { requireAdmin } from '@/lib/require-admin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const session = await createSessionClient();
+  const authResult = await requireAdmin(session);
+  if (authResult instanceof NextResponse) return authResult;
+
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
   }
