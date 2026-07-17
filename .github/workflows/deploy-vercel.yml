@@ -27,59 +27,39 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    if: ${{ secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' && secrets.VERCEL_TOKEN != '' }}
 
     steps:
-      - name: Check required secrets
-        id: secrets_check
-        shell: bash
-        run: |
-          if [ -z "${{ secrets.VERCEL_ORG_ID }}" ] || [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ] || [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "::notice::Vercel secrets missing — skipping deploy."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/checkout@v4
-        if: steps.secrets_check.outputs.skip != 'true'
 
       - uses: actions/setup-node@v4
-        if: steps.secrets_check.outputs.skip != 'true'
         with:
           node-version: 22
 
       - uses: pnpm/action-setup@v4
-        if: steps.secrets_check.outputs.skip != 'true'
         with:
-          version: latest
+          version: 9.15.4
 
       - name: Install dependencies
-        if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile
 
       - name: Install Vercel CLI
-        if: steps.secrets_check.outputs.skip != 'true'
-        run: npm install -g vercel
+        run: npm install -g vercel@latest
 
       - name: Pull Vercel Environment Information
-        if: steps.secrets_check.outputs.skip != 'true'
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Project Artifacts
-        if: steps.secrets_check.outputs.skip != 'true'
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-      
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
       - name: Deploy Project Artifacts to Vercel
         id: deploy
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         shell: bash
         run: |
           set +e
