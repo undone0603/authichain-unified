@@ -48,11 +48,13 @@ export default async function VerifyPage({ searchParams }: PageProps) {
     ? await getInscriptionStatus(product.blockchainTxHash).catch(() => null)
     : null;
 
-  const { data: provenanceEvents } = await supabase
+  const { data: provenanceEvents } = (await supabase
     .from('supply_chain_events')
     .select('id, eventType, location, createdAt')
     .eq('productId', productId)
-    .order('createdAt', { ascending: true });
+    .order('createdAt', { ascending: true })) as {
+    data: { id: string; eventType: string; location: string | null; createdAt: string }[] | null;
+  };
 
   const { data: qrRows } = await supabase
     .from('qr_codes')

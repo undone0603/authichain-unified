@@ -19,36 +19,45 @@ export const metadata: Metadata = {
     'The premier marketplace for cryptographically-verified industrial artifacts and AI QR masterpieces on Base.',
 };
 
+interface QronRow {
+  id: number;
+  image_url: string;
+  prompt: string | null;
+  mode: string | null;
+  shortCode: string | null;
+  scan_count: number | null;
+}
+
 /**
  * NFT Marketplace for StrainChain.io
  * Monetization Solution: High-Value SVG assets + Secondary Royalties
  */
 export default async function MarketplacePage() {
   const supabase = await createClient();
-  
+
   // 1. Fetch High-Value SVG Artifacts (Industrial & Premium)
   // These are assets stored in Supabase with .svg extensions or marked as premium
-  const { data: artifacts } = await supabase
+  const { data: artifacts } = (await supabase
     .from('qrons')
     .select('*')
     .or('mode.eq.industrial,mode.eq.living')
-    .order('createdAt', { ascending: false });
+    .order('createdAt', { ascending: false })) as { data: QronRow[] | null };
 
   // 2. Fetch Featured Community Collection
-  const { data: gallery } = await supabase
+  const { data: gallery } = (await supabase
     .from('qrons')
     .select('*')
     .eq('is_demo', true)
     .order('scan_count', { ascending: false })
-    .limit(24);
+    .limit(24)) as { data: QronRow[] | null };
 
   // 3. Fetch Artistic Samples specifically
-  const { data: artisticSamples } = await supabase
+  const { data: artisticSamples } = (await supabase
     .from('qrons')
     .select('*')
     .eq('is_demo', true)
     .like('image_url', '%/samples/%')
-    .limit(12);
+    .limit(12)) as { data: QronRow[] | null };
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden selection:bg-gold selection:text-black">
@@ -277,10 +286,10 @@ export default async function MarketplacePage() {
               {artisticSamples.map((sample) => (
                 <div key={sample.id} className="protocol-card group bg-zinc-950/30 border-zinc-900 hover:border-gold/30 transition-all">
                   <div className="relative aspect-square overflow-hidden">
-                    <Image 
-                      src={sample.image_url} 
-                      alt={sample.prompt} 
-                      fill 
+                    <Image
+                      src={sample.image_url}
+                      alt={sample.prompt || 'Artistic AI Masterpiece'}
+                      fill
                       className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end">
