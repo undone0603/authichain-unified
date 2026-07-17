@@ -14,6 +14,14 @@ interface JobDefinition {
   schedule: string; // cron expression
   enabled: boolean;
   handler: () => Promise<JobResult>;
+  // Minimum time that must elapse since the last completed/failed run before
+  // this job is allowed to execute again. Needed because the external
+  // triggers calling into `runJobManually` (GitHub Actions backup workflow,
+  // `/api/cron/jobs?job=`) don't know each job's own cadence and may call the
+  // same job many times per day; several handlers (e.g. staking-rewards,
+  // vertical-cloner, strainchain-metrc-sync) are not idempotent and would
+  // duplicate payouts/missions/anchors if re-run before they're actually due.
+  minIntervalMs: number;
 }
 
 interface JobResult {
@@ -29,10 +37,29 @@ function registerJob(job: JobDefinition) {
 }
 
 // ─── Job Execution Wrapper ──────────────────────────────────────────────────
-export async function executeJob(job: JobDefinition): Promise<void> {
+
+async function isJobDue(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, job: JobDefinition): Promise<boolean> {
+  if (job.minIntervalMs <= 0) return true;
+
+  const [lastRun] = await db.select({ startedAt: scheduledJobRuns.startedAt })
+    .from(scheduledJobRuns)
+    .where(eq(scheduledJobRuns.jobName, job.name))
+    .orderBy(desc(scheduledJobRuns.startedAt))
+    .limit(1);
+
+  if (!lastRun) return true;
+  return Date.now() - new Date(lastRun.startedAt).getTime() >= job.minIntervalMs;
+}
+
+export async function executeJob(job: JobDefinition, options?: { force?: boolean }): Promise<void> {
   const db = await getDb();
   if (!db) {
     console.warn(`[Scheduler] Skipping ${job.name}: database not available`);
+    return;
+  }
+
+  if (!options?.force && !(await isJobDue(db, job))) {
+    console.log(`[Scheduler] Skipping ${job.name}: not due yet (min interval ${job.minIntervalMs}ms)`);
     return;
   }
 
@@ -85,6 +112,7 @@ registerJob({
   description: "Check expiring subscriptions, flag past-due accounts, reset monthly quotas",
   schedule: "0 6 * * *",
   enabled: true,
+  minIntervalMs: 20 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
@@ -156,6 +184,7 @@ registerJob({
   description: "Escalate past-due subscriptions (day 3/7/14) to recover failed payments",
   schedule: "0 8 * * *",
   enabled: true,
+  minIntervalMs: 20 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const { runDunningEscalation } = await import("./jobs/dunning");
     const r = await runDunningEscalation();
@@ -171,6 +200,7 @@ registerJob({
   description: "Flag certificates expiring within 30 days and notify owners",
   schedule: "0 7 * * *",
   enabled: true,
+  minIntervalMs: 20 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
@@ -223,6 +253,7 @@ registerJob({
   description: "Identify stale leads, update scores, and sync unsynced leads to HubSpot",
   schedule: "0 9 * * *",
   enabled: true,
+  minIntervalMs: 20 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
@@ -278,6 +309,7 @@ registerJob({
   description: "Purge old read notifications, stale job runs, and expired sessions",
   schedule: "0 3 * * *",
   enabled: true,
+  minIntervalMs: 20 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
@@ -317,6 +349,7 @@ registerJob({
   description: "Compile weekly platform stats and notify owner",
   schedule: "0 8 * * 1",
   enabled: true,
+  minIntervalMs: 6 * 24 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
@@ -392,6 +425,7 @@ registerJob({
   description: "Sync new leads and payment events to HubSpot CRM",
   schedule: "0 */4 * * *",
   enabled: true,
+  minIntervalMs: 3.5 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     if (!isHubSpotConfigured()) {
       return { itemsProcessed: 0, details: { skipped: "HubSpot not configured" } };
@@ -436,6 +470,7 @@ registerJob({
   description: "Recalculate customer health scores based on usage, payments, and engagement",
   schedule: "0 5 * * *",
   enabled: true,
+  minIntervalMs: 20 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
@@ -498,6 +533,7 @@ registerJob({
   description: "Detect suspicious authentication patterns and flag potential fraud",
   schedule: "0 */6 * * *",
   enabled: true,
+  minIntervalMs: 5.5 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
@@ -564,6 +600,10 @@ registerJob({
   description: "Run AgentZ revenue pipeline: find leads, draft outreach, monitor deals",
   schedule: "*/2 * * * *", // every 2 minutes
   enabled: ENV.autonomousPipelineEnabled,
+  // No gate here — runPipelineTick() is already internally due-gated per task
+  // (getDueTasks()) and is meant to be safe to call as often as the external
+  // trigger allows.
+  minIntervalMs: 0,
   handler: async (): Promise<JobResult> => {
     const { runPipelineTick } = await import("./jobs/pipeline-tick");
     const result = await runPipelineTick();
@@ -639,6 +679,7 @@ registerJob({
   description: "Monitor for new industry expansion opportunities and spawn missions",
   schedule: "*/10 * * * *",
   enabled: true,
+  minIntervalMs: 9 * 60 * 1000,
   handler: async () => {
     const { runVerticalCloning } = await import("./jobs/vertical-cloner");
     await runVerticalCloning();
@@ -654,6 +695,7 @@ registerJob({
   description: "Sync METRC transfers and auto-anchor to the Truth Layer",
   schedule: "0 * * * *",
   enabled: true,
+  minIntervalMs: 55 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const { runStrainChainSync } = await import("./jobs/strainchain-sync");
     return await runStrainChainSync();
@@ -668,6 +710,7 @@ registerJob({
   description: "Monitor global news for supply chain incidents and trigger PR missions",
   schedule: "*/30 * * * *",
   enabled: true,
+  minIntervalMs: 25 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const { runNewsjackingMonitor } = await import("./agents/news-pr");
     // Simulate a task object for the agent
@@ -687,6 +730,7 @@ registerJob({
   description: "Distribute validation rewards to active $QRON stakers",
   schedule: "0 4 * * *",
   enabled: true,
+  minIntervalMs: 20 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
@@ -718,6 +762,7 @@ registerJob({
   description: "Monthly pay-yourself-first split from last month's collected revenue",
   schedule: "0 9 1 * *",
   enabled: true,
+  minIntervalMs: 25 * 24 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const { runMonthlyFounderPayout } = await import("./jobs/founder-payout");
     const plan = await runMonthlyFounderPayout();
@@ -737,6 +782,7 @@ registerJob({
   description: "Verify revenue-critical integrations (Stripe, HubSpot, Gmail, PostHog, GA4) are live",
   schedule: "0 11 * * *",
   enabled: true,
+  minIntervalMs: 20 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const { runLiveSystemsCheck } = await import("./jobs/live-systems-check");
     const result = await runLiveSystemsCheck();
@@ -764,6 +810,7 @@ registerJob({
   description: "Snapshot on-chain $QRON supply/block/gas metrics for trend tracking",
   schedule: "0 12 * * *",
   enabled: true,
+  minIntervalMs: 20 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const { runTokenMetrics } = await import("./jobs/token-metrics");
     const snapshot = await runTokenMetrics();
@@ -783,6 +830,7 @@ registerJob({
   description: "External uptime check across all product domains + on-chain token liveness",
   schedule: "0 13 * * *",
   enabled: true,
+  minIntervalMs: 20 * 60 * 60 * 1000,
   handler: async (): Promise<JobResult> => {
     const { runEcosystemHealthCheck } = await import("./jobs/ecosystem-health");
     const result = await runEcosystemHealthCheck();
@@ -862,9 +910,9 @@ export async function getJobHistory(jobName?: string, limit = 50) {
     .limit(limit);
 }
 
-export async function runJobManually(jobName: string): Promise<boolean> {
+export async function runJobManually(jobName: string, options?: { force?: boolean }): Promise<boolean> {
   const job = jobs.find(j => j.name === jobName);
   if (!job) return false;
-  await executeJob(job);
+  await executeJob(job, options);
   return true;
 }
