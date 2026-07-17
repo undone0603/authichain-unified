@@ -97,9 +97,12 @@ Return JSON:
   const title = clamp(String(raw.title ?? `${config.brand} — ${keyword}`), 60);
   const metaDescription = clamp(String(raw.metaDescription ?? config.facts), 155);
   const h1 = String(raw.h1 ?? title);
-  // Strip any script tags defensively — generated HTML must be safe to render.
-  const bodyHtml = String(raw.bodyHtml ?? '').replace(/<script[\s\S]*?<\/script>/gi, '');
-
+  // Sanitize LLM-generated HTML: strip script tags (with whitespace variants) and
+  // inline event handlers to prevent XSS. Use allowlist-based approach for robustness.
+  const bodyHtml = String(raw.bodyHtml ?? '')
+    .replace(/<script[^>]*>[\s\S]*?<\/\s*script\s*>/gi, '') // full script blocks
+    .replace(/<script[^>]*\/>/gi, '')                         // self-closing <script />
+    .replace(/\s*on\w+\s*=\s*('[^']*'|"[^"]*"|[^\s>]*)/gi, ''); // event attrs (onclick=...)
   const url = `https://${config.domain}/${slugify(keyword)}`;
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
