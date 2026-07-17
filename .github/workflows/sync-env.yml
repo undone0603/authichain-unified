@@ -23,6 +23,11 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           API_KEY: ${{ secrets.API_KEY }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Postgres connection string (Supabase QRON-v2 session pooler). The
+          # origin serves /api/cron/* — without this pointing at the live DB the
+          # DB-backed cron jobs 500 with "Failed query" even though the DB is
+          # healthy. Set the DATABASE_URL repo secret to enable this sync.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           # Push each GitHub secret to the Vercel production env.
           # Vercel Cron reads CRON_SECRET from the project env and sends it as
@@ -53,6 +58,10 @@ jobs:
             echo "$name synced to Vercel production environment (project $project)"
           }
           for project in "$VERCEL_PROJECT_ID" "$LIVE_PROJECT_ID"; do
+            # DATABASE_URL first: the DB-backed cron jobs (pipeline, scheduled
+            # job runner) fail closed without a valid connection string on the
+            # serving origin. Skipped automatically if the secret is unset.
+            sync_var "$project" DATABASE_URL "$DATABASE_URL"
             sync_var "$project" API_KEY "$API_KEY"
             sync_var "$project" CRON_SECRET "$CRON_SECRET"
             # Master switch for the autonomous business pipeline (pipeline-tick,
