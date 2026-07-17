@@ -134,9 +134,7 @@ async function runExtractionLoop() {
 
   // Load processed logs
   let processed: string[] = [];
-  if (fs.existsSync(LOG_FILE)) {
-    processed = JSON.parse(fs.readFileSync(LOG_FILE, "utf-8"));
-  }
+  try { processed = JSON.parse(fs.readFileSync(LOG_FILE, "utf-8")); } catch { /* file not yet created; CodeQL #209: EAFP replaces TOCTOU existsSync */ }
 
   const sqlStatements: string[] = [];
 
