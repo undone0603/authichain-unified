@@ -1,0 +1,17 @@
+name: "AuthiChain CodeQL Configuration"
+
+paths-ignore:
+  # Exclude bundled files - these are compiled outputs, not source code
+  # False positives from minified/bundled third-party code should not be scanned
+  - api/server.js
+  - "**/*.min.js"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/.next/**"
+  - "**/node_modules/**"
+  # Chatbot native browser app (separate project with own dependencies)
+  - "apps/chatbot/**"
+
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
