@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { requireAdmin } from '@/lib/require-admin';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    
+    const authResult = await requireAdmin(supabase);
+    if (authResult instanceof NextResponse) return authResult;
+
     const { product_id, metadata, dpp_data, nfc_uid } = await request.json();
 
     // Manual serial generation: QRON-XXXX-XXXX
@@ -64,9 +65,9 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    
+    const authResult = await requireAdmin(supabase);
+    if (authResult instanceof NextResponse) return authResult;
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
