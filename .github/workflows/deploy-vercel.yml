@@ -2,18 +2,12 @@ name: Deploy Vercel App
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - "app/**"
       - "src/**"
-      - "pages/**"
-      - "components/**"
-      - "public/**"
-      - "scripts/**"
       - "package.json"
       - "pnpm-lock.yaml"
-      - "next.config.*"
-      - "tsconfig.json"
       - "vercel.json"
       - ".github/workflows/deploy-vercel.yml"
   workflow_dispatch:
@@ -25,72 +19,37 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      NODE_ENV: production
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22"
+          cache: "pnpm"
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          version: 9.15.4
-
-      - name: Check Vercel secrets
-        id: vercel_secrets
-        shell: bash
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          if [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ] && [ -n "$VERCEL_TOKEN" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
+          version: "9.15.4"
 
       - name: Install dependencies
-        if: steps.vercel_secrets.outputs.present == 'true'
         run: pnpm install --frozen-lockfile
 
-      - name: Install Vercel CLI
-        if: steps.vercel_secrets.outputs.present == 'true'
-        run: npm install -g vercel@latest
+      - name: Build app
+        run: pnpm run build
 
-      - name: Pull Vercel Environment Information
-        if: steps.vercel_secrets.outputs.present == 'true'
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build Project Artifacts
-        if: steps.vercel_secrets.outputs.present == 'true'
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy Project Artifacts to Vercel
-        if: steps.vercel_secrets.outputs.present == 'true'
-        shell: bash
+      - name: Deploy to Vercel
         run: |
-          set +e
-          DEPLOY_OUTPUT=$(vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
-          DEPLOY_EXIT=$?
-          set -e
-          echo "$DEPLOY_OUTPUT"
-          if [ "$DEPLOY_EXIT" -eq 0 ]; then
-            echo "Deployment successful"
-            exit 0
-          fi
-          if echo "$DEPLOY_OUTPUT" | grep -q "api-deployments-free-per-day"; then
-            echo "::warning::Vercel free-tier daily deployment limit reached (100/day). Deployment skipped - will retry on next push."
-            exit 0
-          fi
-          echo "::error::Deployment failed with exit code $DEPLOY_EXIT"
-          exit "$DEPLOY_EXIT"
-        
+          npx vercel build --prod \
+            --token "$VERCEL_TOKEN"
+          npx vercel deploy --prebuilt --prod \
+            --token "$VERCEL_TOKEN"
