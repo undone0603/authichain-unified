@@ -975,34 +975,37 @@ export const checkpointBatches = pgTable("checkpoint_batches", {
 });
 
 // ─── Missions ────────────────────────────────────────────────────────────────
+// Column names below map the ORM to the columns that actually exist in the
+// live Postgres database (snake_case, uuid ids). JS property names are kept
+// stable so callers (server/db.ts, server/missions/missions.db.ts, task-runner)
+// need no changes. `kind`, `priority`, `error`, `scheduledAt` are supplied by
+// migration 013 (additive, nullable/defaulted).
 export const missions = pgTable("missions", {
-  id: varchar("id", { length: 64 }).primaryKey(),
+  id: uuid("id").primaryKey(),
   type: varchar("type", { length: 64 }).notNull(),
   title: varchar("title", { length: 256 }).notNull(),
   description: text("description"),
-  status: varchar("status", { length: 50 }).default("pending").notNull(),
-  priority: integer("priority").default(0).notNull(),
-  metadata: json("metadata"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  status: text("status").default("pending").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ─── Mission Tasks ───────────────────────────────────────────────────────────
 export const missionTasks = pgTable("mission_tasks", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  missionId: varchar("missionId", { length: 64 }).notNull(),
-  kind: varchar("kind", { length: 128 }).notNull(),
+  id: uuid("id").primaryKey(),
+  missionId: uuid("mission_id").notNull(),
+  kind: varchar("kind", { length: 128 }),
   title: varchar("title", { length: 256 }).notNull(),
   description: text("description"),
-  status: varchar("status", { length: 50 }).default("pending").notNull(),
+  status: text("status").default("pending").notNull(),
   priority: integer("priority").default(0).notNull(),
-  order: integer("order").default(0).notNull(),
-  payload: json("payload"),
-  result: json("result"),
+  order: integer("task_order").default(0).notNull(),
+  payload: jsonb("payload"),
+  result: jsonb("result"),
   error: text("error"),
-  scheduledAt: timestamp("scheduledAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ─── Platform Fees ───────────────────────────────────────────────────────────

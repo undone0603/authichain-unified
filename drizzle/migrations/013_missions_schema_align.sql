@@ -1,39 +1,32 @@
--- Migration 013: Align missions / mission_tasks with the Drizzle schema
+-- Migration 013: Align mission_tasks with the application schema (additive-only)
 --
--- Migration 003 created these tables in an earlier shape. The application
--- schema (src/db/schema.ts, re-exported via drizzle/schema.ts and used by
--- server/db.ts) has since gained columns that 003 never created:
+-- The live Postgres database provisions missions / mission_tasks with a
+-- snake_case, uuid-keyed shape:
 --
---   missions:       description, metadata
---   mission_tasks:  title, description, priority, "order", result, error, scheduledAt
+--   missions(id uuid, type, title, description, status, created_at, updated_at)
+--   mission_tasks(id uuid, mission_id, title, description, status, task_order,
+--                 payload jsonb, result jsonb, created_at, updated_at)
 --
--- Without these columns, missions.create / createTask insert into columns that
--- do not exist, and getTasksByMission / getPendingTasks ORDER BY "order" fail,
--- so every missions.* endpoint throws a PostgreSQL "column does not exist"
--- error on any database provisioned from 003.
+-- The Drizzle schema (src/db/schema.ts) is mapped to exactly those columns, but
+-- the application also needs four columns the live table does not yet have:
 --
--- This migration is additive and idempotent (ADD COLUMN IF NOT EXISTS), safe to
--- run against databases in any prior state. Column names are quoted to preserve
--- the camelCase / reserved-word identifiers the Drizzle schema expects.
+--   kind          — task dispatch discriminator (server/jobs/task-runner.ts)
+--   priority      — task ordering
+--   error         — failure message recorded by failTask
+--   scheduled_at  — due-gating in getPendingTasks
 --
--- Run once on Supabase: Dashboard → SQL Editor → paste → Run.
+-- Because getMissions / getTasksByMission / getPendingTasks read via SELECT *,
+-- these columns must exist in the database for the missions endpoints and the
+-- AgentZ pipeline to run at all.
+--
+-- This migration is additive and idempotent — nullable / defaulted columns only,
+-- no renames, no type changes, no data rewrites. The existing rows keep their
+-- data (priority defaults to 0; kind / error / scheduled_at are NULL).
+--
+-- Run once on Supabase: Dashboard -> SQL Editor -> paste -> Run.
 
--- ── missions ─────────────────────────────────────────────────────────────────
-ALTER TABLE missions
-  ADD COLUMN IF NOT EXISTS description TEXT,
-  ADD COLUMN IF NOT EXISTS metadata    JSONB;
-
--- ── mission_tasks ────────────────────────────────────────────────────────────
 ALTER TABLE mission_tasks
-  ADD COLUMN IF NOT EXISTS title         VARCHAR(256) NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS description   TEXT,
-  ADD COLUMN IF NOT EXISTS priority      INTEGER      NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS "order"       INTEGER      NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS result        JSONB,
-  ADD COLUMN IF NOT EXISTS error         TEXT,
-  ADD COLUMN IF NOT EXISTS "scheduledAt" TIMESTAMPTZ;
-
--- Backfill a sensible title for any rows seeded before this column existed
--- (e.g. the missions inserted by migration 006), so the NOT NULL default of ''
--- does not leave blank titles on historical tasks.
-UPDATE mission_tasks SET title = kind WHERE title = '';
+  ADD COLUMN IF NOT EXISTS kind         VARCHAR(128),
+  ADD COLUMN IF NOT EXISTS priority     INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS error        TEXT,
+  ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ;
