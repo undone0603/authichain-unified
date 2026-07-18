@@ -2,9 +2,9 @@ import { enrichLead } from './industrial/enrichment';
 import { supabaseAdmin as admin } from '@/lib/supabase-admin';
 
 /**
- * Capture an arbitrary thrown value as a useful string. Handles JS Errors,
- * Supabase-style `{message, code, details, hint}` objects, and anything else.
- */
+* Capture an arbitrary thrown value as a useful string. Handles JS Errors,
+* Supabase-style `{message, code, details, hint}` objects, and anything else.
+*/
 export function formatErr(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (err && typeof err === 'object') {
@@ -20,8 +20,8 @@ export function formatErr(err: unknown): string {
 }
 
 /**
- * Log an automation event for tracking and debugging.
- */
+* Log an automation event for tracking and debugging.
+*/
 export async function logAutomation(
   workflowName: string,
   triggerType: 'event' | 'cron' | 'manual',
@@ -43,8 +43,8 @@ export async function logAutomation(
 }
 
 /**
- * Captured lead automation: Sync to CRM, trigger email sequence.
- */
+* Captured lead automation: Sync to CRM, trigger email sequence.
+*/
 export async function handleLeadAutomation(lead: {
   email: string;
   name?: string;
@@ -66,7 +66,25 @@ export async function handleLeadAutomation(lead: {
       });
     }
 
-    // 3. Sync to HubSpot (if enterprise potential detected)
+    // 3. Fire n8n lead alert webhook (instant email notification)
+    const n8nWebhook = process.env.N8N_LEAD_WEBHOOK_URL;
+    if (n8nWebhook) {
+      fetch(n8nWebhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: finalLead.name || '',
+          email: finalLead.email,
+          message: finalLead.product_interest || '',
+          source: finalLead.source || 'website',
+          timestamp: new Date().toISOString(),
+        }),
+      }).catch((err) => {
+        console.error('[automation] n8n webhook error:', err);
+      });
+    }
+
+    // 4. Sync to HubSpot (if enterprise potential detected)
     if (enriched.is_enterprise || enriched.lead_score > 60) {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
@@ -80,9 +98,9 @@ export async function handleLeadAutomation(lead: {
       }
     }
 
-    // 4. Trigger Welcome Email via SendGrid (simulated or direct)
+    // 5. Trigger Welcome Email via SendGrid (simulated or direct)
     // For now, we'll log it. In a real scenario, call SendGrid.
-    
+
     await logAutomation(workflowName, 'event', 'success', finalLead);
   } catch (err: unknown) {
     await logAutomation(workflowName, 'event', 'failure', lead, formatErr(err));
@@ -90,8 +108,8 @@ export async function handleLeadAutomation(lead: {
 }
 
 /**
- * Social Media Automation: Queue high-quality generation for showcase.
- */
+* Social Media Automation: Queue high-quality generation for showcase.
+*/
 export async function queueSocialShowcase(qron: {
   id: string;
   imageUrl: string;
@@ -105,7 +123,7 @@ export async function queueSocialShowcase(qron: {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: `Check out this AI-generated QRON! ðŸŽ¨\n\nPrompt: ${qron.prompt}\n\n#AIArt #QRCode #QRON`,
+          text: `Check out this AI-generated QRON! 🎨\n\nPrompt: ${qron.prompt}\n\n#AIArt #QRCode #QRON`,
           media: { picture: qron.imageUrl },
         }),
       });
@@ -117,8 +135,8 @@ export async function queueSocialShowcase(qron: {
 }
 
 /**
- * Autonomous Business Ops: Daily Credit Reset / Report
- */
+* Autonomous Business Ops: Daily Credit Reset / Report
+*/
 export async function runDailyMaintenance() {
   const workflowName = 'daily_maintenance';
   try {
@@ -126,7 +144,7 @@ export async function runDailyMaintenance() {
     // 2. Clean up old temporary files
     // 3. Send daily revenue report to owner
     const _reportEmail = process.env.ADMIN_EMAIL || 'undone.k@gmail.com';
-    
+
     // Fetch stats for the last 24h
     const { count: generations } = await admin
       .from('qron_generations')
