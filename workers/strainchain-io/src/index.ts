@@ -3540,7 +3540,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
   <div class="stat"><div class="stat-value">$0.002</div><div class="stat-label">Per-Batch Audit Cost</div></div>
 </div>
 <script>
-fetch('https://authichain-unified.vercel.app/api/strainchain/stats')
+fetch('https://app.authichain.com/api/strainchain/stats')
   .then(r=>r.json()).then(function(d){
     if(d.lab_tests!=null)document.getElementById('sc-lab').textContent=d.lab_tests.toLocaleString();
     if(d.total_chain_events!=null)document.getElementById('sc-chain').textContent=d.total_chain_events.toLocaleString();

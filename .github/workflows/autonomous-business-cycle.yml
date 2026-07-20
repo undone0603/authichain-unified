@@ -31,6 +31,7 @@ on:
     - cron: '0 11 * * *'  # live-systems-check
     - cron: '0 12 * * *'  # token-metrics
     - cron: '0 13 * * *'  # ecosystem-health
+    - cron: '0 14 * * *'  # nurture-replies (was Vercel cron; Vercel crons removed)
     # The 13 entries above leave an ~11h gap (13:00-00:00 UTC) with zero
     # firings. The sub-daily jobs added below (vertical-cloner, fraud-sweep,
     # strainchain-metrc-sync, hubspot-crm-sync, newsjacking-monitor) rely on
@@ -87,6 +88,10 @@ jobs:
             "/api/cron/jobs?job=live-systems-check"
             "/api/cron/jobs?job=token-metrics"
             "/api/cron/jobs?job=ecosystem-health"
+            # Previously only triggered by Vercel cron (vercel.json) — moved
+            # here when the Vercel crons were removed.
+            "/api/cron/nurture-replies"
+            "/api/crm/sync"
             # These 10 were registered in server/scheduled-jobs.ts but had no
             # external trigger anywhere (not in vercel.json, not in this
             # workflow) — node-cron's in-process schedule set up by

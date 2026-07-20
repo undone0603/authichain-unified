@@ -10,6 +10,9 @@
     "next:dev": "next dev",
     "next:build": "next build",
     "next:start": "next start",
+    "build:cf": "opennextjs-cloudflare build",
+    "preview:cf": "opennextjs-cloudflare preview -- --config wrangler.app.jsonc",
+    "deploy:cf": "opennextjs-cloudflare deploy -- --config wrangler.app.jsonc",
     "check": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -106,7 +109,7 @@
     "react-resizable-panels": "^4.11.2",
     "recharts": "^3.8.1",
     "resend": "^6.12.3",
-        "sanitize-html": "^2.13.0",
+    "sanitize-html": "^2.13.0",
     "sonner": "^1.5.0",
     "streamdown": "^2.5.0",
     "stripe": "^22.3.1",
@@ -119,13 +122,14 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
+    "@opennextjs/cloudflare": "^1.20.1",
     "@types/node": "^22.5.0",
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.4",
     "@types/react-dom": "^18.3.0",
-    "@types/sanitize-html": "^2.13.0",    
+    "@types/sanitize-html": "^2.13.0",
     "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.31.10",
@@ -141,6 +145,14 @@
     "typescript": "^5.5.4",
     "vite": "^6.4.3",
     "vitest": "^3.2.6",
-    "wrangler": "^4.107.0"
+    "wrangler": "^4.107.0",
+    "ioredis": "file:./stubs/empty-redis",
+    "redis": "file:./stubs/empty-redis"
+  },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "file:./stubs/empty-redis",
+      "redis": "file:./stubs/empty-redis"
+    }
   }
 }

@@ -8,11 +8,5 @@
       "destination": "https://govchain.us",
       "permanent": false
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/nurture-replies",
-      "schedule": "0 14 * * *"
-    }
   ]
 }
