@@ -1,16 +1,10 @@
 name: Deploy Vercel App
 
+# Manual-only: Vercel's own Git integration already builds the live project on
+# every push, so the push trigger here double-deployed and burned the
+# free-tier 100-deployments/day quota. Kept for emergency manual deploys
+# during the Vercel wind-down (see the Vercel-elimination plan).
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "src/**"
-      - "package.json"
-      - "pnpm-workspace.yaml"
-      - "pnpm-lock.yaml"
-      - "vercel.json"
-      - ".github/workflows/deploy-vercel.yml"
   workflow_dispatch:
 
 concurrency:

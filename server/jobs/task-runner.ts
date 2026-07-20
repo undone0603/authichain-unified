@@ -29,12 +29,23 @@ import {
   runBrowseScrapeIndustryNews,
   runBrowseVerifyProductUrl,
 } from '../agents/browser.js';
-import { runVisionResearchLead, runVisionFreeform } from '../agents/browser-vision.js';
+// browser-vision (Playwright) is imported lazily inside runTask: Playwright
+// cannot load in the Workers runtime, so vision tasks are left pending there
+// and processed by the browser-vision-tasks GitHub Actions runner instead.
 import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
 import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
 import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
 
+const VISION_TASK_KINDS = new Set(['BROWSE_VISION_RESEARCH_LEAD', 'BROWSE_VISION_FREEFORM']);
+
 export async function runTask(task: Task): Promise<{ ok: boolean }> {
+  // Vision tasks need a Playwright-capable Node host. Leave them unclaimed
+  // (still PENDING) unless this process declares Playwright available — the
+  // browser-vision-tasks workflow sets PLAYWRIGHT_AVAILABLE=1.
+  if (VISION_TASK_KINDS.has(task.kind ?? '') && process.env.PLAYWRIGHT_AVAILABLE !== '1') {
+    return { ok: true };
+  }
+
   const claimed = await markTaskRunning(task.id);
   if (!claimed) return { ok: true }; // Another worker already claimed this task
 
@@ -191,13 +202,14 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
         break;
 
       // ── Browser Vision Agent (Playwright + Gemini vision) ────────────────
+      // Never reached here: the PLAYWRIGHT_AVAILABLE gate above leaves vision
+      // tasks pending, and scripts/run-vision-tasks.ts (the Playwright-capable
+      // GitHub Actions runner) executes them without going through this
+      // switch. Importing browser-vision here would drag playwright-core into
+      // the Workers bundle and break the build.
       case 'BROWSE_VISION_RESEARCH_LEAD':
-        await runVisionResearchLead(task);
-        break;
-
       case 'BROWSE_VISION_FREEFORM':
-        await runVisionFreeform(task);
-        break;
+        throw new Error(`${task.kind} must run via scripts/run-vision-tasks.ts (Playwright runner)`);
 
       default:
         throw new Error(`Unknown task kind: ${task.kind}`);

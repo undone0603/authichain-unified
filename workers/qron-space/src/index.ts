@@ -3543,7 +3543,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
   <div class="stat"><div class="stat-value" id="qs-rewards">369</div><div class="stat-label">Rewards Issued</div></div>
 </div>
 <script>
-fetch('https://authichain-unified.vercel.app/api/qron/stats')
+fetch('https://app.authichain.com/api/qron/stats')
   .then(r=>r.json()).then(function(d){
     if(d.authentications_total!=null)document.getElementById('qs-auths').textContent=d.authentications_total.toLocaleString();
     if(d.certificates_valid!=null)document.getElementById('qs-certs').textContent=d.certificates_valid.toLocaleString();
