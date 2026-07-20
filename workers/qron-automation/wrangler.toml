@@ -5,4 +5,7 @@ account_id = "4c1869b90f13f86940aa3747839bf420"
 workers_dev = false
 
 [triggers]
-crons = ["*/30 * * * *"]
+# The scheduled() handler branches on all three patterns; only */30 was
+# registered, so the SEO ping (0 */6) and daily digest (0 12) never fired.
+# Account cron budget (CF free plan allows 5): autopilot 1 + these 3 = 4.
+crons = ["*/30 * * * *", "0 */6 * * *", "0 12 * * *"]

@@ -1,0 +1,80 @@
+name: Repo Maintenance (drift checks)
+
+# Monthly sync/update signal for the estate. Report-only: each check fails
+# loudly in Actions (which the daily ops health-check routine reads) instead
+# of auto-committing fixes.
+
+on:
+  schedule:
+    - cron: '0 5 2 * *' # monthly, 2nd at 05:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  drift-checks:
+    name: Schema, inventory, and endpoint drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          version: '10.28.2'
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Worker inventory is current
+        run: |
+          bash scripts/gen-worker-inventory.sh
+          if ! git diff --quiet docs/superpowers/plans/worker-inventory.md; then
+            echo "::error::workers/ changed but docs/superpowers/plans/worker-inventory.md was not regenerated. Run scripts/gen-worker-inventory.sh and commit."
+            git diff docs/superpowers/plans/worker-inventory.md
+            exit 1
+          fi
+
+      - name: Drizzle schema ↔ migrations drift
+        run: |
+          pnpm db:generate >/dev/null 2>&1 || true
+          if [ -n "$(git status --porcelain drizzle/)" ]; then
+            echo "::error::drizzle-kit generate produced changes — ORM schema and committed migrations have drifted. Review drizzle/ (note: three parallel migration sets exist; see the maintenance notes in the PR that added this check)."
+            git status --porcelain drizzle/
+            exit 1
+          fi
+
+      - name: HF inference endpoints still alive
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "HF_TOKEN not set — skipping endpoint probe."
+            exit 0
+          fi
+          fail=0
+          # The two embedding models still used via hf-inference
+          # (scripts/lib/embed.ts, src/agents/government-lead-gen-v2.ts).
+          # FLUX died with a 410 the same way in July 2026.
+          for model in sentence-transformers/all-mpnet-base-v2 BAAI/bge-small-en-v1.5; do
+            code=$(curl -sS -o /tmp/hf.txt -w '%{http_code}' \
+              -X POST "https://router.huggingface.co/hf-inference/models/${model}/pipeline/feature-extraction" \
+              -H "Authorization: Bearer ${HF_TOKEN}" -H "Content-Type: application/json" \
+              -d '{"inputs":"probe"}')
+            if [ "$code" = "410" ] || [ "$code" = "404" ]; then
+              echo "::error::hf-inference dropped ${model} (HTTP $code) — migrate the embedding callers before they fail in production."
+              cat /tmp/hf.txt
+              fail=1
+            else
+              echo "OK [$code] ${model}"
+            fi
+          done
+          exit $fail
