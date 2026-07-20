@@ -1,0 +1,69 @@
+name: Browser Vision Tasks (Playwright runner)
+
+# BROWSE_VISION_* mission tasks need a real Chromium + Node host. The app
+# runtime (Cloudflare Workers) leaves them pending (task-runner gates on
+# PLAYWRIGHT_AVAILABLE); this workflow is the host that actually runs them.
+
+on:
+  schedule:
+    - cron: '30 2,8,14,20 * * *' # every 6h, offset from the business-cycle loop
+  workflow_dispatch: {}
+
+concurrency:
+  group: browser-vision-tasks
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run-vision-tasks:
+    name: Process pending vision tasks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Skip if DATABASE_URL not configured
+        id: check
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+            echo "DATABASE_URL repo secret not set — skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.skip == 'false'
+
+      - name: Setup pnpm
+        if: steps.check.outputs.skip == 'false'
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          version: '10.28.2'
+
+      - name: Setup Node 22
+        if: steps.check.outputs.skip == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        if: steps.check.outputs.skip == 'false'
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Install Chromium
+        if: steps.check.outputs.skip == 'false'
+        run: npx playwright install --with-deps chromium
+
+      - name: Run vision tasks
+        if: steps.check.outputs.skip == 'false'
+        env:
+          PLAYWRIGHT_AVAILABLE: '1'
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_GEMINI_API_KEY: ${{ secrets.GOOGLE_GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: pnpm tsx scripts/run-vision-tasks.ts

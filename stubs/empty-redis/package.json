@@ -1,0 +1,6 @@
+{
+  "name": "empty-redis-stub",
+  "version": "1.0.0",
+  "main": "index.js",
+  "description": "Empty stand-in for bottleneck's optional redis/ioredis backends, which are never used (local mode only) but break the Workers bundle if unresolvable."
+}

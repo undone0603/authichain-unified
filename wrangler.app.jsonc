@@ -1,0 +1,43 @@
+// Cloudflare Workers config for the Next.js network app (OpenNext build).
+// Replaces the Vercel deployment of app.authichain.com + brand domains.
+// Deploy: pnpm build:cf && pnpm deploy:cf
+// Free-tier note: Workers free = 10ms CPU/request. The heavy image
+// compositing paths are gated (see src/lib/hf-generation.ts) — revisit
+// limits.cpu_ms after moving to the paid plan.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "authichain-app",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-06-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "4c1869b90f13f86940aa3747839bf420",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "kv_namespaces": [
+    {
+      // Create with: npx wrangler kv namespace create authichain-app-cache
+      // then paste the id here (binding name is fixed by OpenNext).
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+    }
+  ],
+  // Hyperdrive accelerates the Supabase session pooler for pg/postgres TCP
+  // connections. Create with:
+  //   npx wrangler hyperdrive create authichain-db --connection-string="$DATABASE_URL"
+  // then paste the id here and read the connection string from
+  // env.HYPERDRIVE.connectionString where DATABASE_URL is consumed.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "REPLACE_WITH_HYPERDRIVE_ID"
+    }
+  ],
+  "vars": {
+    "APP_ORIGIN": "https://app.authichain.com"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
