@@ -19,6 +19,21 @@ export function formatErr(err: unknown): string {
   return String(err);
 }
 
+// The ledger is for status + context, not blobs: base64 data URLs logged here
+// once bloated automation_logs to ~300KB/row (34MB for <3k rows).
+const MAX_PAYLOAD_CHARS = 16_000;
+const MAX_ERROR_CHARS = 4_000;
+
+function sanitizeForLedger(serialized: string): string {
+  const withoutDataUrls = serialized.replace(
+    /data:[a-z/+.-]+;base64,[A-Za-z0-9+/=]{256,}/g,
+    '[data-url omitted]'
+  );
+  return withoutDataUrls.length > MAX_PAYLOAD_CHARS
+    ? `${withoutDataUrls.slice(0, MAX_PAYLOAD_CHARS)}…[truncated]`
+    : withoutDataUrls;
+}
+
 /**
 * Log an automation event for tracking and debugging.
 */
@@ -34,8 +49,8 @@ export async function logAutomation(
       workflow_name: workflowName,
       trigger_type: triggerType,
       status,
-      payload: payload ? JSON.stringify(payload) : null,
-      error_message: errorMessage || null,
+      payload: payload ? sanitizeForLedger(JSON.stringify(payload)) : null,
+      error_message: errorMessage ? sanitizeForLedger(errorMessage).slice(0, MAX_ERROR_CHARS) : null,
     });
   } catch (err) {
     console.error('[automation] Logging failed:', err);

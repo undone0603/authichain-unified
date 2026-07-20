@@ -200,6 +200,19 @@ app.get("/cron/hourly", async (c) => {
   await c.env.DB.prepare(
     "INSERT INTO cron_logs (ts, note) VALUES (datetime('now'), 'cron ran')"
   ).run();
+  // Retention: both D1 log tables only ever grew. Keep 90 days. The live
+  // tables were created outside this repo, so tolerate schema differences
+  // rather than failing the cron.
+  try {
+    await c.env.DB.prepare(
+      "DELETE FROM cron_logs WHERE ts < datetime('now', '-90 days')"
+    ).run();
+    await c.env.DB.prepare(
+      "DELETE FROM marketplace_events WHERE created_at < datetime('now', '-90 days')"
+    ).run();
+  } catch (err) {
+    console.warn("cron retention skipped:", err);
+  }
   return c.json({ ok: true, ran: "hourly" });
 });
 

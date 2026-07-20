@@ -337,6 +337,20 @@ registerJob({
     details.oldJobRunsDeleted = "checked";
     processed++;
 
+    // automation_logs doubles as the API rate-limit backing store: one
+    // 'api_rate_limit' row per allowed request, only ever queried over the
+    // recent window. Without pruning it grows per-request forever and
+    // degrades the very count query rate-limiting depends on.
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    await db.execute(sql`DELETE FROM automation_logs WHERE workflow_name = 'api_rate_limit' AND created_at < ${twoDaysAgo}`);
+    details.rateLimitRowsPruned = "checked";
+    processed++;
+
+    // General ledger retention (automation_logs is not in the drizzle schema)
+    await db.execute(sql`DELETE FROM automation_logs WHERE created_at < ${ninetyDaysAgo}`);
+    details.oldAutomationLogsPruned = "checked";
+    processed++;
+
     return { itemsProcessed: processed, details };
   },
 });
