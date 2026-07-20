@@ -3524,7 +3524,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
     <li><a href="#compliance">Compliance</a></li>
     <li><a href="#pricing">Pricing</a></li>
   </ul>
-  <a href="https://authichain-unified.vercel.app/onboard" class="btn btn-primary">Request Access</a>
+  <a href="https://app.authichain.com/onboard" class="btn btn-primary">Request Access</a>
 </nav>
 
 <div class="hero">
@@ -3618,16 +3618,16 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
   <h2>Pricing</h2>
   <p class="section-sub">Per-organization. Unlimited opportunities. No per-bid fees.</p>
   <div class="pricing-grid">
-    <div class="price-card"><h3>Contractor</h3><div class="price-amount">$299</div><div class="price-period">per month</div><ul class="price-features"><li>SAM.gov opportunity radar</li><li>AI fit-scoring</li><li>5 capability drafts / mo</li><li>Public datalog (read)</li></ul><a href="https://authichain-unified.vercel.app/onboard" class="btn btn-outline" style="width:100%;text-align:center">Start Trial</a></div>
-    <div class="price-card featured"><h3>Agency</h3><div class="price-amount">$799</div><div class="price-period">per month</div><ul class="price-features"><li>Everything in Contractor</li><li>Unlimited capability drafts</li><li>Made-in-USA provenance seals</li><li>FAR/DFARS/NIST exports</li><li>Deadline watchdog alerts</li></ul><a href="https://authichain-unified.vercel.app/onboard" class="btn btn-primary" style="width:100%;text-align:center">Most Popular</a></div>
-    <div class="price-card"><h3>Enterprise</h3><div class="price-amount">Custom</div><div class="price-period">prime & multi-team</div><ul class="price-features"><li>Multi-team workspaces</li><li>White-label public datalog</li><li>Sub-tier supply-chain anchoring</li><li>Dedicated compliance officer</li><li>SLA & SSO</li></ul><a href="https://authichain-unified.vercel.app/onboard" class="btn btn-outline" style="width:100%;text-align:center">Contact Sales</a></div>
+    <div class="price-card"><h3>Contractor</h3><div class="price-amount">$299</div><div class="price-period">per month</div><ul class="price-features"><li>SAM.gov opportunity radar</li><li>AI fit-scoring</li><li>5 capability drafts / mo</li><li>Public datalog (read)</li></ul><a href="https://app.authichain.com/onboard" class="btn btn-outline" style="width:100%;text-align:center">Start Trial</a></div>
+    <div class="price-card featured"><h3>Agency</h3><div class="price-amount">$799</div><div class="price-period">per month</div><ul class="price-features"><li>Everything in Contractor</li><li>Unlimited capability drafts</li><li>Made-in-USA provenance seals</li><li>FAR/DFARS/NIST exports</li><li>Deadline watchdog alerts</li></ul><a href="https://app.authichain.com/onboard" class="btn btn-primary" style="width:100%;text-align:center">Most Popular</a></div>
+    <div class="price-card"><h3>Enterprise</h3><div class="price-amount">Custom</div><div class="price-period">prime & multi-team</div><ul class="price-features"><li>Multi-team workspaces</li><li>White-label public datalog</li><li>Sub-tier supply-chain anchoring</li><li>Dedicated compliance officer</li><li>SLA & SSO</li></ul><a href="https://app.authichain.com/onboard" class="btn btn-outline" style="width:100%;text-align:center">Contact Sales</a></div>
   </div>
 </section>
 
 <div class="cta-section">
   <h2>Pursue smarter. Prove everything.</h2>
   <p style="color:var(--muted);margin:1rem 0 2rem">Join contractors using GovChain to find winnable federal work and anchor every claim on-chain.</p>
-  <a href="https://authichain-unified.vercel.app/onboard" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Request Access</a>
+  <a href="https://app.authichain.com/onboard" class="btn btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">Request Access</a>
 </div>
 
 <footer>
@@ -3635,7 +3635,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
 </footer>
 <script>
 (function(){
-  var API='https://authichain-unified.vercel.app';
+  var API='https://app.authichain.com';
   function n(x){try{return Number(x).toLocaleString();}catch(e){return x;}}
   function esc(s){return String(s==null?'':s).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});}
   fetch(API+'/api/govchain/stats').then(function(r){return r.json();}).then(function(s){

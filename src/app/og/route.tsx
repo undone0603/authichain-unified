@@ -3,8 +3,9 @@ import { BRANDS, resolveBrand, type BrandId } from '@shared/brands';
 
 // Dynamic Open Graph image generator. Usage:
 //   /og?title=AuthiChain%20vs%20Scantrust&brand=authichain
-// Returns a 1200x630 branded card. Runs on the edge for fast, cached delivery.
-export const runtime = 'edge';
+// Returns a 1200x630 branded card. No `runtime = 'edge'` export: on
+// Cloudflare (OpenNext) the whole app already runs at the edge, and a
+// separate edge bundle breaks the build.
 
 const BRAND_HEX: Record<BrandId, string> = {
   authichain: '#00FFD1',
