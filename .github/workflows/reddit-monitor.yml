@@ -1,0 +1,190 @@
+name: Reddit Market Intelligence
+
+# Monitors relevant subreddits for discussions where StrainChain, QRON, or
+# AuthiChain can add value. Uses Reddit's free RSS feeds (no API key needed).
+# Creates a GitHub issue for each relevant thread with a drafted response.
+# This creates an automated inbound lead channel that runs every 6 hours.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # Every 6 hours
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan Reddit for relevant discussions
+        run: |
+          python3 - <<'PYEOF'
+          import urllib.request
+          import xml.etree.ElementTree as ET
+          import json, os, re, subprocess
+          from datetime import datetime, timezone, timedelta
+
+          # Define search queries for each product
+          searches = [
+              # StrainChain — cannabis counterfeiting & supply chain
+              ("StrainChain", "https://www.reddit.com/r/weedbiz/search.rss?q=counterfeit+OR+fake+vape+OR+supply+chain+verification&restrict_sr=1&sort=new&limit=10"),
+              ("StrainChain", "https://www.reddit.com/r/cleancarts/search.rss?q=authenticate+OR+verify+OR+fake+OR+counterfeit&restrict_sr=1&sort=new&limit=10"),
+              ("StrainChain", "https://www.reddit.com/r/NYSCannabis/search.rss?q=counterfeit+OR+fake+OR+verify&restrict_sr=1&sort=new&limit=10"),
+              ("StrainChain", "https://www.reddit.com/r/CannabisExtracts/search.rss?q=authentic+OR+counterfeit+OR+brand+verification&restrict_sr=1&sort=new&limit=10"),
+              # QRON — QR code design & AI generation
+              ("QRON", "https://www.reddit.com/r/QRcode/search.rss?q=ai+OR+design+OR+art+OR+beautiful+OR+generator&restrict_sr=1&sort=new&limit=10"),
+              ("QRON", "https://www.reddit.com/r/webdev/search.rss?q=qr+code+ai+OR+beautiful+qr&restrict_sr=1&sort=new&limit=5"),
+              ("QRON", "https://www.reddit.com/r/graphic_design/search.rss?q=qr+code+design+OR+ai+qr&restrict_sr=1&sort=new&limit=5"),
+              # AuthiChain — identity verification & EU DPP
+              ("AuthiChain", "https://www.reddit.com/r/cybersecurity/search.rss?q=identity+verification+OR+blockchain+auth+OR+decentralized+identity&restrict_sr=1&sort=new&limit=10"),
+              ("AuthiChain", "https://www.reddit.com/r/digitalpassport/search.rss?q=EU+DPP+OR+digital+product+passport+OR+compliance&restrict_sr=1&sort=new&limit=10"),
+              ("AuthiChain", "https://www.reddit.com/r/blockchain/search.rss?q=identity+verification+OR+product+passport+OR+supply+chain+authenticity&restrict_sr=1&sort=new&limit=5"),
+          ]
+
+          # Fetch existing issues to avoid duplicates
+          try:
+              result = subprocess.run(
+                  ["gh", "issue", "list", "--label", "reddit-lead", "--state", "all", "--limit", "100", "--json", "title"],
+                  capture_output=True, text=True, env={**os.environ, "GH_TOKEN": os.environ.get("GITHUB_TOKEN", "")}
+              )
+              existing = json.loads(result.stdout) if result.stdout.strip() else []
+              existing_titles = {item["title"] for item in existing}
+          except Exception:
+              existing_titles = set()
+
+          cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+          found = 0
+
+          for product, url in searches:
+              try:
+                  req = urllib.request.Request(url, headers={"User-Agent": "StrainChain-Monitor/1.0"})
+                  feed = urllib.request.urlopen(req, timeout=15)
+                  tree = ET.parse(feed)
+                  root = tree.getroot()
+
+                  for item in root.findall('.//item'):
+                      title = item.findtext('title') or ''
+                      link = item.findtext('link') or ''
+                      pub_date_str = item.findtext('pubDate') or ''
+                      description = item.findtext('description') or ''
+
+                      # Parse date
+                      try:
+                          from email.utils import parsedate_to_datetime
+                          pub_date = parsedate_to_datetime(pub_date_str)
+                          if pub_date.tzinfo is None:
+                              pub_date = pub_date.replace(tzinfo=timezone.utc)
+                      except Exception:
+                          continue
+
+                      if pub_date < cutoff:
+                          continue
+
+                      issue_title = f"[REDDIT] {product}: {title[:80]}"
+
+                      if issue_title in existing_titles:
+                          continue
+
+                      # Draft a response based on the product
+                      if product == "StrainChain":
+                          drafted = f"""## Context
+                      Found a relevant Reddit discussion for StrainChain.
+
+                      **Product:** StrainChain
+                      **Subreddit:** {url.split('/r/')[1].split('/')[0]}
+                      **Post:** [{title}]({link})
+                      **Posted:** {pub_date_str}
+
+                      ## Drafted Response (value-first, not promotional)
+
+                      Great question. I've been deep in the cannabis supply chain space and there's a real gap in how brands verify authenticity.
+
+                      The core problem: most "authentication" right now is hologram stickers, which are trivially counterfeited. Real verification needs to be cryptographic — tied to an immutable record that can't be copied.
+
+                      I built StrainChain (strainchain.io) to address exactly this. Blockchain-verified chain of custody from seed to sale. Consumers scan a QR code and see the complete verified journey — lab results, cultivation provenance, distribution chain.
+
+                      Not trying to pitch — just sharing what I've learned building in this space. Happy to answer questions about how the verification actually works.
+
+                      ## Action
+                      - [ ] Review the Reddit post
+                      - [ ] Post the drafted response (adapt as needed)
+                      - [ ] Monitor for replies and engage
+                      """
+                      elif product == "QRON":
+                          drafted = f"""## Context
+                      Found a relevant Reddit discussion for QRON.
+
+                      **Product:** QRON
+                      **Subreddit:** {url.split('/r/')[1].split('/')[0]}
+                      **Post:** [{title}]({link})
+                      **Posted:** {pub_date_str}
+
+                      ## Drafted Response
+
+                      I've been building an AI-powered QR code generator (qron.space) and learned a few things about the scanability vs. design tradeoff:
+
+                      1. Error correction level L (7%) gives you the most artistic freedom but fails on any surface with glare
+                      2. Level M (15%) is the sweet spot for most use cases
+                      3. The key insight: you can push the design pretty far IF you use ControlNet to preserve the scannable structure while generating art around it
+
+                      We achieved 100% scanability across multiple art styles by using quantitative colorimetry to ensure contrast ratios stay above the threshold.
+
+                      Free tier is live at qron.space if anyone wants to test it.
+
+                      ## Action
+                      - [ ] Review the Reddit post
+                      - [ ] Post the drafted response (adapt as needed)
+                      - [ ] Monitor for replies
+                      """
+                      else:  # AuthiChain
+                          drafted = f"""## Context
+                      Found a relevant Reddit discussion for AuthiChain.
+
+                      **Product:** AuthiChain
+                      **Subreddit:** {url.split('/r/')[1].split('/')[0]}
+                      **Post:** [{title}]({link})
+                      **Posted:** {pub_date_str}
+
+                      ## Drafted Response
+
+                      There's an interesting angle here that doesn't get enough attention: using blockchain anchoring for identity verification.
+
+                      The approach we took with AuthiChain: anchor identity attestations to Bitcoin L1 (not an L2 or sidechain) so the provenance record is as durable as the chain itself. Combined with W3C Verifiable Credentials, you get cryptographic proof that's interoperable and tamper-evident.
+
+                      For EU DPP specifically: the Battery Passport deadline (Feb 2027) is forcing non-EU manufacturers to find compliance solutions fast. The registry requirement means you need immutable, verifiable product data — which is exactly what blockchain anchoring provides.
+
+                      Happy to share more about the architecture if useful.
+
+                      ## Action
+                      - [ ] Review the Reddit post
+                      - [ ] Post the drafted response (adapt as needed)
+                      - [ ] Monitor for replies
+                      """
+
+                      # Create GitHub issue
+                      try:
+                          subprocess.run(
+                              ["gh", "issue", "create",
+                               "--title", issue_title,
+                               "--body", drafted,
+                               "--label", "reddit-lead"],
+                              env={**os.environ, "GH_TOKEN": os.environ.get("GITHUB_TOKEN", "")},
+                              timeout=30
+                          )
+                          found += 1
+                          print(f"Created issue: {issue_title}")
+                      except Exception as e:
+                          print(f"Failed to create issue: {e}")
+
+              except Exception as e:
+                  print(f"Failed to fetch {url}: {e}")
+
+          print(f"\n✅ Found {found} new relevant discussions in the last 48h")
+          PYEOF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
