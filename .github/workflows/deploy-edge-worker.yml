@@ -1,10 +1,9 @@
 name: Deploy Cloudflare Edge Worker
 
+# Disabled push trigger — was failing on every push (pnpm install step).
+# Re-enable after fixing the install issue or when ready to deploy edge worker.
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -23,9 +22,9 @@ jobs:
         run: |
           if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
             echo "::notice::CLOUDFLARE_API_TOKEN not set — skipping edge worker deploy. Set in repo secrets to enable."
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> $GITHUB_OUTPUT"
           else
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT"
           fi
 
       - name: Setup Node
@@ -61,6 +60,7 @@ jobs:
           echo "${{ secrets.STRIPE_PRICE_BASIC }}" | wrangler secret put STRIPE_PRICE_BASIC --name authichain-revenue-worker
           echo "${{ secrets.STRIPE_PRICE_PRO }}" | wrangler secret put STRIPE_PRICE_PRO --name authichain-revenue-worker
           echo "${{ secrets.STRIPE_PRICE_ENTERPRISE }}" | wrangler secret put STRIPE_PRICE_ENTERPRISE --name authichain-revenue-worker
+
       - name: Deploy worker
         if: steps.secrets_check.outputs.skip != 'true'
         env:
