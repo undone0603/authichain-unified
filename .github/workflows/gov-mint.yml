@@ -17,8 +17,6 @@ on:
         required: true
       GOVCHAIN_URL:
         required: false
-      POLYGON_RPC_URL:
-        required: false
 
 jobs:
   mint:
@@ -37,10 +35,9 @@ jobs:
       - name: Mint GovChain NFTs
         run: pnpm exec tsx scripts/mint-govchain-nfts.ts
         env:
-          RPC_URL:              ${{ secrets.POLYGON_RPC_URL }}
-          WALLET_PRIVATE_KEY:    ${{ secrets.POLYGON_PRIVATE_KEY }}
-          CONTRACT_ADDRESS:     ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
-          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GOVCHAIN_URL:          ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN:               ${{ inputs.dry_run || 'false' }}
+          WALLET_PRIVATE_KEY:        ${{ secrets.POLYGON_PRIVATE_KEY }}
+          CONTRACT_ADDRESS:          ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOVCHAIN_URL:              ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
+          DRY_RUN:                   ${{ inputs.dry_run || 'false' }}
