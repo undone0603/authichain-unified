@@ -66,4 +66,5 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GOOGLE_GEMINI_API_KEY: ${{ secrets.GOOGLE_GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          NODE_OPTIONS: '--dns-result-order=ipv4first'
         run: pnpm tsx scripts/run-vision-tasks.ts
