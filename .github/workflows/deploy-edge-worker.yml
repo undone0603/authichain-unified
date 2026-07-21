@@ -1,8 +1,15 @@
 name: Deploy Cloudflare Edge Worker
 
-# Disabled push trigger — was failing on every push (pnpm install step).
-# Re-enable after fixing the install issue or when ready to deploy edge worker.
+# Push trigger re-enabled after fixing:
+#   1. pnpm minimumReleaseAge policy (@smithy/* now excluded in pnpm-workspace.yaml)
+#   2. GITHUB_OUTPUT trailing-quote bug in secrets_check step
+#   3. pnpm/action-setup must run before setup-node (for cache to work)
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'workers/**'
+      - '.github/workflows/deploy-edge-worker.yml'
   workflow_dispatch: {}
 
 permissions:
@@ -22,26 +29,27 @@ jobs:
         run: |
           if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
             echo "::notice::CLOUDFLARE_API_TOKEN not set — skipping edge worker deploy. Set in repo secrets to enable."
-            echo "skip=true" >> $GITHUB_OUTPUT"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "skip=false" >> $GITHUB_OUTPUT"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Setup Node
-        if: steps.secrets_check.outputs.skip != 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install wrangler
-        if: steps.secrets_check.outputs.skip != 'true'
-        run: npm install -g wrangler@latest
-
-      - name: Install pnpm
+      - name: Setup pnpm
         if: steps.secrets_check.outputs.skip != 'true'
         uses: pnpm/action-setup@v4
         with:
           version: latest
+
+      - name: Setup Node 22
+        if: steps.secrets_check.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install wrangler
+        if: steps.secrets_check.outputs.skip != 'true'
+        run: npm install -g wrangler@latest
 
       - name: Install dependencies
         if: steps.secrets_check.outputs.skip != 'true'
