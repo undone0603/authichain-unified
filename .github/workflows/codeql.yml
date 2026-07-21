@@ -23,6 +23,8 @@ jobs:
       matrix:
         include:
           - language: javascript-typescript
+            # build-mode: none = extract from source without compiling.
+            # Required for JS/TS in pnpm monorepos — autobuild exits 1.
             build-mode: none
           - language: python
             build-mode: none
@@ -31,19 +33,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode || 'autobuild' }}
-          queries: security-and-quality
-          config: |
-            paths-ignore:
-              - apps
-              - docs/archive
-              - scripts/ops              
-              - api/server.js
-              - '**/*.min.js'
+          # Do NOT use expression fallback — all matrix entries define build-mode explicitly.
+          # The '|| autobuild' fallback was causing the action to ignore the matrix value.
+          build-mode: ${{ matrix.build-mode }}
+          config-file: .github/codeql-config.yml
+
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
@@ -60,7 +59,7 @@ jobs:
         env:
           ANALYZE_RESULT: ${{ needs.analyze.result }}
         run: |
-          if [[ "$ANALYZE_RESULT" == "success" ]]; then
+          if [[  "$ANALYZE_RESULT" == "success" ]]; then
             echo "All CodeQL analysis jobs passed."
           else
             echo "CodeQL analysis result: $ANALYZE_RESULT"
