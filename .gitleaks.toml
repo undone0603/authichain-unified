@@ -1,0 +1,65 @@
+# Gitleaks configuration for authichain-unified
+# Prevents secrets from being committed to git
+
+[allowlist]
+description = "Allowlisted paths and patterns"
+paths = [
+  '''\.env\.example$''',
+  '''\.env\.local\.example$''',
+  '''docs/archive/misc/.*_envs\.txt$''',
+]
+regexes = [
+  '''\*\*\*REMOVED\*\*''',
+  '''REPLACE_WITH_.*''',
+  '''your_.*_here''',
+  '''sk_live_your_stripe_secret_key''',
+  '''whsec_your_webhook_secret''',
+]
+
+[[rules]]
+id = "stripe-live-key"
+description = "Stripe Live Secret Key"
+regex = '''sk_live_[a-zA-Z0-9]{20,}'''
+tags = ["key", "stripe"]
+
+[[rules]]
+id = "stripe-test-key"
+description = "Stripe Test Secret Key"
+regex = '''sk_test_[a-zA-Z0-9]{20,}'''
+tags = ["key", "stripe"]
+
+[[rules]]
+id = "stripe-webhook-secret"
+description = "Stripe Webhook Secret"
+regex = '''whsec_[a-zA-Z0-9]{20,}'''
+tags = ["key", "stripe"]
+
+[[rules]]
+id = "openai-key"
+description = "OpenAI API Key"
+regex = '''sk-proj-[a-zA-Z0-9_-]{40,}'''
+tags = ["key", "openai"]
+
+[[rules]]
+id = "resend-key"
+description = "Resend API Key"
+regex = '''re_[a-zA-Z0-9]{20,}'''
+tags = ["key", "resend"]
+
+[[rules]]
+id = "groq-key"
+description = "Groq API Key"
+regex = '''gsk_[a-zA-Z0-9]{20,}'''
+tags = ["key", "groq"]
+
+[[rules]]
+id = "telegram-bot-token"
+description = "Telegram Bot Token"
+regex = '''[0-9]{8,10}:[a-zA-Z0-9_-]{30,}'''
+tags = ["token", "telegram"]
+
+[[rules]]
+id = "supabase-jwt"
+description = "Supabase JWT (anon or service_role)"
+regex = '''eyJ[a-zA-Z0-9_-]{50,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}'''
+tags = ["key", "supabase"]
