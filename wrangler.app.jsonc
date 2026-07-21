@@ -15,25 +15,25 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  "kv_namespaces": [
-    {
-      // Create with: npx wrangler kv namespace create authichain-app-cache
-      // then paste the id here (binding name is fixed by OpenNext).
-      "binding": "NEXT_INC_CACHE_KV",
-      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
-    }
-  ],
+  // KV namespace for OpenNext incremental cache (ISR).
+  // Create with: npx wrangler kv namespace create authichain-app-cache
+  // Then uncomment and paste the namespace id.
+  // "kv_namespaces": [
+  //   {
+  //     "binding": "NEXT_INC_CACHE_KV",
+  //     "id": "<KV_NAMESPACE_ID>"
+  //   }
+  // ],
   // Hyperdrive accelerates the Supabase session pooler for pg/postgres TCP
   // connections. Create with:
   //   npx wrangler hyperdrive create authichain-db --connection-string="$DATABASE_URL"
-  // then paste the id here and read the connection string from
-  // env.HYPERDRIVE.connectionString where DATABASE_URL is consumed.
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "REPLACE_WITH_HYPERDRIVE_ID"
-    }
-  ],
+  // Then uncomment and paste the id.
+  // "hyperdrive": [
+  //   {
+  //     "binding": "HYPERDRIVE",
+  //     "id": "<HYPERDRIVE_ID>"
+  //   }
+  // ],
   "vars": {
     "APP_ORIGIN": "https://app.authichain.com"
   },
