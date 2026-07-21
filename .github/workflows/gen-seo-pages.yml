@@ -1,0 +1,46 @@
+name: SEO Page Generation
+
+# Generates programmatic SEO pages from the data table in gen-seo-pages.cjs.
+# Deterministic, idempotent, no external credentials needed. Runs weekly
+# and commits the output to content/seo/pages.json.
+# Open-source, zero-cost solution for programmatic SEO.
+
+on:
+  schedule:
+    - cron: '0 9 * * 5'   # Every Friday 09:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    name: Generate SEO pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+
+      - name: Generate SEO pages
+        run: node scripts/gen-seo-pages.cjs
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet content/seo/pages.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add content/seo/pages.json
+          git commit -m "chore(seo): regenerate programmatic SEO pages [skip ci]"
+          git push
