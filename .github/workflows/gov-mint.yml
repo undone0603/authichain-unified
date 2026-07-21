@@ -7,8 +7,6 @@ on:
         required: false
         type: string
     secrets:
-      ALCHEMY_API_KEY:
-        required: true
       POLYGON_PRIVATE_KEY:
         required: true
       GOVCHAIN_NFT_CONTRACT:
@@ -18,6 +16,8 @@ on:
       SUPABASE_SERVICE_ROLE_KEY:
         required: true
       GOVCHAIN_URL:
+        required: false
+      POLYGON_RPC_URL:
         required: false
 
 jobs:
@@ -37,9 +37,9 @@ jobs:
       - name: Mint GovChain NFTs
         run: pnpm exec tsx scripts/mint-govchain-nfts.ts
         env:
-          ALCHEMY_API_KEY:       ${{ secrets.ALCHEMY_API_KEY }}
+          RPC_URL:              ${{ secrets.POLYGON_RPC_URL }}
           WALLET_PRIVATE_KEY:    ${{ secrets.POLYGON_PRIVATE_KEY }}
-          CONTRACT_ADDRESS:      ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
+          CONTRACT_ADDRESS:     ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
           SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GOVCHAIN_URL:          ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
