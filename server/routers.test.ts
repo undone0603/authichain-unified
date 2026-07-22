@@ -81,6 +81,27 @@ vi.mock("./db", async (importOriginal) => {
   };
 });
 
+// server/admin/db-repository.ts and server/subscriptions/router.ts were
+// migrated (Task 2b-4) to call server/db-helpers.ts's db-parameterized
+// reimplementations instead of server/db.ts's named exports directly, so
+// the admin dashboard functions and getUserSubscription now need to be
+// mocked here too (the values below intentionally mirror the "./db" mock
+// above so existing test expectations don't change).
+vi.mock("./db-helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./db-helpers")>();
+  return {
+    ...actual,
+    getAdminDashboardMetrics: vi.fn(async () => ({ totalUsers: 0, totalProducts: 0, totalAuthentications: 0, totalRevenue: 0, totalLeads: 0, totalNfts: 0 })),
+    getAllUsers: vi.fn(async () => []),
+    getRevenueAnalytics: vi.fn(async () => []),
+    getSubscriptionAnalytics: vi.fn(async () => []),
+    getOpenFraudAlerts: vi.fn(async () => []),
+    getAllHealthScores: vi.fn(async () => []),
+    getRecentActivity: vi.fn(async () => []),
+    getUserSubscription: vi.fn(async () => null),
+  };
+});
+
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
