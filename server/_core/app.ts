@@ -18,7 +18,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { sdk } from "./sdk";
-import { getOpsSummary } from "../db";
+import { getDb } from "../db";
+import { getOpsSummary } from "./db-helpers";
 import { createInternalRouter } from "../internal-api";
 import { brandMiddleware } from "./brand-middleware";
 import contactRouter from "../contact";
@@ -168,7 +169,11 @@ export function createApp() {
       return res.status(user ? 403 : 401).json({ error: user ? "Admin only" : "Not signed in" });
     }
     try {
-      const summary = await getOpsSummary();
+      // Express ops-console route (Node-only deployment path, not the
+      // Workers/tRPC path — no ctx.db reachable here). Calling getDb() is a
+      // documented bridge to the legacy server/db.ts singleton.
+      const db = await getDb();
+      const summary = await getOpsSummary(db);
       res.json(summary);
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : "ops query failed" });

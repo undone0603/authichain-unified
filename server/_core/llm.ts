@@ -1,4 +1,10 @@
 import { ENV } from "./env";
+// invokeLLM() below is imported by 31+ files across the codebase (agents,
+// jobs, routers, ...), most not yet migrated off the db.ts singleton. The
+// prompt-cache lookup/store here is best-effort and already fail-open (see
+// the try/catch around each getDb() call) — rethreading a db param through
+// every one of those call sites is well outside this cluster's scope, so
+// this stays a documented getDb() bridge instead of a real migration.
 import { getDb } from "../db.js";
 import { promptCache } from "../../drizzle/schema.js";
 import { eq } from "drizzle-orm";
