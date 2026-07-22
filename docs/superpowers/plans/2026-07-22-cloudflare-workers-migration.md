@@ -218,9 +218,9 @@ git commit -m "feat(workers): add Fetch-adapter tRPC context alongside the exist
 
 ---
 
-### Task 2b: Migrate `db`/`getDb()` call sites to `ctx.db`
+### Task 2b: Migrate `db`/`getDb()`/helper-function call sites to `ctx.db` — split into 6 sub-tasks
 
-**Why this task exists, and a second correction:** discovered during pre-flight plan review and then refined further during Task 1's review cycle. `server/db.ts` has two access interfaces that turn out to share one underlying connection, not two independent things:
+**Why this task exists, and two corrections along the way:** discovered during pre-flight plan review, then refined twice more during Task 1 and Task 2's review cycles. `server/db.ts` has three access surfaces that all share one underlying connection, not independent things:
 ```typescript
 let _db: DrizzleInstance | null = null;
 
@@ -235,67 +235,180 @@ export const db: DrizzleInstance = new Proxy({} as DrizzleInstance, {
     return Reflect.get(_db as object, prop as string);      // having run first
   },
 });
+
+// Plus 151 named query helpers exported from this same file, e.g.:
+export async function getUserByOpenId(openId: string) { /* uses db/getDb internally */ }
+export async function upsertUser(user: InsertUser): Promise<void> { /* ditto */ }
+// ...149 more (createProduct, getLeadByEmail, upsertStripeSubscription, etc.)
 ```
-Both are incompatible with Workers for the same underlying reason: `process.env.DATABASE_URL` and the module-scope `_db` cache both assume a long-lived Node process, not a per-request Workers invocation with `env` bindings only available inside the request handler. A real usage-based grep in the worktree (not an import-statement guess) found:
-- 35 files call `getDb(` (some via `await getDb()`, some through re-exported helpers)
-- 29 files use `db.<method>(` (property access on the Proxy)
-- 24 files do both
-- **40 unique files total** need migration
+All three are incompatible with Workers for the same reason: `process.env.DATABASE_URL` and the module-scope `_db` cache both assume a long-lived Node process, not a per-request Workers invocation where `env` bindings are only available inside the request handler.
+
+A real usage-based investigation (not an import-statement guess — that undercounted twice in a row during this plan's review cycles) found the true scope:
+- 35 files call `getDb(` directly
+- 29 files use `db.<method>(` directly
+- 115 files call at least one of the 151 named helper functions
+- **112 unique production files total** (test files excluded) need migration — far more than this plan's original 40-file estimate
+
+A single task covering 112 files isn't reviewable or safely executable as one unit, so this is split into 6 sub-tasks by subsystem, ~17-19 files each, matching the codebase's own `server/` subdirectory organization:
+
+| Sub-task | Files | Scope |
+|---|---|---|
+| Task 2b-1 | 19 | `server/agents/**` — AI/automation agents |
+| Task 2b-2 | 19 | `server/jobs/**`, `server/scheduled-jobs.ts` — background jobs |
+| Task 2b-3 | 17 | `server/scripts/**`, `server/missions/**`, `server/_core/**`, `server/db/**` — infra/tooling/core |
+| Task 2b-4 | 19 | `server/webhooks/**`, `server/services/**`, `server/sales/**`, `server/admin/**`, `server/payments/**`, `server/paddle/**`, `server/subscriptions/**`, `server/stripe-connect-service.ts`, `server/tenant-billing.ts`, `server/revenue-orchestrator.ts`, `server/fulfillment-service.ts` — commerce/revenue |
+| Task 2b-5 | 19 | `server/staking/**`, `server/referral/**`, `server/white-label/**`, `server/affiliate/**`, `server/bonuses/**`, `server/authenticate/**`, `server/b44-service.ts`, `server/asset-service.ts`, `server/supply-chain/**`, `server/qron/**`, `server/qrcode/**`, `server/products/**`, `server/nft/**`, `server/marketplace/**`, `server/certificates/**`, `server/ordinals-service.ts`, `server/metrc-service.ts` — identity/product |
+| Task 2b-6 | 19 | `server/social-service.ts`, `server/marketing/**`, `server/hubspot/**`, `server/gpt/**`, `server/email-drafts/**`, `server/email-campaigns/**`, `server/notifications/**`, `server/feedback/**`, `server/personalization/**`, `server/character-service.ts`, `server/govchain/**`, `server/mcp/**`, `server/internal-api.ts`, `server/dashboard/**`, `server/blockchain/**`, `server/analytics/**`, `server/ab-testing/**`, `server/routers/**` (the tRPC composition file itself), `server/autopilot/**` — content/comms/composition |
+
+Each sub-task below follows the same procedure; only the file scope differs. Run them in order (2b-1 through 2b-6) so the full suite's growing pass count stays a meaningful regression signal between them, but they have no interface dependency on each other — a review finding in 2b-3 does not block starting 2b-4.
+
+**Interfaces (shared across all six sub-tasks):**
+- Consumes: `TrpcContext.db` from Task 2 (`server/_core/context.workers.ts`) — already present in the type, populated via `getHyperdriveDb(env)` (Task 1's factory — **not** `getDb()`, which is one of the things being migrated away from).
+
+---
+
+#### Task 2b-1: Migrate `server/agents/**` (19 files)
 
 **Files:**
-- Modify: every file the enumeration in Step 1 finds (do not guess the list, and do not reuse the 40 from this plan's own investigation without regenerating it — the worktree may have changed since)
-- Test: existing test files covering each modified router (run per-file after each migration, not once at the end)
+- Modify: `server/agents/browser-vision.ts`, `server/agents/browser.ts`, `server/agents/closer.ts`, `server/agents/content.ts`, `server/agents/crm-update.ts`, `server/agents/dev-team/code-writer.ts`, `server/agents/dev-team/pr-manager.ts`, `server/agents/dev-team/router.ts`, `server/agents/dev-team/test-runner.ts`, `server/agents/followup.ts`, `server/agents/heygen-video.ts`, `server/agents/infra.ts`, `server/agents/lead-finder.ts`, `server/agents/news-pr.ts`, `server/agents/outbound-email.ts`, `server/agents/pilot-packet.ts`, `server/agents/retail.ts`, `server/agents/security.ts`, `server/agents/seo-content.ts`
+- Test: each file's matching `*.test.ts` (run per-file after each migration)
 
-**Interfaces:**
-- Consumes: `TrpcContext.db` from Task 2 (`server/_core/context.workers.ts`) — already present in the type; this task is about call sites adopting it, not adding it. `TrpcContext.db` is populated via `getHyperdriveDb(env)` (Task 1's Hyperdrive factory, **not** `getDb()` — Task 1's review cycle renamed it specifically to avoid colliding with the pre-existing `getDb()` this task is migrating away from).
-
-- [ ] **Step 1: Generate the exact file list — do not rely on the earlier estimate**
+- [ ] **Step 1: Confirm this exact file list is still current**
 
 ```bash
-grep -rl "getDb(" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | grep -v "^server/db\.ts$" | sort > /tmp/getdb-callers.txt
-grep -rlE "\bdb\.(select|insert|update|delete|query|transaction|execute)\(" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | grep -v "^server/db\.ts$" | sort > /tmp/db-singleton-callers.txt
-cat /tmp/getdb-callers.txt /tmp/db-singleton-callers.txt | sort -u > /tmp/db-migration-sites.txt
-wc -l /tmp/db-migration-sites.txt
-cat /tmp/db-migration-sites.txt
+grep -rl "getDb(\|(getUserByOpenId\|upsertUser\|getAllUsers\|createProduct" server/agents --include="*.ts" | grep -v "\.test\.ts$"
 ```
-This is the authoritative list for this task. Exclude `server/db.ts` itself (where both `getDb` and `db` are defined — not a call site) and `server/_core/context.ts`/`server/_core/context.workers.ts` (expected to call `getDb`/`getHyperdriveDb` directly — that's their job).
+(Substitute the actual helper-function names each file uses — this plan's investigation used a loop over all 151 names; for a 19-file cluster, a manual read of each file's imports from `../db` or `../../db` is faster than re-running the full 151-name loop. Confirm no file has been added to or removed from `server/agents/` since this plan was written that would change the list above.)
 
-- [ ] **Step 2: Classify each file by how it's invoked**
+- [ ] **Step 2: Classify each file — router-adjacent (has access to a tRPC `ctx`) vs. standalone service module**
 
-Router files (anything merged into `appRouter` in `server/routers.ts`) already receive `ctx` as a tRPC procedure parameter — migrating them is mechanical: remove the `getDb`/`db` import, replace `await getDb()` or bare `db.` with `ctx.db.` inside the procedure body, no new parameter threading needed. Non-router files (helper modules imported *by* routers, e.g. `server/db/users.ts`-style query helpers, or `server/character-service.ts`-style service modules) don't have a `ctx` of their own — these need a `db` (or `db: DrizzleInstance`) parameter added to their exported functions, threaded in from their caller (which does have `ctx.db`). Split Step 1's list into these two groups before touching any file; migrate router files first (mechanical, lower risk), non-router helpers second (signature changes ripple to every call site — check each helper's callers via `grep -rn "helperFunctionName(" server` before changing its signature).
+Files under `server/agents/dev-team/router.ts` and similar router-registered files receive `ctx` directly. Most files in `server/agents/` are standalone service modules (called by routers or by scheduled jobs, not routers themselves) — these need a `db` parameter added to their exported functions, threaded from whichever router/job calls them.
 
 - [ ] **Step 3: Migrate one file, run its test, repeat**
 
-For each router file: remove the `getDb`/`db` import, replace every `await getDb()` and bare `db.` reference with `ctx.db.`. For each non-router helper: add a `db` parameter to its exported functions (typed as `ReturnType<typeof import("./db").getDb>` resolved, or more simply reuse whatever type `TrpcContext.db` already has from Task 2), update every call site to pass `ctx.db` (or, for a helper called by another already-migrated helper, that helper's own `db` parameter) through.
+For each file: remove the `getDb`/`db`/helper-function-from-db import, add a `db: TrpcContext["db"]` parameter (or the plain `ReturnType<typeof getHyperdriveDb>` type if importing `TrpcContext` would create a circular import — check before choosing), update the function body to call the equivalent drizzle query via the passed-in `db` instead of the removed import, and update every call site of this file's exported functions to pass `db` through.
 
-After each individual file: run that file's specific test. Do not batch multiple files' migrations into one uncommitted pile — commit per file or small logical group, per Step 5.
+Run the file's own test after each migration. Do not batch multiple files into one uncommitted pile.
 
-- [ ] **Step 4: Run the full suite after each batch**
+- [ ] **Step 4: Run the full suite and type check after this cluster**
 
-Run: `pnpm vitest run`
-Expected: PASS, 504 tests (Task 1's baseline, not the original 503 — Task 1 added one new test file) after every batch of migrations, not just at the very end. Also run `npx tsc --noEmit` after each batch — Task 1's review cycle found that `vitest run` alone does not type-check and missed a real breaking change; do not repeat that mistake here across 40 files.
+Run: `npx tsc --noEmit && pnpm vitest run`
+Expected: zero new type errors, test count at or above the running baseline (check the ledger for the count after Task 2's fix cycle before starting).
 
 - [ ] **Step 5: Commit per file or small logical group**
 
 ```bash
 git add <migrated files>
-git commit -m "refactor(workers): migrate <router/module name> off direct db access to ctx.db"
+git commit -m "refactor(workers): migrate server/agents/<name> off direct db access to threaded db param"
 ```
 
-- [ ] **Step 6: Confirm zero remaining call sites**
+- [ ] **Step 6: Confirm zero remaining direct db access in this cluster**
 
-Run:
 ```bash
-grep -rl "getDb(" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | grep -v "^server/db\.ts$"
-grep -rlE "\bdb\.(select|insert|update|delete|query|transaction|execute)\(" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | grep -v "^server/db\.ts$"
+grep -rl "getDb(\|\bdb\.\(select\|insert\|update\|delete\|query\|transaction\|execute\)(" server/agents --include="*.ts" | grep -v "\.test\.ts$"
 ```
-Expected: both commands return only `server/_core/context.ts` and `server/_core/context.workers.ts` (or nothing, if those two also end up going through a shared internal helper). Anything else means Step 1's list was incomplete or a new direct call was introduced mid-task — resolve before marking this task complete.
+Expected: empty.
 
-- [ ] **Step 7: Final type check and full suite**
+---
 
-Run: `npx tsc --noEmit && pnpm vitest run`
-Expected: zero type errors attributable to this task's changes, 504 tests passing. This is the task's actual completion gate, not Step 6's grep alone — Step 6 confirms no old call sites remain, this step confirms nothing is broken.
+#### Task 2b-2: Migrate `server/jobs/**` + `server/scheduled-jobs.ts` (19 files)
 
+**Files:**
+- Modify: every file under `server/jobs/` (18 files — enumerate via `find server/jobs -name "*.ts" | grep -v test`, do not assume the count is exactly 18 without checking, this plan's own file-count discovery process has been wrong twice already) plus `server/scheduled-jobs.ts`
+- Test: each file's matching `*.test.ts`
+
+- [ ] **Step 1: Enumerate current files**
+
+```bash
+find server/jobs -name "*.ts" | grep -v "\.test\.ts$" | sort
+```
+
+- [ ] **Step 2 through 6: same procedure as Task 2b-1**, scoped to this file list. `server/scheduled-jobs.ts` is the Node `setInterval`-based scheduler that Task 8 (Cron Triggers) also touches — coordinate: this sub-task migrates its *database access* off the module singleton; Task 8 migrates its *scheduling mechanism* off `setInterval`. If both tasks touch the same lines, whichever runs second should read the other's diff first rather than conflict blindly. Flag this coordination note in your commit message if you touch `server/scheduled-jobs.ts`.
+
+---
+
+#### Task 2b-3: Migrate `server/scripts/**`, `server/missions/**`, `server/_core/**`, `server/db/**` (17 files)
+
+**Files:**
+- Modify: every file under `server/scripts/` (6 files), `server/missions/` (5 files), `server/_core/` (5 files — **note:** `server/_core/context.ts`, `server/_core/context.workers.ts`, and `server/_core/sdk.ts` are expected to import `getDb`/`getHyperdriveDb` directly, that's their job — exclude those three from this migration, only migrate the other 2 `_core` files that showed up in the original scan), `server/db/` (1 file, `server/db/users.ts`)
+- Test: matching `*.test.ts` files
+
+- [ ] **Step 1: Enumerate and exclude the 3 context/sdk files**
+
+```bash
+find server/scripts server/missions server/_core server/db -name "*.ts" | grep -v "\.test\.ts$" | grep -vE "_core/(context\.ts|context\.workers\.ts|sdk\.ts)$" | sort
+```
+
+- [ ] **Step 2 through 6: same procedure as Task 2b-1**, scoped to this list.
+
+---
+
+#### Task 2b-4: Migrate commerce/revenue cluster (19 files)
+
+**Files:**
+- Modify: `server/webhooks/**` (3 files), `server/services/**` (3 files), `server/sales/**` (3 files), `server/admin/**` (3 files), `server/payments/**` (1 file), `server/paddle/**` (1 file), `server/subscriptions/**` (1 file), `server/stripe-connect-service.ts`, `server/tenant-billing.ts`, `server/revenue-orchestrator.ts`, `server/fulfillment-service.ts`
+- Test: matching `*.test.ts` files
+
+**Note:** `server/webhooks/stripe.ts` was confirmed during this plan's architecture investigation to already take `(rawBody, sig)` as plain parameters (framework-agnostic, no Express coupling) — but it likely still calls `logActivity`/`recordRevenue`/`upsertStripeSubscription` etc. from `server/db.ts` internally, which is exactly what this sub-task migrates. Do not confuse "already Workers-compatible for HTTP framework reasons" (true, established earlier) with "already Workers-compatible for database access reasons" (not true until this task runs).
+
+- [ ] **Step 1: Enumerate**
+
+```bash
+find server/webhooks server/services server/sales server/admin server/payments server/paddle server/subscriptions -name "*.ts" | grep -v "\.test\.ts$"
+echo "server/stripe-connect-service.ts server/tenant-billing.ts server/revenue-orchestrator.ts server/fulfillment-service.ts"
+```
+
+- [ ] **Step 2 through 6: same procedure as Task 2b-1**, scoped to this list. Given this cluster includes real payment webhook handlers, run each file's test individually and read the diff carefully before committing — a mistake here has real financial-data implications, more so than the other clusters.
+
+---
+
+#### Task 2b-5: Migrate identity/product cluster (19 files)
+
+**Files:**
+- Modify: `server/staking/**` (2), `server/referral/**` (2), `server/white-label/**` (1), `server/affiliate/**` (1), `server/bonuses/**` (1), `server/authenticate/**` (1), `server/b44-service.ts`, `server/asset-service.ts`, `server/supply-chain/**` (1), `server/qron/**` (1), `server/qrcode/**` (1), `server/products/**` (1), `server/nft/**` (1), `server/marketplace/**` (1), `server/certificates/**` (1), `server/ordinals-service.ts`, `server/metrc-service.ts`
+- Test: matching `*.test.ts` files
+
+- [ ] **Step 1: Enumerate**
+
+```bash
+find server/staking server/referral server/white-label server/affiliate server/bonuses server/authenticate server/supply-chain server/qron server/qrcode server/products server/nft server/marketplace server/certificates -name "*.ts" | grep -v "\.test\.ts$"
+echo "server/b44-service.ts server/asset-service.ts server/ordinals-service.ts server/metrc-service.ts"
+```
+
+- [ ] **Step 2 through 6: same procedure as Task 2b-1**, scoped to this list.
+
+---
+
+#### Task 2b-6: Migrate content/comms/composition cluster (19 files)
+
+**Files:**
+- Modify: `server/social-service.ts`, `server/marketing/**` (1), `server/hubspot/**` (1), `server/gpt/**` (1), `server/email-drafts/**` (1), `server/email-campaigns/**` (1), `server/notifications/**` (1), `server/feedback/**` (1), `server/personalization/**` (1), `server/character-service.ts`, `server/govchain/**` (1), `server/mcp/**` (1), `server/internal-api.ts`, `server/dashboard/**` (1), `server/blockchain/**` (1), `server/analytics/**` (1), `server/ab-testing/**` (1), `server/routers/**` (1), `server/autopilot/**` (1)
+- Test: matching `*.test.ts` files
+
+**Note on `server/routers/**`:** this is a small directory of standalone routers (`server/routers/metrc.ts`, `server/routers/scheduler.ts`, `server/routers/reputation.ts` — found during this plan's investigation), distinct from `server/routers.ts` (singular, the top-level `appRouter` composition file). Do not confuse the two; `server/routers.ts` itself is not expected to need migration (it just merges sub-routers, per the architecture investigation), but verify with Step 1's enumeration rather than assuming.
+
+- [ ] **Step 1: Enumerate**
+
+```bash
+find server/marketing server/hubspot server/gpt server/email-drafts server/email-campaigns server/notifications server/feedback server/personalization server/govchain server/mcp server/dashboard server/blockchain server/analytics server/ab-testing server/routers server/autopilot -name "*.ts" | grep -v "\.test\.ts$"
+echo "server/social-service.ts server/character-service.ts server/internal-api.ts"
+```
+
+- [ ] **Step 2 through 6: same procedure as Task 2b-1**, scoped to this list.
+
+---
+
+**Overall Task 2b completion gate (run once after all 6 sub-tasks land):**
+
+```bash
+grep -rl "getDb(" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | grep -v "^server/db\.ts$" | grep -vE "_core/(context\.ts|context\.workers\.ts|sdk\.ts)$"
+grep -rlE "\bdb\.(select|insert|update|delete|query|transaction|execute)\(" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | grep -v "^server/db\.ts$"
+npx tsc --noEmit
+pnpm vitest run
+```
+Expected: both greps empty, zero type errors, full suite passing. This is the true gate for "the app no longer depends on the Node-only db singleton anywhere outside server/db.ts's own definitions" — not any individual sub-task's local check.
+
+---
 ---
 
 ### Task 4: Adapt `server/auth/router.ts` off `ctx.req`/`ctx.res`
