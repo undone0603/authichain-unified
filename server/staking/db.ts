@@ -1,14 +1,13 @@
 import { eq, and, desc } from "drizzle-orm";
-import { getDb } from "../db";
 import { stakingPositions, platformFees, transactions, InsertStakingPosition, InsertPlatformFee, InsertTransaction } from "../../drizzle/schema";
+import type { getHyperdriveDb } from "../db";
+
+type Db = ReturnType<typeof getHyperdriveDb>;
 
 /**
  * Get user's staking positions
  */
-export async function getUserStakingPositions(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-
+export async function getUserStakingPositions(db: Db, userId: number) {
   return await db
     .select()
     .from(stakingPositions)
@@ -19,10 +18,7 @@ export async function getUserStakingPositions(userId: number) {
 /**
  * Get active staking positions for a user
  */
-export async function getActiveStakingPositions(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-
+export async function getActiveStakingPositions(db: Db, userId: number) {
   return await db
     .select()
     .from(stakingPositions)
@@ -38,14 +34,11 @@ export async function getActiveStakingPositions(userId: number) {
 /**
  * Create a new staking position
  */
-export async function createStakingPosition(data: {
+export async function createStakingPosition(db: Db, data: {
   userId: number;
   amount: number;
   apy: number;
 }) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   const position: InsertStakingPosition = {
     userId: data.userId,
     amount: data.amount.toString(),
@@ -62,10 +55,7 @@ export async function createStakingPosition(data: {
 /**
  * Calculate and update rewards for a staking position
  */
-export async function calculateRewards(positionId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
+export async function calculateRewards(db: Db, positionId: number) {
   // Get position
   const positions = await db
     .select()
@@ -109,10 +99,7 @@ export async function calculateRewards(positionId: number) {
 /**
  * Withdraw from staking position
  */
-export async function withdrawStaking(positionId: number, userId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
+export async function withdrawStaking(db: Db, positionId: number, userId: number) {
   // Get position
   const positions = await db
     .select()
@@ -136,7 +123,7 @@ export async function withdrawStaking(positionId: number, userId: number) {
   }
 
   // Calculate final rewards
-  await calculateRewards(positionId);
+  await calculateRewards(db, positionId);
 
   // Get updated position
   const updatedPositions = await db
@@ -174,17 +161,7 @@ export async function withdrawStaking(positionId: number, userId: number) {
 /**
  * Get total staking statistics for a user
  */
-export async function getUserStakingStats(userId: number) {
-  const db = await getDb();
-  if (!db) {
-    return {
-      totalStaked: 0,
-      totalRewards: 0,
-      activePositions: 0,
-      totalPositions: 0,
-    };
-  }
-
+export async function getUserStakingStats(db: Db, userId: number) {
   const positions = await db
     .select()
     .from(stakingPositions)
@@ -206,7 +183,7 @@ export async function getUserStakingStats(userId: number) {
 /**
  * Create a transaction record
  */
-export async function createTransaction(data: {
+export async function createTransaction(db: Db, data: {
   userId: number;
   type: string;
   amount: number;
@@ -215,9 +192,6 @@ export async function createTransaction(data: {
   stakingId?: number;
   metadata?: string;
 }) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   const transaction: InsertTransaction = {
     userId: data.userId,
     type: data.type as any,
@@ -232,16 +206,13 @@ export async function createTransaction(data: {
 /**
  * Create a platform fee record
  */
-export async function createPlatformFee(data: {
+export async function createPlatformFee(db: Db, data: {
   feeType: string;
   percentage: number;
   amount: number;
   transactionId?: number;
   description?: string;
 }) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   const fee: InsertPlatformFee = {
     type: data.feeType as any,
     amount: data.amount.toString(),
