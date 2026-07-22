@@ -89,3 +89,7 @@ def _reset_contact(headers: dict, contact_id: str) -> bool:
         headers=headers, json=body, timeout=30.0,
     )
     return r.status_code in (200, 204)
+
+
+def run(ctx: ExecutionContext) -> str:
+    return HubspotDripUnstickHandler().run(ctx)

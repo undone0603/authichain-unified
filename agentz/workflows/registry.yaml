@@ -189,7 +189,7 @@ workflows:
     handler: handlers.authichain_email
     type: api
     estimated_minutes: 5
-    requires: [hubspot_token, gemini_api_key]
+    requires: [hubspot_token, gemini_api_key, gmail_user, gmail_app_password]
     prerequisites: []
     confirm_before_run: false
     description: |
