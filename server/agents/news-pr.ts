@@ -3,10 +3,10 @@
  * Monitors news and drafts automated technical PR responses.
  */
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity, enqueueTask, getDb } from '../db.js';
+import { logActivity, enqueueTask, type Db } from './db-helpers.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
-export async function runNewsjackingMonitor(task: Task): Promise<void> {
+export async function runNewsjackingMonitor(task: Task, db: Db): Promise<void> {
   const p = task.payload as { topics: string[] };
   console.log(`[Newsjacking] Monitoring for topics: ${p.topics.join(', ')}...`);
 
@@ -62,7 +62,7 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
     const pr = parseLLMContent<any>(prResult.choices[0].message.content);
 
     // 3. Log findings and enqueue the next steps
-    await logActivity({
+    await logActivity(db, {
       userId: null,
       action: 'newsjacking_target_identified',
       entityType: 'campaign',
@@ -71,13 +71,13 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
     });
 
     // Enqueue the outreach and social tasks
-    await enqueueTask(task.missionId, 'DRAFT_LAUNCH_EMAIL', {
+    await enqueueTask(db, task.missionId, 'DRAFT_LAUNCH_EMAIL', {
       audience: 'PRESS',
       topic: story.storyTitle,
       narrative: pr.prBody
     });
 
-    await enqueueTask(task.missionId, 'SCHEDULE_SOCIAL_POSTS', {
+    await enqueueTask(db, task.missionId, 'SCHEDULE_SOCIAL_POSTS', {
       platforms: ['twitter', 'linkedin'],
       content: pr.prTitle
     });
@@ -106,7 +106,7 @@ By utilizing Ed25519-signed QRON identifiers, manufacturers can perform surgical
 
 As the FDA DSCSA 2027 mandates approach, AuthiChain provides the only fips-compliant Truth Layer capable of securing life-critical hardware provenance.`;
 
-    await logActivity({
+    await logActivity(db, {
       userId: null,
       action: 'newsjacking_fallback_executed',
       entityType: 'campaign',
@@ -115,7 +115,7 @@ As the FDA DSCSA 2027 mandates approach, AuthiChain provides the only fips-compl
     });
 
     // Still enqueue the tasks so the revenue machine keeps moving
-    await enqueueTask(task.missionId, 'DRAFT_LAUNCH_EMAIL', {
+    await enqueueTask(db, task.missionId, 'DRAFT_LAUNCH_EMAIL', {
       audience: 'PRESS',
       topic: fallbackStory.storyTitle,
       narrative: prBody
