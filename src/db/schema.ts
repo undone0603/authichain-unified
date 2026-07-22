@@ -1242,29 +1242,33 @@ export type Proposal = typeof proposals.$inferSelect;
 export type InsertProposal = typeof proposals.$inferInsert;
 
 // ─── Inbound Email Replies ───────────────────────────────────────────────────────
+// NOTE: JS keys stay camelCase (all call sites use them); the DB column-name
+// strings are snake_case to match the live `inbound_replies` table. They were
+// previously camelCase, which threw `column "leadId" does not exist` on every
+// query, so the whole reply-nurture flow (/api/cron/nurture-replies) was dead.
 export const inboundReplies = pgTable("inbound_replies", {
   id: uuid("id").primaryKey().defaultRandom(),
-  leadId: integer("leadId"), // FK to leads.id, null if unmatched
-  leadEmail: varchar("leadEmail", { length: 320 }).notNull(),
-  senderName: varchar("senderName", { length: 256 }),
+  leadId: integer("lead_id"), // FK to leads.id, null if unmatched
+  leadEmail: varchar("lead_email", { length: 320 }).notNull(),
+  senderName: varchar("sender_name", { length: 256 }),
   subject: varchar("subject", { length: 512 }),
-  bodyPlaintext: text("bodyPlaintext"),
-  bodyHtml: text("bodyHtml"),
-  messageId: varchar("messageId", { length: 256 }).notNull().unique(), // Resend ID for deduplication
+  bodyPlaintext: text("body_plaintext"),
+  bodyHtml: text("body_html"),
+  messageId: varchar("message_id", { length: 256 }).notNull().unique(), // Resend ID for deduplication
   sentiment: varchar("sentiment", { length: 32 }), // positive|neutral|negative|objection
-  objectionType: varchar("objectionType", { length: 64 }), // budget|timeline|competitor|decision_maker|other
-  objectionDetails: text("objectionDetails"),
+  objectionType: varchar("objection_type", { length: 64 }), // budget|timeline|competitor|decision_maker|other
+  objectionDetails: text("objection_details"),
   confidence: real("confidence"), // 0.0-1.0 from Claude
-  proposalMatchId: varchar("proposalMatchId", { length: 64 }), // FK to proposals.id
-  matchConfidence: real("matchConfidence"), // how sure we are about the match
+  proposalMatchId: varchar("proposal_match_id", { length: 64 }), // FK to proposals.id
+  matchConfidence: real("match_confidence"), // how sure we are about the match
   status: varchar("status", { length: 32 }).default("new"), // new|contacted|deal_won|disqualified|nurture_paused
-  manualOverride: boolean("manualOverride").default(false),
-  manualSentiment: varchar("manualSentiment", { length: 32 }),
-  overriddenBy: integer("overriddenBy"), // userId who overrode
-  overriddenAt: timestamp("overriddenAt"),
+  manualOverride: boolean("manual_override").default(false),
+  manualSentiment: varchar("manual_sentiment", { length: 32 }),
+  overriddenBy: integer("overridden_by"), // userId who overrode
+  overriddenAt: timestamp("overridden_at"),
   metadata: jsonb("metadata").default({}), // raw headers, thread info
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
   inboundRepliesLeadIdx: index("idx_inbound_replies_lead").on(table.leadId),
   inboundRepliesEmailIdx: index("idx_inbound_replies_email").on(table.leadEmail),
@@ -1276,21 +1280,23 @@ export type InboundReply = typeof inboundReplies.$inferSelect;
 export type InsertInboundReply = typeof inboundReplies.$inferInsert;
 
 // ─── Reply Nurture Sequences ────────────────────────────────────────────────────
+// DB column strings are snake_case to match the live `reply_sequences` table
+// (same drift as inbound_replies above); JS keys stay camelCase.
 export const replySequences = pgTable("reply_sequences", {
   id: uuid("id").primaryKey().defaultRandom(),
-  leadId: integer("leadId").notNull(), // FK to leads.id
-  replyId: uuid("replyId").notNull(), // FK to inbound_replies.id
-  templateType: varchar("templateType", { length: 64 }).notNull(), // objection_budget|objection_timeline|positive_followup|reminder|objection_competitor
-  sequenceNumber: integer("sequenceNumber").default(1), // 1,2,3... in sequence
+  leadId: integer("lead_id").notNull(), // FK to leads.id
+  replyId: uuid("reply_id").notNull(), // FK to inbound_replies.id
+  templateType: varchar("template_type", { length: 64 }).notNull(), // objection_budget|objection_timeline|positive_followup|reminder|objection_competitor
+  sequenceNumber: integer("sequence_number").default(1), // 1,2,3... in sequence
   status: varchar("status", { length: 32 }).default("pending"), // pending|sent|clicked|bounced|paused
-  sentAt: timestamp("sentAt"),
-  clickedAt: timestamp("clickedAt"),
-  nextScheduledAt: timestamp("nextScheduledAt"),
-  emailSubject: varchar("emailSubject", { length: 512 }),
-  emailBody: text("emailBody"),
+  sentAt: timestamp("sent_at"),
+  clickedAt: timestamp("clicked_at"),
+  nextScheduledAt: timestamp("next_scheduled_at"),
+  emailSubject: varchar("email_subject", { length: 512 }),
+  emailBody: text("email_body"),
   metadata: jsonb("metadata").default({}), // tracking info, link info
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
   replySequencesLeadIdx: index("idx_reply_sequences_lead").on(table.leadId),
   replySequencesReplyIdx: index("idx_reply_sequences_reply").on(table.replyId),
