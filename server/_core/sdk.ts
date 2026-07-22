@@ -13,6 +13,10 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from "./types/manusTypes";
+type CookieBearingRequest = {
+  headers: Headers | { cookie?: string };
+};
+
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -255,16 +259,16 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  private getCookieHeader(req: any): string | undefined {
-    // Fetch Request uses headers.get() method
-    if (typeof req.headers.get === 'function') {
-      return req.headers.get('cookie') ?? undefined;
+  private getCookieHeader(req: CookieBearingRequest): string | undefined {
+    // Fetch Request uses Headers (has get method)
+    if ('get' in req.headers) {
+      return (req.headers as Headers).get('cookie') ?? undefined;
     }
     // Express Request has headers.cookie property
-    return req.headers.cookie;
+    return (req.headers as { cookie?: string }).cookie;
   }
 
-  async authenticateRequest(req: any): Promise<User> {
+  async authenticateRequest(req: CookieBearingRequest): Promise<User> {
     // Regular authentication flow
     const cookies = this.parseCookies(this.getCookieHeader(req));
     const sessionCookie = cookies.get(COOKIE_NAME);
