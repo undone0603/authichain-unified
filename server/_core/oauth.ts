@@ -1,6 +1,7 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import type { Express, Request, Response } from "express";
-import * as db from "../db";
+import { getDb } from "../db";
+import { upsertUser } from "./db-helpers";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
@@ -28,7 +29,11 @@ export function registerOAuthRoutes(app: Express) {
         return;
       }
 
-      await db.upsertUser({
+      // Express OAuth callback route (Node-only deployment path, not the
+      // Workers/tRPC path — no ctx.db reachable here). Calling getDb() is a
+      // documented bridge to the legacy server/db.ts singleton.
+      const db = await getDb();
+      await upsertUser(db, {
         openId: userInfo.openId,
         name: userInfo.name || null,
         email: userInfo.email ?? null,
