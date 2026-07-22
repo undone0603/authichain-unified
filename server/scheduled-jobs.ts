@@ -728,10 +728,11 @@ registerJob({
   handler: async (): Promise<JobResult> => {
     const { runNewsjackingMonitor } = await import("./agents/news-pr");
     // Simulate a task object for the agent
+    const db = await getDb();
     await runNewsjackingMonitor({ 
       missionId: "SYSTEM_PR", 
       payload: { topics: ['medical device recall', 'counterfeit pharma', 'luxury forgery'] } 
-    } as any);
+    } as any, db);
     return { itemsProcessed: 1, details: { status: "news_scan_complete" } };
   },
 });

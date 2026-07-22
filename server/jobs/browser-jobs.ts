@@ -1,4 +1,4 @@
-import { logActivity, hasActionLogged } from '../db.js';
+import { logActivity, hasActionLogged, getDb } from '../db.js';
 import {
   runBrowseCompetitorMonitor,
   runBrowseScrapeIndustryNews,
@@ -26,6 +26,11 @@ export async function runBrowserAgentJobs(): Promise<{
   newsKeywordsScanned: number;
   skipped: number;
 }> {
+  // TODO(2b-2): bridges via the legacy Node singleton getDb() rather than a
+  // threaded db param — this file is server/jobs/** (Task 2b-2's scope). It
+  // threads db into the server/agents/** calls below (Task 2b-1's scope,
+  // already migrated off the singleton).
+  const db = await getDb();
   let competitorsChecked = 0;
   let newsKeywordsScanned = 0;
   let skipped = 0;
@@ -40,7 +45,7 @@ export async function runBrowserAgentJobs(): Promise<{
     for (const competitor of COMPETITORS) {
       try {
         const fakeTask = { id: 0, missionId: 0, payload: competitor } as any;
-        await runBrowseCompetitorMonitor(fakeTask);
+        await runBrowseCompetitorMonitor(fakeTask, db);
         competitorsChecked++;
       } catch (err) {
         await logActivity({
@@ -63,7 +68,7 @@ export async function runBrowserAgentJobs(): Promise<{
     try {
       const payload: BrowseNewsPayload = { keyword, enqueueNewsTask: true };
       const fakeTask = { id: 0, missionId: 0, payload } as any;
-      await runBrowseScrapeIndustryNews(fakeTask);
+      await runBrowseScrapeIndustryNews(fakeTask, db);
       newsKeywordsScanned++;
     } catch (err) {
       await logActivity({

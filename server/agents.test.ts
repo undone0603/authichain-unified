@@ -24,8 +24,23 @@ const mockEnv = vi.hoisted(() => ({
 
 vi.mock('./_core/env.js', () => ({ ENV: mockEnv }));
 
-vi.mock('./db.js', () => ({
-  getDb:                vi.fn().mockResolvedValue(null),
+// Fake per-request db instance threaded into every agent call — its methods
+// are stubbed per-test below where an agent issues a raw drizzle query.
+const fakeDb: any = {
+  insert: vi.fn(() => ({
+    values: vi.fn(() => {
+      // Awaitable directly (most callers just await db.insert(t).values(v))
+      // AND chainable (lead-finder.ts does .values(v).onConflictDoNothing()).
+      const result: any = Promise.resolve(undefined);
+      result.onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
+      return result;
+    }),
+  })),
+  update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn().mockResolvedValue(undefined) })) })),
+  select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) })),
+};
+
+vi.mock('./agents/db-helpers.js', () => ({
   logActivity:          vi.fn().mockResolvedValue(undefined),
   enqueueTask:          vi.fn().mockResolvedValue(undefined),
   markTaskWaitingHuman: vi.fn().mockResolvedValue(undefined),
@@ -122,7 +137,7 @@ describe('runLeadFinder', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     const llmMod    = await import('./_core/llm.js');
-    const dbMod     = await import('./db.js');
+    const dbMod     = await import('./agents/db-helpers.js');
     invokeLLM  = vi.mocked(llmMod.invokeLLM);
     enqueueTask = vi.mocked(dbMod.enqueueTask);
     logActivity = vi.mocked(dbMod.logActivity);
@@ -136,10 +151,11 @@ describe('runLeadFinder', () => {
     ]));
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
-    await runLeadFinder(makeTask('FIND_GOV_LEADS', { count: 2, segment: 'GOV' }));
+    await runLeadFinder(makeTask('FIND_GOV_LEADS', { count: 2, segment: 'GOV' }), fakeDb);
 
     expect(enqueueTask).toHaveBeenCalledTimes(2);
     expect(enqueueTask).toHaveBeenCalledWith(
+      fakeDb,
       'mission-test-001',
       'BROWSE_RESEARCH_LEAD',
       expect.objectContaining({ leadEmail: 'alice@gov.com', segment: 'GOV' }),
@@ -156,7 +172,7 @@ describe('runLeadFinder', () => {
     ]));
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
-    await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }));
+    await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }), fakeDb);
 
     expect(enqueueTask).toHaveBeenCalledTimes(1);
   });
@@ -166,7 +182,7 @@ describe('runLeadFinder', () => {
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
     // Should NOT throw — uses fallback 0.5 score for each lead
-    await expect(runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }))).resolves.toBeUndefined();
+    await expect(runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }), fakeDb)).resolves.toBeUndefined();
     // Both Apollo leads get enqueued despite bad scoring
     expect(enqueueTask).toHaveBeenCalledTimes(2);
   });
@@ -175,7 +191,7 @@ describe('runLeadFinder', () => {
     invokeLLM.mockResolvedValueOnce(llmJsonResponse([]));
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
-    await runLeadFinder(makeTask('FIND_RETAIL_LEADS'));
+    await runLeadFinder(makeTask('FIND_RETAIL_LEADS'), fakeDb);
 
     // LLM scoring prompt should mention RETAIL
     const prompt = invokeLLM.mock.calls[0][0].messages[0].content as string;
@@ -186,9 +202,10 @@ describe('runLeadFinder', () => {
     invokeLLM.mockResolvedValueOnce(llmJsonResponse([]));
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
-    await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }));
+    await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }), fakeDb);
 
     expect(logActivity).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'lead_finder_completed', details: expect.objectContaining({ source: 'apollo' }) }),
     );
   });
@@ -197,7 +214,7 @@ describe('runLeadFinder', () => {
     invokeLLM.mockResolvedValueOnce(llmJsonResponse([]));
 
     const { runLeadFinder } = await import('./agents/lead-finder.js');
-    await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }));
+    await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }), fakeDb);
 
     const prompt = invokeLLM.mock.calls[0][0].messages[0].content as string;
     expect(prompt).toContain('[BAYESIAN REASONING]');
@@ -217,7 +234,7 @@ describe('runOutboundEmail', () => {
     vi.clearAllMocks();
     const llmMod   = await import('./_core/llm.js');
     const emailMod = await import('./email-service.js');
-    const dbMod    = await import('./db.js');
+    const dbMod    = await import('./agents/db-helpers.js');
     invokeLLM           = vi.mocked(llmMod.invokeLLM);
     sendEmail           = vi.mocked(emailMod.sendEmail);
     markTaskWaitingHuman = vi.mocked(dbMod.markTaskWaitingHuman);
@@ -232,7 +249,7 @@ describe('runOutboundEmail', () => {
     await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', sequence: 1, leadEmail: 'lead@gov.com', leadName: 'Alice', leadOrg: 'GovCorp',
       verificationSource: 'apollo_verified',
-    }));
+    }), fakeDb);
 
     expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: 'lead@gov.com' }));
     expect(markTaskWaitingHuman).not.toHaveBeenCalled();
@@ -245,10 +262,10 @@ describe('runOutboundEmail', () => {
     const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', leadEmail: 'lead@gov.com',
-    }));
+    }), fakeDb);
 
     expect(sendEmail).not.toHaveBeenCalled();
-    expect(markTaskWaitingHuman).toHaveBeenCalledWith('task-test-001');
+    expect(markTaskWaitingHuman).toHaveBeenCalledWith(fakeDb, 'task-test-001');
   });
 
   it('throws if LLM returns unparseable JSON', async () => {
@@ -258,7 +275,7 @@ describe('runOutboundEmail', () => {
     const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await expect(runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', leadEmail: 'x@y.com',
-    }))).rejects.toThrow(/unparseable JSON/);
+    }), fakeDb)).rejects.toThrow(/unparseable JSON/);
   });
 
   it('throws if no leadEmail on direct send', async () => {
@@ -266,7 +283,7 @@ describe('runOutboundEmail', () => {
     invokeLLM.mockResolvedValueOnce(llmJsonResponse({ subject: 'Hi', body: 'Body' }));
 
     const { runOutboundEmail } = await import('./agents/outbound-email.js');
-    await expect(runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', { segment: 'GOV' })))
+    await expect(runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', { segment: 'GOV' }), fakeDb))
       .rejects.toThrow(/No leadEmail/);
   });
 
@@ -277,7 +294,7 @@ describe('runOutboundEmail', () => {
     const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', leadEmail: 'a@b.com',
-    }));
+    }), fakeDb);
 
     const prompt = invokeLLM.mock.calls[0][0].messages[0].content as string;
     expect(prompt).toContain('[BAYESIAN REASONING]');
@@ -291,9 +308,10 @@ describe('runOutboundEmail', () => {
     const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', leadEmail: 'a@b.com', verificationSource: 'apollo_verified',
-    }));
+    }), fakeDb);
 
     expect(logActivity).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'outbound_email_sent' }),
     );
   });
@@ -304,14 +322,17 @@ describe('runOutboundEmail', () => {
 describe('runFollowupSequence', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('logs and returns early when no DB connection', async () => {
-    const { logActivity } = await import('./db.js');
+  it('completes and logs followup_sequence_completed when no leads are due', async () => {
+    const { logActivity } = await import('./agents/db-helpers.js');
     const { runFollowupSequence } = await import('./agents/followup.js');
 
-    await runFollowupSequence(makeTask('FOLLOWUP_SEQUENCE', { segment: 'GOV' }));
+    // fakeDb.select(...).from(...).where(...) resolves to [] by default (see fakeDb above),
+    // so there are no due leads to process.
+    await runFollowupSequence(makeTask('FOLLOWUP_SEQUENCE', { segment: 'GOV' }), fakeDb);
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'followup_skipped_no_db' }),
+      fakeDb,
+      expect.objectContaining({ action: 'followup_sequence_completed', details: expect.objectContaining({ dueLeads: 0 }) }),
     );
   });
 });
@@ -323,16 +344,17 @@ describe('runBuildPilotPacket', () => {
 
   it('calls LLM and logs activity', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./agents/db-helpers.js');
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({
       title: 'GOV Pilot Packet',
       sections: [{ heading: 'Exec Summary', content: 'AuthiChain...' }],
     }));
 
     const { runBuildPilotPacket } = await import('./agents/pilot-packet.js');
-    await runBuildPilotPacket(makeTask('BUILD_PILOT_PACKET', { segment: 'GOV' }));
+    await runBuildPilotPacket(makeTask('BUILD_PILOT_PACKET', { segment: 'GOV' }), fakeDb);
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'pilot_packet_built' }),
     );
   });
@@ -342,7 +364,7 @@ describe('runBuildPilotPacket', () => {
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmContentResponse('{{bad'));
 
     const { runBuildPilotPacket } = await import('./agents/pilot-packet.js');
-    await expect(runBuildPilotPacket(makeTask('BUILD_PILOT_PACKET')))
+    await expect(runBuildPilotPacket(makeTask('BUILD_PILOT_PACKET'), fakeDb))
       .rejects.toThrow(/unparseable JSON/);
   });
 });
@@ -352,16 +374,17 @@ describe('runDraftIntelDossier', () => {
 
   it('calls LLM and logs activity', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./agents/db-helpers.js');
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({
       title: 'GOV Dossier',
       sections: [],
     }));
 
     const { runDraftIntelDossier } = await import('./agents/pilot-packet.js');
-    await runDraftIntelDossier(makeTask('DRAFT_INTEL_DOSSIER', { segment: 'GOV' }));
+    await runDraftIntelDossier(makeTask('DRAFT_INTEL_DOSSIER', { segment: 'GOV' }), fakeDb);
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'intel_dossier_drafted' }),
     );
   });
@@ -374,13 +397,14 @@ describe('runCrmUpdate', () => {
 
   it('logs skip and returns when HubSpot is not configured', async () => {
     const { isHubSpotConfigured } = await import('./hubspot-service.js');
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./agents/db-helpers.js');
     vi.mocked(isHubSpotConfigured).mockReturnValue(false);
 
     const { runCrmUpdate } = await import('./agents/crm-update.js');
-    await runCrmUpdate(makeTask('CRM_UPDATE', { segment: 'GOV' }));
+    await runCrmUpdate(makeTask('CRM_UPDATE', { segment: 'GOV' }), fakeDb);
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'crm_update_skipped' }),
     );
     const { syncLeadToHubSpot } = await import('./hubspot-service.js');
@@ -389,18 +413,19 @@ describe('runCrmUpdate', () => {
 
   it('syncs single lead when HubSpot is configured and leadEmail in payload', async () => {
     const { isHubSpotConfigured, syncLeadToHubSpot } = await import('./hubspot-service.js');
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./agents/db-helpers.js');
     vi.mocked(isHubSpotConfigured).mockReturnValue(true);
 
     const { runCrmUpdate } = await import('./agents/crm-update.js');
     await runCrmUpdate(makeTask('CRM_UPDATE', {
       leadEmail: 'alice@gov.com', leadName: 'Alice', leadOrg: 'GovCorp',
-    }));
+    }), fakeDb);
 
     expect(vi.mocked(syncLeadToHubSpot)).toHaveBeenCalledWith(
       expect.objectContaining({ email: 'alice@gov.com' }),
     );
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'crm_lead_synced' }),
     );
   });
@@ -413,15 +438,16 @@ describe('runFinalizeRetailSignage', () => {
 
   it('calls LLM and logs retail_signage_finalized', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./agents/db-helpers.js');
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({
       posScan: 'Scan to verify', shelfTalker: 'Authentic product', staffPoints: [],
     }));
 
     const { runFinalizeRetailSignage } = await import('./agents/retail.js');
-    await runFinalizeRetailSignage(makeTask('FINALIZE_RETAIL_SIGNAGE', { vertical: 'dispensary' }));
+    await runFinalizeRetailSignage(makeTask('FINALIZE_RETAIL_SIGNAGE', { vertical: 'dispensary' }), fakeDb);
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'retail_signage_finalized' }),
     );
   });
@@ -431,7 +457,7 @@ describe('runFinalizeRetailSignage', () => {
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmContentResponse('{{'));
 
     const { runFinalizeRetailSignage } = await import('./agents/retail.js');
-    await expect(runFinalizeRetailSignage(makeTask('FINALIZE_RETAIL_SIGNAGE')))
+    await expect(runFinalizeRetailSignage(makeTask('FINALIZE_RETAIL_SIGNAGE'), fakeDb))
       .rejects.toThrow(/unparseable JSON/);
   });
 });
@@ -441,13 +467,14 @@ describe('runPackageSkuOnboarding', () => {
 
   it('calls LLM and logs sku_onboarding_packaged', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./agents/db-helpers.js');
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ sections: [] }));
 
     const { runPackageSkuOnboarding } = await import('./agents/retail.js');
-    await runPackageSkuOnboarding(makeTask('PACKAGE_SKU_ONBOARDING', { skuCount: 5 }));
+    await runPackageSkuOnboarding(makeTask('PACKAGE_SKU_ONBOARDING', { skuCount: 5 }), fakeDb);
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'sku_onboarding_packaged' }),
     );
   });
@@ -460,52 +487,56 @@ describe('content agents', () => {
 
   it('runGenerateLaunchChecklist logs launch_checklist_generated', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./agents/db-helpers.js');
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ title: 'Checklist', categories: [] }));
 
     const { runGenerateLaunchChecklist } = await import('./agents/content.js');
-    await runGenerateLaunchChecklist(makeTask('GENERATE_LAUNCH_CHECKLIST', { scope: 'full_launch' }));
+    await runGenerateLaunchChecklist(makeTask('GENERATE_LAUNCH_CHECKLIST', { scope: 'full_launch' }), fakeDb);
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'launch_checklist_generated' }),
     );
   });
 
   it('runDraftLaunchEmail logs launch_email_drafted', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./agents/db-helpers.js');
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ subject: 'Launch!', body: 'We launched.' }));
 
     const { runDraftLaunchEmail } = await import('./agents/content.js');
-    await runDraftLaunchEmail(makeTask('DRAFT_LAUNCH_EMAIL', { audience: 'founders' }));
+    await runDraftLaunchEmail(makeTask('DRAFT_LAUNCH_EMAIL', { audience: 'founders' }), fakeDb);
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'launch_email_drafted' }),
     );
   });
 
   it('runDraftPressRelease logs press_release_drafted', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./agents/db-helpers.js');
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ headline: 'AuthiChain Launches', body: '...' }));
 
     const { runDraftPressRelease } = await import('./agents/content.js');
-    await runDraftPressRelease(makeTask('DRAFT_PRESS_RELEASE'));
+    await runDraftPressRelease(makeTask('DRAFT_PRESS_RELEASE'), fakeDb);
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'press_release_drafted' }),
     );
   });
 
   it('runScheduleSocialPosts logs social_posts_scheduled', async () => {
     const { invokeLLM } = await import('./_core/llm.js');
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./agents/db-helpers.js');
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ platforms: { twitter: [] } }));
 
     const { runScheduleSocialPosts } = await import('./agents/content.js');
-    await runScheduleSocialPosts(makeTask('SCHEDULE_SOCIAL_POSTS', { platforms: ['twitter'] }));
+    await runScheduleSocialPosts(makeTask('SCHEDULE_SOCIAL_POSTS', { platforms: ['twitter'] }), fakeDb);
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'social_posts_scheduled' }),
     );
   });
@@ -515,7 +546,7 @@ describe('content agents', () => {
     vi.mocked(invokeLLM).mockResolvedValueOnce(llmContentResponse('bad{{'));
 
     const { runGenerateLaunchChecklist } = await import('./agents/content.js');
-    await expect(runGenerateLaunchChecklist(makeTask('GENERATE_LAUNCH_CHECKLIST')))
+    await expect(runGenerateLaunchChecklist(makeTask('GENERATE_LAUNCH_CHECKLIST'), fakeDb))
       .rejects.toThrow(/unparseable JSON/);
   });
 });
@@ -534,12 +565,13 @@ describe('infra agents', () => {
         json: async () => ({ Status: 0, Answer: [{ data: '1.2.3.4' }] }),
       }));
 
-      const { logActivity } = await import('./db.js');
+      const { logActivity } = await import('./agents/db-helpers.js');
       const { runCheckDnsConfig } = await import('./agents/infra.js');
-      await runCheckDnsConfig(makeTask('CHECK_DNS_CONFIG', { domain: 'authichain.com' }));
+      await runCheckDnsConfig(makeTask('CHECK_DNS_CONFIG', { domain: 'authichain.com' }), fakeDb);
 
       expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'dns_config_checked' }),
+        fakeDb,
+      expect.objectContaining({ action: 'dns_config_checked' }),
       );
     });
 
@@ -549,7 +581,7 @@ describe('infra agents', () => {
       }));
 
       const { runCheckDnsConfig } = await import('./agents/infra.js');
-      await expect(runCheckDnsConfig(makeTask('CHECK_DNS_CONFIG', { domain: 'authichain.com' })))
+      await expect(runCheckDnsConfig(makeTask('CHECK_DNS_CONFIG', { domain: 'authichain.com' }), fakeDb))
         .rejects.toThrow(/DNS check failed/);
     });
 
@@ -557,7 +589,7 @@ describe('infra agents', () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
       const { runCheckDnsConfig } = await import('./agents/infra.js');
-      await expect(runCheckDnsConfig(makeTask('CHECK_DNS_CONFIG', { domain: 'authichain.com' })))
+      await expect(runCheckDnsConfig(makeTask('CHECK_DNS_CONFIG', { domain: 'authichain.com' }), fakeDb))
         .rejects.toThrow(/DNS check failed/);
     });
   });
@@ -567,14 +599,14 @@ describe('infra agents', () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
 
       const { runVerifySsl } = await import('./agents/infra.js');
-      await expect(runVerifySsl(makeTask('VERIFY_SSL', { domain: 'authichain.com' }))).resolves.not.toThrow();
+      await expect(runVerifySsl(makeTask('VERIFY_SSL', { domain: 'authichain.com' }), fakeDb)).resolves.not.toThrow();
     });
 
     it('throws when HTTPS returns non-2xx', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 502 }));
 
       const { runVerifySsl } = await import('./agents/infra.js');
-      await expect(runVerifySsl(makeTask('VERIFY_SSL', { domain: 'authichain.com' })))
+      await expect(runVerifySsl(makeTask('VERIFY_SSL', { domain: 'authichain.com' }), fakeDb))
         .rejects.toThrow(/SSL\/connectivity check failed/);
     });
 
@@ -582,7 +614,7 @@ describe('infra agents', () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('UNABLE_TO_VERIFY_LEAF_SIGNATURE')));
 
       const { runVerifySsl } = await import('./agents/infra.js');
-      await expect(runVerifySsl(makeTask('VERIFY_SSL', { domain: 'authichain.com' })))
+      await expect(runVerifySsl(makeTask('VERIFY_SSL', { domain: 'authichain.com' }), fakeDb))
         .rejects.toThrow(/SSL\/connectivity check failed/);
     });
   });
@@ -602,11 +634,11 @@ describe('infra agents', () => {
         }),
       }));
 
-      const { logActivity } = await import('./db.js');
+      const { logActivity } = await import('./agents/db-helpers.js');
       const { runLighthouseAudit } = await import('./agents/infra.js');
-      await runLighthouseAudit(makeTask('RUN_LIGHTHOUSE_AUDIT', { url: 'https://authichain.com' }));
+      await runLighthouseAudit(makeTask('RUN_LIGHTHOUSE_AUDIT', { url: 'https://authichain.com' }), fakeDb);
 
-      const call = vi.mocked(logActivity).mock.calls[0][0];
+      const call = vi.mocked(logActivity).mock.calls[0][1];
       expect((call as any).details.scores.performance).toBe(95);
       expect((call as any).details.scores.accessibility).toBe(88);
     });
@@ -619,7 +651,7 @@ describe('infra agents', () => {
       }));
 
       const { runLighthouseAudit } = await import('./agents/infra.js');
-      await expect(runLighthouseAudit(makeTask('RUN_LIGHTHOUSE_AUDIT')))
+      await expect(runLighthouseAudit(makeTask('RUN_LIGHTHOUSE_AUDIT'), fakeDb))
         .rejects.toThrow(/Lighthouse audit failed/);
     });
 
@@ -627,7 +659,7 @@ describe('infra agents', () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('timeout')));
 
       const { runLighthouseAudit } = await import('./agents/infra.js');
-      await expect(runLighthouseAudit(makeTask('RUN_LIGHTHOUSE_AUDIT')))
+      await expect(runLighthouseAudit(makeTask('RUN_LIGHTHOUSE_AUDIT'), fakeDb))
         .rejects.toThrow(/Lighthouse audit failed/);
     });
   });
