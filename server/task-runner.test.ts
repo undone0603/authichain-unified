@@ -43,15 +43,16 @@ vi.mock('./agents/browser-vision.js', () => ({
 
 // ─── Mock db lifecycle functions ──────────────────────────────────────────────
 
-vi.mock('./db.js', () => ({
+vi.mock('./jobs/db-helpers.js', () => ({
   markTaskRunning:  vi.fn().mockResolvedValue(true),
   markTaskDone:     vi.fn().mockResolvedValue(undefined),
   markTaskFailed:   vi.fn().mockResolvedValue(undefined),
   logActivity:      vi.fn().mockResolvedValue(undefined),
-  getDb:            vi.fn().mockResolvedValue({}),
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const fakeDb = {} as any;
 
 function makeTask(kind: string): MissionTask {
   return {
@@ -106,7 +107,7 @@ describe('runTask — routing', () => {
       const agentModule   = await import(mod as any);
       const agent         = vi.mocked((agentModule as any)[fn]);
 
-      await runTask(makeTask(kind));
+      await runTask(fakeDb, makeTask(kind));
 
       expect(agent).toHaveBeenCalledOnce();
     });
@@ -117,9 +118,9 @@ describe('runTask — routing', () => {
   for (const kind of ['BROWSE_VISION_RESEARCH_LEAD', 'BROWSE_VISION_FREEFORM']) {
     it(`leaves ${kind} pending for the Playwright runner`, async () => {
       const { runTask }         = await import('./jobs/task-runner.js');
-      const { markTaskRunning } = await import('./db.js');
+      const { markTaskRunning } = await import('./jobs/db-helpers.js');
 
-      const result = await runTask(makeTask(kind));
+      const result = await runTask(fakeDb, makeTask(kind));
 
       expect(result).toEqual({ ok: true });
       expect(vi.mocked(markTaskRunning)).not.toHaveBeenCalled();
@@ -132,46 +133,47 @@ describe('runTask — lifecycle', () => {
 
   it('calls markTaskRunning before the agent', async () => {
     const callOrder: string[] = [];
-    const { markTaskRunning } = await import('./db.js');
+    const { markTaskRunning } = await import('./jobs/db-helpers.js');
     const { runLeadFinder } = await import('./agents/lead-finder.js');
     vi.mocked(markTaskRunning).mockImplementation(async () => { callOrder.push('running'); return true; });
     vi.mocked(runLeadFinder).mockImplementation(async () => { callOrder.push('agent'); });
 
     const { runTask } = await import('./jobs/task-runner.js');
-    await runTask(makeTask('FIND_GOV_LEADS'));
+    await runTask(fakeDb, makeTask('FIND_GOV_LEADS'));
 
     expect(callOrder[0]).toBe('running');
     expect(callOrder[1]).toBe('agent');
   });
 
   it('calls markTaskDone after a successful agent run', async () => {
-    const { markTaskDone } = await import('./db.js');
+    const { markTaskDone } = await import('./jobs/db-helpers.js');
     const { runTask } = await import('./jobs/task-runner.js');
-    await runTask(makeTask('FIND_GOV_LEADS'));
-    expect(vi.mocked(markTaskDone)).toHaveBeenCalledWith('task-FIND_GOV_LEADS');
+    await runTask(fakeDb, makeTask('FIND_GOV_LEADS'));
+    expect(vi.mocked(markTaskDone)).toHaveBeenCalledWith(fakeDb, 'task-FIND_GOV_LEADS');
   });
 
   it('calls markTaskFailed when the agent throws', async () => {
-    const { markTaskFailed, markTaskDone } = await import('./db.js');
+    const { markTaskFailed, markTaskDone } = await import('./jobs/db-helpers.js');
     const { runLeadFinder } = await import('./agents/lead-finder.js');
     vi.mocked(runLeadFinder).mockRejectedValueOnce(new Error('LLM timeout'));
 
     const { runTask } = await import('./jobs/task-runner.js');
-    await runTask(makeTask('FIND_GOV_LEADS'));
+    await runTask(fakeDb, makeTask('FIND_GOV_LEADS'));
 
-    expect(vi.mocked(markTaskFailed)).toHaveBeenCalledWith('task-FIND_GOV_LEADS', 'LLM timeout');
+    expect(vi.mocked(markTaskFailed)).toHaveBeenCalledWith(fakeDb, 'task-FIND_GOV_LEADS', 'LLM timeout');
     expect(vi.mocked(markTaskDone)).not.toHaveBeenCalled();
   });
 
   it('logs task_failed activity when the agent throws', async () => {
-    const { logActivity } = await import('./db.js');
+    const { logActivity } = await import('./jobs/db-helpers.js');
     const { runLeadFinder } = await import('./agents/lead-finder.js');
     vi.mocked(runLeadFinder).mockRejectedValueOnce(new Error('timeout'));
 
     const { runTask } = await import('./jobs/task-runner.js');
-    await runTask(makeTask('FIND_GOV_LEADS'));
+    await runTask(fakeDb, makeTask('FIND_GOV_LEADS'));
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
+      fakeDb,
       expect.objectContaining({ action: 'task_failed', details: expect.objectContaining({ error: 'timeout' }) }),
     );
   });
@@ -181,7 +183,7 @@ describe('runTask — lifecycle', () => {
     vi.mocked(runLeadFinder).mockRejectedValueOnce(new Error('boom'));
 
     const { runTask } = await import('./jobs/task-runner.js');
-    await expect(runTask(makeTask('FIND_GOV_LEADS'))).resolves.not.toThrow();
+    await expect(runTask(fakeDb, makeTask('FIND_GOV_LEADS'))).resolves.not.toThrow();
   });
 });
 
@@ -189,12 +191,13 @@ describe('runTask — unknown kind', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('marks the task as failed with "Unknown task kind" message', async () => {
-    const { markTaskFailed } = await import('./db.js');
+    const { markTaskFailed } = await import('./jobs/db-helpers.js');
     const { runTask } = await import('./jobs/task-runner.js');
 
-    await runTask(makeTask('NOT_A_REAL_TASK'));
+    await runTask(fakeDb, makeTask('NOT_A_REAL_TASK'));
 
     expect(vi.mocked(markTaskFailed)).toHaveBeenCalledWith(
+      fakeDb,
       'task-NOT_A_REAL_TASK',
       expect.stringContaining('Unknown task kind'),
     );

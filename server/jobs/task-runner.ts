@@ -1,4 +1,4 @@
-import { markTaskRunning, markTaskDone, markTaskFailed, logActivity, getDb } from '../db.js';
+import { markTaskRunning, markTaskDone, markTaskFailed, logActivity, type Db } from './db-helpers.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 import { runLeadFinder } from '../agents/lead-finder.js';
 import { runOutboundEmail } from '../agents/outbound-email.js';
@@ -38,7 +38,7 @@ import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/de
 
 const VISION_TASK_KINDS = new Set(['BROWSE_VISION_RESEARCH_LEAD', 'BROWSE_VISION_FREEFORM']);
 
-export async function runTask(task: Task): Promise<{ ok: boolean }> {
+export async function runTask(db: Db, task: Task): Promise<{ ok: boolean }> {
   // Vision tasks need a Playwright-capable Node host. Leave them unclaimed
   // (still PENDING) unless this process declares Playwright available — the
   // browser-vision-tasks workflow sets PLAYWRIGHT_AVAILABLE=1.
@@ -46,16 +46,8 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
     return { ok: true };
   }
 
-  const claimed = await markTaskRunning(task.id);
+  const claimed = await markTaskRunning(db, task.id);
   if (!claimed) return { ok: true }; // Another worker already claimed this task
-
-  // TODO(2b-2): task-runner.ts itself still bridges via the legacy Node
-  // singleton getDb() rather than receiving a threaded db param — this file
-  // is server/jobs/** (Task 2b-2's scope). It obtains db here and threads
-  // it into every server/agents/** function it calls (Task 2b-1's scope,
-  // already migrated off the singleton) so the agents themselves have no
-  // remaining direct db.ts coupling.
-  const db = await getDb();
 
   try {
     switch (task.kind) {
@@ -224,12 +216,12 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
     }
 
     // markTaskDone guards with WHERE status='RUNNING', so WAITING_HUMAN is preserved if the agent set it
-    await markTaskDone(task.id);
+    await markTaskDone(db, task.id);
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await markTaskFailed(task.id, message);
-    await logActivity({ userId: null, action: 'task_failed', entityType: 'task', entityId: 0, details: { taskId: task.id,
+    await markTaskFailed(db, task.id, message);
+    await logActivity(db, { userId: null, action: 'task_failed', entityType: 'task', entityId: 0, details: { taskId: task.id,
       kind: task.kind,
       missionId: task.missionId,
       error: message,
