@@ -250,10 +250,14 @@ export function createInternalRouter(): Router {
         return res.status(400).json({ error: "records array required" });
       }
 
+      // server/tenant-billing.ts was migrated to take a threaded `db` in
+      // Task 2b-4; server/internal-api.ts itself is out of that task's
+      // scope (Task 2b-6), so this stays a documented getDb() bridge.
+      const usageDb = await getDb();
       // Process each usage record
       await Promise.all(
         records.map((r: { tenantId: number; endpoint: string; count: number }) =>
-          reportUsageToStripe(r.tenantId, r.endpoint, r.count),
+          reportUsageToStripe(usageDb, r.tenantId, r.endpoint, r.count),
         ),
       );
 

@@ -1,5 +1,5 @@
 import { getStripe } from "./stripe-service";
-import { getDb } from "./db";
+import type { Db } from "./db-helpers";
 import { whiteLabelClients, apiUsageDaily } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -24,7 +24,7 @@ const RATE_LIMITS: Record<string, { rpm: number; rpd: number }> = {
 };
 
 // ─── Provision a New Tenant ──────────────────────────────────────────────────
-export async function provisionTenant(data: {
+export async function provisionTenant(db: Db, data: {
   userId: number;
   companyName: string;
   domain?: string;
@@ -32,7 +32,6 @@ export async function provisionTenant(data: {
   verticals?: string[];
 }) {
   const stripe = getStripe();
-  const db = await getDb();
   if (!db) throw new Error("Database unavailable");
 
   // Generate API key
@@ -82,8 +81,7 @@ export async function provisionTenant(data: {
 }
 
 // ─── Report Usage to Stripe ──────────────────────────────────────────────────
-export async function reportUsageToStripe(tenantId: number, endpoint: string, quantity: number) {
-  const db = await getDb();
+export async function reportUsageToStripe(db: Db, tenantId: number, endpoint: string, quantity: number) {
   if (!db) return;
 
   const [tenant] = await db.select().from(whiteLabelClients).where(eq(whiteLabelClients.id, tenantId)).limit(1);
@@ -112,8 +110,7 @@ export async function reportUsageToStripe(tenantId: number, endpoint: string, qu
 }
 
 // ─── Get Tenant Billing Status ───────────────────────────────────────────────
-export async function getTenantBillingStatus(tenantId: number) {
-  const db = await getDb();
+export async function getTenantBillingStatus(db: Db, tenantId: number) {
   if (!db) return null;
 
   const [tenant] = await db.select().from(whiteLabelClients).where(eq(whiteLabelClients.id, tenantId)).limit(1);
