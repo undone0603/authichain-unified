@@ -1,6 +1,9 @@
 import "dotenv/config";
 
 const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?.[0] ?? ''}***@${d}` : '***'; };
+// Standalone Node CLI monitor script (run via tsx) — not a request handler,
+// so there is no per-request db to thread in. Calling getDb() directly here
+// is a documented bridge to the legacy server/db.ts singleton.
 import { getDb } from "../db.js";
 import { activityLog, leads } from "../../drizzle/schema.js";
 import { desc, eq, and } from "drizzle-orm";
