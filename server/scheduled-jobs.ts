@@ -1,5 +1,6 @@
 // server/scheduled-jobs.ts
 import { getDb } from "./db";
+import type { Db } from "./jobs/db-helpers";
 import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger } from "../drizzle/schema";
 import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
@@ -13,7 +14,7 @@ interface JobDefinition {
   description: string;
   schedule: string; // cron expression
   enabled: boolean;
-  handler: () => Promise<JobResult>;
+  handler: (db: Db) => Promise<JobResult>;
   // Minimum time that must elapse since the last completed/failed run before
   // this job is allowed to execute again. Needed because the external
   // triggers calling into `runJobManually` (GitHub Actions backup workflow,
@@ -38,7 +39,7 @@ function registerJob(job: JobDefinition) {
 
 // ─── Job Execution Wrapper ──────────────────────────────────────────────────
 
-async function isJobDue(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, job: JobDefinition): Promise<boolean> {
+async function isJobDue(db: Db, job: JobDefinition): Promise<boolean> {
   if (job.minIntervalMs <= 0) return true;
 
   const [lastRun] = await db.select({ startedAt: scheduledJobRuns.startedAt })
@@ -52,6 +53,13 @@ async function isJobDue(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, job:
 }
 
 export async function executeJob(job: JobDefinition, options?: { force?: boolean }): Promise<void> {
+  // Documented bridge: executeJob is the root entry point for the whole jobs
+  // subsystem — invoked by node-cron's own scheduler (server/scheduled-jobs.ts
+  // itself, not a tRPC/Workers request) or by runJobManually()'s callers
+  // (admin routes not yet migrated off the db.ts singleton). There is no
+  // caller to thread a db instance from, so it obtains one here and threads
+  // it into every job handler below so individual jobs don't each reach for
+  // the singleton themselves.
   const db = await getDb();
   if (!db) {
     console.warn(`[Scheduler] Skipping ${job.name}: database not available`);
@@ -75,7 +83,7 @@ export async function executeJob(job: JobDefinition, options?: { force?: boolean
   const runId = runRecord.id;
 
   try {
-    const result = await job.handler();
+    const result = await job.handler(db);
     const duration = Date.now() - startTime;
 
     await db.update(scheduledJobRuns)
@@ -113,10 +121,7 @@ registerJob({
   schedule: "0 6 * * *",
   enabled: true,
   minIntervalMs: 20 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
-    const db = await getDb();
-    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
-
+  handler: async (db): Promise<JobResult> => {
     const now = new Date();
     const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     let processed = 0;
@@ -185,9 +190,9 @@ registerJob({
   schedule: "0 8 * * *",
   enabled: true,
   minIntervalMs: 20 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
+  handler: async (db): Promise<JobResult> => {
     const { runDunningEscalation } = await import("./jobs/dunning");
-    const r = await runDunningEscalation();
+    const r = await runDunningEscalation(db);
     return { itemsProcessed: r.remindersSent, details: { checked: r.checked, remindersSent: r.remindersSent } };
   },
 });
@@ -201,10 +206,7 @@ registerJob({
   schedule: "0 7 * * *",
   enabled: true,
   minIntervalMs: 20 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
-    const db = await getDb();
-    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
-
+  handler: async (db): Promise<JobResult> => {
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     let processed = 0;
@@ -254,10 +256,7 @@ registerJob({
   schedule: "0 9 * * *",
   enabled: true,
   minIntervalMs: 20 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
-    const db = await getDb();
-    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
-
+  handler: async (db): Promise<JobResult> => {
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     let processed = 0;
@@ -310,10 +309,7 @@ registerJob({
   schedule: "0 3 * * *",
   enabled: true,
   minIntervalMs: 20 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
-    const db = await getDb();
-    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
-
+  handler: async (db): Promise<JobResult> => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
     let processed = 0;
@@ -364,10 +360,7 @@ registerJob({
   schedule: "0 8 * * 1",
   enabled: true,
   minIntervalMs: 6 * 24 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
-    const db = await getDb();
-    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
-
+  handler: async (db): Promise<JobResult> => {
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     // Count new users this week
@@ -440,13 +433,10 @@ registerJob({
   schedule: "0 */4 * * *",
   enabled: true,
   minIntervalMs: 3.5 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
+  handler: async (db): Promise<JobResult> => {
     if (!isHubSpotConfigured()) {
       return { itemsProcessed: 0, details: { skipped: "HubSpot not configured" } };
     }
-
-    const db = await getDb();
-    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
 
     const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
     let synced = 0;
@@ -485,10 +475,7 @@ registerJob({
   schedule: "0 5 * * *",
   enabled: true,
   minIntervalMs: 20 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
-    const db = await getDb();
-    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
-
+  handler: async (db): Promise<JobResult> => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     let processed = 0;
 
@@ -548,10 +535,7 @@ registerJob({
   schedule: "0 */6 * * *",
   enabled: true,
   minIntervalMs: 5.5 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
-    const db = await getDb();
-    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
-
+  handler: async (db): Promise<JobResult> => {
     const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
     let flagged = 0;
 
@@ -618,9 +602,9 @@ registerJob({
   // (getDueTasks()) and is meant to be safe to call as often as the external
   // trigger allows.
   minIntervalMs: 0,
-  handler: async (): Promise<JobResult> => {
+  handler: async (db): Promise<JobResult> => {
     const { runPipelineTick } = await import("./jobs/pipeline-tick");
-    const result = await runPipelineTick();
+    const result = await runPipelineTick(db);
     if ("skipped" in result && result.skipped) {
       return { itemsProcessed: 0, details: result };
     }
@@ -694,9 +678,9 @@ registerJob({
   schedule: "*/10 * * * *",
   enabled: true,
   minIntervalMs: 9 * 60 * 1000,
-  handler: async () => {
+  handler: async (db) => {
     const { runVerticalCloning } = await import("./jobs/vertical-cloner");
-    await runVerticalCloning();
+    await runVerticalCloning(db);
     return { itemsProcessed: 2, details: { status: "cloning_cycle_complete", verticals: ["EV_BATTERY", "ARTISAN_COFFEE"] } };
   }
 });
@@ -710,9 +694,9 @@ registerJob({
   schedule: "0 * * * *",
   enabled: true,
   minIntervalMs: 55 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
+  handler: async (db): Promise<JobResult> => {
     const { runStrainChainSync } = await import("./jobs/strainchain-sync");
-    return await runStrainChainSync();
+    return await runStrainChainSync(db);
   },
 });
 
@@ -725,11 +709,10 @@ registerJob({
   schedule: "*/30 * * * *",
   enabled: true,
   minIntervalMs: 25 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
+  handler: async (db): Promise<JobResult> => {
     const { runNewsjackingMonitor } = await import("./agents/news-pr");
     // Simulate a task object for the agent
-    const db = await getDb();
-    await runNewsjackingMonitor({ 
+    await runNewsjackingMonitor({
       missionId: "SYSTEM_PR", 
       payload: { topics: ['medical device recall', 'counterfeit pharma', 'luxury forgery'] } 
     } as any, db);
@@ -746,10 +729,7 @@ registerJob({
   schedule: "0 4 * * *",
   enabled: true,
   minIntervalMs: 20 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
-    const db = await getDb();
-    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
-    
+  handler: async (db): Promise<JobResult> => {
     const activePositions = await db.select().from(stakingPositions)
       .where(eq(stakingPositions.status, "active"))
       .limit(10000);
@@ -778,9 +758,9 @@ registerJob({
   schedule: "0 9 1 * *",
   enabled: true,
   minIntervalMs: 25 * 24 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
+  handler: async (db): Promise<JobResult> => {
     const { runMonthlyFounderPayout } = await import("./jobs/founder-payout");
-    const plan = await runMonthlyFounderPayout();
+    const plan = await runMonthlyFounderPayout(db);
     return { itemsProcessed: 1, details: plan };
   },
 });
@@ -798,9 +778,9 @@ registerJob({
   schedule: "0 11 * * *",
   enabled: true,
   minIntervalMs: 20 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
+  handler: async (db): Promise<JobResult> => {
     const { runLiveSystemsCheck } = await import("./jobs/live-systems-check");
-    const result = await runLiveSystemsCheck();
+    const result = await runLiveSystemsCheck(db);
     if (!result.ready) {
       try {
         await notifyOwner({
@@ -826,9 +806,9 @@ registerJob({
   schedule: "0 12 * * *",
   enabled: true,
   minIntervalMs: 20 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
+  handler: async (db): Promise<JobResult> => {
     const { runTokenMetrics } = await import("./jobs/token-metrics");
-    const snapshot = await runTokenMetrics();
+    const snapshot = await runTokenMetrics(db);
     return { itemsProcessed: 1, details: snapshot };
   },
 });
@@ -846,9 +826,9 @@ registerJob({
   schedule: "0 13 * * *",
   enabled: true,
   minIntervalMs: 20 * 60 * 60 * 1000,
-  handler: async (): Promise<JobResult> => {
+  handler: async (db): Promise<JobResult> => {
     const { runEcosystemHealthCheck } = await import("./jobs/ecosystem-health");
-    const result = await runEcosystemHealthCheck();
+    const result = await runEcosystemHealthCheck(db);
     if (result.overallStatus === "DEGRADED") {
       try {
         await notifyOwner({
@@ -908,6 +888,9 @@ export function getRegisteredJobs() {
 }
 
 export async function getJobHistory(jobName?: string, limit = 50) {
+  // Documented bridge: called directly by admin routes/routers (server/routers/**,
+  // Task 2b-3+ scope, not yet migrated off the db.ts singleton) rather than a
+  // tRPC procedure that could thread ctx.db in, so it obtains its own db here.
   const db = await getDb();
   if (!db) return [];
 
