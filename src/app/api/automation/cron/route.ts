@@ -44,9 +44,15 @@ export async function GET(request: Request) {
   }
 
   // Also fire a forced pipeline tick for the server-side autonomous jobs
+  // Documented bridge: this Next.js API route is a standalone cron entry
+  // point (src/app/api/**, not yet migrated off the db.ts singleton), so it
+  // obtains its own db and threads it into the already-migrated
+  // server/jobs/pipeline-tick.ts (Task 2b-2 scope).
   try {
     const { runPipelineTick } = await import('../../../../../server/jobs/pipeline-tick');
-    const tick = await runPipelineTick({ force: true });
+    const { getDb } = await import('../../../../../server/db');
+    const db = await getDb();
+    const tick = await runPipelineTick(db, { force: true });
     results.pipelineTick = tick;
   } catch (err) {
     results.pipelineTick = { error: err instanceof Error ? err.message : String(err) };
