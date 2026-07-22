@@ -29,10 +29,19 @@ export async function createWorkersContext(
     user = null;
   }
 
+  const db = getHyperdriveDb(env);
+
   return {
-    db: getHyperdriveDb(env),
+    db,
     user,
-    missionsRepo: new DbMissionsRepository(),
+    // DbMissionsRepository accepts an optional injected db (Task 2b-3) --
+    // pass the real per-request Workers db so ctx.missionsRepo doesn't fall
+    // through to its legacy getDb()/process.env.DATABASE_URL bridge, which
+    // isn't expected to work in the Workers runtime.
+    missionsRepo: new DbMissionsRepository(db),
+    // DbAdminRepository doesn't support injection yet (server/admin/** is
+    // migrated in Task 2b-4, not yet done) -- update this call the same way
+    // once that lands, or this will have the same gap missionsRepo just had.
     adminRepo: new DbAdminRepository(),
   };
 }
