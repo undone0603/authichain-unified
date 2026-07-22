@@ -1,5 +1,6 @@
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
+import { getDb } from "../db";
 import { calculateHarmony } from "../sales/harmony-service";
 
 export const dashboardRouter = router({
@@ -7,7 +8,11 @@ export const dashboardRouter = router({
     return await db.getDashboardMetrics(ctx.user.id);
   }),
   harmony: publicProcedure.query(async () => {
-    return await calculateHarmony();
+    // server/sales/harmony-service.ts was migrated to take a threaded `db`
+    // in Task 2b-4; server/dashboard/** itself is out of that task's scope
+    // (Task 2b-6), so this stays a documented getDb() bridge for now.
+    const harmonyDb = await getDb();
+    return await calculateHarmony(harmonyDb);
   }),
   pulse: publicProcedure.query(async () => {
     const activity = await db.getRecentActivity(10);

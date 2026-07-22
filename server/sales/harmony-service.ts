@@ -4,7 +4,7 @@
  * Formula: H = (Trust * Velocity * Adoption) ^ (1/3)
  */
 
-import * as db from "../db";
+import type { Db } from "../db-helpers";
 import { authentications, stakingPositions, revenueRecords, checkpointBatches } from "../../drizzle/schema";
 import { sql, eq, gte } from "drizzle-orm";
 
@@ -23,8 +23,7 @@ export interface HarmonyMetrics {
   }
 }
 
-export async function calculateHarmony(): Promise<HarmonyMetrics> {
-  const d = await db.getDb();
+export async function calculateHarmony(d: Db): Promise<HarmonyMetrics> {
   if (!d) throw new Error("Database unavailable");
 
   const now = new Date();
@@ -34,7 +33,7 @@ export async function calculateHarmony(): Promise<HarmonyMetrics> {
   // % of auths that are Bitcoin anchored + Avg AI Confidence
   const [totalAuths] = await d.select({ count: sql<number>`count(*)` }).from(authentications);
   const [anchoredAuths] = await d.select({ count: sql<number>`count(*)` }).from(authentications).where(eq(authentications.blockchainVerified, 1));
-  
+
   const anchoredPct = (anchoredAuths.count / (totalAuths.count || 1));
   const trust = Math.min(1, (anchoredPct * 0.6) + 0.4); // Base 0.4 trust from protocol design
 
@@ -50,7 +49,7 @@ export async function calculateHarmony(): Promise<HarmonyMetrics> {
   const [totalStaked] = await d.select({ sum: sql<string>`sum(amount)` }).from(stakingPositions).where(eq(stakingPositions.status, "active"));
   const stakedAmount = Number(totalStaked.sum || 0);
   const targetStake = 10_000_000; // 10M QRON target for network stability
-  
+
   const adoption = Math.min(1, (stakedAmount / targetStake) * 0.5 + 0.5); // Base 0.5 from existing pipeline
 
   // 4. Master Harmony Index (H)
