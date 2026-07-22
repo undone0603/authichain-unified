@@ -122,8 +122,8 @@ git commit -m "feat(workers): add Hyperdrive-backed getDb() factory alongside th
 - Test: `server/_core/context.workers.test.ts`
 
 **Interfaces:**
-- Consumes: `getDb` from Task 1 (`server/db.ts`)
-- Produces: `createWorkersContext(opts: FetchCreateContextFnOptions, env: Env): Promise<TrpcContext>` — used by Task 4's Worker entrypoint.
+- Consumes: `getHyperdriveDb` from Task 1 (`server/db.ts`) — **not** `getDb`. Task 1 originally planned to export this as `getDb(env)`, but its review cycle found a pre-existing, unrelated `getDb()` already in `server/db.ts` (async, zero-arg, used by ~30 files) and renamed the new Hyperdrive factory to `getHyperdriveDb(env)` to avoid colliding with it. Importing `getDb` here would silently pull in the wrong (old, Node-only, zero-arg) function — use `getHyperdriveDb`.
+- Produces: `createWorkersContext(opts: FetchCreateContextFnOptions, env: Env): Promise<TrpcContext>` — used by Task 5's Worker entrypoint.
 
 - [ ] **Step 1: Verify `sdk.authenticateRequest`'s `Request` type**
 
@@ -171,10 +171,10 @@ import type { IMissionsRepository } from "../missions/types";
 import type { IAdminRepository } from "../admin/types";
 import { DbMissionsRepository } from "../missions/db-repository";
 import { DbAdminRepository } from "../admin/db-repository";
-import { getDb } from "../db";
+import { getHyperdriveDb } from "../db";
 
 export type TrpcContext = {
-  db: ReturnType<typeof getDb>;
+  db: ReturnType<typeof getHyperdriveDb>;
   user: User | null;
   missionsRepo?: IMissionsRepository;
   adminRepo?: IAdminRepository;
@@ -195,14 +195,14 @@ export async function createWorkersContext(
   }
 
   return {
-    db: getDb(env),
+    db: getHyperdriveDb(env),
     user,
     missionsRepo: new DbMissionsRepository(),
     adminRepo: new DbAdminRepository(),
   };
 }
 ```
-Note this drops `req`/`res` from `TrpcContext` entirely (the Express version kept them for the one router that used them directly — `server/auth/router.ts`, handled in Task 5) and adds `db` (previously a bare module import, now threaded through context per Task 1's factory change).
+Note this drops `req`/`res` from `TrpcContext` entirely (the Express version kept them for the one router that used them directly — `server/auth/router.ts`, handled in Task 4) and adds `db` (previously a bare module import, now threaded through context via `getHyperdriveDb`, Task 1's additive Hyperdrive factory).
 
 - [ ] **Step 5: Run test to verify it passes**
 
@@ -218,52 +218,83 @@ git commit -m "feat(workers): add Fetch-adapter tRPC context alongside the exist
 
 ---
 
-### Task 2b: Migrate direct `db` imports to `ctx.db`
+### Task 2b: Migrate `db`/`getDb()` call sites to `ctx.db`
 
-**Why this task exists:** discovered during pre-flight plan review, not part of the original architecture investigation. A grep run in the worktree before Task 1 started found 47–77 files importing `db` directly from `server/db.ts` at module scope, not through tRPC's `ctx.db`. Every one of those is incompatible with the Workers runtime for the same reason `server/db.ts`'s old singleton was (Task 1): a module-scope `import { db }` runs at load time, before Workers grants access to `env.HYPERDRIVE`. This task is what actually closes that gap — without it, Tasks 1–2's new `getDb()`/`createWorkersContext()` exist but most of the app still can't run on Workers.
+**Why this task exists, and a second correction:** discovered during pre-flight plan review and then refined further during Task 1's review cycle. `server/db.ts` has two access interfaces that turn out to share one underlying connection, not two independent things:
+```typescript
+let _db: DrizzleInstance | null = null;
+
+export async function getDb() {              // lazy-initializes _db on first call,
+  if (_db) return _db;                        // using process.env.DATABASE_URL,
+  // ...new Pool({ connectionString: process.env.DATABASE_URL }); _db = drizzle(pool);
+}
+
+export const db: DrizzleInstance = new Proxy({} as DrizzleInstance, {
+  get(_target, prop) {
+    if (!_db) throw new Error("Database not available");  // depends on getDb()
+    return Reflect.get(_db as object, prop as string);      // having run first
+  },
+});
+```
+Both are incompatible with Workers for the same underlying reason: `process.env.DATABASE_URL` and the module-scope `_db` cache both assume a long-lived Node process, not a per-request Workers invocation with `env` bindings only available inside the request handler. A real usage-based grep in the worktree (not an import-statement guess) found:
+- 35 files call `getDb(` (some via `await getDb()`, some through re-exported helpers)
+- 29 files use `db.<method>(` (property access on the Proxy)
+- 24 files do both
+- **40 unique files total** need migration
 
 **Files:**
-- Modify: every file the enumeration in Step 1 finds (do not guess the list — generate it)
+- Modify: every file the enumeration in Step 1 finds (do not guess the list, and do not reuse the 40 from this plan's own investigation without regenerating it — the worktree may have changed since)
 - Test: existing test files covering each modified router (run per-file after each migration, not once at the end)
 
 **Interfaces:**
-- Consumes: `TrpcContext.db` from Task 2 (`server/_core/context.workers.ts`) — already present in the type; this task is about call sites adopting it, not adding it.
+- Consumes: `TrpcContext.db` from Task 2 (`server/_core/context.workers.ts`) — already present in the type; this task is about call sites adopting it, not adding it. `TrpcContext.db` is populated via `getHyperdriveDb(env)` (Task 1's Hyperdrive factory, **not** `getDb()` — Task 1's review cycle renamed it specifically to avoid colliding with the pre-existing `getDb()` this task is migrating away from).
 
 - [ ] **Step 1: Generate the exact file list — do not rely on the earlier estimate**
 
 ```bash
-grep -rln "from [\"'].*\/db[\"']" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | sort > /tmp/db-import-sites.txt
-wc -l /tmp/db-import-sites.txt
-cat /tmp/db-import-sites.txt
+grep -rl "getDb(" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | grep -v "^server/db\.ts$" | sort > /tmp/getdb-callers.txt
+grep -rlE "\bdb\.(select|insert|update|delete|query|transaction|execute)\(" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | grep -v "^server/db\.ts$" | sort > /tmp/db-singleton-callers.txt
+cat /tmp/getdb-callers.txt /tmp/db-singleton-callers.txt | sort -u > /tmp/db-migration-sites.txt
+wc -l /tmp/db-migration-sites.txt
+cat /tmp/db-migration-sites.txt
 ```
-This is the authoritative list for this task. Exclude `server/db.ts` itself and `server/_core/context.ts`/`server/_core/context.workers.ts` (the two context files are expected to import `db`/`getDb` directly — that's their job, not a call site to migrate).
+This is the authoritative list for this task. Exclude `server/db.ts` itself (where both `getDb` and `db` are defined — not a call site) and `server/_core/context.ts`/`server/_core/context.workers.ts` (expected to call `getDb`/`getHyperdriveDb` directly — that's their job).
 
 - [ ] **Step 2: Classify each file by how it's invoked**
 
-Router files (anything merged into `appRouter` in `server/routers.ts`) already receive `ctx` as a tRPC procedure parameter — migrating them is a mechanical `import { db } from "../db"` → use `ctx.db` inside the procedure body, no new parameter threading needed. Non-router files (helper modules imported *by* routers, e.g. `server/db/users.ts`-style query helpers) don't have a `ctx` of their own — these need `db` passed in as an explicit function parameter from their caller (which does have `ctx.db`), not a global import. Split Step 1's list into these two groups before touching any file; migrate router files first (mechanical, lower risk), non-router helpers second (signature changes ripple to callers — check every call site of a helper before changing its signature).
+Router files (anything merged into `appRouter` in `server/routers.ts`) already receive `ctx` as a tRPC procedure parameter — migrating them is mechanical: remove the `getDb`/`db` import, replace `await getDb()` or bare `db.` with `ctx.db.` inside the procedure body, no new parameter threading needed. Non-router files (helper modules imported *by* routers, e.g. `server/db/users.ts`-style query helpers, or `server/character-service.ts`-style service modules) don't have a `ctx` of their own — these need a `db` (or `db: DrizzleInstance`) parameter added to their exported functions, threaded in from their caller (which does have `ctx.db`). Split Step 1's list into these two groups before touching any file; migrate router files first (mechanical, lower risk), non-router helpers second (signature changes ripple to every call site — check each helper's callers via `grep -rn "helperFunctionName(" server` before changing its signature).
 
 - [ ] **Step 3: Migrate one file, run its test, repeat**
 
-For each router file: replace `import { db } from "../db"` (or relative equivalent) with removing that import and using `ctx.db` wherever the file referenced bare `db`. For each non-router helper: change its exported functions to accept `db: ReturnType<typeof getDb>` as a parameter, update every call site (found via `grep -rn "helperFunctionName(" server`) to pass `ctx.db` through.
+For each router file: remove the `getDb`/`db` import, replace every `await getDb()` and bare `db.` reference with `ctx.db.`. For each non-router helper: add a `db` parameter to its exported functions (typed as `ReturnType<typeof import("./db").getDb>` resolved, or more simply reuse whatever type `TrpcContext.db` already has from Task 2), update every call site to pass `ctx.db` (or, for a helper called by another already-migrated helper, that helper's own `db` parameter) through.
 
-After each individual file: run that file's specific test (e.g. `pnpm vitest run server/routers.test.ts` if `server/routers.ts`-adjacent, or the matching `*.test.ts` for whichever file was just touched). Do not batch multiple files' migrations into one uncommitted pile — commit per file or small logical group, per Step 5.
+After each individual file: run that file's specific test. Do not batch multiple files' migrations into one uncommitted pile — commit per file or small logical group, per Step 5.
 
 - [ ] **Step 4: Run the full suite after each batch**
 
 Run: `pnpm vitest run`
-Expected: PASS, 503 tests (same count as the pre-Task-1 baseline) after every batch of migrations, not just at the very end — a regression introduced by file 12 of 60 should be caught before files 13-60 are migrated on top of it.
+Expected: PASS, 504 tests (Task 1's baseline, not the original 503 — Task 1 added one new test file) after every batch of migrations, not just at the very end. Also run `npx tsc --noEmit` after each batch — Task 1's review cycle found that `vitest run` alone does not type-check and missed a real breaking change; do not repeat that mistake here across 40 files.
 
 - [ ] **Step 5: Commit per file or small logical group**
 
 ```bash
 git add <migrated files>
-git commit -m "refactor(workers): migrate <router/module name> off direct db import to ctx.db"
+git commit -m "refactor(workers): migrate <router/module name> off direct db access to ctx.db"
 ```
 
 - [ ] **Step 6: Confirm zero remaining call sites**
 
-Run: `grep -rln "from [\"'].*\/db[\"']" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$"`
-Expected: only `server/db.ts`, `server/_core/context.ts`, `server/_core/context.workers.ts` remain. Anything else means Step 1's list was incomplete or a new direct import was introduced mid-task — resolve before marking this task complete.
+Run:
+```bash
+grep -rl "getDb(" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | grep -v "^server/db\.ts$"
+grep -rlE "\bdb\.(select|insert|update|delete|query|transaction|execute)\(" server --include="*.ts" | grep -v node_modules | grep -v "\.test\.ts$" | grep -v "^server/db\.ts$"
+```
+Expected: both commands return only `server/_core/context.ts` and `server/_core/context.workers.ts` (or nothing, if those two also end up going through a shared internal helper). Anything else means Step 1's list was incomplete or a new direct call was introduced mid-task — resolve before marking this task complete.
+
+- [ ] **Step 7: Final type check and full suite**
+
+Run: `npx tsc --noEmit && pnpm vitest run`
+Expected: zero type errors attributable to this task's changes, 504 tests passing. This is the task's actual completion gate, not Step 6's grep alone — Step 6 confirms no old call sites remain, this step confirms nothing is broken.
 
 ---
 
@@ -638,7 +669,7 @@ and a dispatcher:
 export async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
   switch (event.cron) {
     case "*/5 * * * *":
-      // ctx.waitUntil(existingJobFunction(getDb(env)));
+      // ctx.waitUntil(existingJobFunction(getHyperdriveDb(env))); // NOT getDb — see Task 1/2's naming note
       break;
     // one case per cron string from wrangler.toml, calling the Step 1 jobs
   }
