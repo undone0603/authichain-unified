@@ -48,6 +48,7 @@ vi.mock('./db.js', () => ({
   markTaskDone:     vi.fn().mockResolvedValue(undefined),
   markTaskFailed:   vi.fn().mockResolvedValue(undefined),
   logActivity:      vi.fn().mockResolvedValue(undefined),
+  getDb:            vi.fn().mockResolvedValue({}),
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
