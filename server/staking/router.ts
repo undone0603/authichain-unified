@@ -1,10 +1,14 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
-import * as db from "../db";
+import { getDb } from "../db";
+import { getUserStakingPositions, createStakingPosition, logActivity, updateStakingPosition } from "../identity-db-helpers";
 
 export const stakingRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
-    return await db.getUserStakingPositions(ctx.user.id);
+    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
+    // context does. Bridge via getDb() until this router has a ctx.db to use.
+    const db = await getDb();
+    return await getUserStakingPositions(db, ctx.user.id);
   }),
   stake: protectedProcedure
     .input(z.object({
@@ -12,7 +16,8 @@ export const stakingRouter = router({
       agentId: z.number().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const position = await db.createStakingPosition({
+      const db = await getDb(); // see list() above
+      const position = await createStakingPosition(db, {
         userId: ctx.user.id,
         agentId: input.agentId,
         amount: input.amount,
@@ -21,7 +26,7 @@ export const stakingRouter = router({
         apy: "12.50"
       });
 
-      await db.logActivity({
+      await logActivity(db, {
         userId: ctx.user.id,
         action: "qron_staked",
         entityType: "staking",
@@ -34,7 +39,8 @@ export const stakingRouter = router({
   unstake: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      await db.updateStakingPosition(input.id, ctx.user.id, { status: "unstaking" });
+      const db = await getDb(); // see list() above
+      await updateStakingPosition(db, input.id, ctx.user.id, { status: "unstaking" });
       return { success: true };
     }),
 });
