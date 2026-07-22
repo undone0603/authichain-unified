@@ -3,13 +3,13 @@
  * Automatically syncs state data and anchors it to the AuthiChain Truth Layer.
  */
 import { syncMetrcTransfers, anchorPackageToTruthLayer } from "../metrc-service";
-import * as db from "../db";
+import { getWhiteLabelClients, logActivity, type Db } from "./db-helpers";
 
-export async function runStrainChainSync() {
+export async function runStrainChainSync(db: Db) {
   console.log("[StrainChain Job] Starting METRC sync...");
-  
+
   // 1. Get all white-label clients
-  const clients = await db.getWhiteLabelClients();
+  const clients = await getWhiteLabelClients(db);
   let anchoredCount = 0;
 
   for (const client of clients) {
@@ -43,7 +43,7 @@ export async function runStrainChainSync() {
           
           if (anchorResult.success) {
             anchoredCount++;
-            await db.logActivity({
+            await logActivity(db, {
               userId: client.userId,
               action: 'strainchain_auto_anchor',
               entityType: 'manifest',

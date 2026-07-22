@@ -3,9 +3,9 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 const logActivity = vi.fn(async (..._a: unknown[]) => {});
 const notifyOwner = vi.fn(async (..._a: unknown[]) => {});
 const { rev } = vi.hoisted(() => ({ rev: { rows: [] as Array<{ amount: string }> } }));
-vi.mock('../db', () => ({
+vi.mock('./db-helpers', () => ({
   logActivity: (...a: unknown[]) => logActivity(...a),
-  getRevenueAnalytics: async () => rev.rows,
+  getRevenueAnalytics: async (_db: unknown) => rev.rows,
 }));
 vi.mock('../_core/notification', () => ({ notifyOwner: (...a: unknown[]) => notifyOwner(...a) }));
 
@@ -13,6 +13,8 @@ import {
   computePayout, defaultSplit, runFounderPayout,
   lastMonthRange, collectedRevenueCents, runMonthlyFounderPayout,
 } from './founder-payout';
+
+const fakeDb = {} as any;
 
 afterEach(() => {
   delete process.env.FOUNDER_PAY_PCT;
@@ -53,9 +55,9 @@ describe('defaultSplit', () => {
 
 describe('runFounderPayout', () => {
   it('computes, logs, and notifies the owner', async () => {
-    const p = await runFounderPayout(100000);
+    const p = await runFounderPayout(fakeDb, 100000);
     expect(p.founderCents).toBe(30000);
-    expect(logActivity).toHaveBeenCalledWith(expect.objectContaining({ action: 'founder_payout_computed' }));
+    expect(logActivity).toHaveBeenCalledWith(fakeDb, expect.objectContaining({ action: 'founder_payout_computed' }));
     expect(notifyOwner).toHaveBeenCalled();
   });
 });
@@ -76,7 +78,7 @@ describe('lastMonthRange', () => {
 describe('collectedRevenueCents', () => {
   it('sums revenueRecords.amount (dollars) into cents', async () => {
     rev.rows = [{ amount: '199.00' }, { amount: '499.50' }, { amount: 'bad' } as any];
-    const cents = await collectedRevenueCents(new Date(), new Date());
+    const cents = await collectedRevenueCents(fakeDb, new Date(), new Date());
     expect(cents).toBe(69850); // 199.00 + 499.50 = 698.50 -> 69850 cents; 'bad' ignored
   });
 });
@@ -84,9 +86,9 @@ describe('collectedRevenueCents', () => {
 describe('runMonthlyFounderPayout', () => {
   it('reads last month revenue and applies the split', async () => {
     rev.rows = [{ amount: '1000.00' }];
-    const p = await runMonthlyFounderPayout(new Date('2026-03-02T00:00:00Z'));
+    const p = await runMonthlyFounderPayout(fakeDb, new Date('2026-03-02T00:00:00Z'));
     expect(p.grossCents).toBe(100000);
     expect(p.founderCents).toBe(30000);
-    expect(logActivity).toHaveBeenCalledWith(expect.objectContaining({ action: 'founder_payout_computed' }));
+    expect(logActivity).toHaveBeenCalledWith(fakeDb, expect.objectContaining({ action: 'founder_payout_computed' }));
   });
 });
