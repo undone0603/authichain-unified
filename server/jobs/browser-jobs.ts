@@ -1,4 +1,4 @@
-import { logActivity, hasActionLogged, getDb } from '../db.js';
+import { logActivity, hasActionLogged, type Db } from './db-helpers.js';
 import {
   runBrowseCompetitorMonitor,
   runBrowseScrapeIndustryNews,
@@ -21,16 +21,11 @@ const NEWS_KEYWORDS: string[] = [
   'medical device counterfeit recall',
 ];
 
-export async function runBrowserAgentJobs(): Promise<{
+export async function runBrowserAgentJobs(db: Db): Promise<{
   competitorsChecked: number;
   newsKeywordsScanned: number;
   skipped: number;
 }> {
-  // TODO(2b-2): bridges via the legacy Node singleton getDb() rather than a
-  // threaded db param — this file is server/jobs/** (Task 2b-2's scope). It
-  // threads db into the server/agents/** calls below (Task 2b-1's scope,
-  // already migrated off the singleton).
-  const db = await getDb();
   let competitorsChecked = 0;
   let newsKeywordsScanned = 0;
   let skipped = 0;
@@ -38,7 +33,7 @@ export async function runBrowserAgentJobs(): Promise<{
   // ── Weekly competitor monitoring ──────────────────────────────────────────
   // Gate the whole batch — if any competitor was checked this week, skip all.
   // This prevents re-running the batch mid-week on subsequent ticks.
-  const batchRanThisWeek = await hasActionLogged('browse_competitor_monitor_completed', 7);
+  const batchRanThisWeek = await hasActionLogged(db, 'browse_competitor_monitor_completed', 7);
   if (batchRanThisWeek) {
     skipped += COMPETITORS.length;
   } else {
@@ -48,7 +43,7 @@ export async function runBrowserAgentJobs(): Promise<{
         await runBrowseCompetitorMonitor(fakeTask, db);
         competitorsChecked++;
       } catch (err) {
-        await logActivity({
+        await logActivity(db, {
           userId: null,
           action: 'browser_jobs_competitor_error',
           entityType: 'automation',
@@ -62,7 +57,7 @@ export async function runBrowserAgentJobs(): Promise<{
   // ── Daily news scan ───────────────────────────────────────────────────────
   // Gate: skip each keyword if it was scanned in the last 24 hours.
   for (const keyword of NEWS_KEYWORDS) {
-    const ranToday = await hasActionLogged('browse_scrape_news_completed', 1);
+    const ranToday = await hasActionLogged(db, 'browse_scrape_news_completed', 1);
     if (ranToday) { skipped++; continue; }
 
     try {
@@ -71,7 +66,7 @@ export async function runBrowserAgentJobs(): Promise<{
       await runBrowseScrapeIndustryNews(fakeTask, db);
       newsKeywordsScanned++;
     } catch (err) {
-      await logActivity({
+      await logActivity(db, {
         userId: null,
         action: 'browser_jobs_news_error',
         entityType: 'automation',

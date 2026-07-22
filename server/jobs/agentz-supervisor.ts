@@ -3,7 +3,8 @@ import { promises as fs } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { ENV } from "../_core/env";
-import { logActivity } from "../db";
+import { getDb } from "../db";
+import { logActivity, type Db } from "./db-helpers";
 import { runPipelineTick } from "./pipeline-tick";
 
 type TickResult = Awaited<ReturnType<typeof runPipelineTick>>;
@@ -39,8 +40,8 @@ function toErrorMessage(error: unknown) {
   return String(error);
 }
 
-async function runSingleTick() {
-  const result = await runPipelineTick();
+async function runSingleTick(db: Db) {
+  const result = await runPipelineTick(db);
   console.log(JSON.stringify(result, null, 2));
   return result;
 }
@@ -51,6 +52,12 @@ export async function runAgentZSupervisor(options?: { once?: boolean }) {
       "AgentZ requires AUTONOMOUS_PIPELINE_ENABLED=true. Set it in runtime environment before starting.",
     );
   }
+
+  // Documented bridge: this is a standalone, long-running Node supervisor
+  // process (started via CLI, looping on its own timer) — there is no caller
+  // to thread a db instance from, so it obtains one from the legacy Node
+  // singleton once for the lifetime of the process.
+  const db = await getDb();
 
   const once = options?.once ?? process.argv.includes("--once");
   const tickSeconds = parsePositiveInt(process.env.AGENTZ_TICK_SECONDS, 300);
@@ -76,7 +83,7 @@ export async function runAgentZSupervisor(options?: { once?: boolean }) {
     );
   }
 
-  await logActivity({
+  await logActivity(db, {
     userId: null,
     action: "agentz_supervisor_started",
     entityType: "automation",
@@ -95,9 +102,9 @@ export async function runAgentZSupervisor(options?: { once?: boolean }) {
       const tickStartedAt = Date.now();
 
       try {
-        const tickResult: TickResult = await runSingleTick();
+        const tickResult: TickResult = await runSingleTick(db);
         consecutiveFailures = 0;
-        await logActivity({
+        await logActivity(db, {
           userId: null,
           action: "agentz_tick_success",
           entityType: "automation",
@@ -109,7 +116,7 @@ export async function runAgentZSupervisor(options?: { once?: boolean }) {
         const failureMessage = toErrorMessage(error);
         const backoffSeconds = baseBackoffSeconds * Math.min(consecutiveFailures, 10);
 
-        await logActivity({
+        await logActivity(db, {
           userId: null,
           action: "agentz_tick_failed",
           entityType: "automation",
@@ -140,7 +147,7 @@ export async function runAgentZSupervisor(options?: { once?: boolean }) {
       await delay(sleepMs);
     } while (!shouldStop);
   } finally {
-    await logActivity({
+    await logActivity(db, {
       userId: null,
       action: "agentz_supervisor_stopped",
       entityType: "automation",
