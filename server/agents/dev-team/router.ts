@@ -1,4 +1,11 @@
 import { router, protectedProcedure } from "../../_core/trpc";
+// NOTE: getDb() bridge, not yet ctx.db — this router's shared TrpcContext
+// (server/_core/context.ts) doesn't have a `db` field; only the separate,
+// not-yet-wired Workers context (server/_core/context.workers.ts, Task 2)
+// does. Adding `db` to the live Express TrpcContext is an app-wide change
+// outside this sub-task's scope (Task 2b-1 is server/agents/** call sites
+// only). Same documented-bridge pattern used for the automation cron route
+// in this same commit series.
 import { getDb } from "../../db";
 import { createTask, logActivity, getTasksByMission } from "../db-helpers.js";
 import { z } from "zod";
