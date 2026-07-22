@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { COOKIE_NAME } from "@shared/const";
 import { sdk } from "./sdk";
 import * as db from "../db";
 
@@ -11,65 +12,99 @@ vi.mock("../db", () => ({
 describe("sdk.authenticateRequest", () => {
   describe("cookie extraction from Fetch Request", () => {
     it("extracts cookie header from a real Fetch Request using headers.get()", async () => {
+      const testCookieValue = "test-token-fetch-123";
       const req = new Request("https://authichain.com/api/test", {
         headers: {
-          Cookie: "session=test-token-fetch",
+          Cookie: COOKIE_NAME + "=" + testCookieValue + "; other=value",
         },
       });
 
-      // This will fail auth (missing valid session) but should NOT fail on cookie extraction
-      // We're verifying the cookie was extracted correctly by catching the auth error
+      // Spy on verifySession to confirm the cookie was extracted correctly
+      const verifySpy = vi.spyOn(sdk, "verifySession");
+      
       try {
         await sdk.authenticateRequest(req as any);
       } catch (error) {
-        // Expected to fail auth, but cookie extraction should have worked
-        // If it was a "undefined is not a function" error for headers.get, that would be bad
+        // Expected to fail due to invalid session, but extraction should have worked
         expect(error).toBeDefined();
       }
+
+      // Verify that verifySession was called with the correct cookie value
+      // This proves getCookieHeader extracted it from headers.get()
+      expect(verifySpy).toHaveBeenCalledWith(testCookieValue);
+      
+      verifySpy.mockRestore();
     });
   });
 
   describe("cookie extraction from Express-like object", () => {
     it("extracts cookie header from Express-like request object using headers.cookie property", async () => {
+      const testCookieValue = "test-token-express-456";
       const req = {
         headers: {
-          cookie: "session=test-token-express",
+          cookie: COOKIE_NAME + "=" + testCookieValue + "; other=value",
         },
       };
 
-      // This will fail auth (missing valid session) but should NOT fail on cookie extraction
+      // Spy on verifySession to confirm the cookie was extracted correctly
+      const verifySpy = vi.spyOn(sdk, "verifySession");
+      
       try {
         await sdk.authenticateRequest(req as any);
       } catch (error) {
-        // Expected to fail auth, but cookie extraction should have worked
+        // Expected to fail due to invalid session, but extraction should have worked
         expect(error).toBeDefined();
       }
+
+      // Verify that verifySession was called with the correct cookie value
+      // This proves getCookieHeader extracted it from headers.cookie
+      expect(verifySpy).toHaveBeenCalledWith(testCookieValue);
+      
+      verifySpy.mockRestore();
     });
   });
 
   describe("cookie extraction handles missing cookies gracefully", () => {
-    it("handles Fetch Request with no Cookie header", async () => {
-      const req = new Request("https://authichain.com/api/test");
+    it("handles Fetch Request with no matching cookie", async () => {
+      const req = new Request("https://authichain.com/api/test", {
+        headers: {
+          Cookie: "other=value",
+        },
+      });
+
+      const verifySpy = vi.spyOn(sdk, "verifySession");
 
       try {
         await sdk.authenticateRequest(req as any);
       } catch (error) {
-        // Should fail auth due to missing session
         expect(error).toBeDefined();
       }
+
+      // verifySession should be called with undefined (no matching cookie found)
+      expect(verifySpy).toHaveBeenCalledWith(undefined);
+      
+      verifySpy.mockRestore();
     });
 
-    it("handles Express-like object with no cookie property", async () => {
+    it("handles Express-like object with no matching cookie", async () => {
       const req = {
-        headers: {},
+        headers: {
+          cookie: "other=value",
+        },
       };
+
+      const verifySpy = vi.spyOn(sdk, "verifySession");
 
       try {
         await sdk.authenticateRequest(req as any);
       } catch (error) {
-        // Should fail auth due to missing session
         expect(error).toBeDefined();
       }
+
+      // verifySession should be called with undefined (no matching cookie found)
+      expect(verifySpy).toHaveBeenCalledWith(undefined);
+      
+      verifySpy.mockRestore();
     });
   });
 });
