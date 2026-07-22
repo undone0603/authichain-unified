@@ -79,7 +79,12 @@ export function createApp() {
     }
     try {
       const { handleStripeWebhook } = await import("../webhooks/stripe");
-      const result = await handleStripeWebhook(req.body, sig);
+      // Express route (Node-only deployment path, not Workers/tRPC — no
+      // ctx.db reachable here). Calling getDb() is a documented bridge to
+      // the legacy server/db.ts singleton (server/webhooks/stripe.ts itself
+      // was migrated off it in Task 2b-4; this call site wasn't).
+      const db = await getDb();
+      const result = await handleStripeWebhook(db, req.body, sig);
       res.json(result);
     } catch (err: any) {
       console.error(`[Stripe Webhook] Error: ${err.message}`);
@@ -95,7 +100,9 @@ export function createApp() {
     }
     try {
       const { handlePaddleWebhook } = await import("../paddle/webhook");
-      await handlePaddleWebhook(req, res);
+      // Documented bridge (see stripe webhook comment above) — same reason.
+      const db = await getDb();
+      await handlePaddleWebhook(db, req, res);
     } catch (err: any) {
       console.error(`[Paddle Webhook] Error: ${err.message}`);
       res.status(400).json({ error: err.message });
@@ -113,7 +120,9 @@ export function createApp() {
     }
     try {
       const { handleInstantlyWebhook } = await import("../webhooks/instantly.js");
-      const result = await handleInstantlyWebhook(req.body);
+      // Documented bridge (see stripe webhook comment above) — same reason.
+      const db = await getDb();
+      const result = await handleInstantlyWebhook(db, req.body);
       res.json(result);
     } catch (err: any) {
       console.error(`[Instantly Webhook] Error: ${err.message}`);
@@ -132,7 +141,9 @@ export function createApp() {
     }
     try {
       const { handleDocuSignWebhook } = await import("../webhooks/docusign.js");
-      const result = await handleDocuSignWebhook(req.body);
+      // Documented bridge (see stripe webhook comment above) — same reason.
+      const db = await getDb();
+      const result = await handleDocuSignWebhook(db, req.body);
       res.json(result);
     } catch (err: any) {
       console.error(`[DocuSign Webhook] Error: ${err.message}`);
