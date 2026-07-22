@@ -8,7 +8,7 @@
  */
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { sendEmail, checkThreadReplies } from '../email-service.js';
-import { logActivity, enqueueTask, getDb, createProposal } from '../db.js';
+import { logActivity, enqueueTask, createProposal, type Db } from './db-helpers.js';
 import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import { getStripe } from '../stripe-service.js';
@@ -24,9 +24,7 @@ const PILOT_PRICE_USD: Record<string, number> = {
   DEFAULT: 10_000,
 };
 
-async function updateLeadStatus(email: string, status: string) {
-  const db = await getDb();
-  if (!db) return;
+async function updateLeadStatus(db: Db, email: string, status: string) {
   await db.update(leads)
     .set({ status, updatedAt: new Date() })
     .where(eq(leads.email, email.toLowerCase()));
@@ -73,7 +71,7 @@ Return JSON: { "intent": "<one of: interested | wants_proposal | objection | pri
   }
 }
 
-export async function runCheckReplies(task: Task): Promise<void> {
+export async function runCheckReplies(task: Task, db: Db): Promise<void> {
   const payload = task.payload as CheckRepliesPayload;
   const { threadId, leadEmail, leadName, leadOrg, leadTitle, segment } = payload;
   const sequence = payload.sequence ?? 1;
@@ -84,9 +82,9 @@ export async function runCheckReplies(task: Task): Promise<void> {
   if (replyCheck.hasReply && replyCheck.replyText) {
     const intent = await classifyReplyIntent(replyCheck.replyText, segment);
 
-    await updateLeadStatus(leadEmail, 'REPLIED');
+    await updateLeadStatus(db, leadEmail, 'REPLIED');
 
-    await logActivity({
+    await logActivity(db, {
       userId: null, action: 'reply_received', entityType: 'task', entityId: 0,
       details: { taskId: task.id, leadEmail, segment, intent, replyFrom: replyCheck.replyFrom },
     });
@@ -96,40 +94,40 @@ export async function runCheckReplies(task: Task): Promise<void> {
 
     switch (intent) {
       case 'interested':
-        await enqueueTask(task.missionId, 'SEND_DEMO_PACKET', nextBase);
+        await enqueueTask(db, task.missionId, 'SEND_DEMO_PACKET', nextBase);
         break;
 
       case 'wants_proposal':
-        await enqueueTask(task.missionId, 'GENERATE_PROPOSAL', nextBase);
+        await enqueueTask(db, task.missionId, 'GENERATE_PROPOSAL', nextBase);
         break;
 
       case 'objection':
-        await enqueueTask(task.missionId, 'AUTO_REPLY', { ...nextBase, intent: 'objection' });
+        await enqueueTask(db, task.missionId, 'AUTO_REPLY', { ...nextBase, intent: 'objection' });
         break;
 
       case 'pricing':
-        await enqueueTask(task.missionId, 'AUTO_REPLY', { ...nextBase, intent: 'pricing' });
+        await enqueueTask(db, task.missionId, 'AUTO_REPLY', { ...nextBase, intent: 'pricing' });
         break;
 
       case 'not_interested':
-        await updateLeadStatus(leadEmail, 'CLOSED_LOST');
-        await logActivity({
+        await updateLeadStatus(db, leadEmail, 'CLOSED_LOST');
+        await logActivity(db, {
           userId: null, action: 'outcome_signal', entityType: 'lead', entityId: 0,
           details: { signal: 'no_response', segment },
         });
         break;
 
       case 'already_customer':
-        await updateLeadStatus(leadEmail, 'CLOSED_WON');
+        await updateLeadStatus(db, leadEmail, 'CLOSED_WON');
         break;
 
       default:
         // Unknown intent — treat as soft interest, send demo in 48h
-        await enqueueTask(task.missionId, 'SEND_DEMO_PACKET', nextBase, delay48h);
+        await enqueueTask(db, task.missionId, 'SEND_DEMO_PACKET', nextBase, delay48h);
     }
 
     // Record reply outcome signal for Bayesian learning
-    await logActivity({
+    await logActivity(db, {
       userId: null, action: 'outcome_signal', entityType: 'lead', entityId: 0,
       details: { signal: 'email_replied', segment },
     });
@@ -139,12 +137,12 @@ export async function runCheckReplies(task: Task): Promise<void> {
   // No reply — advance follow-up sequence or close lost
   if (sequence < maxSequence) {
     const delay = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // 3 days
-    await enqueueTask(task.missionId, 'FOLLOWUP_SEQUENCE', {
+    await enqueueTask(db, task.missionId, 'FOLLOWUP_SEQUENCE', {
       segment, leadEmail, leadName, leadOrg, leadTitle, sequence: sequence + 1, maxFollowups: maxSequence,
     }, delay);
   } else {
-    await updateLeadStatus(leadEmail, 'CLOSED_LOST');
-    await logActivity({
+    await updateLeadStatus(db, leadEmail, 'CLOSED_LOST');
+    await logActivity(db, {
       userId: null, action: 'outcome_signal', entityType: 'lead', entityId: 0,
       details: { signal: 'no_response', segment },
     });
@@ -171,7 +169,7 @@ const SEGMENT_ROI_CONTEXT: Record<string, string> = {
   DEFAULT: 'AuthiChain enables brands to verify product authenticity via blockchain-backed QR codes and AI confidence scoring.',
 };
 
-export async function runSendDemoPacket(task: Task): Promise<void> {
+export async function runSendDemoPacket(task: Task, db: Db): Promise<void> {
   const payload = task.payload as DemoPacketPayload;
   const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText, threadId } = payload;
 
@@ -208,16 +206,16 @@ Return JSON: { "subject": "...", "body": "..." }`;
   const sendResult = await sendEmail({ to: leadEmail, subject, body });
 
   if (sendResult.status === 'sent') {
-    await updateLeadStatus(leadEmail, 'DEMO_SENT');
+    await updateLeadStatus(db, leadEmail, 'DEMO_SENT');
     // Enqueue reply check in 72h
     const check72h = new Date(Date.now() + 72 * 60 * 60 * 1000);
-    await enqueueTask(task.missionId, 'CHECK_REPLIES', {
+    await enqueueTask(db, task.missionId, 'CHECK_REPLIES', {
       threadId: sendResult.threadId ?? threadId,
       leadEmail, leadName, leadOrg, leadTitle, segment, sequence: 0, maxSequence: 1,
     }, check72h);
   }
 
-  await logActivity({
+  await logActivity(db, {
     userId: null, action: 'demo_packet_sent', entityType: 'task', entityId: 0,
     details: { taskId: task.id, leadEmail, segment, sendStatus: sendResult.status },
   });
@@ -235,7 +233,7 @@ interface ProposalPayload {
   threadId?: string;
 }
 
-export async function runGenerateProposal(task: Task): Promise<void> {
+export async function runGenerateProposal(task: Task, db: Db): Promise<void> {
   const payload = task.payload as ProposalPayload;
   const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText, threadId } = payload;
   const priceUsd = PILOT_PRICE_USD[segment] ?? PILOT_PRICE_USD.DEFAULT;
@@ -306,7 +304,7 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
   }
 
   // ── Store proposal ────────────────────────────────────────────────────────
-  const proposalId = await createProposal({
+  const proposalId = await createProposal(db, {
     leadEmail,
     missionId: task.missionId,
     taskId: task.id,
@@ -328,9 +326,9 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
     body: `${proposalContent}${paymentSection}`,
   });
 
-  await updateLeadStatus(leadEmail, 'PILOT_PROPOSED');
+  await updateLeadStatus(db, leadEmail, 'PILOT_PROPOSED');
 
-  await logActivity({
+  await logActivity(db, {
     userId: null, action: 'proposal_sent', entityType: 'task', entityId: 0,
     details: {
       taskId: task.id, leadEmail, segment, proposalId,
@@ -351,7 +349,7 @@ interface ContractPayload {
   threadId?: string;
 }
 
-export async function runSendContract(task: Task): Promise<void> {
+export async function runSendContract(task: Task, db: Db): Promise<void> {
   const payload = task.payload as ContractPayload;
   const { leadEmail, leadName, leadOrg, segment } = payload;
   const priceUsd = PILOT_PRICE_USD[segment] ?? PILOT_PRICE_USD.DEFAULT;
@@ -409,7 +407,7 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
     body: `${contractBody}${paymentSection}`,
   });
 
-  await logActivity({
+  await logActivity(db, {
     userId: null, action: 'contract_sent', entityType: 'task', entityId: 0,
     details: { taskId: task.id, leadEmail, segment, sendStatus: sendResult.status, hasPaymentLink: !!paymentLink },
   });
@@ -434,7 +432,7 @@ const PRICING_TABLE: Record<string, string> = {
   DEFAULT: 'Pricing is $5,000–$25,000 depending on scope, with a 6-month pilot structure. We can tailor the package to your needs.',
 };
 
-export async function runAutoReply(task: Task): Promise<void> {
+export async function runAutoReply(task: Task, db: Db): Promise<void> {
   const payload = task.payload as AutoReplyPayload;
   const { leadEmail, leadName, leadOrg, segment, replyText, intent, threadId } = payload;
 
@@ -470,13 +468,13 @@ Return JSON: { "subject": "Re: [keep thread subject]", "body": "..." }`;
   if (sendResult.status === 'sent') {
     // Check again in 72h
     const check72h = new Date(Date.now() + 72 * 60 * 60 * 1000);
-    await enqueueTask(task.missionId, 'CHECK_REPLIES', {
+    await enqueueTask(db, task.missionId, 'CHECK_REPLIES', {
       threadId: sendResult.threadId ?? threadId,
       leadEmail, leadName, leadOrg, segment, sequence: 0, maxSequence: 1,
     }, check72h);
   }
 
-  await logActivity({
+  await logActivity(db, {
     userId: null, action: 'auto_reply_sent', entityType: 'task', entityId: 0,
     details: { taskId: task.id, leadEmail, segment, intent, sendStatus: sendResult.status },
   });
