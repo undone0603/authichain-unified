@@ -1,4 +1,4 @@
-import { getDb } from '../db';
+import type { Db } from '../db-helpers';
 import { certificates, products, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { storagePut } from '../storage';
@@ -33,8 +33,7 @@ interface CertificateData {
  * Generate certificate automatically after payment
  * This is called by the Paddle webhook handler
  */
-export async function generateCertificateAfterPayment(certificateId: number): Promise<void> {
-  const db = await getDb();
+export async function generateCertificateAfterPayment(db: Db, certificateId: number): Promise<void> {
   if (!db) {
     console.error('[Certificate Automation] Database not available');
     return;
@@ -58,7 +57,7 @@ export async function generateCertificateAfterPayment(certificateId: number): Pr
     const certificateData = cert[0];
 
     // Step 1: Generate NFT token (simulated for now)
-    const nftData = await generateNFT(certificateData);
+    const nftData = await generateNFT(db, certificateData);
 
     // Step 2: Create certificate PDF/image
     const certificateUrl = await generateCertificatePDF(certificateData, nftData);
@@ -76,7 +75,7 @@ export async function generateCertificateAfterPayment(certificateId: number): Pr
       .where(eq(certificates.id, certificateId));
 
     // Step 4: Send email to customer
-    await sendCertificateEmail(certificateData, certificateUrl, nftData);
+    await sendCertificateEmail(db, certificateData, certificateUrl, nftData);
 
     // Step 5: Notify owner
     await notifyOwner({
@@ -88,7 +87,7 @@ export async function generateCertificateAfterPayment(certificateId: number): Pr
 
   } catch (error) {
     console.error(`[Certificate Automation] Error generating certificate ${certificateId}:`, error);
-    
+
     // Notify owner of failure
     await notifyOwner({
       title: '⚠️ Certificate Generation Failed',
@@ -97,7 +96,7 @@ export async function generateCertificateAfterPayment(certificateId: number): Pr
   }
 }
 
-async function generateNFT(certificateData: any): Promise<{
+async function generateNFT(db: Db, certificateData: any): Promise<{
   tokenId: string;
   contractAddress: string;
   txHash: string;
@@ -118,7 +117,6 @@ async function generateNFT(certificateData: any): Promise<{
     };
   }
 
-  const db = await getDb();
   const [product, userRecord] = await Promise.all([
     db ? db.select().from(products).where(eq(products.id, certificateData.productId)).limit(1).then(r => r[0]) : null,
     db ? db.select({ walletAddress: users.walletAddress }).from(users).where(eq(users.id, certificateData.userId)).limit(1).then(r => r[0]) : null,
@@ -233,39 +231,39 @@ async function generateCertificatePDF(
           <h1 class="title">Certificate of Authenticity</h1>
           <p class="subtitle">Blockchain-Verified Product Authentication</p>
         </div>
-        
+
         <div class="content">
           <div class="field">
             <span class="label">Certificate Number:</span>
             <span class="value">${certificateData.certificateNumber}</span>
           </div>
-          
+
           <div class="field">
             <span class="label">Product:</span>
             <span class="value">${certificateData.productName}</span>
           </div>
-          
+
           <div class="field">
             <span class="label">Category:</span>
             <span class="value">${certificateData.productCategory || 'Luxury Goods'}</span>
           </div>
-          
+
           <div class="field">
             <span class="label">Authentication Result:</span>
             <span class="value">${certificateData.isAuthentic ? '✅ AUTHENTIC' : '❌ COUNTERFEIT'}</span>
           </div>
-          
+
           <div class="field">
             <span class="label">Confidence Score:</span>
             <span class="value">${certificateData.confidenceScore}%</span>
           </div>
-          
+
           <div class="field">
             <span class="label">Tier:</span>
             <span class="value">${certificateData.tier.toUpperCase()}</span>
           </div>
         </div>
-        
+
         <div class="blockchain">
           <h3>Blockchain Proof</h3>
           <div class="field">
@@ -281,7 +279,7 @@ async function generateCertificatePDF(
             <span class="value">${new Date().toLocaleDateString()}</span>
           </div>
         </div>
-        
+
         <div class="footer">
           <p>© ${new Date().getFullYear()} AuthiChain AI - Blockchain Authentication Platform</p>
           <p>This certificate is cryptographically secured and immutable</p>
@@ -309,14 +307,13 @@ async function generateCertificatePDF(
  * Send certificate email to customer
  */
 async function sendCertificateEmail(
+  db: Db,
   certificateData: any,
   certificateUrl: string,
   nftData: { tokenId: string }
 ): Promise<void> {
   console.log(`[Email] Sending certificate to customer`);
 
-  // Get user email from database
-  const db = await getDb();
   if (!db) {
     console.error('[Email] Database not available');
     return;
