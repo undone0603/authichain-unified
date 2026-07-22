@@ -11,6 +11,8 @@ paths-ignore:
   - "**/node_modules/**"
   # Chatbot native browser app (separate project with own dependencies)
   - "apps/chatbot/**"
+  # strainchain-io index.ts contains large embedded base64 assets that crash the CodeQL TypeScript parser
+  - "workers/strainchain-io/**"
 
 queries:
   - uses: security-extended
