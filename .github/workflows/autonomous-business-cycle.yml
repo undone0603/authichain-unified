@@ -12,9 +12,7 @@ name: Autonomous Business Cycle (Vercel Cron backup)
 # fraud-detection-sweep, vertical-cloner, strainchain-metrc-sync,
 # newsjacking-monitor, staking-rewards) that vercel.json never lists —
 # node-cron's in-process schedule never persists in a serverless Vercel
-# function, so without this loop they'd never run at all. Each is
-# min-interval-gated in scheduled-jobs.ts so calling them on every firing here
-# is safe; they no-op until actually due.
+# function, so without this loop they'd never run at all.
 
 on:
   schedule:
@@ -31,13 +29,7 @@ on:
     - cron: '0 11 * * *'  # live-systems-check
     - cron: '0 12 * * *'  # token-metrics
     - cron: '0 13 * * *'  # ecosystem-health
-    - cron: '0 14 * * *'  # nurture-replies (was Vercel cron; Vercel crons removed)
-    # The 13 entries above leave an ~11h gap (13:00-00:00 UTC) with zero
-    # firings. The sub-daily jobs added below (vertical-cloner, fraud-sweep,
-    # strainchain-metrc-sync, hubspot-crm-sync, newsjacking-monitor) rely on
-    # this workflow firing regularly through that window to get anywhere
-    # close to their intended cadence, so fill it in without adding a
-    # separate high-frequency workflow (cost/complexity trade-off).
+    - cron: '0 14 * * *'  # nurture-replies
     - cron: '0 16 * * *'
     - cron: '0 19 * * *'
     - cron: '0 22 * * *'
@@ -62,18 +54,21 @@ jobs:
         id: check
         run: |
           if [ -z "${{ secrets.CRON_SECRET }}" ]; then
-            echo "CRON_SECRET repo secret not set — skipping (see workflow header for setup steps)."
+            echo "CRON_SECRET repo secret not set — skipping (set it to enable the backup cron loop)."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Call every cron path (safe no-ops if not due / already run by Vercel)
+      - name: Call every cron path (safe no-ops if not due)
         if: steps.check.outputs.skip == 'false'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          set -uo pipefail
+          # Fail on unset variables but NOT on pipeline errors — we collect
+          # all results and only fail if a hard error (non-2xx, non-401/403)
+          # exceeds the threshold (currently: any hard error = warn, not fail).
+          set -u
           paths=(
             "/api/cron/pipeline"
             "/api/automation/cron"
@@ -88,18 +83,8 @@ jobs:
             "/api/cron/jobs?job=live-systems-check"
             "/api/cron/jobs?job=token-metrics"
             "/api/cron/jobs?job=ecosystem-health"
-            # Previously only triggered by Vercel cron (vercel.json) — moved
-            # here when the Vercel crons were removed.
             "/api/cron/nurture-replies"
             "/api/crm/sync"
-            # These 10 were registered in server/scheduled-jobs.ts but had no
-            # external trigger anywhere (not in vercel.json, not in this
-            # workflow) — node-cron's in-process schedule set up by
-            # initializeScheduler() never fires in a serverless Vercel
-            # function, so they never ran in production. Each is now
-            # min-interval-gated server-side (see scheduled-jobs.ts), so it's
-            # safe to call them here on every run of this daily backup loop —
-            # they'll no-op until they're actually due.
             "/api/cron/jobs?job=certificate-expiry-check"
             "/api/cron/jobs?job=lead-nurturing"
             "/api/cron/jobs?job=database-cleanup"
@@ -111,20 +96,26 @@ jobs:
             "/api/cron/jobs?job=newsjacking-monitor"
             "/api/cron/jobs?job=staking-rewards"
           )
-          fail=0
+          warn=0
           for p in "${paths[@]}"; do
             url="${APP_URL}${p}"
-            code=$(curl -sS -o /tmp/resp.txt -w '%{http_code}' -X GET "$url" -H "Authorization: Bearer ${CRON_SECRET}")
+            code=$(curl -sS -o /tmp/resp.txt -w '%{http_code}' -X GET "$url" -H "Authorization: Bearer ${CRON_SECRET}" || echo "000")
             if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
               echo "OK  [$code] $p"
             elif [ "$code" -eq 401 ] || [ "$code" -eq 403 ]; then
-              # 401/403 means CRON_SECRET in GH secrets doesn't match Vercel's env —
-              # Vercel's own cron is still running; log and skip rather than fail CI.
-              echo "WARN [$code] $p — CRON_SECRET mismatch; resync secret with Vercel env to fix"
-              cat /tmp/resp.txt
+              echo "::warning::[$code] $p — CRON_SECRET mismatch; resync with Vercel env"
+              cat /tmp/resp.txt || true
+              warn=$((warn+1))
+            elif [ "$code" = "000" ]; then
+              echo "::warning::[CURL_ERR] $p — network/connection error"
+              warn=$((warn+1))
             else
-              echo "WARN [$code] $p"
-              cat /tmp/resp.txt
+              echo "::warning::[$code] $p"
+              cat /tmp/resp.txt || true
+              warn=$((warn+1))
             fi
           done
-          exit $fail
+          echo "Done — $warn warnings out of ${#paths[@]} paths."
+          # Exit 0 always: warnings are informational; a hard-exit here would
+          # stop the remaining schedule entries from firing on subsequent runs.
+          exit 0
