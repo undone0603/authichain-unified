@@ -21,7 +21,7 @@
  */
 
 import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
-import { logActivity, createSystemNotification, getDb, getAllAdminIds } from '../../db.js';
+import { logActivity, createSystemNotification, getAllAdminIds, type Db } from '../db-helpers.js';
 import { missionTasks } from '../../../drizzle/schema.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
@@ -35,7 +35,7 @@ import {
 
 // ─── RUN_TESTS ────────────────────────────────────────────────────────────
 
-export async function runTests(task: Task): Promise<void> {
+export async function runTests(task: Task, db: Db): Promise<void> {
   const p = task.payload as { branch: string; prNumber?: number };
 
   // Get the PR head SHA
@@ -57,7 +57,7 @@ export async function runTests(task: Task): Promise<void> {
 
   const passed = run.conclusion === 'success';
 
-  await logActivity({
+  await logActivity(db, {
     userId: null,
     action: passed ? 'tests_passed' : 'tests_failed',
     entityType: 'task',
@@ -74,7 +74,6 @@ export async function runTests(task: Task): Promise<void> {
 
   if (!passed) {
     // Enqueue AUTO_FIX
-    const db = await getDb();
     await db.insert(missionTasks).values({
       id: crypto.randomUUID(),
       missionId: task.missionId,
@@ -93,7 +92,7 @@ export async function runTests(task: Task): Promise<void> {
 
 // ─── MONITOR_DEPLOY ───────────────────────────────────────────────────────
 
-export async function runMonitorDeploy(task: Task): Promise<void> {
+export async function runMonitorDeploy(task: Task, db: Db): Promise<void> {
   const p = task.payload as { prNumber: number; branch: string };
 
   // Poll Cloudflare for recent deployment (simple health check approach)
@@ -119,7 +118,7 @@ export async function runMonitorDeploy(task: Task): Promise<void> {
     }
   }
 
-  await logActivity({
+  await logActivity(db, {
     userId: null,
     action: deployHealthy ? 'deploy_healthy' : 'deploy_failed',
     entityType: 'task',
@@ -136,7 +135,6 @@ export async function runMonitorDeploy(task: Task): Promise<void> {
     });
 
     // Enqueue AUTO_FIX
-    const db = await getDb();
     await db.insert(missionTasks).values({
       id: crypto.randomUUID(),
       missionId: task.missionId,
@@ -151,8 +149,9 @@ export async function runMonitorDeploy(task: Task): Promise<void> {
     });
 
     // Notify admin
-    const adminIds = await getAllAdminIds();
+    const adminIds = await getAllAdminIds(db);
     await Promise.all(adminIds.map(adminId => createSystemNotification(
+      db,
       adminId,
       'Deploy Health Check Failed',
       `Post-deploy health check failed after PR #${p.prNumber}: ${lastError}. AUTO_FIX queued.`,
@@ -164,7 +163,7 @@ export async function runMonitorDeploy(task: Task): Promise<void> {
 
 // ─── FILE_BUG ─────────────────────────────────────────────────────────────
 
-export async function runFileBug(task: Task): Promise<void> {
+export async function runFileBug(task: Task, db: Db): Promise<void> {
   const p = task.payload as {
     title: string;
     body: string;
@@ -178,7 +177,7 @@ export async function runFileBug(task: Task): Promise<void> {
     labels: p.labels ?? ['bug', 'agentz'],
   });
 
-  await logActivity({
+  await logActivity(db, {
     userId: null,
     action: 'bug_filed',
     entityType: 'task',
@@ -201,7 +200,7 @@ Return JSON:
   "isHotfix": true/false  // true if this needs a new branch, false if it can go on the existing branch
 }`;
 
-export async function runAutoFix(task: Task): Promise<void> {
+export async function runAutoFix(task: Task, db: Db): Promise<void> {
   const p = task.payload as {
     branch: string;
     errorSummary: string;
@@ -238,7 +237,6 @@ export async function runAutoFix(task: Task): Promise<void> {
   }
 
   // Enqueue WRITE_CODE targeting the identified files
-  const db = await getDb();
   const fixTaskId = crypto.randomUUID();
   await db.insert(missionTasks).values({
     id: fixTaskId,
@@ -272,7 +270,7 @@ export async function runAutoFix(task: Task): Promise<void> {
     });
   }
 
-  await logActivity({
+  await logActivity(db, {
     userId: null,
     action: 'auto_fix_queued',
     entityType: 'task',
