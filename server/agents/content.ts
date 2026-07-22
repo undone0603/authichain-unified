@@ -1,5 +1,5 @@
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity } from '../db.js';
+import { logActivity, type Db } from './db-helpers.js';
 import { postThread } from '../twitter-service.js';
 import { postLinkedInThread } from '../linkedin-service.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
@@ -10,7 +10,7 @@ interface ContentPayload {
   platforms?: string[];
 }
 
-export async function runGenerateLaunchChecklist(task: Task): Promise<void> {
+export async function runGenerateLaunchChecklist(task: Task, db: Db): Promise<void> {
   const payload = task.payload as ContentPayload;
   const scope = payload.scope ?? 'full_launch';
 
@@ -34,13 +34,13 @@ Return JSON: { "title": "...", "categories": [{ "name": "...", "items": [{ "task
 
   const checklist = parseLLMContent<unknown>(result.choices[0].message.content);
 
-  await logActivity({ userId: null, action: 'launch_checklist_generated', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity(db, { userId: null, action: 'launch_checklist_generated', entityType: 'task', entityId: 0, details: { taskId: task.id,
     scope,
     missionId: task.missionId,
   }});
 }
 
-export async function runDraftLaunchEmail(task: Task): Promise<void> {
+export async function runDraftLaunchEmail(task: Task, db: Db): Promise<void> {
   const payload = task.payload as ContentPayload;
   const audience = payload.audience ?? 'founders';
 
@@ -65,14 +65,14 @@ Return JSON: { "subject": "...", "body": "..." }`;
 
   const email = parseLLMContent<{ subject: string; body: string }>(result.choices[0].message.content);
 
-  await logActivity({ userId: null, action: 'launch_email_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity(db, { userId: null, action: 'launch_email_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
     audience,
     subject: email.subject,
     missionId: task.missionId,
   }});
 }
 
-export async function runDraftPressRelease(task: Task): Promise<void> {
+export async function runDraftPressRelease(task: Task, db: Db): Promise<void> {
   const prompt = `Write a press release announcing the launch of AuthiChain (authichain.com).
 
 AuthiChain enables brands and distributors to authenticate products using blockchain-backed QR codes and AI-powered counterfeit detection. Key features: instant QR scan authentication, NFT certificates of authenticity, AI confidence scoring, tamper-evident provenance trail.
@@ -96,12 +96,12 @@ Return JSON: { "headline": "...", "subheadline": "...", "body": "...", "quote": 
 
   const pr = parseLLMContent<unknown>(result.choices[0].message.content);
 
-  await logActivity({ userId: null, action: 'press_release_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity(db, { userId: null, action: 'press_release_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
     missionId: task.missionId,
   }});
 }
 
-export async function runScheduleSocialPosts(task: Task): Promise<void> {
+export async function runScheduleSocialPosts(task: Task, db: Db): Promise<void> {
   const payload = task.payload as ContentPayload;
   const platforms = payload.platforms ?? ['twitter', 'linkedin'];
 
@@ -163,7 +163,7 @@ Return JSON: { "platforms": { "<platform>": [{ "day": 0, "copy": "...", "hashtag
   if (linkedinResults.status === 'fulfilled') postedUrls.push(...linkedinResults.value);
   else console.warn('[content.ts] LinkedIn post failed:', linkedinResults.reason);
 
-  await logActivity({ userId: null, action: 'social_posts_scheduled', entityType: 'task', entityId: 0, details: {
+  await logActivity(db, { userId: null, action: 'social_posts_scheduled', entityType: 'task', entityId: 0, details: {
     taskId: task.id,
     platforms,
     missionId: task.missionId,

@@ -4,7 +4,7 @@
 // AI search engines use for citations). Owned-property content = no platform ToS
 // gate, so this is safe to run fully autonomously (e.g. from /api/automation/cron).
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity } from '../db.js';
+import { logActivity, type Db } from './db-helpers.js';
 import sanitizeHtml from 'sanitize-html';
 
 export interface BrandSeoConfig {
@@ -123,6 +123,7 @@ Return JSON:
  */
 export async function runProgrammaticSeoBatch(
   jobs: { brandKey: keyof typeof BRAND_SEO; keyword: string }[],
+  db: Db,
 ): Promise<SeoPage[]> {
   const pages: SeoPage[] = [];
   for (const job of jobs) {
@@ -135,7 +136,7 @@ export async function runProgrammaticSeoBatch(
     }
   }
 
-  await logActivity({
+  await logActivity(db, {
     userId: null,
     action: 'programmatic_seo_generated',
     entityType: 'seo_batch',
