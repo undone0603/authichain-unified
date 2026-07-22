@@ -55,6 +55,8 @@ export async function GET(request: Request) {
   // Autonomous programmatic-SEO generation (owned-property content; no ToS gate).
   try {
     const { runProgrammaticSeoBatch } = await import('../../../../../server/agents/seo-content');
+    const { getDb } = await import('../../../../../server/db');
+    const db = await getDb();
     const seoJobs = [
       { brandKey: 'authichain', keyword: 'blockchain product authentication' },
       { brandKey: 'authichain', keyword: 'anti-counterfeit qr verification' },
@@ -63,7 +65,7 @@ export async function GET(request: Request) {
       { brandKey: 'govchain', keyword: 'government document verification blockchain' },
       { brandKey: 'qron', keyword: 'ai qr code art generator' },
     ] as const;
-    const pages = await runProgrammaticSeoBatch([...seoJobs]);
+    const pages = await runProgrammaticSeoBatch([...seoJobs], db);
     results.seo = { generated: pages.length, slugs: pages.map((p) => p.slug) };
   } catch (err) {
     results.seo = { error: err instanceof Error ? err.message : String(err) };
