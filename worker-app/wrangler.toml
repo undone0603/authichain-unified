@@ -23,36 +23,51 @@ class_name = "RateLimiter"
 tag = "v1"
 new_classes = ["RateLimiter"]
 
-# ─── Cron Triggers (INTENTIONALLY DISABLED) ───────────────────────────────────────
-# The scheduled() handler in index.ts is wired and ready, but these triggers
-# are left commented out on purpose: several jobs have real side effects
-# (HubSpot sync, revenue pipeline, outreach). Enabling them is a DELIBERATE
-# cutover-time decision (which jobs, and when) — do NOT uncomment for a
-# parity/test deployment, or a test worker will start firing production-
-# affecting jobs. Uncomment (and prune to the jobs you actually want live)
-# only at real cutover.
+# ─── Cron Triggers ────────────────────────────────────────────────────────────
+# The scheduled() handler in index.ts is wired and ready. Triggers are split
+# into two groups by an explicit enablement DECISION (see below). BOTH groups
+# are still commented out here, on purpose: the live Vercel deployment is
+# ALREADY running these jobs via its own node-cron, so uncommenting these
+# before Vercel is turned off would DOUBLE-FIRE every job (double emails,
+# double cleanup, etc.) against the same production database. Enable a group
+# only at the FINAL Vercel cutover, not on a parity/test deployment.
 #
-# Schedules below are every distinct cron string registered in
-# server/scheduled-jobs.ts (grep "schedule:"), one line per schedule,
-# annotated with the job name(s) that fire on it.
+# Workers fires scheduled() with event.cron = the matched schedule string;
+# index.ts dispatches it to the job whose `schedule` equals it. All 18
+# schedules are distinct, so each line maps to exactly one job.
+#
+# ── GROUP A — CLEARED to enable at cutover ──────────────────────────────────
+# Internal maintenance, read-only monitoring, and transactional notifications
+# to existing customers about their OWN accounts. No autonomous outreach, no
+# money movement, no on-chain writes. At cutover, uncomment [triggers] + this
+# `crons` array to activate exactly these 10.
 # [triggers]
 # crons = [
-#   "0 3 * * *",   # database-cleanup (safe: deletes old scheduledJobRuns/notifications/sessions rows)
-#   "0 4 * * *",   # staking-rewards (HIGH side-effect: distributes $QRON staking payouts)
-#   "0 5 * * *",   # customer-health-score (recomputes health scores, no external calls)
-#   "0 6 * * *",   # subscription-health-check (flags past-due accounts, resets quotas)
-#   "0 7 * * *",   # certificate-expiry-check (notifies owner of expiring certs)
-#   "0 8 * * *",   # dunning-escalation (HIGH side-effect: emails/escalates past-due payments)
-#   "0 8 * * 1",   # weekly-analytics-digest (Monday only; notifies owner)
-#   "0 9 * * *",   # lead-nurturing (HIGH side-effect: syncs unsynced leads to HubSpot)
-#   "0 9 1 * *",   # founder-payout (HIGH side-effect: monthly pay-yourself-first revenue split; 1st of month)
-#   "0 11 * * *",  # live-systems-check (verifies Stripe/HubSpot/Gmail/PostHog/GA4 are live)
-#   "0 12 * * *",  # token-metrics (snapshots on-chain $QRON supply/gas metrics)
-#   "0 13 * * *",  # ecosystem-health (external uptime check across product domains)
-#   "0 */4 * * *", # hubspot-crm-sync (HIGH side-effect: syncs leads/payment events to HubSpot CRM)
-#   "0 */6 * * *", # fraud-detection-sweep (flags suspicious auth/counterfeit patterns)
-#   "0 * * * *",   # strainchain-metrc-sync (HIGH side-effect: syncs METRC transfers, anchors to Truth Layer)
-#   "*/2 * * * *", # autonomous-pipeline-tick (HIGH side-effect: AgentZ revenue pipeline — drafts outreach, monitors deals, every 2 min)
-#   "*/10 * * * *",# vertical-cloner (spawns missions for new industry expansion opportunities)
-#   "*/30 * * * *",# newsjacking-monitor (HIGH side-effect: monitors news, triggers PR/outreach missions)
+#   "0 3 * * *",   # database-cleanup — deletes old job-run/notification/session rows (internal)
+#   "0 5 * * *",   # customer-health-score — recomputes health scores in DB (no external calls)
+#   "0 6 * * *",   # subscription-health-check — in-app expiry notices, marks past-due, resets quotas (internal)
+#   "0 7 * * *",   # certificate-expiry-check — notifies cert owners of expiry (transactional)
+#   "0 8 * * *",   # dunning-escalation — transactional payment-failed/past-due emails to affected customers (standard billing recovery)
+#   "0 8 * * 1",   # weekly-analytics-digest — Monday internal stats report to the owner
+#   "0 11 * * *",  # live-systems-check — read-only ping of Stripe/HubSpot/Gmail/PostHog/GA4 liveness
+#   "0 12 * * *",  # token-metrics — read-only on-chain $QRON supply/gas snapshot
+#   "0 13 * * *",  # ecosystem-health — read-only external uptime check across product domains
+#   "0 */6 * * *", # fraud-detection-sweep — inserts fraud_alerts flags only (defensive; no revocation/outreach)
+# ]
+#
+# ── GROUP B — HELD: do NOT enable without an explicit, per-job decision ──────
+# Autonomous growth/outreach, external CRM writes, mission-spawning, on-chain
+# writes, or money movement. Each needs a deliberate business sign-off before
+# it runs autonomously on a new runtime — do NOT bulk-enable. To activate one,
+# move its line into GROUP A's crons array (and confirm you actually want it
+# firing autonomously).
+# crons_HELD = [
+#   "0 9 * * *",   # lead-nurturing — writes/syncs unsynced leads to HubSpot (external CRM writes)
+#   "0 */4 * * *", # hubspot-crm-sync — syncs leads/payment events to HubSpot (external CRM writes)
+#   "0 4 * * *",   # staking-rewards — inserts pending $QRON reward-ledger entries (creates financial obligations)
+#   "0 9 1 * *",   # founder-payout — monthly Stripe pay-yourself-first split (MOVES REAL MONEY; 1st of month)
+#   "0 * * * *",   # strainchain-metrc-sync — METRC sync + on-chain Truth-Layer anchoring (costs gas; external)
+#   "*/2 * * * *", # autonomous-pipeline-tick — AgentZ revenue engine: finds leads, DRAFTS OUTREACH, monitors deals (also env-gated by ENV.autonomousPipelineEnabled; every 2 min)
+#   "*/10 * * * *",# vertical-cloner — autonomously spawns industry-expansion missions
+#   "*/30 * * * *",# newsjacking-monitor — monitors news and triggers PR/outreach missions (autonomous external)
 # ]
