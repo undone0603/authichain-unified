@@ -111,6 +111,49 @@ app.post("/api/paddle/webhook", async (c) => {
   }
 });
 
+
+// ─── Instantly.ai Webhook ───────────────────────────────────────────────────
+app.post("/api/webhooks/instantly", async (c) => {
+  const secret = process.env.INSTANTLY_WEBHOOK_SECRET;
+  if (secret) {
+    const provided = c.req.header("x-webhook-secret");
+    if (!provided || !timingSafeEqualStrings(provided, secret)) {
+      return c.json({ error: "Invalid webhook secret" }, 401);
+    }
+  }
+  try {
+    const { handleInstantlyWebhook } = await import("../server/webhooks/instantly");
+    const payload = await c.req.json();
+    const db = getHyperdriveDb(c.env);
+    const result = await handleInstantlyWebhook(db, payload);
+    return c.json(result);
+  } catch (err: any) {
+    console.error(`[Instantly Webhook] Error: ${err.message}`);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// ─── DocuSign Webhook ───────────────────────────────────────────────────────
+app.post("/api/webhooks/docusign", async (c) => {
+  const secret = process.env.DOCUSIGN_WEBHOOK_SECRET;
+  if (secret) {
+    const provided = c.req.header("x-docusign-secret");
+    if (!provided || !timingSafeEqualStrings(provided, secret)) {
+      return c.json({ error: "Invalid webhook secret" }, 401);
+    }
+  }
+  try {
+    const { handleDocuSignWebhook } = await import("../server/webhooks/docusign");
+    const payload = await c.req.json();
+    const db = getHyperdriveDb(c.env);
+    const result = await handleDocuSignWebhook(db, payload);
+    return c.json(result);
+  } catch (err: any) {
+    console.error(`[DocuSign Webhook] Error: ${err.message}`);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 // Static assets fallback (Vite build output, same dist/public the existing
 // worker/index.ts already serves for the marketing page).
 app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
