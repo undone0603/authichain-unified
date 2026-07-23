@@ -16,15 +16,18 @@ export async function runStrainChainSync(db: Db) {
     // We assume METRC config is stored in the features JSON field
     const features = client.features as any;
     const metrcConfig = features?.metrc;
-    
+
     if (!metrcConfig || !metrcConfig.licenseNumber) {
       continue;
     }
 
     console.log(`[StrainChain Job] Syncing for client: ${client.companyName} (${metrcConfig.licenseNumber})`);
-    
+
     try {
-      const transfers = await syncMetrcTransfers({
+      // server/metrc-service.ts's syncMetrcTransfers was migrated (Task 2b-5)
+      // to take an explicit db instead of calling the singleton itself --
+      // this job already threads its own db, so just pass it through.
+      const transfers = await syncMetrcTransfers(db, {
         licenseNumber: metrcConfig.licenseNumber,
         vendorKey: metrcConfig.vendorKey || process.env.METRC_VENDOR_KEY || "",
         userKey: metrcConfig.userKey || process.env.METRC_USER_KEY || "",
@@ -34,13 +37,13 @@ export async function runStrainChainSync(db: Db) {
         // We only anchor 'Shipped' or 'Received' manifests that haven't been anchored yet
         // In a real scenario, we'd check against a 'synced_manifests' table
         if (transfer.status === 'Shipped' || transfer.status === 'Received') {
-          
+
           // Generate a package tag for the purpose of the prototype
           // In production, this would be extracted from manifest line items
           const packageTag = `1A400031266B0${transfer.id}`;
-          
+
           const anchorResult = await anchorPackageToTruthLayer(packageTag, String(transfer.id));
-          
+
           if (anchorResult.success) {
             anchoredCount++;
             await logActivity(db, {
