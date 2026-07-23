@@ -1,9 +1,10 @@
 name: Deploy Cloudflare Edge Worker
 
 # Push trigger re-enabled after fixing:
-#   1. pnpm minimumReleaseAge policy (@smithy/* now excluded in pnpm-workspace.yaml,
-#      and --config.minimumReleaseAge=0 passed explicitly at install time since the
-#      allowlist keeps drifting out of date as transitive deps publish new versions)
+#   1. pnpm minimumReleaseAge policy: pnpm-workspace.yaml now scope-globs the
+#      frequently-updating trusted vendors (@smithy/*, @aws-sdk/*, miniflare,
+#      wrangler) out of the age check, so routine transitive-dep updates no
+#      longer break the install while protection stays on for everything else.
 #   2. GITHUB_OUTPUT trailing-quote bug in secrets_check step
 #   3. pnpm/action-setup must run before setup-node (for cache to work)
 #   4. pnpm version pinned to 10.28.2 (matching deploy-workers.yml / deploy-cloudflare.yml)
@@ -58,14 +59,13 @@ jobs:
 
       - name: Install dependencies
         if: steps.secrets_check.outputs.skip != 'true'
-        # --config.minimumReleaseAge=0 bypasses pnpm's supply-chain
-        # minimumReleaseAge policy for this CI install. pnpm-workspace.yaml
-        # already sets minimumReleaseAge: 0 with a minimumReleaseAgeExclude
-        # allowlist for known-fresh packages (e.g. @smithy/*), but that
-        # allowlist drifts out of date every time those transitive deps
-        # publish a new version (as happened here) — the CLI flag is the
-        # authoritative override and doesn't need to be kept in sync.
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
+        # Plain install. Supply-chain minimumReleaseAge protection is handled
+        # coherently in pnpm-workspace.yaml (minimumReleaseAge: 1440 with
+        # @smithy/*, @aws-sdk/*, miniflare, wrangler scope-globbed out) — no
+        # per-workflow bypass flag needed. Do NOT re-add
+        # --config.minimumReleaseAge=0 here: that disables the supply-chain
+        # freshness check wholesale for this install.
+        run: pnpm install --no-frozen-lockfile
 
       - name: Upload secrets
         if: steps.secrets_check.outputs.skip != 'true'
