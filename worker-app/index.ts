@@ -154,6 +154,27 @@ app.post("/api/webhooks/docusign", async (c) => {
   }
 });
 
+
+// ─── Admin ops console (client/src/pages/OpsDashboard.tsx) ─────────────────
+app.get("/api/admin/ops", async (c) => {
+  const { sdk } = await import("../server/_core/sdk");
+  const user = await sdk.authenticateRequest(c.req.raw).catch(() => null);
+  if (!user) {
+    return c.json({ error: "Not signed in" }, 401);
+  }
+  if (user.role !== "admin") {
+    return c.json({ error: "Admin only" }, 403);
+  }
+  try {
+    const { getOpsSummary } = await import("../server/_core/db-helpers");
+    const db = getHyperdriveDb(c.env);
+    const summary = await getOpsSummary(db);
+    return c.json(summary);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "ops query failed" }, 500);
+  }
+});
+
 // Static assets fallback (Vite build output, same dist/public the existing
 // worker/index.ts already serves for the marketing page).
 app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
