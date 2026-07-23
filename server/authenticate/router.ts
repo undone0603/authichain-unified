@@ -75,7 +75,7 @@ export const authenticateRouter = router({
     });
 
     // Reward protocol agent
-    await rewardAgentForVerification(ctx.user.id, aiResult.result === "authentic");
+    await rewardAgentForVerification(db, ctx.user.id, aiResult.result === "authentic");
 
     // Trigger MACROHARD Webhook: product_authenticated
     await triggerMacrohardEvent("product_authenticated", {

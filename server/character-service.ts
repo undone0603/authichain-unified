@@ -1,12 +1,11 @@
 /**
  * AuthiCharacter Generation Service — OpenArt Protocol Edition
- * 
+ *
  * Integrates: Protocol-grade prompt builder (7 archetypes),
  * 7-dimension scoring (protocol_fit, thumbnail_clarity, premium_feel,
  * silhouette, trust_symbolism, mint_readiness, ui_compatibility),
  * mint-prep pipeline, agent creation, QRON reward distribution.
  */
-import { getDb } from "./db";
 import {
   characterGenerations, characterAssets, protocolAgents,
   verificationClaims, consensusResults, qronRewardLedger,
@@ -19,6 +18,9 @@ import { generateImage } from "./_core/imageGeneration";
 import { invokeLLM, parseLLMContent } from "./_core/llm";
 import { storagePut } from "./storage";
 import crypto from "crypto";
+import type { getHyperdriveDb } from "./db";
+
+export type Db = ReturnType<typeof getHyperdriveDb>;
 
 // ─── Archetype Definitions (7 archetypes from OpenArt protocol) ────────────
 const ARCHETYPES = {
@@ -162,8 +164,8 @@ STYLE REQUIREMENTS:
 - Character should embody trust, verification, and digital authority
 - Background: abstract blockchain network pattern with subtle glow effects`;
 
-  const negativePrompt = `text, watermark, signature, logo, border, frame, low quality, blurry, 
-deformed, ugly, amateur, cartoon, anime, chibi, pixel art, voxel, 
+  const negativePrompt = `text, watermark, signature, logo, border, frame, low quality, blurry,
+deformed, ugly, amateur, cartoon, anime, chibi, pixel art, voxel,
 photorealistic human face, photograph, stock photo, clip art,
 violent, gore, nsfw, offensive symbols, real brand logos`;
 
@@ -172,13 +174,11 @@ violent, gore, nsfw, offensive symbols, real brand logos`;
 
 // ─── Character Generation ───────────────────────────────────────────────────
 export async function startCharacterGeneration(
+  db: Db,
   userId: number,
   archetype: ArchetypeKey,
   context?: { brand?: string; object?: string; colorway?: string; mood?: string }
 ): Promise<{ generationId: number; prompt: string }> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   const { prompt, negativePrompt } = buildCharacterPrompt(archetype, context);
 
   const [result] = await db.insert(characterGenerations).values({
@@ -199,7 +199,7 @@ export async function startCharacterGeneration(
   const generationId = result.id;
 
   // Start async generation (don't await - return immediately)
-  generateVariants(generationId, prompt, archetype, userId).catch(err => {
+  generateVariants(db, generationId, prompt, archetype, userId).catch(err => {
     console.error(`[CharacterGen] Generation ${generationId} failed:`, err);
   });
 
@@ -207,11 +207,8 @@ export async function startCharacterGeneration(
 }
 
 async function generateVariants(
-  generationId: number, prompt: string, archetype: ArchetypeKey, userId: number
+  db: Db, generationId: number, prompt: string, archetype: ArchetypeKey, userId: number
 ): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-
   await db.update(characterGenerations)
     .set({ status: "generating" })
     .where(eq(characterGenerations.id, generationId));
@@ -261,7 +258,7 @@ async function generateVariants(
 
     // Score and track best
     try {
-      const score = await scoreCharacterAsset(assetId, variant.imageUrl, archetype);
+      const score = await scoreCharacterAsset(db, assetId, variant.imageUrl, archetype);
       if (score > bestScore) {
         bestScore = score;
         bestAssetId = assetId;
@@ -289,11 +286,8 @@ async function generateVariants(
 
 // ─── 7-Dimension Character Scoring (OpenArt Protocol) ──────────────────────
 async function scoreCharacterAsset(
-  assetId: number, imageUrl: string, archetype: ArchetypeKey
+  db: Db, assetId: number, imageUrl: string, archetype: ArchetypeKey
 ): Promise<number> {
-  const db = await getDb();
-  if (!db) return 0;
-
   try {
     const result = await invokeLLM({
       messages: [
@@ -402,11 +396,8 @@ Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`,
 
 // ─── Character Selection (from uploaded select route) ──────────────────────
 export async function selectCharacterAsset(
-  userId: number, assetId: number
+  db: Db, userId: number, assetId: number
 ): Promise<{ success: boolean; metadataHash?: string }> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   // Verify ownership
   const [asset] = await db.select()
     .from(characterAssets)
@@ -481,16 +472,13 @@ export async function selectCharacterAsset(
 }
 
 // ─── Mint Prep (from uploaded mint-prep route) ─────────────────────────────
-export async function prepareMint(userId: number, assetId: number): Promise<{
+export async function prepareMint(db: Db, userId: number, assetId: number): Promise<{
   success: boolean;
   metadataUri: string;
   metadataHash: string;
   imageHash: string;
   imageUrl: string;
 }> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   // Verify ownership and selection
   const [asset] = await db.select()
     .from(characterAssets)
@@ -530,14 +518,12 @@ export async function prepareMint(userId: number, assetId: number): Promise<{
 
 // ─── Agent Creation ─────────────────────────────────────────────────────────
 export async function createProtocolAgent(
+  db: Db,
   userId: number,
   characterAssetId: number,
   name: string,
   agentType: ArchetypeKey
 ): Promise<{ agentId: number }> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   const arch = ARCHETYPES[agentType];
 
   const [result] = await db.insert(protocolAgents).values({
@@ -557,10 +543,7 @@ export async function createProtocolAgent(
 }
 
 // ─── Agent Stats & Queries ──────────────────────────────────────────────────
-export async function getAgentByUser(userId: number) {
-  const db = await getDb();
-  if (!db) return null;
-
+export async function getAgentByUser(db: Db, userId: number) {
   const [agent] = await db.select()
     .from(protocolAgents)
     .where(and(eq(protocolAgents.userId, userId), eq(protocolAgents.status, "active")))
@@ -570,10 +553,7 @@ export async function getAgentByUser(userId: number) {
   return agent || null;
 }
 
-export async function getAgentLeaderboard(limit = 20) {
-  const db = await getDb();
-  if (!db) return [];
-
+export async function getAgentLeaderboard(db: Db, limit = 20) {
   return db.select()
     .from(protocolAgents)
     .where(eq(protocolAgents.status, "active"))
@@ -581,10 +561,7 @@ export async function getAgentLeaderboard(limit = 20) {
     .limit(limit);
 }
 
-export async function getGenerationStatus(generationId: number) {
-  const db = await getDb();
-  if (!db) return null;
-
+export async function getGenerationStatus(db: Db, generationId: number) {
   const [gen] = await db.select()
     .from(characterGenerations)
     .where(eq(characterGenerations.id, generationId))
@@ -600,20 +577,14 @@ export async function getGenerationStatus(generationId: number) {
   return { ...gen, assets };
 }
 
-export async function getUserGenerations(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-
+export async function getUserGenerations(db: Db, userId: number) {
   return db.select()
     .from(characterGenerations)
     .where(eq(characterGenerations.userId, userId))
     .orderBy(desc(characterGenerations.createdAt));
 }
 
-export async function getUserCharacterAssets(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-
+export async function getUserCharacterAssets(db: Db, userId: number) {
   return db.select({
     asset: characterAssets,
     generation: characterGenerations,
@@ -626,6 +597,7 @@ export async function getUserCharacterAssets(userId: number) {
 
 // ─── QRON Rewards ───────────────────────────────────────────────────────────
 export async function awardQRON(
+  db: Db,
   agentId: number,
   userId: number,
   amount: string,
@@ -633,9 +605,6 @@ export async function awardQRON(
   referenceType?: string,
   referenceId?: number
 ): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-
   await db.insert(qronRewardLedger).values({
     agentId,
     userId,
@@ -653,10 +622,7 @@ export async function awardQRON(
     .where(eq(protocolAgents.id, agentId));
 }
 
-export async function getAgentRewards(agentId: number, limit = 50) {
-  const db = await getDb();
-  if (!db) return [];
-
+export async function getAgentRewards(db: Db, agentId: number, limit = 50) {
   return db.select()
     .from(qronRewardLedger)
     .where(eq(qronRewardLedger.agentId, agentId))
@@ -665,14 +631,7 @@ export async function getAgentRewards(agentId: number, limit = 50) {
 }
 
 // ─── Network Stats ──────────────────────────────────────────────────────────
-export async function getNetworkStats() {
-  const db = await getDb();
-  if (!db) return {
-    totalAgents: 0, totalVerifications: 0, totalConsensus: 0,
-    totalQRONDistributed: "0", totalCheckpoints: 0,
-    agentsByType: [], recentActivity: [],
-  };
-
+export async function getNetworkStats(db: Db) {
   const [agentCount] = await db.select({ count: count() }).from(protocolAgents);
   const [verifyCount] = await db.select({ count: count() }).from(verificationClaims);
   const [consensusCount] = await db.select({ count: count() }).from(consensusResults);
@@ -708,6 +667,7 @@ export async function getNetworkStats() {
 
 // ─── Verification & Consensus ───────────────────────────────────────────────
 export async function submitVerificationClaim(
+  db: Db,
   agentId: number,
   productId: number,
   authenticationId: number | null,
@@ -716,9 +676,6 @@ export async function submitVerificationClaim(
   evidence?: Record<string, unknown>,
   reasoning?: string
 ): Promise<{ claimId: number }> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
   const [agent] = await db.select()
     .from(protocolAgents)
     .where(eq(protocolAgents.id, agentId))
@@ -745,7 +702,7 @@ export async function submitVerificationClaim(
     })
     .where(eq(protocolAgents.id, agentId));
 
-  await awardQRON(agentId, agent?.userId || 0, "0.50", "verification_reward", "claim", result.id);
+  await awardQRON(db, agentId, agent?.userId || 0, "0.50", "verification_reward", "claim", result.id);
 
   return { claimId: result.id };
 }
@@ -755,9 +712,7 @@ import { checkUserMilestones } from "./hubspot/automation";
 /**
  * Reward user's agent for completing a verification (called from authenticate.analyze)
  */
-export async function rewardAgentForVerification(userId: number, wasSuccessful: boolean) {
-  const db = await getDb();
-  if (!db) return;
+export async function rewardAgentForVerification(db: Db, userId: number, wasSuccessful: boolean) {
   const [agent] = await db.select().from(protocolAgents).where(eq(protocolAgents.userId, userId)).limit(1);
   if (!agent) return;
 
@@ -776,11 +731,11 @@ export async function rewardAgentForVerification(userId: number, wasSuccessful: 
     .set(updateSet)
     .where(eq(protocolAgents.id, agent.id));
 
-  await awardQRON(agent.id, userId, qronReward, "verification_reward", "verification", 0);
+  await awardQRON(db, agent.id, userId, qronReward, "verification_reward", "verification", 0);
   console.log(`[Agent XP] User ${userId} agent ${agent.id} earned ${xpReward} XP + ${qronReward} QRON`);
 
   // Check for HubSpot automation milestones
-  await checkUserMilestones(userId);
+  await checkUserMilestones(db, userId);
 }
 
 

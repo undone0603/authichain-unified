@@ -187,6 +187,32 @@ vi.mock("./content-db-helpers", async (importOriginal) => {
   };
 });
 
+// server/character-service.ts was migrated (Task 2b-6) to take an explicit
+// `db` instead of resolving getDb() (and its now-removed dead `if (!db)`
+// guards) itself. This test file's "./db" mock intentionally sets
+// `getDb: () => null` (see comment above), which used to make those dead
+// guards return graceful empty defaults for the "character" describe block
+// below; now that db is required (never null in practice -- getDb() throws
+// instead), that path is mocked directly here instead, returning the same
+// empty-database values the old guards produced so existing test
+// expectations don't change.
+vi.mock("./character-service", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./character-service")>();
+  return {
+    ...actual,
+    getNetworkStats: vi.fn(async () => ({
+      totalAgents: 0, totalVerifications: 0, totalConsensus: 0,
+      totalQRONDistributed: "0", totalCheckpoints: 0,
+      agentsByType: [], recentActivity: [],
+    })),
+    getAgentLeaderboard: vi.fn(async () => []),
+    getUserGenerations: vi.fn(async () => []),
+    getUserCharacterAssets: vi.fn(async () => []),
+    getAgentByUser: vi.fn(async () => null),
+    rewardAgentForVerification: vi.fn(async () => undefined),
+  };
+});
+
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
