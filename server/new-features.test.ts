@@ -162,6 +162,8 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     user,
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: { clearCookie: vi.fn() } as unknown as TrpcContext["res"],
+    secure: true,
+    setCookieHeader: () => {},
   };
 }
 
@@ -170,6 +172,8 @@ function createPublicContext(): TrpcContext {
     user: null,
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: { clearCookie: vi.fn() } as unknown as TrpcContext["res"],
+    secure: true,
+    setCookieHeader: () => {},
   };
 }
 

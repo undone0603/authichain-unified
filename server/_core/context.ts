@@ -1,4 +1,5 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import { isSecureRequest } from "./cookies";
 import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
 import type { IMissionsRepository } from "../missions/types";
@@ -10,6 +11,8 @@ export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  secure: boolean;
+  setCookieHeader: (value: string) => void;
   missionsRepo?: IMissionsRepository;
   adminRepo?: IAdminRepository;
 };
@@ -30,6 +33,8 @@ export async function createContext(
     req: opts.req,
     res: opts.res,
     user,
+    secure: isSecureRequest(opts.req),
+    setCookieHeader: (value: string) => { opts.res.append("Set-Cookie", value); },
     missionsRepo: new DbMissionsRepository(),
     adminRepo: new DbAdminRepository(),
   };

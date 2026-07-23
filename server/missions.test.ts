@@ -108,6 +108,8 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
     } as any,
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
+    secure: true,
+    setCookieHeader: () => {},
   };
 }
 
@@ -116,6 +118,8 @@ function publicCtx(): TrpcContext {
     user: null,
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
+    secure: true,
+    setCookieHeader: () => {},
   };
 }
 
