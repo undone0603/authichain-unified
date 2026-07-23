@@ -7,36 +7,22 @@ allowBuilds:
   unrs-resolver: true
   utf-8-validate: true
   workerd: true
-minimumReleaseAge: 0
+# Supply-chain protection: require packages to be at least 1 day old before
+# install, so a freshly-published malicious version cannot be pulled in before
+# npm/the community catches it. (1440 minutes = the effective policy that was
+# already applying; the prior `minimumReleaseAge: 0` did not actually disable
+# it — pnpm 10.x applies a ~1-day default this value was not overriding.)
+minimumReleaseAge: 1440
+# Scope/name globs for trusted vendors that publish frequently and would
+# otherwise trip the age check on every routine update (AWS SDK low-level libs
+# and Cloudflare tooling). Using globs instead of a hand-maintained version
+# list avoids the drift that repeatedly broke CI. Protection stays ON for all
+# other packages.
 minimumReleaseAgeExclude:
-  - miniflare@4.20260701.0
-  - wrangler@4.107.0
-  # @smithy/* packages published 2026-07-20 — within minimumReleaseAge window
-  - "@smithy/fetch-http-handler@4.0.0"
-  - "@smithy/hash-blob-browser@4.4.11"
-  - "@smithy/hash-node@4.4.11"
-  - "@smithy/hash-stream-node@4.4.11"
-  - "@smithy/invalid-dependency@4.4.11"
-  - "@smithy/md5-js@4.4.11"
-  - "@smithy/middleware-content-length@4.4.11"
-  - "@smithy/middleware-endpoint@4.6.11"
-  - "@smithy/middleware-retry@4.7.11"
-  - "@smithy/middleware-serde@4.4.11"
-  - "@smithy/middleware-stack@4.4.11"
-  - "@smithy/node-config-provider@4.5.11"
-  - "@smithy/node-http-handler@4.9.8"
-  - "@smithy/protocol-http@5.5.11"
-  - "@smithy/fetch-http-handler@3.0.0"
-  - "@smithy/util-body-length-browser@4.4.11"
-  - "@smithy/util-body-length-node@4.4.11"
-  - "@smithy/util-defaults-mode-browser@4.4.11"
-  - "@smithy/util-defaults-mode-node@4.4.11"
-  - "@smithy/util-endpoints@4.4.11"
-  - "@smithy/util-middleware@4.4.11"
-  - "@smithy/util-retry@4.4.11"
-  - "@smithy/util-stream@4.4.11"
-  - "@smithy/util-utf8@4.4.11"
-  - "@smithy/smithy-client@4.4.11"
+  - "@smithy/*"
+  - "@aws-sdk/*"
+  - "miniflare"
+  - "wrangler"
 # pnpm settings (pnpm 10+ reads overrides from here, not package.json).
 # Scoped security overrides: each selector targets only the vulnerable range,
 # so unaffected versions (e.g. ws@7.x) are left untouched.
