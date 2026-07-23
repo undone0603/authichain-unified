@@ -175,6 +175,67 @@ app.get("/api/admin/ops", async (c) => {
   }
 });
 
+
+// ─── OAuth callback ─────────────────────────────────────────────────────────
+app.get("/api/oauth/callback", async (c) => {
+  const code = c.req.query("code");
+  const state = c.req.query("state");
+
+  if (!code || !state) {
+    return c.json({ error: "code and state are required" }, 400);
+  }
+
+  try {
+    const { sdk } = await import("../server/_core/sdk");
+    const tokenResponse = await sdk.exchangeCodeForToken(code, state);
+    const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
+
+    if (!userInfo.openId) {
+      return c.json({ error: "openId missing from user info" }, 400);
+    }
+
+    const { upsertUser } = await import("../server/_core/db-helpers");
+    const db = getHyperdriveDb(c.env);
+    await upsertUser(db, {
+      openId: userInfo.openId,
+      name: userInfo.name || null,
+      email: userInfo.email ?? null,
+      loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+      lastSignedIn: new Date(),
+    });
+
+    const sessionToken = await sdk.createSessionToken(userInfo.openId, {
+      name: userInfo.name || "",
+      expiresInMs: ONE_YEAR_MS,
+    });
+
+    // isSecureRequest() (server/_core/cookies.ts) takes an Express Request;
+    // the Workers equivalent is context.workers.ts's own protocol check,
+    // mirrored here since it isn't exported as a standalone helper.
+    const url = new URL(c.req.url);
+    const forwardedProto = c.req.header("x-forwarded-proto");
+    const secure =
+      url.protocol === "https:" ||
+      (forwardedProto?.split(",").some((p) => p.trim().toLowerCase() === "https") ?? false);
+
+    const cookieOptions = getSessionCookieOptions(secure);
+    const cookieParts = [
+      `${COOKIE_NAME}=${encodeURIComponent(sessionToken)}`,
+      `Path=${cookieOptions.path}`,
+      "HttpOnly",
+      "SameSite=Lax",
+      `Max-Age=${Math.floor(ONE_YEAR_MS / 1000)}`,
+    ];
+    if (cookieOptions.secure) cookieParts.push("Secure");
+    c.header("Set-Cookie", cookieParts.join("; "));
+
+    return c.redirect("/", 302);
+  } catch (error) {
+    console.error("[OAuth] Callback failed", error);
+    return c.json({ error: "OAuth callback failed" }, 500);
+  }
+});
+
 // Static assets fallback (Vite build output, same dist/public the existing
 // worker/index.ts already serves for the marketing page).
 app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
