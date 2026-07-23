@@ -4,6 +4,7 @@ import { appRouter } from "../server/routers";
 import { createWorkersContext } from "../server/_core/context.workers";
 import { resolveBrand, type BrandId } from "../shared/brands";
 import { getHyperdriveDb } from "../server/db";
+import { getScheduledJobs, executeJobWithDb } from "../server/scheduled-jobs";
 import { timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "../server/_core/cookies";
@@ -36,7 +37,10 @@ function timingSafeEqualStrings(a: string, b: string): boolean {
   }
 }
 
-const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+export const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+// Named export above lets tests (routes.test.ts) exercise the Hono app's
+// own .request() test helper directly; the default export below is the
+// { fetch, scheduled } object shape Workers actually invokes.
 
 // Brand resolution — same logic as src/middleware.ts and the old
 // server/_core/brand-middleware.ts, ported to Hono context instead of
@@ -786,4 +790,21 @@ app.get("/api/internal/tenant", async (c) => {
 app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export { RateLimiter } from "./rate-limiter";
-export default app;
+
+// ─── Cron Trigger dispatcher ────────────────────────────────────────────────
+// Dispatches a firing Cron Trigger to any registered scheduled-jobs.ts job(s)
+// whose `schedule` matches the cron expression that fired. NOTE: the actual
+// [triggers] crons in wrangler.toml are left commented out (see wrangler.toml)
+// — this handler is wired and ready, but nothing currently fires it in a
+// deployed Worker. Enabling specific crons is a deliberate cutover decision.
+async function scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+  const db = getHyperdriveDb(env);
+  const due = getScheduledJobs().filter((j) => j.schedule === event.cron);
+  for (const job of due) {
+    // force:true — the Cron Trigger firing IS the schedule; skip the
+    // node-cron-era minIntervalMs dedup (Workers cron already controls cadence).
+    ctx.waitUntil(executeJobWithDb(job, db, { force: true }));
+  }
+}
+
+export default { fetch: app.fetch, scheduled };

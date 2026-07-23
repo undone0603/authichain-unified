@@ -22,3 +22,37 @@ class_name = "RateLimiter"
 [[migrations]]
 tag = "v1"
 new_classes = ["RateLimiter"]
+
+# ─── Cron Triggers (INTENTIONALLY DISABLED) ───────────────────────────────────────
+# The scheduled() handler in index.ts is wired and ready, but these triggers
+# are left commented out on purpose: several jobs have real side effects
+# (HubSpot sync, revenue pipeline, outreach). Enabling them is a DELIBERATE
+# cutover-time decision (which jobs, and when) — do NOT uncomment for a
+# parity/test deployment, or a test worker will start firing production-
+# affecting jobs. Uncomment (and prune to the jobs you actually want live)
+# only at real cutover.
+#
+# Schedules below are every distinct cron string registered in
+# server/scheduled-jobs.ts (grep "schedule:"), one line per schedule,
+# annotated with the job name(s) that fire on it.
+# [triggers]
+# crons = [
+#   "0 3 * * *",   # database-cleanup (safe: deletes old scheduledJobRuns/notifications/sessions rows)
+#   "0 4 * * *",   # staking-rewards (HIGH side-effect: distributes $QRON staking payouts)
+#   "0 5 * * *",   # customer-health-score (recomputes health scores, no external calls)
+#   "0 6 * * *",   # subscription-health-check (flags past-due accounts, resets quotas)
+#   "0 7 * * *",   # certificate-expiry-check (notifies owner of expiring certs)
+#   "0 8 * * *",   # dunning-escalation (HIGH side-effect: emails/escalates past-due payments)
+#   "0 8 * * 1",   # weekly-analytics-digest (Monday only; notifies owner)
+#   "0 9 * * *",   # lead-nurturing (HIGH side-effect: syncs unsynced leads to HubSpot)
+#   "0 9 1 * *",   # founder-payout (HIGH side-effect: monthly pay-yourself-first revenue split; 1st of month)
+#   "0 11 * * *",  # live-systems-check (verifies Stripe/HubSpot/Gmail/PostHog/GA4 are live)
+#   "0 12 * * *",  # token-metrics (snapshots on-chain $QRON supply/gas metrics)
+#   "0 13 * * *",  # ecosystem-health (external uptime check across product domains)
+#   "0 */4 * * *", # hubspot-crm-sync (HIGH side-effect: syncs leads/payment events to HubSpot CRM)
+#   "0 */6 * * *", # fraud-detection-sweep (flags suspicious auth/counterfeit patterns)
+#   "0 * * * *",   # strainchain-metrc-sync (HIGH side-effect: syncs METRC transfers, anchors to Truth Layer)
+#   "*/2 * * * *", # autonomous-pipeline-tick (HIGH side-effect: AgentZ revenue pipeline — drafts outreach, monitors deals, every 2 min)
+#   "*/10 * * * *",# vertical-cloner (spawns missions for new industry expansion opportunities)
+#   "*/30 * * * *",# newsjacking-monitor (HIGH side-effect: monitors news, triggers PR/outreach missions)
+# ]
