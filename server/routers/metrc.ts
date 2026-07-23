@@ -15,9 +15,7 @@ export const metrcRouter = router({
     }))
     .mutation(async ({ input }) => {
       // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
-      // context does, and server/routers/** is out of this task's scope
-      // (Task 2b-5 only covers server/metrc-service.ts itself). Bridge via
-      // getDb() until this router has a ctx.db to use.
+      // context does. Bridge via getDb() until this router has a ctx.db to use.
       const db = await getDb();
       // Logic would typically pull keys from the white_label_clients table if not provided
       const result = await syncMetrcTransfers(db, {
@@ -37,7 +35,8 @@ export const metrcRouter = router({
       manifestId: z.string(),
     }))
     .mutation(async ({ input }) => {
-      return await anchorPackageToTruthLayer(input.packageTag, input.manifestId);
+      const db = await getDb();
+      return await anchorPackageToTruthLayer(db, input.packageTag, input.manifestId);
     }),
 
   /**

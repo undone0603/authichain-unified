@@ -4,7 +4,7 @@
  * Connects to Make.com / Buffer via webhook to support multi-platform posting (X, LinkedIn, IG).
  */
 import { ENV } from "./_core/env";
-import * as db from "./db";
+import { logActivity, type Db } from "./content-db-helpers";
 
 interface SocialBroadcastRequest {
   type: 'inscription' | 'purchase' | 'verification';
@@ -17,9 +17,9 @@ interface SocialBroadcastRequest {
 /**
  * Dispatches a social media broadcast.
  */
-export async function broadcastSocialProof(data: SocialBroadcastRequest) {
+export async function broadcastSocialProof(db: Db, data: SocialBroadcastRequest) {
   const { makeWebhookUrl } = ENV;
-  
+
   if (!makeWebhookUrl) {
     console.warn("[Social Bridge] Skipping broadcast: MAKE_WEBHOOK_URL not configured");
     return;
@@ -27,7 +27,7 @@ export async function broadcastSocialProof(data: SocialBroadcastRequest) {
 
   console.log(`📣 Broadcasting social proof for ${data.brandName}...`);
 
-  const message = data.type === 'inscription' 
+  const message = data.type === 'inscription'
     ? `New Inscription: ${data.brandName}'s "${data.productName}" is now live on the Bitcoin L1 Truth Layer. 🛡️`
     : `${data.brandName} just secured their supply chain with AuthiChain. Verification live. 📦`;
 
@@ -44,7 +44,7 @@ export async function broadcastSocialProof(data: SocialBroadcastRequest) {
     });
 
     if (response.ok) {
-      await db.logActivity({
+      await logActivity(db, {
         userId: 1, // System
         action: 'social_proof_broadcasted',
         entityType: 'broadcast',
@@ -64,8 +64,8 @@ export async function broadcastSocialProof(data: SocialBroadcastRequest) {
 /**
  * Helper: Broadcast a Michigan CRA "Audit Win"
  */
-export async function broadcastRegulatoryWin(agency: string, manifestId: string) {
-    return await broadcastSocialProof({
+export async function broadcastRegulatoryWin(db: Db, agency: string, manifestId: string) {
+    return await broadcastSocialProof(db, {
       type: 'verification',
       brandName: agency,
       productName: `Manifest ${manifestId}`,
