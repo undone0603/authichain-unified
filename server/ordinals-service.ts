@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
-import { getDb } from "./db";
 import { products } from "../drizzle/schema";
+import type { getHyperdriveDb } from "./db";
+
+type Db = ReturnType<typeof getHyperdriveDb>;
 
 /**
  * BTC Ordinals Inscription Service
@@ -50,11 +52,8 @@ export async function getInscriptionStatus(inscriptionId: string) {
 /**
  * Links a QronCode to its BTC Ordinal counterpart and existing Polygon NFT.
  */
-export async function linkOrdinalToProduct(productId: number, inscriptionId: string) {
-  const d = await getDb();
-  if (!d) throw new Error("Database not available");
-
-  await d.update(products)
+export async function linkOrdinalToProduct(db: Db, productId: number, inscriptionId: string) {
+  await db.update(products)
     .set({ blockchainTxHash: inscriptionId })
     .where(eq(products.id, productId));
 
