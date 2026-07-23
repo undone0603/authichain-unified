@@ -438,6 +438,301 @@ app.post("/api/gpt/trust-score", async (c) => {
   }
 });
 
+// ─── Internal API for the authichain-gateway Cloudflare Worker
+// (server/internal-api.ts's Express Router, ported route-by-route).
+// Protected by X-Internal-Secret header. ────────────────────────────────
+app.use("/api/internal/*", async (c, next) => {
+  const secret = c.req.header("x-internal-secret");
+  const { ENV } = await import("../server/_core/env");
+  if (!secret || !timingSafeEqualStrings(secret, ENV.internalApiSecret)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  await next();
+});
+
+// POST /api/internal/verify
+app.post("/api/internal/verify", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const { identifier, productId, barcode, imageUrl } = body ?? {};
+    const lookupId = identifier || productId || barcode;
+    if (!lookupId) return c.json({ error: "identifier, productId, or barcode required" }, 400);
+
+    const db = getHyperdriveDb(c.env);
+    const { getCertificateByNumber } = await import("../server/content-db-helpers");
+    const cert = await getCertificateByNumber(db, lookupId);
+    if (cert) {
+      return c.json({
+        verified: cert.status === "active",
+        type: "certificate",
+        certificate: cert,
+        trustScore: 95,
+        confidence: 0.98,
+        agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
+      });
+    }
+
+    // Prevent prompt injection — only the sanitized identifier reaches the LLM
+    const safeLookupId = String(lookupId).replace(/[^a-zA-Z0-9\-_.]/g, "").slice(0, 128);
+
+    const { invokeLLM, parseLLMContent } = await import("../server/_core/llm");
+    const analysis = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content: `You are AuthiChain's product verification engine. Analyze the product identifier and determine authenticity. Return JSON: { "verified": boolean, "confidence": number (0-1), "reasoning": string, "riskFlags": string[] }`,
+        },
+        {
+          role: "user",
+          content: JSON.stringify({ identifier: safeLookupId, hasImage: !!imageUrl }),
+        },
+      ],
+      responseFormat: { type: "json_object" },
+    });
+
+    let result: { verified: boolean; confidence: number; reasoning: string; riskFlags: string[] };
+    try {
+      result = parseLLMContent(analysis.choices[0].message.content);
+    } catch {
+      return c.json({ error: "Internal server error" }, 500);
+    }
+    return c.json({
+      verified: result.verified,
+      type: "ai_analysis",
+      trustScore: Math.round(result.confidence * 100),
+      confidence: result.confidence,
+      reasoning: result.reasoning,
+      riskFlags: result.riskFlags || [],
+      agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
+    });
+  } catch (err: any) {
+    console.error("[Internal API] verify error:", err.message);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// POST /api/internal/qr/generate
+app.post("/api/internal/qr/generate", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const { url, data, style, productName, brand, productId } = body ?? {};
+    const qrData = url || data;
+    if (!qrData) return c.json({ error: "url or data required" }, 400);
+
+    const { generateProductQRON } = await import("../server/qron-service");
+    const result = await generateProductQRON({
+      productId: productId || 0,
+      productName: productName || "Product",
+      brand: brand || undefined,
+      tier: style === "premium" ? "premium" : "standard",
+      verifyUrl: qrData,
+    });
+
+    return c.json(result);
+  } catch (err: any) {
+    console.error("[Internal API] qr/generate error:", err.message);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// POST /api/internal/certificates/verify
+app.post("/api/internal/certificates/verify", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const raw = body?.certNumber ?? body?.number;
+    const number = typeof raw === "string" ? raw : undefined;
+    if (!number) return c.json({ error: "certNumber body field required" }, 400);
+    if (number.length > 64) return c.json({ error: "certNumber too long" }, 400);
+
+    const db = getHyperdriveDb(c.env);
+    const { getCertificateByNumber } = await import("../server/content-db-helpers");
+    const cert = await getCertificateByNumber(db, number);
+    if (!cert) return c.json({ error: "Certificate not found", valid: false }, 404);
+
+    return c.json({
+      valid: cert.status === "active",
+      certificate: cert,
+      issuedAt: cert.issuedAt,
+      expiresAt: cert.expiresAt,
+      blockchainVerified: !!cert.blockchainTxHash,
+    });
+  } catch (err: any) {
+    console.error("[Internal API] certificates/verify error:", err.message);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// POST /api/internal/cannabis/verify
+app.post("/api/internal/cannabis/verify", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const { strainId, strainName, dispensaryId, batchId, thcPercent, cbdPercent } = body ?? {};
+    const strain = strainName || strainId;
+    if (!strain) return c.json({ error: "strainName or strainId required" }, 400);
+
+    const metadata = {
+      name: strain,
+      type: "HYBRID" as const,
+      genetics: ["Unknown"],
+      thcContent: thcPercent || 25,
+      cbdContent: cbdPercent || 1,
+      harvestDate: new Date().toISOString(),
+    };
+    const profile = {
+      thc: thcPercent || 25,
+      thca: (thcPercent || 25) * 1.12,
+      cbd: cbdPercent || 1,
+      cbda: (cbdPercent || 1) * 1.2,
+      total: (thcPercent || 25) + (cbdPercent || 1) + 5,
+    };
+
+    const { calculateStrainRarity, formatTruthLayerMetadata } = await import("../server/cannabis-service");
+    const rarity = calculateStrainRarity(metadata, profile);
+    const truthLayer = formatTruthLayerMetadata(metadata, profile);
+
+    return c.json({
+      verified: true,
+      strainName: strain,
+      batchId: batchId || null,
+      dispensaryId: dispensaryId || null,
+      rarityScore: rarity,
+      complianceStatus: dispensaryId ? "compliant" : "unverified",
+      truthLayer,
+    });
+  } catch (err: any) {
+    console.error("[Internal API] cannabis/verify error:", err.message);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// POST /api/internal/trust-score
+app.post("/api/internal/trust-score", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk } = body ?? {};
+
+    const { computeTrustScore } = await import("../server/qron-service");
+    const score = computeTrustScore({
+      qrDecodePass: qrDecodePass ?? true,
+      blockchainCertExists: blockchainCertExists ?? false,
+      communityVerified: visualMatch ? Math.round(visualMatch / 20) : 0,
+      communityFlagged: 0,
+      openArtRegistered: nfcMatch ?? false,
+    });
+
+    return c.json({
+      ...score,
+      inputs: { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk },
+    });
+  } catch (err: any) {
+    console.error("[Internal API] trust-score error:", err.message);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// GET /api/internal/analytics
+app.get("/api/internal/analytics", async (c) => {
+  try {
+    const period = c.req.query("period") || "30d";
+    // Not used for querying below (this endpoint returns static stub
+    // metrics), but kept so a misconfigured Hyperdrive binding still
+    // surfaces here as a 500 rather than silently returning stub data.
+    getHyperdriveDb(c.env);
+
+    return c.json({
+      period,
+      verifications: { total: 0, authentic: 0, counterfeit: 0 },
+      qrCodesGenerated: 0,
+      certificatesIssued: 0,
+      activeAgents: 5,
+      message: "Analytics data will be populated once usage metering is active",
+    });
+  } catch (err: any) {
+    console.error("[Internal API] analytics error:", err.message);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// POST /api/internal/products/register
+app.post("/api/internal/products/register", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const { name, brand, category, serialNumber, description, userId } = body ?? {};
+    if (!name) return c.json({ error: "name required" }, 400);
+    const parsedUserId = parseInt(userId, 10);
+    if (!userId || !Number.isFinite(parsedUserId) || parsedUserId <= 0) {
+      return c.json({ error: "valid userId required" }, 400);
+    }
+
+    const db = getHyperdriveDb(c.env);
+    const { createProduct } = await import("../server/content-db-helpers");
+    const product = await createProduct(db, {
+      name,
+      brand,
+      category,
+      serialNumber,
+      description,
+      userId: parsedUserId,
+      status: "active",
+    });
+
+    return c.json({ success: true, product });
+  } catch (err: any) {
+    console.error("[Internal API] products/register error:", err.message);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// POST /api/internal/usage/report
+app.post("/api/internal/usage/report", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const { records } = body ?? {};
+    if (!Array.isArray(records) || records.length === 0) {
+      return c.json({ error: "records array required" }, 400);
+    }
+
+    const usageDb = getHyperdriveDb(c.env);
+    const { reportUsageToStripe } = await import("../server/tenant-billing");
+    await Promise.all(
+      records.map((r: { tenantId: number; endpoint: string; count: number }) =>
+        reportUsageToStripe(usageDb, r.tenantId, r.endpoint, r.count),
+      ),
+    );
+
+    return c.json({ success: true, processed: records.length });
+  } catch (err: any) {
+    console.error("[Internal API] usage/report error:", err.message);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// GET /api/internal/tenant
+app.get("/api/internal/tenant", async (c) => {
+  try {
+    const authHeader = c.req.header("authorization");
+    const apiKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!apiKey) return c.json({ error: "Authorization: Bearer <apiKey> required" }, 400);
+
+    const db = getHyperdriveDb(c.env);
+    const { getWhiteLabelByApiKey } = await import("../server/content-db-helpers");
+    const tenant = await getWhiteLabelByApiKey(db, apiKey);
+    if (!tenant) return c.json({ error: "Tenant not found" }, 404);
+
+    return c.json({
+      id: tenant.id,
+      companyName: tenant.companyName,
+      status: tenant.status,
+      apiCallLimit: tenant.apiCallLimit,
+      monthlyApiCalls: tenant.monthlyApiCalls,
+      features: tenant.features,
+    });
+  } catch (err: any) {
+    console.error("[Internal API] tenant error:", err.message);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
 // Static assets fallback (Vite build output, same dist/public the existing
 // worker/index.ts already serves for the marketing page).
 app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
