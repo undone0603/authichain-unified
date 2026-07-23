@@ -88,7 +88,7 @@ export async function syncMetrcTransfers(db: Db, auth: MetrcAuth) {
  * Anchors a METRC package to a Bitcoin Inscription.
  * This turns a state compliance record into a permanent brand asset.
  */
-export async function anchorPackageToTruthLayer(packageTag: string, manifestId: string) {
+export async function anchorPackageToTruthLayer(db: Db, packageTag: string, manifestId: string) {
   // 1. Verify manifest existence in DB
   // 2. Trigger Inscription via qron-ordinal-worker
   // 3. Update AuthiChain certificate status
@@ -97,7 +97,7 @@ export async function anchorPackageToTruthLayer(packageTag: string, manifestId: 
 
   // 4. Trigger Social Proof Bridge
   try {
-    await broadcastSocialProof({
+    await broadcastSocialProof(db, {
       type: 'inscription',
       brandName: "Michigan Processor", // Dynamically resolve brand name from DB in real scenario
       productName: `Package ${packageTag}`,

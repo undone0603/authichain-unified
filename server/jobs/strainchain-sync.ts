@@ -42,7 +42,7 @@ export async function runStrainChainSync(db: Db) {
           // In production, this would be extracted from manifest line items
           const packageTag = `1A400031266B0${transfer.id}`;
 
-          const anchorResult = await anchorPackageToTruthLayer(packageTag, String(transfer.id));
+          const anchorResult = await anchorPackageToTruthLayer(db, packageTag, String(transfer.id));
 
           if (anchorResult.success) {
             anchoredCount++;
