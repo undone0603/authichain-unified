@@ -1,7 +1,9 @@
 import { nanoid } from "nanoid";
 import { eq, desc, and } from "drizzle-orm";
-import { db } from "../db";
 import { referrals, referralClicks, affiliates } from "../../drizzle/schema";
+import type { getHyperdriveDb } from "../db";
+
+type Db = ReturnType<typeof getHyperdriveDb>;
 
 export const COMMISSION_RATES: Record<string, number> = {
   starter: 0.10,      // 10%
@@ -31,7 +33,7 @@ export function generateAffiliateCode(userId: number): string {
   return `AFF-${userId}-${nanoid(6).toUpperCase()}`;
 }
 
-export async function createReferralCode(referrerId: number): Promise<{ id: number; referralCode: string }> {
+export async function createReferralCode(db: Db, referrerId: number): Promise<{ id: number; referralCode: string }> {
   const code = generateReferralCode(referrerId);
   const [result] = await db.insert(referrals).values({
     referrerId,
@@ -41,7 +43,7 @@ export async function createReferralCode(referrerId: number): Promise<{ id: numb
   return { id: result.id, referralCode: code };
 }
 
-export async function trackReferralClick(params: {
+export async function trackReferralClick(db: Db, params: {
   referralCode: string;
   ipAddress?: string;
   userAgent?: string;
@@ -51,7 +53,7 @@ export async function trackReferralClick(params: {
   await db.insert(referralClicks).values(params);
 }
 
-export async function completeReferral(params: {
+export async function completeReferral(db: Db, params: {
   referralCode: string;
   referredId: number;
   referredEmail: string;
@@ -80,7 +82,7 @@ export async function completeReferral(params: {
   if (updated.length === 0) throw new Error("Referral code already used");
 }
 
-export async function getReferralStats(referrerId: number) {
+export async function getReferralStats(db: Db, referrerId: number) {
   const all = await db.select().from(referrals).where(eq(referrals.referrerId, referrerId));
   const converted = all.filter(r => r.status === "converted");
   const totalCommission = converted.reduce((sum, r) => sum + parseFloat(r.commissionPaid || "0"), 0);

@@ -41,6 +41,11 @@ vi.mock("./db", async (importOriginal) => {
   return {
     ...actual,
     db: mockDb,
+    // bonuses/referral/affiliate/marketplace routers (Task 2b-5) now resolve
+    // their own db via a documented getDb() bridge (no ctx.db on TrpcContext)
+    // instead of importing the `db` proxy directly -- give them the same
+    // chainable mockDb above so bonuses' raw queries keep working unchanged.
+    getDb: vi.fn(async () => mockDb),
     // referral helpers
     getUserReferrals: vi.fn(async () => []),
     getReferralByCode: vi.fn(async () => undefined),
@@ -58,12 +63,31 @@ vi.mock("./db", async (importOriginal) => {
   };
 });
 
+// ─── Mock ./identity-db-helpers ────────────────────────────────────────────────
+// server/referral/router.ts and server/affiliate/router.ts were migrated
+// (Task 2b-5) to call server/identity-db-helpers.ts's db-parameterized
+// reimplementations instead of server/db.ts's named exports directly, so the
+// referral/affiliate helpers need to be mocked here too (the values below
+// intentionally mirror the "./db" mock above so existing test expectations
+// don't change).
+vi.mock("./identity-db-helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./identity-db-helpers")>();
+  return {
+    ...actual,
+    getUserReferrals: vi.fn(async () => []),
+    getReferralByCode: vi.fn(async () => undefined),
+    getAffiliateByUserId: vi.fn(async () => undefined),
+    createAffiliate: vi.fn(async (_db: any, data: any) => ({ id: store.nextId() })),
+    getAffiliateCommissions: vi.fn(async () => []),
+  };
+});
+
 // ─── Mock ./referral/core ─────────────────────────────────────────────────────
 vi.mock("./referral/core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./referral/core")>();
   return {
     ...actual, // keeps COMMISSION_RATES, AFFILIATE_BONUS_TIERS, generateReferralCode, generateAffiliateCode
-    createReferralCode: vi.fn(async (referrerId: number) => ({
+    createReferralCode: vi.fn(async (_db: any, referrerId: number) => ({
       id: 300 + referrerId,
       referralCode: `REF-${referrerId}-TESTXX`,
     })),
@@ -238,7 +262,7 @@ describe("New Features", () => {
       });
 
       it("affiliate.submitApplication reports already-enrolled when affiliate exists", async () => {
-        const { getAffiliateByUserId } = await import("./db");
+        const { getAffiliateByUserId } = await import("./identity-db-helpers");
         vi.mocked(getAffiliateByUserId).mockResolvedValueOnce({
           id: 10, userId: 1, affiliateCode: "AFF-1-EXISTING", status: "active",
           commissionRate: "10.00", totalEarnings: "0", pendingPayout: "0",
@@ -252,7 +276,7 @@ describe("New Features", () => {
       });
 
       it("affiliate.getStats returns stats object when enrolled", async () => {
-        const { getAffiliateByUserId, getAffiliateCommissions } = await import("./db");
+        const { getAffiliateByUserId, getAffiliateCommissions } = await import("./identity-db-helpers");
         vi.mocked(getAffiliateByUserId).mockResolvedValueOnce({
           id: 10, userId: 1, affiliateCode: "AFF-1-GOLD", status: "active",
           commissionRate: "15.00", totalEarnings: "250.00", pendingPayout: "50.00",
