@@ -1,9 +1,14 @@
 name: Deploy Cloudflare Edge Worker
 
 # Push trigger re-enabled after fixing:
-#   1. pnpm minimumReleaseAge policy (@smithy/* now excluded in pnpm-workspace.yaml)
+#   1. pnpm minimumReleaseAge policy (@smithy/* now excluded in pnpm-workspace.yaml,
+#      and --config.minimumReleaseAge=0 passed explicitly at install time since the
+#      allowlist keeps drifting out of date as transitive deps publish new versions)
 #   2. GITHUB_OUTPUT trailing-quote bug in secrets_check step
 #   3. pnpm/action-setup must run before setup-node (for cache to work)
+#   4. pnpm version pinned to 10.28.2 (matching deploy-workers.yml / deploy-cloudflare.yml)
+#      instead of 'latest', which could pick up a version with different
+#      minimumReleaseAge default/config-reading behavior
 on:
   push:
     branches: [main]
@@ -36,9 +41,9 @@ jobs:
 
       - name: Setup pnpm
         if: steps.secrets_check.outputs.skip != 'true'
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
-          version: latest
+          version: '10.28.2'
 
       - name: Setup Node 22
         if: steps.secrets_check.outputs.skip != 'true'
@@ -53,7 +58,14 @@ jobs:
 
       - name: Install dependencies
         if: steps.secrets_check.outputs.skip != 'true'
-        run: pnpm install --no-frozen-lockfile
+        # --config.minimumReleaseAge=0 bypasses pnpm's supply-chain
+        # minimumReleaseAge policy for this CI install. pnpm-workspace.yaml
+        # already sets minimumReleaseAge: 0 with a minimumReleaseAgeExclude
+        # allowlist for known-fresh packages (e.g. @smithy/*), but that
+        # allowlist drifts out of date every time those transitive deps
+        # publish a new version (as happened here) — the CLI flag is the
+        # authoritative override and doesn't need to be kept in sync.
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Upload secrets
         if: steps.secrets_check.outputs.skip != 'true'
