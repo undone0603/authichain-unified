@@ -305,6 +305,139 @@ app.post("/api/contact", async (c) => {
   }
 });
 
+
+// ─── GPT plugin REST endpoints (server/gpt/router.ts's Express Router,
+// ported route-by-route — each handler only touched req.body/req.query and
+// a getDb() bridge, replaced here with c.req.json()/c.req.query() and
+// getHyperdriveDb(c.env)) ────────────────────────────────────────────────
+
+// POST /api/gpt/verify - Verify product authenticity
+app.post("/api/gpt/verify", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const productId = body?.productId;
+    if (!productId) return c.json({ error: "productId required" }, 400);
+    const db = getHyperdriveDb(c.env);
+    const [product] = await db.select().from(products).where(eq(products.id, Number(productId))).limit(1);
+    if (!product) {
+      return c.json({
+        verified: false,
+        trustScore: 0,
+        message: "Product not found. This item may be counterfeit.",
+        blockchain: null,
+      });
+    }
+    const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
+    return c.json({
+      verified: !!cert,
+      trustScore: cert ? 95 : 20,
+      productName: product.name,
+      brand: product.brand ?? null,
+      certificateId: cert?.id ?? null,
+      blockchain: cert ? { status: "SECURED", network: "Polygon" } : null,
+      message: cert
+        ? `VERIFIED AUTHENTIC: ${product.name} - Blockchain secured.`
+        : `UNVERIFIED: ${product.name} lacks blockchain certificate.`,
+    });
+  } catch (err) {
+    console.error("[GPT /verify]", err);
+    return c.json({ error: "Internal error during verification" }, 500);
+  }
+});
+
+// POST /api/gpt/qr/generate - Generate a QR code
+app.post("/api/gpt/qr/generate", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const { productId, style, size } = body ?? {};
+    if (!productId) return c.json({ error: "productId required" }, 400);
+    const verifyUrl = `https://authichain.com/verify/${productId}`;
+    return c.json({
+      qrUrl: verifyUrl,
+      embedUrl: `https://authichain.com/api/qr/${productId}?style=${style || "default"}&size=${size || 256}`,
+      message: `QR code generated for product ${productId}`,
+    });
+  } catch (err) {
+    console.error("[GPT /qr/generate]", err);
+    return c.json({ error: "QR generation failed" }, 500);
+  }
+});
+
+// GET /api/gpt/certificates/verify - Check certificate by number
+app.get("/api/gpt/certificates/verify", async (c) => {
+  try {
+    const certNumber = c.req.query("certNumber");
+    if (!certNumber) return c.json({ error: "certNumber required" }, 400);
+    if (certNumber.length > 64) return c.json({ error: "certNumber too long" }, 400);
+    const db = getHyperdriveDb(c.env);
+    const [cert] = await db.select().from(certificates).where(eq(certificates.certificateNumber, certNumber)).limit(1);
+    if (!cert) return c.json({ valid: false, message: "Certificate not found" });
+    return c.json({
+      valid: true,
+      certificateId: cert.id,
+      issuedAt: cert.issuedAt,
+      blockchain: { status: "SECURED", network: "Polygon" },
+      message: "Certificate is valid and blockchain-secured.",
+    });
+  } catch (err) {
+    console.error("[GPT /certificates/verify]", err);
+    return c.json({ error: "Certificate check failed" }, 500);
+  }
+});
+
+// POST /api/gpt/cannabis/verify - Verify cannabis strain (by product name)
+app.post("/api/gpt/cannabis/verify", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const { strainName, batchId } = body ?? {};
+    if (!batchId && !strainName) {
+      return c.json({ error: "strainName or batchId required" }, 400);
+    }
+    const db = getHyperdriveDb(c.env);
+    const [product] = strainName
+      ? await db.select().from(products).where(eq(products.name, strainName)).limit(1)
+      : [];
+    return c.json({
+      verified: !!product,
+      strainName: strainName || "Unknown",
+      batchId: batchId || null,
+      metrcCompliant: !!product,
+      blockchain: product ? { status: "SECURED", network: "Polygon" } : null,
+      message: product
+        ? `VERIFIED: ${product.name} - METRC compliant, blockchain secured.`
+        : "Strain not found in AuthiChain registry.",
+    });
+  } catch (err) {
+    console.error("[GPT /cannabis/verify]", err);
+    return c.json({ error: "Cannabis verification failed" }, 500);
+  }
+});
+
+// POST /api/gpt/trust-score - Compute trust score
+app.post("/api/gpt/trust-score", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const productId = body?.productId;
+    if (!productId) return c.json({ error: "productId required" }, 400);
+    const db = getHyperdriveDb(c.env);
+    const [product] = await db.select().from(products).where(eq(products.id, Number(productId))).limit(1);
+    if (!product) return c.json({ trustScore: 0, verdict: "UNKNOWN", message: "Product not found" });
+    const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
+    const baseScore = cert ? 85 : 15;
+    const trustScore = Math.min(100, baseScore);
+    const verdict = trustScore >= 80 ? "TRUSTED" : trustScore >= 50 ? "MODERATE" : "SUSPICIOUS";
+    return c.json({
+      trustScore,
+      verdict,
+      breakdown: { blockchainCert: cert ? 85 : 0 },
+      message: `Trust score for ${product.name}: ${trustScore}/100 — ${verdict}`,
+    });
+  } catch (err) {
+    console.error("[GPT /trust-score]", err);
+    return c.json({ error: "Trust score computation failed" }, 500);
+  }
+});
+
 // Static assets fallback (Vite build output, same dist/public the existing
 // worker/index.ts already serves for the marketing page).
 app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
