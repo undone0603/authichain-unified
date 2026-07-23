@@ -9,7 +9,7 @@ import { ENV } from "./_core/env";
 import { runStrainChainSync } from "./jobs/strainchain-sync";
 
 // ─── Job Registry ───────────────────────────────────────────────────────────
-interface JobDefinition {
+export interface JobDefinition {
   name: string;
   description: string;
   schedule: string; // cron expression
@@ -35,6 +35,11 @@ const scheduledTasks: Map<string, any> = new Map();
 
 function registerJob(job: JobDefinition) {
   jobs.push(job);
+}
+
+/** Read-only access to the registered jobs (for the Workers Cron dispatcher). */
+export function getScheduledJobs(): ReadonlyArray<JobDefinition> {
+  return jobs;
 }
 
 // ─── Job Execution Wrapper ──────────────────────────────────────────────────
@@ -66,6 +71,12 @@ export async function executeJob(job: JobDefinition, options?: { force?: boolean
     return;
   }
 
+  return executeJobWithDb(job, db, options);
+}
+
+/** Runs a single job with an explicitly-provided db (Workers Cron path threads
+ *  getHyperdriveDb(env) here; the Express path goes through executeJob above). */
+export async function executeJobWithDb(job: JobDefinition, db: Db, options?: { force?: boolean }): Promise<void> {
   if (!options?.force && !(await isJobDue(db, job))) {
     console.log(`[Scheduler] Skipping ${job.name}: not due yet (min interval ${job.minIntervalMs}ms)`);
     return;
