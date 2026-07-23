@@ -1,21 +1,22 @@
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import * as db from "../db";
 import { getDb } from "../db";
+import { getDashboardMetrics, getRecentActivity } from "../content-db-helpers";
 import { calculateHarmony } from "../sales/harmony-service";
 
 export const dashboardRouter = router({
   metrics: protectedProcedure.query(async ({ ctx }) => {
-    return await db.getDashboardMetrics(ctx.user.id);
+    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
+    // context does. Bridge via getDb() until this router has a ctx.db to use.
+    const db = await getDb();
+    return await getDashboardMetrics(db, ctx.user.id);
   }),
   harmony: publicProcedure.query(async () => {
-    // server/sales/harmony-service.ts was migrated to take a threaded `db`
-    // in Task 2b-4; server/dashboard/** itself is out of that task's scope
-    // (Task 2b-6), so this stays a documented getDb() bridge for now.
-    const harmonyDb = await getDb();
-    return await calculateHarmony(harmonyDb);
+    const db = await getDb();
+    return await calculateHarmony(db);
   }),
   pulse: publicProcedure.query(async () => {
-    const activity = await db.getRecentActivity(10);
+    const db = await getDb();
+    const activity = await getRecentActivity(db, 10);
     return activity.map(a => {
       let text = "Network Activity Detected";
       if (a.action === "strainchain_auto_anchor") {
