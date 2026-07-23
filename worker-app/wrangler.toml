@@ -1,0 +1,16 @@
+name = "authichain-app"
+main = "index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "../dist/public"
+binding = "ASSETS"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from the root wrangler.toml
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "97d767ff69584161a0672cd942e9364a"
