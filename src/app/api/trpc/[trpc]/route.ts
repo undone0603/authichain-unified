@@ -35,6 +35,8 @@ async function handler(req: Request): Promise<Response> {
         req: { headers: Object.fromEntries(req.headers) } as never,
         res: { clearCookie: () => {}, cookie: () => {} } as never,
         user,
+        secure: true,
+        setCookieHeader: () => {},
         missionsRepo: new DbMissionsRepository(),
         adminRepo: new DbAdminRepository(),
       };
