@@ -1,5 +1,14 @@
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import * as db from "../db";
+import { getDb } from "../db";
+import {
+  getProductById,
+  createQrCode,
+  getProductQrCodes,
+  incrementScanCount,
+  logScanEvent,
+  getRecentScanEvents,
+  updateProduct,
+} from "../identity-db-helpers";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import QRCode from "qrcode";
@@ -7,8 +16,8 @@ import { invokeLLM, parseLLMContent } from "../_core/llm";
 import { verifyHash, type QRVerificationRecord } from "../_core/verification";
 import type { Product } from "../../src/db/schema";
 
-async function getOwnedProduct(productId: number, userId: number): Promise<Product> {
-  const product = await db.getProductById(productId);
+async function getOwnedProduct(db: Awaited<ReturnType<typeof getDb>>, productId: number, userId: number): Promise<Product> {
+  const product = await getProductById(db, productId);
   if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
   if (product.userId !== userId) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
   return product;
@@ -20,10 +29,13 @@ export const qrcodeRouter = router({
     size: z.number().optional().default(300),
     batchId: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
-    const product = await getOwnedProduct(input.productId, ctx.user.id);
+    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
+    // context does. Bridge via getDb() until this router has a ctx.db to use.
+    const db = await getDb();
+    const product = await getOwnedProduct(db, input.productId, ctx.user.id);
     const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL || "https://authichain.com"}/verify/${product.id}`;
     const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: input.size, margin: 2, color: { dark: "#000000", light: "#FFFFFF" } });
-    await db.createQrCode({ productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl });
+    await createQrCode(db, { productId: input.productId, userId: ctx.user.id, qrData: verifyUrl, qrImageUrl: qrDataUrl });
     return { qrCodeDataUrl: qrDataUrl, verifyUrl };
   }),
 
@@ -31,12 +43,13 @@ export const qrcodeRouter = router({
     productId: z.number(),
     hash: z.string().optional(),  // present when scanning a hash-signed QR code
   })).query(async ({ input }) => {
-    const product = await db.getProductById(input.productId);
+    const db = await getDb(); // see generate() above
+    const product = await getProductById(db, input.productId);
     if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
 
-    const qrCodes = await db.getProductQrCodes(input.productId);
+    const qrCodes = await getProductQrCodes(db, input.productId);
     if (qrCodes.length > 0) {
-      await db.incrementScanCount(qrCodes[0].id);
+      await incrementScanCount(db, qrCodes[0].id);
     }
 
     // Hash validation against the stored QR record (when hash is present)
@@ -60,7 +73,7 @@ export const qrcodeRouter = router({
 
     // Fire-and-forget scan event log
     if (qrCodes.length > 0) {
-      db.logScanEvent({
+      logScanEvent(db, {
         qrCodeId: qrCodes[0].id,
         productId: input.productId,
         isAuthentic: hashResult?.valid ?? undefined,
@@ -74,20 +87,23 @@ export const qrcodeRouter = router({
     };
   }),
   listForProduct: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ ctx, input }) => {
-    await getOwnedProduct(input.productId, ctx.user.id);
-    return await db.getProductQrCodes(input.productId);
+    const db = await getDb(); // see generate() above
+    await getOwnedProduct(db, input.productId, ctx.user.id);
+    return await getProductQrCodes(db, input.productId);
   }),
   scanHistory: protectedProcedure.input(z.object({
     productId: z.number(),
     limit: z.number().min(1).max(100).default(20),
   })).query(async ({ ctx, input }) => {
-    await getOwnedProduct(input.productId, ctx.user.id);
-    return await db.getRecentScanEvents(input.productId, input.limit);
+    const db = await getDb(); // see generate() above
+    await getOwnedProduct(db, input.productId, ctx.user.id);
+    return await getRecentScanEvents(db, input.productId, input.limit);
   }),
   generateStorymode: protectedProcedure.input(z.object({
     productId: z.number(),
   })).mutation(async ({ ctx, input }) => {
-    const product = await getOwnedProduct(input.productId, ctx.user.id);
+    const db = await getDb(); // see generate() above
+    const product = await getOwnedProduct(db, input.productId, ctx.user.id);
 
     const response = await invokeLLM({
       messages: [
@@ -129,7 +145,7 @@ export const qrcodeRouter = router({
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to parse story response" });
     }
     const metadata = { ...(product.metadata as Record<string, unknown> ?? {}), storymode: storyData };
-    await db.updateProduct(product.id, { metadata });
+    await updateProduct(db, product.id, { metadata });
 
     return { success: true, storymode: storyData };
   }),
