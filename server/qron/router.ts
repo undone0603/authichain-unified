@@ -1,12 +1,23 @@
 import { z } from "zod";
 import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
-import * as db from "../db";
+import { getDb } from "../db";
+import {
+  getQronList,
+  getProductById,
+  createQron,
+  getQronById,
+  createQronScanVerdict,
+  updateQron,
+} from "../identity-db-helpers";
 import { TRPCError } from "@trpc/server";
 import { generateProductQRON, verifyVisualFingerprint, computeTrustScore } from "../qron-service";
 
 export const qronRouter = router({
   list: protectedProcedure.query(async () => {
-    return await db.getQronList();
+    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
+    // context does. Bridge via getDb() until this router has a ctx.db to use.
+    const db = await getDb();
+    return await getQronList(db);
   }),
 
   generate: protectedProcedure
@@ -18,11 +29,12 @@ export const qronRouter = router({
       tier: z.enum(["standard", "premium", "enterprise", "pharma"]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const product = await db.getProductById(input.productId);
+      const db = await getDb(); // see list() above
+      const product = await getProductById(db, input.productId);
       if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
 
       const verifyUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL || "https://authichain.com"}/verify/${product.id}`;
-      
+
       const qron = await generateProductQRON({
         ...input,
         serialNumber: product.serialNumber ?? undefined,
@@ -30,7 +42,7 @@ export const qronRouter = router({
         verifyUrl,
       });
 
-      const [record] = await db.createQron({
+      const [record] = await createQron(db, {
         id: qron.qronId,
         productId: input.productId,
         userId: ctx.user.id,
@@ -56,7 +68,8 @@ export const qronRouter = router({
       scannedImageUrl: z.string(),
     }))
     .mutation(async ({ input }) => {
-      const qron = await db.getQronById(input.qronId);
+      const db = await getDb(); // see list() above
+      const qron = await getQronById(db, input.qronId);
       if (!qron) throw new TRPCError({ code: "NOT_FOUND", message: "QRON not found" });
 
       const visualResult = await verifyVisualFingerprint({
@@ -74,7 +87,7 @@ export const qronRouter = router({
         openArtRegistered: !!qron.openartRegistered,
       });
 
-      await db.createQronScanVerdict({
+      await createQronScanVerdict(db, {
         qronId: qron.id,
         scannedImageUrl: input.scannedImageUrl,
         similarityScore: visualResult.similarity,
@@ -84,12 +97,12 @@ export const qronRouter = router({
 
       // Update aggregate counts
       if (visualResult.verdict === "authentic") {
-        await db.updateQron(qron.id, { 
+        await updateQron(db, qron.id, {
           verifiedScanCount: (qron.verifiedScanCount ?? 0) + 1,
           trustScore: trust.score,
         });
       } else if (visualResult.verdict === "fake") {
-        await db.updateQron(qron.id, { 
+        await updateQron(db, qron.id, {
           fakeFlagCount: (qron.fakeFlagCount ?? 0) + 1,
           trustScore: trust.score,
         });
