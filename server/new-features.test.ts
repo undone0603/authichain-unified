@@ -82,6 +82,22 @@ vi.mock("./identity-db-helpers", async (importOriginal) => {
   };
 });
 
+// ─── Mock ./content-db-helpers ─────────────────────────────────────────────────
+// server/email-drafts/router.ts was migrated (Task 2b-6) to call
+// server/content-db-helpers.ts's db-parameterized reimplementations instead
+// of server/db.ts's named exports directly, so the email-draft helpers need
+// to be mocked here too (the values below intentionally mirror the "./db"
+// mock above so existing test expectations don't change).
+vi.mock("./content-db-helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./content-db-helpers")>();
+  return {
+    ...actual,
+    getPendingDrafts: vi.fn(async () => []),
+    createEmailDraft: vi.fn(async () => ({ id: store.nextId() })),
+    updateDraftStatus: vi.fn(async () => undefined),
+  };
+});
+
 // ─── Mock ./referral/core ─────────────────────────────────────────────────────
 vi.mock("./referral/core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./referral/core")>();
@@ -464,7 +480,7 @@ describe("New Features", () => {
       });
 
       it("emailDrafts.approve DOES send email when draft is in pending list", async () => {
-        const { getPendingDrafts } = await import("./db");
+        const { getPendingDrafts } = await import("./content-db-helpers");
         vi.mocked(getPendingDrafts).mockResolvedValueOnce([{
           id: 42, prospectEmail: "lead@bigcorp.com", subject: "Our Partnership",
           body: "<p>Hello!</p>", prospectName: "Alice",

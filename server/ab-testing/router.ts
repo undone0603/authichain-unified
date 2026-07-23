@@ -1,10 +1,14 @@
 import { adminProcedure, router } from "../_core/trpc";
-import * as db from "../db";
+import { getDb } from "../db";
+import { getAllAbTests, createAbTest } from "../content-db-helpers";
 import { z } from "zod";
 
 export const abTestingRouter = router({
   list: adminProcedure.query(async () => {
-    return await db.getAllAbTests();
+    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
+    // context does. Bridge via getDb() until this router has a ctx.db to use.
+    const db = await getDb();
+    return await getAllAbTests(db);
   }),
   create: adminProcedure.input(z.object({
     name: z.string().min(1),
@@ -12,6 +16,7 @@ export const abTestingRouter = router({
     type: z.string(),
     variants: z.any(),
   })).mutation(async ({ input }) => {
-    return await db.createAbTest({ ...input, status: "draft" });
+    const db = await getDb();
+    return await createAbTest(db, { ...input, status: "draft" });
   }),
 });

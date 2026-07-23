@@ -126,6 +126,67 @@ vi.mock("./identity-db-helpers", async (importOriginal) => {
   };
 });
 
+// server/ab-testing/router.ts, server/notifications/router.ts,
+// server/email-campaigns/router.ts, server/email-drafts/router.ts,
+// server/marketing/router.ts, server/blockchain/router.ts,
+// server/dashboard/router.ts, and server/hubspot/automation.ts were
+// migrated (Task 2b-6) to call server/content-db-helpers.ts's
+// db-parameterized reimplementations instead of server/db.ts's named
+// exports directly, so the functions those tests below actually exercise
+// need to be mocked here too (the values below intentionally mirror the
+// "./db" mock above -- including the same in-memory `store` for
+// notifications/leads -- so existing test expectations don't change).
+vi.mock("./content-db-helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./content-db-helpers")>();
+  return {
+    ...actual,
+    createNotification: vi.fn(async (_db: any, data: any) => {
+      const id = store.nextNotifId();
+      store.notifications.push({ ...data, id, createdAt: new Date() });
+      return { id };
+    }),
+    getUserNotifications: vi.fn(async (_db: any, userId: number, limit = 50) => {
+      return store.notifications.filter((n: any) => n.userId === userId).slice(0, limit);
+    }),
+    getUnreadNotificationCount: vi.fn(async (_db: any, userId: number) => {
+      return store.notifications.filter((n: any) => n.userId === userId && n.isRead === 0).length;
+    }),
+    markNotificationRead: vi.fn(async (_db: any, id: number, userId: number) => {
+      const n = store.notifications.find((n: any) => n.id === id && n.userId === userId);
+      if (n) n.isRead = 1;
+    }),
+    markAllNotificationsRead: vi.fn(async (_db: any, userId: number) => {
+      store.notifications.filter((n: any) => n.userId === userId).forEach((n: any) => { n.isRead = 1; });
+    }),
+    deleteNotification: vi.fn(async (_db: any, id: number, userId: number) => {
+      const idx = store.notifications.findIndex((n: any) => n.id === id && n.userId === userId);
+      if (idx >= 0) store.notifications.splice(idx, 1);
+    }),
+    createLead: vi.fn(async (_db: any, _data: any) => ({ id: store.nextLeadId() })),
+    getAllLeads: vi.fn(async () => []),
+    updateLeadScore: vi.fn(async () => undefined),
+    updateLeadStatus: vi.fn(async () => undefined),
+    getCertificateByNumber: vi.fn(async () => null),
+    getProductById: vi.fn(async () => undefined),
+    getUserById: vi.fn(async () => null),
+    hasUserActionLogged: vi.fn(async () => false),
+    logActivity: vi.fn(async () => undefined),
+    getAutopilotConfig: vi.fn(async () => undefined),
+    getRecentDecisions: vi.fn(async () => []),
+    getUserEmailCampaigns: vi.fn(async () => []),
+    createEmailCampaign: vi.fn(async (_db: any, data: any) => ({ id: 1, ...data })),
+    updateEmailCampaign: vi.fn(async () => undefined),
+    getPendingDrafts: vi.fn(async () => []),
+    createEmailDraft: vi.fn(async (_db: any, data: any) => ({ id: 1, ...data })),
+    updateDraftStatus: vi.fn(async () => undefined),
+    getAllAbTests: vi.fn(async () => []),
+    createAbTest: vi.fn(async (_db: any, data: any) => ({ id: 1, ...data })),
+    getWhiteLabelByApiKey: vi.fn(async () => null),
+    getDashboardMetrics: vi.fn(async () => ({ totalProducts: 0, totalAuthentications: 0, totalCertificates: 0, totalNfts: 0 })),
+    getRecentActivity: vi.fn(async () => []),
+  };
+});
+
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
