@@ -3,6 +3,12 @@ import { trpcServer } from "@hono/trpc-server";
 import { appRouter } from "../server/routers";
 import { createWorkersContext } from "../server/_core/context.workers";
 import { resolveBrand, type BrandId } from "../shared/brands";
+import { getHyperdriveDb } from "../server/db";
+import { timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
+import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
+import { getSessionCookieOptions } from "../server/_core/cookies";
+import { products, certificates } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -13,6 +19,20 @@ type Env = {
 type Variables = {
   brand: BrandId;
 };
+
+
+// Shared timing-safe string comparison for webhook secret headers (mirrors
+// the local helper in server/_core/app.ts and server/internal-api.ts).
+function timingSafeEqualStrings(a: string, b: string): boolean {
+  try {
+    const ba = Buffer.from(a);
+    const bb = Buffer.from(b);
+    if (ba.length !== bb.length) return false;
+    return cryptoTimingSafeEqual(ba, bb);
+  } catch {
+    return false;
+  }
+}
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -36,6 +56,60 @@ app.use(
 );
 
 app.get("/api/health", (c) => c.json({ status: "ok" }));
+
+
+// ─── Stripe Webhook ─────────────────────────────────────────────────────────
+// handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
+// function (server/webhooks/stripe.ts) — just a new call site here.
+app.post("/api/stripe/webhook", async (c) => {
+  const sig = c.req.header("stripe-signature");
+  if (!sig) {
+    return c.json({ error: "Missing stripe-signature header" }, 400);
+  }
+  try {
+    const { handleStripeWebhook } = await import("../server/webhooks/stripe");
+    const rawBody = Buffer.from(await c.req.arrayBuffer());
+    const db = getHyperdriveDb(c.env);
+    const result = await handleStripeWebhook(db, rawBody, sig);
+    return c.json(result);
+  } catch (err: any) {
+    console.error(`[Stripe Webhook] Error: ${err.message}`);
+    return c.json({ error: err.message }, 400);
+  }
+});
+
+// ─── Paddle Webhook ─────────────────────────────────────────────────────────
+// handlePaddleWebhook(db, req, res) takes Express-shaped req/res objects
+// directly (not a framework-agnostic signature like the other webhook
+// handlers) — this is a minimal req/res shim rather than a rewrite of
+// server/paddle/webhook.ts, which only touches req.headers, req.body, and
+// res.status()/res.json().
+app.post("/api/paddle/webhook", async (c) => {
+  const sig = c.req.header("paddle-signature");
+  if (!sig) {
+    return c.json({ error: "Missing paddle-signature header" }, 400);
+  }
+  try {
+    const { handlePaddleWebhook } = await import("../server/paddle/webhook");
+    const bodyText = await c.req.text();
+    const db = getHyperdriveDb(c.env);
+    let statusCode = 200;
+    let responseBody: unknown = null;
+    const fakeReq = {
+      headers: { "paddle-signature": sig },
+      body: { toString: () => bodyText },
+    } as any;
+    const fakeRes = {
+      status(code: number) { statusCode = code; return fakeRes; },
+      json(body: unknown) { responseBody = body; return fakeRes; },
+    } as any;
+    await handlePaddleWebhook(db, fakeReq, fakeRes);
+    return c.json(responseBody as any, statusCode as any);
+  } catch (err: any) {
+    console.error(`[Paddle Webhook] Error: ${err.message}`);
+    return c.json({ error: err.message }, 400);
+  }
+});
 
 // Static assets fallback (Vite build output, same dist/public the existing
 // worker/index.ts already serves for the marketing page).
