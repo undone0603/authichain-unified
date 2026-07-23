@@ -109,7 +109,7 @@ vi.mock("./marketplace/db", async () => ({
     { id: 1, name: "Authenticator Pro", category: "vision", price: 1999, status: "active", downloads: 42, rating: "4.80", reviewCount: 10, creatorId: 99 },
     { id: 2, name: "Chain Verifier",    category: "nlp",    price: 999,  status: "active", downloads: 18, rating: "4.20", reviewCount: 5,  creatorId: 99 },
   ]),
-  getModelById: vi.fn(async (id: number) =>
+  getModelById: vi.fn(async (_db: any, id: number) =>
     id === 1
       ? { id: 1, name: "Authenticator Pro", price: 1999, status: "active", creatorId: 99 }
       : undefined

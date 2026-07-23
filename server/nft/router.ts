@@ -1,5 +1,19 @@
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import * as db from "../db";
+import { getDb } from "../db";
+import {
+  listNfts,
+  getNftById,
+  createNft,
+  logActivity,
+  listCollections,
+  getCollectionBySlug,
+  createCollection,
+  getActiveAuctions,
+  getAuctionById,
+  getAuctionBids,
+  createAuction,
+  placeBid,
+} from "../identity-db-helpers";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { triggerMacrohardEvent } from "../macrohard/service";
@@ -10,10 +24,14 @@ export const nftRouter = router({
     status: z.string().optional(),
     limit: z.number().optional().default(50),
   })).query(async ({ input }) => {
-    return await db.listNfts(input);
+    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
+    // context does. Bridge via getDb() until this router has a ctx.db to use.
+    const db = await getDb();
+    return await listNfts(db, input);
   }),
   getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-    return await db.getNftById(input.id);
+    const db = await getDb(); // see list() above
+    return await getNftById(db, input.id);
   }),
   create: protectedProcedure.input(z.object({
     name: z.string().min(1),
@@ -26,8 +44,9 @@ export const nftRouter = router({
     traits: z.any().optional(),
     productId: z.number().optional(),
   })).mutation(async ({ ctx, input }) => {
-    const result = await db.createNft({ ...input, ownerId: ctx.user.id, creatorId: ctx.user.id, status: "listed" });
-    await db.logActivity({ userId: ctx.user.id, action: "nft_created", entityType: "nft", entityId: result.id });
+    const db = await getDb(); // see list() above
+    const result = await createNft(db, { ...input, ownerId: ctx.user.id, creatorId: ctx.user.id, status: "listed" });
+    await logActivity(db, { userId: ctx.user.id, action: "nft_created", entityType: "nft", entityId: result.id });
 
     // Trigger MACROHARD Webhook: nft_minted
     await triggerMacrohardEvent("nft_minted", {
@@ -42,10 +61,12 @@ export const nftRouter = router({
 
   collections: router({
     list: publicProcedure.query(async () => {
-      return await db.listCollections();
+      const db = await getDb(); // see list() above
+      return await listCollections(db);
     }),
     getBySlug: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => {
-      return await db.getCollectionBySlug(input.slug);
+      const db = await getDb(); // see list() above
+      return await getCollectionBySlug(db, input.slug);
     }),
     create: protectedProcedure.input(z.object({
       name: z.string().min(1),
@@ -54,16 +75,19 @@ export const nftRouter = router({
       imageUrl: z.string().optional(),
       category: z.string().optional(),
     })).mutation(async ({ ctx, input }) => {
-      return await db.createCollection({ ...input, userId: ctx.user.id });
+      const db = await getDb(); // see list() above
+      return await createCollection(db, { ...input, userId: ctx.user.id });
     }),
   }),
   auctions: router({
     list: publicProcedure.query(async () => {
-      return await db.getActiveAuctions();
+      const db = await getDb(); // see list() above
+      return await getActiveAuctions(db);
     }),
     getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-      const auction = await db.getAuctionById(input.id);
-      const bids = await db.getAuctionBids(input.id);
+      const db = await getDb(); // see list() above
+      const auction = await getAuctionById(db, input.id);
+      const bids = await getAuctionBids(db, input.id);
       return { auction, bids };
     }),
     create: protectedProcedure.input(z.object({
@@ -72,22 +96,24 @@ export const nftRouter = router({
       reservePrice: z.string().optional(),
       endsAt: z.string(),
     })).mutation(async ({ ctx, input }) => {
-      const nft = await db.getNftById(input.nftId);
+      const db = await getDb(); // see list() above
+      const nft = await getNftById(db, input.nftId);
       if (!nft) throw new TRPCError({ code: "NOT_FOUND", message: "NFT not found" });
       if (nft.ownerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You do not own this NFT" });
-      return await db.createAuction({ ...input, sellerId: ctx.user.id, endsAt: new Date(input.endsAt) });
+      return await createAuction(db, { ...input, sellerId: ctx.user.id, endsAt: new Date(input.endsAt) });
     }),
     bid: protectedProcedure.input(z.object({
       auctionId: z.number(),
       amount: z.string(),
     })).mutation(async ({ ctx, input }) => {
-      const auction = await db.getAuctionById(input.auctionId);
+      const db = await getDb(); // see list() above
+      const auction = await getAuctionById(db, input.auctionId);
       if (!auction) throw new TRPCError({ code: "NOT_FOUND" });
       if (auction.status !== "active") throw new TRPCError({ code: "BAD_REQUEST", message: "Auction not active" });
       if (auction.currentBid && parseFloat(input.amount) <= parseFloat(auction.currentBid)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Bid must be higher than current bid" });
       }
-      await db.placeBid(input.auctionId, ctx.user.id, input.amount);
+      await placeBid(db, input.auctionId, ctx.user.id, input.amount);
       return { success: true };
     }),
   }),
