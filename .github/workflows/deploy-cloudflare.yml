@@ -48,6 +48,7 @@ jobs:
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile
 
+<<<<<<< HEAD
       - name: Build frontend
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm run build
@@ -107,3 +108,12 @@ jobs:
       - name: Deploy skipped notice
         if: steps.secrets_check.outputs.skip == 'true'
         run: echo "::notice::Cloudflare deploy skipped — set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in repo secrets to enable."
+=======
+      - name: Publish Worker + Assets
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Dynamically target the specific worker's configuration file
+          command: deploy --config workers/${{ matrix.worker }}/wrangler.toml
+>>>>>>> 381d43a0 (fix: clean up cloudflare workflows and remove vercel deploy)
