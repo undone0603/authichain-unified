@@ -23,7 +23,7 @@ async function handler(req: Request): Promise<Response> {
     endpoint: '/api/trpc',
     req,
     router: appRouter,
-    createContext: async () => {
+    createContext: async ({ resHeaders }) => {
       let user = null;
       try {
         const cookie = req.headers.get('cookie') ?? '';
@@ -35,8 +35,14 @@ async function handler(req: Request): Promise<Response> {
         req: { headers: Object.fromEntries(req.headers) } as never,
         res: { clearCookie: () => {}, cookie: () => {} } as never,
         user,
+        // Vercel production traffic is always HTTPS.
         secure: true,
-        setCookieHeader: () => {},
+        // Real cookie writer (fixes logout not clearing the session cookie
+        // on this live Next.js path — it was previously a no-op). The tRPC
+        // fetch adapter merges resHeaders into the final response, so a
+        // Set-Cookie appended here (e.g. by auth.logout) actually reaches
+        // the browser.
+        setCookieHeader: (value: string) => { resHeaders.append('Set-Cookie', value); },
         missionsRepo: new DbMissionsRepository(),
         adminRepo: new DbAdminRepository(),
       };
