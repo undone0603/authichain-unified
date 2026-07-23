@@ -236,6 +236,75 @@ app.get("/api/oauth/callback", async (c) => {
   }
 });
 
+
+function escapeContactHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// ─── Contact form (server/contact/index.ts's router body, ported directly —
+// it's a single POST / handler with no Express-specific internals beyond
+// req.body/res.json) ─────────────────────────────────────────────────────
+app.post("/api/contact", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}) as any);
+    const { name, email, company, message, subject } = body ?? {};
+
+    if (!name || !email || !message) {
+      return c.json({ success: false, error: "Name, email, and message are required" }, 400);
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
+    if (!emailRegex.test(email)) {
+      return c.json({ success: false, error: "Invalid email address" }, 400);
+    }
+
+    const safeName = escapeContactHtml(name);
+    const safeEmail = escapeContactHtml(email);
+    const safeCompany = escapeContactHtml(company || "N/A");
+    const safeMessage = escapeContactHtml(message);
+    const safeSubject = subject ? escapeContactHtml(subject) : `Contact form: ${safeName}`;
+
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const toEmail = process.env.CONTACT_EMAIL || "hello@authichain.com";
+
+    if (smtpHost && smtpUser && smtpPass) {
+      // nodemailer needs Node net/tls; loaded lazily so requests that never
+      // hit this SMTP-configured branch don't pay the Workers nodejs_compat
+      // module cost (same lazy-load rationale as server/email-service.ts).
+      const nodemailer = (await import("nodemailer")).default;
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: false,
+        auth: { user: smtpUser, pass: smtpPass },
+      });
+
+      await transporter.sendMail({
+        from: `"${safeName}" <${smtpUser}>`,
+        replyTo: safeEmail,
+        to: toEmail,
+        subject: safeSubject,
+        text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || "N/A"}\nMessage:\n${message}`,
+        html: `<p><strong>Name:</strong> ${safeName}</p><p><strong>Email:</strong> ${safeEmail}</p><p><strong>Company:</strong> ${safeCompany}</p><p><strong>Message:</strong></p><p>${safeMessage}</p>`,
+      });
+    }
+
+    return c.json({
+      success: true,
+      message: "Thank you for your message. We will be in touch shortly.",
+    });
+  } catch (error) {
+    console.error("Contact form error:", error);
+    return c.json({ success: false, error: "Failed to process your request. Please try again." }, 500);
+  }
+});
+
 // Static assets fallback (Vite build output, same dist/public the existing
 // worker/index.ts already serves for the marketing page).
 app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
