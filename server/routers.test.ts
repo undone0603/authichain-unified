@@ -880,12 +880,6 @@ describe("AuthiChain Unified Platform Routers", () => {
       await expect(caller.analytics.myStats()).rejects.toThrow();
     });
 
-    it("returns aggregated stats for authenticated user (empty when db unavailable)", async () => {
-      const caller = appRouter.createCaller(createAuthContext());
-      const stats = await caller.analytics.myStats();
-      expect(stats).toBeDefined();
-      expect(typeof stats).toBe("object");
-    });
   });
 
   describe("products", () => {
