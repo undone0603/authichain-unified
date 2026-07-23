@@ -53,6 +53,7 @@ vi.mock("./db", async (importOriginal) => {
     getUserReferrals: vi.fn(async () => []),
     // white-label
     getWhiteLabelByApiKey: vi.fn(async () => null),
+    getWhiteLabelClients: vi.fn(async () => []),
     // subscriptions
     getUserSubscription: vi.fn(async () => null),
     // autopilot
@@ -75,7 +76,6 @@ vi.mock("./db", async (importOriginal) => {
     getOpenFraudAlerts: vi.fn(async () => []),
     getAllHealthScores: vi.fn(async () => []),
     getRecentActivity: vi.fn(async () => []),
-    getWhiteLabelClients: vi.fn(async () => []),
     // make getDb return null so character/scheduler null-guards activate
     getDb: vi.fn(async () => null),
   };
@@ -99,6 +99,30 @@ vi.mock("./db-helpers", async (importOriginal) => {
     getAllHealthScores: vi.fn(async () => []),
     getRecentActivity: vi.fn(async () => []),
     getUserSubscription: vi.fn(async () => null),
+  };
+});
+
+// server/staking/router.ts, server/referral/router.ts,
+// server/white-label/router.ts, server/affiliate/router.ts,
+// server/nft/router.ts, and server/certificates/router.ts were migrated
+// (Task 2b-5) to call server/identity-db-helpers.ts's db-parameterized
+// reimplementations instead of server/db.ts's named exports directly, so
+// the functions those public/authenticated tests below actually exercise
+// need to be mocked here too (the values below intentionally mirror the
+// "./db" mock above so existing test expectations don't change).
+vi.mock("./identity-db-helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./identity-db-helpers")>();
+  return {
+    ...actual,
+    getCertificateByNumber: vi.fn(async () => null),
+    listNfts: vi.fn(async () => []),
+    listCollections: vi.fn(async () => []),
+    getActiveAuctions: vi.fn(async () => []),
+    getReferralByCode: vi.fn(async () => undefined),
+    getUserReferrals: vi.fn(async () => []),
+    getWhiteLabelByApiKey: vi.fn(async () => null),
+    getWhiteLabelClients: vi.fn(async () => []),
+    getAffiliateByUserId: vi.fn(async () => null),
   };
 });
 
