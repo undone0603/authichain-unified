@@ -6,15 +6,7 @@ import type { IAdminRepository } from "../admin/types";
 import { DbMissionsRepository } from "../missions/db-repository";
 import { DbAdminRepository } from "../admin/db-repository";
 import { getHyperdriveDb } from "../db";
-
-export type TrpcContext = {
-  db: ReturnType<typeof getHyperdriveDb>;
-  user: User | null;
-  secure: boolean;
-  setCookieHeader: (value: string) => void;
-  missionsRepo?: IMissionsRepository;
-  adminRepo?: IAdminRepository;
-};
+import type { TrpcContext } from "./context";
 
 type WorkersEnv = { HYPERDRIVE: { connectionString: string } };
 
