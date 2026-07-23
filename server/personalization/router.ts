@@ -14,6 +14,11 @@ import {
   analyzePersonalizationPerformance,
 } from "./contentEngine";
 
+// TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
+// context does. This router runs its own drizzle queries directly (not
+// through server/db.ts's named helpers), so there's nothing to
+// re-implement in content-db-helpers.ts here -- just a documented getDb()
+// bridge until this router has a ctx.db to use.
 export const personalizationRouter = router({
   // Track visitor and get personalized content (public endpoint)
   getPersonalizedContent: publicProcedure
@@ -27,7 +32,6 @@ export const personalizationRouter = router({
     }))
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) return null;
 
       // Check if visitor profile exists
       let profile = (await db
@@ -41,7 +45,7 @@ export const personalizationRouter = router({
         const geo = input.ipAddress ? await getGeolocation(input.ipAddress) : {};
         const utmParams = input.url ? parseUTMParams(input.url) : {};
         const trafficSource = detectTrafficSource(input.referrer);
-        
+
         // Detect device type from user agent
         let deviceType: "desktop" | "mobile" | "tablet" = "desktop";
         if (input.userAgent) {
@@ -164,7 +168,6 @@ export const personalizationRouter = router({
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) return { success: false };
 
       // Update visitor profile
       await db
@@ -223,7 +226,6 @@ export const personalizationRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not available');
 
       await db.insert(personalizationRules).values({
         name: input.name,
@@ -248,7 +250,6 @@ export const personalizationRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not available');
 
       // Generate rules using AI
       const rules = await generatePersonalizationRules(
@@ -280,7 +281,6 @@ export const personalizationRouter = router({
     }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) return [];
 
       let query = db.select().from(personalizationRules).orderBy(desc(personalizationRules.createdAt)) as any;
 
@@ -298,7 +298,6 @@ export const personalizationRouter = router({
     }))
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) return null;
 
       const rules = await db
         .select()
@@ -316,7 +315,6 @@ export const personalizationRouter = router({
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not available');
 
       await db
         .update(personalizationRules)
@@ -335,7 +333,6 @@ export const personalizationRouter = router({
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not available');
 
       await db
         .update(personalizationRules)
@@ -351,7 +348,6 @@ export const personalizationRouter = router({
   getSegmentAnalytics: adminProcedure
     .query(async () => {
       const db = await getDb();
-      if (!db) return [];
 
       const profiles = await db.select().from(visitorProfiles);
 
@@ -391,7 +387,6 @@ export const personalizationRouter = router({
   getPerformanceAnalytics: adminProcedure
     .query(async () => {
       const db = await getDb();
-      if (!db) return null;
 
       const rules = await db
         .select()

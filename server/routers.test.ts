@@ -888,16 +888,6 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
   });
 
-  describe("personalization", () => {
-    it("getPersonalizedContent returns null when db unavailable", async () => {
-      const caller = appRouter.createCaller(createPublicContext());
-      const result = await caller.personalization.getPersonalizedContent({
-        sessionId: "test-session-123",
-      });
-      expect(result).toBeNull();
-    });
-  });
-
   describe("products", () => {
     it("list requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
