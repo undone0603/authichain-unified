@@ -12,7 +12,12 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 
 const rateLimitMiddleware = t.middleware(({ ctx, next }) => {
-  checkTrpcPublicLimit(ctx.req);
+  // ctx.req is present only on the Express runtime. On Workers it is
+  // undefined; per-request rate limiting for the Workers path is handled
+  // separately in Task 7 (Durable Object). Guard so this shared middleware
+  // type-checks against the unified context and no-ops cleanly on Workers
+  // until then.
+  if (ctx.req) checkTrpcPublicLimit(ctx.req);
   return next();
 });
 
