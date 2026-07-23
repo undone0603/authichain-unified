@@ -9,11 +9,13 @@ import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "../server/_core/cookies";
 import { products, certificates } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { checkRateLimit } from "./rate-limiter";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
   ASSETS: Fetcher;
   SESSIONS: KVNamespace;
+  RATE_LIMITER: DurableObjectNamespace;
 };
 
 type Variables = {
@@ -46,6 +48,52 @@ app.use("*", async (c, next) => {
   c.header("X-Brand", brand);
   await next();
 });
+
+// ─── Rate limiting (Durable Object–backed) ─────────────────────────────────
+// Replaces the Express oauthRateLimit/contactRateLimit/gptRateLimit/
+// globalApiRateLimit/adminRateLimit middlewares (server/_core/rate-limit.ts)
+// on the Workers path. Same exact per-route limits, backed by the
+// RATE_LIMITER Durable Object instead of a process-local in-memory Map.
+//
+// tRPC per-procedure rate limiting (rateLimitedPublicProcedure in
+// server/_core/trpc.ts, used by 2 procedures in server/sales/router.ts) is
+// intentionally OUT OF SCOPE here — that middleware already no-ops on the
+// Workers path (guarded in an earlier migration task). Those 2 procedures
+// still fall under the global /api/* 300/min limit below (a coarser bound
+// than their specific 30/min Express limit); threading the Durable Object
+// into the tRPC context is a larger change left as a follow-up.
+function rateLimitMiddleware(namePrefix: string, limit: number, windowMs: number) {
+  return async (c: any, next: () => Promise<void>) => {
+    // Fail open if the RATE_LIMITER Durable Object binding isn't present
+    // (e.g. the Node-based vitest suite in routes.test.ts, which runs
+    // worker-app/index.ts outside workerd with no c.env at all — see
+    // vitest.config.ts's "worker-app/**/*.test.ts" include). In a real
+    // deployment the binding is always present per wrangler.toml, so this
+    // only matters for tests / a misconfigured environment, where skipping
+    // the check is safer than 500ing every request.
+    const namespace = c.env?.RATE_LIMITER;
+    if (namespace) {
+      const ip = c.req.header("cf-connecting-ip") ?? "unknown";
+      const allowed = await checkRateLimit(namespace, `${namePrefix}:${ip}`, limit, windowMs);
+      if (!allowed) {
+        return c.json({ error: "Too many requests. Please slow down." }, 429);
+      }
+    }
+    await next();
+  };
+}
+
+// OAuth callback: 20 attempts per 15 min per IP
+app.use("/api/oauth/*", rateLimitMiddleware("oauth", 20, 15 * 60_000));
+// Contact form: 5 submissions per hour per IP
+app.use("/api/contact/*", rateLimitMiddleware("contact", 5, 60 * 60_000));
+// GPT plugin endpoints: 60 requests per minute per IP
+app.use("/api/gpt/*", rateLimitMiddleware("gpt", 60, 60_000));
+// Admin ops: 30 requests per 15 min per IP
+app.use("/api/admin/*", rateLimitMiddleware("admin", 30, 15 * 60_000));
+// Catch-all API guard: 300 requests per minute per IP (also covers
+// /api/trpc/* — see tRPC note above)
+app.use("/api/*", rateLimitMiddleware("global", 300, 60_000));
 
 app.use(
   "/api/trpc/*",
@@ -737,4 +785,5 @@ app.get("/api/internal/tenant", async (c) => {
 // worker/index.ts already serves for the marketing page).
 app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
+export { RateLimiter } from "./rate-limiter";
 export default app;

@@ -14,3 +14,11 @@ id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from t
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "97d767ff69584161a0672cd942e9364a"
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RateLimiter"]
