@@ -33,7 +33,7 @@ vi.mock("../server/_core/db-helpers", () => ({
   upsertUser: vi.fn().mockResolvedValue(undefined),
 }));
 
-const app = (await import("./index")).default;
+const app = (await import("./index")).app;
 
 describe("POST /api/stripe/webhook", () => {
   it("passes the raw body and signature header through unchanged", async () => {
