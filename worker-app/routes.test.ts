@@ -317,6 +317,28 @@ describe("manifest-driven static + SPA routing", () => {
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("ASSET:/favicon-qron.svg");
   });
+
+  it("passes /robots.txt through raw (allowlisted static extension)", async () => {
+    const res = await app.request("/robots.txt", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("ASSET:/robots.txt");
+  });
+
+  it("serves the SPA shell (NOT the real admin.html) for /admin.html [regression: static-extension allowlist]", async () => {
+    // /admin.html is spa-fallback (resolveOwner only special-cases the exact
+    // "/admin" path, not "/admin.html"). Before the allowlist fix, the old
+    // "last segment has a dot" heuristic treated ".html" as a static
+    // extension and raw-fetched ASSETS, returning the real prerendered
+    // admin.html (mocked here as "MARKETING:/admin.html") -- defeating the
+    // D1 invariant that /admin must always be the SPA. ".html" must NOT be
+    // in STATIC_ASSET_EXTENSIONS, so this must fall through to the shell.
+    const res = await app.request("/admin.html", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toBe("SPA-SHELL");
+    expect(body).not.toBe("MARKETING:/admin.html");
+    expect(body).not.toContain("MARKETING");
+  });
 });
 
 describe("routing regression (Task 3.2 additive)", () => {
@@ -324,5 +346,59 @@ describe("routing regression (Task 3.2 additive)", () => {
     const res = await app.request("/api/health");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "ok" });
+  });
+});
+
+describe("tRPC routes are handled by the tRPC middleware, not the * SPA fallback", () => {
+  function makeTrpcEnv() {
+    const indexHtmlFetch = vi.fn();
+    return {
+      env: {
+        ASSETS: {
+          fetch: async (input: Request | string) => {
+            const url = new URL(typeof input === "string" ? input : input.url);
+            if (url.pathname === "/index.html") {
+              indexHtmlFetch(url.pathname);
+              return new Response("SPA-SHELL", {
+                status: 200,
+                headers: { "content-type": "text/html" },
+              });
+            }
+            if (url.pathname === "/marketing-manifest.json") {
+              return new Response(JSON.stringify({ routes: [] }), {
+                status: 200,
+                headers: { "content-type": "application/json" },
+              });
+            }
+            return new Response("ASSET:" + url.pathname, { status: 200 });
+          },
+        },
+      },
+      indexHtmlFetch,
+    };
+  }
+
+  it("GET /api/trpc/system.health returns a tRPC-shaped JSON response, never the SPA shell", async () => {
+    const { env, indexHtmlFetch } = makeTrpcEnv();
+    const input = encodeURIComponent(JSON.stringify({ json: { timestamp: Date.now() } }));
+    const res = await app.request(`/api/trpc/system.health?input=${input}`, {}, env as any);
+
+    // Never falls through to the "*" SPA-shell branch: /index.html is never
+    // fetched from ASSETS for a /api/trpc/* request.
+    expect(indexHtmlFetch).not.toHaveBeenCalled();
+
+    const contentType = res.headers.get("content-type") ?? "";
+    expect(contentType).toMatch(/json/i);
+    const body: any = await res.json();
+    // superjson-transformer tRPC response shape: either a success envelope
+    // ({ result: { data: ... } }) or a structured tRPC error envelope
+    // ({ error: { ... } }) -- either proves the tRPC middleware (not the SPA
+    // fallback) handled the request.
+    expect(body).toSatisfy(
+      (b: any) => (b && typeof b === "object" && ("result" in b || "error" in b)),
+    );
+    if (body.result) {
+      expect(body.result.data.json).toEqual({ ok: true });
+    }
   });
 });
