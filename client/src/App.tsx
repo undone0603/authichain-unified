@@ -11,7 +11,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { ThirdwebProvider } from "./components/ThirdwebProvider";
 import DashboardLayout from "./components/DashboardLayout";
 
-const Home = lazy(() => import("./pages/brand/AuthiChainHome"));
+const Home = lazy(() => import("./pages/brand/BrandHome"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Authenticate = lazy(() => import("./pages/Authenticate"));
 const QrCodes = lazy(() => import("./pages/QrCodes"));
