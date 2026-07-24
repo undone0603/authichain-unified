@@ -11,6 +11,7 @@ import { getSessionCookieOptions } from "../server/_core/cookies";
 import { products, certificates } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { checkRateLimit } from "./rate-limiter";
+import { resolveOwner } from "./route-manifest";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -785,9 +786,102 @@ app.get("/api/internal/tenant", async (c) => {
   }
 });
 
-// Static assets fallback (Vite build output, same dist/public the existing
-// worker/index.ts already serves for the marketing page).
-app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
+// ─── Manifest-driven static + SPA routing (Task 3.2) ───────────────────────
+// The Worker is the SINGLE routing authority (worker-first, see
+// wrangler.toml [assets].run_worker_first). resolveOwner() in route-manifest.ts
+// decides the owner of every non-asset navigation request, OVERRIDING what a
+// naive static-asset layer would do (e.g. dist/site/admin.html exists because
+// Next prerendered /admin, but D1 says /admin -> SPA shell; pricing.html exists
+// and D1 says /pricing -> marketing). Static asset dirs (/_next/*, /assets/*)
+// are served directly by the Asset Worker and never reach here.
+
+// Cached marketing route set, loaded once from the merged assets dir via the
+// ASSETS binding. Module-level cache so we fetch+parse the manifest a single
+// time per isolate. Fail-open to an empty set so a missing manifest (or the
+// Node vitest suite with a partial env) never 500s — an empty set just means
+// resolveOwner treats every unknown path as "spa-fallback".
+let _marketingRoutesCache: Promise<Set<string>> | null = null;
+
+async function getMarketingRoutes(env: Env): Promise<Set<string>> {
+  if (_marketingRoutesCache) return _marketingRoutesCache;
+  _marketingRoutesCache = (async () => {
+    try {
+      const res = await env.ASSETS.fetch(
+        new Request("https://internal/marketing-manifest.json"),
+      );
+      if (!res || res.status !== 200) return new Set<string>();
+      const data = (await res.json()) as { routes?: string[] };
+      return new Set<string>(Array.isArray(data.routes) ? data.routes : []);
+    } catch {
+      return new Set<string>();
+    }
+  })();
+  return _marketingRoutesCache;
+}
+
+// Test-only: reset the module-level manifest cache between cases so a fresh
+// mock env is re-read (see routes.test.ts).
+export function __resetMarketingRoutesCache(): void {
+  _marketingRoutesCache = null;
+}
+
+// Serve the Vite/wouter SPA shell (index.html). wouter resolves the route
+// client-side (or renders its own 404).
+function serveSpaShell(c: any): Promise<Response> {
+  return c.env.ASSETS.fetch(
+    new Request(new URL("/index.html", c.req.url), c.req.raw),
+  );
+}
+
+app.get("*", async (c) => {
+  const { pathname } = new URL(c.req.url);
+
+  // Static asset dirs: raw passthrough — the file path IS the URL path.
+  // (Normally served directly by the Asset Worker; this is a safety net if a
+  // /_next/* request is ever routed worker-first.)
+  if (pathname.startsWith("/_next/")) {
+    return c.env.ASSETS.fetch(c.req.raw);
+  }
+
+  const owner = resolveOwner(pathname, await getMarketingRoutes(c.env));
+
+  // "api" should never reach here (real /api/* routes are registered above);
+  // handle defensively by passing the raw request through to ASSETS.
+  if (owner === "api") {
+    return c.env.ASSETS.fetch(c.req.raw);
+  }
+
+  // "dynamic": lean Hono-rendered pages. INTERIM — serve the SPA shell until
+  // Task 3.3 wires worker-app/dynamic-pages.ts.
+  if (owner === "dynamic") {
+    // TODO(Task 3.3): renderDynamicPage(c) — replace this SPA-shell interim.
+    return serveSpaShell(c);
+  }
+
+  // "marketing": serve the Next-prerendered static HTML for this route.
+  if (owner === "marketing") {
+    const base = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+    const htmlUrl = new URL(base + ".html", c.req.url);
+    const res = await c.env.ASSETS.fetch(new Request(htmlUrl, c.req.raw));
+    if (res.status === 200) return res;
+    // marketing-miss -> fall through to the SPA shell below.
+  }
+
+  // "spa" | "spa-fallback" | marketing-miss:
+  // For spa-fallback, an unknown path that LOOKS like a static file (has a
+  // file extension in its last segment, e.g. /favicon-qron.svg, /robots.txt)
+  // is passed through raw so root-level static assets are served correctly;
+  // everything else (real SPA routes, unknown navigation) gets the shell.
+  if (owner === "spa-fallback") {
+    const lastSeg = pathname.split("/").pop() ?? "";
+    if (lastSeg.includes(".")) {
+      const assetRes = await c.env.ASSETS.fetch(c.req.raw);
+      if (assetRes.status === 200) return assetRes;
+    }
+  }
+
+  return serveSpaShell(c);
+});
 
 export { RateLimiter } from "./rate-limiter";
 
