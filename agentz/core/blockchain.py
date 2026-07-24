@@ -71,10 +71,44 @@ class BlockchainAgent:
             "status": "anchored"
         }
 
-    def verify_anchor(self, tx_hash: str) -> bool:
-        """Verifies that a transaction exists on-chain."""
+    def claim_counterfeit_bounty(self, certificate_number: str, claimant: str) -> str:
+        """
+        Interacts with CounterfeitBounty contract to claim a bounty.
+        """
+        if not self.account:
+            return "err:no_account"
+
+        contract_address = get("COUNTERFEIT_BOUNTY_ADDRESS")
+        if not contract_address:
+            return "err:no_contract_address"
+
+        # Minimal ABI for claimBounty
+        abi = [{
+            "constant": False,
+            "inputs": [
+                {"name": "_certificateNumber", "type": "string"},
+                {"name": "_claimant", "type": "address"}
+            ],
+            "name": "claimBounty",
+            "outputs": [],
+            "payable": False,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }]
+
+        contract = self.w3.eth.contract(address=contract_address, abi=abi)
+        
         try:
-            receipt = self.w3.eth.get_transaction_receipt(tx_hash)
-            return receipt is not None
-        except:
-            return False
+            tx = contract.functions.claimBounty(certificate_number, claimant).build_transaction({
+                'nonce': self.w3.eth.get_transaction_count(self.account.address),
+                'gas': 200000,
+                'gasPrice': self.w3.eth.gas_price,
+                'chainId': self.w3.eth.chain_id
+            })
+            
+            signed_tx = self.w3.eth.account.sign_transaction(tx, self.private_key)
+            tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            
+            return self.w3.to_hex(tx_hash)
+        except Exception as e:
+            return f"err:blockchain:{str(e)[:50]}"
