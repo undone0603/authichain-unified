@@ -833,6 +833,23 @@ function serveSpaShell(c: any): Promise<Response> {
   );
 }
 
+// Root-level static files the SPA ships alongside index.html (favicons,
+// touch icons, robots.txt, sitemap.xml, web manifests, hashed/immutable
+// assets, etc.) — these must be raw-fetched from ASSETS instead of getting
+// the SPA shell. Deliberately an ALLOWLIST (not a bare "has a dot"
+// heuristic): a naive dot-check also matches "*.html" paths like
+// /admin.html, which would raw-serve the real prerendered admin.html and
+// defeat the CRITICAL D1 invariant that /admin (and its .html twin) must
+// always be the SPA shell. Extensions are matched case-insensitively
+// against the final path segment.
+const STATIC_ASSET_EXTENSIONS = new Set([
+  "svg", "png", "jpg", "jpeg", "gif", "webp", "ico",
+  "txt", "xml", "json", "webmanifest",
+  "woff", "woff2", "ttf", "otf", "eot",
+  "css", "js", "map",
+  "mp4", "webm", "avif",
+]);
+
 app.get("*", async (c) => {
   const { pathname } = new URL(c.req.url);
 
@@ -868,13 +885,18 @@ app.get("*", async (c) => {
   }
 
   // "spa" | "spa-fallback" | marketing-miss:
-  // For spa-fallback, an unknown path that LOOKS like a static file (has a
-  // file extension in its last segment, e.g. /favicon-qron.svg, /robots.txt)
-  // is passed through raw so root-level static assets are served correctly;
-  // everything else (real SPA routes, unknown navigation) gets the shell.
+  // For spa-fallback, an unknown path whose last segment has a KNOWN STATIC
+  // extension (STATIC_ASSET_EXTENSIONS, e.g. /favicon-qron.svg, /robots.txt)
+  // is passed through raw so root-level static assets are served correctly.
+  // ".html" is deliberately NOT in that allowlist -- e.g. /admin.html must
+  // still fall through to the SPA shell below, not raw-serve the real
+  // prerendered admin.html (see STATIC_ASSET_EXTENSIONS comment above).
+  // Everything else (real SPA routes, unknown navigation) gets the shell.
   if (owner === "spa-fallback") {
     const lastSeg = pathname.split("/").pop() ?? "";
-    if (lastSeg.includes(".")) {
+    const dotIdx = lastSeg.lastIndexOf(".");
+    const ext = dotIdx >= 0 ? lastSeg.slice(dotIdx + 1).toLowerCase() : "";
+    if (STATIC_ASSET_EXTENSIONS.has(ext)) {
       const assetRes = await c.env.ASSETS.fetch(c.req.raw);
       if (assetRes.status === 200) return assetRes;
     }
