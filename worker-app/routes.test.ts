@@ -306,8 +306,22 @@ describe("manifest-driven static + SPA routing", () => {
     expect(await res.text()).toBe("SPA-SHELL");
   });
 
-  it("serves the SPA shell for a dynamic-owned path (Task 3.3 interim)", async () => {
-    const res = await app.request("/verify/abc", {}, makeEnv() as any);
+  it("routes a dynamic-owned path through renderDynamicPage, not the bare shell (Task 3.3)", async () => {
+    // Bare /verify has no ?id= and no path-segment identifier, so this
+    // exercises dynamic-pages.ts real no-identifier branch (a rendered
+    // verify prompt, no DB call needed) -- proving the "dynamic" owner now
+    // goes through renderDynamicPage own logic and not just an
+    // unconditional SPA-shell interim.
+    const res = await app.request("/verify", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).not.toBe("SPA-SHELL");
+    expect(body).toContain("Verify a Product");
+  });
+
+  it("still serves the SPA shell for a stubbed dynamic route (Task 3.3 stub scope)", async () => {
+    // /status is a still-stubbed dynamic route -- always the SPA shell.
+    const res = await app.request("/status", {}, makeEnv() as any);
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("SPA-SHELL");
   });
