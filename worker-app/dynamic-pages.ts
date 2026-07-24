@@ -107,13 +107,20 @@ function notFoundHtml(heading: string, message: string, canonicalPath: string): 
 // for a scanned QR code where a redirect to home is more useful.
 async function renderShortlink(c: Context): Promise<Response> {
   const { pathname } = new URL(c.req.url);
-  const shortcode = decodeURIComponent(pathname.replace(/^\/s\/?/, ""));
-
-  if (!shortcode) {
-    return c.redirect("/", 302);
-  }
 
   try {
+    // Extraction+decode lives inside the try: decodeURIComponent throws
+    // URIError on malformed percent-encoding (e.g. /s/%zz), and a malformed
+    // shortcode should degrade exactly like a lookup miss (redirect home),
+    // not 500. Also strip a trailing slash (e.g. /s/abc/) so it resolves
+    // the same as the non-slash form.
+    const raw = pathname.replace(/^\/s\/?/, "").replace(/\/+$/, "");
+    const shortcode = decodeURIComponent(raw);
+
+    if (!shortcode) {
+      return c.redirect("/", 302);
+    }
+
     const db = getHyperdriveDb(c.env as any);
     const qron = await getQronById(db, shortcode);
 
@@ -176,17 +183,24 @@ function certStatusLabel(cert: { status?: string | null } | null | undefined): {
 
 async function renderProductPassport(c: Context): Promise<Response> {
   const { pathname } = new URL(c.req.url);
-  const serial = decodeURIComponent(pathname.replace(/^\/p\/?/, ""));
-
-  if (!serial) {
-    return htmlResponse(
-      c,
-      notFoundHtml("Product Not Found", "No serial number was provided.", pathname),
-      404,
-    );
-  }
 
   try {
+    // Extraction+decode lives inside the try: decodeURIComponent throws
+    // URIError on malformed percent-encoding (e.g. /p/%zz), and that should
+    // degrade like any other lookup failure (caught below -> SPA shell)
+    // rather than 500. Also strip a trailing slash (e.g. /p/CERT-001/) so
+    // it resolves the same as the non-slash form.
+    const raw = pathname.replace(/^\/p\/?/, "").replace(/\/+$/, "");
+    const serial = decodeURIComponent(raw);
+
+    if (!serial) {
+      return htmlResponse(
+        c,
+        notFoundHtml("Product Not Found", "No serial number was provided.", pathname),
+        404,
+      );
+    }
+
     const db = getHyperdriveDb(c.env as any);
     const result = await findPassportBySerial(db, serial);
 
@@ -261,15 +275,22 @@ function verifyPromptHtml(): string {
 
 async function renderVerify(c: Context): Promise<Response> {
   const url = new URL(c.req.url);
-  const idParam = url.searchParams.get("id");
-  const pathSegment = decodeURIComponent(url.pathname.replace(/^\/verify\/?/, ""));
-  const identifier = idParam || pathSegment || null;
-
-  if (!identifier) {
-    return htmlResponse(c, verifyPromptHtml(), 200);
-  }
 
   try {
+    // Extraction+decode lives inside the try: decodeURIComponent throws
+    // URIError on malformed percent-encoding (e.g. /verify/%zz), and that
+    // should degrade like any other lookup failure (caught below -> SPA
+    // shell) rather than 500. Also strip a trailing slash (e.g.
+    // /verify/CERT-001/) so it resolves the same as the non-slash form.
+    const idParam = url.searchParams.get("id");
+    const rawPathSegment = url.pathname.replace(/^\/verify\/?/, "").replace(/\/+$/, "");
+    const pathSegment = decodeURIComponent(rawPathSegment);
+    const identifier = idParam || pathSegment || null;
+
+    if (!identifier) {
+      return htmlResponse(c, verifyPromptHtml(), 200);
+    }
+
     const db = getHyperdriveDb(c.env as any);
 
     let product: any = null;

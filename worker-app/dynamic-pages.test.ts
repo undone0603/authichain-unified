@@ -94,6 +94,14 @@ describe("renderDynamicPage: /s/<shortcode> shortlink redirect", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/");
   });
+
+  it("does not 500 on malformed percent-encoding and degrades to the home redirect", async () => {
+    const res = await app.request("/s/%zz", { redirect: "manual" }, makeEnv() as any);
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/");
+    expect(getQronById).not.toHaveBeenCalled();
+  });
 });
 
 describe("renderDynamicPage: /p/<serial> product passport", () => {
@@ -134,6 +142,40 @@ describe("renderDynamicPage: /p/<serial> product passport", () => {
     expect(res.status).toBe(404);
     expect(body).toContain("Product Not Found");
   });
+
+  it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
+    const res = await app.request("/p/%zz", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toBe("SPA-SHELL");
+    expect(getCertificateByNumber).not.toHaveBeenCalled();
+  });
+
+  it("strips a trailing slash so /p/CERT-001/ resolves the same as /p/CERT-001", async () => {
+    (getCertificateByNumber as any).mockResolvedValue({
+      id: 1,
+      productId: 42,
+      certificateNumber: "CERT-001",
+      status: "active",
+    });
+    (getProductById as any).mockResolvedValue({
+      id: 42,
+      name: "Golden Widget",
+      brand: "Acme",
+      description: "A very fine widget.",
+      manufacturer: "Acme Corp",
+      serialNumber: "CERT-001",
+    });
+    (getHyperdriveDb as any).mockReturnValue(makeDbSelectStub([]));
+
+    const res = await app.request("/p/CERT-001/", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("Golden Widget");
+    expect(getCertificateByNumber).toHaveBeenCalledWith(expect.anything(), "CERT-001");
+  });
 });
 
 describe("renderDynamicPage: /verify verification landing", () => {
@@ -163,6 +205,15 @@ describe("renderDynamicPage: /verify verification landing", () => {
     expect(res.status).toBe(200);
     expect(body).toContain("Verified Sneaker");
     expect(body).toContain("Authentic Product Verified");
+  });
+
+  it("does not 500 on malformed percent-encoding (falls back to the SPA shell)", async () => {
+    const res = await app.request("/verify/%zz", {}, makeEnv() as any);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toBe("SPA-SHELL");
+    expect(getProductById).not.toHaveBeenCalled();
   });
 });
 
