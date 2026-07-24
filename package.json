@@ -13,6 +13,8 @@
     "build:cf": "opennextjs-cloudflare build",
     "preview:cf": "opennextjs-cloudflare preview -- --config wrangler.app.jsonc",
     "deploy:cf": "opennextjs-cloudflare deploy -- --config wrangler.app.jsonc",
+    "build:marketing": "node scripts/build-marketing-snapshot.mjs",
+    "build:site": "vite build && node scripts/build-marketing-snapshot.mjs && node scripts/merge-assets.mjs",
     "check": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
