@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { protectedProcedure, router } from "./_core/trpc";
+import { getDb } from "./db";
 import {
   provisionVendorAccount,
   generateOnboardingLink,
@@ -17,7 +18,12 @@ export const stripeConnectRouter = router({
   provisionAccount: protectedProcedure
     .input(z.object({ country: z.string().length(2).default("US") }))
     .mutation(async ({ ctx, input }) => {
+      // ctx.db does not exist on the live TrpcContext (server/_core/context.ts) —
+      // only the separate Workers context has it. Documented bridge until
+      // this router is wired up to a real per-request db.
+      const db = await getDb();
       const accountId = await provisionVendorAccount(
+        db,
         ctx.user.id,
         ctx.user.name ?? "Vendor",
         ctx.user.email ?? "",

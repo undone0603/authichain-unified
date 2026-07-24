@@ -1,5 +1,6 @@
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import * as db from "../db";
+import { getDb } from "../db";
+import { getUserReferrals, getReferralByCode } from "../identity-db-helpers";
 import { z } from "zod";
 import {
   createReferralCode,
@@ -10,13 +11,18 @@ import {
 
 export const referralRouter = router({
   generateCode: protectedProcedure.mutation(async ({ ctx }) => {
-    return await createReferralCode(ctx.user.id);
+    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
+    // context does. Bridge via getDb() until this router has a ctx.db to use.
+    const db = await getDb();
+    return await createReferralCode(db, ctx.user.id);
   }),
   getStats: protectedProcedure.query(async ({ ctx }) => {
-    return await getReferralStats(ctx.user.id);
+    const db = await getDb(); // see generateCode() above
+    return await getReferralStats(db, ctx.user.id);
   }),
   getHistory: protectedProcedure.query(async ({ ctx }) => {
-    return await db.getUserReferrals(ctx.user.id);
+    const db = await getDb(); // see generateCode() above
+    return await getUserReferrals(db, ctx.user.id);
   }),
   trackClick: publicProcedure.input(z.object({
     referralCode: z.string(),
@@ -25,11 +31,13 @@ export const referralRouter = router({
     referer: z.string().optional(),
     landingPage: z.string().optional(),
   })).mutation(async ({ input }) => {
-    await trackReferralClick(input);
+    const db = await getDb(); // see generateCode() above
+    await trackReferralClick(db, input);
     return { success: true };
   }),
   validate: publicProcedure.input(z.object({ code: z.string() })).query(async ({ input }) => {
-    const referral = await db.getReferralByCode(input.code);
+    const db = await getDb(); // see generateCode() above
+    const referral = await getReferralByCode(db, input.code);
     return { valid: !!referral, referral };
   }),
   complete: protectedProcedure.input(z.object({
@@ -37,7 +45,8 @@ export const referralRouter = router({
     referredEmail: z.string().email(),
     tier: z.enum(["starter", "professional", "enterprise", "agency"]).optional().default("starter"),
   })).mutation(async ({ ctx, input }) => {
-    await completeReferral({
+    const db = await getDb(); // see generateCode() above
+    await completeReferral(db, {
       referralCode: input.referralCode,
       referredId: ctx.user.id,
       referredEmail: input.referredEmail,

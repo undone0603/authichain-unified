@@ -1,7 +1,8 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import type { Express, Request, Response } from "express";
-import * as db from "../db";
-import { getSessionCookieOptions } from "./cookies";
+import { getDb } from "../db";
+import { upsertUser } from "./db-helpers";
+import { getSessionCookieOptions, isSecureRequest } from "./cookies";
 import { sdk } from "./sdk";
 
 function getQueryParam(req: Request, key: string): string | undefined {
@@ -28,7 +29,11 @@ export function registerOAuthRoutes(app: Express) {
         return;
       }
 
-      await db.upsertUser({
+      // Express OAuth callback route (Node-only deployment path, not the
+      // Workers/tRPC path — no ctx.db reachable here). Calling getDb() is a
+      // documented bridge to the legacy server/db.ts singleton.
+      const db = await getDb();
+      await upsertUser(db, {
         openId: userInfo.openId,
         name: userInfo.name || null,
         email: userInfo.email ?? null,
@@ -41,7 +46,7 @@ export function registerOAuthRoutes(app: Express) {
         expiresInMs: ONE_YEAR_MS,
       });
 
-      const cookieOptions = getSessionCookieOptions(req);
+      const cookieOptions = getSessionCookieOptions(isSecureRequest(req));
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
       res.redirect(302, "/");

@@ -1,5 +1,5 @@
 import { syncLeadToHubSpot, isHubSpotConfigured } from '../hubspot-service.js';
-import { logActivity, getDb } from '../db.js';
+import { logActivity, type Db } from './db-helpers.js';
 import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
@@ -12,15 +12,13 @@ interface CrmUpdatePayload {
   leadOrg?: string;
 }
 
-export async function runCrmUpdate(task: Task): Promise<void> {
+export async function runCrmUpdate(task: Task, db: Db): Promise<void> {
   const payload = task.payload as CrmUpdatePayload;
 
   if (!isHubSpotConfigured()) {
-    await logActivity({ userId: null, action: 'crm_update_skipped', entityType: 'task', entityId: 0, details: { taskId: task.id, reason: 'hubspot_not_configured' } });
+    await logActivity(db, { userId: null, action: 'crm_update_skipped', entityType: 'task', entityId: 0, details: { taskId: task.id, reason: 'hubspot_not_configured' } });
     return;
   }
-
-  const db = await getDb();
 
   if (payload.leadEmail) {
     await syncLeadToHubSpot({
@@ -29,13 +27,11 @@ export async function runCrmUpdate(task: Task): Promise<void> {
       company: payload.leadOrg,
     });
 
-    if (db) {
-      await db.update(leads)
-        .set({ updatedAt: new Date() })
-        .where(eq(leads.email, payload.leadEmail.toLowerCase()));
-    }
+    await db.update(leads)
+      .set({ updatedAt: new Date() })
+      .where(eq(leads.email, payload.leadEmail.toLowerCase()));
 
-    await logActivity({ userId: null, action: 'crm_lead_synced', entityType: 'task', entityId: 0, details: { taskId: task.id,
+    await logActivity(db, { userId: null, action: 'crm_lead_synced', entityType: 'task', entityId: 0, details: { taskId: task.id,
       leadEmail: payload.leadEmail,
       segment: payload.segment,
     }});
@@ -43,8 +39,6 @@ export async function runCrmUpdate(task: Task): Promise<void> {
   }
 
   // Bulk sync: push all leads for this segment
-  if (!db) return;
-
   const segmentLeads = payload.segment
     ? await db.select().from(leads).where(eq(leads.segment, payload.segment))
     : await db.select().from(leads);
@@ -63,7 +57,7 @@ export async function runCrmUpdate(task: Task): Promise<void> {
     }
   }
 
-  await logActivity({ userId: null, action: 'crm_bulk_sync_completed', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity(db, { userId: null, action: 'crm_bulk_sync_completed', entityType: 'task', entityId: 0, details: { taskId: task.id,
     segment: payload.segment,
     total: segmentLeads.length,
     synced,

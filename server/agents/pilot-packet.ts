@@ -1,5 +1,5 @@
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity } from '../db.js';
+import { logActivity, type Db } from './db-helpers.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 interface PilotPacketPayload {
@@ -14,7 +14,7 @@ const segmentContext: Record<string, string> = {
   PARTNER: 'strategic partners interested in co-selling or embedding AuthiChain in their platform',
 };
 
-export async function runBuildPilotPacket(task: Task): Promise<void> {
+export async function runBuildPilotPacket(task: Task, db: Db): Promise<void> {
   const payload = task.payload as PilotPacketPayload;
   const segment = payload.segment ?? 'GOV';
   const focus = payload.focus ?? segmentContext[segment] ?? 'enterprise customers';
@@ -41,7 +41,7 @@ Return JSON: { "title": "...", "sections": [{ "heading": "...", "content": "..."
 
   const packet = parseLLMContent<{ title: string; sections: { heading: string; content: string }[] }>(result.choices[0].message.content);
 
-  await logActivity({ userId: null, action: 'pilot_packet_built', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity(db, { userId: null, action: 'pilot_packet_built', entityType: 'task', entityId: 0, details: { taskId: task.id,
     segment,
     title: packet.title,
     sectionCount: packet.sections?.length ?? 0,
@@ -49,7 +49,7 @@ Return JSON: { "title": "...", "sections": [{ "heading": "...", "content": "..."
   }});
 }
 
-export async function runDraftIntelDossier(task: Task): Promise<void> {
+export async function runDraftIntelDossier(task: Task, db: Db): Promise<void> {
   const payload = task.payload as PilotPacketPayload;
   const segment = payload.segment ?? 'GOV';
   const focus = payload.focus ?? segmentContext[segment] ?? 'market landscape';
@@ -75,7 +75,7 @@ Return JSON: { "title": "...", "sections": [{ "heading": "...", "content": "..."
 
   const dossier = parseLLMContent<unknown>(result.choices[0].message.content);
 
-  await logActivity({ userId: null, action: 'intel_dossier_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity(db, { userId: null, action: 'intel_dossier_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
     segment,
     focus,
     missionId: task.missionId,

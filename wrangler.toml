@@ -33,3 +33,8 @@ database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 [[r2_buckets]]
 binding = "MICROSITES_BUCKET"
 bucket_name = "authichain-microsites"
+
+# Hyperdrive binding for Postgres connection pooling
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "97d767ff69584161a0672cd942e9364a"

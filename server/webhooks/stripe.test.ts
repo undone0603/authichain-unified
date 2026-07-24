@@ -17,9 +17,10 @@ vi.mock("stripe", () => {
   return { default: MockStripe };
 });
 
-// ─── Mock DB ──────────────────────────────────────────────────────────────────
+// ─── Mock DB helpers (server/db-helpers.ts — the db-parameterized module
+// server/webhooks/stripe.ts now calls instead of server/db.ts directly) ───────
 
-vi.mock("../db.js", () => ({
+vi.mock("../db-helpers.js", () => ({
   logActivity: vi.fn().mockResolvedValue(undefined),
   logAutomationAudit: vi.fn().mockResolvedValue(undefined),
   recordRevenue: vi.fn().mockResolvedValue(undefined),
@@ -53,6 +54,10 @@ function makeEvent(type: string, id: string, data: object) {
   return { id, type, data: { object: data } };
 }
 
+// Fake db instance — every db-touching call in server/webhooks/stripe.ts goes
+// through the mocked ../db-helpers.js module above, so the real value here is
+// never dereferenced; it just has to be threaded through as the first arg.
+const FAKE_DB = {} as any;
 const RAW_BODY = Buffer.from("{}");
 const SIG = "stripe-sig";
 
@@ -71,7 +76,7 @@ describe("handleStripeWebhook — prerequisites", () => {
     delete process.env.STRIPE_WEBHOOK_SECRET;
     delete process.env.STRIPE_SECRET_KEY;
     const { handleStripeWebhook } = await import("./stripe.js");
-    await expect(handleStripeWebhook(RAW_BODY, SIG)).rejects.toThrow(
+    await expect(handleStripeWebhook(FAKE_DB, RAW_BODY, SIG)).rejects.toThrow(
       "STRIPE_WEBHOOK_SECRET not configured",
     );
   });
@@ -82,7 +87,7 @@ describe("handleStripeWebhook — test events", () => {
   it("returns received:true immediately for test verification events", async () => {
     mockConstructEvent.mockReturnValue(makeEvent("webhook_endpoint.created", "evt_test_verify", {}));
     const { handleStripeWebhook } = await import("./stripe.js");
-    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    const result = await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
     expect(result.received).toBe(true);
   });
 });
@@ -90,11 +95,11 @@ describe("handleStripeWebhook — test events", () => {
 describe("handleStripeWebhook — idempotency", () => {
 
   it("marks duplicate events and skips processing", async () => {
-    const { hasWebhookEventProcessed } = await import("../db.js");
+    const { hasWebhookEventProcessed } = await import("../db-helpers.js");
     vi.mocked(hasWebhookEventProcessed).mockResolvedValueOnce(true);
     mockConstructEvent.mockReturnValue(makeEvent("customer.subscription.created", "evt_001", {}));
     const { handleStripeWebhook } = await import("./stripe.js");
-    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    const result = await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
     expect(result.duplicate).toBe(true);
     expect(result.received).toBe(true);
   });
@@ -117,13 +122,13 @@ describe("handleStripeWebhook — subscription events", () => {
       }),
     );
     const { handleStripeWebhook } = await import("./stripe.js");
-    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    const result = await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
     expect(result.received).toBe(true);
     expect(result.error).toBeUndefined();
   });
 
   it("handles customer.subscription.deleted and cancels subscription", async () => {
-    const { setSubscriptionStatusByStripeId } = await import("../db.js");
+    const { setSubscriptionStatusByStripeId } = await import("../db-helpers.js");
     mockConstructEvent.mockReturnValue(
       makeEvent("customer.subscription.deleted", "evt_sub_del", {
         id: "sub_del",
@@ -135,9 +140,9 @@ describe("handleStripeWebhook — subscription events", () => {
       }),
     );
     const { handleStripeWebhook } = await import("./stripe.js");
-    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    const result = await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
     expect(result.received).toBe(true);
-    expect(vi.mocked(setSubscriptionStatusByStripeId)).toHaveBeenCalledWith("sub_del", "cancelled", expect.any(Date));
+    expect(vi.mocked(setSubscriptionStatusByStripeId)).toHaveBeenCalledWith(FAKE_DB, "sub_del", "cancelled", expect.any(Date));
   });
 });
 
@@ -147,7 +152,7 @@ describe("handleStripeWebhook — invoice events", () => {
   });
 
   it("invoice.payment_succeeded records revenue", async () => {
-    const { recordRevenue } = await import("../db.js");
+    const { recordRevenue } = await import("../db-helpers.js");
     mockConstructEvent.mockReturnValue(
       makeEvent("invoice.payment_succeeded", "evt_inv_ok", {
         id: "in_001",
@@ -159,9 +164,10 @@ describe("handleStripeWebhook — invoice events", () => {
       }),
     );
     const { handleStripeWebhook } = await import("./stripe.js");
-    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    const result = await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
     expect(result.received).toBe(true);
     expect(vi.mocked(recordRevenue)).toHaveBeenCalledWith(
+      FAKE_DB,
       expect.objectContaining({ source: "stripe", amount: "49.00" }),
     );
   });
@@ -171,7 +177,7 @@ describe("handleStripeWebhook — invoice events", () => {
       setSubscriptionStatusByStripeId,
       createSystemNotification,
       getSubscriptionByStripeSubscriptionId,
-    } = await import("../db.js");
+    } = await import("../db-helpers.js");
     vi.mocked(getSubscriptionByStripeSubscriptionId).mockResolvedValueOnce({ userId: 99 } as any);
     mockConstructEvent.mockReturnValue(
       makeEvent("invoice.payment_failed", "evt_inv_fail", {
@@ -184,11 +190,11 @@ describe("handleStripeWebhook — invoice events", () => {
       }),
     );
     const { handleStripeWebhook } = await import("./stripe.js");
-    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    const result = await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
     expect(result.received).toBe(true);
-    expect(vi.mocked(setSubscriptionStatusByStripeId)).toHaveBeenCalledWith("sub_001", "past_due");
+    expect(vi.mocked(setSubscriptionStatusByStripeId)).toHaveBeenCalledWith(FAKE_DB, "sub_001", "past_due");
     expect(vi.mocked(createSystemNotification)).toHaveBeenCalledWith(
-      99, "Payment Failed", expect.any(String), "alert", "/subscriptions",
+      FAKE_DB, 99, "Payment Failed", expect.any(String), "alert", "/subscriptions",
     );
   });
 });
@@ -208,7 +214,7 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
       }),
     );
     const { handleStripeWebhook } = await import("./stripe.js");
-    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    const result = await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
     expect(result.received).toBe(true);
   });
 
@@ -226,9 +232,10 @@ describe("handleStripeWebhook — checkout.session.completed", () => {
       }),
     );
     const { handleStripeWebhook } = await import("./stripe.js");
-    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    const result = await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
     expect(result.received).toBe(true);
     expect(vi.mocked(handleServiceOrderPayment)).toHaveBeenCalledWith(
+      FAKE_DB,
       expect.objectContaining({ id: "cs_service_001", payment_intent: "pi_service_001" }),
     );
   });
@@ -247,7 +254,7 @@ describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", ()
       }),
     );
     const { handleStripeWebhook } = await import("./stripe.js");
-    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    const result = await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
     expect(result.received).toBe(true);
     expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(
       expect.objectContaining({ to: "lost@example.com" }),
@@ -264,7 +271,7 @@ describe("handleStripeWebhook — checkout.session.expired (abandoned cart)", ()
       }),
     );
     const { handleStripeWebhook } = await import("./stripe.js");
-    const result = await handleStripeWebhook(RAW_BODY, SIG);
+    const result = await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
     expect(result.received).toBe(true);
     expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
   });
@@ -283,7 +290,7 @@ describe("plan detection (via subscription amounts)", () => {
 
   for (const { priceId, amount, expectedPlan } of cases) {
     it(`detects plan '${expectedPlan}' from priceId '${priceId}'`, async () => {
-      const { upsertStripeSubscription } = await import("../db.js");
+      const { upsertStripeSubscription } = await import("../db-helpers.js");
       mockConstructEvent.mockReturnValue(
         makeEvent("customer.subscription.created", `evt_plan_${expectedPlan}`, {
           id: `sub_${expectedPlan}`,
@@ -295,8 +302,9 @@ describe("plan detection (via subscription amounts)", () => {
         }),
       );
       const { handleStripeWebhook } = await import("./stripe.js");
-      await handleStripeWebhook(RAW_BODY, SIG);
+      await handleStripeWebhook(FAKE_DB, RAW_BODY, SIG);
       expect(vi.mocked(upsertStripeSubscription)).toHaveBeenCalledWith(
+        FAKE_DB,
         expect.objectContaining({ plan: expectedPlan }),
       );
     });

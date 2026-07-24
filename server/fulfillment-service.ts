@@ -3,7 +3,14 @@
  * Bridges Bitcoin L1 inscriptions to physical scannable security seals.
  * Integrates with high-security printing partners (e.g. Avery, Printful, or Custom).
  */
-import * as db from "./db";
+import type { Db } from "./db-helpers";
+import {
+  updateServiceOrderStatus,
+  logActivity,
+  getServiceOrderById,
+  createSystemNotification,
+  getServiceOrderBySessionId,
+} from "./db-helpers";
 
 interface FulfillmentRequest {
   orderId: number;
@@ -22,7 +29,7 @@ interface FulfillmentRequest {
 /**
  * Dispatches a print-and-ship request to the fulfillment partner.
  */
-export async function processPhysicalFulfillment(request: FulfillmentRequest) {
+export async function processPhysicalFulfillment(db: Db, request: FulfillmentRequest) {
   console.log(`📦 Initializing physical fulfillment for Order #${request.orderId}...`);
 
   // Mock API call to printing partner
@@ -37,18 +44,18 @@ export async function processPhysicalFulfillment(request: FulfillmentRequest) {
 
     if (mockResponse.success) {
       // 1. Update the service order in DB
-      await db.updateServiceOrderStatus(request.orderId, "delivered", {
+      await updateServiceOrderStatus(db, request.orderId, "delivered", {
         deliveryUrl: `https://tracking.carrier.com?q=${mockResponse.trackingNumber}`,
         deliveredAt: new Date()
       });
 
       // 2. Log Activity
-      await db.logActivity({
+      await logActivity(db, {
         userId: 1, // System
         action: 'physical_fulfillment_dispatched',
         entityType: 'order',
         entityId: request.orderId,
-        details: { 
+        details: {
           jobId: mockResponse.jobId,
           trackingNumber: mockResponse.trackingNumber,
           quantity: request.quantity
@@ -57,9 +64,10 @@ export async function processPhysicalFulfillment(request: FulfillmentRequest) {
 
       // 3. Create System Notification for the customer
       // (Implementation assumes we have a userId linked to the order)
-      const order = await db.getServiceOrderById(request.orderId);
+      const order = await getServiceOrderById(db, request.orderId);
       if (order?.userId) {
-        await db.createSystemNotification(
+        await createSystemNotification(
+          db,
           order.userId,
           "Security Seals Dispatched 📦",
           `Your 1,000 scannable security seals for Order #${request.orderId} are on the way. Tracking: ${mockResponse.trackingNumber}`,
@@ -70,7 +78,7 @@ export async function processPhysicalFulfillment(request: FulfillmentRequest) {
 
       return { success: true, trackingNumber: mockResponse.trackingNumber };
     }
-    
+
     return { success: false, error: "Printing partner API failure" };
 
   } catch (error: any) {
@@ -90,8 +98,8 @@ export async function processPhysicalFulfillment(request: FulfillmentRequest) {
  * would phantom-deliver to a hardcoded address. Flip the flag on only when
  * real address collection + a real partner API are wired.
  */
-export async function triggerFulfillmentFromPayment(sessionId: string) {
-  const order = await db.getServiceOrderBySessionId(sessionId);
+export async function triggerFulfillmentFromPayment(db: Db, sessionId: string) {
+  const order = await getServiceOrderBySessionId(db, sessionId);
   if (!order) return;
 
   const physicalServices = ["brand_story_pack", "automation_setup"];
@@ -105,7 +113,7 @@ export async function triggerFulfillmentFromPayment(sessionId: string) {
     return;
   }
 
-  return await processPhysicalFulfillment({
+  return await processPhysicalFulfillment(db, {
     orderId: order.id,
     customerName: order.customerName || "AuthiChain Customer",
     shippingAddress: {

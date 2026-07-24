@@ -9,10 +9,18 @@
  *   pnpm tsx server/missions/seed.ts        (env loaded from .env automatically by tsx)
  */
 
-import { createMission, getMissions, getDb } from '../db.js';
-import { leads, missionTasks } from '../../drizzle/schema.js';
-import { eq, and } from 'drizzle-orm';
+// This is a standalone Node CLI script (run via tsx), not a request handler,
+// so there is no per-request db to thread in from a caller. Calling getDb()
+// here at the entrypoint is a documented bridge to the legacy server/db.ts
+// singleton — everything below this point receives `db` as an explicit
+// parameter instead of reaching for the singleton itself.
+import { getDb } from '../db.js';
+import { missions, missionTasks, leads } from '../../drizzle/schema.js';
+import { eq, and, desc } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import type { MissionType } from './types.js';
+
+type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 const ALL_TYPES: MissionType[] = [
   'GOV_PILOT',
@@ -78,7 +86,7 @@ const TEST_LEADS = [
   },
 ];
 
-async function seedLeads(db: NonNullable<Awaited<ReturnType<typeof getDb>>>) {
+async function seedLeads(db: Db) {
   let inserted = 0;
   for (const lead of TEST_LEADS) {
     const existing = await db
@@ -98,8 +106,27 @@ async function seedLeads(db: NonNullable<Awaited<ReturnType<typeof getDb>>>) {
   return inserted;
 }
 
-async function seedMissions(): Promise<Map<MissionType, string>> {
-  const existing = await getMissions();
+// Mirrors server/db.ts's (pre-migration) getMissions()/createMission() —
+// intentionally NOT server/missions/missions.db.ts's versions, which also
+// auto-create template tasks and would change this script's behavior.
+async function getMissionsForSeed(db: Db) {
+  return db.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
+}
+
+async function createMissionForSeed(db: Db, type: MissionType) {
+  const id = randomUUID();
+  await db.insert(missions).values({
+    id,
+    type,
+    title: type,
+    description: `Mission: ${type}`,
+    status: 'pending',
+  });
+  return id;
+}
+
+async function seedMissions(db: Db): Promise<Map<MissionType, string>> {
+  const existing = await getMissionsForSeed(db);
   const existingTypes = new Set(existing.map(m => m.type as MissionType));
 
   const created = new Map<MissionType, string>();
@@ -109,7 +136,7 @@ async function seedMissions(): Promise<Map<MissionType, string>> {
       console.log(`  skip ${type} — already exists (${m.id})`);
       created.set(type, m.id);
     } else {
-      const id = await createMission(type);
+      const id = await createMissionForSeed(db, type);
       console.log(`  created ${type} → ${id}`);
       created.set(type, id);
     }
@@ -117,10 +144,7 @@ async function seedMissions(): Promise<Map<MissionType, string>> {
   return created;
 }
 
-async function seedFailedTask(
-  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
-  missionId: string,
-) {
+async function seedFailedTask(db: Db, missionId: string) {
   // Mark the last task of the mission as FAILED for retry testing
   const tasks = await db
     .select()
@@ -152,10 +176,10 @@ async function main() {
   console.log(`  inserted ${leadsInserted}/${TEST_LEADS.length} (rest already existed)\n`);
 
   console.log('Missions:');
-  const missions = await seedMissions();
+  const seededMissions = await seedMissions(db);
 
   // Add a FAILED task in GOV_PILOT mission for retry tests
-  const govId = missions.get('GOV_PILOT')!;
+  const govId = seededMissions.get('GOV_PILOT')!;
   const failedTaskId = await seedFailedTask(db, govId);
   if (failedTaskId) {
     console.log(`\nFailed task for retry test: ${failedTaskId} (mission: ${govId})`);
@@ -163,7 +187,7 @@ async function main() {
 
   console.log('\n✅ Seed complete.');
   console.log('\nSummary:');
-  for (const [type, id] of missions) {
+  for (const [type, id] of seededMissions) {
     console.log(`  ${type.padEnd(22)} ${id}`);
   }
   process.exit(0);

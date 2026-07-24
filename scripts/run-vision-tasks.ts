@@ -7,10 +7,10 @@
  *
  * Usage: PLAYWRIGHT_AVAILABLE=1 pnpm tsx scripts/run-vision-tasks.ts
  */
-import { getDueTasks, markTaskRunning, markTaskDone, markTaskFailed } from '../server/db.js';
+import { getDueTasks, markTaskRunning, markTaskDone, markTaskFailed, getDb } from '../server/db.js';
 import { runVisionResearchLead, runVisionFreeform } from '../server/agents/browser-vision.js';
 
-const VISION_RUNNERS: Record<string, (task: any) => Promise<unknown>> = {
+const VISION_RUNNERS: Record<string, (task: any, db: any) => Promise<unknown>> = {
   BROWSE_VISION_RESEARCH_LEAD: runVisionResearchLead,
   BROWSE_VISION_FREEFORM: runVisionFreeform,
 };
@@ -20,6 +20,7 @@ async function main() {
     throw new Error('Set PLAYWRIGHT_AVAILABLE=1 (and install Chromium) before running vision tasks.');
   }
 
+  const db = await getDb();
   const due = await getDueTasks(50);
   const visionTasks = due.filter(t => t.kind && VISION_RUNNERS[t.kind]);
   console.log(`Due tasks: ${due.length}; vision tasks: ${visionTasks.length}`);
@@ -30,7 +31,7 @@ async function main() {
     const claimed = await markTaskRunning(task.id);
     if (!claimed) continue;
     try {
-      await VISION_RUNNERS[task.kind!](task);
+      await VISION_RUNNERS[task.kind!](task, db);
       // markTaskDone guards with WHERE status='RUNNING', matching task-runner
       await markTaskDone(task.id);
       ran++;

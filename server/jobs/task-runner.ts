@@ -1,4 +1,4 @@
-import { markTaskRunning, markTaskDone, markTaskFailed, logActivity } from '../db.js';
+import { markTaskRunning, markTaskDone, markTaskFailed, logActivity, type Db } from './db-helpers.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 import { runLeadFinder } from '../agents/lead-finder.js';
 import { runOutboundEmail } from '../agents/outbound-email.js';
@@ -38,7 +38,7 @@ import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/de
 
 const VISION_TASK_KINDS = new Set(['BROWSE_VISION_RESEARCH_LEAD', 'BROWSE_VISION_FREEFORM']);
 
-export async function runTask(task: Task): Promise<{ ok: boolean }> {
+export async function runTask(db: Db, task: Task): Promise<{ ok: boolean }> {
   // Vision tasks need a Playwright-capable Node host. Leave them unclaimed
   // (still PENDING) unless this process declares Playwright available — the
   // browser-vision-tasks workflow sets PLAYWRIGHT_AVAILABLE=1.
@@ -46,7 +46,7 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
     return { ok: true };
   }
 
-  const claimed = await markTaskRunning(task.id);
+  const claimed = await markTaskRunning(db, task.id);
   if (!claimed) return { ok: true }; // Another worker already claimed this task
 
   try {
@@ -56,149 +56,149 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
       case 'FIND_LUXURY_LEADS':
       case 'FIND_PHARMA_LEADS':
       case 'FIND_TIMEPIECE_LEADS':
-        await runLeadFinder(task);
+        await runLeadFinder(task, db);
         break;
 
       case 'DRAFT_OUTBOUND_EMAIL':
-        await runOutboundEmail(task);
+        await runOutboundEmail(task, db);
         break;
 
       case 'FOLLOWUP_SEQUENCE':
-        await runFollowupSequence(task);
+        await runFollowupSequence(task, db);
         break;
 
       case 'BUILD_PILOT_PACKET':
-        await runBuildPilotPacket(task);
+        await runBuildPilotPacket(task, db);
         break;
 
       case 'DRAFT_INTEL_DOSSIER':
-        await runDraftIntelDossier(task);
+        await runDraftIntelDossier(task, db);
         break;
 
       case 'CRM_UPDATE':
-        await runCrmUpdate(task);
+        await runCrmUpdate(task, db);
         break;
 
       case 'FINALIZE_RETAIL_SIGNAGE':
-        await runFinalizeRetailSignage(task);
+        await runFinalizeRetailSignage(task, db);
         break;
 
       case 'PACKAGE_SKU_ONBOARDING':
-        await runPackageSkuOnboarding(task);
+        await runPackageSkuOnboarding(task, db);
         break;
 
       case 'CHECK_DNS_CONFIG':
-        await runCheckDnsConfig(task);
+        await runCheckDnsConfig(task, db);
         break;
 
       case 'VERIFY_SSL':
-        await runVerifySsl(task);
+        await runVerifySsl(task, db);
         break;
 
       case 'RUN_LIGHTHOUSE_AUDIT':
-        await runLighthouseAudit(task);
+        await runLighthouseAudit(task, db);
         break;
 
       case 'GENERATE_LAUNCH_CHECKLIST':
-        await runGenerateLaunchChecklist(task);
+        await runGenerateLaunchChecklist(task, db);
         break;
 
       case 'DRAFT_LAUNCH_EMAIL':
-        await runDraftLaunchEmail(task);
+        await runDraftLaunchEmail(task, db);
         break;
 
       case 'DRAFT_PRESS_RELEASE':
-        await runDraftPressRelease(task);
+        await runDraftPressRelease(task, db);
         break;
 
       case 'SCHEDULE_SOCIAL_POSTS':
-        await runScheduleSocialPosts(task);
+        await runScheduleSocialPosts(task, db);
         break;
 
       case 'CHECK_REPLIES':
-        await runCheckReplies(task);
+        await runCheckReplies(task, db);
         break;
 
       case 'SEND_DEMO_PACKET':
-        await runSendDemoPacket(task);
+        await runSendDemoPacket(task, db);
         break;
 
       case 'GENERATE_PROPOSAL':
-        await runGenerateProposal(task);
+        await runGenerateProposal(task, db);
         break;
 
       case 'SEND_CONTRACT':
-        await runSendContract(task);
+        await runSendContract(task, db);
         break;
 
       case 'AUTO_REPLY':
-        await runAutoReply(task);
+        await runAutoReply(task, db);
         break;
 
       case 'GENERATE_OUTREACH_VIDEO':
-        await runGenerateOutreachVideo(task);
+        await runGenerateOutreachVideo(task, db);
         break;
 
       case 'SECURITY_AUDIT':
-        await runSecurityAudit(task);
+        await runSecurityAudit(task, db);
         break;
 
       case 'MONITOR_NEWS_FOR_PR':
-        await runNewsjackingMonitor(task);
+        await runNewsjackingMonitor(task, db);
         break;
 
       // ── Dev Team ────────────────────────────────────────────────────────
       case 'PLAN_SPRINT':
-        await runPlanSprint(task);
+        await runPlanSprint(task, db);
         break;
 
       case 'WRITE_CODE':
-        await runWriteCode(task);
+        await runWriteCode(task, db);
         break;
 
       case 'OPEN_PR':
-        await runOpenPR(task);
+        await runOpenPR(task, db);
         break;
 
       case 'RUN_TESTS':
-        await runTests(task);
+        await runTests(task, db);
         break;
 
       case 'CODE_REVIEW':
-        await runCodeReview(task);
+        await runCodeReview(task, db);
         break;
 
       case 'MERGE_PR':
-        await runMergePR(task);
+        await runMergePR(task, db);
         break;
 
       case 'MONITOR_DEPLOY':
-        await runMonitorDeploy(task);
+        await runMonitorDeploy(task, db);
         break;
 
       case 'FILE_BUG':
-        await runFileBug(task);
+        await runFileBug(task, db);
         break;
 
       case 'AUTO_FIX':
-        await runAutoFix(task);
+        await runAutoFix(task, db);
         break;
 
       // ── Browser Agent ────────────────────────────────────────────────────
       case 'BROWSE_RESEARCH_LEAD':
-        await runBrowseResearchLead(task);
+        await runBrowseResearchLead(task, db);
         break;
 
       case 'BROWSE_COMPETITOR_MONITOR':
-        await runBrowseCompetitorMonitor(task);
+        await runBrowseCompetitorMonitor(task, db);
         break;
 
       case 'BROWSE_SCRAPE_INDUSTRY_NEWS':
-        await runBrowseScrapeIndustryNews(task);
+        await runBrowseScrapeIndustryNews(task, db);
         break;
 
       case 'BROWSE_VERIFY_PRODUCT_URL':
-        await runBrowseVerifyProductUrl(task);
+        await runBrowseVerifyProductUrl(task, db);
         break;
 
       // ── Browser Vision Agent (Playwright + Gemini vision) ────────────────
@@ -216,12 +216,12 @@ export async function runTask(task: Task): Promise<{ ok: boolean }> {
     }
 
     // markTaskDone guards with WHERE status='RUNNING', so WAITING_HUMAN is preserved if the agent set it
-    await markTaskDone(task.id);
+    await markTaskDone(db, task.id);
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await markTaskFailed(task.id, message);
-    await logActivity({ userId: null, action: 'task_failed', entityType: 'task', entityId: 0, details: { taskId: task.id,
+    await markTaskFailed(db, task.id, message);
+    await logActivity(db, { userId: null, action: 'task_failed', entityType: 'task', entityId: 0, details: { taskId: task.id,
       kind: task.kind,
       missionId: task.missionId,
       error: message,

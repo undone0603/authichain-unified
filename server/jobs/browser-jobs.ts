@@ -1,4 +1,4 @@
-import { logActivity, hasActionLogged } from '../db.js';
+import { logActivity, hasActionLogged, type Db } from './db-helpers.js';
 import {
   runBrowseCompetitorMonitor,
   runBrowseScrapeIndustryNews,
@@ -21,7 +21,7 @@ const NEWS_KEYWORDS: string[] = [
   'medical device counterfeit recall',
 ];
 
-export async function runBrowserAgentJobs(): Promise<{
+export async function runBrowserAgentJobs(db: Db): Promise<{
   competitorsChecked: number;
   newsKeywordsScanned: number;
   skipped: number;
@@ -33,17 +33,17 @@ export async function runBrowserAgentJobs(): Promise<{
   // ── Weekly competitor monitoring ──────────────────────────────────────────
   // Gate the whole batch — if any competitor was checked this week, skip all.
   // This prevents re-running the batch mid-week on subsequent ticks.
-  const batchRanThisWeek = await hasActionLogged('browse_competitor_monitor_completed', 7);
+  const batchRanThisWeek = await hasActionLogged(db, 'browse_competitor_monitor_completed', 7);
   if (batchRanThisWeek) {
     skipped += COMPETITORS.length;
   } else {
     for (const competitor of COMPETITORS) {
       try {
         const fakeTask = { id: 0, missionId: 0, payload: competitor } as any;
-        await runBrowseCompetitorMonitor(fakeTask);
+        await runBrowseCompetitorMonitor(fakeTask, db);
         competitorsChecked++;
       } catch (err) {
-        await logActivity({
+        await logActivity(db, {
           userId: null,
           action: 'browser_jobs_competitor_error',
           entityType: 'automation',
@@ -57,16 +57,16 @@ export async function runBrowserAgentJobs(): Promise<{
   // ── Daily news scan ───────────────────────────────────────────────────────
   // Gate: skip each keyword if it was scanned in the last 24 hours.
   for (const keyword of NEWS_KEYWORDS) {
-    const ranToday = await hasActionLogged('browse_scrape_news_completed', 1);
+    const ranToday = await hasActionLogged(db, 'browse_scrape_news_completed', 1);
     if (ranToday) { skipped++; continue; }
 
     try {
       const payload: BrowseNewsPayload = { keyword, enqueueNewsTask: true };
       const fakeTask = { id: 0, missionId: 0, payload } as any;
-      await runBrowseScrapeIndustryNews(fakeTask);
+      await runBrowseScrapeIndustryNews(fakeTask, db);
       newsKeywordsScanned++;
     } catch (err) {
-      await logActivity({
+      await logActivity(db, {
         userId: null,
         action: 'browser_jobs_news_error',
         entityType: 'automation',

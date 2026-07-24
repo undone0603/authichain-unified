@@ -1,22 +1,33 @@
 import "dotenv/config";
-import { createMission, enqueueTask } from "../db.js";
+// Standalone Node CLI script (run via tsx) — not a request handler, so
+// there is no per-request db to thread in from a caller. Calling getDb()
+// once here at the entrypoint is a documented bridge to the legacy
+// server/db.ts singleton; everything below receives `db` as an explicit
+// parameter instead of reaching for the singleton itself.
+import { getDb } from "../db.js";
+import { createMission, enqueueTask } from "./db-helpers";
 
 async function launchMedTech() {
   console.log("🚀 Launching MedTech Outreach Mission via Native DB Bridge...");
 
   try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
     // 1. Create the mission
-    const missionId = await createMission("MEDTECH_OUTREACH" as any);
+    const missionId = await createMission(db, "MEDTECH_OUTREACH" as any);
     console.log(`✅ Mission Created: ${missionId}`);
 
     // 2. Enqueue the sequence tasks
     await enqueueTask(
+      db,
       missionId, 
       "FIND_MEDTECH_LEADS", 
       { count: 10, icp: "Compliance Director at medical device manufacturer" }
     );
     
     await enqueueTask(
+      db,
       missionId, 
       "DRAFT_OUTBOUND_EMAIL", 
       { segment: "MEDTECH", sequence: 1 }

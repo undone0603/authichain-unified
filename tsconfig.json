@@ -58,6 +58,7 @@
     "apps/**/*",
     "workers/**/*",
     "worker/**/*",
+    "worker-app/**/*",
     "mobile/**/*",
     "packages/**/*",
     "scripts/**/*",
