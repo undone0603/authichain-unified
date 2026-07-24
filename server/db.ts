@@ -45,14 +45,15 @@ import {
   stakingPositions,
   budgetConfig,
   proposals,
+  webhookEvents,
   type Product,
   type InsertProduct,
   type InsertNotification,
   type InsertUser,
-} from "../drizzle/schema";
-import { ENV } from './_core/env';
-import { SEGMENT_PRIORS } from './_core/bayesian';
-import { bayesianPriors } from '../drizzle/schema';
+} from "../drizzle/schema.js";
+import { ENV } from './_core/env.js';
+import { SEGMENT_PRIORS } from './_core/bayesian.js';
+import { bayesianPriors } from '../drizzle/schema.js';
 
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
@@ -525,7 +526,7 @@ export async function hasUserActionLogged(userId: number, action: string, sinceD
 // MISSIONS CRUD (used by missions/router.ts)
 // ─────────────────────────────────────────────────────────────
 
-import type { MissionType, MissionStatus } from "./missions/types";
+import type { MissionType, MissionStatus } from "./missions/types.js";
 
 export async function getMissions(statusFilter?: string) {
   const d = await getDb();
@@ -1440,7 +1441,39 @@ export async function hasWebhookEventProcessed(eventId: string): Promise<boolean
   return (row?.count ?? 0) > 0;
 }
 
-// ─── Paddle Subscription Helpers ──────────────────────────────────────────────
+// ─── Webhook Idempotency Helpers ──────────────────────────────────────────────
+
+export async function claimWebhookEvent(
+  provider: string,
+  eventId: string,
+  eventType: string,
+): Promise<{ id: number } | null> {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const result = await db
+      .insert(webhookEvents)
+      .values({ provider, eventId, eventType })
+      .onConflictDoNothing({ target: [webhookEvents.provider, webhookEvents.eventId] })
+      .returning({ id: webhookEvents.id });
+    return result.length > 0 ? result[0] : null;
+  } catch (e) {
+    console.error(`[Webhook] Claim failed: ${e}`);
+    return null;
+  }
+}
+
+export async function markWebhookEventProcessed(
+  provider: string,
+  eventId: string,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(webhookEvents)
+    .set({ processedAt: new Date() })
+    .where(and(eq(webhookEvents.provider, provider), eq(webhookEvents.eventId, eventId)));
+}
 
 export async function upsertPaddleSubscription(data: {
   userId: number;

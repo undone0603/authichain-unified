@@ -35,9 +35,29 @@ class BillingAgent:
             logger.error(f"Stripe Usage Report Failed: {e}")
             return None
 
-async def log_api_call(supabase, api_key_id: str, endpoint: str):
+    async def reconcile_usage(self, supabase, user_id: str):
+        """
+        Reconciles usage records from Supabase and reports to Stripe.
+        """
+        # Placeholder for reconciliation logic:
+        # 1. Fetch unbilled usage from Supabase
+        # 2. Get Stripe subscription item ID
+        # 3. Report usage to Stripe
+        # 4. Mark usage as billed in Supabase
+        logger.info(f"Reconciling usage for user {user_id}")
+        return True
+
+async def log_api_call(supabase, user_id: str, endpoint: str):
     """
     Logs an API call in Supabase for audit and billing reconciliation.
     """
-    # In production: await supabase.table("api_usage").insert({...}).execute()
-    return True
+    try:
+        await supabase.table("usage_records").insert({
+            "user_id": user_id,
+            "endpoint": endpoint,
+            "recorded_at": "now"
+        }).execute()
+        return True
+    except Exception as e:
+        logger.error(f"Supabase Logging Failed: {e}")
+        return False

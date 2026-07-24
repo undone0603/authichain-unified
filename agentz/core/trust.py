@@ -1,5 +1,6 @@
 from typing import Dict, Any
 import logging
+from agentz.core.blockchain import BlockchainAgent
 
 logger = logging.getLogger("agentz.trust")
 
@@ -119,6 +120,12 @@ async def monitor_scans(supabase, product_id: str) -> float:
     
     # Combined score (floor at 0)
     final_score = min(score, base_score)
+
+    if final_score < 30.0:
+        bc_agent = BlockchainAgent()
+        cert_num = product_metadata.get("certificate_number", "UNKNOWN")
+        logger.info(f"Triggering counterfeit bounty for {cert_num} due to low trust score: {final_score}")
+        bc_agent.claim_counterfeit_bounty(cert_num, "0x0000000000000000000000000000000000000000") # Placeholder claimant
 
     # 4. Update Timeline in Metadata
     if "timeline" not in product_metadata:
