@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { BrandProvider } from "./contexts/BrandContext";
 import { ThirdwebProvider } from "./components/ThirdwebProvider";
 import DashboardLayout from "./components/DashboardLayout";
 
@@ -135,12 +136,14 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
-        <ThirdwebProvider>
-          <TooltipProvider>
-            <Toaster />
-            <AppRouter />
-          </TooltipProvider>
-        </ThirdwebProvider>
+        <BrandProvider>
+          <ThirdwebProvider>
+            <TooltipProvider>
+              <Toaster />
+              <AppRouter />
+            </TooltipProvider>
+          </ThirdwebProvider>
+        </BrandProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

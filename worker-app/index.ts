@@ -852,7 +852,15 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 ]);
 
 app.get("*", async (c) => {
-  const { pathname } = new URL(c.req.url);
+  const { pathname: rawPathname } = new URL(c.req.url);
+  // Normalize a trailing slash (except root "/") so /about/ resolves the same
+  // as /about; otherwise the exact-match marketing lookup misses and the page
+  // wrongly falls through to the SPA shell (an SEO regression for any
+  // trailing-slash inbound link or crawler).
+  const pathname =
+    rawPathname !== "/" && rawPathname.endsWith("/")
+      ? rawPathname.replace(/\/+$/, "")
+      : rawPathname;
 
   // Static asset dirs: raw passthrough — the file path IS the URL path.
   // (Normally served directly by the Asset Worker; this is a safety net if a

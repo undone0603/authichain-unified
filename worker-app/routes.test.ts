@@ -272,6 +272,12 @@ describe("manifest-driven static + SPA routing", () => {
     expect(await res.text()).toBe("MARKETING:/about.html");
   });
 
+  it("normalizes a trailing slash so /about/ serves marketing HTML, not the SPA shell", async () => {
+    const res = await app.request("/about/", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("MARKETING:/about.html");
+  });
+
   it("serves marketing (NOT the SPA shell) for /pricing [D1]", async () => {
     const res = await app.request("/pricing", {}, makeEnv() as any);
     expect(res.status).toBe(200);
