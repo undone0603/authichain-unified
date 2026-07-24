@@ -12,6 +12,7 @@ import { products, certificates } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { checkRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
+import { renderDynamicPage } from "./dynamic-pages";
 
 type Env = {
   HYPERDRIVE: Hyperdrive;
@@ -868,11 +869,11 @@ app.get("*", async (c) => {
     return c.env.ASSETS.fetch(c.req.raw);
   }
 
-  // "dynamic": lean Hono-rendered pages. INTERIM — serve the SPA shell until
-  // Task 3.3 wires worker-app/dynamic-pages.ts.
+  // "dynamic": lean Hono-rendered pages (Task 3.3). /s, /p, /verify are real
+  // handlers; /status, /grants, /gallery, /reveal, /brand/qron/artwork are
+  // stubbed to the SPA shell inside renderDynamicPage itself.
   if (owner === "dynamic") {
-    // TODO(Task 3.3): renderDynamicPage(c) — replace this SPA-shell interim.
-    return serveSpaShell(c);
+    return renderDynamicPage(c);
   }
 
   // "marketing": serve the Next-prerendered static HTML for this route.
