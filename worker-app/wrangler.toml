@@ -4,8 +4,18 @@ compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
 [assets]
-directory = "../dist/public"
+directory = "../dist/site"
 binding = "ASSETS"
+html_handling = "none"
+not_found_handling = "single-page-application"
+# Worker-first: the Worker is the SINGLE routing authority (Task 3.2). Every
+# navigation request is routed to the Worker so route-manifest.ts/resolveOwner
+# decides the owner, OVERRIDING what a naive static-asset layer would do (e.g.
+# dist/site/admin.html exists but /admin must serve the SPA shell; pricing.html
+# exists and /pricing must serve marketing). The negative rules let the two
+# hashed/immutable static-asset dirs be served directly by the Asset Worker for
+# speed - correctness for those paths does not depend on the manifest.
+run_worker_first = ["/*", "!/_next/*", "!/assets/*"]
 
 [[kv_namespaces]]
 binding = "SESSIONS"

@@ -33,7 +33,9 @@ vi.mock("../server/_core/db-helpers", () => ({
   upsertUser: vi.fn().mockResolvedValue(undefined),
 }));
 
-const app = (await import("./index")).app;
+const indexModule = await import("./index");
+const app = indexModule.app;
+const __resetMarketingRoutesCache = indexModule.__resetMarketingRoutesCache;
 
 describe("POST /api/stripe/webhook", () => {
   it("passes the raw body and signature header through unchanged", async () => {
@@ -211,5 +213,116 @@ describe("Internal gateway API auth guard", () => {
       headers: { "x-internal-secret": "definitely-wrong" },
     });
     expect(res.status).toBe(401);
+  });
+});
+
+
+// __STATIC_ROUTING_TESTS__
+// Task 3.2: manifest-driven static + SPA routing in the "*" fallback handler.
+// The Hono app runs OUTSIDE workerd here (no real ASSETS binding), so we pass a
+// mock env as the 3rd arg to app.request(). The mock ASSETS.fetch returns a
+// Response keyed on the requested URL pathname, letting us assert exactly which
+// asset the worker chose to fetch for each route.
+describe("manifest-driven static + SPA routing", () => {
+  const MARKETING_ROUTES = ["/about", "/pricing", "/admin", "/contact"];
+
+  function makeEnv() {
+    return {
+      ASSETS: {
+        fetch: async (input: Request | string) => {
+          const url = new URL(typeof input === "string" ? input : input.url);
+          const p = url.pathname;
+          if (p === "/marketing-manifest.json") {
+            // NOTE: deliberately lists /admin as a marketing route to prove the
+            // D1 override — resolveOwner must still return "spa" for /admin
+            // because SPA_OWNED_PREFIXES is checked before the marketing set.
+            return new Response(JSON.stringify({ routes: MARKETING_ROUTES }), {
+              status: 200,
+              headers: { "content-type": "application/json" },
+            });
+          }
+          if (p === "/index.html") {
+            return new Response("SPA-SHELL", {
+              status: 200,
+              headers: { "content-type": "text/html" },
+            });
+          }
+          if (p.endsWith(".html")) {
+            return new Response("MARKETING:" + p, {
+              status: 200,
+              headers: { "content-type": "text/html" },
+            });
+          }
+          // Raw passthrough for everything else (e.g. /_next/static/*).
+          return new Response("ASSET:" + p, { status: 200 });
+        },
+      },
+    };
+  }
+
+  beforeEach(() => {
+    // Reset the module-level marketing-manifest cache so each case re-reads the
+    // fresh mock env.
+    __resetMarketingRoutesCache();
+  });
+
+  it("serves prerendered marketing HTML for /about", async () => {
+    const res = await app.request("/about", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("MARKETING:/about.html");
+  });
+
+  it("serves marketing (NOT the SPA shell) for /pricing [D1]", async () => {
+    const res = await app.request("/pricing", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toBe("MARKETING:/pricing.html");
+    expect(body).not.toBe("SPA-SHELL");
+  });
+
+  it("serves the SPA shell for /admin even though admin.html exists [D1 override]", async () => {
+    const res = await app.request("/admin", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toBe("SPA-SHELL");
+    expect(body).not.toContain("MARKETING");
+  });
+
+  it("serves the SPA shell for /dashboard", async () => {
+    const res = await app.request("/dashboard", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("SPA-SHELL");
+  });
+
+  it("passes /_next/static/x.js through to ASSETS raw", async () => {
+    const res = await app.request("/_next/static/x.js", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("ASSET:/_next/static/x.js");
+  });
+
+  it("serves the SPA shell for an unknown path (spa-fallback)", async () => {
+    const res = await app.request("/some-unknown-path", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("SPA-SHELL");
+  });
+
+  it("serves the SPA shell for a dynamic-owned path (Task 3.3 interim)", async () => {
+    const res = await app.request("/verify/abc", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("SPA-SHELL");
+  });
+
+  it("passes a root-level static file (spa-fallback with extension) through raw", async () => {
+    const res = await app.request("/favicon-qron.svg", {}, makeEnv() as any);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("ASSET:/favicon-qron.svg");
+  });
+});
+
+describe("routing regression (Task 3.2 additive)", () => {
+  it("GET /api/health still returns {status:ok}", async () => {
+    const res = await app.request("/api/health");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "ok" });
   });
 });
