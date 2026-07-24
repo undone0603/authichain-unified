@@ -34,19 +34,19 @@ const TITLES: Record<string, string> = {
 // ─── Mock missions.db module (what the router actually imports) ───────────────
 
 vi.mock('./missions/missions.db', () => ({
-  getMissions: async (statusFilter?: string) => {
+  getMissions: async (_db: any, statusFilter?: string) => {
     const all = [...store.missions.values()];
     return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
   },
 
-  getMissionById: async (id: string) => {
+  getMissionById: async (_db: any, id: string) => {
     const m = store.missions.get(id);
     if (!m) return null;
     const tasks = [...store.tasks.values()].filter((t: any) => t.missionId === id);
     return { ...m, tasks };
   },
 
-  createMission: async (type: string) => {
+  createMission: async (_db: any, type: string) => {
     const id = crypto.randomUUID();
     store.missions.set(id, {
       id, type,
@@ -67,16 +67,16 @@ vi.mock('./missions/missions.db', () => ({
     return id;
   },
 
-  updateMissionStatus: async (id: string, status: string) => {
+  updateMissionStatus: async (_db: any, id: string, status: string) => {
     const m = store.missions.get(id);
     if (m) store.missions.set(id, { ...m, status, updatedAt: new Date() });
   },
 
-  getTasksByMission: async (missionId: string) => {
+  getTasksByMission: async (_db: any, missionId: string) => {
     return [...store.tasks.values()].filter((t: any) => t.missionId === missionId);
   },
 
-  retryTask: async (id: string) => {
+  retryTask: async (_db: any, id: string) => {
     const t = store.tasks.get(id);
     if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
   },
@@ -108,6 +108,8 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
     } as any,
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
+    secure: true,
+    setCookieHeader: () => {},
   };
 }
 
@@ -116,6 +118,8 @@ function publicCtx(): TrpcContext {
     user: null,
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
+    secure: true,
+    setCookieHeader: () => {},
   };
 }
 
@@ -257,8 +261,8 @@ describe('tasks.retry', () => {
     const { createMission, getTasksByMission } = await import('./missions/missions.db');
     const { getDb } = await import('./db');
 
-    const missionId = await createMission('TECH_OS_LOCK');
-    const tasks = await getTasksByMission(missionId);
+    const missionId = await createMission(null as any, 'TECH_OS_LOCK');
+    const tasks = await getTasksByMission(null as any, missionId);
     failedTaskId = tasks[0].id;
 
     // Directly mark the task FAILED in the in-memory store

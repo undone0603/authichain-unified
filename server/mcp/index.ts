@@ -1,7 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { getCertificateByNumber, getProductById } from "../db";
+import { getDb } from "../db";
+import { getCertificateByNumber, getProductById } from "../content-db-helpers";
 import { classifyIndustry } from "../../shared/industries";
 
 /**
@@ -18,14 +19,19 @@ server.tool(
   "verify_authenticity",
   { certificateNumber: z.string().describe("The unique AuthiChain certificate ID") },
   async ({ certificateNumber }) => {
-    const cert = await getCertificateByNumber(certificateNumber);
+    // This is a standalone Node stdio process (started via startMcpServer()
+    // below), not a per-request tRPC/Workers invocation, so there's no
+    // request-scoped db to thread in -- a documented getDb() bridge is the
+    // correct (and only) option here.
+    const db = await getDb();
+    const cert = await getCertificateByNumber(db, certificateNumber);
     if (!cert) return { content: [{ type: "text", text: "Certificate not found. This product is UNVERIFIED." }] };
-    
-    const product = await getProductById(cert.productId);
+
+    const product = await getProductById(db, cert.productId);
     return {
-      content: [{ 
-        type: "text", 
-        text: `VERIFIED AUTHENTIC: ${product?.name} (${product?.brand}). Certificate issued on ${cert.createdAt}. Blockchain status: SECURED.` 
+      content: [{
+        type: "text",
+        text: `VERIFIED AUTHENTIC: ${product?.name} (${product?.brand}). Certificate issued on ${cert.createdAt}. Blockchain status: SECURED.`
       }]
     };
   }
@@ -34,8 +40,8 @@ server.tool(
 // Tool: Mint Trust Certificate
 server.tool(
   "mint_certificate",
-  { 
-    productId: z.number(), 
+  {
+    productId: z.number(),
     userId: z.number(),
     bountyAmount: z.number().optional().describe("Amount of $QRON to lock as a trust bounty")
   },
@@ -50,7 +56,7 @@ server.tool(
 // Tool: Classify Product Vertical
 server.tool(
   "classify_product",
-  { 
+  {
     name: z.string().describe("Name of the product"),
     description: z.string().optional().describe("Description or physical attributes")
   },
@@ -65,13 +71,14 @@ server.tool(
 // Tool: Verify Sovereign Deal
 server.tool(
   "verify_sovereign_deal",
-  { 
+  {
     truemarkId: z.string().describe("The TrueMark ID of the deal to verify")
   },
   async ({ truemarkId }) => {
-    const cert = await getCertificateByNumber(truemarkId);
+    const db = await getDb();
+    const cert = await getCertificateByNumber(db, truemarkId);
     if (!cert) return { content: [{ type: "text", text: "NOT FOUND: This TrueMark ID does not exist in the sovereign ledger." }] };
-    const product = await getProductById(cert.productId);
+    const product = await getProductById(db, cert.productId);
     return {
       content: [{ type: "text", text: `VERIFIED: Deal Authenticity Confirmed. Manufacturer: ${product?.brand}. Status: SEALED. Origin: Made in USA.` }]
     };

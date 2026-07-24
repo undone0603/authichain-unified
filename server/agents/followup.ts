@@ -1,7 +1,7 @@
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { ENV } from '../_core/env.js';
 import { sendEmail } from '../email-service.js';
-import { logActivity, getDb, markTaskWaitingHuman } from '../db.js';
+import { logActivity, markTaskWaitingHuman, type Db } from './db-helpers.js';
 import { emailDrafts, leads } from '../../drizzle/schema.js';
 import { eq, and, lte, inArray } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
@@ -11,16 +11,10 @@ interface FollowupPayload {
   maxFollowups?: number;
 }
 
-export async function runFollowupSequence(task: Task): Promise<void> {
+export async function runFollowupSequence(task: Task, db: Db): Promise<void> {
   const payload = task.payload as FollowupPayload;
   const segment = payload.segment ?? 'GOV';
   const maxFollowups = payload.maxFollowups ?? 3;
-
-  const db = await getDb();
-  if (!db) {
-    await logActivity({ userId: null, action: 'followup_skipped_no_db', entityType: 'task', entityId: 0, details: { taskId: task.id, segment } });
-    return;
-  }
 
   const now = new Date();
   const dueLeads = await db.select().from(leads).where(
@@ -95,10 +89,10 @@ Return JSON: { "subject": "...", "body": "..." }`;
   }
 
   if (ENV.requireOutreachApproval && drafted > 0) {
-    await markTaskWaitingHuman(task.id);
+    await markTaskWaitingHuman(db, task.id);
   }
 
-  await logActivity({ userId: null, action: 'followup_sequence_completed', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity(db, { userId: null, action: 'followup_sequence_completed', entityType: 'task', entityId: 0, details: { taskId: task.id,
     segment,
     dueLeads: dueLeads.length,
     drafted,

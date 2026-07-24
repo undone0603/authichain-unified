@@ -1,0 +1,83 @@
+name = "authichain-app"
+main = "index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "../dist/site"
+binding = "ASSETS"
+html_handling = "none"
+not_found_handling = "single-page-application"
+# Worker-first: the Worker is the SINGLE routing authority (Task 3.2). Every
+# navigation request is routed to the Worker so route-manifest.ts/resolveOwner
+# decides the owner, OVERRIDING what a naive static-asset layer would do (e.g.
+# dist/site/admin.html exists but /admin must serve the SPA shell; pricing.html
+# exists and /pricing must serve marketing). The negative rules let the two
+# hashed/immutable static-asset dirs be served directly by the Asset Worker for
+# speed - correctness for those paths does not depend on the manifest.
+run_worker_first = ["/*", "!/_next/*", "!/assets/*"]
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from the root wrangler.toml
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "97d767ff69584161a0672cd942e9364a"
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RateLimiter"]
+
+# ─── Cron Triggers ────────────────────────────────────────────────────────────
+# The scheduled() handler in index.ts is wired and ready. Triggers are split
+# into two groups by an explicit enablement DECISION (see below). BOTH groups
+# are still commented out here, on purpose: the live Vercel deployment is
+# ALREADY running these jobs via its own node-cron, so uncommenting these
+# before Vercel is turned off would DOUBLE-FIRE every job (double emails,
+# double cleanup, etc.) against the same production database. Enable a group
+# only at the FINAL Vercel cutover, not on a parity/test deployment.
+#
+# Workers fires scheduled() with event.cron = the matched schedule string;
+# index.ts dispatches it to the job whose `schedule` equals it. All 18
+# schedules are distinct, so each line maps to exactly one job.
+#
+# ── GROUP A — CLEARED to enable at cutover ──────────────────────────────────
+# Internal maintenance, read-only monitoring, and transactional notifications
+# to existing customers about their OWN accounts. No autonomous outreach, no
+# money movement, no on-chain writes. At cutover, uncomment [triggers] + this
+# `crons` array to activate exactly these 10.
+# [triggers]
+# crons = [
+#   "0 3 * * *",   # database-cleanup — deletes old job-run/notification/session rows (internal)
+#   "0 5 * * *",   # customer-health-score — recomputes health scores in DB (no external calls)
+#   "0 6 * * *",   # subscription-health-check — in-app expiry notices, marks past-due, resets quotas (internal)
+#   "0 7 * * *",   # certificate-expiry-check — notifies cert owners of expiry (transactional)
+#   "0 8 * * *",   # dunning-escalation — transactional payment-failed/past-due emails to affected customers (standard billing recovery)
+#   "0 8 * * 1",   # weekly-analytics-digest — Monday internal stats report to the owner
+#   "0 11 * * *",  # live-systems-check — read-only ping of Stripe/HubSpot/Gmail/PostHog/GA4 liveness
+#   "0 12 * * *",  # token-metrics — read-only on-chain $QRON supply/gas snapshot
+#   "0 13 * * *",  # ecosystem-health — read-only external uptime check across product domains
+#   "0 */6 * * *", # fraud-detection-sweep — inserts fraud_alerts flags only (defensive; no revocation/outreach)
+# ]
+#
+# ── GROUP B — HELD: do NOT enable without an explicit, per-job decision ──────
+# Autonomous growth/outreach, external CRM writes, mission-spawning, on-chain
+# writes, or money movement. Each needs a deliberate business sign-off before
+# it runs autonomously on a new runtime — do NOT bulk-enable. To activate one,
+# move its line into GROUP A's crons array (and confirm you actually want it
+# firing autonomously).
+# crons_HELD = [
+#   "0 9 * * *",   # lead-nurturing — writes/syncs unsynced leads to HubSpot (external CRM writes)
+#   "0 */4 * * *", # hubspot-crm-sync — syncs leads/payment events to HubSpot (external CRM writes)
+#   "0 4 * * *",   # staking-rewards — inserts pending $QRON reward-ledger entries (creates financial obligations)
+#   "0 9 1 * *",   # founder-payout — monthly Stripe pay-yourself-first split (MOVES REAL MONEY; 1st of month)
+#   "0 * * * *",   # strainchain-metrc-sync — METRC sync + on-chain Truth-Layer anchoring (costs gas; external)
+#   "*/2 * * * *", # autonomous-pipeline-tick — AgentZ revenue engine: finds leads, DRAFTS OUTREACH, monitors deals (also env-gated by ENV.autonomousPipelineEnabled; every 2 min)
+#   "*/10 * * * *",# vertical-cloner — autonomously spawns industry-expansion missions
+#   "*/30 * * * *",# newsjacking-monitor — monitors news and triggers PR/outreach missions (autonomous external)
+# ]

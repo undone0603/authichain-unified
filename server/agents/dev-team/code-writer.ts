@@ -19,7 +19,7 @@
  */
 
 import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
-import { logActivity, getDb } from '../../db.js';
+import { logActivity, type Db } from '../db-helpers.js';
 import { missionTasks } from '../../../drizzle/schema.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
@@ -87,7 +87,7 @@ IMPORTANT: Always return COMPLETE file content. Never use "..." or "existing cod
 
 // ─── PLAN_SPRINT ─────────────────────────────────────────────────────────
 
-export async function runPlanSprint(task: Task): Promise<void> {
+export async function runPlanSprint(task: Task, db: Db): Promise<void> {
   const p = task.payload as {
     feature: string;
     context?: string;
@@ -154,7 +154,6 @@ Rules:
   await createBranch(plan.branch);
 
   // Enqueue all planned tasks (WRITE_CODE + OPEN_PR + RUN_TESTS + CODE_REVIEW)
-  const db = await getDb();
   const allTasks = [...plan.tasks, ...plan.followupTasks];
 
   await db.insert(missionTasks).values(
@@ -169,7 +168,7 @@ Rules:
     }))
   );
 
-  await logActivity({
+  await logActivity(db, {
     userId: null,
     action: 'sprint_planned',
     entityType: 'task',
@@ -186,7 +185,7 @@ Rules:
 
 // ─── WRITE_CODE ───────────────────────────────────────────────────────────
 
-export async function runWriteCode(task: Task): Promise<void> {
+export async function runWriteCode(task: Task, db: Db): Promise<void> {
   const p = task.payload as {
     branch: string;
     feature: string;
@@ -279,7 +278,7 @@ Write the code changes. Return the full JSON response as specified in your syste
     committedFiles.push(file.path);
   }
 
-  await logActivity({
+  await logActivity(db, {
     userId: null,
     action: 'code_written',
     entityType: 'task',

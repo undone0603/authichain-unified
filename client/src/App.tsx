@@ -8,10 +8,11 @@ import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { BrandProvider } from "./contexts/BrandContext";
 import { ThirdwebProvider } from "./components/ThirdwebProvider";
 import DashboardLayout from "./components/DashboardLayout";
 
-const Home = lazy(() => import("./pages/brand/AuthiChainHome"));
+const Home = lazy(() => import("./pages/brand/BrandHome"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Authenticate = lazy(() => import("./pages/Authenticate"));
 const QrCodes = lazy(() => import("./pages/QrCodes"));
@@ -135,12 +136,14 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
-        <ThirdwebProvider>
-          <TooltipProvider>
-            <Toaster />
-            <AppRouter />
-          </TooltipProvider>
-        </ThirdwebProvider>
+        <BrandProvider>
+          <ThirdwebProvider>
+            <TooltipProvider>
+              <Toaster />
+              <AppRouter />
+            </TooltipProvider>
+          </ThirdwebProvider>
+        </BrandProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

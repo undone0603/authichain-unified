@@ -61,7 +61,7 @@ describe("Stripe Connect Service (v2)", () => {
       });
       mockDb.where.mockResolvedValue([{ insertId: 1 }]);
 
-      const result = await stripeConnect.provisionVendorAccount(1, "Test account", "testaccount@example.com", "US");
+      const result = await stripeConnect.provisionVendorAccount(mockDb, 1, "Test account", "testaccount@example.com", "US");
 
       expect(mockStripe.rawRequest).toHaveBeenCalledWith("POST", "/v2/core/accounts",
         expect.objectContaining({

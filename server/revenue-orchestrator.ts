@@ -1,11 +1,12 @@
 import { ENV } from "./_core/env";
+import type { Db } from "./db-helpers";
 import {
   computeLeadScore,
   logAutomationAudit,
   updateLeadScore,
   updateLeadStatus,
   upsertLeadByEmail,
-} from "./db";
+} from "./db-helpers";
 
 export type IncomingLead = {
   email: string;
@@ -39,11 +40,11 @@ function scoreToLeadStatus(score: number): "new" | "contacted" | "qualified" {
   return "new";
 }
 
-export async function ingestLeadAndRoute(input: IncomingLead) {
+export async function ingestLeadAndRoute(db: Db, input: IncomingLead) {
   const normalizedEmail = input.email.trim().toLowerCase();
   const suppressed = suppressionSet().has(normalizedEmail);
   if (suppressed) {
-    await logAutomationAudit("lead_suppressed", {
+    await logAutomationAudit(db, "lead_suppressed", {
       email: normalizedEmail,
       source: input.source || "unknown",
       reason: "suppression_list",
@@ -51,22 +52,22 @@ export async function ingestLeadAndRoute(input: IncomingLead) {
     return { accepted: false as const, reason: "suppressed" as const };
   }
 
-  const upserted = await upsertLeadByEmail({
+  const upserted = await upsertLeadByEmail(db, {
     ...input,
     email: normalizedEmail,
     source: input.source || "website_form",
   });
-  await logAutomationAudit(upserted.created ? "lead_create" : "lead_update", {
+  await logAutomationAudit(db, upserted.created ? "lead_create" : "lead_update", {
     leadId: upserted.id,
     email: normalizedEmail,
     source: input.source || "website_form",
   });
   const scoring = computeLeadScore(input.signals || {});
-  await updateLeadScore(upserted.id, scoring.score);
+  await updateLeadScore(db, upserted.id, scoring.score);
   const newStatus = scoreToLeadStatus(scoring.score);
-  await updateLeadStatus(upserted.id, newStatus);
+  await updateLeadStatus(db, upserted.id, newStatus);
 
-  await logAutomationAudit("lead_routed", {
+  await logAutomationAudit(db, "lead_routed", {
     leadId: upserted.id,
     created: upserted.created,
     score: scoring.score,

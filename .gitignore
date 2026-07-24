@@ -97,3 +97,6 @@ PATCH_EOF
 # Wrangler local cache
 .wrangler/
 .env*
+
+# Local git worktrees (superpowers:using-git-worktrees)
+.worktrees/

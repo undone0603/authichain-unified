@@ -1,22 +1,20 @@
-import { getDb } from "../db";
 import { missions, activityLog } from "../../drizzle/schema";
 import { classifyIndustry } from "../../shared/industries";
+import type { Db } from "./db-helpers";
 
 /**
  * Vertical Cloner — Autonomous Expansion Engine
  * Scans for opportunities and creates mission templates for new verticals.
  */
-export async function runVerticalCloning() {
+export async function runVerticalCloning(db: Db) {
   console.log("[Autopilot] Scanning for industry expansion opportunities...");
-  
+
   // Real superpower logic: In production, this would hit a Trend API (e.g. Perplexity/OpenAI)
   // For this push, we are auto-scaling into the 'EV & Battery' and 'Artisan Roasters' verticals
   const targets = [
     { name: "Tesla Battery Cell", desc: "Lithium-ion provenance" },
     { name: "Artisan Blue Mountain Coffee", desc: "Direct trade verification" }
   ];
-
-  const db = await getDb();
 
   for (const target of targets) {
     const industry = classifyIndustry(target.name, target.desc);

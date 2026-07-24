@@ -7,7 +7,14 @@
 // checkout.session.completed handler. Idempotent: if the order is already
 // past the "pending" state, the call is a no-op.
 
-import * as db from "../db";
+import type { Db } from "../db-helpers";
+import {
+  getServiceOrderBySessionId,
+  updateServiceOrderStatus,
+  logActivity,
+  recordRevenue,
+  createSystemNotification,
+} from "../db-helpers";
 import { decideOrderPaymentAction, type SessionShape } from "./order-payment-decision";
 
 export type HandleResult =
@@ -16,8 +23,8 @@ export type HandleResult =
 
 type SessionWithId = SessionShape & { id: string };
 
-export async function handleServiceOrderPayment(session: SessionWithId): Promise<HandleResult> {
-  const order = await db.getServiceOrderBySessionId(session.id);
+export async function handleServiceOrderPayment(db: Db, session: SessionWithId): Promise<HandleResult> {
+  const order = await getServiceOrderBySessionId(db, session.id);
   if (!order) {
     return { handled: false, reason: "no service order for this session" };
   }
@@ -27,11 +34,11 @@ export async function handleServiceOrderPayment(session: SessionWithId): Promise
     return { handled: false, reason: decision.reason };
   }
 
-  await db.updateServiceOrderStatus(order.id, decision.updates.status, {
+  await updateServiceOrderStatus(db, order.id, decision.updates.status, {
     stripePaymentIntentId: decision.updates.stripePaymentIntentId,
   });
 
-  await db.logActivity({
+  await logActivity(db, {
     userId: order.userId ?? null,
     action: "service_order_paid",
     entityType: "service_order",
@@ -44,7 +51,7 @@ export async function handleServiceOrderPayment(session: SessionWithId): Promise
   });
 
   if (order.amount) {
-    await db.recordRevenue({
+    await recordRevenue(db, {
       source: "stripe",
       amount: (order.amount / 100).toFixed(2),
       currency: "USD",
@@ -60,7 +67,8 @@ export async function handleServiceOrderPayment(session: SessionWithId): Promise
   }
 
   if (order.userId) {
-    await db.createSystemNotification(
+    await createSystemNotification(
+      db,
       order.userId,
       "Payment confirmed",
       `Your service order for ${order.serviceType} is paid and will be fulfilled shortly.`,

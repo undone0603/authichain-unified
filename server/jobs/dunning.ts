@@ -1,12 +1,14 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
+import { getDb } from "../db";
 import {
   createSystemNotification,
   hasDunningStepLogged,
   listPastDueSubscriptions,
   logActivity,
   getUserById,
-} from "../db";
+  type Db,
+} from "./db-helpers";
 import { sendEmail } from "../email-service";
 
 function daysSince(date: Date | null | undefined) {
@@ -32,11 +34,12 @@ const EMAIL_BODY: Record<Step, (name: string, plan: string) => string> = {
     `Hi ${name},\n\nThis is a final notice. Your AuthiChain ${plan} subscription payment is 14 days overdue. Please update your billing details immediately to avoid account suspension.\n\nUpdate billing: https://authichain.com/subscriptions\n\nThe AuthiChain Team`,
 };
 
-async function runStep(subscription: any, step: Step, message: string) {
-  const alreadyLogged = await hasDunningStepLogged(subscription.id, step);
+async function runStep(db: Db, subscription: any, step: Step, message: string) {
+  const alreadyLogged = await hasDunningStepLogged(db, subscription.id, step);
   if (alreadyLogged) return false;
 
   await createSystemNotification(
+    db,
     subscription.userId,
     "Billing Reminder",
     message,
@@ -46,7 +49,7 @@ async function runStep(subscription: any, step: Step, message: string) {
 
   if (subscription.userId) {
     try {
-      const user = await getUserById(subscription.userId);
+      const user = await getUserById(db, subscription.userId);
       if (user?.email) {
         const planLabel = (subscription.plan || "starter");
         const planDisplay = planLabel.charAt(0).toUpperCase() + planLabel.slice(1);
@@ -62,7 +65,7 @@ async function runStep(subscription: any, step: Step, message: string) {
     }
   }
 
-  await logActivity({
+  await logActivity(db, {
     userId: subscription.userId,
     action: `billing_dunning_${step}`,
     entityType: "subscription",
@@ -75,8 +78,8 @@ async function runStep(subscription: any, step: Step, message: string) {
   return true;
 }
 
-export async function runDunningEscalation() {
-  const pastDue = await listPastDueSubscriptions();
+export async function runDunningEscalation(db: Db) {
+  const pastDue = await listPastDueSubscriptions(db);
   let sent = 0;
 
   for (const sub of pastDue) {
@@ -84,6 +87,7 @@ export async function runDunningEscalation() {
 
     if (ageDays >= 14) {
       const didSend = await runStep(
+        db,
         sub,
         "day_14",
         "Final billing reminder: update payment details to avoid service downgrade.",
@@ -94,6 +98,7 @@ export async function runDunningEscalation() {
 
     if (ageDays >= 7) {
       const didSend = await runStep(
+        db,
         sub,
         "day_7",
         "Billing reminder: payment is still overdue. Please update billing details.",
@@ -104,6 +109,7 @@ export async function runDunningEscalation() {
 
     if (ageDays >= 3) {
       const didSend = await runStep(
+        db,
         sub,
         "day_3",
         "Billing reminder: we could not process your payment. Please update your card.",
@@ -118,7 +124,10 @@ export async function runDunningEscalation() {
 const isMain = !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
-  runDunningEscalation()
+  // Documented bridge: standalone CLI entry point has no caller to thread a
+  // db instance from, so it obtains one from the legacy Node singleton itself.
+  getDb()
+    .then(db => runDunningEscalation(db))
     .then(result => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);

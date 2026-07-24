@@ -1,4 +1,7 @@
 import "dotenv/config";
+// Standalone Node CLI diagnostic script (run via tsx) — not a request
+// handler, so there is no per-request db to thread in. Calling getDb()
+// directly here is a documented bridge to the legacy server/db.ts singleton.
 import { getDb } from "../db.js";
 
 async function debugDb() {

@@ -2,10 +2,10 @@
  * Security Audit Agent — Checks for vulnerabilities and compliance.
  */
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity, createSystemNotification } from '../db.js';
+import { logActivity, createSystemNotification, type Db } from './db-helpers.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
-export async function runSecurityAudit(task: Task): Promise<void> {
+export async function runSecurityAudit(task: Task, db: Db): Promise<void> {
   const p = task.payload as {
     scope: string;
     compliance?: string[];
@@ -65,7 +65,7 @@ Return JSON:
   }>(result.choices[0].message.content);
 
   // 2. Log findings and notify admins
-  await logActivity({
+  await logActivity(db, {
     userId: null,
     action: 'security_audit_completed',
     entityType: 'task',
@@ -81,6 +81,7 @@ Return JSON:
 
   if (auditResult.findings.some(f => f.severity === 'CRITICAL' || f.severity === 'HIGH')) {
     await createSystemNotification(
+      db,
       1, // Admin user ID
       "🚨 Critical Security Findings",
       `The Security Audit identified ${auditResult.findings.filter(f => f.severity === 'CRITICAL').length} critical issues. Action required immediately.`,

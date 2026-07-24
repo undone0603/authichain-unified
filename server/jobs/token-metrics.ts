@@ -4,7 +4,7 @@
 // key. Logged through logActivity so getJobHistory("token-metrics") gives
 // a queryable trend over time; workers/authichain-chain-data already
 // serves this data on-demand, but nothing was tracking it historically.
-import { logActivity } from "../db";
+import { logActivity, type Db } from "./db-helpers";
 
 const QRON_TOKEN = process.env.POLYGON_QRON_TOKEN || "0xAebfA6b08fb25b59748c93273aB8880e20FfE437";
 const POLYGON_RPC = "https://polygon-bor-rpc.publicnode.com";
@@ -67,10 +67,10 @@ export async function collectTokenMetrics(): Promise<TokenMetricsSnapshot> {
   };
 }
 
-export async function runTokenMetrics(): Promise<TokenMetricsSnapshot> {
+export async function runTokenMetrics(db: Db): Promise<TokenMetricsSnapshot> {
   const snapshot = await collectTokenMetrics();
 
-  await logActivity({
+  await logActivity(db, {
     userId: null,
     action: "token_metrics_snapshot",
     entityType: "automation",
