@@ -338,10 +338,68 @@ describe("manifest-driven static + SPA routing", () => {
     expect(await res.text()).toBe("ASSET:/favicon-qron.svg");
   });
 
-  it("passes /robots.txt through raw (allowlisted static extension)", async () => {
-    const res = await app.request("/robots.txt", {}, makeEnv() as any);
+  it("serves a per-brand robots.txt pointing at the brand sitemap", async () => {
+    const res = await app.request(
+      "/robots.txt",
+      { headers: { "x-forwarded-host": "qron.space" } },
+      makeEnv() as any,
+    );
     expect(res.status).toBe(200);
-    expect(await res.text()).toBe("ASSET:/robots.txt");
+    const body = await res.text();
+    expect(body).toContain("User-agent: *");
+    expect(body).toContain("Sitemap: https://qron.space/sitemap.xml");
+  });
+
+  it("serves a per-brand sitemap.xml under the brand origin", async () => {
+    const res = await app.request(
+      "/sitemap.xml",
+      { headers: { "x-forwarded-host": "qron.space" } },
+      makeEnv() as any,
+    );
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("<loc>https://qron.space/</loc>");
+    expect(body).toContain("<loc>https://qron.space/about</loc>");
+    expect(body).toContain("urlset");
+    expect(body).not.toContain("/_not-found");
+  });
+
+  it("injects per-brand title/description/og and window.__BRAND__ into the SPA shell", async () => {
+    const shell =
+      "<!doctype html><html><head>" +
+      "<title>AuthiChain \u2013 Blockchain Product Authentication Platform</title>" +
+      '<meta name="description" content="old default description" />' +
+      "</head><body><div id=\"root\"></div></body></html>";
+    const htmlEnv = {
+      ASSETS: {
+        fetch: async (input: Request | string) => {
+          const u = new URL(typeof input === "string" ? input : input.url);
+          if (u.pathname === "/marketing-manifest.json")
+            return new Response(JSON.stringify({ routes: MARKETING_ROUTES }), {
+              status: 200,
+              headers: { "content-type": "application/json" },
+            });
+          if (u.pathname === "/index.html")
+            return new Response(shell, {
+              status: 200,
+              headers: { "content-type": "text/html" },
+            });
+          return new Response("ASSET:" + u.pathname, { status: 200 });
+        },
+      },
+    };
+    const res = await app.request(
+      "/",
+      { headers: { "x-forwarded-host": "qron.space" } },
+      htmlEnv as any,
+    );
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("<title>QRON");
+    expect(html).toContain("AI-Generated QR Art That Scans.");
+    expect(html).toContain('window.__BRAND__="qron"');
+    expect(html).toContain("apple-touch-icon-qron.png");
+    expect(html).not.toContain("Blockchain Product Authentication Platform");
   });
 
   it("serves the SPA shell (NOT the real admin.html) for /admin.html [regression: static-extension allowlist]", async () => {

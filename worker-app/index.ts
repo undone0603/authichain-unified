@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { trpcServer } from "@hono/trpc-server";
 import { appRouter } from "../server/routers";
 import { createWorkersContext } from "../server/_core/context.workers";
-import { resolveBrand, type BrandId } from "../shared/brands";
+import { resolveBrand, BRANDS, type BrandId } from "../shared/brands";
 import { getHyperdriveDb } from "../server/db";
 import { getScheduledJobs, executeJobWithDb } from "../server/scheduled-jobs";
 import { timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
@@ -828,10 +828,37 @@ export function __resetMarketingRoutesCache(): void {
 
 // Serve the Vite/wouter SPA shell (index.html). wouter resolves the route
 // client-side (or renders its own 404).
-function serveSpaShell(c: any): Promise<Response> {
-  return c.env.ASSETS.fetch(
+async function serveSpaShell(c: any): Promise<Response> {
+  const res = await c.env.ASSETS.fetch(
     new Request(new URL("/index.html", c.req.url), c.req.raw),
   );
+  // Inject per-brand SEO/meta into the otherwise brand-agnostic SPA shell so
+  // crawlers and social unfurlers see the correct title/description/OG image
+  // per domain, and the SPA reads window.__BRAND__ (no hostname flash). The
+  // page BODY is still client-rendered (D2: "SPA picks brand").
+  const brand = BRANDS[c.get("brand") as BrandId];
+  if (!brand || !res.ok) return res;
+  const html = await res.text();
+  const path = new URL(c.req.url).pathname;
+  const origin = `https://${brand.domain}`;
+  const title = `${brand.displayName} — ${brand.tagline}`;
+  const desc = brand.description;
+  const ogImage = `${origin}/apple-touch-icon-${brand.id}.png`;
+  const canonical = `${origin}${path}`;
+  const meta =
+    `<meta property="og:title" content="${escapeContactHtml(title)}" />` +
+    `<meta property="og:description" content="${escapeContactHtml(desc)}" />` +
+    `<meta property="og:image" content="${ogImage}" />` +
+    `<meta property="og:url" content="${canonical}" />` +
+    `<meta property="og:type" content="website" />` +
+    `<meta name="twitter:card" content="summary_large_image" />` +
+    `<link rel="canonical" href="${canonical}" />` +
+    `<script>window.__BRAND__=${JSON.stringify(brand.id)}</script>`;
+  const out = html
+    .replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeContactHtml(title)}</title>`)
+    .replace(/<meta\s+name="description"[^>]*>/, `<meta name="description" content="${escapeContactHtml(desc)}" />`)
+    .replace("</head>", `${meta}</head>`);
+  return c.html(out, res.status);
 }
 
 // Root-level static files the SPA ships alongside index.html (favicons,
@@ -850,6 +877,27 @@ const STATIC_ASSET_EXTENSIONS = new Set([
   "css", "js", "map",
   "mp4", "webm", "avif",
 ]);
+
+// Per-brand robots.txt / sitemap.xml. These override the single brand-agnostic
+// files the SPA ships (otherwise served raw via the extension allowlist), so
+// each domain advertises its OWN sitemap and canonical origin.
+app.get("/robots.txt", (c) => {
+  const brand = BRANDS[c.get("brand") as BrandId];
+  const body = `User-agent: *\nAllow: /\nSitemap: https://${brand.domain}/sitemap.xml\n`;
+  return c.body(body, 200, { "Content-Type": "text/plain; charset=utf-8" });
+});
+
+app.get("/sitemap.xml", async (c) => {
+  const brand = BRANDS[c.get("brand") as BrandId];
+  const origin = `https://${brand.domain}`;
+  const routes = await getMarketingRoutes(c.env);
+  const paths = ["/", ...[...routes].filter((r) => r !== "/" && !r.startsWith("/_"))].sort();
+  const urls = paths.map((p) => `  <url><loc>${origin}${p}</loc></url>`).join("\n");
+  const body =
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+  return c.body(body, 200, { "Content-Type": "application/xml; charset=utf-8" });
+});
 
 app.get("*", async (c) => {
   const { pathname: rawPathname } = new URL(c.req.url);
