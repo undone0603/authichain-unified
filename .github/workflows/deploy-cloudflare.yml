@@ -48,7 +48,6 @@ jobs:
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm install --no-frozen-lockfile
 
-<<<<<<< HEAD
       - name: Build frontend
         if: steps.secrets_check.outputs.skip != 'true'
         run: pnpm run build
@@ -56,6 +55,14 @@ jobs:
           VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
           VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
           VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
+
+      # Root worker: worker/index.ts + Vite static assets (dist/public)
+      - name: Publish root worker (authichain)
+        if: steps.secrets_check.outputs.skip != 'true'
+        run: npx wrangler deploy --minify --config wrangler.toml
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Publish Worker + Assets (authichain-dashboard)
         if: steps.secrets_check.outputs.skip != 'true'
@@ -108,12 +115,3 @@ jobs:
       - name: Deploy skipped notice
         if: steps.secrets_check.outputs.skip == 'true'
         run: echo "::notice::Cloudflare deploy skipped — set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in repo secrets to enable."
-=======
-      - name: Publish Worker + Assets
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # Dynamically target the specific worker's configuration file
-          command: deploy --config workers/${{ matrix.worker }}/wrangler.toml
->>>>>>> 381d43a0 (fix: clean up cloudflare workflows and remove vercel deploy)

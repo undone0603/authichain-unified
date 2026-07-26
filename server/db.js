@@ -1,0 +1,1454 @@
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import { eq, desc, and, or, gte, lte, isNull, like, sql } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import { users, products, authentications, certificates, qrCodes, qrScanEvents, nftCollections, nfts, auctions, auctionBids, subscriptions, usageRecords, invoices, payments, leads, emailCampaigns, emailDrafts, supplyChainEvents, referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions, abTests, whiteLabelClients, activityLog, scheduledJobRuns, fraudAlerts, customerHealthScores, revenueRecords, notifications, serviceOrders, missions, missionTasks, stakingPositions, budgetConfig, proposals, webhookEvents, } from "../drizzle/schema";
+import { ENV } from './_core/env';
+import { SEGMENT_PRIORS } from './_core/bayesian';
+import { bayesianPriors } from '../drizzle/schema';
+let _db = null;
+export async function getDb() {
+    if (_db)
+        return _db;
+    if (!process.env.DATABASE_URL) {
+        throw new Error("DATABASE_URL environment variable is not set");
+    }
+    try {
+        const pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+        });
+        _db = drizzle(pool);
+        return _db;
+    }
+    catch (error) {
+        console.error("[Database] Failed to connect:", error);
+        throw error;
+    }
+}
+// Synchronous proxy for feature modules - throws if DB not initialised
+export const db = new Proxy({}, {
+    get(_target, prop) {
+        if (!_db)
+            throw new Error("Database not available");
+        return Reflect.get(_db, prop);
+    },
+});
+// --- User Helpers --------------------------------------------------------
+export async function upsertUser(user) {
+    if (!user.openId)
+        throw new Error("User openId is required for upsert");
+    const db = await getDb();
+    if (!db) {
+        console.warn("[Database] Cannot upsert user: database not available");
+        return;
+    }
+    try {
+        const values = { openId: user.openId };
+        const updateSet = {};
+        const textFields = ["name", "email", "loginMethod"];
+        const assignNullable = (field) => {
+            const value = user[field];
+            if (value === undefined)
+                return;
+            const normalized = value ?? null;
+            values[field] = normalized;
+            updateSet[field] = normalized;
+        };
+        textFields.forEach(assignNullable);
+        if (user.role) {
+            values.role = user.role;
+            updateSet.role = user.role;
+        }
+        if (user.points !== undefined) {
+            values.points = user.points;
+            updateSet.points = user.points;
+        }
+        if (user.lastSignedIn) {
+            values.lastSignedIn = user.lastSignedIn;
+            updateSet.lastSignedIn = user.lastSignedIn;
+        }
+        else if (user.openId === ENV.ownerOpenId)
+            values.role = 'admin';
+        if (!values.lastSignedIn)
+            values.lastSignedIn = new Date();
+        if (Object.keys(updateSet).length === 0)
+            updateSet.lastSignedIn = new Date();
+        await db.insert(users).values(values).onConflictDoUpdate({ target: users.openId, set: updateSet });
+    }
+    catch (error) {
+        console.error("[Database] Failed to upsert user:", error);
+        throw error;
+    }
+}
+export async function getUserByOpenId(openId) {
+    const db = await getDb();
+    if (!db)
+        return null;
+    const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+    return result.length > 0 ? result[0] : null;
+}
+export async function getUserById(id) {
+    const db = await getDb();
+    if (!db)
+        return null;
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0] ?? null;
+}
+export async function getAllUsers() {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(users).orderBy(desc(users.createdAt)).limit(1000);
+}
+// ─── Staking Helpers ────────────────────────────────────────────────────────
+export async function getUserStakingPositions(userId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(stakingPositions).where(eq(stakingPositions.userId, userId)).orderBy(desc(stakingPositions.stakedAt));
+}
+export async function createStakingPosition(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(stakingPositions).values(data).returning();
+    return { id: result.id, ...data };
+}
+export async function updateStakingPosition(id, userId, data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    await db.update(stakingPositions).set(data).where(and(eq(stakingPositions.id, id), eq(stakingPositions.userId, userId)));
+}
+// ─── Product Helpers ─────────────────────────────────────────────────────────
+export async function createProduct(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(products).values(data).returning();
+    return { id: result.id };
+}
+export async function getRecentActivity(limit = 20) {
+    const d = await getDb();
+    return d.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(limit);
+}
+export async function getRecentDecisions(limit = 10) {
+    const d = await getDb();
+    return d.select().from(autopilotDecisions).orderBy(desc(autopilotDecisions.createdAt)).limit(limit);
+}
+export async function logActivity(actionOrData, details) {
+    const d = await getDb();
+    if (typeof actionOrData === "string") {
+        await d.insert(activityLog).values({ action: actionOrData, details: details ? { text: details } : undefined });
+    }
+    else {
+        await d.insert(activityLog).values({
+            userId: actionOrData.userId ?? undefined,
+            action: actionOrData.action,
+            entityType: actionOrData.entityType,
+            entityId: actionOrData.entityId,
+            details: actionOrData.details,
+        });
+    }
+}
+// ─────────────────────────────────────────────────────────────
+// TASK QUEUE (used by agents, missions)
+// ─────────────────────────────────────────────────────────────
+export async function getDueTasks(limit = 10) {
+    const d = await getDb();
+    const now = new Date();
+    return d.select().from(missionTasks)
+        .where(and(eq(missionTasks.status, "pending"), or(isNull(missionTasks.scheduledAt), lte(missionTasks.scheduledAt, now))))
+        .orderBy(missionTasks.order)
+        .limit(limit);
+}
+export async function getRunTaskCount() {
+    const d = await getDb();
+    const rows = await d.select({ count: sql `count(*)` }).from(missionTasks).where(eq(missionTasks.status, "in_progress"));
+    return rows[0]?.count ?? 0;
+}
+export async function markTaskWaitingHuman(id) {
+    const d = await getDb();
+    await d.update(missionTasks).set({ status: "waiting_human", updatedAt: new Date() }).where(eq(missionTasks.id, id));
+}
+export async function getActiveMissionTypes() {
+    const d = await getDb();
+    const rows = await d.select({ title: missions.title }).from(missions).where(eq(missions.status, "active"));
+    return rows.map(r => r.title);
+}
+export async function getAdaptivePriors() {
+    try {
+        const d = await getDb();
+        if (!d)
+            return { ...SEGMENT_PRIORS };
+        const rows = await d.select({
+            segment: bayesianPriors.segment,
+            priorAlpha: bayesianPriors.priorAlpha,
+            priorBeta: bayesianPriors.priorBeta,
+        }).from(bayesianPriors).limit(200);
+        if (!rows.length)
+            return { ...SEGMENT_PRIORS };
+        const map = { ...SEGMENT_PRIORS };
+        for (const row of rows) {
+            map[row.segment] = {
+                alpha: parseFloat(row.priorAlpha ?? '2'),
+                beta: parseFloat(row.priorBeta ?? '18'),
+            };
+        }
+        return map;
+    }
+    catch {
+        return { ...SEGMENT_PRIORS };
+    }
+}
+export async function createLead(data) {
+    const d = await getDb();
+    const values = {
+        email: data.email,
+        name: data.name ?? null,
+        company: data.company ?? null,
+        title: data.title ?? null,
+        phone: data.phone ?? null,
+        source: data.source ?? "direct",
+        status: data.status ?? "new",
+        isVip: data.isVip ?? false,
+        industry: data.industry ?? null,
+        metadata: data.metadata ?? null,
+    };
+    const [result] = await d.insert(leads).values(values).returning();
+    return result;
+}
+export async function getLeadByEmail(email) {
+    const d = await getDb();
+    const rows = await d.select().from(leads).where(eq(leads.email, email)).limit(1);
+    return rows[0] ?? null;
+}
+export async function updateLead(id, data) {
+    const d = await getDb();
+    await d.update(leads).set(data).where(eq(leads.id, id));
+}
+export async function getLeadById(id) {
+    const d = await getDb();
+    const rows = await d.select().from(leads).where(eq(leads.id, id)).limit(1);
+    return rows[0] ?? null;
+}
+export async function getAllLeads() {
+    const d = await getDb();
+    return d.select().from(leads).orderBy(desc(leads.createdAt)).limit(1000);
+}
+export async function incrementInteractionCount(id) {
+    const d = await getDb();
+    await d.update(leads).set({ interactionsCount: sql `coalesce(${leads.interactionsCount}, 0) + 1` }).where(eq(leads.id, id));
+}
+export async function updateLeadScore(id, score) {
+    const d = await getDb();
+    await d.update(leads).set({ score }).where(eq(leads.id, id));
+}
+export async function updateLeadStatus(id, status) {
+    const d = await getDb();
+    await d.update(leads).set({ status: status }).where(eq(leads.id, id));
+}
+// ─────────────────────────────────────────────────────────────
+// SERVICE ORDERS (used by service-orders router)
+// ─────────────────────────────────────────────────────────────
+export async function getServiceOrderById(id) {
+    const d = await getDb();
+    const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
+    return rows[0] ?? null;
+}
+export async function updateServiceOrderStatus(id, status, extra) {
+    const d = await getDb();
+    await d.update(serviceOrders).set({ status, ...(extra ?? {}), updatedAt: new Date() }).where(eq(serviceOrders.id, id));
+}
+export async function createServiceOrder(data) {
+    const d = await getDb();
+    const [result] = await d.insert(serviceOrders).values(data).returning();
+    const id = result.id;
+    return { id, ...data };
+}
+export async function getServiceOrderBySessionId(sessionId) {
+    const d = await getDb();
+    const rows = await d.select().from(serviceOrders).where(eq(serviceOrders.stripeSessionId, sessionId)).limit(1);
+    return rows[0] ?? null;
+}
+export async function getServiceOrdersByUser(userId) {
+    const d = await getDb();
+    return d.select().from(serviceOrders).where(eq(serviceOrders.userId, userId)).orderBy(desc(serviceOrders.createdAt));
+}
+export async function getAllServiceOrders() {
+    const d = await getDb();
+    return d.select().from(serviceOrders).orderBy(desc(serviceOrders.createdAt));
+}
+// ─────────────────────────────────────────────────────────────
+// BUDGET & TASKS
+// ─────────────────────────────────────────────────────────────
+export async function getBudgetStatus(_asOf) {
+    const d = await getDb();
+    const rows = await d.select().from(budgetConfig).limit(1);
+    const row = rows[0] ?? { monthlyLimit: "1000.00", spent: "0.00", currency: "USD" };
+    const limit = parseFloat(row.monthlyLimit);
+    const spent = parseFloat(row.spent ?? "0");
+    const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+    const now = _asOf ?? new Date();
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const dayKey = now.toISOString().slice(0, 10);
+    return {
+        ...row,
+        llm: { pct, spent, limit },
+        ads: { pct: 0, spent: 0, limit: 0 },
+        enrichment: { pct: 0, spent: 0, limit: 0 },
+        period: { month: monthKey, day: dayKey },
+    };
+}
+export async function markTaskRunning(id) {
+    const d = await getDb();
+    const rows = await d.update(missionTasks)
+        .set({ status: "in_progress", updatedAt: new Date() })
+        .where(and(eq(missionTasks.id, id), eq(missionTasks.status, "pending")))
+        .returning({ id: missionTasks.id });
+    return rows.length > 0;
+}
+export async function markTaskDone(id, result) {
+    const d = await getDb();
+    // WHERE status='in_progress' preserves 'waiting_human' if an agent set it during execution
+    await d.update(missionTasks).set({ status: "completed", result, updatedAt: new Date() }).where(and(eq(missionTasks.id, id), eq(missionTasks.status, "in_progress")));
+}
+export async function markTaskFailed(id, error) {
+    const d = await getDb();
+    await d.update(missionTasks).set({ status: "failed", error, updatedAt: new Date() }).where(eq(missionTasks.id, id));
+}
+export async function enqueueTask(missionId, kind, payload, scheduledAt) {
+    const d = await getDb();
+    const id = randomUUID();
+    await d.insert(missionTasks).values({
+        id,
+        missionId,
+        kind,
+        title: kind,
+        status: "pending",
+        payload,
+        ...(scheduledAt ? { scheduledAt } : {}),
+    });
+    return id;
+}
+// ─────────────────────────────────────────────────────────────
+// PROPOSALS
+// ─────────────────────────────────────────────────────────────
+export async function createProposal(data) {
+    const d = await getDb();
+    const id = randomUUID();
+    await d.insert(proposals).values({ id, ...data });
+    return id;
+}
+// ─────────────────────────────────────────────────────────────
+// REPORTING & ANALYTICS (used by jobs/revenue-digest, value-report)
+// ─────────────────────────────────────────────────────────────
+export async function getWeeklyRevenueDigest() {
+    const d = await getDb();
+    const weekAgo = new Date(Date.now() - 7 * 86400000);
+    const rows = await d.select().from(revenueRecords).where(gte(revenueRecords.createdAt, weekAgo));
+    const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+    return {
+        leads: rows.length,
+        mqlToSql: 0,
+        demosBooked: 0,
+        trialToPaid: 0,
+        churn: 0,
+        mrr: total.toFixed(2),
+        arpa: rows.length ? (total / rows.length).toFixed(2) : "0.00",
+        rows,
+    };
+}
+export async function hasActionLogged(action, sinceDaysAgo = 1) {
+    const d = await getDb();
+    const since = new Date(Date.now() - sinceDaysAgo * 86400000);
+    const rows = await d.select().from(activityLog)
+        .where(and(eq(activityLog.action, action), gte(activityLog.createdAt, since)))
+        .limit(1);
+    return rows.length > 0;
+}
+export async function getQuarterlyValueReport() {
+    const d = await getDb();
+    const quarterAgo = new Date(Date.now() - 90 * 86400000);
+    const now = new Date();
+    const q = `${now.getFullYear()}-Q${Math.ceil((now.getMonth() + 1) / 3)}`;
+    const rows = await d.select().from(revenueRecords).where(gte(revenueRecords.createdAt, quarterAgo));
+    const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+    return {
+        period: q,
+        roiSummary: `Q${Math.ceil((now.getMonth() + 1) / 3)} revenue: $${total.toFixed(2)} across ${rows.length} records.`,
+        totalRevenue: total,
+        rows,
+    };
+}
+// ─────────────────────────────────────────────────────────────
+// USER SEGMENT QUERIES (used by jobs/retention.ts, onboarding)
+// ─────────────────────────────────────────────────────────────
+export async function listHighScanUsers(minScans = 10) {
+    const d = await getDb();
+    return d.select().from(users).orderBy(desc(users.lastSignedIn)).limit(50);
+}
+export async function listInactiveUsersNoRecentScans(daysSinceLastScan = 30) {
+    const d = await getDb();
+    const cutoff = new Date(Date.now() - daysSinceLastScan * 86400000);
+    return d.select().from(users).where(lte(users.lastSignedIn, cutoff)).limit(500);
+}
+export async function listUsersForOnboardingStep(step) {
+    const d = await getDb();
+    return d.select().from(users).orderBy(desc(users.createdAt)).limit(100);
+}
+// ─────────────────────────────────────────────────────────────
+// DUNNING & RETENTION (used by jobs/dunning.ts, jobs/retention.ts)
+// ─────────────────────────────────────────────────────────────
+export async function listPastDueSubscriptions() {
+    const d = await getDb();
+    return d.select().from(subscriptions).where(eq(subscriptions.status, "past_due")).limit(1000);
+}
+export async function hasDunningStepLogged(subscriptionId, step) {
+    const d = await getDb();
+    const rows = await d.select().from(activityLog)
+        .where(and(like(activityLog.action, `dunning:${step}:%`), sql `${activityLog.details}->>'text' LIKE ${'%sub:' + subscriptionId + '%'}`)).limit(1);
+    return rows.length > 0;
+}
+export async function hasUserActionLogged(userId, action, sinceDaysAgo = 365) {
+    const d = await getDb();
+    const since = new Date(Date.now() - sinceDaysAgo * 86400000);
+    const rows = await d.select().from(activityLog)
+        .where(and(eq(activityLog.userId, userId), eq(activityLog.action, action), gte(activityLog.createdAt, since))).limit(1);
+    return rows.length > 0;
+}
+export async function getMissions(statusFilter) {
+    const d = await getDb();
+    if (statusFilter) {
+        return d.select().from(missions).where(eq(missions.status, statusFilter));
+    }
+    return d.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
+}
+export async function getMissionById(id) {
+    const d = await getDb();
+    const rows = await d.select().from(missions).where(eq(missions.id, id));
+    return rows[0] ?? null;
+}
+export async function createMission(type) {
+    const d = await getDb();
+    const id = randomUUID();
+    await d.insert(missions).values({
+        id,
+        type,
+        title: type,
+        description: `Mission: ${type}`,
+        status: "pending",
+    });
+    return id;
+}
+export async function createTask(data) {
+    const d = await getDb();
+    const id = randomUUID();
+    await d.insert(missionTasks).values({
+        id,
+        missionId: data.missionId,
+        kind: data.kind,
+        title: data.title || data.kind,
+        description: data.description || data.kind,
+        priority: data.priority || 0,
+        status: data.status || "pending",
+        payload: data.payload,
+    });
+    return id;
+}
+export async function updateMissionStatus(id, status) {
+    const d = await getDb();
+    await d.update(missions).set({ status: status.toLowerCase() }).where(eq(missions.id, id));
+}
+export async function getTasksByMission(missionId) {
+    const d = await getDb();
+    return d.select().from(missionTasks).where(eq(missionTasks.missionId, missionId)).orderBy(missionTasks.order);
+}
+export async function retryTask(id) {
+    const d = await getDb();
+    await d.update(missionTasks).set({ status: "pending" }).where(eq(missionTasks.id, id));
+}
+// ─────────────────────────────────────────────────────────────
+// USER LOOKUPS
+// ─────────────────────────────────────────────────────────────
+export async function getAllAdminIds() {
+    const d = await getDb();
+    const rows = await d.select({ id: users.id }).from(users).where(eq(users.role, "admin"));
+    return rows.map(r => r.id);
+}
+// ─────────────────────────────────────────────────────────────
+// PRODUCTS
+// ─────────────────────────────────────────────────────────────
+export async function getUserProducts(userId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(products).where(eq(products.userId, userId)).orderBy(desc(products.createdAt));
+}
+export async function getProductById(id) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
+    return result[0];
+}
+export async function updateProduct(id, data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    await db.update(products).set(data).where(eq(products.id, id));
+}
+// ─── Authentication Helpers ──────────────────────────────────────────────────
+export async function createAuthentication(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(authentications).values(data).returning();
+    return { id: result.id };
+}
+export async function getUserAuthentications(userId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(authentications).where(eq(authentications.userId, userId)).orderBy(desc(authentications.createdAt));
+}
+export async function getAuthenticationByShareToken(shareToken) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(authentications).where(eq(authentications.shareToken, shareToken)).limit(1);
+    return result[0];
+}
+export async function updateAuthenticationSharing(id, userId, isPublic, shareToken) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    await db.update(authentications).set({ isPublic: isPublic ? 1 : 0, shareToken }).where(and(eq(authentications.id, id), eq(authentications.userId, userId)));
+}
+export async function incrementShareCount(id) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.update(authentications).set({ shareCount: sql `${authentications.shareCount} + 1` }).where(eq(authentications.id, id));
+}
+// ─── Certificate Helpers ─────────────────────────────────────────────────────
+export async function createCertificate(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(certificates).values(data).returning();
+    return result;
+}
+export async function getCertificateByNumber(certNumber) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(certificates).where(eq(certificates.certificateNumber, certNumber)).limit(1);
+    return result[0];
+}
+export async function getUserCertificates(userId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(certificates).where(eq(certificates.userId, userId)).orderBy(desc(certificates.createdAt));
+}
+// ─── QR Code Helpers ─────────────────────────────────────────────────────────
+export async function createQrCode(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(qrCodes).values(data).returning();
+    return { id: result.id };
+}
+export async function getProductQrCodes(productId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(qrCodes).where(eq(qrCodes.productId, productId));
+}
+export async function incrementScanCount(id) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.update(qrCodes).set({ scanCount: sql `${qrCodes.scanCount} + 1`, lastScannedAt: new Date() }).where(eq(qrCodes.id, id));
+}
+export async function logScanEvent(data) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.insert(qrScanEvents).values({
+        qrCodeId: data.qrCodeId,
+        productId: data.productId,
+        isAuthentic: data.isAuthentic,
+        userAgent: data.userAgent,
+    });
+    if (data.userId && data.isAuthentic) {
+        await recordReputationEvent(data.userId, "scan_authenticity_confirmed", 1);
+    }
+}
+export async function recordReputationEvent(userId, eventType, pointsDelta) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.execute(sql `
+    INSERT INTO reputation_events (user_id, event_type, points_delta)
+    VALUES (${userId}, ${eventType}, ${pointsDelta})
+  `);
+    await db.execute(sql `
+    INSERT INTO user_reputation (user_id, points, trust_level)
+    VALUES (${userId}, ${pointsDelta}, 'novice')
+    ON CONFLICT (user_id) DO UPDATE SET
+      points = user_reputation.points + EXCLUDED.points,
+      last_updated_at = now()
+  `);
+}
+// Ops console aggregation over scheduled_job_runs (client/src/pages/OpsDashboard.tsx).
+// Job statuses are running/completed/failed; the console speaks success/failure.
+export async function getOpsSummary(windowHours = 24) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("database not available");
+    const since = new Date(Date.now() - windowHours * 3600_000);
+    const runs = await db
+        .select()
+        .from(scheduledJobRuns)
+        .where(gte(scheduledJobRuns.startedAt, since))
+        .orderBy(desc(scheduledJobRuns.startedAt))
+        .limit(500);
+    const toUiStatus = (s) => (s === "completed" ? "success" : s === "failed" ? "failure" : s);
+    const byJob = new Map();
+    for (const r of runs) {
+        const entry = byJob.get(r.jobName) ?? { success: 0, failure: 0, lastSeen: r.startedAt, lastError: null };
+        if (r.status === "completed")
+            entry.success++;
+        if (r.status === "failed") {
+            entry.failure++;
+            entry.lastError ??= r.error || "(no message)";
+        }
+        if (r.startedAt > entry.lastSeen)
+            entry.lastSeen = r.startedAt;
+        byJob.set(r.jobName, entry);
+    }
+    const summary = Array.from(byJob.entries())
+        .map(([name, v]) => ({
+        workflow: name,
+        success: v.success,
+        failure: v.failure,
+        last_seen: v.lastSeen.toISOString(),
+        last_error: v.lastError,
+    }))
+        .sort((a, b) => b.failure - a.failure || b.success - a.success);
+    const failures = runs
+        .filter(r => r.status === "failed")
+        .slice(0, 50)
+        .map(r => ({
+        workflow: r.jobName,
+        error: r.error,
+        payload: r.result ? JSON.stringify(r.result) : null,
+        at: r.startedAt.toISOString(),
+    }));
+    const recent = runs.slice(0, 50).map(r => ({
+        workflow: r.jobName,
+        status: toUiStatus(r.status),
+        at: r.startedAt.toISOString(),
+    }));
+    return {
+        window_hours: windowHours,
+        generated_at: new Date().toISOString(),
+        totals: {
+            success: runs.filter(r => r.status === "completed").length,
+            failure: runs.filter(r => r.status === "failed").length,
+        },
+        summary,
+        failures,
+        recent,
+    };
+}
+export async function resolveFraudAlert(alertId, userId, isVerifiedCounterfeit) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.update(fraudAlerts).set({ status: "resolved" }).where(eq(fraudAlerts.id, alertId));
+    if (isVerifiedCounterfeit) {
+        await recordReputationEvent(userId, "counterfeit_verified", 50);
+    }
+}
+export async function getRecentScanEvents(productId, limit = 20) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db
+        .select()
+        .from(qrScanEvents)
+        .where(eq(qrScanEvents.productId, productId))
+        .orderBy(desc(qrScanEvents.scannedAt))
+        .limit(limit);
+}
+// ─── NFT Helpers ─────────────────────────────────────────────────────────────
+export async function listNfts(filters) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    let query = db.select().from(nfts);
+    const conditions = [];
+    if (filters?.collectionId)
+        conditions.push(eq(nfts.collectionId, filters.collectionId));
+    if (filters?.status)
+        conditions.push(eq(nfts.status, filters.status));
+    if (conditions.length)
+        query = query.where(and(...conditions));
+    return await query.orderBy(desc(nfts.createdAt)).limit(filters?.limit || 50);
+}
+export async function getNftById(id) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(nfts).where(eq(nfts.id, id)).limit(1);
+    return result[0];
+}
+export async function createNft(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(nfts).values(data).returning();
+    return result;
+}
+export async function listCollections() {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(nftCollections).orderBy(desc(nftCollections.createdAt)).limit(200);
+}
+export async function getCollectionBySlug(slug) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(nftCollections).where(eq(nftCollections.slug, slug)).limit(1);
+    return result[0];
+}
+export async function createCollection(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(nftCollections).values(data).returning();
+    return { id: result.id };
+}
+// ─── Auction Helpers ─────────────────────────────────────────────────────────
+export async function createAuction(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(auctions).values(data).returning();
+    return { id: result.id };
+}
+export async function getActiveAuctions() {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(auctions).where(eq(auctions.status, "active")).orderBy(desc(auctions.createdAt));
+}
+export async function getAuctionById(id) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(auctions).where(eq(auctions.id, id)).limit(1);
+    return result[0];
+}
+export async function placeBid(auctionId, bidderId, amount) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    await db.insert(auctionBids).values({ auctionId, bidderId, amount });
+    await db.update(auctions).set({
+        currentBid: amount,
+        highestBidderId: bidderId,
+        bidCount: sql `${auctions.bidCount} + 1`,
+    }).where(eq(auctions.id, auctionId));
+}
+export async function getAuctionBids(auctionId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(auctionBids).where(eq(auctionBids.auctionId, auctionId)).orderBy(desc(auctionBids.amount));
+}
+// ─── Subscription Helpers ────────────────────────────────────────────────────
+export async function getUserSubscription(userId) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(subscriptions).where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active"))).limit(1);
+    return result[0];
+}
+export async function createSubscription(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(subscriptions).values(data).returning();
+    return { id: result.id };
+}
+export async function updateSubscriptionUsage(userId, usedQuota) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.update(subscriptions).set({ usedQuota }).where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")));
+}
+export async function consumeSubscriptionQuota(userId) {
+    const db = await getDb();
+    if (!db)
+        return "no_subscription";
+    const rows = await db.update(subscriptions)
+        .set({ usedQuota: sql `${subscriptions.usedQuota} + 1` })
+        .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active"), sql `COALESCE(${subscriptions.usedQuota}, 0) < ${subscriptions.monthlyQuota}`))
+        .returning({ id: subscriptions.id });
+    if (rows.length > 0)
+        return "ok";
+    const [sub] = await db.select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")))
+        .limit(1);
+    return sub ? "exceeded" : "no_subscription";
+}
+export async function recordUsage(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    await db.insert(usageRecords).values(data);
+}
+// ─── Invoice Helpers ─────────────────────────────────────────────────────────
+export async function createInvoice(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(invoices).values(data).returning();
+    return { id: result.id };
+}
+export async function getUserInvoices(userId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(invoices).where(eq(invoices.userId, userId)).orderBy(desc(invoices.createdAt));
+}
+// ─── Payment Helpers ─────────────────────────────────────────────────────────
+export async function createPayment(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(payments).values(data).returning();
+    return { id: result.id };
+}
+export async function getUserPayments(userId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(payments).where(eq(payments.userId, userId)).orderBy(desc(payments.createdAt));
+}
+export async function updatePaymentStatus(id, status) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.update(payments).set({ status: status }).where(eq(payments.id, id));
+}
+// ─── Email Campaign Helpers ──────────────────────────────────────────────────
+export async function createEmailCampaign(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(emailCampaigns).values(data).returning();
+    return { id: result.id };
+}
+export async function getUserEmailCampaigns(userId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(emailCampaigns).where(eq(emailCampaigns.userId, userId)).orderBy(desc(emailCampaigns.createdAt));
+}
+export async function updateEmailCampaign(id, data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    await db.update(emailCampaigns).set(data).where(eq(emailCampaigns.id, id));
+}
+// ─── Email Draft Helpers ─────────────────────────────────────────────────────
+export async function createEmailDraft(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(emailDrafts).values(data).returning();
+    return { id: result.id };
+}
+export async function getPendingDrafts() {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(emailDrafts).where(eq(emailDrafts.status, "pending")).orderBy(desc(emailDrafts.createdAt)).limit(200);
+}
+export async function updateDraftStatus(id, status, approvedBy) {
+    const db = await getDb();
+    if (!db)
+        return;
+    const updateData = { status };
+    if (approvedBy) {
+        updateData.approvedBy = approvedBy;
+        updateData.approvedAt = new Date();
+    }
+    if (status === "sent")
+        updateData.sentAt = new Date();
+    await db.update(emailDrafts).set(updateData).where(eq(emailDrafts.id, id));
+}
+// ─── Supply Chain Helpers ────────────────────────────────────────────────────
+export async function createSupplyChainEvent(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(supplyChainEvents).values(data).returning();
+    return { id: result.id };
+}
+export async function getProductSupplyChain(productId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(supplyChainEvents).where(eq(supplyChainEvents.productId, productId)).orderBy(supplyChainEvents.createdAt);
+}
+// ─── Referral Helpers ────────────────────────────────────────────────────────
+export async function createReferral(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(referrals).values(data).returning();
+    return { id: result.id };
+}
+export async function getReferralByCode(code) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(referrals).where(eq(referrals.referralCode, code)).limit(1);
+    return result[0];
+}
+export async function getUserReferrals(userId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(referrals).where(eq(referrals.referrerId, userId)).orderBy(desc(referrals.createdAt));
+}
+// ─── Affiliate Helpers ───────────────────────────────────────────────────────
+export async function getAffiliateByUserId(userId) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(affiliates).where(eq(affiliates.userId, userId)).limit(1);
+    return result[0];
+}
+export async function createAffiliate(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(affiliates).values(data).returning();
+    return { id: result.id };
+}
+export async function getAffiliateCommissions(affiliateId) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(affiliateCommissions).where(eq(affiliateCommissions.affiliateId, affiliateId)).orderBy(desc(affiliateCommissions.createdAt));
+}
+// ─── Autopilot Helpers ───────────────────────────────────────────────────────
+export async function getAutopilotConfig() {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(autopilotConfig).orderBy(desc(autopilotConfig.id)).limit(1);
+    return result[0];
+}
+export async function upsertAutopilotConfig(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(autopilotConfig).values(data).onConflictDoUpdate({ target: autopilotConfig.tenantId, set: data }).returning();
+    return result?.id;
+}
+export async function createAutopilotDecision(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(autopilotDecisions).values(data).returning();
+    return { id: result.id };
+}
+export async function getAutopilotDecisionCountByMonth(_type) {
+    const db = await getDb();
+    if (!db)
+        return { data: 0 };
+    const firstOfMonth = new Date();
+    firstOfMonth.setDate(1);
+    firstOfMonth.setHours(0, 0, 0, 0);
+    const rows = await db.select({ count: sql `count(*)` })
+        .from(autopilotDecisions)
+        .where(gte(autopilotDecisions.createdAt, firstOfMonth));
+    return { data: rows[0]?.count ?? 0 };
+}
+// ─── A/B Test Helpers ────────────────────────────────────────────────────────
+export async function createAbTest(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(abTests).values(data).returning();
+    return { id: result.id };
+}
+export async function getActiveAbTests() {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(abTests).where(eq(abTests.status, "running")).orderBy(desc(abTests.createdAt));
+}
+export async function getAllAbTests() {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(abTests).orderBy(desc(abTests.createdAt)).limit(200);
+}
+// ─── White Label Helpers ─────────────────────────────────────────────────────
+export async function createWhiteLabelClient(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(whiteLabelClients).values(data).returning();
+    return { id: result.id };
+}
+export async function getWhiteLabelClients() {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(whiteLabelClients).orderBy(desc(whiteLabelClients.createdAt)).limit(200);
+}
+export async function getWhiteLabelByApiKey(apiKey) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db.select().from(whiteLabelClients).where(eq(whiteLabelClients.apiKey, apiKey)).limit(1);
+    return result[0];
+}
+// ─── Fraud Alert Helpers ─────────────────────────────────────────────────────
+export async function createFraudAlert(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(fraudAlerts).values(data).returning();
+    return { id: result.id };
+}
+export async function getOpenFraudAlerts() {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(fraudAlerts).where(eq(fraudAlerts.status, "open")).orderBy(desc(fraudAlerts.createdAt));
+}
+// ─── Customer Health Helpers ─────────────────────────────────────────────────
+export async function upsertHealthScore(userId, score, factors, trend) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.insert(customerHealthScores)
+        .values({ userId, score, factors, trend: trend })
+        .onConflictDoUpdate({ target: customerHealthScores.userId, set: { score, factors, trend: trend, lastCalculatedAt: new Date() } });
+}
+export async function getAllHealthScores() {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(customerHealthScores).orderBy(desc(customerHealthScores.score)).limit(500);
+}
+// ─── Revenue Helpers ─────────────────────────────────────────────────────────
+export async function recordRevenue(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    await db.insert(revenueRecords).values(data);
+}
+export async function getRevenueAnalytics(startDate, endDate) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    let query = db.select().from(revenueRecords);
+    if (startDate && endDate) {
+        query = query.where(and(gte(revenueRecords.createdAt, startDate), lte(revenueRecords.createdAt, endDate)));
+    }
+    return await query.orderBy(desc(revenueRecords.createdAt)).limit(2000);
+}
+// ─── Dashboard Metrics ───────────────────────────────────────────────────────
+export async function getDashboardMetrics(userId) {
+    const db = await getDb();
+    if (!db)
+        return { totalProducts: 0, totalAuthentications: 0, totalCertificates: 0, totalNfts: 0 };
+    const [[prods], [auths], [certs], [nftCount]] = await Promise.all([
+        db.select({ count: sql `count(*)` }).from(products).where(eq(products.userId, userId)),
+        db.select({ count: sql `count(*)` }).from(authentications).where(eq(authentications.userId, userId)),
+        db.select({ count: sql `count(*)` }).from(certificates).where(eq(certificates.userId, userId)),
+        db.select({ count: sql `count(*)` }).from(nfts).where(eq(nfts.ownerId, userId)),
+    ]);
+    return {
+        totalProducts: prods?.count || 0,
+        totalAuthentications: auths?.count || 0,
+        totalCertificates: certs?.count || 0,
+        totalNfts: nftCount?.count || 0,
+    };
+}
+export async function getAdminDashboardMetrics() {
+    const db = await getDb();
+    if (!db)
+        return { totalUsers: 0, totalProducts: 0, totalAuthentications: 0, totalRevenue: 0, totalLeads: 0, totalNfts: 0 };
+    const [[userCount], [prodCount], [authCount], [leadCount], [nftCount], [revenue]] = await Promise.all([
+        db.select({ count: sql `count(*)` }).from(users),
+        db.select({ count: sql `count(*)` }).from(products),
+        db.select({ count: sql `count(*)` }).from(authentications),
+        db.select({ count: sql `count(*)` }).from(leads),
+        db.select({ count: sql `count(*)` }).from(nfts),
+        db.select({ total: sql `COALESCE(SUM(amount), 0)` }).from(revenueRecords),
+    ]);
+    return {
+        totalUsers: userCount?.count || 0,
+        totalProducts: prodCount?.count || 0,
+        totalAuthentications: authCount?.count || 0,
+        totalRevenue: parseFloat(revenue?.total || "0"),
+        totalLeads: leadCount?.count || 0,
+        totalNfts: nftCount?.count || 0,
+    };
+}
+export async function getSubscriptionAnalytics() {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(subscriptions).orderBy(desc(subscriptions.createdAt)).limit(5000);
+}
+// ─── Notification Helpers ───────────────────────────────────────────────────
+export async function createNotification(data) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const [result] = await db.insert(notifications).values(data).returning();
+    return { id: result.id };
+}
+export async function getUserNotifications(userId, limit = 50) {
+    const db = await getDb();
+    if (!db)
+        return [];
+    return await db.select().from(notifications)
+        .where(eq(notifications.userId, userId))
+        .orderBy(desc(notifications.createdAt))
+        .limit(limit);
+}
+export async function getUnreadNotificationCount(userId) {
+    const db = await getDb();
+    if (!db)
+        return 0;
+    const [result] = await db.select({ count: sql `count(*)` })
+        .from(notifications)
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+    return result?.count || 0;
+}
+export async function markNotificationRead(id, userId) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    await db.update(notifications)
+        .set({ isRead: 1 })
+        .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+}
+export async function markAllNotificationsRead(userId) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    await db.update(notifications)
+        .set({ isRead: 1 })
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+}
+export async function deleteNotification(id, userId) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    await db.delete(notifications)
+        .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+}
+export async function createSystemNotification(userId, title, message, type, actionUrl) {
+    return createNotification({ userId, type: type, title, message, isRead: 0, actionUrl });
+}
+// ─── Automation Audit ────────────────────────────────────────────────────────
+export async function logAutomationAudit(action, data, userId) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.insert(activityLog).values({ userId, action, details: { text: action, ...data } });
+}
+// ─── Lead Upsert & Scoring ──────────────────────────────────────────────────
+export async function upsertLeadByEmail(input) {
+    const db = await getDb();
+    if (!db)
+        throw new Error("Database not available");
+    const existing = await db.select({ id: leads.id }).from(leads).where(eq(leads.email, input.email)).limit(1);
+    if (existing[0]) {
+        await db.update(leads).set({
+            name: input.name,
+            company: input.company,
+            title: input.title,
+            phone: input.phone,
+            source: input.source,
+            industry: input.industry,
+            metadata: input.metadata,
+        }).where(eq(leads.id, existing[0].id));
+        return { id: existing[0].id, created: false };
+    }
+    const [result] = await db.insert(leads).values({
+        email: input.email,
+        name: input.name,
+        company: input.company,
+        title: input.title,
+        phone: input.phone,
+        source: input.source || "website_form",
+        industry: input.industry,
+        metadata: input.metadata,
+    }).returning();
+    return { id: result.id, created: true };
+}
+export function computeLeadScore(signals) {
+    const w = { segmentFit: 0.3, intent: 0.35, urgency: 0.2, budgetProxy: 0.15 };
+    const score = Math.round((signals.segmentFit ?? 50) * w.segmentFit +
+        (signals.intent ?? 50) * w.intent +
+        (signals.urgency ?? 50) * w.urgency +
+        (signals.budgetProxy ?? 50) * w.budgetProxy);
+    const band = score >= 80 ? "hot" : score >= 50 ? "warm" : "cold";
+    const route = band === "hot" ? "sales_direct" : band === "warm" ? "nurture_sequence" : "newsletter";
+    return { score, band, route };
+}
+// ─── Stripe Subscription Helpers ─────────────────────────────────────────────
+export async function upsertStripeSubscription(data) {
+    const db = await getDb();
+    if (!db)
+        return;
+    const existing = await db
+        .select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(eq(subscriptions.stripeSubscriptionId, data.stripeSubscriptionId))
+        .limit(1);
+    if (existing[0]) {
+        await db.update(subscriptions).set({
+            plan: data.plan,
+            status: data.status,
+            monthlyQuota: data.monthlyQuota,
+            billingCycle: data.billingCycle,
+            stripeCustomerId: data.stripeCustomerId ?? undefined,
+            currentPeriodStart: data.currentPeriodStart,
+            currentPeriodEnd: data.currentPeriodEnd,
+            trialEndsAt: data.trialEndsAt ?? undefined,
+        }).where(eq(subscriptions.id, existing[0].id));
+    }
+    else {
+        await db.insert(subscriptions).values({
+            userId: data.userId,
+            plan: data.plan,
+            status: data.status,
+            monthlyQuota: data.monthlyQuota,
+            billingCycle: data.billingCycle,
+            stripeCustomerId: data.stripeCustomerId ?? undefined,
+            stripeSubscriptionId: data.stripeSubscriptionId,
+            currentPeriodStart: data.currentPeriodStart,
+            currentPeriodEnd: data.currentPeriodEnd,
+            trialEndsAt: data.trialEndsAt ?? undefined,
+        });
+    }
+}
+export async function setSubscriptionStatusByStripeId(stripeSubscriptionId, status, cancelledAt) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.update(subscriptions)
+        .set({ status, cancelledAt: cancelledAt ?? undefined })
+        .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId));
+}
+export async function getSubscriptionByStripeSubscriptionId(stripeSubscriptionId) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId))
+        .limit(1);
+    return result[0];
+}
+export async function hasWebhookEventProcessed(eventId) {
+    const db = await getDb();
+    if (!db)
+        return false;
+    const [row] = await db
+        .select({ count: sql `count(*)` })
+        .from(activityLog)
+        .where(sql `${activityLog.details}->>'eventId' = ${eventId}`);
+    return (row?.count ?? 0) > 0;
+}
+// ─── Webhook Idempotency Helpers ──────────────────────────────────────────────
+export async function claimWebhookEvent(provider, eventId, eventType) {
+    const db = await getDb();
+    if (!db)
+        return null;
+    try {
+        const result = await db
+            .insert(webhookEvents)
+            .values({ provider, eventId, eventType })
+            .onConflictDoNothing({ target: [webhookEvents.provider, webhookEvents.eventId] })
+            .returning({ id: webhookEvents.id });
+        return result.length > 0 ? result[0] : null;
+    }
+    catch (e) {
+        console.error(`[Webhook] Claim failed: ${e}`);
+        return null;
+    }
+}
+export async function markWebhookEventProcessed(provider, eventId) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db
+        .update(webhookEvents)
+        .set({ processedAt: new Date() })
+        .where(and(eq(webhookEvents.provider, provider), eq(webhookEvents.eventId, eventId)));
+}
+export async function upsertPaddleSubscription(data) {
+    const db = await getDb();
+    if (!db)
+        return;
+    const existing = await db
+        .select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(eq(subscriptions.paddleSubscriptionId, data.paddleSubscriptionId))
+        .limit(1);
+    if (existing[0]) {
+        await db.update(subscriptions).set({
+            plan: data.plan,
+            status: data.status,
+            monthlyQuota: data.monthlyQuota,
+            billingCycle: data.billingCycle,
+            paddleCustomerId: data.paddleCustomerId ?? undefined,
+            currentPeriodStart: data.currentPeriodStart,
+            currentPeriodEnd: data.currentPeriodEnd,
+        }).where(eq(subscriptions.id, existing[0].id));
+    }
+    else {
+        await db.insert(subscriptions).values({
+            userId: data.userId,
+            plan: data.plan,
+            status: data.status,
+            monthlyQuota: data.monthlyQuota,
+            billingCycle: data.billingCycle,
+            paddleCustomerId: data.paddleCustomerId ?? undefined,
+            paddleSubscriptionId: data.paddleSubscriptionId,
+            currentPeriodStart: data.currentPeriodStart,
+            currentPeriodEnd: data.currentPeriodEnd,
+        });
+    }
+}
+export async function setSubscriptionStatusByPaddleId(paddleSubscriptionId, status, cancelledAt) {
+    const db = await getDb();
+    if (!db)
+        return;
+    await db.update(subscriptions)
+        .set({ status, cancelledAt: cancelledAt ?? undefined })
+        .where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId));
+}
+export async function getSubscriptionByPaddleSubscriptionId(paddleSubscriptionId) {
+    const db = await getDb();
+    if (!db)
+        return undefined;
+    const result = await db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.paddleSubscriptionId, paddleSubscriptionId))
+        .limit(1);
+    return result[0];
+}
+export async function getAcceptanceCriteriaStatus() {
+    return { total: 0, passed: 0, failed: 0, pending: 0 };
+}
+export async function getFunnelBySegmentAndChannel() {
+    return [];
+}
+export async function getLeadCohorts() {
+    return [];
+}
+// ─── QRON Helpers (backed by qr_codes + metadata) ────────────────────────────
+export async function getQronList() {
+    const d = await getDb();
+    return d.select().from(qrCodes).orderBy(desc(qrCodes.createdAt)).limit(200);
+}
+export async function createQron(data) {
+    const d = await getDb();
+    return d.insert(qrCodes).values({
+        userId: data.userId,
+        productId: data.productId,
+        shortCode: data.id,
+        mode: data.mode ?? 'standard',
+        imageUrl: data.imageUrl,
+        qrData: data.id,
+        metadata: {
+            qronId: data.id,
+            productName: data.productName,
+            brand: data.brand,
+            category: data.category,
+            seed: data.seed,
+            thumbnailUrl: data.thumbnailUrl,
+            fingerprintHash: data.fingerprintHash,
+            nftTokenId: data.nftTokenId,
+            openartUrl: data.openartUrl,
+            openartRegistered: !!data.openartUrl,
+            trustScore: data.trustScore ?? 100,
+            verifiedScanCount: 0,
+            fakeFlagCount: 0,
+        },
+    }).returning();
+}
+export async function getQronById(qronId) {
+    const d = await getDb();
+    const rows = await d.select().from(qrCodes).where(eq(qrCodes.shortCode, qronId)).limit(1);
+    const row = rows[0];
+    if (!row)
+        return null;
+    const meta = (row.metadata ?? {});
+    return {
+        ...row,
+        id: row.shortCode ?? String(row.id),
+        fingerprintHash: meta.fingerprintHash,
+        nftTokenId: meta.nftTokenId,
+        openartUrl: meta.openartUrl,
+        openartRegistered: !!(meta.openartUrl),
+        trustScore: meta.trustScore,
+        verifiedScanCount: meta.verifiedScanCount,
+        fakeFlagCount: meta.fakeFlagCount,
+    };
+}
+export async function createQronScanVerdict(data) {
+    const d = await getDb();
+    const rows = await d.select({ id: qrCodes.id, productId: qrCodes.productId })
+        .from(qrCodes).where(eq(qrCodes.shortCode, data.qronId)).limit(1);
+    const qr = rows[0];
+    if (!qr)
+        return;
+    await d.insert(qrScanEvents).values({
+        qrCodeId: qr.id,
+        productId: qr.productId ?? 0,
+        isAuthentic: data.verdict === 'authentic',
+        userAgent: JSON.stringify({
+            verdict: data.verdict,
+            similarity: data.similarityScore,
+            details: data.details,
+            scannedImageUrl: data.scannedImageUrl,
+        }),
+    });
+}
+export async function updateQron(qronId, data) {
+    const d = await getDb();
+    const rows = await d.select({ id: qrCodes.id, metadata: qrCodes.metadata })
+        .from(qrCodes).where(eq(qrCodes.shortCode, qronId)).limit(1);
+    const row = rows[0];
+    if (!row)
+        return;
+    const merged = { ...(row.metadata ?? {}), ...data };
+    await d.update(qrCodes)
+        .set({ metadata: merged, updatedAt: new Date() })
+        .where(eq(qrCodes.id, row.id));
+}
