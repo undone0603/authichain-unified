@@ -18,7 +18,7 @@ from agentz.core.reports import (
 from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
+    lm_manager.load_model("google/gemma-4-e4b")
     try:
         ctx.step("--- EXECUTIVE REPORTING: SCALE-UP PHASE ---")
         
@@ -95,4 +95,4 @@ def run(ctx: ExecutionContext) -> str:
         
         return f"Executive reporting complete. 3 high-fidelity documents generated for {city} and {brand}."
     finally:
-        lm_manager.unload_model("local-model")
+        lm_manager.unload_model("google/gemma-4-e4b")

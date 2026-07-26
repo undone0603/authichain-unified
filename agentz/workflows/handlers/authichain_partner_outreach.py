@@ -13,7 +13,7 @@ from agentz.core.partnership import register_partner
 from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> Optional[str]:
-    lm_manager.load_model("local-model")
+    lm_manager.load_model("google/gemma-4-e4b")
     try:
         ctx.step("--- INITIALIZING PARTNERSHIP OUTREACH BLITZ ---")
         
@@ -67,4 +67,4 @@ def run(ctx: ExecutionContext) -> Optional[str]:
                 
         return f"Partnership Blitz complete. {activated} high-leverage proposals drafted and queued."
     finally:
-        lm_manager.unload_model("local-model")
+        lm_manager.unload_model("google/gemma-4-e4b")

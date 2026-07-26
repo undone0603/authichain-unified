@@ -13,7 +13,7 @@ from agentz.core.media import generate_story_mode
 from supabase import create_client, Client
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
+    lm_manager.load_model("google/gemma-4-e4b")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -50,4 +50,4 @@ def run(ctx: ExecutionContext) -> str:
         
         return f"Daily Provenance cycle complete. Featured: {product_name}. Video: {video_url}"
     finally:
-        lm_manager.unload_model("local-model")
+        lm_manager.unload_model("google/gemma-4-e4b")

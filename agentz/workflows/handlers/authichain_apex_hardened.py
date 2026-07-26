@@ -14,7 +14,7 @@ from agentz.core.credentials import get_or_placeholder
 from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
+    lm_manager.load_model("google/gemma-4-e4b")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -71,4 +71,4 @@ def run(ctx: ExecutionContext) -> str:
 
         return "Apex Hardening complete. Ecosystem is now globally integrated and phygital-hardened."
     finally:
-        lm_manager.unload_model("local-model")
+        lm_manager.unload_model("google/gemma-4-e4b")

@@ -112,6 +112,56 @@ async def get_lead_contact_info(deal_id: str) -> Optional[Dict[str, str]]:
         logger.error(f"Failed to fetch contact info for deal {deal_id}: {e}")
     return None
 
+async def get_deal_notes(deal_id: str) -> str:
+    """Fetches all notes associated with a deal."""
+    token = get("hubspot_token")
+    if not token: return "No notes available (missing token)."
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Association type ID 214 is for deal-to-note
+            r = await client.get(f"https://api.hubapi.com/crm/v3/objects/deals/{deal_id}/associations/notes", headers=headers)
+            if r.status_code == 200:
+                notes_data = r.json().get("results", [])
+                note_contents = []
+                for n in notes_data:
+                    n_id = n["id"]
+                    r_note = await client.get(f"https://api.hubapi.com/crm/v3/objects/notes/{n_id}?properties=hs_note_body", headers=headers)
+                    if r_note.status_code == 200:
+                        note_contents.append(r_note.json().get("properties", {}).get("hs_note_body", ""))
+                return "\n".join(note_contents)
+            return "No notes found."
+    except Exception as e:
+        logger.error(f"Failed to fetch notes for deal {deal_id}: {e}")
+        return "Error fetching notes."
+
+
+async def get_deal_notes(deal_id: str) -> str:
+    """Fetches all notes associated with a deal."""
+    token = get("hubspot_token")
+    if not token: return "No notes available (missing token)."
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Association type ID 214 is for deal-to-note
+            r = await client.get(f"https://api.hubapi.com/crm/v3/objects/deals/{deal_id}/associations/notes", headers=headers)
+            if r.status_code == 200:
+                notes_data = r.json().get("results", [])
+                note_contents = []
+                for n in notes_data:
+                    n_id = n["id"]
+                    r_note = await client.get(f"https://api.hubapi.com/crm/v3/objects/notes/{n_id}?properties=hs_note_body", headers=headers)
+                    if r_note.status_code == 200:
+                        note_contents.append(r_note.json().get("properties", {}).get("hs_note_body", ""))
+                return "\n".join(note_contents)
+            return "No notes found."
+    except Exception as e:
+        logger.error(f"Failed to fetch notes for deal {deal_id}: {e}")
+        return "Error fetching notes."
+
+
 async def add_deal_note(deal_id: str, content: str) -> bool:
     """Creates a note and associates it with a deal."""
     token = get("hubspot_token")
