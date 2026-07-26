@@ -32,6 +32,37 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # GitHub-hosted runners have no IPv6 route, but Supabase's pooler host
+      # sometimes hands back only/first an AAAA record — NODE_OPTIONS
+      # --dns-result-order=ipv4first (below) only *reorders* results Node's
+      # own dns.lookup() already got; it can't help if pg's connection pool
+      # ends up with the IPv6 address anyway (confirmed by prior failures:
+      # ENETUNREACH connect to a 2600:... address on port 6543 even with
+      # ipv4first set). Pinning the resolved IPv4 address into /etc/hosts
+      # short-circuits DNS entirely for this hostname, which is reliable
+      # regardless of Node/driver DNS-ordering quirks.
+      - name: Force IPv4 for Supabase pooler (runner has no IPv6 route)
+        if: steps.check.outputs.skip == 'false'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          host=$(printf '%s' "$DATABASE_URL" | sed -E 's#^[a-zA-Z]+://[^@]*@##; s#[:/].*$##')
+          if [ -z "$host" ]; then
+            echo "Could not parse a host out of DATABASE_URL; skipping IPv4 pin (falling back to NODE_OPTIONS ipv4first only)."
+            exit 0
+          fi
+          ipv4=$(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1; exit}' || true)
+          if [ -z "$ipv4" ]; then
+            ipv4=$(dig +short A "$host" 2>/dev/null | tail -1 || true)
+          fi
+          if [ -n "$ipv4" ]; then
+            echo "Pinning $host -> $ipv4 in /etc/hosts (forces IPv4, bypasses AAAA resolution)."
+            echo "$ipv4 $host" | sudo tee -a /etc/hosts >/dev/null
+          else
+            echo "WARNING: no IPv4 (A) record found for $host — no /etc/hosts pin applied, relying on NODE_OPTIONS ipv4first only."
+          fi
+
       - uses: actions/checkout@v4
         if: steps.check.outputs.skip == 'false'
 
