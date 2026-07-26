@@ -10,7 +10,7 @@ from agentz.core.credentials import get_or_placeholder, get
 from agentz.core.llm import get_llm, lm_manager
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
+    lm_manager.load_model("google/gemma-4-e4b")
     try:
         token = get_or_placeholder("hubspot_token", ctx)
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -108,4 +108,4 @@ def run(ctx: ExecutionContext) -> str:
             
         return f"Sent {sent} Authichain follow-up emails"
     finally:
-        lm_manager.unload_model("local-model")
+        lm_manager.unload_model("google/gemma-4-e4b")

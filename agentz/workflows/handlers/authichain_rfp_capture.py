@@ -14,7 +14,7 @@ from agentz.core.llm import lm_manager
 
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
+    lm_manager.load_model("google/gemma-4-e4b")
     try:
         ctx.step("🎖️ --- INITIALIZING FEDERAL RFP CAPTURE MACHINE --- 🎖️")
 
@@ -67,4 +67,4 @@ def run(ctx: ExecutionContext) -> str:
             f"{len(opportunities)} qualified total."
         )
     finally:
-        lm_manager.unload_model("local-model")
+        lm_manager.unload_model("google/gemma-4-e4b")

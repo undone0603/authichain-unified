@@ -11,7 +11,7 @@ from agentz.core.outreach_engine import OutreachEngineClient
 from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("local-model")
+    lm_manager.load_model("google/gemma-4-e4b")
     try:
         ctx.step("--- AUTONOMOUS CLOUDFLARE OUTREACH ---")
         
@@ -51,4 +51,4 @@ def run(ctx: ExecutionContext) -> str:
         
         return f"Outreach complete. Synced {synced} leads to Cloudflare. Result: {res}"
     finally:
-        lm_manager.unload_model("local-model")
+        lm_manager.unload_model("google/gemma-4-e4b")

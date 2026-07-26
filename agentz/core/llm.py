@@ -200,7 +200,7 @@ class LimitProofLLM:
     def _get_openai(self):
         api_key = get("openai_api_key", required=False) or os.environ.get("OPENAI_API_KEY")
         if not api_key: raise RuntimeError("Missing OpenAI Key")
-        llm = ChatOpenAI(model="gpt-4o", temperature=self.temperature, api_key=api_key, max_retries=1)
+        llm = ChatOpenAI(model="gpt-4o", temperature=self.temperature, api_key=api_key, max_retries=1, request_timeout=300)
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def _get_openrouter(self):
@@ -212,6 +212,7 @@ class LimitProofLLM:
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
             max_retries=1,
+            request_timeout=300,
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
