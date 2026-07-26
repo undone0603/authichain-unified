@@ -13,6 +13,8 @@ paths-ignore:
   - "apps/chatbot/**"
   # strainchain-io index.ts contains large embedded base64 assets that crash the CodeQL TypeScript parser
   - "workers/strainchain-io/**"
+  # qron-space index.ts also embeds large base64 assets that crash the CodeQL TypeScript parser
+  - "workers/qron-space/**"
 
 queries:
   - uses: security-extended
