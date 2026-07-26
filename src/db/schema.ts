@@ -15,6 +15,7 @@ import {
   jsonb,
   primaryKey,
   real,
+    uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
@@ -1306,3 +1307,29 @@ export const replySequences = pgTable("reply_sequences", {
 
 export type ReplySequence = typeof replySequences.$inferSelect;
 export type InsertReplySequence = typeof replySequences.$inferInsert;
+
+// ── Webhook Event Dedup ──────────────────────────────────────────────────
+// Atomic claim/process tracker for inbound webhook events from external
+// providers (Stripe, Paddle, etc.). UNIQUE(provider, eventId) lets us use
+// INSERT ... ON CONFLICT DO NOTHING as a race-safe dedup primitive.
+export const webhookEvents = pgTable(
+  "webhook_events",
+  {
+    id: serial("id").primaryKey(),
+    provider: varchar("provider", { length: 32 }).notNull(),
+    eventId: varchar("eventId", { length: 128 }).notNull(),
+    eventType: varchar("eventType", { length: 128 }).notNull(),
+    receivedAt: timestamp("receivedAt").defaultNow().notNull(),
+    processedAt: timestamp("processedAt"),
+  },
+  (t) => ({
+    uniqProviderEvent: uniqueIndex("webhook_events_provider_eventId_uniq").on(
+      t.provider,
+      t.eventId
+    ),
+  })
+);
+
+export type WebhookEvent = typeof webhookEvents.$inferSelect;
+export type InsertWebhookEvent = typeof webhookEvents.$inferInsert;
+
