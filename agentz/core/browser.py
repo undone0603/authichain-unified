@@ -58,9 +58,10 @@ async def run_browser_task(task: str, ctx: ExecutionContext) -> Any:
     High-level helper to run a browser-use agent with AgentZ defaults.
     """
     from browser_use import Agent, Controller
-    from agentz.core.llm import get_llm
+    from agentz.core.llm import LimitProofLLM
 
-    llm = get_llm()
+    # Use LimitProofLLM directly to ensure waterfall failover is active
+    llm = LimitProofLLM(temperature=0.0)
     controller = Controller()
     attach_interceptor(controller, ctx)
 

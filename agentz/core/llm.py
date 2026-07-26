@@ -183,9 +183,9 @@ class LimitProofLLM:
 
     def _get_lmstudio(self):
         llm = ChatOpenAI(
-            model=os.environ.get("LOCAL_MODEL_ID", "google/gemma-4-e4b"),
+            model=os.environ.get("LOCAL_MODEL_ID", "mistralai/mistral-7b-instruct-v0.3"),
             temperature=self.temperature, api_key="not-needed",
-            base_url=self._local_base_url(), max_retries=0, timeout=120
+            base_url=self._local_base_url(), max_retries=1, timeout=300
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
@@ -193,7 +193,7 @@ class LimitProofLLM:
         llm = ChatOpenAI(
             model=os.environ.get("LOCAL_MODEL_ID_FALLBACK", "nvidia/nemotron-3-nano-4b"),
             temperature=self.temperature, api_key="not-needed",
-            base_url=self._local_base_url(), max_retries=0, timeout=120
+            base_url=self._local_base_url(), max_retries=1, timeout=300
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
