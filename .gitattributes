@@ -1,0 +1,25 @@
+# Normalize line endings in the repo. A commit that rewrote these files to CRLF
+# (fc9106eb) coincided with pnpm-lock.yaml corruption that broke every CI
+# `pnpm install` with ERR_PNPM_BROKEN_LOCKFILE. Force LF for text so a Windows
+# checkout can't reintroduce it.
+* text=auto eol=lf
+
+# Lockfiles and configs: never touch, never convert.
+pnpm-lock.yaml   -text linguist-generated=true
+package-lock.json -text linguist-generated=true
+*.lock           -text
+
+# Shell scripts and workflow YAML break at runtime with CR (`\r: command not found`).
+*.sh             text eol=lf
+*.yml            text eol=lf
+*.yaml           text eol=lf
+
+# Binaries: leave alone.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
