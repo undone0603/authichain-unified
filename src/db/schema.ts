@@ -16,6 +16,7 @@ import {
   primaryKey,
   real,
     uniqueIndex,
+  date,
 } from 'drizzle-orm/pg-core';
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
@@ -1332,4 +1333,80 @@ export const webhookEvents = pgTable(
 
 export type WebhookEvent = typeof webhookEvents.$inferSelect;
 export type InsertWebhookEvent = typeof webhookEvents.$inferInsert;
+
+// ─── Guardrail / Caps Layer ─────────────────────────────────────────────────
+// Shared enforcement point every automation channel must check before any
+// external-effect action (send email, publish content, send a contract).
+// See docs/superpowers/specs/2026-07-29-guardrail-caps-layer-design.md.
+export const guardrailChannels = pgTable("guardrail_channels", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  category: varchar("category", { length: 32 }).notNull(), // email|content|contract|spend
+  dailyCap: integer("daily_cap").notNull(),
+  enabled: boolean("enabled").default(false).notNull(),
+  spendCeilingCents: integer("spend_ceiling_cents").default(0).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  guardrailChannelsNameUniq: uniqueIndex("guardrail_channels_name_uniq").on(table.name),
+}));
+
+export type GuardrailChannel = typeof guardrailChannels.$inferSelect;
+export type InsertGuardrailChannel = typeof guardrailChannels.$inferInsert;
+
+export const guardrailCounters = pgTable("guardrail_counters", {
+  id: serial("id").primaryKey(),
+  channelId: integer("channel_id").notNull(),
+  day: date("day").notNull(),
+  count: integer("count").default(0).notNull(),
+}, (table) => ({
+  guardrailCountersChannelDayUniq: uniqueIndex("guardrail_counters_channel_day_uniq").on(table.channelId, table.day),
+}));
+
+export type GuardrailCounter = typeof guardrailCounters.$inferSelect;
+export type InsertGuardrailCounter = typeof guardrailCounters.$inferInsert;
+
+export const suppressionList = pgTable("suppression_list", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  reason: varchar("reason", { length: 32 }).notNull(), // bounced|complained|manual|unsubscribed
+  source: varchar("source", { length: 64 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  suppressionListEmailUniq: uniqueIndex("suppression_list_email_uniq").on(table.email),
+}));
+
+export type Suppression = typeof suppressionList.$inferSelect;
+export type InsertSuppression = typeof suppressionList.$inferInsert;
+
+export const killSwitches = pgTable("kill_switches", {
+  id: serial("id").primaryKey(),
+  scope: varchar("scope", { length: 128 }).notNull(), // "global" or a channel name
+  enabled: boolean("enabled").default(false).notNull(), // true = tripped/blocked
+  reason: text("reason"),
+  updatedBy: varchar("updated_by", { length: 64 }).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  killSwitchesScopeUniq: uniqueIndex("kill_switches_scope_uniq").on(table.scope),
+}));
+
+export type KillSwitch = typeof killSwitches.$inferSelect;
+export type InsertKillSwitch = typeof killSwitches.$inferInsert;
+
+export const guardrailEvents = pgTable("guardrail_events", {
+  id: serial("id").primaryKey(),
+  channelId: integer("channel_id"),
+  action: varchar("action", { length: 32 }).notNull(), // check|record|suppress|kill_toggle
+  allowed: boolean("allowed"),
+  reason: text("reason"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  guardrailEventsChannelIdx: index("idx_guardrail_events_channel").on(table.channelId),
+  guardrailEventsCreatedIdx: index("idx_guardrail_events_created").on(table.createdAt),
+}));
+
+export type GuardrailEvent = typeof guardrailEvents.$inferSelect;
+export type InsertGuardrailEvent = typeof guardrailEvents.$inferInsert;
 
