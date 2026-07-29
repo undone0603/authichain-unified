@@ -16,6 +16,14 @@ import { Resend } from 'resend';
 const isDryRun = process.env.DRY_RUN === 'true';
 const segment  = process.argv.find(a => a.startsWith('--segment='))?.split('=')[1] ?? 'all';
 
+// Send-failure tracking. A live run where every send fails (bad key, unverified
+// domain, provider outage) previously exited 0 and showed a green check — the
+// pipeline looked healthy while delivering nothing. These are aggregated and
+// surfaced as a non-zero exit + GitHub Actions annotations at the end.
+const sendFailures: string[] = [];
+let totalAttempted = 0;
+let totalSent = 0;
+
 const supabase = createClient(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -342,6 +350,7 @@ async function processTargets<T extends { company: string; email: string; name?:
   segmentName: string,
 ) {
   let sent = 0; let saved = 0; let queued = 0;
+  totalAttempted += targets.length;
 
   if (!resend && !isDryRun) {
     console.warn(`  ⚠️  RESEND_API_KEY not set — emails will be queued in Supabase (status=queued) and sent on next run when key is present`);
@@ -409,14 +418,17 @@ async function processTargets<T extends { company: string; email: string; name?:
           .eq('email', email);
       } else {
         console.warn(`  ⚠️  Resend error for ${t.company}:`, res.error);
+        sendFailures.push(`${t.company}: ${res.error?.message ?? 'unknown Resend error'}`);
         queued++;
       }
     } catch (err: any) {
       console.warn(`  ⚠️  Send failed for ${t.company}: ${err.message}`);
+      sendFailures.push(`${t.company}: ${err.message}`);
       queued++;
     }
   }
 
+  totalSent += sent;
   console.log(`\n[${segmentName}] Saved: ${saved} | Sent: ${sent} | Queued/Pending: ${queued}`);
 }
 
@@ -470,6 +482,7 @@ if (segment === 'all' || segment === 'qron') {
 }
 
 console.log('\n✅ OUTREACH COMPLETE');
+console.log(`Totals — attempted: ${totalAttempted} | sent: ${totalSent} | send failures: ${sendFailures.length}`);
 console.log('Next steps:');
 if (!resend) {
   console.log('  ⚡ Set RESEND_API_KEY then flush queued leads:');
@@ -480,3 +493,14 @@ if (!process.env.APOLLO_API_KEY) {
 }
 console.log('  📅 Demo booking page (no Calendly needed): ' + CALENDLY);
 console.log('  📋 View all leads in Supabase: select * from leads where source like \'b2b_outreach_%\' order by created_at desc');
+
+// ── Fail loudly on delivery problems ─────────────────────────────────────────
+// A live run that reaches the provider and gets rejected every time is a broken
+// pipeline, not a successful no-op. Emit Actions error annotations and exit
+// non-zero so the scheduled run turns red instead of silently sending nothing.
+if (!isDryRun && sendFailures.length > 0) {
+  const unique = [...new Set(sendFailures.map(f => f.split(': ').slice(1).join(': ')))];
+  console.error(`\n::error::Outreach delivered ${totalSent}/${totalAttempted} emails — ${sendFailures.length} send failure(s)`);
+  for (const reason of unique.slice(0, 5)) console.error(`::error::Send failure: ${reason}`);
+  process.exit(1);
+}
