@@ -26,6 +26,10 @@ export async function checkAndReserve(
     return { allowed: false, remaining: 0, reason: 'global kill switch engaged' };
   }
 
+  if (!Number.isInteger(count) || count < 1) {
+    return { allowed: false, remaining: 0, reason: 'invalid count' };
+  }
+
   const [channel] = await db.select().from(guardrailChannels).where(eq(guardrailChannels.name, channelName)).limit(1);
   if (!channel) {
     return { allowed: false, remaining: 0, reason: `unknown channel: ${channelName}` };
