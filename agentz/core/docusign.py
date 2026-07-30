@@ -13,8 +13,14 @@ logger = logging.getLogger("agentz.docusign")
 
 async def create_envelope_from_markdown(agreement_path: str, contact_email: str) -> Dict[str, Any]:
     """
-    Simulates sending a DocuSign envelope based on a generated Markdown agreement.
-    In a real implementation, this converts MD to PDF and uses the DocuSign API.
+    Prepares a DocuSign envelope from a generated Markdown agreement.
+
+    NOTE: the real DocuSign API call is not implemented yet (see the
+    placeholder below) -- this always returns status:"simulation",
+    regardless of whether docusign_token is configured, so nothing
+    downstream can mistake this for a real, delivered envelope. Only once
+    the real API call is implemented should a genuine "sent" status be
+    returned, and only from that real call's actual response.
     """
     from pathlib import Path
     path = Path(agreement_path)
@@ -24,31 +30,26 @@ async def create_envelope_from_markdown(agreement_path: str, contact_email: str)
 
     content = path.read_text(encoding="utf-8")
     logger.info(f"Preparing DocuSign envelope for {contact_email} (Length: {len(content)} chars)")
-    
-    # 1. Call DocuSign API (Mocked until docusign_token is set)
+
     token = get("docusign_token", required=False)
     if not token:
         logger.warning("Missing docusign_token. Operating in Simulation Mode.")
-        return {
-            "envelope_id": f"sim_7992228b_{path.stem}",
-            "status": "sent",
-            "mode": "simulation",
-            "recipient": contact_email
-        }
 
-    # Real API Logic Placeholder
+    # TODO: implement the real DocuSign API call here once ready:
     # headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     # payload = { "emailSubject": "Partnership Agreement - AuthiChain", ... }
     # r = await httpx.post(f"{BASE_URL}/envelopes", headers=headers, json=payload)
-    
+    # ... and return the real envelope id/status from r.json() here instead
+    # of the simulation response below.
+
     return {
-        "envelope_id": f"ds_{path.stem[:8]}",
-        "status": "sent",
+        "envelope_id": f"sim_{path.stem[:8]}",
+        "status": "simulation",
         "recipient": contact_email
     }
 
 async def check_envelope_status(envelope_id: str) -> str:
     """Queries DocuSign for the status of an envelope."""
     if envelope_id.startswith("sim_"):
-        return "completed" # Auto-complete simulation
+        return "simulation"  # no real envelope was ever created for this id
     return "sent"

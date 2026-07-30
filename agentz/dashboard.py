@@ -17,6 +17,7 @@ from supabase import create_client, Client
 from agentz.core.aggregator import get_global_network_stats, generate_marketplace_manifest
 from agentz.core.llm import get_provider_health
 from agentz.core.grants_pipeline import read_ledger, LEDGER_STATUSES
+from agentz.core.hubspot import get_all_deals
 
 # Set page config
 st.set_page_config(page_title="AgentZ Command Center", page_icon="🛡️", layout="wide")
@@ -107,6 +108,17 @@ def load_federal_pipeline():
             })
         return pd.DataFrame(rows)
     except:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=30)
+def load_deal_pipeline():
+    """Loads real deal pipeline data from HubSpot."""
+    try:
+        deals = asyncio.run(get_all_deals(limit=200))
+        if not deals:
+            return pd.DataFrame()
+        return pd.DataFrame(deals)
+    except Exception:
         return pd.DataFrame()
 
 @st.cache_data(ttl=30)
@@ -234,28 +246,36 @@ elif page == "Federal Capture":
 
 elif page == "Revenue Siphon":
     st.header("$$ Real-time Revenue Siphon")
-    
-    # Real Pipeline Projections
-    pipeline_total = 172 # Total deals in backlog
-    avg_setup = 2500
-    avg_sub = 499 * 12
-    potential_arr = pipeline_total * (avg_setup + avg_sub)
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Current Pipeline Potential", f"${potential_arr:,.0f}", delta="Backlog: 172")
-    col2.metric("Layer 1: SaaS (Target)", "$1.46M", delta="+ $85k/mo")
-    col3.metric("High-Value Potential", "$250,000", delta="LVMH + Hermes")
-    
-    st.divider()
-    st.subheader("Mass Activation Pipeline")
-    # Live data from HubSpot probe
-    chart_data = pd.DataFrame({
-        "Stage": ["Backlog", "Researching", "Deployed", "Contacted", "Contract Sent"],
-        "Count": [72, 50, 35, 10, 5]
-    })
-    st.bar_chart(chart_data, x="Stage", y="Count")
-    
-    st.info("💡 **Revenue Blitz Tip**: 100 lead-microsites are currently live. Transitioning to 'Auto-Closer' loop will issue 5 DocuSign agreements this week.")
+
+    df_deals = load_deal_pipeline()
+
+    if df_deals.empty:
+        st.warning("No deal pipeline data available (HubSpot token missing, unreachable, or zero deals returned).")
+    else:
+        total_deals = len(df_deals)
+        pipeline_value = (
+            df_deals["amount"].apply(lambda a: float(a) if a not in (None, "") else 0.0).sum()
+            if "amount" in df_deals.columns else 0.0
+        )
+        avg_deal = pipeline_value / total_deals if total_deals else 0.0
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Tracked Deals", total_deals)
+        col2.metric("Pipeline Value (Real)", f"${pipeline_value:,.0f}")
+        col3.metric("Avg Deal Size", f"${avg_deal:,.0f}")
+
+        st.divider()
+        st.subheader("Pipeline by Stage")
+        if "stage" in df_deals.columns:
+            stage_counts = df_deals["stage"].fillna("Unknown").value_counts().reset_index()
+            stage_counts.columns = ["Stage", "Count"]
+            st.bar_chart(stage_counts, x="Stage", y="Count")
+        else:
+            st.info("No stage data available on these deals.")
+
+        st.divider()
+        st.subheader("Deal Ledger")
+        st.dataframe(df_deals, use_container_width=True)
 
 elif page == "Limit-Proofing Health":
     st.header("🛡️ Limit-Proofing: Provider Health")
