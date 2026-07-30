@@ -78,11 +78,15 @@ def run(ctx: ExecutionContext) -> str:
         if deals:
             target_deal = deals[0]
             brand = target_deal.get("name", "Strategic Partner")
-            # Estimate metrics based on deal size or use optimistic defaults
-            metrics = {"scans": 1500, "rewards": 8500, "retention": "28%"}
+            # No real per-merchant usage data (scans/rewards/retention) is
+            # available from HubSpot deals -- most CRM deals are prospects
+            # who haven't onboarded yet. Report the honest zero/no-data
+            # state rather than fabricating plausible-looking numbers under
+            # a real company's name.
+            metrics = {"scans": 0, "rewards": 0, "retention": "N/A (no usage data yet)"}
         else:
-            brand = "Detroit Artisan Brews"
-            metrics = {"scans": 154, "rewards": 1200, "retention": "22%"}
+            brand = "Example Merchant"
+            metrics = {"scans": 0, "rewards": 0, "retention": "N/A (illustrative example, no real deal)"}
 
         if ctx.mode == Mode.DRY_RUN:
             roi_report = "# Dry-run ROI Report"
