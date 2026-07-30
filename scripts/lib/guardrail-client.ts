@@ -14,6 +14,15 @@ export interface GuardrailCheckResult {
   allowed: boolean;
   remaining: number;
   reason?: string;
+  /**
+   * True when `allowed:false` came from the check call itself failing
+   * (missing secret, unreachable API, non-ok HTTP) rather than the server
+   * explicitly denying the request (cap reached, channel disabled,
+   * suppressed recipient). Callers should route `errored:true` into their
+   * own failure/alerting path — an infra outage should not look identical
+   * to a routine policy denial.
+   */
+  errored?: boolean;
 }
 
 export interface GuardrailRecordInput {
@@ -34,7 +43,7 @@ export async function guardrailCheck(
 ): Promise<GuardrailCheckResult> {
   const secret = process.env.INTERNAL_API_SECRET;
   if (!secret) {
-    return { allowed: false, remaining: 0, reason: 'INTERNAL_API_SECRET not configured' };
+    return { allowed: false, remaining: 0, reason: 'INTERNAL_API_SECRET not configured', errored: true };
   }
 
   try {
@@ -46,17 +55,19 @@ export async function guardrailCheck(
     });
 
     if (!res.ok) {
-      return { allowed: false, remaining: 0, reason: `guardrail check HTTP ${res.status}` };
+      return { allowed: false, remaining: 0, reason: `guardrail check HTTP ${res.status}`, errored: true };
     }
 
     const data = (await res.json()) as Partial<GuardrailCheckResult>;
     if (data.allowed !== true) {
-      return { allowed: false, remaining: data.remaining ?? 0, reason: data.reason ?? 'denied' };
+      // The server responded successfully and explicitly denied — a policy
+      // decision, not an error.
+      return { allowed: false, remaining: data.remaining ?? 0, reason: data.reason ?? 'denied', errored: false };
     }
     return { allowed: true, remaining: data.remaining ?? 0 };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { allowed: false, remaining: 0, reason: `guardrail check failed: ${message}` };
+    return { allowed: false, remaining: 0, reason: `guardrail check failed: ${message}`, errored: true };
   }
 }
 
