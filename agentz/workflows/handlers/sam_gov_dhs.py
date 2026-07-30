@@ -60,13 +60,29 @@ def run(ctx: ExecutionContext) -> str:
         ctx.step("submit $200K Phase I application")
         return "dry-run complete"
 
-    # This registry entry sets confirm_before_run: true specifically so a
-    # full --mode auto run still stops for a human before this one fires
-    # (see runner.py's effective_mode logic) -- that only works if the
-    # actual submission goes through ctx.step(), which is what implements
-    # the interactive "Proceed? [y/N]" prompt in Mode.CONFIRM. Calling
-    # _run_browser_task directly here would silently submit a real $200K
-    # federal grant application with no human in the loop at all.
+    if ctx.mode == Mode.AUTO:
+        # This handler submits a real $200,000 federal grant application.
+        # The registry entry sets confirm_before_run: true specifically so
+        # that a full `--mode auto` run downgrades to Mode.CONFIRM before
+        # this fires -- but that promotion only exists in one of this
+        # repo's two runners (agentz/core/runner.py); the other
+        # (agentz/workflows/runner.py, the one actually wired into GitHub
+        # Actions for other handlers, and the pattern anyone would copy to
+        # wire this one up too) defaults straight to Mode.AUTO with no
+        # promotion at all. This handler must not trust that some other
+        # layer has already downgraded AUTO to CONFIRM -- it refuses
+        # outright rather than ever autonomously submitting.
+        msg = (
+            "Refused: sam_gov_dhs cannot run in Mode.AUTO -- submitting a "
+            "real $200,000 federal grant application requires explicit "
+            "human confirmation. Re-run in Mode.CONFIRM."
+        )
+        ctx.step(msg)
+        return msg
+
+    # Mode.CONFIRM: ctx.step's interactive prompt is what actually gates
+    # the real submission below -- it will not call the action unless a
+    # human explicitly answers "y".
     result = ctx.step(
         "Submit $200,000 DHS SVIP Phase I application via SAM.gov/DHS portal automation",
         action=lambda: asyncio.run(_run_browser_task(ctx)),

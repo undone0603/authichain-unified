@@ -53,3 +53,21 @@ def test_dry_run_never_touches_the_real_browser_task(mock_browser_task, mock_get
 
     mock_browser_task.assert_not_called()
     assert "dry-run" in result.lower()
+
+
+@patch("agentz.workflows.handlers.sam_gov_dhs.get_or_placeholder", return_value="fake-session")
+@patch("agentz.workflows.handlers.sam_gov_dhs._run_browser_task")
+def test_auto_mode_is_refused_regardless_of_which_runner_invoked_it(mock_browser_task, mock_get):
+    # Two separate runners exist in this codebase (agentz/core/runner.py and
+    # agentz/workflows/runner.py). Only the former applies the registry's
+    # confirm_before_run -> effective_mode promotion; the latter -- the one
+    # actually wired into GitHub Actions for other handlers, and the
+    # established pattern anyone would copy to wire this one up too --
+    # defaults straight to Mode.AUTO with no promotion at all. This handler
+    # must not trust that some *other* layer will have already downgraded
+    # AUTO to CONFIRM before calling it.
+    result = sam_gov_dhs.run(make_ctx(Mode.AUTO))
+
+    mock_browser_task.assert_not_called()
+    assert "refused" in result.lower()
+    assert "auto" in result.lower()
