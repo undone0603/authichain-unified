@@ -4,6 +4,10 @@
 // Current queue uses verified named contacts only.
 // KV stores: outreach_sent (sent list), outreach_bounced (bounce suppression list)
 
+import { guardrailCheck, guardrailRecord, guardrailSuppress } from './guardrail-client';
+
+const GUARDRAIL_CHANNEL = 'email.qron-outreach';
+
 function timingSafeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder();
   const ab = enc.encode(a), bb = enc.encode(b);
@@ -13,7 +17,7 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-interface Email {
+export interface Email {
   to: string;
   name: string;
   subject: string;
@@ -414,15 +418,17 @@ async function addBounced(env: any, email: string) {
 
 // ── Bounce webhook ────────────────────────────────────────────────────────────
 
-async function handleBounceWebhook(request: Request, env: any): Promise<Response> {
+export async function handleBounceWebhook(request: Request, env: any): Promise<Response> {
   try {
     const payload: any = await request.json();
     const eventType: string = payload?.type ?? '';
 
     if (eventType === 'email.bounced' || eventType === 'email.complained') {
       const recipients: string[] = payload?.data?.to ?? [];
+      const guardrailReason = eventType === 'email.complained' ? 'complained' : 'bounced';
       for (const addr of recipients) {
         await addBounced(env, addr);
+        await guardrailSuppress(env, addr, guardrailReason, 'qron-outreach-webhook');
         console.log(`Suppressed ${addr} (${eventType})`);
       }
     }
@@ -544,12 +550,27 @@ async function sendAllDpp(env: any) {
   return { sent: results.filter(r => r.sent).length, failed: results.filter(r => !r.sent).length, results };
 }
 
-async function sendViaResend(email: Email, env: any): Promise<boolean> {
+export async function sendViaResend(email: Email, env: any): Promise<boolean> {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) {
     console.error('RESEND_API_KEY not set on qron-outreach worker');
     return false;
   }
+
+  // Guardrail gate: every send must be checked/reserved before it fires.
+  // Fails closed — unreachable API, missing secret, disabled channel, cap
+  // reached, or a suppressed recipient all deny the send.
+  const gate = await guardrailCheck(env, GUARDRAIL_CHANNEL, { recipient: email.to });
+  if (!gate.allowed) {
+    // An errored check (guardrail unreachable) vs. a policy denial (cap/
+    // disabled/suppressed) look identical to callers otherwise — log the
+    // former more loudly since it means the pipeline is broken, not just
+    // correctly capped for today.
+    const log = gate.errored ? console.error : console.log;
+    log(`Blocked by guardrail (${GUARDRAIL_CHANNEL}): ${gate.reason} — ${email.to}`);
+    return false;
+  }
+
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -572,9 +593,17 @@ async function sendViaResend(email: Email, env: any): Promise<boolean> {
     const result: any = await resp.json();
     const ok = resp.ok && !!result.id;
     console.log(`Email to ${email.to}: ${ok ? 'sent' : 'failed'} ${result.id ?? result.message ?? ''}`);
+    await guardrailRecord(env, {
+      channel: GUARDRAIL_CHANNEL,
+      action: 'record',
+      allowed: ok,
+      reason: ok ? 'sent' : (result.message ?? 'unknown Resend error'),
+      metadata: { email: email.to, resendId: result.id },
+    });
     return ok;
   } catch (e: any) {
     console.error(`Email error for ${email.to}:`, e.message);
+    await guardrailRecord(env, { channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: e.message, metadata: { email: email.to } });
     return false;
   }
 }
