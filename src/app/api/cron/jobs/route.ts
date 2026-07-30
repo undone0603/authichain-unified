@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
+import { logErrorDetail } from '@/lib/log-error-detail';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -56,8 +57,8 @@ export async function GET(request: Request) {
       durationMs: Date.now() - started,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('[CronJobs]', message);
-    return NextResponse.json({ error: message, durationMs: Date.now() - started }, { status: 500 });
+    const detail = logErrorDetail(err);
+    console.error('[CronJobs]', detail);
+    return NextResponse.json({ error: detail.message, durationMs: Date.now() - started }, { status: 500 });
   }
 }
