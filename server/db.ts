@@ -66,8 +66,21 @@ export async function getDb() {
   }
 
   try {
+    const url = process.env.DATABASE_URL;
+    const isLocal = /localhost|127\.0\.0\.1/.test(url);
     const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: url,
+      // Supabase (and every hosted Postgres pooler) requires TLS. node-postgres
+      // does NOT enable SSL from a connection string that omits sslmode, so a
+      // plain `new Pool({ connectionString })` is rejected at connect time —
+      // which is why every getDb() query failed fast in production while the
+      // supabase-js (HTTPS) routes kept working. rejectUnauthorized:false
+      // accepts Supabase's pooler cert chain.
+      ssl: isLocal ? undefined : { rejectUnauthorized: false },
+      // Serverless invocations are short-lived; keep the per-instance pool small.
+      max: 5,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 10_000,
     });
     _db = drizzle(pool);
     return _db;
