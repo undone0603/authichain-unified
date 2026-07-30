@@ -59,11 +59,10 @@ class MarketplaceAgent:
             logger.error(f"Marketplace Checkout Failed: {e}")
             return {"error": str(e)}
 
-async def process_qron_purchase(supabase, wallet: str, qron_amount: float, product_id: str):
-    """
-    Handles purchases made entirely via $QRON token.
-    """
-    # 1. Verify QRON Balance (Simulated)
-    # 2. Burn QRON for Product
-    # 3. Transfer digital twin ownership to buyer
-    return {"status": "SUCCESS", "tx_hash": "0xQRON_BUY_HASH"}
+# NOTE: a $QRON-token purchase flow (process_qron_purchase) previously lived
+# here but had zero callers anywhere in the repo and no real implementation
+# behind it -- it unconditionally returned {"status": "SUCCESS", "tx_hash":
+# "0xQRON_BUY_HASH"}, a fabricated on-chain transaction hash, regardless of
+# any real balance or transfer. Removed rather than fixed in place: if this
+# feature is built for real, it needs an actual balance check, burn, and
+# ownership-transfer implementation, not a stub that lies about succeeding.
