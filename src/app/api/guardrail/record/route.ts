@@ -20,6 +20,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'channel and action are required' }, { status: 400 });
   }
 
+  const validActions = ['check', 'record', 'suppress', 'kill_toggle'] as const;
+  if (!validActions.includes(body.action as any)) {
+    return NextResponse.json({ error: 'action must be one of: check, record, suppress, kill_toggle' }, { status: 400 });
+  }
+
   try {
     await recordEvent({
       channel: body.channel,
