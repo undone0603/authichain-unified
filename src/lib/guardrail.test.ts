@@ -110,6 +110,33 @@ describe('checkAndReserve', () => {
 
     expect(result).toEqual({ allowed: false, remaining: 0, reason: 'daily cap reached' });
   });
+
+  it('denies a count of zero', async () => {
+    limit.mockResolvedValueOnce([]); // no global kill switch
+
+    const result = await checkAndReserve('content.publish', 0);
+
+    expect(result).toEqual({ allowed: false, remaining: 0, reason: 'invalid count' });
+    expect(select).toHaveBeenCalledTimes(1); // only the global kill switch check
+  });
+
+  it('denies a negative count', async () => {
+    limit.mockResolvedValueOnce([]); // no global kill switch
+
+    const result = await checkAndReserve('content.publish', -100);
+
+    expect(result).toEqual({ allowed: false, remaining: 0, reason: 'invalid count' });
+    expect(select).toHaveBeenCalledTimes(1); // only the global kill switch check
+  });
+
+  it('denies a non-integer count', async () => {
+    limit.mockResolvedValueOnce([]); // no global kill switch
+
+    const result = await checkAndReserve('content.publish', 1.5);
+
+    expect(result).toEqual({ allowed: false, remaining: 0, reason: 'invalid count' });
+    expect(select).toHaveBeenCalledTimes(1); // only the global kill switch check
+  });
 });
 
 describe('recordEvent', () => {
