@@ -98,10 +98,16 @@ export async function getDb() {
   try {
     // sslmode is stripped so it can't override the ssl option below (newer
     // pg-connection-string versions derive their own verify-full ssl object
-    // from it, which would conflict with the pinned CA).
-    const connectionString = process.env.DATABASE_URL.replace(/[?&]sslmode=[^&]+/, "");
+    // from it, which would conflict with the pinned CA). Parsed as a URL
+    // rather than regex-stripped so sibling params (e.g. Supabase's
+    // pgbouncer=true) survive intact regardless of param order.
+    const url = new URL(process.env.DATABASE_URL);
+    url.searchParams.delete("sslmode");
     const pool = new Pool({
-      connectionString,
+      connectionString: url.toString(),
+      // Pinned to the Supabase pooler's own CA rather than the system trust
+      // store (see SUPABASE_POOLER_CA above). This project only ever
+      // connects to Supabase, so no host check is needed here.
       ssl: { ca: SUPABASE_POOLER_CA },
     });
     _db = drizzle(pool);
