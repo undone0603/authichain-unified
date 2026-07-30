@@ -192,3 +192,4 @@ Supabase-pooler-CA fix (`e97b4f2ba5`) that was stuck `CANCELED`
 otherwise. The 5 earlier canceled merges listed above still need to be
 re-landed via a verified path if their production impact turns out to
 be missing — not done as part of this edit.
+
