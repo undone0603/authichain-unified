@@ -54,13 +54,24 @@ def run(ctx: ExecutionContext) -> str:
 
     if ctx.mode == Mode.DRY_RUN:
         ctx.step("open SAM.gov")
-        ctx.step("link CAGE code 9Y8Z1 to AuthiChain, Inc.")
+        ctx.step("link CAGE code 1PUJ6 to AuthiChain, Inc.")
         ctx.step("open DHS SVIP portal")
         ctx.step("upload Technical Volume content")
         ctx.step("submit $200K Phase I application")
         return "dry-run complete"
 
-    return asyncio.run(_run_browser_task(ctx))
+    # This registry entry sets confirm_before_run: true specifically so a
+    # full --mode auto run still stops for a human before this one fires
+    # (see runner.py's effective_mode logic) -- that only works if the
+    # actual submission goes through ctx.step(), which is what implements
+    # the interactive "Proceed? [y/N]" prompt in Mode.CONFIRM. Calling
+    # _run_browser_task directly here would silently submit a real $200K
+    # federal grant application with no human in the loop at all.
+    result = ctx.step(
+        "Submit $200,000 DHS SVIP Phase I application via SAM.gov/DHS portal automation",
+        action=lambda: asyncio.run(_run_browser_task(ctx)),
+    )
+    return result or "Submission skipped (not confirmed)."
 
 
 async def _run_browser_task(ctx: ExecutionContext) -> str:
