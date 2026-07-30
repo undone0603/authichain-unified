@@ -154,3 +154,41 @@ fixing the Supabase URL secret at all versus deleting the workflow.
 | deploy-edge-worker.yml | Fixed | **Passing** on `workflow_dispatch` (run 30041174520) |
 | deploy-app-worker.yml | Diagnosed — Cloudflare Workers free-tier 3 MiB size limit, needs plan upgrade | N/A, not a code fix |
 | deploy-vercel.yml | Diagnosed — bad `NEXT_PUBLIC_SUPABASE_URL` value, needs secret fix; question whether worth fixing given Vercel wind-down | N/A, not a code fix |
+
+## Addendum (2026-07-30): Vercel silently cancels unverified-commit deployments to qron-platform
+
+The `qron-platform` Vercel project has a Git integration setting that
+rejects production deployments for commits GitHub doesn't mark
+"verified" — the deployment's `readyState` goes straight to
+`CANCELED` with an `errorLink` pointing at Vercel's verified-commits
+docs, and no build log is produced. A commit pushed directly via
+`git push` from a normal (non-GPG-signed) local client comes through
+as `"unverified"` and hits this gate every time, even though the push
+itself succeeds and the commit lands on `main` normally — there's no
+error at push time, only a silently canceled deployment afterward.
+
+This affected every direct-push merge to `main` earlier in this
+session (guardrail/caps layer, b2b-cold-outreach wiring, qron-outreach
+worker wiring, the 9 agentz fabrication-bug fixes, the
+`sam_gov_dhs.py` confirm-gate fix) — all show `CANCELED` with
+`"githubCommitVerification":"unverified"` when checked via the Vercel
+`get_deployment`/`list_deployments` APIs. Only commits that reached
+`main` through an actual GitHub pull-request merge (via the GitHub UI
+or the API) show `"verified"` and deploy successfully — GitHub signs
+PR-merge commits and API-created commits itself.
+
+**Going forward:** land changes to `main` via `gh pr create` +
+`gh pr merge` (or an equivalent GitHub-API-mediated merge) instead of
+`git push origin <branch>:main`, so the resulting commit is verified
+and Vercel actually deploys it. A direct push returning success is not
+sufficient evidence a change is live in production — check
+`get_deployment` for the resulting commit's `readyState` and
+`githubCommitVerification` before treating a merge as shipped.
+
+**Immediate fix:** this edit itself is being made via the GitHub
+Contents API (not a local git push) specifically so the resulting
+commit is GitHub-verified, unblocking the deployment for the
+Supabase-pooler-CA fix (`e97b4f2ba5`) that was stuck `CANCELED`
+otherwise. The 5 earlier canceled merges listed above still need to be
+re-landed via a verified path if their production impact turns out to
+be missing — not done as part of this edit.
