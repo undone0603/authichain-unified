@@ -44,7 +44,7 @@ describe('guardrailCheck', () => {
     );
   });
 
-  it('fails closed when the API explicitly denies', async () => {
+  it('fails closed when the API explicitly denies, and does not mark it as an error', async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: async () => ({ allowed: false, remaining: 0, reason: 'daily cap reached' }),
@@ -52,33 +52,42 @@ describe('guardrailCheck', () => {
 
     const result = await guardrailCheck('email.b2b-cold');
 
-    expect(result).toEqual({ allowed: false, remaining: 0, reason: 'daily cap reached' });
+    expect(result).toEqual({ allowed: false, remaining: 0, reason: 'daily cap reached', errored: false });
   });
 
-  it('fails closed when the HTTP response is not ok', async () => {
+  // A policy denial (cap reached, channel disabled, recipient suppressed) and an
+  // infrastructure failure of the check call itself both resolve to allowed:false,
+  // but callers need to tell them apart: a policy denial should just queue the
+  // send for later, while an infra failure means the guardrail can't be reached
+  // at all and should trip the caller's own send-failure/non-zero-exit tracking
+  // rather than silently look like a healthy, capped-out run.
+  it('marks an unreachable/erroring check as errored:true (distinct from a policy denial)', async () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, status: 503, json: async () => ({}) });
 
     const result = await guardrailCheck('email.b2b-cold');
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toMatch(/503/);
+    expect(result.errored).toBe(true);
   });
 
-  it('fails closed when fetch throws (network error / unreachable API)', async () => {
+  it('marks a network error as errored:true', async () => {
     (fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('ECONNREFUSED'));
 
     const result = await guardrailCheck('email.b2b-cold');
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toMatch(/ECONNREFUSED/);
+    expect(result.errored).toBe(true);
   });
 
-  it('fails closed when INTERNAL_API_SECRET is not configured, without calling fetch', async () => {
+  it('marks a missing INTERNAL_API_SECRET as errored:true, without calling fetch', async () => {
     delete process.env.INTERNAL_API_SECRET;
 
     const result = await guardrailCheck('email.b2b-cold');
 
     expect(result.allowed).toBe(false);
+    expect(result.errored).toBe(true);
     expect(fetch).not.toHaveBeenCalled();
   });
 });
@@ -104,5 +113,14 @@ describe('guardrailRecord', () => {
     await expect(
       guardrailRecord({ channel: 'email.b2b-cold', action: 'record', allowed: true }),
     ).resolves.toBeUndefined();
+  });
+
+  it('never throws when INTERNAL_API_SECRET is not configured, without calling fetch', async () => {
+    delete process.env.INTERNAL_API_SECRET;
+
+    await expect(
+      guardrailRecord({ channel: 'email.b2b-cold', action: 'record', allowed: true }),
+    ).resolves.toBeUndefined();
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

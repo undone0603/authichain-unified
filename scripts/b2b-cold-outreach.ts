@@ -413,11 +413,15 @@ async function processTargets<T extends { company: string; email: string; name?:
 
     // Guardrail gate: every send must be checked/reserved before it fires.
     // Fails closed — unreachable API, missing secret, disabled channel, cap
-    // reached, or a suppressed recipient all deny the send.
+    // reached, or a suppressed recipient all deny the send. A policy denial
+    // (cap/disabled/suppressed) just queues for later; an errored check
+    // (can't reach the guardrail at all) is a broken pipeline, not a healthy
+    // no-op, so it counts as a send failure the same as a Resend error.
     const gate = await guardrailCheck(GUARDRAIL_CHANNEL, { recipient: email });
     if (!gate.allowed) {
       console.log(`     🚧 Blocked by guardrail (${GUARDRAIL_CHANNEL}): ${gate.reason} — ${email}`);
       queued++;
+      if (gate.errored) sendFailures.push(`${t.company}: guardrail check failed — ${gate.reason}`);
       continue;
     }
 
@@ -468,7 +472,12 @@ export async function flushQueuedLeads(): Promise<void> {
 
     const gate = await guardrailCheck(GUARDRAIL_CHANNEL, { recipient: lead.email });
     if (!gate.allowed) {
-      console.log(`  🚧 Blocked by guardrail (${GUARDRAIL_CHANNEL}): ${gate.reason} — ${lead.email}`);
+      // An errored check (guardrail unreachable) vs. a policy denial (cap/
+      // disabled/suppressed) look identical to the caller otherwise — flag
+      // the former more loudly since it means the pipeline is broken, not
+      // just correctly capped.
+      const log = gate.errored ? console.error : console.log;
+      log(`  🚧 Blocked by guardrail (${GUARDRAIL_CHANNEL}): ${gate.reason} — ${lead.email}`);
       continue;
     }
 
