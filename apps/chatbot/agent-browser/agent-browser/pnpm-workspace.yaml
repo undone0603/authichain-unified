@@ -1,0 +1,10 @@
+# Scoped security overrides — Dependabot critical alerts, vendored agent-browser copy.
+overrides:
+  # GHSA critical: shell-quote quote() doesn't escape newlines in .op values.
+  'shell-quote@>=1.1.0 <=1.8.3': 1.8.4
+  # GHSA critical: Vitest UI server allows arbitrary file read/execute when listening.
+  'vitest@>=4.0.0 <4.1.0': 4.1.0
+  # GHSA critical: fast-xml-parser entity-encoding bypass via regex injection in DOCTYPE entity names.
+  'fast-xml-parser@>=5.0.0 <5.3.5': 5.3.5
+  # GHSA critical: basic-ftp path traversal in downloadToDir().
+  'basic-ftp@<5.2.0': 5.2.0
