@@ -241,17 +241,52 @@ describe('structured JSON output via forced tool-use', () => {
     expect(() => parseLLMContent(result.choices[0].message.content)).not.toThrow();
   });
 
-  it('forces a permissive tool call for responseFormat json_object', async () => {
+  it('json_object does NOT force a tool (an empty schema lets the model invent wrapper keys)', async () => {
+    // Regression test: forcing a tool with input_schema:{type:'object'} (no
+    // required properties) let the model wrap real output in an arbitrary
+    // key ({"output":{...}}, {"data":{...}}) inconsistently across calls,
+    // so callers destructuring the promised top-level fields silently got
+    // undefined. json_object must stay plain-text so the caller's own
+    // prompt (which already describes the shape in words) is what the
+    // model follows, not an unconstrained schema.
+    fetchMock.mockResolvedValue(anthropicResponse({ content: [{ type: 'text', text: '{"anything":"goes"}' }] }));
+    const result = await invokeLLM({
+      messages: [{ role: 'user', content: 'give me json' }],
+      responseFormat: { type: 'json_object' },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.tools).toBeUndefined();
+    expect(body.tool_choice).toBeUndefined();
+    expect(result.choices[0].message.content).toBe('{"anything":"goes"}');
+  });
+
+  it('json_object appends a JSON-only instruction to the system prompt', async () => {
+    fetchMock.mockResolvedValue(anthropicResponse({ content: [{ type: 'text', text: '{}' }] }));
+    await invokeLLM({
+      messages: [
+        { role: 'system', content: 'You write SEO copy.' },
+        { role: 'user', content: 'give me json' },
+      ],
+      responseFormat: { type: 'json_object' },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.system).toContain('You write SEO copy.');
+    expect(body.system).toMatch(/only.*valid json object/i);
+  });
+
+  it('json_object strips a markdown code fence if the model wraps one anyway', async () => {
     fetchMock.mockResolvedValue(anthropicResponse({
-      stop_reason: 'tool_use',
-      content: [{ type: 'tool_use', id: 'toolu_1', name: '__structured_output', input: { anything: 'goes' } }],
+      content: [{ type: 'text', text: '```json\n{"anything":"goes"}\n```' }],
     }));
     const result = await invokeLLM({
       messages: [{ role: 'user', content: 'give me json' }],
       responseFormat: { type: 'json_object' },
     });
 
-    expect(result.choices[0].message.content).toBe(JSON.stringify({ anything: 'goes' }));
+    expect(result.choices[0].message.content).toBe('{"anything":"goes"}');
+    expect(() => parseLLMContent(result.choices[0].message.content)).not.toThrow();
   });
 
   it('does not force a tool for plain text (no responseFormat)', async () => {
