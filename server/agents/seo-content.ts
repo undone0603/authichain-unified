@@ -203,14 +203,24 @@ export async function runProgrammaticSeoBatch(
       pages.push(page);
 
       const result = await checkAndReserve('content.publish', 1);
+      // Persist failures are caught separately (not left to the outer catch)
+      // so a reserved-but-unpublished guardrail slot always gets a
+      // recordEvent — otherwise the daily cap silently absorbs the slot
+      // with no audit trail of what happened to it.
+      let persistError: string | undefined;
       if (result.allowed) {
-        await upsertSeoPage(db, page);
+        try {
+          await upsertSeoPage(db, page);
+        } catch (err) {
+          persistError = err instanceof Error ? err.message : String(err);
+          console.warn(`[seo-content] persist failed for ${page.slug}:`, err);
+        }
       }
       await recordEvent({
         channel: 'content.publish',
         action: 'record',
-        allowed: result.allowed,
-        reason: result.reason,
+        allowed: result.allowed && !persistError,
+        reason: persistError ?? result.reason,
         metadata: { slug: page.slug, brand: page.brand, keyword: page.keyword },
       });
     } catch (err) {
