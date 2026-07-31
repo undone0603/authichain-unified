@@ -373,8 +373,11 @@ const JSON_OBJECT_INSTRUCTION =
 // its JSON in one despite JSON_OBJECT_INSTRUCTION — a defensive fallback,
 // not the primary mechanism.
 const stripJsonFence = (text: string): string => {
-  const match = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/);
-  return match ? match[1] : text;
+  // Trimmed first: the model occasionally emits a leading newline or brief
+  // preamble before the fence despite JSON_OBJECT_INSTRUCTION, which the
+  // anchored regex below would otherwise silently fail to match.
+  const match = text.trim().match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/);
+  return match ? match[1] : text.trim();
 };
 
 const FINISH_REASON_MAP: Record<string, string> = {

@@ -259,6 +259,10 @@ describe('structured JSON output via forced tool-use', () => {
     expect(body.tools).toBeUndefined();
     expect(body.tool_choice).toBeUndefined();
     expect(result.choices[0].message.content).toBe('{"anything":"goes"}');
+    // No caller system message here (generateSeoPage's real-world case) --
+    // the instruction must still be set as the entire system field, not
+    // silently dropped by the "join with existing system" branch.
+    expect(body.system).toMatch(/only.*valid json object/i);
   });
 
   it('json_object appends a JSON-only instruction to the system prompt', async () => {
@@ -279,6 +283,23 @@ describe('structured JSON output via forced tool-use', () => {
   it('json_object strips a markdown code fence if the model wraps one anyway', async () => {
     fetchMock.mockResolvedValue(anthropicResponse({
       content: [{ type: 'text', text: '```json\n{"anything":"goes"}\n```' }],
+    }));
+    const result = await invokeLLM({
+      messages: [{ role: 'user', content: 'give me json' }],
+      responseFormat: { type: 'json_object' },
+    });
+
+    expect(result.choices[0].message.content).toBe('{"anything":"goes"}');
+    expect(() => parseLLMContent(result.choices[0].message.content)).not.toThrow();
+  });
+
+  it('json_object strips a fence even with a leading newline or surrounding whitespace', async () => {
+    // Regression: the fence regex used to anchor directly to ``` with no
+    // allowance for leading whitespace, so a model response starting with a
+    // stray newline before the fence (observed in practice) silently failed
+    // to strip, leaving unparseable text.
+    fetchMock.mockResolvedValue(anthropicResponse({
+      content: [{ type: 'text', text: '\n  ```json\n{"anything":"goes"}\n```  \n' }],
     }));
     const result = await invokeLLM({
       messages: [{ role: 'user', content: 'give me json' }],
