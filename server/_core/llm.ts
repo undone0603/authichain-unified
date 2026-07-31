@@ -344,24 +344,37 @@ const toAnthropicToolChoice = (
   return { type: "tool", name: choice.function.name };
 };
 
+// Only json_schema forces a tool call — its schema gives the model concrete
+// top-level keys to fill in, so the forced tool_use.input reliably matches
+// the caller's shape. json_object has no schema to anchor it: an empty
+// input_schema ({type:"object"}) leaves the model free to invent its own
+// top-level key names, and it does — observed wrapping real output in
+// {"output":{...}} or {"data":{...}} inconsistently across calls, so
+// callers destructuring the promised top-level fields silently got
+// undefined. json_object is handled as plain-text JSON instead (see
+// JSON_OBJECT_INSTRUCTION below), matching how callers' prompts already
+// describe the desired shape in words.
 const structuredOutputTool = (
   format: ReturnType<typeof normalizeResponseFormat>
 ): { name: string; description: string; input_schema: Record<string, unknown>; strict?: boolean } | undefined => {
-  if (!format || format.type === "text") return undefined;
-  if (format.type === "json_schema") {
-    return {
-      name: STRUCTURED_OUTPUT_TOOL,
-      description: "Return the requested structured output.",
-      input_schema: format.json_schema.schema,
-      ...(format.json_schema.strict ? { strict: true } : {}),
-    };
-  }
-  // json_object: no specific schema requested — maximally permissive.
+  if (!format || format.type !== "json_schema") return undefined;
   return {
     name: STRUCTURED_OUTPUT_TOOL,
-    description: "Return the requested output as a JSON object.",
-    input_schema: { type: "object" },
+    description: "Return the requested structured output.",
+    input_schema: format.json_schema.schema,
+    ...(format.json_schema.strict ? { strict: true } : {}),
   };
+};
+
+const JSON_OBJECT_INSTRUCTION =
+  "Respond with ONLY a single valid JSON object matching the shape described above — no markdown code fences, no explanation, no wrapper key around it.";
+
+// Strips a ```json ... ``` (or bare ```...```) fence if the model wrapped
+// its JSON in one despite JSON_OBJECT_INSTRUCTION — a defensive fallback,
+// not the primary mechanism.
+const stripJsonFence = (text: string): string => {
+  const match = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/);
+  return match ? match[1] : text;
 };
 
 const FINISH_REASON_MAP: Record<string, string> = {
@@ -384,7 +397,8 @@ type AnthropicResponse = {
 
 const fromAnthropicResponse = (
   anthropicResult: AnthropicResponse,
-  isStructuredOutput: boolean
+  isStructuredOutput: boolean,
+  isJsonTextMode: boolean
 ): InvokeResult => {
   const textBlocks = anthropicResult.content.filter(
     (b): b is { type: "text"; text: string } => b.type === "text"
@@ -400,6 +414,8 @@ const fromAnthropicResponse = (
   if (isStructuredOutput) {
     const structuredBlock = toolUseBlocks.find(b => b.name === STRUCTURED_OUTPUT_TOOL);
     if (structuredBlock) content = JSON.stringify(structuredBlock.input);
+  } else if (isJsonTextMode) {
+    content = stripJsonFence(content);
   } else if (toolUseBlocks.length > 0) {
     toolCalls = toolUseBlocks.map(b => ({
       id: b.id,
@@ -461,13 +477,18 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   });
   const structuredTool = structuredOutputTool(normalizedResponseFormat);
   const isStructuredOutput = !!structuredTool;
+  const isJsonTextMode = normalizedResponseFormat?.type === "json_object";
 
   const payload: Record<string, unknown> = {
     model: ENV.anthropicModel || DEFAULT_MODEL,
     max_tokens: maxTokens || max_tokens || 8192,
     messages: anthropicMessages,
   };
-  if (system) payload.system = system;
+  if (isJsonTextMode) {
+    payload.system = system ? `${system}\n\n${JSON_OBJECT_INSTRUCTION}` : JSON_OBJECT_INSTRUCTION;
+  } else if (system) {
+    payload.system = system;
+  }
 
   if (isStructuredOutput) {
     payload.tools = [structuredTool];
@@ -515,7 +536,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   const anthropicResult = (await response.json()) as AnthropicResponse;
-  const result = fromAnthropicResponse(anthropicResult, isStructuredOutput);
+  const result = fromAnthropicResponse(anthropicResult, isStructuredOutput, isJsonTextMode);
 
   // Store in cache
   try {
