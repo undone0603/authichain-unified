@@ -2810,7 +2810,7 @@ export default {
     // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).
     const APP_PREFIXES = ['/dashboard', '/api', '/verify', '/auth', '/login', '/logout',
       '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin',
-      '/pricing', '/enterprise', '/eu-dpp', '/book'];
+      '/pricing', '/enterprise', '/eu-dpp', '/book', '/p'];
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       const target = new URL(request.url);
       target.hostname = 'app.authichain.com';
