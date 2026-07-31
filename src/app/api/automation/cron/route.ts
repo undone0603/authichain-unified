@@ -60,18 +60,22 @@ export async function GET(request: Request) {
 
   // Autonomous programmatic-SEO generation (owned-property content; no ToS gate).
   try {
-    const { runProgrammaticSeoBatch } = await import('../../../../../server/agents/seo-content');
+    const { runProgrammaticSeoBatch, selectUnpublishedJobs, SEO_KEYWORD_POOL } = await import('../../../../../server/agents/seo-content');
+    const { listPublishedSlugs } = await import('../../../../../server/agents/db-helpers');
+    const { listSeoSlugs } = await import('../../../../../src/lib/seo-pages');
     const { getDb } = await import('../../../../../server/db');
     const db = await getDb();
-    const seoJobs = [
-      { brandKey: 'authichain', keyword: 'blockchain product authentication' },
-      { brandKey: 'authichain', keyword: 'anti-counterfeit qr verification' },
-      { brandKey: 'strainchain', keyword: 'cannabis blockchain provenance' },
-      { brandKey: 'strainchain', keyword: 'metrc compliance blockchain' },
-      { brandKey: 'govchain', keyword: 'government document verification blockchain' },
-      { brandKey: 'qron', keyword: 'ai qr code art generator' },
-    ] as const;
-    const pages = await runProgrammaticSeoBatch([...seoJobs], db);
+    // Excludes both DB-published slugs AND the statically committed ones
+    // (content/seo/pages.json already covers some pool keywords) so the
+    // batch never wastes an LLM call regenerating a page that already exists.
+    const publishedSlugs = [...listSeoSlugs(), ...(await listPublishedSlugs(db))];
+    // The pool is much larger than the content.publish guardrail's daily cap
+    // (10) on purpose — it's exhausted gradually, a handful of new pages per
+    // run, not regenerated from scratch every day. New keywords get appended
+    // to SEO_KEYWORD_POOL as they're identified rather than replacing
+    // exhausted ones.
+    const seoJobs = selectUnpublishedJobs(SEO_KEYWORD_POOL, publishedSlugs, 8);
+    const pages = await runProgrammaticSeoBatch(seoJobs, db);
     results.seo = { generated: pages.length, slugs: pages.map((p) => p.slug) };
   } catch (err) {
     results.seo = { error: err instanceof Error ? err.message : String(err) };
