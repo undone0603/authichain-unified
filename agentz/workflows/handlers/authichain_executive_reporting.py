@@ -30,14 +30,24 @@ def run(ctx: ExecutionContext) -> str:
             deals = ctx.step("Fetch HubSpot deals", action=lambda: asyncio.run(get_all_deals()))
             if deals is None: deals = []
             
-        pipeline_value = sum(float(d.get("amount") or 0) for d in deals)
-        
+        # 2026-07-31 audit: 166/171 HubSpot deals had zero associated contacts
+        # despite "appointment/presentation scheduled" stages -- fabricated
+        # pipeline from an earlier session. Report verified (has a real
+        # contact attached) and unverified pipeline value separately rather
+        # than blending them into one number that reads as real revenue.
+        verified_deals = [d for d in deals if d.get("has_verified_contact")]
+        unverified_deals = [d for d in deals if not d.get("has_verified_contact")]
+        pipeline_value = sum(float(d.get("amount") or 0) for d in verified_deals)
+        unverified_pipeline_value = sum(float(d.get("amount") or 0) for d in unverified_deals)
+
         # 1. Global Scale-Up Report
         ctx.step("Generating high-fidelity Global Scale-Up Report...")
         scale_data = {
             "status": "Global",
-            "deal_count": len(deals),
-            "pipeline_value": pipeline_value
+            "deal_count": len(verified_deals),
+            "pipeline_value": pipeline_value,
+            "unverified_deal_count": len(unverified_deals),
+            "unverified_pipeline_value": unverified_pipeline_value
         }
         
         if ctx.mode == Mode.DRY_RUN:
@@ -75,8 +85,8 @@ def run(ctx: ExecutionContext) -> str:
         
         # 3. Merchant ROI Report
         ctx.step("Generating Merchant ROI report for top CRM deal...")
-        if deals:
-            target_deal = deals[0]
+        if verified_deals:
+            target_deal = verified_deals[0]
             brand = target_deal.get("name", "Strategic Partner")
             # No real per-merchant usage data (scans/rewards/retention) is
             # available from HubSpot deals -- most CRM deals are prospects
