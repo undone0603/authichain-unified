@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { invokeLLM, parseLLMContent } from "../_core/llm";
+import { ENV } from "../_core/env";
 import { getDb } from "../db";
 import { logActivity, type Db } from "./db-helpers";
 
@@ -174,7 +175,7 @@ export async function runOrganicTrafficAutomation(db: Db) {
   let items = buildFallbackPlan();
   let generatedBy = "template";
 
-  if (process.env.BUILT_IN_FORGE_API_KEY) {
+  if (ENV.anthropicApiKey) {
     try {
       const llmItems = await buildLlmPlan();
       if (llmItems.length > 0) {
