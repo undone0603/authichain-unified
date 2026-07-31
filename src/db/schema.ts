@@ -1396,14 +1396,14 @@ export const guardrailCounters = pgTable("guardrail_counters", {
 export type GuardrailCounter = typeof guardrailCounters.$inferSelect;
 export type InsertGuardrailCounter = typeof guardrailCounters.$inferInsert;
 
-export const suppressionList = pgTable("suppression_list", {
+export const suppressionList = pgTable("guardrail_suppression_list", {
   id: serial("id").primaryKey(),
   email: varchar("email", { length: 320 }).notNull(),
   reason: varchar("reason", { length: 32 }).notNull(), // bounced|complained|manual|unsubscribed
   source: varchar("source", { length: 64 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
-  suppressionListEmailUniq: uniqueIndex("suppression_list_email_uniq").on(table.email),
+  suppressionListEmailUniq: uniqueIndex("guardrail_suppression_list_email_uniq").on(table.email),
 }));
 
 export type Suppression = typeof suppressionList.$inferSelect;
