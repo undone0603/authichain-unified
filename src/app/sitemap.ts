@@ -1,14 +1,16 @@
 import type { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
-import { listSeoPages } from '@/lib/seo-pages';
+import { listSeoPagesWithDb } from '@/lib/seo-pages';
+import { getDb } from '../../server/db';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const headersList = await headers();
   const host = headersList.get('host') || 'qron.space';
   const BASE = `https://${host}`;
   const now = new Date();
-  // Programmatic-SEO landing pages (generated + committed in content/seo).
-  const seoEntries: MetadataRoute.Sitemap = listSeoPages().map((page) => ({
+  // Programmatic-SEO landing pages: statically committed (content/seo) plus
+  // the daily cron batch persisted to the seo_pages table.
+  const seoEntries: MetadataRoute.Sitemap = (await listSeoPagesWithDb(await getDb())).map((page) => ({
     url: `${BASE}/p/${page.slug}`,
     lastModified: now,
     changeFrequency: 'weekly' as const,

@@ -4,7 +4,8 @@ import { createClient } from '@/utils/supabase/server';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getSeoPageBySlug, listSeoSlugs } from '@/lib/seo-pages';
+import { getSeoPageBySlugWithDb, listSeoSlugs } from '@/lib/seo-pages';
+import { getDb } from '../../../../server/db';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -40,7 +41,7 @@ export async function generateMetadata(
   { params }: PageProps,
 ): Promise<Metadata> {
   const { serial } = await params;
-  const seoPage = getSeoPageBySlug(serial);
+  const seoPage = await getSeoPageBySlugWithDb(serial, await getDb());
   if (!seoPage) return {};
   const canonical = typeof seoPage.jsonLd.url === 'string' ? seoPage.jsonLd.url : undefined;
   return {
@@ -54,7 +55,7 @@ export async function generateMetadata(
 export default async function CertificationPage({ params }: PageProps) {
   const { serial } = await params;
 
-  const seoPage = getSeoPageBySlug(serial);
+  const seoPage = await getSeoPageBySlugWithDb(serial, await getDb());
   if (seoPage) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-12 prose prose-invert">
