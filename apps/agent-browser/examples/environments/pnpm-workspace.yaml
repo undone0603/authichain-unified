@@ -13,12 +13,18 @@ overrides:
   'body-parser@>=2.0.0 <2.3.0': 2.3.0
   # GHSA: brace-expansion ReDoS, 1.x line.
   'brace-expansion@<1.1.16': 1.1.16
-  # GHSA: brace-expansion ReDoS, 2.x line.
-  'brace-expansion@>=2.0.0 <2.1.2': 2.1.2
+  # GHSA: brace-expansion ReDoS, 2.x line. Widened from 2.1.2 -> 2.1.3 — a
+  # second, newer GHSA superseded the first fix (same staleness pattern hit
+  # ws/postcss at the repo root: verify the target still holds before reuse).
+  'brace-expansion@>=2.0.0 <2.1.3': 2.1.3
   # Supply-chain compromise: brace-expansion 3.0.0-5.0.7 were published as
   # part of a worm-style npm compromise (unrelated to the legitimate 1.x/2.x
   # lines) — route anything in that window to the clean 5.0.8.
   'brace-expansion@>=3.0.0 <=5.0.7': 5.0.8
+  # GHSA high: rollup DOM-clobbering-adjacent bug in the plugin/build pipeline.
+  'rollup@>=4.0.0 <4.59.0': 4.59.0
+  # GHSA high: sharp — heap overflow processing crafted images.
+  'sharp@<0.35.0': 0.35.0
   # GHSA: fast-uri ReDoS / prototype pollution, latest advisory supersedes earlier ones.
   'fast-uri@<=3.1.3': 3.1.4
   # GHSA: fast-xml-parser DOCTYPE entity-injection family, latest supersedes earlier ones.

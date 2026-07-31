@@ -138,7 +138,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.5.4",
     "drizzle-kit": "^0.31.10",
-    "esbuild": "^0.23.1",
+    "esbuild": "^0.25.4",
     "eslint": "^9.9.1",
     "eslint-config-next": "16.2.10",
     "ioredis": "file:./stubs/empty-redis",
