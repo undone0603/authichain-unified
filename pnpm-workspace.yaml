@@ -57,8 +57,16 @@ overrides:
   '@hono/node-server@<2.0.5': 2.0.5
   # GHSA medium: axios — multiple CVEs across the 1.x line, all fixed by 1.18.0.
   'axios@<1.18.0': 1.18.0
-  # GHSA high: brace-expansion ReDoS in the 1.x line (2.x/5.x already patched).
+  # GHSA high: brace-expansion ReDoS in the 1.x line.
   'brace-expansion@<1.1.16': 1.1.16
+  # GHSA high: brace-expansion ReDoS, 2.x line. The resolved 2.1.2 here
+  # turned out to already be inside a second, newer GHSA's vulnerable range
+  # (>=2.0.0 <2.1.3) — this override was missing entirely, not just stale.
+  'brace-expansion@>=2.0.0 <2.1.3': 2.1.3
+  # Supply-chain compromise: brace-expansion 3.0.0-5.0.7 were published as
+  # part of a worm-style npm compromise. Root had 5.0.7 resolved — also
+  # missing, not just stale.
+  'brace-expansion@>=3.0.0 <=5.0.7': 5.0.8
   # GHSA low: DOMPurify mXSS bypass, patched same-day point release.
   'dompurify@<=3.4.11': 3.4.12
   # GHSA moderate: esbuild dev-server allows any website to send requests to
