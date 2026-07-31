@@ -254,13 +254,31 @@ const toAnthropicMessages = (
     }
 
     if (msg.role === "tool" || msg.role === "function") {
+      if (!msg.tool_call_id) {
+        throw new Error("invokeLLM: a tool/function-role message requires tool_call_id");
+      }
       const text = ensureArray(msg.content)
         .map(part => (typeof part === "string" ? part : JSON.stringify(part)))
         .join("\n");
-      out.push({
-        role: "user",
-        content: [{ type: "tool_result", tool_use_id: msg.tool_call_id ?? "", content: text }],
-      });
+      const resultBlock: AnthropicContentBlock = { type: "tool_result", tool_use_id: msg.tool_call_id, content: text };
+
+      // Parallel tool calls (Claude's default) each get their own tool-role
+      // message from callers like browser-vision.ts, but Anthropic expects
+      // all of a turn's tool_results batched into ONE user message —
+      // sending them as separate consecutive messages silently discourages
+      // the model from using parallel tool calls again. Merge into the
+      // previous message when it's also a pure tool_result batch.
+      const prev = out[out.length - 1];
+      const prevIsToolResultBatch =
+        prev?.role === "user" &&
+        Array.isArray(prev.content) &&
+        prev.content.length > 0 &&
+        prev.content.every(b => b.type === "tool_result");
+      if (prevIsToolResultBatch) {
+        (prev.content as AnthropicContentBlock[]).push(resultBlock);
+      } else {
+        out.push({ role: "user", content: [resultBlock] });
+      }
       continue;
     }
 
@@ -328,13 +346,14 @@ const toAnthropicToolChoice = (
 
 const structuredOutputTool = (
   format: ReturnType<typeof normalizeResponseFormat>
-): { name: string; description: string; input_schema: Record<string, unknown> } | undefined => {
+): { name: string; description: string; input_schema: Record<string, unknown>; strict?: boolean } | undefined => {
   if (!format || format.type === "text") return undefined;
   if (format.type === "json_schema") {
     return {
       name: STRUCTURED_OUTPUT_TOOL,
       description: "Return the requested structured output.",
       input_schema: format.json_schema.schema,
+      ...(format.json_schema.strict ? { strict: true } : {}),
     };
   }
   // json_object: no specific schema requested — maximally permissive.
@@ -444,7 +463,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const isStructuredOutput = !!structuredTool;
 
   const payload: Record<string, unknown> = {
-    model: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
+    model: ENV.anthropicModel || DEFAULT_MODEL,
     max_tokens: maxTokens || max_tokens || 8192,
     messages: anthropicMessages,
   };
