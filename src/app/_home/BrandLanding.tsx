@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 import { BRANDS, type BrandId } from '@shared/brands';
 import { TrustRail } from '@/components/TrustRail';
-import { LiveStatsCounter } from '@/components/LiveStatsCounter';
 import { StickyConversionBar } from '@/components/StickyConversionBar';
 import { ExitIntentGuide } from '@/components/ExitIntentGuide';
 
@@ -158,9 +157,6 @@ export function BrandLanding({
 
       {/* Brand-specific conversion sections (competitor table, ROI calc, …) */}
       {children}
-
-      {/* Animated live-stats counter band */}
-      <LiveStatsCounter accent={accent} />
 
       {/* Closing CTA → pricing (revenue) */}
       <section className="border-t border-zinc-900 px-6 py-24 text-center">
