@@ -65,22 +65,30 @@ async def generate_scale_up_report(ecosystem_data: Dict[str, Any]) -> str:
     prompt = f"""
     You are the AgentZ Chief Strategy Officer. Generate a 'Global Scale-Up Report' for stakeholders.
     
-    Current State:
-    - Infrastructure: FastAPI REST Gateway (OpenAPI Live)
-    - Consumer: Android/iOS Apps + qron.space Hub
-    - Growth: Pi Network Studio (55M users) + Viral Marketing Agent
-    - Trust: Polygon On-chain Anchoring + Dynamic Timelines
+    Current State (only state what is listed here -- do not add products,
+    platforms, or user bases not listed):
+    - Infrastructure: Next.js web app + Cloudflare Workers, multi-tenant across
+      authichain.com / qron.space / govchain.us / strainchain.io
+    - Trust: AuthiChain NFT (ERC-721) + $QRON token (ERC-20) anchored on Polygon PoS
     
-    Pipeline Statistics:
-    - Total Deals in Pipeline: {ecosystem_data.get('deal_count', 0)}
-    - Estimated Pipeline Value: ${ecosystem_data.get('pipeline_value', 0):,.2f}
-    
+    Pipeline Statistics (verified = deal has at least one real associated contact
+    in the CRM; unverified deals are NOT confirmed prospects and must not be
+    presented as revenue, forecast, or pipeline in this report):
+    - Verified Deals: {ecosystem_data.get('deal_count', 0)}
+    - Verified Pipeline Value: ${ecosystem_data.get('pipeline_value', 0):,.2f}
+    - Unverified/Unconfirmed CRM Records (exclude from all totals and claims): {ecosystem_data.get('unverified_deal_count', 0)} (${ecosystem_data.get('unverified_pipeline_value', 0):,.2f})
+
     Include:
     1. Executive Summary: The transition from pilot to global infrastructure.
     2. Technical Achievement: API-first sovereignty and GPT integration.
-    3. Market Reach: Tapping into the Pi Network and viral social loops.
-    4. Strategic Outlook: Projected revenue from Layer 1 (SaaS) and Layer 2 (Burn Fees).
-    
+    3. Market Reach: growth channels actually in use.
+    4. Strategic Outlook: based only on verified pipeline figures above -- do not
+       project revenue from, or otherwise reference as real, the unverified count.
+
+    Do not state or imply any number, company name, or deal not explicitly given
+    above. Do not invent user counts, partnerships, or metrics not provided in
+    this prompt.
+
     Output in professional Markdown.
     """
     try:
