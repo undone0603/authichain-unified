@@ -40,3 +40,8 @@ overrides:
   'vite@<6.4.3': 6.4.3
   # GHSA moderate: postcss XSS via unescaped </style> (transitive via next).
   'postcss@<8.5.10': 8.5.10
+  # GHSA critical: Auth.js email normalizer validates before Unicode
+  # normalization, allowing a homoglyph `@` bypass. Direct dep was already
+  # ^0.41.3, but @auth/drizzle-adapter's transitive @auth/core stayed pinned
+  # to the vulnerable 0.41.2 in the lockfile — force it everywhere.
+  '@auth/core@<0.41.3': 0.41.3
