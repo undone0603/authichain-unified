@@ -17,7 +17,9 @@ import {
   bayesianPriors,
   users,
   notifications,
+  seoPages,
   type InsertNotification,
+  type InsertSeoPageRow,
 } from '../../drizzle/schema';
 import { SEGMENT_PRIORS } from '../_core/bayesian';
 import type { getHyperdriveDb } from '../db';
@@ -117,6 +119,33 @@ export async function createNotification(
 ): Promise<{ id: number }> {
   const [result] = await db.insert(notifications).values(data).returning();
   return { id: result.id };
+}
+
+export async function upsertSeoPage(
+  db: Db,
+  page: Omit<InsertSeoPageRow, 'id' | 'createdAt'>,
+): Promise<void> {
+  await db
+    .insert(seoPages)
+    .values(page)
+    .onConflictDoUpdate({
+      target: seoPages.slug,
+      set: {
+        keyword: page.keyword,
+        brand: page.brand,
+        domain: page.domain,
+        title: page.title,
+        metaDescription: page.metaDescription,
+        h1: page.h1,
+        bodyHtml: page.bodyHtml,
+        jsonLd: page.jsonLd,
+      },
+    });
+}
+
+export async function listPublishedSlugs(db: Db): Promise<string[]> {
+  const rows = await db.select({ slug: seoPages.slug }).from(seoPages);
+  return rows.map(r => r.slug);
 }
 
 export async function createSystemNotification(
