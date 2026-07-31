@@ -140,6 +140,48 @@ describe('tool round-tripping (agentic loop, e.g. browser-vision.ts)', () => {
     expect(body.tools).toEqual([{ name: 'navigate', description: 'go somewhere', input_schema: { type: 'object' } }]);
     expect(body.tool_choice).toEqual({ type: 'any' });
   });
+
+  it('batches parallel tool results into one user message instead of separate consecutive ones', async () => {
+    // Claude's default is to emit multiple tool_use blocks in a single turn.
+    // A caller looping over each call typically pushes one tool-role message
+    // per result (as browser-vision.ts does) -- those must be merged back
+    // into ONE user message with N tool_result blocks, or the model is
+    // silently discouraged from making parallel tool calls again.
+    fetchMock.mockResolvedValue(anthropicResponse());
+    await invokeLLM({
+      messages: [
+        { role: 'user', content: 'go' },
+        {
+          role: 'assistant',
+          content: '',
+          // @ts-expect-error tool_calls attached like browser-vision.ts does
+          tool_calls: [
+            { id: 'toolu_1', type: 'function', function: { name: 'navigate', arguments: '{}' } },
+            { id: 'toolu_2', type: 'function', function: { name: 'extract', arguments: '{}' } },
+          ],
+        },
+        { role: 'tool', content: 'ok-1', tool_call_id: 'toolu_1', name: 'navigate' },
+        { role: 'tool', content: 'ok-2', tool_call_id: 'toolu_2', name: 'extract' },
+      ],
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.messages).toHaveLength(3); // user, assistant, ONE merged user (not 2 separate)
+    expect(body.messages[2]).toEqual({
+      role: 'user',
+      content: [
+        { type: 'tool_result', tool_use_id: 'toolu_1', content: 'ok-1' },
+        { type: 'tool_result', tool_use_id: 'toolu_2', content: 'ok-2' },
+      ],
+    });
+  });
+
+  it('throws when a tool-role message has no tool_call_id, instead of sending an opaque empty id', async () => {
+    await expect(invokeLLM({
+      messages: [{ role: 'tool', content: 'ok' }],
+    })).rejects.toThrow(/tool_call_id/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('image content conversion', () => {
@@ -219,6 +261,37 @@ describe('structured JSON output via forced tool-use', () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.tools).toBeUndefined();
     expect(body.tool_choice).toBeUndefined();
+  });
+
+  it('passes strict:true through to the Anthropic tool definition when requested', async () => {
+    fetchMock.mockResolvedValue(anthropicResponse({
+      stop_reason: 'tool_use',
+      content: [{ type: 'tool_use', id: 'toolu_1', name: '__structured_output', input: { title: 'T' } }],
+    }));
+    await invokeLLM({
+      messages: [{ role: 'user', content: 'write something' }],
+      responseFormat: {
+        type: 'json_schema',
+        json_schema: { name: 'page', schema: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'], additionalProperties: false }, strict: true },
+      },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.tools[0].strict).toBe(true);
+  });
+
+  it('omits strict when not requested', async () => {
+    fetchMock.mockResolvedValue(anthropicResponse({
+      stop_reason: 'tool_use',
+      content: [{ type: 'tool_use', id: 'toolu_1', name: '__structured_output', input: { title: 'T' } }],
+    }));
+    await invokeLLM({
+      messages: [{ role: 'user', content: 'write something' }],
+      responseFormat: { type: 'json_schema', json_schema: { name: 'page', schema: { type: 'object' } } },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.tools[0].strict).toBeUndefined();
   });
 });
 

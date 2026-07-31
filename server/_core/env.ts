@@ -8,6 +8,7 @@ export const ENV = {
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  anthropicModel: process.env.ANTHROPIC_MODEL ?? "",
   thirdwebClientId:
     process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID ??
     process.env.VITE_THIRDWEB_CLIENT_ID ??
