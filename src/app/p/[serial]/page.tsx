@@ -60,9 +60,12 @@ export default async function CertificationPage({ params }: PageProps) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-12 prose prose-invert">
         {/* JSON-LD structured data — the signal AI search engines cite. */}
+        {/* `<` escaped so a literal "</script>" in DB-sourced content (LLM
+            output, unlike the hand-written static JSON) can't break out of
+            the script context. */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(seoPage.jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(seoPage.jsonLd).replace(/</g, '\\u003c') }}
         />
         <h1>{seoPage.h1}</h1>
         {/* bodyHtml is sanitized at generation time (script tags stripped). */}

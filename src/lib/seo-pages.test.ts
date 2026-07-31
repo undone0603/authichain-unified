@@ -2,11 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { listSeoPages, listSeoSlugs, getSeoPageBySlug, listSeoPagesWithDb, getSeoPageBySlugWithDb } from './seo-pages';
 
 // Minimal thenable query-builder stand-in: `await db.select().from(x)`
-// resolves to `rows` directly, and `.where(...).limit(...)` narrows to the
-// same `rows` (tests control what "matches" by passing the right rows in).
+// resolves to `rows` directly, and `.where(eq(seoPages.slug, x)).limit(...)`
+// actually filters `rows` by that slug — real filtering, not just returning
+// whatever was seeded, so a broken/dropped WHERE clause fails these tests.
 function fakeDb(rows: any[]) {
   const chain = {
-    where: () => ({ limit: async () => rows }),
+    where: (cond: any) => {
+      const value = cond.queryChunks[3].value;
+      return { limit: async () => rows.filter((r) => r.slug === value) };
+    },
     then: (resolve: (v: any[]) => void) => resolve(rows),
   };
   return { select: () => ({ from: () => chain }) } as any;
@@ -67,7 +71,10 @@ describe('*WithDb variants', () => {
   });
 
   it('getSeoPageBySlugWithDb falls back to the DB row for a slug not in the static set', async () => {
-    const page = await getSeoPageBySlugWithDb(dbRow.slug, fakeDb([dbRow]));
+    // Multiple rows in the table so a broken/dropped WHERE clause (returning
+    // whatever's first) would fail this assertion instead of passing by luck.
+    const otherRow = { ...dbRow, slug: 'other-keyword', h1: 'Other H1' };
+    const page = await getSeoPageBySlugWithDb(dbRow.slug, fakeDb([otherRow, dbRow]));
     expect(page).toEqual(expect.objectContaining({ slug: dbRow.slug, h1: 'H1' }));
   });
 

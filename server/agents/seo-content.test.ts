@@ -116,6 +116,17 @@ describe('runProgrammaticSeoBatch', () => {
     );
   });
 
+  it('still records the guardrail event when persistence fails after a reserved slot', async () => {
+    upsertSeoPage.mockRejectedValueOnce(new Error('db boom'));
+    const pages = await runProgrammaticSeoBatch([
+      { brandKey: 'strainchain', keyword: 'metrc blockchain' },
+    ], fakeDb);
+    expect(pages).toHaveLength(1); // the page was still generated
+    expect(recordEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ channel: 'content.publish', action: 'record', allowed: false, reason: 'db boom' }),
+    );
+  });
+
   it('isolates a single failed generation without aborting the batch', async () => {
     llm.throwOnce = true; // first generateSeoPage call throws
     const pages = await runProgrammaticSeoBatch([
