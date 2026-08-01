@@ -59,8 +59,6 @@ const AUTH_ERROR_RE = /invalid_api_key|authentication|unauthorized|\b401\b|\b403
 const QUOTA_ERROR_RE = /insufficient_quota|exceeded your current quota|check your plan and billing/i;
 const QUOTA_COOLDOWN_MS = 120_000;
 
-let warnedSkippedProviders = false;
-
 function makeGroqProvider(model: string): Provider {
   return {
     name: `groq:${model}`,
@@ -303,25 +301,36 @@ export async function chat(
         if (!content || typeof content !== 'string') {
           throw new Error('empty completion');
         }
-        if (errors.length > 0 && !warnedSkippedProviders) {
+        if (errors.length > 0) {
+          // Logged on every call, not just the first, so a run's log shows
+          // exactly which provider is actually serving each opportunity --
+          // a "quota cooldown" on the primary free provider is silent
+          // otherwise, hiding whether the configured fallbacks are covering
+          // for it or are themselves dead (e.g. an expired key that only
+          // fails once cooldown routes traffic to it).
           console.warn(
             `ℹ️  chat() fell through failed providers before landing on ${p.name}:\n   - ${errors.join('\n   - ')}`
           );
-          warnedSkippedProviders = true;
         }
         return { content, provider: p.name };
       } catch (err: any) {
         const msg = err?.message || String(err);
         errors.push(`${p.name} (try ${attempt + 1}): ${msg.slice(0, 160)}`);
         if (p.name.startsWith('local:')) {
-          if (/ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|fetch failed/i.test(msg)) {
-            // Server unreachable: every local entry shares it — disable them all.
+          // Unreachable server (ECONNREFUSED/ENOTFOUND) and a malformed/empty
+          // LOCAL_MODEL_URL (fetch's "Failed to parse URL") are both
+          // categorically dead for the rest of the run -- e.g. a CI runner can
+          // never reach a URL that only resolves on the operator's own
+          // machine, and no retry fixes a URL that doesn't parse. Disable
+          // every local: entry immediately instead of re-paying this cost on
+          // each of the run's opportunities.
+          if (/ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|fetch failed|Failed to parse URL/i.test(msg)) {
             for (const lp of providers) {
               if (lp.name.startsWith('local:')) {
                 providerCooldown.set(lp.name, { until: Infinity, reason: msg.slice(0, 120) });
               }
             }
-            console.warn('⚠️  Local model server unreachable — disabling all local providers for this run.');
+            console.warn('⚠️  Local model server unreachable or misconfigured — disabling all local providers for this run.');
             break;
           }
           if (/abort|timed?\s?out|TimeoutError/i.test(msg)) {
