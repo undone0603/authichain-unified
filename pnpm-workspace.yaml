@@ -54,7 +54,11 @@ overrides:
   # by @modelcontextprotocol/sdk's Node HTTP example transport — not used
   # directly by the app (grep found no imports) — so the major bump is low
   # blast-radius even though it crosses a major version.
-  '@hono/node-server@<2.0.5': 2.0.5
+  # GHSA-9mqv-5hh9-4cgg (2026-08-01): a second, newer advisory (unauthenticated
+  # memory-leak DoS via aborted WebSocket handshake) covers >=2.0.0 <=2.0.9 --
+  # the 2.0.5 this override pinned to is itself inside that range. Widened to
+  # the actual first-patched version instead of stacking a second override.
+  '@hono/node-server@<2.0.10': 2.0.10
   # GHSA medium: axios — multiple CVEs across the 1.x line, all fixed by 1.18.0.
   'axios@<1.18.0': 1.18.0
   # GHSA high: brace-expansion ReDoS in the 1.x line.

@@ -6,7 +6,10 @@ overrides:
   # GHSA: @babel/core arbitrary code exec via crafted plugin config.
   '@babel/core@<=7.29.0': 7.29.6
   # GHSA: @hono/node-server header-handling bug (covers both 1.x and 2.x advisories).
-  '@hono/node-server@<2.0.5': 2.0.5
+  # GHSA-9mqv-5hh9-4cgg (2026-08-01): newer advisory covers >=2.0.0 <=2.0.9,
+  # which includes the 2.0.5 this override previously pinned to. Widened to
+  # the actual first-patched version.
+  '@hono/node-server@<2.0.10': 2.0.10
   # GHSA: basic-ftp path traversal + follow-up hardening releases.
   'basic-ftp@<=5.3.0': 5.3.1
   # GHSA: body-parser DoS via crafted request body.
