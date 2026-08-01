@@ -10,6 +10,7 @@ import httpx
 import logging
 import asyncio
 import json
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from agentz.core.credentials import get, update_credential
 from agentz.core.hubspot_healer import rotate_hubspot_token
@@ -175,11 +176,14 @@ async def add_deal_note(deal_id: str, content: str) -> bool:
     token = get("hubspot_token")
     if not token: return False
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    
+
     note_payload = {
         "properties": {
             "hs_note_body": content,
-            "hs_timestamp": "2026-07-12T12:00:00Z" # Simple fallback timestamp
+            # Was hardcoded to a fixed 2026-07-12 timestamp, so every note this
+            # function ever wrote showed the wrong activity date in HubSpot
+            # regardless of when it was actually created. Use the real time.
+            "hs_timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         },
         "associations": [
             {
@@ -188,13 +192,63 @@ async def add_deal_note(deal_id: str, content: str) -> bool:
             }
         ]
     }
-    
+
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.post("https://api.hubapi.com/crm/v3/objects/notes", headers=headers, json=note_payload)
             return r.status_code == 201
     except Exception as e:
         logger.error(f"Failed to add note to deal {deal_id}: {e}")
+        return False
+
+async def create_verified_contact_for_deal(deal_id: str, email: str, company: str) -> bool:
+    """
+    Creates a HubSpot contact and associates it with a deal. Callers must
+    only invoke this AFTER independently confirming the email is real
+    (e.g. Resend reported the send as "delivered", not just "sent") --
+    this function does no verification of its own, it just records it.
+    """
+    token = get("hubspot_token")
+    if not token: return False
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    contact_payload = {
+        "properties": {"email": email, "company": company},
+        "associations": [
+            {
+                "to": {"id": deal_id},
+                "types": [{"associationCategory": "HUBSPOT_DEFINED", "associationTypeId": 3}]
+            }
+        ]
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post("https://api.hubapi.com/crm/v3/objects/contacts", headers=headers, json=contact_payload)
+            if r.status_code == 201:
+                return True
+            # Contact with this email may already exist (e.g. an orphan
+            # contact from earlier fabricated-pipeline records) -- look it
+            # up and associate the existing one instead of failing.
+            if r.status_code == 409:
+                search = await client.post(
+                    "https://api.hubapi.com/crm/v3/objects/contacts/search",
+                    headers=headers,
+                    json={"filterGroups": [{"filters": [{"propertyName": "email", "operator": "EQ", "value": email}]}]},
+                )
+                if search.status_code == 200:
+                    results = search.json().get("results", [])
+                    if results:
+                        contact_id = results[0]["id"]
+                        assoc = await client.put(
+                            f"https://api.hubapi.com/crm/v3/objects/contacts/{contact_id}/associations/deals/{deal_id}/3",
+                            headers=headers,
+                        )
+                        return assoc.status_code in (200, 201, 204)
+            logger.error(f"Failed to create/associate contact for deal {deal_id}: {r.status_code} {r.text}")
+            return False
+    except Exception as e:
+        logger.error(f"Failed to create contact for deal {deal_id}: {e}")
         return False
 
 async def prioritize_leads_by_sentiment(deals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

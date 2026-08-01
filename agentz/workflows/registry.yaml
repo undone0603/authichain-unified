@@ -181,6 +181,34 @@ workflows:
       Simulates targeted direct email outreach to cannabis testing labs
       in Michigan, offering the $299 Pilot Package. Uses Gemini 2.5 Flash
       to craft personalized 3-sentence B2B cold emails.
+      NOTE (2026-07-31 audit): "Simulates" above is the actual behavior --
+      this workflow does not verify delivery, which is exactly how the CRM
+      ended up with 166 fabricated deals. See verified_outreach_sequence
+      below for the real, delivery-gated replacement for this same goal.
+
+  - id: verified_outreach_sequence
+    title: "Verified outreach: send, confirm delivery via Resend, only then log as real"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.verified_outreach_sequence
+    type: api
+    estimated_minutes: 5
+    requires: [resend_api_key, hubspot_token]
+    prerequisites: []
+    confirm_before_run: true   # sends real email; review a dry-run pass first
+    max_runs_per_day: 3        # rate-limited, protects sending-domain reputation
+    description: |
+      Real replacement for strainchain_email_pitch's fabrication problem.
+      For each targeted deal without a verified contact: guesses a
+      plausible company email, sends via Resend, waits, then checks
+      Resend's actual delivery status. A HubSpot contact + "delivered"
+      note is only created if Resend confirms delivery; a bounce is
+      logged as a bounce (no contact created); an unconfirmed status is
+      logged as unconfirmed (re-run later, don't treat as real yet).
+      Rate-limited between sends to protect deliverability. Does NOT
+      auto-send follow-up touches -- that needs real reply detection
+      (Gmail) wired up first, which is not done here; see the module
+      docstring in agentz/workflows/handlers/verified_outreach_sequence.py.
 
   - id: authichain_crm_outreach
     title: "Authichain B2B CRM Outreach & Follow-up"
