@@ -29,7 +29,7 @@ async def get_all_deals(limit: int = 200, _retry: bool = True) -> List[Dict[str,
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     body = {
-        "properties": ["dealname", "amount", "dealstage", "slug", "city"],
+        "properties": ["dealname", "amount", "dealstage", "slug", "city", "num_associated_contacts"],
         "limit": 100 # HubSpot per-page limit
     }
     
@@ -70,7 +70,15 @@ async def get_all_deals(limit: int = 200, _retry: bool = True) -> List[Dict[str,
                             "amount": d["properties"].get("amount"),
                             "stage": d["properties"].get("dealstage"),
                             "slug": slug,
-                            "city": d["properties"].get("city", "Unknown")
+                            "city": d["properties"].get("city", "Unknown"),
+                            # HubSpot audit (2026-07-31) found 166/171 deals with zero
+                            # associated contacts despite "appointment/presentation
+                            # scheduled" stages -- fabricated pipeline from an earlier
+                            # session, not real prospects. Every consumer of this list
+                            # MUST check this field before treating a deal as real
+                            # (spending money on it, counting it in a revenue report,
+                            # etc.) rather than trusting dealstage/amount alone.
+                            "has_verified_contact": int(d["properties"].get("num_associated_contacts") or 0) > 0
                         })
                     
                     after = data.get("paging", {}).get("next", {}).get("after")
