@@ -425,6 +425,32 @@ workflows:
       2) Coordinates distribution across LinkedIn (Sales Nav), Reddit, and Twitter.
       3) Drives traffic to qron.space engagement hub.
 
+  # NOTE (2026-08-01 audit): the 9 workflows below this line through
+  # authichain_apex_dominance (advanced_ops, atomic_scan, terminal_ops,
+  # global_scale, daily_video_factory, apex_ops, apex_hardened,
+  # sovereign_healer, apex_dominance) are an "evolution chain" prototype,
+  # not verified revenue infrastructure, despite most being labeled
+  # priority: critical / blocks_revenue: true. Sampled 4 of the 9 handlers
+  # directly and found the same pattern in each: real plumbing (Supabase
+  # reads, HubSpot fetches) mixed with hardcoded demo constants that a
+  # "real" (non-dry-run) execution would still act on -- a fixed
+  # "0x742d..." demo wallet for QRON burns, a fake "1234567890" FedEx
+  # tracking number, a Stripe application_fee_amount call with no
+  # Connect-account destination wired in (would error, caught silently and
+  # returned as {"error": ...}), and unconditional ctx.step() log lines
+  # asserting things happened ("Mobile Android/iOS wrappers synchronized",
+  # "Pi Network Studio" deploy) with no real check behind them -- the same
+  # "Pi Network Studio, 55M users" claim already caught and stripped from
+  # generate_scale_up_report's prompt in PR #573. None of these 9 are
+  # wired into any GitHub Actions schedule (confirmed via grep across
+  # .github/workflows) -- they're dormant, not actively misreporting into
+  # anything today. But do not flip one to Mode.AUTO or add it to a cron
+  # schedule without first replacing its hardcoded demo data with a real
+  # implementation -- that's exactly how the HubSpot pipeline ended up
+  # with 166 fabricated deals presented as a real pipeline. Flagged rather
+  # than rewritten unilaterally: fixing the underlying core modules
+  # (marketplace.py, redemption.py, oracle.py, pi.py, etc.) is real product
+  # work, not a safe drive-by change.
   - id: authichain_advanced_ops
     title: "Advanced Ecosystem Evolution: Concierge + Microsites + Oracles"
     priority: critical
