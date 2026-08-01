@@ -85,14 +85,80 @@ CAN_SPAM_FOOTER = (
 )
 
 
+# _BRAND_KEYWORDS / dealname parsing: this repo's HubSpot deal names mix
+# "Company — Brand Product Description" and "Brand — Company description"
+# ordering inconsistently (e.g. "Gage Cannabis — StrainChain 30-Day Pilot"
+# vs "StrainChain — Acreage Holdings Cannabis MSO (12 States)"). Caught
+# during a live-data dry-run check (2026-08-01) before this ever ran with
+# real sends: passing the full dealname straight into a domain guesser
+# produced garbage like "gagecannabisstrainchain30daypilot.com" for every
+# single target -- a 100% bounce rate that would also look spammy to
+# receiving mail servers. _extract_company_name fixes the parsing; the
+# guess itself is still inherently a heuristic (see _guess_domain).
+_BRAND_KEYWORDS = {"strainchain", "qron", "authichain", "govchain"}
+_DEAL_SUFFIX_WORDS = {"mso", "pilot", "dispensary", "30day", "hotlead"}
+
+# Real domains confirmed by hand this session (web research + actual Resend
+# delivery) for companies where the generic name->domain heuristic cannot
+# work -- e.g. "Gage Cannabis Company" trades as gageusa.com, nothing in
+# the display name hints at that. Check this before guessing.
+KNOWN_DOMAIN_OVERRIDES = {
+    "gage cannabis": "gageusa.com",
+    "skymint brands": "skymint.com",
+    "skymint": "skymint.com",
+}
+
+
+def _extract_company_name(dealname: str) -> str:
+    """
+    Pulls the actual company name out of a free-text HubSpot dealname.
+    Splits on the em-dash separator this CRM uses, keeps whichever segment
+    isn't just the brand/product name, then strips a trailing parenthetical
+    and known non-company suffix words.
+    """
+    segments = [s.strip() for s in re.split(r"\s*—\s*|\s+-\s+", dealname) if s.strip()]
+    company = segments[0] if segments else dealname
+    for seg in segments:
+        words = set(re.findall(r"[a-z0-9]+", seg.lower()))
+        if not words & _BRAND_KEYWORDS:
+            company = seg
+            break
+
+    company = re.sub(r"\s*\([^)]*\)\s*$", "", company).strip()
+    words = [w for w in company.split() if w.lower() not in _DEAL_SUFFIX_WORDS]
+    return " ".join(words) if words else company
+
+
+# Deal names matching these are not real sales prospects (funding/VC
+# entries, internal pipeline-tracking placeholders, competitions) -- found
+# during the same live-data dry-run check: "StrainChain — Dispensary
+# Pipeline (Metrc Consolidation Opportunity)" and "StrainChain — Casa Verde
+# Capital ($3M Seed)" both survived the has_verified_contact filter and
+# would have guessed nonsense/generic domains (e.g. info@pipeline.com) --
+# risking emailing a real, unrelated company by coincidence, not just a
+# harmless bounce. Excluded outright rather than left to a bounce.
+_NON_PROSPECT_PATTERNS = re.compile(
+    r"\b(pipeline|capital|seed|competition|investor|vc|fund(ing)?)\b", re.IGNORECASE
+)
+
+
+def _is_non_prospect_deal(dealname: str) -> bool:
+    return bool(_NON_PROSPECT_PATTERNS.search(dealname))
+
+
 def _guess_domain(company_name: str) -> str:
     """
     Best-effort company -> domain guess (e.g. "Pure Options" ->
     pureoptions.com). This is intentionally naive -- it is NOT the
     verification step. Resend's delivery status after actually sending is
     the verification step. A wrong guess here just produces a bounce,
-    which this workflow logs honestly rather than hides.
+    which this workflow logs honestly rather than hides. Checks
+    KNOWN_DOMAIN_OVERRIDES first for companies the heuristic can't get right.
     """
+    override = KNOWN_DOMAIN_OVERRIDES.get(company_name.strip().lower())
+    if override:
+        return override
+
     slug = re.sub(r"[^a-z0-9]", "", company_name.lower())
     slug = re.sub(r"(inc|llc|co|corp|company|brands|holdings|group)$", "", slug)
     return f"{slug}.com"
@@ -117,10 +183,11 @@ def _build_pitch_email(company_name: str, brand: dict) -> tuple[str, str]:
 
 async def _process_deal(deal: Dict[str, Any], brand: dict) -> Dict[str, Any]:
     """Send + verify + honestly log one deal. Returns an outcome summary dict."""
-    name = deal.get("name", "Unknown")
+    dealname = deal.get("name", "Unknown")
+    company_name = _extract_company_name(dealname)
     deal_id = deal["id"]
-    candidate_email = f"info@{_guess_domain(name)}"
-    subject, text = _build_pitch_email(name, brand)
+    candidate_email = f"info@{_guess_domain(company_name)}"
+    subject, text = _build_pitch_email(company_name, brand)
 
     email_id = await resend_email.send_email(
         to=candidate_email,
@@ -133,19 +200,19 @@ async def _process_deal(deal: Dict[str, Any], brand: dict) -> Dict[str, Any]:
 
     if not email_id:
         await add_deal_note(deal_id, f"verified_outreach_sequence: send API call failed for {candidate_email}. Not logged as contact.")
-        return {"deal": name, "email": candidate_email, "outcome": "send_failed"}
+        return {"deal": dealname, "email": candidate_email, "outcome": "send_failed"}
 
     await asyncio.sleep(STATUS_CHECK_DELAY_SECONDS)
     status = await resend_email.get_delivery_status(email_id)
 
     if resend_email.is_delivered(status):
-        await create_verified_contact_for_deal(deal_id, candidate_email, name)
+        await create_verified_contact_for_deal(deal_id, candidate_email, company_name)
         await add_deal_note(
             deal_id,
             f"verified_outreach_sequence: sent to {candidate_email}, confirmed DELIVERED "
             f"(Resend id {email_id}). Contact added.",
         )
-        return {"deal": name, "email": candidate_email, "outcome": "delivered"}
+        return {"deal": dealname, "email": candidate_email, "outcome": "delivered"}
 
     if resend_email.is_failed(status):
         await add_deal_note(
@@ -153,7 +220,7 @@ async def _process_deal(deal: Dict[str, Any], brand: dict) -> Dict[str, Any]:
             f"verified_outreach_sequence: attempted {candidate_email} -- {status.upper()} "
             f"(Resend id {email_id}). Address does not work; needs real contact research.",
         )
-        return {"deal": name, "email": candidate_email, "outcome": status}
+        return {"deal": dealname, "email": candidate_email, "outcome": status}
 
     await add_deal_note(
         deal_id,
@@ -161,7 +228,7 @@ async def _process_deal(deal: Dict[str, Any], brand: dict) -> Dict[str, Any]:
         f"after {STATUS_CHECK_DELAY_SECONDS}s (Resend id {email_id}). Not yet confirmed "
         f"delivered -- re-run this workflow later to check again before treating as real.",
     )
-    return {"deal": name, "email": candidate_email, "outcome": f"unconfirmed:{status}"}
+    return {"deal": dealname, "email": candidate_email, "outcome": f"unconfirmed:{status}"}
 
 
 def run(ctx: ExecutionContext, brand_key: str = "strainchain", max_deals: int = 10) -> str:
@@ -182,6 +249,7 @@ def run(ctx: ExecutionContext, brand_key: str = "strainchain", max_deals: int = 
         d for d in deals
         if brand["product_line"].lower() in d.get("name", "").lower()
         and not d.get("has_verified_contact")
+        and not _is_non_prospect_deal(d.get("name", ""))
     ][:max_deals]
 
     if not targets:
@@ -189,8 +257,23 @@ def run(ctx: ExecutionContext, brand_key: str = "strainchain", max_deals: int = 
 
     ctx.step(f"Found {len(targets)} unverified {brand['product_line']} deals to attempt.")
 
+    # Multiple deal records often represent the same real company under
+    # different names ("Curaleaf", "Curaleaf Holdings", "StrainChain --
+    # Curaleaf Cannabis MSO" are 3 separate deals for one real business --
+    # found in the same live-data check). Without this, a single run would
+    # email the same real inbox multiple times. Dedupe by guessed address
+    # within this run; each skipped duplicate is logged so it's visible
+    # rather than silently dropped.
+    seen_emails: set[str] = set()
     outcomes: List[Dict[str, Any]] = []
     for i, deal in enumerate(targets):
+        candidate_email = f"info@{_guess_domain(_extract_company_name(deal.get('name', '')))}"
+        if candidate_email in seen_emails:
+            ctx.step(f"Skipping {deal.get('name')}: already targeted {candidate_email} earlier in this run")
+            outcomes.append({"deal": deal.get("name"), "email": candidate_email, "outcome": "duplicate_skipped"})
+            continue
+        seen_emails.add(candidate_email)
+
         result = ctx.step(
             f"Verified-outreach attempt {i + 1}/{len(targets)}: {deal.get('name')}",
             action=lambda d=deal: asyncio.run(_process_deal(d, brand)),
@@ -202,10 +285,13 @@ def run(ctx: ExecutionContext, brand_key: str = "strainchain", max_deals: int = 
 
     delivered = sum(1 for o in outcomes if o["outcome"] == "delivered")
     failed = sum(1 for o in outcomes if o["outcome"] in resend_email.FAILED_STATUSES)
-    unconfirmed = len(outcomes) - delivered - failed
+    duplicates = sum(1 for o in outcomes if o["outcome"] == "duplicate_skipped")
+    unconfirmed = len(outcomes) - delivered - failed - duplicates
 
     return (
         f"Verified outreach complete for {brand['product_line']}: "
         f"{delivered} delivered (contact added), {failed} bounced/failed "
-        f"(logged, no contact added), {unconfirmed} unconfirmed (re-check later)."
+        f"(logged, no contact added), {duplicates} skipped as duplicates "
+        f"(same guessed address as another deal this run), "
+        f"{unconfirmed} unconfirmed (re-check later)."
     )
