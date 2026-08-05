@@ -346,15 +346,17 @@ export function QronHome() {
             />
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-extrabold mb-4 leading-tight tracking-tight">
+          <h1 className="text-5xl md:text-7xl font-extrabold mb-3 leading-[1.02] tracking-tight">
             <span className="gold-text">QRON</span>
-            <span className="sr-only"> — AI-Generated QR Art That Scans</span>
+            <span className="mt-3 block text-2xl md:text-4xl font-bold text-white leading-tight">
+              AI-generated QR art that actually scans
+            </span>
           </h1>
           <p
-            className="text-xl md:text-2xl font-light mb-3"
+            className="text-lg md:text-xl font-light mb-3"
             style={{ color: '#c8c8c8' }}
           >
-            Cryptographically verified QR art.
+            Turn any link into a branded work of art — cryptographically signed and scannable from any camera.
           </p>
           <p
             className="text-base max-w-xl mx-auto"
