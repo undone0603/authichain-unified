@@ -10,6 +10,24 @@ export function GovchainHome() {
       eyebrow="Public Sector Records"
       headline="A permanent record for public records."
       subhead="GovChain seals permits, filings, and official documents to a tamper-evident ledger — so agencies, auditors, and the public can confirm a record hasn't been altered."
+      heroPoints={['Open public verification', 'Works offline', 'No central authority']}
+      howItWorks={[
+        {
+          title: 'Seal the record',
+          desc: 'When a permit, certificate, or filing is finalized, its fingerprint is anchored on-chain — instantly and permanently.',
+        },
+        {
+          title: 'Attach a QR',
+          desc: 'Each sealed document carries a QR code that links to its verifiable public record.',
+        },
+        {
+          title: 'Verify anywhere',
+          desc: 'Residents and auditors scan to confirm a record has not been altered — in about two seconds, even offline.',
+        },
+      ]}
+      featuresHeading="A verifiable record, from filing to lookup"
+      featuresIntro="Everything an agency needs to make its records provable — without handing trust to a third party."
+      audiences={['State & local agencies', 'Permitting offices', 'Procurement / RFP', 'Auditors', 'SBIR / SVIP programs']}
       stats={[
         { value: '256-bit', label: 'SHA-3 Hash' },
         { value: 'Instant', label: 'Seal Time' },
