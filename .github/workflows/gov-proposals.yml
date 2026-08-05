@@ -43,8 +43,7 @@ jobs:
         with: { version: '10.28.2' }
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-
+        - run: pnpm install --no-frozen-lockfile
       - name: Generate AI proposal drafts
         continue-on-error: true
         run: pnpm exec tsx scripts/generate-proposals.ts
