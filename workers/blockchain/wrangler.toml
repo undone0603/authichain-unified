@@ -1,3 +1,6 @@
 name = "blockchain"
 main = "src/index.ts"
 compatibility_date = "2024-05-07"
+
+[vars]
+POLYGON_RPC_URL = "https://polygon-rpc.com"
