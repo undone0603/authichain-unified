@@ -1,0 +1,13 @@
+name = "glowchain-io"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = false
+
+[[routes]]
+pattern = "glowchain.io/*"
+zone_name = "glowchain.io"
+
+[[routes]]
+pattern = "www.glowchain.io/*"
+zone_name = "glowchain.io"
