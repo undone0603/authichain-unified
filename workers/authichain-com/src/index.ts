@@ -2526,7 +2526,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   <div style="background:linear-gradient(90deg,#c9a227 0%,#00ffd1 100%);text-align:center;padding:.6rem 1rem;font-size:.82rem;font-weight:700;color:#000;letter-spacing:.03em">
-    ⚡ EU Digital Product Passport Registry opens <strong>July 19, 2026</strong> — <a href="/digital-product-passport" style="color:#000;text-decoration:underline;font-weight:800">Get Compliant Now →</a>
+    ⚡ EU Digital Product Passport Registry is <strong>live</strong> — <a href="/digital-product-passport" style="color:#000;text-decoration:underline;font-weight:800">Enroll Now →</a>
   </div>
   <nav>
     <a class="nav-logo" href="/">
