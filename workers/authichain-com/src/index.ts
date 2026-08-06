@@ -2848,7 +2848,7 @@ async function doAnchor() {
 </html>`;
 
 function certPage(certId: string): string {
-  return \`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -2937,7 +2937,7 @@ a{color:#c9a227;text-decoration:none}
 })();
 <\/script>
 </body>
-</html>\`;
+</html>`;
 }
 
 const DPP_HTML = `<!DOCTYPE html>
