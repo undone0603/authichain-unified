@@ -11,6 +11,24 @@ export function StrainchainHome() {
       brandId="strainchain"
       themeClass="theme-agricultural"
       eyebrow="Seed-to-Sale Provenance"
+      heroPoints={['Verify in under a second', 'METRC & BioTrack integrated', 'Consumer-facing QR']}
+      howItWorks={[
+        {
+          title: 'Sync your track-and-trace',
+          desc: 'Connect METRC or BioTrack — StrainChain keeps state reporting in sync with an immutable on-chain backstop.',
+        },
+        {
+          title: 'Anchor the proof',
+          desc: 'Lab certificates and every hand-off are anchored on-chain, so a tampered or expired COA is detectable in a single scan.',
+        },
+        {
+          title: 'Shoppers scan to trust',
+          desc: 'A QR on the package shows a verified chain of custody — turning compliance into trust at the shelf.',
+        },
+      ]}
+      featuresHeading="Provenance your regulators and customers both trust"
+      featuresIntro="A consumer-facing, tamper-evident layer on top of the track-and-trace you already run."
+      audiences={['Dispensaries', 'MSOs', 'Cultivators', 'Processors', 'Testing labs']}
       stats={[
         { value: '38', label: 'Legal Markets' },
         { value: '$199', label: 'Per Location / Mo' },
