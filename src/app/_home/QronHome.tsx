@@ -398,18 +398,18 @@ export function QronHome() {
             {[
               {
                 icon: <Zap className="w-4 h-4" />,
-                stat: '~25%',
-                label: 'scan lift vs plain QR',
+                stat: 'Scannable',
+                label: 'AI art from any camera',
               },
               {
                 icon: <Lock className="w-4 h-4" />,
                 stat: 'Ed25519',
-                label: 'cryptographic signature',
+                label: 'signed & Polygon-anchored',
               },
               {
                 icon: <Shield className="w-4 h-4" />,
-                stat: '99.7%',
-                label: 'verification accuracy',
+                stat: 'Editable',
+                label: 'redirects — no reprint',
               },
             ].map(({ icon, stat, label }) => (
               <div
@@ -429,20 +429,20 @@ export function QronHome() {
           {/* New Trust Row */}
           <div className="mt-16 flex flex-col items-center">
              <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6">
-                <span>Polygon POS</span>
+                <span>Polygon PoS</span>
                 <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>NIST Compliant</span>
+                <span>Ed25519 Signed</span>
                 <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>ISO 27001 Ready</span>
+                <span>Editable Redirects</span>
              </div>
              <div className="px-8 py-4 rounded-2xl bg-gold/5 border border-gold/10 inline-flex items-center gap-6">
                 <div className="text-left border-r border-gold/10 pr-6">
-                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">Live Trust Feed</p>
-                    <p className="text-xl font-black text-white tracking-tighter">1,247 <span className="text-zinc-500 font-medium text-xs tracking-normal uppercase ml-1">Verifications this week</span></p>
+                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">On-chain provenance</p>
+                    <p className="text-xl font-black text-white tracking-tighter">Signed <span className="text-zinc-500 font-medium text-xs tracking-normal uppercase ml-1">&amp; verifiable by anyone</span></p>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                    <CheckCircle className="w-4 h-4 text-green-500" />
-                   Verified by 5 AI Agents
+                   Secured by the AuthiChain Protocol
                 </div>
              </div>
           </div>
