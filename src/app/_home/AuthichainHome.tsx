@@ -13,6 +13,24 @@ export function AuthichainHome() {
     <BrandLanding
       brandId="authichain"
       eyebrow="Enterprise Authentication"
+      heroPoints={['Verify in under 2 seconds', 'Works with any phone camera', 'No special hardware']}
+      howItWorks={[
+        {
+          title: 'Seal the product',
+          desc: 'Issue a cryptographically-signed seal for each item, anchored to an immutable on-chain record.',
+        },
+        {
+          title: 'Ship with a QR',
+          desc: 'The seal travels as a QR code on packaging, a label, or an NFC tag — nothing new on your production line.',
+        },
+        {
+          title: 'Anyone verifies in a scan',
+          desc: 'Customers, auditors, and regulators confirm authenticity, origin, and recall status from any phone camera in under two seconds.',
+        },
+      ]}
+      featuresHeading="Everything you need to prove authenticity"
+      featuresIntro="From the factory floor to the customer's phone, AuthiChain gives every product a verifiable identity."
+      audiences={['Luxury & fashion', 'Pharma (DSCSA)', 'Electronics', 'Agriculture', 'Art & collectibles', 'Cannabis']}
       stats={[
         { value: 'Ed25519', label: 'Signed seals' },
         { value: 'Polygon', label: 'On-chain anchor' },
