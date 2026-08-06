@@ -392,6 +392,9 @@ export function QronHome() {
                </button>
              ))}
           </div>
+          <p className="text-center text-[9px] uppercase tracking-widest text-zinc-700 mt-3">
+            Unaffiliated demo — brand names shown for illustration only, no endorsement implied
+          </p>
 
           {/* Stat strip */}
           <div className="flex flex-wrap justify-center gap-8 mt-12">
@@ -1510,8 +1513,8 @@ export function QronHome() {
                 a: 'Each QR is Ed25519-signed and anchored on the AuthiChain blockchain. Anyone who scans it can verify its authenticity instantly.',
               },
               {
-                q: 'What if I need more than 2,000 generations?',
-                a: 'The Business plan gives you unlimited generations for $49/month, or contact us for a custom enterprise contract.',
+                q: 'What if I need more generations than my plan includes?',
+                a: 'QRON Studio Pro gives you unlimited generations for $99/month, or contact us for a custom enterprise contract.',
               },
               {
                 q: 'What AI model generates the QR art?',
@@ -1519,7 +1522,7 @@ export function QronHome() {
               },
               {
                 q: 'Is there a refund policy?',
-                a: 'If your generated QR is not scannable, we regenerate it free. For billing issues, contact authichain@gmail.com.',
+                a: 'If your generated QR is not scannable, we regenerate it free. For billing issues, contact support@qron.space.',
               },
             ].map(({ q, a }) => (
               <div key={q} className="protocol-card p-5">

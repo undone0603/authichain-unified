@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 import { BRANDS, type BrandId } from '@shared/brands';
 import { TrustRail } from '@/components/TrustRail';
-import { LiveStatsCounter } from '@/components/LiveStatsCounter';
 import { StickyConversionBar } from '@/components/StickyConversionBar';
 import { ExitIntentGuide } from '@/components/ExitIntentGuide';
 
