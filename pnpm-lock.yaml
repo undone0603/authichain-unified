@@ -17,10 +17,10 @@ importers:
         version: 3.0.74(zod@3.25.76)
       '@auth/core':
         specifier: ^0.41.3
-        version: 0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)
+        version: 0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.3)
       '@auth/drizzle-adapter':
         specifier: ^1.4.2
-        version: 1.11.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)
+        version: 1.11.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.3)
       '@clerk/nextjs':
         specifier: ^7.4.1
         version: 7.5.7(next@15.5.21(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -232,8 +232,8 @@ importers:
         specifier: 15.5.21
         version: 15.5.21(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       nodemailer:
-        specifier: ^9.0.1
-        version: 9.0.1
+        specifier: ^9.0.3
+        version: 9.0.3
       openai:
         specifier: ^6.39.0
         version: 6.44.0(ws@8.21.2(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@3.25.76)
@@ -8280,8 +8280,8 @@ packages:
     resolution: {integrity: sha512-wRNIrw4DmVLKQlbgOMdkMx27Wrpzes2hh5Jtbi2bjPd+4wJstWIqP5A+lscnqbm0xxmT5Bpg8Lec5ItEBwx6BQ==}
     engines: {node: '>=18'}
 
-  nodemailer@9.0.1:
-    resolution: {integrity: sha512-Gwv8SQewT616ZM/URn0H54b8PWo/Wum7md3EW2aWy1lO27+WZCX+Xyak3J+NlmHUjDh5ME+uesJUDRbR3Ye8Bw==}
+  nodemailer@9.0.3:
+    resolution: {integrity: sha512-n+YP+NKwR5zRWa60k3GiQ6Q3B4KXCoAw40dAKeCtYn020iNN74aWK2liXIC3ZEATeGql7we3tE3t8QwhY0eskw==}
     engines: {node: '>=6.0.0'}
 
   normalize-path@3.0.0:
@@ -10590,7 +10590,7 @@ snapshots:
       '@ast-grep/napi-win32-ia32-msvc': 0.40.5
       '@ast-grep/napi-win32-x64-msvc': 0.40.5
 
-  '@auth/core@0.41.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)':
+  '@auth/core@0.41.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.3)':
     dependencies:
       '@panva/hkdf': 1.2.1
       jose: 6.2.3
@@ -10599,9 +10599,9 @@ snapshots:
       preact-render-to-string: 6.5.11(preact@10.24.3)
     optionalDependencies:
       '@simplewebauthn/browser': 13.3.0
-      nodemailer: 9.0.1
+      nodemailer: 9.0.3
 
-  '@auth/core@0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)':
+  '@auth/core@0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.3)':
     dependencies:
       '@panva/hkdf': 1.2.1
       jose: 6.2.3
@@ -10610,11 +10610,11 @@ snapshots:
       preact-render-to-string: 6.5.11(preact@10.24.3)
     optionalDependencies:
       '@simplewebauthn/browser': 13.3.0
-      nodemailer: 9.0.1
+      nodemailer: 9.0.3
 
-  '@auth/drizzle-adapter@1.11.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)':
+  '@auth/drizzle-adapter@1.11.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.3)':
     dependencies:
-      '@auth/core': 0.41.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)
+      '@auth/core': 0.41.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.3)
     transitivePeerDependencies:
       - '@simplewebauthn/browser'
       - '@simplewebauthn/server'
@@ -20298,7 +20298,7 @@ snapshots:
 
   node-releases@2.0.51: {}
 
-  nodemailer@9.0.1: {}
+  nodemailer@9.0.3: {}
 
   normalize-path@3.0.0: {}
 
