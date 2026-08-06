@@ -2526,7 +2526,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   <div style="background:linear-gradient(90deg,#c9a227 0%,#00ffd1 100%);text-align:center;padding:.6rem 1rem;font-size:.82rem;font-weight:700;color:#000;letter-spacing:.03em">
-    ⚡ EU Digital Product Passport Registry opens <strong>July 19, 2026</strong> — <a href="/digital-product-passport" style="color:#000;text-decoration:underline;font-weight:800">Get Compliant Now →</a>
+    ⚡ EU Digital Product Passport Registry is <strong>live</strong> — <a href="/digital-product-passport" style="color:#000;text-decoration:underline;font-weight:800">Enroll Now →</a>
   </div>
   <nav>
     <a class="nav-logo" href="/">
@@ -2853,11 +2853,11 @@ function certPage(certId: string): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Certificate ${certId} — AuthiChain</title>
-<meta name="description" content="Verify blockchain certificate ${certId} on AuthiChain. Cryptographic proof of product authenticity.">
+<title>Certificate \${certId} — AuthiChain</title>
+<meta name="description" content="Verify blockchain certificate \${certId} on AuthiChain. Cryptographic proof of product authenticity.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#c9a227">
-<meta property="og:title" content="AuthiChain Certificate ${certId}">
+<meta property="og:title" content="AuthiChain Certificate \${certId}">
 <meta property="og:description" content="Blockchain-anchored product certificate. Verify authenticity instantly.">
 <meta property="og:image" content="https://authichain.com/og-image.png">
 <style>
@@ -2895,11 +2895,11 @@ a{color:#c9a227;text-decoration:none}
 <div class="wrap">
   <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:.5rem">Product Certificate</h1>
   <p style="color:#94a3b8;margin-bottom:2rem;font-size:.9rem">Blockchain-anchored proof of authenticity</p>
-  <div id="main"><div class="status-loading">Fetching certificate&#8230;</div></div>
+  <div id="main"><div class="status-loading">Fetching certificate…</div></div>
 </div>
 <script>
 (function(){
-  var id = ${JSON.stringify(certId)};
+  var id = \${JSON.stringify(certId)};
   var el = document.getElementById('main');
   function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
   fetch('https://api.authichain.com/api/v1/cert/'+encodeURIComponent(id))
@@ -2910,6 +2910,7 @@ a{color:#c9a227;text-decoration:none}
         return;
       }
       var c=data.certificate;
+      var certUrl='https://authichain.com/cert/'+esc(id);
       var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=140x140&data='+encodeURIComponent('https://authichain.com/cert/'+id);
       var ts=c.ts?new Date(c.ts).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}):'';
       el.innerHTML='<div class="cert-card">'
@@ -2934,7 +2935,7 @@ a{color:#c9a227;text-decoration:none}
       el.innerHTML='<div class="status-err"><div style="font-size:3rem;margin-bottom:1rem">&#x26A0;</div><div style="font-size:1.1rem;font-weight:700;color:#ef4444">Failed to load</div><div style="color:#94a3b8;margin-top:.5rem">'+esc(e.message)+'</div></div>';
     });
 })();
-</script>
+<\/script>
 </body>
 </html>`;
 }

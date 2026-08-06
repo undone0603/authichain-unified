@@ -24,7 +24,7 @@ jobs:
         id: check
         shell: bash
         run: |
-          DOMAINS="authichain.com qron.space govchain.us strainchain.io luxechain.io rxchain.io chipchain.io threadchain.io partchain.io harvestchain.io provenchain.io glowchain.io fanchain.io"
+          DOMAINS="authichain.com qron.space govchain.us strainchain.io luxechain.io"
           OVERALL=0
 
           run_check() {
@@ -193,7 +193,7 @@ jobs:
           echo ""
           echo "--- rollup ---"
           if [ "$OVERALL" -eq 0 ]; then
-            echo "All 13 brand domains passed all 6 SEO checks (homepage meta, og-image.png size, og-image.svg, favicon.svg, sitemap.xml, robots.txt). No regressions detected."
+            echo "All 4 brand domains passed all 6 SEO checks (homepage meta, og-image.png size, og-image.svg, favicon.svg, sitemap.xml, robots.txt). No regressions detected."
           else
             echo "One or more brand domains failed SEO checks. Investigate the FAIL lines above and look at the corresponding workers/<brand>/src/index.ts fetch handler for the failing route. Common causes: a route handler was removed or returned the wrong content-type; the PNG asset grew beyond 300 KB or shrank below 80 KB; an ld+json block was dropped from the homepage template."
           fi

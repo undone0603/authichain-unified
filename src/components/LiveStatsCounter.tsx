@@ -25,12 +25,17 @@ function formatNumber(n: number, decimals: number) {
 }
 
 function Counter({ stat, active, accent }: { stat: StatDef; active: boolean; accent: string }) {
-  const [display, setDisplay] = useState(0);
+  // Default to the real value so SSR output, no-JS clients, bots, and social
+  // link-preview scrapers see the true number instead of a literal 0. The
+  // count-up animation (0 -> value) only kicks in client-side once the
+  // section scrolls into view.
+  const [display, setDisplay] = useState(stat.value);
   const decimals = stat.decimals ?? 0;
 
   useEffect(() => {
     if (!active) return;
     const duration = 1800;
+    setDisplay(0);
     const start = performance.now();
     let raf = 0;
 
