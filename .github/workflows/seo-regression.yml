@@ -24,7 +24,7 @@ jobs:
         id: check
         shell: bash
         run: |
-          DOMAINS="authichain.com qron.space govchain.us strainchain.io"
+          DOMAINS="authichain.com qron.space govchain.us strainchain.io luxechain.io"
           OVERALL=0
 
           run_check() {
