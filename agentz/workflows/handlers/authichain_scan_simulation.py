@@ -53,8 +53,7 @@ def run(ctx: ExecutionContext) -> str:
             "Run Growth Agent: Reward Issuance",
             action=lambda: asyncio.run(reward_repeat_scans(supabase, wallet_address, product_id))
         )
-        ctx.step(f"   -> Reward Issued: {reward_res.get('reward_amount')} QRON")
-        ctx.step(f"   -> On-chain Tx: {reward_res.get('tx_hash')}")
+        ctx.step(f"   -> Reward Calculated: {reward_res.get('reward_amount')} QRON ({reward_res.get('status')})")
         
         # 6. Update Merchant Analytics
         ctx.step("Step 5: Updating Merchant Analytics & Engagement Score...")

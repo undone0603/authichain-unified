@@ -50,7 +50,7 @@ jobs:
 
       - name: Build frontend
         if: steps.secrets_check.outputs.skip != 'true'
-        run: pnpm run build
+        run: pnpm run build:site
         env:
           VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
           VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}

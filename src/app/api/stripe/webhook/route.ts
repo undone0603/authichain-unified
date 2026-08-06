@@ -153,7 +153,11 @@ export async function POST(req: NextRequest) {
         const session = event.data.object;
         const md = session.metadata || {};
         const userId = md.user_id;
-        const plan = md.plan;
+        // Accept both metadata conventions: the live /api/checkout route sets
+        // `plan`, but other checkout entry points set `plan_id`. Tolerating both
+        // means a paying customer is always provisioned with the right credits,
+        // regardless of which route created the session.
+        const plan = md.plan ?? md.plan_id;
         const brand = getBrandIdFromMetadata(md);
         const customerId = session.customer;
         const subscriptionId = session.subscription;

@@ -14,7 +14,7 @@ export interface IndustryClassification {
   workflow: WorkflowStep[];
 }
 
-const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[] }> = {
+const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[]; brand?: string }> = {
   cannabis: {
     keywords: ["cannabis", "marijuana", "thc", "cbd", "hemp", "strain", "dispensary", "metrc", "weed"],
     workflow: [
@@ -24,12 +24,14 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[] 
     ],
   },
   luxury: {
-    keywords: ["luxury", "louis vuitton", "gucci", "prada", "rolex", "watch", "handbag", "designer"],
+    keywords: ["luxury", "louis vuitton", "gucci", "prada", "rolex", "watch", "handbag", "designer", "jewellery", "jewelry", "wine", "champagne", "cognac", "nfc", "certificate of authenticity"],
     workflow: [
       { name: "Brand Registry Check", action: "check_brand_registry" },
       { name: "Serial Verification", action: "verify_serial" },
       { name: "NFC Seal", action: "apply_nfc_seal" },
+      { name: "EU DPP Export", action: "export_eu_dpp" },
     ],
+    brand: "luxechain.io",
   },
   pharma: {
     keywords: ["pharma", "pharmaceutical", "drug", "medicine", "fda", "dscsa", "prescription"],

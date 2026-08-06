@@ -32,11 +32,57 @@ overrides:
   'form-data@>=4.0.0 <4.0.6': 4.0.6
   # GHSA high: js-cookie per-instance prototype hijack in assign().
   'js-cookie@<=3.0.5': 3.0.7
-  # GHSA high: ws memory-exhaustion DoS from tiny fragments (8.x only).
-  # Note: miniflare depends on ws@8.18.0, so we allow up to 8.21.0 but don't force it
-  # Dependabot should be able to update within this range as deps allow
-  'ws@>=8.0.0 <8.18.0': 8.18.0
+  # GHSA high: ws memory-exhaustion DoS from tiny fragments. Widened from the
+  # original 8.18.0 cap — two newer GHSAs (patched 8.20.1, then 8.21.0)
+  # superseded it, and the lockfile had five distinct ws versions sitting
+  # below 8.21.0 despite the old override, so force the ceiling instead of
+  # the historical floor. miniflare's own ws@8.18.0 dep is within this range.
+  'ws@<8.21.0': 8.21.0
   # GHSA: vite server.fs.deny bypass + NTLMv2 hash disclosure (vitest peer pulls 5.x).
   'vite@<6.4.3': 6.4.3
-  # GHSA moderate: postcss XSS via unescaped </style> (transitive via next).
-  'postcss@<8.5.10': 8.5.10
+  # GHSA moderate/high: postcss XSS via unescaped </style> (transitive via
+  # next). Widened from 8.5.10 — a newer GHSA (patched 8.5.18) superseded it,
+  # and the old override wasn't collapsing an 8.4.31 resolution either.
+  'postcss@<8.5.18': 8.5.18
+  # GHSA critical: Auth.js email normalizer validates before Unicode
+  # normalization, allowing a homoglyph `@` bypass. Direct dep was already
+  # ^0.41.3, but @auth/drizzle-adapter's transitive @auth/core stayed pinned
+  # to the vulnerable 0.41.2 in the lockfile — force it everywhere.
+  '@auth/core@<0.41.3': 0.41.3
+  # GHSA medium: @hono/node-server request-smuggling-adjacent header handling
+  # bug, fixed in the 2.x line (no 1.x backport). Only pulled in transitively
+  # by @modelcontextprotocol/sdk's Node HTTP example transport — not used
+  # directly by the app (grep found no imports) — so the major bump is low
+  # blast-radius even though it crosses a major version.
+  # GHSA-9mqv-5hh9-4cgg (2026-08-01): a second, newer advisory (unauthenticated
+  # memory-leak DoS via aborted WebSocket handshake) covers >=2.0.0 <=2.0.9 --
+  # the 2.0.5 this override pinned to is itself inside that range. Widened to
+  # the actual first-patched version instead of stacking a second override.
+  '@hono/node-server@<2.0.10': 2.0.10
+  # GHSA medium: axios — multiple CVEs across the 1.x line, all fixed by 1.18.0.
+  'axios@<1.18.0': 1.18.0
+  # GHSA high: brace-expansion ReDoS in the 1.x line.
+  'brace-expansion@<1.1.16': 1.1.16
+  # GHSA high: brace-expansion ReDoS, 2.x line. The resolved 2.1.2 here
+  # turned out to already be inside a second, newer GHSA's vulnerable range
+  # (>=2.0.0 <2.1.3) — this override was missing entirely, not just stale.
+  'brace-expansion@>=2.0.0 <2.1.3': 2.1.3
+  # Supply-chain compromise: brace-expansion 3.0.0-5.0.7 were published as
+  # part of a worm-style npm compromise. Root had 5.0.7 resolved — also
+  # missing, not just stale.
+  'brace-expansion@>=3.0.0 <=5.0.7': 5.0.8
+  # GHSA low: DOMPurify mXSS bypass, patched same-day point release.
+  'dompurify@<=3.4.11': 3.4.12
+  # GHSA moderate: esbuild dev-server allows any website to send requests to
+  # it and read the response (CORS misconfig), fixed in 0.25.0.
+  'esbuild@<=0.24.2': 0.25.4
+  # GHSA high: fast-uri ReDoS / prototype pollution — two GHSAs, second one
+  # patched at 3.1.4 supersedes the first's 3.1.3.
+  'fast-uri@<=3.1.3': 3.1.4
+  # GHSA high: js-yaml prototype pollution via crafted YAML in the 4.x line.
+  'js-yaml@>=4.0.0 <4.3.0': 4.3.0
+  # GHSA high: sharp — heap overflow processing crafted images, fixed in 0.35.0.
+  'sharp@<0.35.0': 0.35.0
+  # GHSA moderate: uuid — insecure randomness in the affected range (8.x/9.x
+  # branches; 14.x already unaffected and left alone).
+  'uuid@<11.1.1': 11.1.1

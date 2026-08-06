@@ -181,6 +181,34 @@ workflows:
       Simulates targeted direct email outreach to cannabis testing labs
       in Michigan, offering the $299 Pilot Package. Uses Gemini 2.5 Flash
       to craft personalized 3-sentence B2B cold emails.
+      NOTE (2026-07-31 audit): "Simulates" above is the actual behavior --
+      this workflow does not verify delivery, which is exactly how the CRM
+      ended up with 166 fabricated deals. See verified_outreach_sequence
+      below for the real, delivery-gated replacement for this same goal.
+
+  - id: verified_outreach_sequence
+    title: "Verified outreach: send, confirm delivery via Resend, only then log as real"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.verified_outreach_sequence
+    type: api
+    estimated_minutes: 5
+    requires: [resend_api_key, hubspot_token]
+    prerequisites: []
+    confirm_before_run: true   # sends real email; review a dry-run pass first
+    max_runs_per_day: 3        # rate-limited, protects sending-domain reputation
+    description: |
+      Real replacement for strainchain_email_pitch's fabrication problem.
+      For each targeted deal without a verified contact: guesses a
+      plausible company email, sends via Resend, waits, then checks
+      Resend's actual delivery status. A HubSpot contact + "delivered"
+      note is only created if Resend confirms delivery; a bounce is
+      logged as a bounce (no contact created); an unconfirmed status is
+      logged as unconfirmed (re-run later, don't treat as real yet).
+      Rate-limited between sends to protect deliverability. Does NOT
+      auto-send follow-up touches -- that needs real reply detection
+      (Gmail) wired up first, which is not done here; see the module
+      docstring in agentz/workflows/handlers/verified_outreach_sequence.py.
 
   - id: authichain_crm_outreach
     title: "Authichain B2B CRM Outreach & Follow-up"
@@ -397,6 +425,49 @@ workflows:
       2) Coordinates distribution across LinkedIn (Sales Nav), Reddit, and Twitter.
       3) Drives traffic to qron.space engagement hub.
 
+  # NOTE (2026-08-01 audit, corrected same day): of the 9 workflows below
+  # this line through authichain_apex_dominance (advanced_ops, atomic_scan,
+  # terminal_ops, global_scale, daily_video_factory, apex_ops,
+  # apex_hardened, sovereign_healer, apex_dominance), 4 were read in full
+  # and confirmed to mix real plumbing (Supabase reads, HubSpot fetches)
+  # with hardcoded demo constants a "real" (non-dry-run) execution would
+  # still act on: authichain_advanced_ops, authichain_terminal_ops,
+  # authichain_global_scale, authichain_apex_ops. Concrete examples: a
+  # fake "1234567890" FedEx tracking number, a Stripe
+  # application_fee_amount call with no Connect-account destination wired
+  # in (would error, caught silently and returned as {"error": ...}), and
+  # unconditional ctx.step() log lines asserting things happened ("Mobile
+  # Android/iOS wrappers synchronized", "Pi Network Studio" deploy) with no
+  # real check behind them -- the same "Pi Network Studio, 55M users" claim
+  # already caught and stripped from generate_scale_up_report's prompt in
+  # PR #573.
+  #
+  # authichain_sovereign_healer was also read in full and is NOT part of
+  # this problem -- real Supabase/file health checks, honest "no automated
+  # recovery path defined" fallback, no hardcoded demo data. Don't apply
+  # this warning to it. authichain_apex_hardened, authichain_apex_dominance
+  # (handler authichain_apex_orchestrator), and authichain_daily_video_factory
+  # were not individually verified either way as of this note.
+  #
+  # The "0x742d..." demo wallet mentioned in the original version of this
+  # note (shared by authichain_terminal_ops and authichain_atomic_scan) led
+  # to a real bug, not just a demo-data smell: authichain_atomic_scan's
+  # reward_repeat_scans() call fabricated a sha256 hash formatted exactly
+  # like a real Polygon tx hash and returned it from the live POST /scan
+  # handler in agentz/api/main.py. Fixed for real in PR #578
+  # (agentz/core/growth.py) rather than just flagged, since that path is
+  # reachable from a live API route, not only from this dormant CLI chain.
+  #
+  # None of these 9 are wired into any GitHub Actions schedule (confirmed
+  # via grep across .github/workflows) -- the ones that are still flagged
+  # are dormant, not actively misreporting into anything today. But do not
+  # flip a flagged one to Mode.AUTO or add it to a cron schedule without
+  # first replacing its hardcoded demo data with a real implementation --
+  # that's exactly how the HubSpot pipeline ended up with 166 fabricated
+  # deals presented as a real pipeline. Flagged rather than rewritten
+  # unilaterally: fixing the underlying core modules (marketplace.py,
+  # oracle.py, pi.py, etc.) is real product work, not a safe drive-by
+  # change.
   - id: authichain_advanced_ops
     title: "Advanced Ecosystem Evolution: Concierge + Microsites + Oracles"
     priority: critical
