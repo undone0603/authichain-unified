@@ -19,8 +19,8 @@ importers:
         specifier: ^0.41.3
         version: 0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)
       '@auth/drizzle-adapter':
-        specifier: ^1.4.2
-        version: 1.11.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)
+        specifier: ^1.11.3
+        version: 1.11.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)
       '@clerk/nextjs':
         specifier: ^7.4.1
         version: 7.5.7(next@15.5.21(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -498,20 +498,6 @@ packages:
     resolution: {integrity: sha512-hJA62OeBKUQT68DD2gDyhOqJxZxycqg8wLxbqjgqSzYttCMSDL9tiAQ9abgekBYNHudbJosm9sWOEbmCDfpX2A==}
     engines: {node: '>= 10'}
 
-  '@auth/core@0.41.2':
-    resolution: {integrity: sha512-Hx5MNBxN2fJTbJKGUKAA0wca43D0Akl3TvufY54Gn8lop7F+34vU1zA1pn0vQfIoVuLIrpfc2nkyjwIaPJMW7w==}
-    peerDependencies:
-      '@simplewebauthn/browser': ^9.0.1
-      '@simplewebauthn/server': ^9.0.2
-      nodemailer: ^7.0.7
-    peerDependenciesMeta:
-      '@simplewebauthn/browser':
-        optional: true
-      '@simplewebauthn/server':
-        optional: true
-      nodemailer:
-        optional: true
-
   '@auth/core@0.41.3':
     resolution: {integrity: sha512-sJ3JMHHkXMD3aOjopv7mOBTO1Ocw4b0fAEXJBz6k7YHLpYQI6C40jCUPc5fNvUKxXRXNE1/sRISA15UrwWJBTw==}
     peerDependencies:
@@ -526,8 +512,8 @@ packages:
       nodemailer:
         optional: true
 
-  '@auth/drizzle-adapter@1.11.2':
-    resolution: {integrity: sha512-VOuj7REI8jfJjpSbsYwDM/Zrn55T6lS9Yc+29V+EXMcel8eqG7x+7LodNfd1WHjakfkLYi+qsbYUHB3E6aDA4w==}
+  '@auth/drizzle-adapter@1.11.3':
+    resolution: {integrity: sha512-TxqVasPVuf7LDAT1Yuu6bftpuet8o0tjdXW+mXpnXWdSRPQsomdzMoz9RsXkFN/JfdK+/DwdgOEmOTv1gbiFNw==}
 
   '@aws-crypto/sha1-browser@5.2.0':
     resolution: {integrity: sha512-OH6lveCFfcDjX4dbAvCFSYUjJZjDr/3XJ3xHtjn3Oj5b9RjojQo8npoLeA/bNwkOkrSQ0wgrHzXk4tDRxGKJeg==}
@@ -10521,17 +10507,6 @@ snapshots:
       '@ast-grep/napi-win32-ia32-msvc': 0.40.5
       '@ast-grep/napi-win32-x64-msvc': 0.40.5
 
-  '@auth/core@0.41.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)':
-    dependencies:
-      '@panva/hkdf': 1.2.1
-      jose: 6.2.3
-      oauth4webapi: 3.8.6
-      preact: 10.24.3
-      preact-render-to-string: 6.5.11(preact@10.24.3)
-    optionalDependencies:
-      '@simplewebauthn/browser': 13.3.0
-      nodemailer: 9.0.1
-
   '@auth/core@0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)':
     dependencies:
       '@panva/hkdf': 1.2.1
@@ -10543,9 +10518,9 @@ snapshots:
       '@simplewebauthn/browser': 13.3.0
       nodemailer: 9.0.1
 
-  '@auth/drizzle-adapter@1.11.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)':
+  '@auth/drizzle-adapter@1.11.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)':
     dependencies:
-      '@auth/core': 0.41.2(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)
+      '@auth/core': 0.41.3(@simplewebauthn/browser@13.3.0)(nodemailer@9.0.1)
     transitivePeerDependencies:
       - '@simplewebauthn/browser'
       - '@simplewebauthn/server'
