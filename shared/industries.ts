@@ -22,6 +22,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
       { name: "COA Verification", action: "verify_coa" },
       { name: "Seed-to-Sale Log", action: "log_provenance" },
     ],
+    brand: "strainchain.io",
   },
   luxury: {
     keywords: ["luxury", "louis vuitton", "gucci", "prada", "rolex", "watch", "handbag", "designer", "jewellery", "jewelry", "wine", "champagne", "cognac", "nfc", "certificate of authenticity"],
@@ -31,7 +32,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
       { name: "NFC Seal", action: "apply_nfc_seal" },
       { name: "EU DPP Export", action: "export_eu_dpp" },
     ],
-    brand: "luxechain.io",
+    brand: "authichain.com",
   },
   pharma: {
     keywords: ["pharma", "pharmaceutical", "drug", "medicine", "fda", "dscsa", "prescription"],
@@ -40,7 +41,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
       { name: "Lot Tracking", action: "track_lot" },
       { name: "Temperature Log", action: "log_cold_chain" },
     ],
-    brand: "rxchain.io",
+    brand: "authichain.com",
   },
   electronics: {
     keywords: ["electronics", "chip", "semiconductor", "component", "circuit", "battery", "lithium", "ev", "tesla"],
@@ -49,7 +50,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
       { name: "Origin Trace", action: "trace_origin" },
       { name: "Spec Verification", action: "verify_specs" },
     ],
-    brand: "chipchain.io",
+    brand: "authichain.com",
   },
   fashion: {
     keywords: ["fashion", "clothing", "apparel", "sneaker", "shoe", "nike", "adidas", "textile"],
@@ -58,7 +59,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
       { name: "Material Trace", action: "trace_material" },
       { name: "Grey Market Check", action: "check_grey_market" },
     ],
-    brand: "threadchain.io",
+    brand: "authichain.com",
   },
   auto: {
     keywords: ["auto", "automotive", "car", "vehicle", "part", "engine", "brake", "oem"],
@@ -67,7 +68,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
       { name: "VIN Cross-Ref", action: "crossref_vin" },
       { name: "Warranty Seal", action: "seal_warranty" },
     ],
-    brand: "partchain.io",
+    brand: "authichain.com",
   },
   food: {
     keywords: ["food", "organic", "coffee", "wine", "olive", "artisan", "farm", "produce", "roaster"],
@@ -76,7 +77,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
       { name: "Certification Check", action: "check_certification" },
       { name: "Quality Seal", action: "seal_quality" },
     ],
-    brand: "harvestchain.io",
+    brand: "authichain.com",
   },
   art: {
     keywords: ["art", "painting", "sculpture", "gallery", "nft", "collectible", "print", "edition"],
@@ -85,7 +86,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
       { name: "NFT Bind", action: "bind_nft_to_physical" },
       { name: "Certificate Issue", action: "issue_certificate" },
     ],
-    brand: "provenchain.io",
+    brand: "authichain.com",
   },
   cosmetics: {
     keywords: ["cosmetics", "beauty", "skincare", "makeup", "fragrance", "perfume", "serum"],
@@ -94,7 +95,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
       { name: "Batch Tracking", action: "track_batch" },
       { name: "Safety Seal", action: "apply_safety_seal" },
     ],
-    brand: "glowchain.io",
+    brand: "authichain.com",
   },
   sports: {
     keywords: ["sports", "memorabilia", "jersey", "signed", "autograph", "trading card", "collectible"],
@@ -103,7 +104,7 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
       { name: "Event Cross-Ref", action: "crossref_event" },
       { name: "Fan Certificate", action: "issue_fan_cert" },
     ],
-    brand: "fanchain.io",
+    brand: "authichain.com",
   },
 };
 

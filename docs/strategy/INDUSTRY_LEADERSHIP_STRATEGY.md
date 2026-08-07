@@ -346,6 +346,16 @@ containing them.
 
 ---
 
+## 8.1 Execution status
+
+| Move | State |
+|---|---|
+| **0 — credibility repair** | **Done.** All instances fixed; see §2.1 for the full sweep. Remaining: the public transparency page. |
+| **1 — cut to the live brands** | **Repo side done.** Only the four live domains remain — authichain.com, qron.space, govchain.us, strainchain.io. `luxechain-io` removed from the CI deploy matrix and the SEO regression sweep (it was the only one of the ten wired into CI); the nine dead `brand:` pointers in `shared/industries.ts` repointed to live domains. The nine unused worker sources are left in place, parked rather than deleted — they build from Cloudflare's Git integration, which is configured dashboard-side and is an operator action. |
+| **2 — agent-payable verification** | **Specified, not built** — `docs/superpowers/plans/2026-08-07-x402-agent-verification.md`. A week of work gated on two operator decisions: price per verification, and whether `$QRON` settles alongside USDC. Step 1 (spend caps) has no such dependency and is worth building regardless. |
+| **3 — own the spec** | **Blocked on a licensing decision.** `LICENSE.md` prohibits reproducing the protocol, which is incompatible with owning a standard. That is a legal call, not one to make unilaterally — nothing is published until it is resolved. |
+| **4 — fix distribution** | **Repo side done**, DNS side documented — `docs/outreach-deliverability-runbook.md`. Both no-op cron schedules disabled; `reply_to` added and the `noreply@` default removed from `server/outreach/send-guard.ts`, which had made replying literally impossible. SPF/DKIM/DMARC records are specified in the runbook but require DNS access. |
+
 ## 9. Stop doing
 
 - **Building new verticals or workers.** The estate already exceeds what one operator can
