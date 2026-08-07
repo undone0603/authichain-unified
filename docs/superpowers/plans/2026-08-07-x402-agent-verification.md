@@ -1,7 +1,33 @@
 # Plan: pay-per-call verification for autonomous agents (x402)
 
 **Created:** 2026-08-07 · Implements Move 2 of `docs/strategy/INDUSTRY_LEADERSHIP_STRATEGY.md`.
-**Status:** specified, not built. See "Why this is a plan and not a diff" at the end.
+**Status:** decisions made; step 1 built. See "Decisions" and "Progress" below.
+
+## Decisions (operator-approved 2026-08-07)
+
+Both open questions are now settled. The plan below is unchanged except that
+these replace the "operator decision" placeholders.
+
+- **Price: $0.05 per verification, flat.** One published number, not the
+  $0.03–$0.49 tier ladder in `REVENUE_STRATEGY.md`. Tiered pricing is a
+  negotiation, and there is no leverage to negotiate with before the first
+  customer; an agent developer reading a docs page should not have to model a
+  table. Implemented as `DEFAULT_PRICE_CENTS = 5` in `src/lib/verification-caps.ts`,
+  overridable via `VERIFICATION_PRICE_CENTS`.
+- **Settlement: USDC only. `$QRON` stays off the paid path.** A token in the
+  settlement path adds a treasury and KYC problem to a product with zero
+  customers. `$QRON` keeps its role in staking discounts, which does not require
+  it to be the unit of account for an API call.
+
+## Progress
+
+- ✅ **Step 1 — spend caps and rate limits.** Built:
+  `supabase/migrations/20260807000001_verification_quota.sql` (two tables and an
+  atomic `consume_verification_quota` function), `src/lib/verification-caps.ts`,
+  and enforcement wired into `src/app/api/verify/route.ts`. 22 tests.
+  **The migration has not been applied** — it touches a live Supabase project and
+  needs owner confirmation, per the convention in the guardrail plan.
+- ⬜ Steps 2–5 below remain.
 
 ## The position
 

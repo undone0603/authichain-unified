@@ -2,8 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { onVerificationEvent } from '../../../../server/revenue-engine/loop';
+import {
+  consumeVerificationQuota,
+  statusForDenial,
+  isRetryable,
+  verificationPriceCents,
+} from '@/lib/verification-caps';
 
 export async function POST(req: NextRequest) {
+  // Caps before work. This endpoint is the one agents will call and pay for, so
+  // every request must be authenticated, rate limited and charged against a hard
+  // ceiling before it touches the database. See
+  // docs/superpowers/plans/2026-08-07-x402-agent-verification.md — guardrails
+  // ship ahead of the payment path, never alongside it.
+  const decision = await consumeVerificationQuota(req.headers);
+  if (!decision.allowed) {
+    const status = statusForDenial(decision.reason);
+    return NextResponse.json(
+      {
+        error: decision.reason,
+        retryable: isRetryable(decision.reason),
+        // Advertise the price on the 402 so an x402 client knows what to settle.
+        ...(status === 402 ? { price_cents: verificationPriceCents() } : {}),
+      },
+      { status },
+    );
+  }
+
   const supabase = createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
