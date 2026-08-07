@@ -2940,6 +2940,103 @@ a{color:#c9a227;text-decoration:none}
 </html>`;
 }
 
+// Public landing page for the open verification protocol (Apache-2.0, in
+// protocol/ on the public repo). The CTA of the Product Hunt launch points
+// here. Every claim on this page is checkable by a reader in under a minute —
+// no user counts, no certifications, nothing unsubstantiated.
+const PROTOCOL_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open Verification Protocol — AuthiChain</title>
+<meta name="description" content="An open specification and a zero-dependency reference verifier for product provenance. Check a signed record and its on-chain anchor offline, in one command, with no account. Apache-2.0.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#c9a227">
+<meta property="og:title" content="Open Verification Protocol — AuthiChain">
+<meta property="og:description" content="Verify product provenance yourself. Offline, one command, no account. Apache-2.0.">
+<meta property="og:image" content="https://authichain.com/og-image.png">
+<meta property="og:url" content="https://authichain.com/protocol">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"AuthiChain Verification Specification","description":"An open specification and reference verifier for product provenance, licensed Apache-2.0.","license":"https://www.apache.org/licenses/LICENSE-2.0","url":"https://authichain.com/protocol"}</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050507;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;line-height:1.65}
+a{color:#c9a227;text-decoration:none}
+a:hover{text-decoration:underline}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid rgba(201,162,39,.15)}
+.nav-logo{font-size:1.1rem;font-weight:700;letter-spacing:.05em;color:#f8fafc}
+.nav-logo span{color:#c9a227}
+.wrap{max-width:720px;margin:0 auto;padding:3rem 1.5rem 6rem}
+h1{font-size:2.1rem;line-height:1.2;letter-spacing:-.02em;margin-bottom:1rem}
+h2{font-size:1.15rem;margin:2.5rem 0 .75rem;letter-spacing:.02em}
+p{color:#cbd5e1;margin-bottom:1rem}
+.lede{font-size:1.1rem;color:#e2e8f0}
+.badge{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#c9a227;border:1px solid rgba(201,162,39,.35);border-radius:999px;padding:.3rem .7rem;margin-bottom:1.25rem}
+pre{background:#0c0c11;border:1px solid rgba(201,162,39,.18);border-radius:10px;padding:1rem;overflow-x:auto;margin:1rem 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86rem;color:#e2e8f0}
+ul{margin:0 0 1rem 1.1rem;color:#cbd5e1}
+li{margin-bottom:.5rem}
+.cta{display:flex;flex-wrap:wrap;gap:.75rem;margin:2rem 0 1rem}
+.btn{display:inline-block;padding:.7rem 1.15rem;border-radius:8px;font-weight:600;font-size:.92rem;border:1px solid rgba(201,162,39,.4);color:#c9a227}
+.btn.primary{background:#c9a227;color:#050507;border-color:#c9a227}
+.btn:hover{text-decoration:none;opacity:.9}
+.note{border-left:2px solid rgba(201,162,39,.4);padding:.25rem 0 .25rem 1rem;color:#94a3b8;font-size:.92rem;margin:1.5rem 0}
+footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:center;color:#64748b;font-size:.85rem}
+</style>
+</head>
+<body>
+<nav class="nav"><a class="nav-logo" href="/">AUTHI<span>CHAIN</span></a><a href="/anchor">Anchor a product</a></nav>
+<div class="wrap">
+  <div class="badge">Apache-2.0 &middot; v0.1.0 draft</div>
+  <h1>Verify it yourself.</h1>
+  <p class="lede">Most &ldquo;verified authentic&rdquo; badges resolve to a vendor&rsquo;s server saying <em>trust me</em>. That doesn&rsquo;t solve the trust problem, it relocates it.</p>
+  <p>The AuthiChain verification protocol is an open specification with a reference verifier you run on your own machine. No account, no API key, no network calls to us.</p>
+
+  <pre><code>node verifier.mjs record.json anchor.json
+
+{ "verdict": "verified", "reasons": [], "checks": { "signature": true, "anchorHash": true } }</code></pre>
+
+  <p>Zero dependencies &mdash; Node builtins only. It checks an Ed25519 signature over a JCS-canonicalised W3C Verifiable Credential, then checks that the record&rsquo;s hash matches what was committed on-chain.</p>
+
+  <div class="cta">
+    <a class="btn primary" href="https://github.com/undone0603/authichain-unified/tree/main/protocol">Read the spec</a>
+    <a class="btn" href="https://github.com/undone0603/authichain-unified/blob/main/protocol/verifier.mjs">Run the verifier</a>
+    <a class="btn" href="https://github.com/undone0603/authichain-unified/blob/main/protocol/LICENSE">View the license</a>
+  </div>
+
+  <h2>Three verdicts. No partial credit.</h2>
+  <ul>
+    <li><code>verified</code> &mdash; signature valid; anchor present, well formed, mainnet, hash matches</li>
+    <li><code>valid-unanchored</code> &mdash; signature valid; no anchor supplied</li>
+    <li><code>invalid</code> &mdash; any required check failed</li>
+  </ul>
+  <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
+
+  <h2>Two rules we learned the hard way</h2>
+  <p>Both exist because this codebase shipped violations of them, and both are enforced by tests you can read:</p>
+  <ul>
+    <li><strong>A testnet anchor is not proof.</strong> Rejected unless the caller explicitly opts in.</li>
+    <li><strong>A malformed transaction hash is rejected, not displayed.</strong> Render a truncated hash and you have published something that looks like proof and links nowhere.</li>
+  </ul>
+
+  <h2>Built on existing standards</h2>
+  <p>W3C Verifiable Credentials 2.0, GS1 Digital Link for item identity, CAIP-2 for chain identifiers, RFC 8785 for canonicalisation. Not a private format &mdash; adoption follows compatibility.</p>
+
+  <h2>Claim conformance</h2>
+  <pre><code>node conformance/run.mjs --strict -- &lt;your command&gt;</code></pre>
+  <p>28 fixtures, any language. All must pass. The suite is itself validated against deliberately broken implementations, so it demonstrably can fail.</p>
+
+  <div class="note">
+    v0.1.0 is a draft and not yet stable. There is no revocation mechanism &mdash; a record signed by a compromised key stays cryptographically valid. And a signature proves who asserted something, never that it is true: an issuer can sign a false statement and this layer will correctly report <code>verified</code>. Defending against that lives above the specification, not in it.
+  </div>
+
+  <p>Independent implementations are the point. If a fixture looks wrong, that is more valuable to find than a bug in a verifier &mdash; open an issue.</p>
+</div>
+<footer>&copy; 2026 AuthiChain Inc. &middot; The protocol is Apache-2.0; the platform is not. <a href="/">Home</a></footer>
+</body>
+</html>`;
+
 const DPP_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3161,7 +3258,7 @@ export default {
       return assetResponse(FAVICON_SVG);
     }
     if (p === '/sitemap.xml') {
-      const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://authichain.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url><url><loc>https://authichain.com/anchor</loc><changefreq>weekly</changefreq><priority>0.95</priority></url><url><loc>https://authichain.com/digital-product-passport</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain/technology</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/authichain/pilots</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/book</loc><changefreq>monthly</changefreq><priority>0.8</priority></url></urlset>`;
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://authichain.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url><url><loc>https://authichain.com/anchor</loc><changefreq>weekly</changefreq><priority>0.95</priority></url><url><loc>https://authichain.com/protocol</loc><changefreq>weekly</changefreq><priority>0.95</priority></url><url><loc>https://authichain.com/digital-product-passport</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain/technology</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/authichain/pilots</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/book</loc><changefreq>monthly</changefreq><priority>0.8</priority></url></urlset>`;
       return new Response(sitemap, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
     if (p === '/robots.txt') {
@@ -3175,6 +3272,9 @@ export default {
     }
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(DPP_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    if (p === '/protocol' || p === '/spec') {
+      return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     if (p === '/anchor') {
       return new Response(ANCHOR_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
