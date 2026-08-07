@@ -62,11 +62,29 @@ outputFileTracingRoot: process.cwd(),
   // "Module not found: Can't resolve '../db.js'". extensionAlias tells webpack
   // to try the TypeScript sources for a `.js`/`.mjs` request, fixing every such
   // import at once without rewriting the ~135 import statements.
-  webpack: (config) => {
+  webpack: (config, { webpack }) => {
     config.resolve.extensionAlias = {
       '.js': ['.ts', '.tsx', '.js', '.jsx'],
       '.mjs': ['.mts', '.mjs'],
     };
+
+    // @coinbase/cdp-sdk's x402 payment-signing path imports the @x402/* packages
+    // (@x402/evm, @x402/svm/exact/client, ...). They are optional peers: none is
+    // declared in package.json and none resolves in the lockfile, so webpack
+    // fails the entire build with "Module not found: Can't resolve '@x402/evm'".
+    // They arrive purely transitively — thirdweb → @base-org/account →
+    // @coinbase/cdp-sdk — reached from the governance page and the NFT mint
+    // route. Nothing in this app calls signX402Payment, so ignore the whole
+    // scope; aliasing them one at a time just surfaces the next sibling.
+    //
+    // If the agent-payable verification work in
+    // docs/superpowers/plans/2026-08-07-x402-agent-verification.md ends up
+    // settling through cdp-sdk, install the real @x402/* packages and delete
+    // this — at that point these imports must resolve for real.
+    config.plugins.push(
+      new webpack.IgnorePlugin({ resourceRegExp: /^@x402\// })
+    );
+
     return config;
   },
 
