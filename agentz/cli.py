@@ -7,7 +7,7 @@ Usage:
     python -m agentz.cli list-agents
 
 Options for 'run power_launch_all':
-    --mode {auto|confirm|dry-run}   Execution mode (default: auto)
+    --mode {auto|confirm|dry-run}   Execution mode (default: confirm)
     --serial                        Disable parallel execution
     --lm-url URL                    LM Studio base URL (default: http://localhost:1234/v1)
     --quiet                         Suppress progress output
@@ -104,7 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument(
         "--mode",
         choices=["auto", "confirm", "dry-run"],
-        default="auto",
+        default="confirm",
         help="Execution mode (default: auto)",
     )
     run_p.add_argument(
