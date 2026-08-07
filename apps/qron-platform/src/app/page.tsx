@@ -425,7 +425,7 @@ export default function Home() {
                  {isMagicGenerating ? 'Synchronizing Brand Assets...' : 'Creating Cinematic QRON...'}
                </h3>
                <p className="text-zinc-500 text-xs font-bold uppercase tracking-[0.2em] max-w-xs leading-loose">
-                 Anchoring to AuthiChain Truth Network â€¢ AI Inference in progress â€¢ ~15s
+                 Anchoring to AuthiChain Truth Network • AI Inference in progress • ~15s
                </p>
             </div>
           )}

@@ -276,7 +276,7 @@ export class AutonomousController {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            text: `The Protocol has detected a new trend: ${currentTrend}. ðŸš€\n\nBehold this autonomous creation, cryptographically anchored by AuthiChain.\n\n#AIArt #TrendWatch #${currentTrend.replace(/\s/g, '')}`,
+            text: `The Protocol has detected a new trend: ${currentTrend}. 🚀\n\nBehold this autonomous creation, cryptographically anchored by AuthiChain.\n\n#AIArt #TrendWatch #${currentTrend.replace(/\s/g, '')}`,
             media: { picture: data.downloadUrl },
           }),
         });
@@ -430,7 +430,7 @@ export class AutonomousController {
         const yesPercent = totalVotes > 0 ? (proposal.yes_votes / totalVotes) * 100 : 0;
         
         // 3. Draft Executive Summary
-        const alertMsg = `âš–ï¸  DAO ALERT: Voting closes in < 24h for ${proposal.id}!\n\n` +
+        const alertMsg = `⚖️  DAO ALERT: Voting closes in < 24h for ${proposal.id}!\n\n` +
           `**Title**: ${proposal.title}\n` +
           `**Sentiment**: ${yesPercent.toFixed(1)}% YES (${proposal.yes_votes} QRON)\n\n` +
           `Your voice determines the protocol's future. Vote now at govchain.us`;
@@ -711,7 +711,7 @@ export class AutonomousController {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: `Today's Featured QRON! ðŸŽ¨\n\nMode: ${showcase.mode}\nPrompt: ${showcase.prompt}\n\nCreate your own verified QR art at qron.space`,
+          text: `Today's Featured QRON! 🎨\n\nMode: ${showcase.mode}\nPrompt: ${showcase.prompt}\n\nCreate your own verified QR art at qron.space`,
           media: { picture: showcase.imageUrl },
         }),
       });
