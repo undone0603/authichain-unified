@@ -36,6 +36,26 @@ function clampMeta(s, max) {
   return cut.slice(0, lastSpace > 0 ? lastSpace : max).replace(/[\s,;:.]+$/, '') + '.';
 }
 
+// Search results truncate around 60 characters, and src/lib/seo-pages.test.ts
+// asserts the limit. Titles were assembled unclamped, so a long keyword pushed
+// "Product Authentication For Government Supply Chain | GovChain" to 61 and the
+// regeneration workflow committed it straight to main under [skip ci] — the
+// test only ran on the next unrelated push.
+//
+// The brand suffix is kept and the keyword is trimmed at a word boundary: the
+// brand is the part that earns the click, so it is the wrong end to lose.
+function clampTitle(kwTitle, brand, max = 60) {
+  const suffix = ` | ${brand}`;
+  const full = `${kwTitle}${suffix}`;
+  if (full.length <= max) return full;
+
+  const room = max - suffix.length;
+  const cut = kwTitle.slice(0, room);
+  const lastSpace = cut.lastIndexOf(' ');
+  const kw = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s|,;:-]+$/, '');
+  return `${kw}${suffix}`;
+}
+
 // Each entry: keyword, brand, schemaType, lead, bullets[3], close, faqs[{q,a}]
 const DATA = [
   // ── blockchain qr code for [industry] ─────────────────────────────
@@ -186,7 +206,7 @@ function buildEntry(d) {
   const kwTitle = titleCase(d.keyword);
   const slug = slugify(d.keyword);
   const url = `https://${b.domain}/p/${slug}`;
-  const title = `${kwTitle} | ${b.name}`;
+  const title = clampTitle(kwTitle, b.name);
   const firstSentence = d.lead.split('. ')[0].replace(/\.$/, '');
   const metaDescription = clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
   const h1 = kwTitle;

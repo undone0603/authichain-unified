@@ -228,7 +228,7 @@ export default async function MarketplacePage() {
                     </h3>
                     <div className="flex items-center gap-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
                         <span className="flex items-center gap-1 text-gold"><Leaf className="w-3 h-3" /> {item.mode}</span>
-                        <span>â€¢</span>
+                        <span>•</span>
                         <span>0.045 ETH</span>
                     </div>
                   </div>

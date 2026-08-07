@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json(
               {
                 error:
-                  'QR code is not scannable â€” cannot mint. Please regenerate.',
+                  'QR code is not scannable — cannot mint. Please regenerate.',
               },
               { status: 400 }
             );
@@ -76,12 +76,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // â”€â”€ Business tier credit check (non-business users may need credits) â”€â”€â”€â”€â”€â”€
+    // ── Business tier credit check (non-business users may need credits) ──────
     const isUnlimited = await hasUnlimitedPlan(session.user.id);
     // For now, minting is free for all users with a valid QRON
     // Future: charge mint credits for non-business users
 
-    // â”€â”€ thirdweb v5 server-side mint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── thirdweb v5 server-side mint ──────────────────────────────────────────
     const { createThirdwebClient, getContract, sendTransaction } = await import(
       'thirdweb'
     );
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     const metadata = {
       name: `QRON QR Code #${qronId ?? Date.now()}`,
-      description: `AI-generated QR code linking to ${destinationUrl}. Created with the QRON Creative Studio â€” part of the AuthiChain Protocol.`,
+      description: `AI-generated QR code linking to ${destinationUrl}. Created with the QRON Creative Studio — part of the AuthiChain Protocol.`,
       image: imageUrl,
       external_url: destinationUrl,
       attributes: [
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       receipt.transactionHash
     );
 
-    // â”€â”€ Persist to Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Persist to Supabase ───────────────────────────────────────────────────
     try {
       const { createClient: createSbClient } = await import(
         '@supabase/supabase-js'
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
       await logAutomation('mint_nft.persist', 'event', 'failure', { recipient, txHash: receipt.transactionHash, qronId }, msg);
     }
 
-    // â”€â”€ Update AuthiChain provenance to 'minted' â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Update AuthiChain provenance to 'minted' ─────────────────────────────
     if (registration_id && authichainUrl) {
       try {
         await fetch(`${authichainUrl}/api/qron-register/mint`, {
