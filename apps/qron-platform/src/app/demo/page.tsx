@@ -148,7 +148,7 @@ export default function DemoGalleryPage() {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
             <h2 className="text-4xl font-black mb-6 uppercase tracking-tighter italic">Ready for Your <span className="gold-text">Pilot?</span></h2>
             <p className="text-zinc-500 mb-12 max-w-lg mx-auto leading-loose font-medium uppercase tracking-[0.2em] text-xs">
-              Join the 1,200+ brands using the AuthiChain protocol to eliminate counterfeiting and increase customer engagement by ~25%.
+              Be one of the first pilots on the AuthiChain protocol. The spec, the reference verifier and the conformance suite are open — audit the cryptography before you commit to anything.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6">
                 <Link href="/" className="btn-gold inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs shadow-gold">

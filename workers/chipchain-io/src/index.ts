@@ -2311,7 +2311,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
     <div class="compliance-card"><h3>EU Battery Regulation (DPP)</h3><p>Digital Product Passport export for EV and industrial batteries. Full raw-material traceability chain from mine to pack, ready for EU market entry.</p></div>
     <div class="compliance-card"><h3>IPC-1752A / CMRT Conflict Minerals</h3><p>Automated Conflict Minerals Reporting Template generation for SEC Dodd-Frank Section 1502. On-chain supplier declarations eliminate manual data collection.</p></div>
     <div class="compliance-card"><h3>US NDAA Section 889 (Banned Components)</h3><p>Cross-reference component registrations against NDAA prohibited supplier lists. Automatic flag at sourcing and incoming inspection for federal contract compliance.</p></div>
-    <div class="compliance-card"><h3>ISO 9001 Audit Trail</h3><p>Immutable on-chain records satisfy ISO 9001 traceability requirements. One-click evidence package export for certification audits and customer requests.</p></div>
+    <div class="compliance-card"><h3>ISO 9001 Audit Trail</h3><p>Immutable on-chain records built to support ISO 9001 traceability evidence. One-click evidence package export for certification audits and customer requests. Certification remains yours to hold.</p></div>
   </div>
 </section>
 
