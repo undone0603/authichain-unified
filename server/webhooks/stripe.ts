@@ -30,6 +30,7 @@ import {
   createSystemNotification,
   claimWebhookEvent,
   markWebhookEventProcessed,
+  getDb,
 } from "../db";
 import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
 import { handleServiceOrderPayment } from "../services/order-payment-handler";
@@ -413,7 +414,14 @@ export async function handleStripeWebhook(
         );
 
         if (session.metadata?.type === "one_time_service") {
-          await handleServiceOrderPayment({ id: session.id, payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : undefined });
+          // handleServiceOrderPayment is (db, session). This call passed only the
+          // session, so one-time service orders silently failed to be marked paid.
+          // This module already imports from ../db, so taking a handle here is
+          // consistent with the existing dependency rather than a new one.
+          await handleServiceOrderPayment(await getDb(), {
+            id: session.id,
+            payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : undefined,
+          });
         }
 
         console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);
