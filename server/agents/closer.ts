@@ -361,7 +361,7 @@ Terms to include:
 2. Services: 6-month AuthiChain pilot — product authentication platform including QR code generation, blockchain provenance tracking, AI confidence scoring, dashboard access, and onboarding support
 3. Payment: $${priceUsd.toLocaleString()} USD, due upon execution
 4. IP: AuthiChain retains all platform IP. Client retains rights to their product data.
-5. Data: AuthiChain stores no personally identifiable consumer data beyond scan metadata. Compliant with SOC 2 principles.
+5. Data: AuthiChain stores no personally identifiable consumer data beyond scan metadata.
 6. Termination: Either party may terminate with 30 days written notice after the pilot period.
 7. Acceptance: Execution of payment constitutes acceptance of these terms.
 8. Governing law: State of Delaware, United States.

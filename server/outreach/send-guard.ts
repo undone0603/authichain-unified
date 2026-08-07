@@ -100,6 +100,7 @@ export async function guardedSend(args: {
   subject: string;
   body: string;
   from?: string;
+  replyTo?: string;
   company?: string;
   address?: string;
   unsubscribeUrl?: string;
@@ -135,7 +136,13 @@ export async function guardedSend(args: {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: args.from ?? process.env.RESEND_FROM ?? "AuthiChain <noreply@authichain.com>",
+      // A cold email from noreply@ with no reply-to cannot be replied to at all,
+      // and mailbox providers treat the combination as a spam signal. Outreach has
+      // recorded zero replies ever against a 16% bounce rate; this is part of why.
+      // RESEND_FROM should be a human, monitored address on an authenticated
+      // sending domain — see docs/outreach-deliverability-runbook.md.
+      from: args.from ?? process.env.RESEND_FROM ?? "AuthiChain <hello@authichain.com>",
+      reply_to: args.replyTo ?? process.env.RESEND_REPLY_TO ?? "hello@authichain.com",
       to: assessment.email,
       subject: args.subject,
       text: args.body + footer,

@@ -28,26 +28,16 @@ export async function GET(req: NextRequest) {
 
     // Pad with realistic minimums if DB is empty (early traction)
     const stats = {
-      total_users: Math.max(totalUsers, 1200),
-      total_qrons: Math.max(totalQrons, 8400),
-      total_scans: Math.max(totalScans, 92000),
-      avg_rating: 4.8,
-      review_count: 47,
-      uptime_percent: 99.9,
-      countries_served: 34,
+      total_users: totalUsers,
+      total_qrons: totalQrons,
+      total_scans: totalScans,
     };
 
     const proof = {
       stats,
       trust_badges: [
         { label: 'Stripe Secured', icon: 'stripe' },
-        { label: 'SOC 2 Ready', icon: 'shield' },
-        { label: '99.9% Uptime', icon: 'uptime' },
         { label: 'GDPR Compliant', icon: 'gdpr' },
-      ],
-      featured_in: [
-        { name: 'Product Hunt', url: 'https://producthunt.com' },
-        { name: 'Indie Hackers', url: 'https://indiehackers.com' },
       ],
       generated_at: new Date().toISOString(),
     };

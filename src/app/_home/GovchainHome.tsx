@@ -31,7 +31,7 @@ export function GovchainHome() {
       stats={[
         { value: '256-bit', label: 'SHA-3 Hash' },
         { value: 'Instant', label: 'Seal Time' },
-        { value: 'SOC 2', label: 'Compliant' },
+        { value: 'No Login', label: 'To Verify' },
         { value: 'Open', label: 'Verification' },
       ]}
       features={[
