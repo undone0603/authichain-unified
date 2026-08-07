@@ -108,7 +108,7 @@ Thanks for mentioning that you're also evaluating other solutions. That's smart 
 Here's how AuthiChain stands apart:
 
 1. **Multi-chain support**: Polygon + Bitcoin Ordinals (competitors: Polygon-only)
-2. **Compliance-first**: GDPR + SOC2 built-in (competitors: add-on)
+2. **Compliance-first**: GDPR built-in (competitors: add-on)
 3. **Turnkey integration**: 48-hour implementation vs. 12-week average
 
 I'd love to show you a side-by-side comparison of our architecture vs. \[competitor\]. It's usually eye-opening.

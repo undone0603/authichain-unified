@@ -35,6 +35,9 @@ that nobody else in this industry has.
 
 **This is the highest-leverage item in the document and it costs a day.**
 
+> **Status: executed on this branch.** A repo-wide sweep for the same defect found
+> more than the three instances below — see §2.1. All of it is fixed here.
+
 An authenticity company cannot be caught fabricating its own evidence. Not "should not" —
 cannot. It is the one failure mode from which this specific business does not recover,
 because the product *is* the claim that claims can be trusted. Three concrete instances
@@ -93,6 +96,53 @@ and an explicit "these are demos, not customers" label on demo content. In a mar
 saturated with vendors making unfalsifiable trust claims, being the one company whose
 numbers are independently checkable *is* the differentiated position. Lead with the honesty
 your competitors can't afford.
+
+### 2.1 What the full sweep found
+
+The three instances above were what surfaced from a targeted look. Grepping the whole repo
+for the same defect found the problem is broader — the three were a sample, not the set.
+
+**Additional fabricated usage metrics**
+
+- `src/app/authichain/page.tsx` ran a **"Live Trust Feed"** seeded at `useState(1247)` and
+  incremented by `Math.floor(Math.random() * 3) + 1` every four seconds. Visitors watched
+  a verification counter tick upward in real time, against a platform with no recorded
+  third-party verifications. This is the most serious instance found: not a stale number,
+  but a running simulation of activity presented as live.
+- The same page's "Protocol Stats" band claimed **`124M+` Total Verifications** and
+  **`8,420` Network Nodes**, plus a `99.99%` "Uptime SLA" that no contract backs.
+- `apps/qron-platform/` carries duplicate copies of both the page and the `social-proof`
+  route, with identical fabrications. It is not in `pnpm-workspace.yaml` and the live
+  Vercel project builds from the repo root, so it appears to be a legacy tree — but **this
+  repository is public**, so the claims are discoverable there regardless of what deploys.
+
+**Additional unsubstantiated certification claims** (beyond the three SOC 2 sites)
+
+- `src/app/authichain/page.tsx` also asserted **ISO 27001 Ready** and **NIST SP 800-131A**
+  in the same badge row — the identical shape to the DFARS and SBIR badges removed in
+  `b31b2c2`, with no substantiating record in the repo.
+- `src/lib/email-templates/index.ts:111` sent **"GDPR + SOC2 built-in"** to prospects in
+  the competitor-objection nurture template. This one leaves the building.
+- `server/agents/closer.ts:364` put **"Compliant with SOC 2 principles"** into the
+  generated **Service Agreement** — a term in a document a customer signs. Legally the
+  most exposed instance of the set.
+- `apps/qron-platform/src/app/api/plans/route.ts:160` sold **"SOC 2 reports"** as an
+  Enterprise plan deliverable.
+
+**Left in place deliberately**
+
+- `client/src/pages/RegulatoryDemo.tsx:26` — mock rows (`REG-2024-001`…) in a compliance
+  *dashboard demo*, illustrating what the product displays rather than asserting
+  AuthiChain's own status. Worth an explicit "sample data" label, but restructuring a demo
+  page is a product decision, not a credibility fix.
+- `server/agents/security.ts:21` — `'General SOC2'` is a default describing a *customer's*
+  compliance requirements inside a prompt. Not a self-claim.
+
+**One more accuracy gap, noted not fixed:** `docs/CAPABILITIES.md` §1 states
+"`pnpm check` 0 errors · `pnpm test` 503/503." Actual on `main` today: **20 type errors**
+and **652/655 tests passing with 3 failures.** Pre-existing and unrelated to this branch —
+verified by running both against a clean stash — but a document asserting green status
+while the tree is not green is the same category of problem as everything above.
 
 ---
 
@@ -285,7 +335,7 @@ containing them.
 
 | Window | Objective | Done when |
 |---|---|---|
-| **Week 1** | Credibility repair | `social-proof` floors deleted; `AUTHENTICITY_INDEX.md` rebuilt or removed; all three SOC 2 claims pulled; public transparency page live with real numbers |
+| **Week 1** | Credibility repair | ~~`social-proof` floors deleted; `AUTHENTICITY_INDEX.md` removed; SOC 2 and other unearned certification claims pulled; simulated "Live Trust Feed" and invented protocol stats removed~~ **done on this branch** — remaining: public transparency page live with real numbers |
 | **Week 1–2** | Focus | 10 brands parked/redirected; StrainChain + AuthiChain + GovChain only; no-op outreach crons disabled |
 | **Week 2–3** | Email infrastructure | SPF/DKIM/DMARC green, dedicated warmed domain, human From:, bounce rate under 3% on a verified list |
 | **Week 2–6** | First revenue | Founder-led: 20 hand-written emails/week to Michigan cannabis operators. **Target: 10 paying customers.** Not 100 — 10 |
