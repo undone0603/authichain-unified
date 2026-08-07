@@ -110,7 +110,7 @@ export async function queueSocialShowcase(qron: {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: `Check out this AI-generated QRON! ðŸŽ¨\n\nPrompt: ${qron.prompt}\n\n#AIArt #QRCode #QRON`,
+          text: `Check out this AI-generated QRON! 🎨\n\nPrompt: ${qron.prompt}\n\n#AIArt #QRCode #QRON`,
           media: { picture: qron.imageUrl },
         }),
       });

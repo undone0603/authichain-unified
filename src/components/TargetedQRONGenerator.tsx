@@ -8,15 +8,15 @@ import { createClient } from '@/utils/supabase/client';
 
 // --- Style presets (must match API route keys) ---
 const STYLE_OPTIONS = [
-  { key: 'portrait', label: 'Oil Portrait', emoji: 'ðŸŽ¨', tier: 'free' },
-  { key: 'watercolor', label: 'Watercolor', emoji: 'ðŸ–Œï¸', tier: 'free' },
-  { key: 'cyberpunk', label: 'Cyberpunk', emoji: 'ðŸ¤–', tier: 'free' },
-  { key: 'miniature', label: 'Tiny World', emoji: 'ðŸ™ï¸', tier: 'pro' },
-  { key: 'anime', label: 'Anime', emoji: 'â›©ï¸', tier: 'pro' },
-  { key: 'luxury', label: 'Luxury Brand', emoji: 'ðŸ’Ž', tier: 'pro' },
-  { key: 'graffiti', label: 'Street Art', emoji: 'ðŸŽ­', tier: 'pro' },
-  { key: 'geometric', label: 'Geometric', emoji: 'ðŸ”·', tier: 'free' },
-  { key: 'nature', label: 'Botanical', emoji: 'ðŸŒ¿', tier: 'free' },
+  { key: 'portrait', label: 'Oil Portrait', emoji: '🎨', tier: 'free' },
+  { key: 'watercolor', label: 'Watercolor', emoji: '🖌️', tier: 'free' },
+  { key: 'cyberpunk', label: 'Cyberpunk', emoji: '🤖', tier: 'free' },
+  { key: 'miniature', label: 'Tiny World', emoji: '🏙️', tier: 'pro' },
+  { key: 'anime', label: 'Anime', emoji: '⛩️', tier: 'pro' },
+  { key: 'luxury', label: 'Luxury Brand', emoji: '💎', tier: 'pro' },
+  { key: 'graffiti', label: 'Street Art', emoji: '🎭', tier: 'pro' },
+  { key: 'geometric', label: 'Geometric', emoji: '🔷', tier: 'free' },
+  { key: 'nature', label: 'Botanical', emoji: '🌿', tier: 'free' },
 ] as const;
 
 type StyleKey = (typeof STYLE_OPTIONS)[number]['key'];
@@ -135,7 +135,7 @@ export function TargetedQRONGenerator({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* â”€â”€ Left: Input Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Left: Input Panel ─────────────────────────────────────────────────── */}
       <div className="protocol-card space-y-5">
         <div className="flex items-center gap-2">
           <Target className="w-5 h-5 text-gold" />
@@ -179,7 +179,7 @@ export function TargetedQRONGenerator({
             disabled={isGenerating}
           />
           <p className="text-xs text-slate-600 mt-1">
-            Be specific â€” include details like color, expression, setting if
+            Be specific — include details like color, expression, setting if
             desired.
           </p>
         </div>
@@ -222,7 +222,7 @@ export function TargetedQRONGenerator({
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="text-sm gold-text hover:opacity-80 transition-colors"
         >
-          {showAdvanced ? 'âˆ’ Hide' : '+ Show'} Advanced Options
+          {showAdvanced ? '− Hide' : '+ Show'} Advanced Options
         </button>
 
         {showAdvanced && (
@@ -291,12 +291,12 @@ export function TargetedQRONGenerator({
         </button>
 
         <p className="text-xs text-slate-500 text-center">
-          Uses high error-correction QR + Hugging Face ControlNet Â· ~20â€“45
+          Uses high error-correction QR + Hugging Face ControlNet · ~20–45
           seconds
         </p>
       </div>
 
-      {/* â”€â”€ Right: Preview Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Right: Preview Panel ──────────────────────────────────────────────── */}
       <div>
         <QRDisplay
           qron={generatedQRON}
@@ -312,19 +312,19 @@ export function TargetedQRONGenerator({
             </h3>
             <div className="grid grid-cols-3 gap-3 text-center text-xs text-slate-400">
               <div className="space-y-1">
-                <div className="text-2xl">ðŸ¤–</div>
+                <div className="text-2xl">🤖</div>
                 <div>Cyberpunk</div>
-                <div className="text-slate-600">Neon Â· Glitch Â· Dark</div>
+                <div className="text-slate-600">Neon · Glitch · Dark</div>
               </div>
               <div className="space-y-1">
-                <div className="text-2xl">ðŸ–Œï¸</div>
+                <div className="text-2xl">🖌️</div>
                 <div>Watercolor</div>
-                <div className="text-slate-600">Soft Â· Vivid Â· Art</div>
+                <div className="text-slate-600">Soft · Vivid · Art</div>
               </div>
               <div className="space-y-1">
-                <div className="text-2xl">ðŸ™ï¸</div>
+                <div className="text-2xl">🏙️</div>
                 <div>Tiny World</div>
-                <div className="text-slate-600">Isometric Â· Miniature</div>
+                <div className="text-slate-600">Isometric · Miniature</div>
               </div>
             </div>
           </div>
