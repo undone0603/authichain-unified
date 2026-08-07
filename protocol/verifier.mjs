@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2026 AuthiChain Inc.
  *
- * Zero dependencies, Node >= 18. Runs offline. Nothing here contacts an
+ * Zero dependencies (node: builtins only). Verified on Node 22; the APIs used
+ * are available from Node 18. Runs offline. Nothing here contacts an
  * AuthiChain server, and that is the point: a verifier you have to ask us to
  * run for you is not proof of anything.
  *

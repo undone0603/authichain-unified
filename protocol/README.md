@@ -3,7 +3,7 @@
 **Apache-2.0.** Anyone may implement this, including competitors.
 
 - [`SPEC.md`](./SPEC.md) — the specification (v0.1.0 draft)
-- [`verifier.mjs`](./verifier.mjs) — reference verifier, zero dependencies, Node ≥ 18
+- [`verifier.mjs`](./verifier.mjs) — reference verifier, zero dependencies (`node:` builtins only). Verified on Node 22; the APIs it uses are available from Node 18.
 - [`LICENSE`](./LICENSE) — Apache License 2.0
 
 ## Why this directory is open while the rest of the repo is not
