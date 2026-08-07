@@ -152,7 +152,10 @@ export async function consumeVerificationQuota(
 
     if (keyError) return { allowed: false, reason: 'unavailable' };
     if (!keyRow) return { allowed: false, reason: 'invalid_key' };
-    if (keyRow.is_active === false) return { allowed: false, reason: 'key_disabled' };
+    // api_keys.is_active is nullable in the live schema. Require an explicit
+    // true: a NULL is ambiguous, and ambiguity resolves to denied here, not
+    // allowed. Checking `=== false` would let NULL rows through.
+    if (keyRow.is_active !== true) return { allowed: false, reason: 'key_disabled' };
 
     const { data, error } = await client.rpc('consume_verification_quota', {
       p_api_key_id: keyRow.id,

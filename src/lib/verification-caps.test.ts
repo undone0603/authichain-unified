@@ -174,6 +174,15 @@ describe('consumeVerificationQuota — fails closed', () => {
     expect(d).toEqual({ allowed: false, reason: 'key_disabled' });
   });
 
+  it('denies a key whose is_active is NULL rather than treating it as active', async () => {
+    // api_keys.is_active is nullable in the live schema, so this row shape is
+    // reachable. Ambiguity must resolve to denied.
+    const d = await consumeVerificationQuota(headersWith({ 'x-api-key': KEY }), {
+      client: stubClient({ keyRow: { id: 'k1', is_active: null } as never }),
+    });
+    expect(d).toEqual({ allowed: false, reason: 'key_disabled' });
+  });
+
   it('denies when the quota RPC errors', async () => {
     const d = await consumeVerificationQuota(headersWith({ 'x-api-key': KEY }), {
       client: stubClient({ keyRow: { id: 'k1', is_active: true }, rpcError: true }),
