@@ -4,6 +4,7 @@
 
 - [`SPEC.md`](./SPEC.md) — the specification (v0.1.0 draft)
 - [`verifier.mjs`](./verifier.mjs) — reference verifier, zero dependencies (`node:` builtins only). Verified on Node 22; the APIs it uses are available from Node 18.
+- [`conformance/`](./conformance/) — 28-fixture conformance suite; run it against any implementation
 - [`LICENSE`](./LICENSE) — Apache License 2.0
 
 ## Why this directory is open while the rest of the repo is not
@@ -69,6 +70,16 @@ instead of 64. A conforming verifier refuses both, and there are tests for it:
   this class of system misleads people.
 - **A malformed transaction hash is rejected, not displayed.** Render a truncated
   hash and you have published something that looks like proof and links nowhere.
+
+## Claim conformance
+
+```bash
+node conformance/run.mjs --strict -- <your command>
+```
+
+28 fixtures, any language. All must pass. The suite is validated against
+deliberately broken implementations so it demonstrably can fail — see
+[`conformance/README.md`](./conformance/README.md).
 
 ## Status
 
