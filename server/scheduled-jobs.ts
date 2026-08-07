@@ -110,14 +110,28 @@ export async function executeJobWithDb(job: JobDefinition, db: Db, options?: { f
     console.log(`[Scheduler] Completed ${job.name} in ${duration}ms (${result.itemsProcessed} items)`);
   } catch (error: any) {
     const duration = Date.now() - startTime;
-    console.error(`[Scheduler] Failed ${job.name}:`, error.message);
+
+    // Drizzle wraps database failures so that error.message is only
+    // "Failed query: <sql>" — the actual Postgres reason (missing column,
+    // constraint violation, permission denied) lives on error.cause. Logging
+    // just the message is why these jobs failed hundreds of times over days
+    // without anyone being able to say why. Surface the cause.
+    const cause = error?.cause;
+    const detail = cause
+      ? [cause.code && `[${cause.code}]`, cause.message, cause.detail, cause.hint]
+          .filter(Boolean)
+          .join(' ')
+      : undefined;
+    const message = detail ? `${error.message} — ${detail}` : (error.message || "Unknown error");
+
+    console.error(`[Scheduler] Failed ${job.name}:`, message);
 
     await db.update(scheduledJobRuns)
       .set({
         status: "failed",
         completedAt: new Date(),
         duration,
-        error: error.message || "Unknown error",
+        error: message,
       })
       .where(eq(scheduledJobRuns.id, Number(runId)));
   }
