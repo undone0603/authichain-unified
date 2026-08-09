@@ -12,7 +12,7 @@
 #
 # Get your token: https://vercel.com/account/tokens
 
-set -eo pipefail
+set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${REPO_ROOT}/.env"

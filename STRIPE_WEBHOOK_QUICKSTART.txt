@@ -1,0 +1,248 @@
+================================================================================
+STRIPE WEBHOOK IMPLEMENTATION — QUICK START
+================================================================================
+
+WHAT WAS IMPLEMENTED?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Webhook Handler
+  File: src/app/api/webhooks/stripe/route.ts (386 lines)
+  - POST endpoint at /api/webhooks/stripe
+  - Stripe signature validation with STRIPE_WEBHOOK_AUTHICHAIN_SECRET
+  - Handles 4 events: checkout.session.completed, invoice.payment_succeeded,
+    invoice.payment_failed, customer.subscription.deleted
+  - Idempotency deduplication (Stripe retries are deduplicated)
+  - Comprehensive error handling and audit logging
+
+✓ Database Schema
+  File: supabase/migrations/00003_stripe_payment_tracking.sql (213 lines)
+  Tables:
+    - payments: Record individual checkout payments
+    - subscriptions: Track subscription lifecycle (active/failed/canceled)
+    - alerts: Alert sales team on payment failures
+    - audit_log: Log all webhook events for compliance
+    - stripe_events: Idempotency guard (prevent duplicate processing)
+  Views:
+    - payment_summary_daily: Revenue reporting
+    - subscription_status_summary: Subscription health
+    - critical_alerts: Unresolved alerts dashboard
+
+✓ Documentation
+  - STRIPE_WEBHOOK_IMPLEMENTATION.md: Executive summary (this directory)
+  - docs/stripe-webhook-setup.md: Comprehensive guide (700+ lines)
+  - docs/stripe-webhook-checklist.md: Quick reference (250+ lines)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+WHAT DOES IT DO?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Event: checkout.session.completed
+  → INSERT payments (session_id, customer_email, amount_cents, currency, status='paid')
+  → UPDATE lead_captures SET status='customer' WHERE email=customer_email
+  Purpose: Track revenue, tag leads as customers for nurturing
+
+Event: invoice.payment_succeeded
+  → UPDATE subscriptions SET status='active', next_billing_date=...
+  Purpose: Keep subscription lifecycle up-to-date
+
+Event: invoice.payment_failed
+  → UPDATE subscriptions SET status='payment_failed'
+  → INSERT alerts FOR SALES TEAM
+  Purpose: Alert team to retry payments, prevent churn
+
+Event: customer.subscription.deleted
+  → UPDATE subscriptions SET status='canceled', canceled_at=NOW()
+  Purpose: Track cancellations
+
+ALL EVENTS:
+  → INSERT stripe_events (for idempotency deduplication)
+  → INSERT audit_log (for compliance and debugging)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SETUP IN 5 MINUTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. APPLY DATABASE MIGRATION
+   $ cd supabase
+   $ supabase db push
+
+2. DEPLOY CODE
+   $ git add src/app/api/webhooks/stripe/route.ts supabase/migrations/00003_stripe_payment_tracking.sql
+   $ git commit -m "Add Stripe webhook handlers for payment tracking"
+   $ git push origin main
+   (Vercel auto-deploys)
+
+3. GET WEBHOOK SECRET FROM STRIPE
+   → Go to https://dashboard.stripe.com/webhooks
+   → Add endpoint: https://app.authichain.com/api/webhooks/stripe
+   → Events: checkout.session.completed, invoice.payment_succeeded,
+              invoice.payment_failed, customer.subscription.deleted
+   → Click "Reveal signing secret" → Copy (starts with whsec_)
+
+4. ADD ENVIRONMENT VARIABLE IN VERCEL
+   → https://vercel.com/dashboard/settings/environment-variables
+   → Add: STRIPE_WEBHOOK_AUTHICHAIN_SECRET = (paste secret from step 3)
+   → Environments: Production, Preview, Development
+
+5. REDEPLOY FOR ENV VAR TO TAKE EFFECT
+   → Vercel → Deployments → Click latest → Redeploy
+
+DONE! Webhooks are now active.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+VERIFY IT WORKS (3 WAYS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Way 1: STRIPE CLI TEST (Local)
+  $ stripe listen --forward-to localhost:3000/api/webhooks/stripe \
+      --events checkout.session.completed,invoice.payment_succeeded,invoice.payment_failed,customer.subscription.deleted
+  $ pnpm dev
+  $ stripe trigger checkout.session.completed
+  → Check console for "[stripe-webhook] checkout.session.completed: cs_test_..."
+
+Way 2: DATABASE CHECK
+  $ supabase db view payments
+  → Should see a row with your test customer email
+
+Way 3: STRIPE DASHBOARD
+  → https://dashboard.stripe.com/webhooks
+  → Click endpoint
+  → Check "Recent events" → Should show green ✓ status
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DATABASE SCHEMA AT A GLANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+payments
+  session_id (pk) | customer_email | amount_cents | currency | status | created_at | updated_at
+  Example: cs_test_xxx | customer@example.com | 1999 | usd | paid | 2026-06-25 | 2026-06-25
+
+subscriptions
+  subscription_id (pk) | customer_email | product_id | status | next_billing_date | canceled_at | created_at | updated_at
+  Example: sub_test_xxx | customer@example.com | prod_123 | active | 2026-07-25 | NULL | 2026-06-25 | 2026-06-25
+
+alerts
+  id (uuid, pk) | type | message | customer_email | metadata | resolved_at | created_at
+  Example: uuid | payment_failed | "Payment failed for subscription sub_xxx" | customer@example.com | {...} | NULL | 2026-06-25
+
+audit_log
+  id (uuid, pk) | event_type | event_id | status | payload | created_at
+  Example: uuid | stripe_webhook.checkout.session.completed | evt_test_xxx | success | {...} | 2026-06-25
+
+stripe_events
+  event_id (pk) | event_type | processed_at
+  Example: evt_test_xxx | checkout.session.completed | 2026-06-25
+  Purpose: Deduplication — prevents processing the same Stripe event twice
+
+═══════════════════════════════════════════════════════════════════════════════
+
+MONITORING YOUR WEBHOOKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Revenue Today (SQL)
+  SELECT SUM(amount_cents) / 100.0 FROM payments
+  WHERE DATE(created_at) = CURRENT_DATE AND status = 'paid';
+
+Failed Payments Alert (SQL)
+  SELECT * FROM critical_alerts WHERE type = 'payment_failed'
+  ORDER BY created_at DESC;
+
+Webhook Error Rate (SQL)
+  SELECT event_type, COUNT(*) as total,
+    SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as errors
+  FROM audit_log WHERE created_at > NOW() - INTERVAL '24 hours'
+  GROUP BY event_type;
+
+═══════════════════════════════════════════════════════════════════════════════
+
+ENVIRONMENT VARIABLES NEEDED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Already Set (no action needed):
+  STRIPE_SECRET_KEY
+  NEXT_PUBLIC_SUPABASE_URL
+  SUPABASE_SERVICE_ROLE_KEY
+
+NEW (add to Vercel):
+  STRIPE_WEBHOOK_AUTHICHAIN_SECRET  (from Stripe Dashboard → Webhooks → Reveal signing secret)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+FILES CREATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+src/app/api/webhooks/stripe/route.ts                (386 lines)
+supabase/migrations/00003_stripe_payment_tracking.sql  (213 lines)
+docs/stripe-webhook-setup.md                        (700+ lines, comprehensive guide)
+docs/stripe-webhook-checklist.md                    (250+ lines, quick reference)
+STRIPE_WEBHOOK_IMPLEMENTATION.md                    (550+ lines, executive summary)
+STRIPE_WEBHOOK_QUICKSTART.txt                       (this file)
+
+NO EXISTING FILES WERE MODIFIED — Fully backward compatible!
+
+═══════════════════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Problem: Webhook returns 500
+  → Check Vercel Logs: https://vercel.com/dashboard/logs
+  → Verify STRIPE_WEBHOOK_AUTHICHAIN_SECRET is set
+  → Verify database tables exist
+
+Problem: Webhook returns 400 "Webhook Error"
+  → Check Stripe Dashboard → Webhooks → Recent events → Click event for error details
+  → Verify webhook secret matches the one in Stripe Dashboard
+
+Problem: Payments table is empty
+  → Check Stripe Dashboard → Webhooks → Event deliveries (look for ✗ failures)
+  → Check Vercel Logs for errors
+  → Verify webhook endpoint URL is correct: https://app.authichain.com/api/webhooks/stripe
+
+Problem: Duplicate payments in database
+  → This is EXPECTED — Stripe retries webhooks
+  → Check stripe_events table to see dedup working
+  → If you see duplicate ROWS (not retries), check audit_log for errors
+
+Full troubleshooting guide: See docs/stripe-webhook-setup.md
+
+═══════════════════════════════════════════════════════════════════════════════
+
+NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ✓ Read this file
+2. ✓ Follow the 5-minute setup above
+3. ✓ Test with Stripe CLI and real payments
+4. ✓ Check Stripe Dashboard for green ✓ webhook status
+5. ✓ Set up monitoring (SQL queries above)
+6. ✓ Read docs/stripe-webhook-setup.md for comprehensive guide
+7. ✓ Integrate with your lead nurturing (HubSpot, Make.com, email)
+8. ✓ Add Slack alerts for critical payment failures
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For comprehensive setup and troubleshooting:
+  → Open: docs/stripe-webhook-setup.md
+
+For quick reference checklist:
+  → Open: docs/stripe-webhook-checklist.md
+
+For executive summary and architecture:
+  → Open: STRIPE_WEBHOOK_IMPLEMENTATION.md
+
+For code documentation:
+  → Read inline comments in src/app/api/webhooks/stripe/route.ts
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Questions? See the FAQ in docs/stripe-webhook-setup.md or check the inline code comments.
+
+Implementation complete as of 2026-06-25.

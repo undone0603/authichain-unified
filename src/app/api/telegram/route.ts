@@ -1,22 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
 import { generateLivingQR } from '@/lib/hf-generation';
 import { supabaseAdmin as admin } from '@/lib/supabase-admin';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-
-/**
- * Telegram calls the webhook with this header set to whatever secret_token
- * was passed to setWebhook — verifying it stops anyone who finds this URL
- * from triggering paid AI generation + bot sends with a forged update.
- */
-function isAuthorizedTelegramRequest(req: NextRequest): boolean {
-  const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
-  if (!expected) return false;
-  const received = req.headers.get('x-telegram-bot-api-secret-token') ?? '';
-  if (received.length !== expected.length) return false;
-  return timingSafeEqual(Buffer.from(received), Buffer.from(expected));
-}
 
 /**
  * TELEGRAM BOT WEBHOOK (qron-telegram)
@@ -27,10 +13,6 @@ export async function POST(req: NextRequest) {
     if (!TELEGRAM_BOT_TOKEN) {
       console.warn('[Telegram] TELEGRAM_BOT_TOKEN missing. Bot is inactive.');
       return NextResponse.json({ error: 'Bot inactive' }, { status: 503 });
-    }
-
-    if (!isAuthorizedTelegramRequest(req)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();

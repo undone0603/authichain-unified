@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
-import { getDb } from "../db";
-import { createSystemNotification, getAllUsers, getBudgetStatus, getRecentActivity, logActivity, type Db } from "./db-helpers";
+import { createSystemNotification, getAllUsers, getBudgetStatus, getRecentActivity, logActivity } from "../db";
 
 type Threshold = 70 | 90;
 
@@ -9,16 +8,16 @@ function alertAction(metric: string, threshold: Threshold, periodKey: string) {
   return `budget_alert_${metric}_${threshold}_${periodKey}`;
 }
 
-async function alreadyAlerted(db: Db, action: string) {
-  const recent = await getRecentActivity(db, 2000);
+async function alreadyAlerted(action: string) {
+  const recent = await getRecentActivity(2000);
   return recent.some(a => a.action === action);
 }
 
-async function notifyAdmins(db: Db, title: string, message: string, details: any) {
-  const admins = (await getAllUsers(db)).filter(u => u.role === "admin");
+async function notifyAdmins(title: string, message: string, details: any) {
+  const admins = (await getAllUsers()).filter(u => u.role === "admin");
   for (const admin of admins) {
-    await createSystemNotification(db, admin.id, title, message, "alert", "/admin");
-    await logActivity(db, {
+    await createSystemNotification(admin.id, title, message, "alert", "/admin");
+    await logActivity({
       userId: admin.id,
       action: "budget_alert_dispatched",
       entityType: "budget",
@@ -29,8 +28,8 @@ async function notifyAdmins(db: Db, title: string, message: string, details: any
   return admins.length;
 }
 
-export async function runBudgetMonitor(db: Db) {
-  const status = await getBudgetStatus(db);
+export async function runBudgetMonitor() {
+  const status = await getBudgetStatus();
   let alerts = 0;
   let recipients = 0;
 
@@ -44,15 +43,14 @@ export async function runBudgetMonitor(db: Db) {
     for (const t of [90, 70] as const) {
       if (c.pct < t) continue;
       const action = alertAction(c.metric, t, c.period);
-      if (await alreadyAlerted(db, action)) continue;
+      if (await alreadyAlerted(action)) continue;
 
       const count = await notifyAdmins(
-        db,
         `Budget Alert: ${c.metric.toUpperCase()} ${t}%`,
         `${c.metric} spend reached ${c.pct}% for period ${c.period}.`,
         { metric: c.metric, threshold: t, pct: c.pct, period: c.period },
       );
-      await logActivity(db, {
+      await logActivity({
         userId: null,
         action,
         entityType: "budget",
@@ -71,11 +69,7 @@ export async function runBudgetMonitor(db: Db) {
 const isMain = !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
-  // Documented bridge: standalone CLI entry point (`node budget-monitor.ts`)
-  // has no caller to thread a db instance from, so it obtains one from the
-  // legacy Node singleton itself.
-  getDb()
-    .then(db => runBudgetMonitor(db))
+  runBudgetMonitor()
     .then(result => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);

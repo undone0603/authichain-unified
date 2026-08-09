@@ -1,13 +1,12 @@
 import { eq } from "drizzle-orm";
-import type { getHyperdriveDb } from "../db";
+import { getDb } from "../db";
 import { users, type InsertUser } from "../../drizzle/schema";
 import { ENV } from "../_core/env";
 
-type Db = ReturnType<typeof getHyperdriveDb>;
-
-export async function upsertUser(db: Db, user: InsertUser): Promise<void> {
+export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   try {
+    const db = await getDb();
     const values: InsertUser = {
       openId: user.openId,
       name: user.name ?? null,
@@ -38,12 +37,14 @@ export async function upsertUser(db: Db, user: InsertUser): Promise<void> {
   }
 }
 
-export async function getUserByOpenId(db: Db, openId: string) {
+export async function getUserByOpenId(openId: string) {
+  const db = await getDb();
   const rows = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return rows[0] ?? null;
 }
 
-export async function getUserById(db: Db, id: number) {
+export async function getUserById(id: number) {
+  const db = await getDb();
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return rows[0] ?? null;
 }

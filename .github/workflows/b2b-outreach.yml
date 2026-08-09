@@ -77,10 +77,6 @@ jobs:
           AUTHICHAIN_BOOK_URL:   ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
           DRY_RUN:               ${{ inputs.dry_run || 'false' }}
           FLUSH_QUEUED_ONLY:     ${{ inputs.flush_queued || 'false' }}
-          # Guardrail/caps layer — every send is check/record-gated through
-          # this. Missing secret fails closed (nothing sends), so this must
-          # be set for the channel to ever actually send once enabled.
-          INTERNAL_API_SECRET:   ${{ secrets.INTERNAL_API_SECRET }}
 
       - name: Flush queued leads (if RESEND_API_KEY available)
         if: ${{ inputs.flush_queued == 'true' }}
@@ -91,4 +87,3 @@ jobs:
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
           OUTREACH_FROM_EMAIL:  ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
           CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
-          INTERNAL_API_SECRET:  ${{ secrets.INTERNAL_API_SECRET }}

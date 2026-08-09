@@ -2,6 +2,7 @@ import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
+import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
@@ -13,10 +14,6 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from "./types/manusTypes";
-type CookieBearingRequest = {
-  headers: Headers | { cookie?: string };
-};
-
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -259,18 +256,9 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  private getCookieHeader(req: CookieBearingRequest): string | undefined {
-    // Fetch Request uses Headers (has get method)
-    if ('get' in req.headers) {
-      return (req.headers as Headers).get('cookie') ?? undefined;
-    }
-    // Express Request has headers.cookie property
-    return (req.headers as { cookie?: string }).cookie;
-  }
-
-  async authenticateRequest(req: CookieBearingRequest): Promise<User> {
+  async authenticateRequest(req: Request): Promise<User> {
     // Regular authentication flow
-    const cookies = this.parseCookies(this.getCookieHeader(req));
+    const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
 

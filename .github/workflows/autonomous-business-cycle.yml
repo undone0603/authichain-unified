@@ -6,13 +6,6 @@ name: Autonomous Business Cycle (Vercel Cron backup)
 # retention, affiliate/founder payouts, GovChain sync, competitive
 # monitoring, subscription health. Until CRON_SECRET is set as a repo
 # secret, the job below skips gracefully.
-#
-# Also the ONLY external trigger for 10 registered jobs (certificate-expiry,
-# lead-nurturing, database-cleanup, weekly-analytics-digest, hubspot-crm-sync,
-# fraud-detection-sweep, vertical-cloner, strainchain-metrc-sync,
-# newsjacking-monitor, staking-rewards) that vercel.json never lists —
-# node-cron's in-process schedule never persists in a serverless Vercel
-# function, so without this loop they'd never run at all.
 
 on:
   schedule:
@@ -29,10 +22,6 @@ on:
     - cron: '0 11 * * *'  # live-systems-check
     - cron: '0 12 * * *'  # token-metrics
     - cron: '0 13 * * *'  # ecosystem-health
-    - cron: '0 14 * * *'  # nurture-replies
-    - cron: '0 16 * * *'
-    - cron: '0 19 * * *'
-    - cron: '0 22 * * *'
   workflow_dispatch: {}
 
 concurrency:
@@ -54,21 +43,18 @@ jobs:
         id: check
         run: |
           if [ -z "${{ secrets.CRON_SECRET }}" ]; then
-            echo "CRON_SECRET repo secret not set — skipping (set it to enable the backup cron loop)."
+            echo "CRON_SECRET repo secret not set — skipping (see workflow header for setup steps)."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Call every cron path (safe no-ops if not due)
+      - name: Call every cron path (safe no-ops if not due / already run by Vercel)
         if: steps.check.outputs.skip == 'false'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          # Fail on unset variables but NOT on pipeline errors — we collect
-          # all results and only fail if a hard error (non-2xx, non-401/403)
-          # exceeds the threshold (currently: any hard error = warn, not fail).
-          set -u
+          set -uo pipefail
           paths=(
             "/api/cron/pipeline"
             "/api/automation/cron"
@@ -83,39 +69,20 @@ jobs:
             "/api/cron/jobs?job=live-systems-check"
             "/api/cron/jobs?job=token-metrics"
             "/api/cron/jobs?job=ecosystem-health"
-            "/api/cron/nurture-replies"
-            "/api/crm/sync"
-            "/api/cron/jobs?job=certificate-expiry-check"
-            "/api/cron/jobs?job=lead-nurturing"
-            "/api/cron/jobs?job=database-cleanup"
-            "/api/cron/jobs?job=weekly-analytics-digest"
-            "/api/cron/jobs?job=hubspot-crm-sync"
-            "/api/cron/jobs?job=fraud-detection-sweep"
-            "/api/cron/jobs?job=vertical-cloner"
-            "/api/cron/jobs?job=strainchain-metrc-sync"
-            "/api/cron/jobs?job=newsjacking-monitor"
-            "/api/cron/jobs?job=staking-rewards"
           )
-          warn=0
+          fail=0
           for p in "${paths[@]}"; do
             url="${APP_URL}${p}"
-            code=$(curl -sS -o /tmp/resp.txt -w '%{http_code}' -X GET "$url" -H "Authorization: Bearer ${CRON_SECRET}" || echo "000")
+            code=$(curl -sS -o /tmp/resp.txt -w '%{http_code}' -X GET "$url" -H "Authorization: Bearer ${CRON_SECRET}")
             if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
               echo "OK  [$code] $p"
             elif [ "$code" -eq 401 ] || [ "$code" -eq 403 ]; then
-              echo "::warning::[$code] $p — CRON_SECRET mismatch; resync with Vercel env"
-              cat /tmp/resp.txt || true
-              warn=$((warn+1))
-            elif [ "$code" = "000" ]; then
-              echo "::warning::[CURL_ERR] $p — network/connection error"
-              warn=$((warn+1))
+              echo "AUTH [$code] $p"
+              cat /tmp/resp.txt
+              fail=1
             else
-              echo "::warning::[$code] $p"
-              cat /tmp/resp.txt || true
-              warn=$((warn+1))
+              echo "WARN [$code] $p"
+              cat /tmp/resp.txt
             fi
           done
-          echo "Done — $warn warnings out of ${#paths[@]} paths."
-          # Exit 0 always: warnings are informational; a hard-exit here would
-          # stop the remaining schedule entries from firing on subsequent runs.
-          exit 0
+          exit $fail

@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { adminProcedure, router, publicProcedure } from "../_core/trpc";
 import { issueSovereignPassport, verifySovereignPassport } from "./vc-service";
-import { getDb } from "../db";
-import { logActivity } from "../content-db-helpers";
+import * as db from "../db";
 import { TRPCError } from "@trpc/server";
 
 export const govchainRouter = router({
@@ -26,16 +25,13 @@ export const govchainRouter = router({
         claims: input.claims,
       });
 
-      // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
-      // context does. Bridge via getDb() until this router has a ctx.db to use.
-      const db = await getDb();
       // Store issuance record in activity log
-      await logActivity(db, {
+      await db.logActivity({
         userId: ctx.user.id,
         action: "govchain_passport_issued",
         entityType: "passport",
         entityId: 0,
-        details: {
+        details: { 
           documentId: input.documentId,
           recipient: input.recipientEmail,
           vcId: vc.id
@@ -54,10 +50,9 @@ export const govchainRouter = router({
     }))
     .query(async ({ input }) => {
       const result = await verifySovereignPassport(input.vc);
-
+      
       if (result.valid) {
-        const db = await getDb();
-        await logActivity(db, {
+        await db.logActivity({
           userId: null,
           action: "govchain_passport_verified",
           entityType: "passport",

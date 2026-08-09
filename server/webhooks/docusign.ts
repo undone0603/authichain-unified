@@ -5,18 +5,17 @@
  * updates deal status in the sales pipeline.
  */
 
-import type { Db } from "../db-helpers";
-import {
-  getLeadByEmail,
-  updateLead,
+import { 
+  getLeadByEmail, 
+  updateLead, 
   logActivity,
-  createSystemNotification,
-} from "../db-helpers.js";
+  createSystemNotification 
+} from "../db.js";
 import { calculateLeadScore } from "../sales/scoring-service.js";
 
-export async function handleDocuSignWebhook(db: Db, payload: any) {
+export async function handleDocuSignWebhook(payload: any) {
   const { event: eventType, recipientEmail, envelopeId } = payload;
-
+  
   if (!recipientEmail) {
     return { success: false, error: "Recipient email missing" };
   }
@@ -24,7 +23,7 @@ export async function handleDocuSignWebhook(db: Db, payload: any) {
   console.log(`[docusign-webhook] Received ${eventType} for ${recipientEmail}`);
 
   // 1. Find the lead in our DB
-  const lead = await getLeadByEmail(db, recipientEmail);
+  const lead = await getLeadByEmail(recipientEmail);
   if (!lead) {
     console.warn(`[docusign-webhook] Lead not found for email: ${recipientEmail}`);
     return { success: false, error: "Lead not found" };
@@ -32,7 +31,7 @@ export async function handleDocuSignWebhook(db: Db, payload: any) {
 
   // 2. Update lead status flags
   const updates: any = {};
-
+  
   if (eventType === "envelope-sent") {
     updates.contractSent = true;
   } else if (eventType === "envelope-delivered") {
@@ -40,10 +39,9 @@ export async function handleDocuSignWebhook(db: Db, payload: any) {
   } else if (eventType === "envelope-completed") {
     updates.contractSigned = true;
     updates.dealStage = "CLOSED_WON";
-
+    
     // 🎉 Notify sales team of a closed deal
     await createSystemNotification(
-      db,
       1, // Admin
       "🎉 DEAL CLOSED!",
       `Prospect ${recipientEmail} (${lead.company}) has signed the AuthiChain MSA!`,
@@ -55,11 +53,11 @@ export async function handleDocuSignWebhook(db: Db, payload: any) {
   }
 
   if (Object.keys(updates).length > 0) {
-    await updateLead(db, lead.id, updates);
+    await updateLead(lead.id, updates);
   }
 
   // 3. Log activity for the audit trail
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: `docusign_${eventType}`,
     entityType: "lead",
@@ -68,8 +66,8 @@ export async function handleDocuSignWebhook(db: Db, payload: any) {
   });
 
   // 4. Recalculate lead score
-  const newScore = await calculateLeadScore(db, lead.id);
-
+  const newScore = await calculateLeadScore(lead.id);
+  
   console.log(`[docusign-webhook] Lead ${recipientEmail} status updated after DocuSign event.`);
 
   return { success: true, score: newScore };

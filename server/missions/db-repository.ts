@@ -4,52 +4,29 @@
 // (see server/missions.test.ts repository-injection coverage).
 import * as missionsDb from "./missions.db";
 import type { IMissionsRepository, MissionStatus, MissionType } from "./types";
-import { getDb, type getHyperdriveDb } from "../db";
-
-type Db = ReturnType<typeof getHyperdriveDb>;
 
 export class DbMissionsRepository implements IMissionsRepository {
-  // Optional: callers that already have a threaded `db` (e.g. a future
-  // ctx.db-aware caller) can inject it directly. server/_core/context.ts
-  // (out of scope for this migration — Task 1/2 territory) still
-  // instantiates this with zero args, so the constructor — and therefore
-  // resolveDb() below — must keep working without one. Until context.ts
-  // is wired up to pass a real per-request db, this falls back to the
-  // legacy getDb() singleton as a documented bridge.
-  constructor(private readonly injectedDb?: Db) {}
-
-  private async resolveDb(): Promise<Db> {
-    if (this.injectedDb) return this.injectedDb;
-    return getDb();
+  getMissions(status?: MissionStatus): Promise<any[]> {
+    return missionsDb.getMissions(status);
   }
 
-  async getMissions(status?: MissionStatus): Promise<any[]> {
-    const db = await this.resolveDb();
-    return missionsDb.getMissions(db, status);
+  getMissionById(id: string): Promise<any | null> {
+    return missionsDb.getMissionById(id);
   }
 
-  async getMissionById(id: string): Promise<any | null> {
-    const db = await this.resolveDb();
-    return missionsDb.getMissionById(db, id);
+  createMission(type: MissionType): Promise<string> {
+    return missionsDb.createMission(type);
   }
 
-  async createMission(type: MissionType): Promise<string> {
-    const db = await this.resolveDb();
-    return missionsDb.createMission(db, type);
+  updateMissionStatus(id: string, status: MissionStatus): Promise<void> {
+    return missionsDb.updateMissionStatus(id, status);
   }
 
-  async updateMissionStatus(id: string, status: MissionStatus): Promise<void> {
-    const db = await this.resolveDb();
-    return missionsDb.updateMissionStatus(db, id, status);
+  getTasksByMission(missionId: string): Promise<any[]> {
+    return missionsDb.getTasksByMission(missionId);
   }
 
-  async getTasksByMission(missionId: string): Promise<any[]> {
-    const db = await this.resolveDb();
-    return missionsDb.getTasksByMission(db, missionId);
-  }
-
-  async retryTask(id: string): Promise<void> {
-    const db = await this.resolveDb();
-    return missionsDb.retryTask(db, id);
+  retryTask(id: string): Promise<void> {
+    return missionsDb.retryTask(id);
   }
 }

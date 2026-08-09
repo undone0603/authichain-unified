@@ -35,7 +35,6 @@ on:
 jobs:
   proposals:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -43,9 +42,9 @@ jobs:
         with: { version: '10.28.2' }
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: pnpm }
-        - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile
+
       - name: Generate AI proposal drafts
-        continue-on-error: true
         run: pnpm exec tsx scripts/generate-proposals.ts
         env:
           OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}

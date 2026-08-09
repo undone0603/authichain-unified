@@ -548,7 +548,7 @@ export async function POST(request: Request) {
   }
 
   const Stripe = (await import('stripe')).default;
-  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-06-24.dahlia' as const });
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-05-27.dahlia' as const });
 
   let event: Stripe.Event;
   try {

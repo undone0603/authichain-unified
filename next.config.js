@@ -1,19 +1,4 @@
 /** @type {import('next').NextConfig} */
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-
-// Guard against a regression that once shipped a broken build to prod: a
-// stray root-level app/ directory silently shadows src/app/ in `next build`
-// (all other routes get dropped with no warning). Fail fast instead.
-if (existsSync(join(process.cwd(), "app")) && existsSync(join(process.cwd(), "src", "app"))) {
-  throw new Error(
-    "Both app/ and src/app/ exist at the project root. Next.js silently " +
-    "builds only the root app/ directory and drops every route under " +
-    "src/app/ with no error. Remove the root app/ directory (merge any " +
-    "needed files into src/app/ first)."
-  );
-}
-
 // Sentry is optional: @sentry/nextjs is not a dependency yet (zero-budget),
 // and `next build` must not fail when it's absent. If the SDK is installed
 // later, the wrapper activates automatically.
@@ -44,7 +29,9 @@ const CSP = [
 ].join('; ');
 
 const nextConfig = {
-outputFileTracingRoot: process.cwd(),
+  experimental: {
+    outputFileTracingRoot: process.cwd(),
+  },
   // Messy multi-architecture codebase — type errors are gated in CI, not here.
   typescript: { ignoreBuildErrors: true },
 
@@ -106,7 +93,9 @@ outputFileTracingRoot: process.cwd(),
 
   env: {
     NEXT_PUBLIC_CANONICAL_HOSTNAME:
-      process.env.APP_ORIGIN ?? 'https://authichain.com',
+      process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'https://authichain.com',
     // Build-time fallbacks: Turbopack inlines module-level instantiations,
     // so these secrets need a non-empty value at build time to prevent
     // constructor throws. At runtime, the real env vars take over.

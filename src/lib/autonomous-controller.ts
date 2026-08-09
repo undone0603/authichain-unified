@@ -282,11 +282,7 @@ export class AutonomousController {
         });
       }
 
-      // downloadUrl is a multi-hundred-KB base64 data URL — log its size, not the blob
-      await logAutomation(workflowName, 'cron', 'success', {
-        trend: currentTrend,
-        imageKB: Math.round((data.downloadUrl?.length ?? 0) / 1024),
-      });
+      await logAutomation(workflowName, 'cron', 'success', { trend: currentTrend, imageUrl: data.downloadUrl });
     } catch (err: unknown) {
       await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }

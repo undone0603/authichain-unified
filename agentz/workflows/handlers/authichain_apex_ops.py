@@ -13,7 +13,7 @@ from agentz.core.credentials import get_or_placeholder
 from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("google/gemma-4-e4b")
+    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -60,4 +60,4 @@ def run(ctx: ExecutionContext) -> str:
 
         return "Apex evolution complete. Infrastructure is now transactional and legally self-defending."
     finally:
-        lm_manager.unload_model("google/gemma-4-e4b")
+        lm_manager.unload_model("local-model")

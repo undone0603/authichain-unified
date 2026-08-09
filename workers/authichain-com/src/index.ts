@@ -2421,17 +2421,17 @@ function ecosystemFooter() {
     <div>
       <div class="footer-heading">Platform</div>
       <ul class="footer-links">
-        <li><a href="https://app.authichain.com/login">Get Started</a></li>
-        <li><a href="https://app.authichain.com/pricing">Pricing</a></li>
-        <li><a href="https://app.authichain.com/dashboard">Dashboard</a></li>
-        <li><a href="https://app.authichain.com/enterprise">Brand Onboarding</a></li>
+        <li><a href="https://authichain-unified.vercel.app/auth">Get Started</a></li>
+        <li><a href="https://authichain-unified.vercel.app/subscriptions">Pricing</a></li>
+        <li><a href="https://authichain-unified.vercel.app/dashboard">Dashboard</a></li>
+        <li><a href="https://authichain-unified.vercel.app/onboard">Brand Onboarding</a></li>
       </ul>
     </div>
     <div>
       <div class="footer-heading">Ecosystem</div>
       <ul class="footer-links">
         <li><a href="#community">$QRON Token</a></li>
-        <li><a href="https://qron.space">QRON Platform</a></li>
+        <li><a href="https://qron.app">QRON Platform</a></li>
         <li><a href="https://govchain.us">GovChain US</a></li>
         <li><a href="https://strainchain.io">StrainChain</a></li>
       </ul>
@@ -2440,7 +2440,7 @@ function ecosystemFooter() {
       <div class="footer-heading">Company</div>
       <ul class="footer-links">
         <li><a href="mailto:hello@authichain.com">Contact</a></li>
-        <li><a href="https://app.authichain.com/login">Sign In</a></li>
+        <li><a href="https://authichain-unified.vercel.app/auth">Sign In</a></li>
       </ul>
     </div>
   </div>
@@ -2480,8 +2480,8 @@ const HTML = `<!DOCTYPE html>
       <a class="nav-link" href="#community">$QRON</a>
       <a class="nav-link" href="#technology">Technology</a>
       <a class="nav-link" href="/digital-product-passport" style="color:var(--accent)">EU DPP</a>
-      <a class="nav-link" href="https://app.authichain.com/pricing">Pricing</a>
-      <a class="btn btn-primary btn-sm" href="https://app.authichain.com/login">Get Started</a>
+      <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
+      <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/auth">Get Started</a>
     </div>
   </nav>
 
@@ -2490,7 +2490,7 @@ const HTML = `<!DOCTYPE html>
       <h1 class="hero-title"><span>VERIFY </span><span class="accent">EVERYTHING.</span></h1>
       <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets. ERC-721 NFTs · AI QR · 2.1-second verification.</p>
       <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:40px">
-        <a class="btn btn-primary" style="width:auto; min-width:200px" href="https://app.authichain.com/login">Start Free Trial</a>
+        <a class="btn btn-primary" style="width:auto; min-width:200px" href="https://authichain-unified.vercel.app/auth">Start Free Trial</a>
         <a class="btn" style="width:auto; min-width:200px; background:transparent; border:1px solid var(--border); color:var(--text)" href="#community">Learn More</a>
       </div>
     </div>
@@ -2625,8 +2625,8 @@ const DPP_HTML = `<!DOCTYPE html>
     </a>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
-      <a class="nav-link" href="https://app.authichain.com/pricing">Pricing</a>
-      <a class="btn btn-primary btn-sm" href="https://app.authichain.com/eu-dpp">Start DPP Onboarding</a>
+      <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
+      <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/onboard">Start DPP Onboarding</a>
     </div>
   </nav>
 
@@ -2640,7 +2640,7 @@ const DPP_HTML = `<!DOCTYPE html>
         The EU's Ecodesign for Sustainable Products Regulation (ESPR) requires a blockchain-readable product passport for every item sold in Europe. AuthiChain is live — ERC-721 certificates, audit-ready exports, one integration.
       </p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" href="https://app.authichain.com/eu-dpp">Get DPP Compliant</a>
+        <a class="btn btn-primary" href="https://authichain-unified.vercel.app/onboard">Get DPP Compliant</a>
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20Compliance%20Demo">Book a Demo</a>
       </div>
     </div>
@@ -2759,7 +2759,7 @@ const DPP_HTML = `<!DOCTYPE html>
       <h2 class="section-title">Start DPP Compliance Today</h2>
       <p class="section-sub">Brands that register before July 19 get early-mover advantage in the EU market. Setup takes under 30 minutes.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="https://app.authichain.com/eu-dpp">Start Free — Get DPP Compliant</a>
+        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="https://authichain-unified.vercel.app/onboard">Start Free — Get DPP Compliant</a>
       </div>
       <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">No credit card required. First DPP certificate included.</p>
     </div>
@@ -2797,10 +2797,10 @@ export default {
       return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n', { headers: { 'Content-Type': 'text/plain' } });
     }
     if (p === '/dapp' || p.startsWith('/dapp/')) {
-      return Response.redirect('https://app.authichain.com/dashboard', 302);
+      return Response.redirect('https://authichain-unified.vercel.app/dashboard', 302);
     }
     if (p === '/demo' || p.startsWith('/demo/')) {
-      return Response.redirect('https://app.authichain.com/pricing', 302);
+      return Response.redirect('https://authichain-unified.vercel.app/subscriptions', 302);
     }
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(DPP_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
@@ -2809,15 +2809,14 @@ export default {
     // Prefixes must NOT have a trailing slash so the startsWith check works correctly
     // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).
     const APP_PREFIXES = ['/dashboard', '/api', '/verify', '/auth', '/login', '/logout',
-      '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin',
-      '/pricing', '/enterprise', '/eu-dpp', '/book', '/p'];
+      '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin'];
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       const target = new URL(request.url);
-      target.hostname = 'app.authichain.com';
+      target.hostname = 'authichain-unified.vercel.app';
       target.protocol = 'https:';
       // Replace the Host header so Vercel routes to the correct project
       const headers = new Headers(request.headers);
-      headers.set('Host', 'app.authichain.com');
+      headers.set('Host', 'authichain-unified.vercel.app');
       return fetch(new Request(target.toString(), {
         method: request.method,
         headers,

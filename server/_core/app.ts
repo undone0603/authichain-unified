@@ -17,9 +17,6 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { sdk } from "./sdk";
-import { getDb } from "../db";
-import { getOpsSummary } from "./db-helpers";
 import { createInternalRouter } from "../internal-api";
 import { brandMiddleware } from "./brand-middleware";
 import contactRouter from "../contact";
@@ -29,7 +26,6 @@ import {
   contactRateLimit,
   gptRateLimit,
   globalApiRateLimit,
-    adminRateLimit,
 } from "./rate-limit";
 
 /**
@@ -79,12 +75,7 @@ export function createApp() {
     }
     try {
       const { handleStripeWebhook } = await import("../webhooks/stripe");
-      // Express route (Node-only deployment path, not Workers/tRPC — no
-      // ctx.db reachable here). Calling getDb() is a documented bridge to
-      // the legacy server/db.ts singleton (server/webhooks/stripe.ts itself
-      // was migrated off it in Task 2b-4; this call site wasn't).
-      const db = await getDb();
-      const result = await handleStripeWebhook(db, req.body, sig);
+      const result = await handleStripeWebhook(req.body, sig);
       res.json(result);
     } catch (err: any) {
       console.error(`[Stripe Webhook] Error: ${err.message}`);
@@ -100,9 +91,7 @@ export function createApp() {
     }
     try {
       const { handlePaddleWebhook } = await import("../paddle/webhook");
-      // Documented bridge (see stripe webhook comment above) — same reason.
-      const db = await getDb();
-      await handlePaddleWebhook(db, req, res);
+      await handlePaddleWebhook(req, res);
     } catch (err: any) {
       console.error(`[Paddle Webhook] Error: ${err.message}`);
       res.status(400).json({ error: err.message });
@@ -120,9 +109,7 @@ export function createApp() {
     }
     try {
       const { handleInstantlyWebhook } = await import("../webhooks/instantly.js");
-      // Documented bridge (see stripe webhook comment above) — same reason.
-      const db = await getDb();
-      const result = await handleInstantlyWebhook(db, req.body);
+      const result = await handleInstantlyWebhook(req.body);
       res.json(result);
     } catch (err: any) {
       console.error(`[Instantly Webhook] Error: ${err.message}`);
@@ -141,9 +128,7 @@ export function createApp() {
     }
     try {
       const { handleDocuSignWebhook } = await import("../webhooks/docusign.js");
-      // Documented bridge (see stripe webhook comment above) — same reason.
-      const db = await getDb();
-      const result = await handleDocuSignWebhook(db, req.body);
+      const result = await handleDocuSignWebhook(req.body);
       res.json(result);
     } catch (err: any) {
       console.error(`[DocuSign Webhook] Error: ${err.message}`);
@@ -172,24 +157,6 @@ export function createApp() {
 
   app.use(express.json({ limit: "5mb" }));
   app.use(express.urlencoded({ limit: "5mb", extended: true }));
-
-  // ─── Admin ops console (client/src/pages/OpsDashboard.tsx) ───────────────
-  app.get("/api/admin/ops", adminRateLimit, async (req, res) => {
-    const user = await sdk.authenticateRequest(req).catch(() => null);
-    if (!user || user.role !== "admin") {
-      return res.status(user ? 403 : 401).json({ error: user ? "Admin only" : "Not signed in" });
-    }
-    try {
-      // Express ops-console route (Node-only deployment path, not the
-      // Workers/tRPC path — no ctx.db reachable here). Calling getDb() is a
-      // documented bridge to the legacy server/db.ts singleton.
-      const db = await getDb();
-      const summary = await getOpsSummary(db);
-      res.json(summary);
-    } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : "ops query failed" });
-    }
-  });
 
   // ─── OAuth callback: stricter rate limit ─────────────────────────────────
   app.use("/api/oauth", oauthRateLimit);

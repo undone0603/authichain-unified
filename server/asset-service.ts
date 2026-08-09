@@ -2,19 +2,18 @@
  * AuthiChain Asset Service
  * Manages the persistence and automated updates of generated industrial assets.
  */
+import { getDb } from "./db";
 import { products, deadLetterQueue } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { analyzeProductVision } from "./vision-service";
 import { generateProductAudioStory } from "./audio-service";
-import type { getHyperdriveDb } from "./db";
-
-type Db = ReturnType<typeof getHyperdriveDb>;
 
 /**
  * Executes the "Sync-to-Verify" asset generation pipeline for a product.
  * This runs after a METRC sync or a new product creation.
  */
-export async function generateProductAssets(db: Db, productId: number) {
+export async function generateProductAssets(productId: number) {
+  const db = await getDb();
   const [product] = await db.select().from(products).where(eq(products.id, productId));
 
   if (!product) throw new Error(`Product ${productId} not found`);
@@ -50,7 +49,7 @@ export async function generateProductAssets(db: Db, productId: number) {
 
   } catch (error: any) {
     console.error(`❌ Asset generation failed for Product ${productId}:`, error.message);
-
+    
     // Push to Dead Letter Queue for retry
     await db.insert(deadLetterQueue).values({
       taskType: "asset_generation",
@@ -65,7 +64,8 @@ export async function generateProductAssets(db: Db, productId: number) {
 /**
  * Retries failed asset generation tasks from the Dead Letter Queue.
  */
-export async function retryFailedAssets(db: Db) {
+export async function retryFailedAssets() {
+  const db = await getDb();
   const failedTasks = await db.select()
     .from(deadLetterQueue)
     .where(eq(deadLetterQueue.status, "pending"));
@@ -75,15 +75,15 @@ export async function retryFailedAssets(db: Db) {
   for (const task of failedTasks) {
     const { productId } = task.payload as any;
     try {
-      await generateProductAssets(db, productId);
+      await generateProductAssets(productId);
       await db.update(deadLetterQueue)
         .set({ status: "resolved" })
         .where(eq(deadLetterQueue.id, task.id));
     } catch (e) {
       await db.update(deadLetterQueue)
-        .set({
+        .set({ 
           retryCount: (task.retryCount || 0) + 1,
-          lastAttemptedAt: new Date()
+          lastAttemptedAt: new Date() 
         })
         .where(eq(deadLetterQueue.id, task.id));
     }
