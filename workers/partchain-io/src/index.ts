@@ -2339,7 +2339,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
   <div class="compliance-grid">
     <div class="compliance-card"><h3>EU Battery Regulation (DPP 2026)</h3><p>Full Digital Product Passport for EV battery packs. Cell-level provenance from raw material to vehicle, satisfying the 2026 EU mandate.</p></div>
     <div class="compliance-card"><h3>UNECE WP.29 Cybersecurity</h3><p>Tamper-evident part records aligned with UNECE WP.29 cybersecurity requirements for connected vehicle supply chains.</p></div>
-    <div class="compliance-card"><h3>ISO 9001 / IATF 16949 Audit Trail</h3><p>Immutable on-chain audit trail satisfies ISO 9001 and IATF 16949 quality management requirements. Export evidence packages on demand.</p></div>
+    <div class="compliance-card"><h3>ISO 9001 / IATF 16949 Audit Trail</h3><p>An immutable on-chain audit trail built to support ISO 9001 and IATF 16949 quality management evidence. Export evidence packages on demand. Certification remains yours to hold.</p></div>
     <div class="compliance-card"><h3>Conflict Minerals (CMRT / Dodd-Frank)</h3><p>Track conflict minerals from smelter to finished part. Automated CMRT reporting for Dodd-Frank Section 1502 compliance.</p></div>
   </div>
 </section>
