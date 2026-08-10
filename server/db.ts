@@ -1674,7 +1674,4 @@ export async function updateQron(
 //   const db = getHyperdriveDb(env);
 //   const users = await db.query.users.findMany();
 
-export function getHyperdriveDb(env: { HYPERDRIVE: { connectionString: string } }): ReturnType<typeof drizzle> {
-  const workersPool = new Pool({ connectionString: env.HYPERDRIVE.connectionString });
-  return drizzle(workersPool);
-}
+export { getHyperdriveDb } from "./db-hyperdrive.js";

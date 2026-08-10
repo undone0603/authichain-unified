@@ -1,0 +1,18 @@
+name = "authichain-scan-validate"
+main = "src/index.ts"
+compatibility_date = "2025-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://authichain.com"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-provenance"
+database_id = "5a6672a7-b3cb-43d4-85d4-d675451e58cb"
+
+[env.production]
+name = "authichain-scan-validate"
+
+[env.staging]
+name = "authichain-scan-validate-staging"

@@ -1,0 +1,9 @@
+{
+  "name": "authichain-com-worker",
+  "version": "1.0.0",
+  "description": "AuthiChain.com Cloudflare Worker",
+  "scripts": {
+    "deploy": "npx wrangler deploy"
+  },
+  "devDependencies": {}
+}
