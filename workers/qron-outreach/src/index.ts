@@ -38,7 +38,7 @@ const OUTREACH_QUEUE: Email[] = [
 
 I came across Mission Restaurant Group and I'm impressed by your portfolio of Michigan restaurants. I'd love to help elevate your menu QR codes.
 
-I create AI-generated artistic QR codes using QRON — each one is a unique piece of art that's 100% scannable. Clients see 25-40% more scans because customers actually want to scan something beautiful.
+I create AI-generated artistic QR codes using QRON — each one is a unique piece of art that is scan-tested before delivery. The bet is simple: a code that looks like it belongs on your menu gets scanned more often than a black square. I would rather you test that on one restaurant than take my word for it.
 
 What I can deliver for your restaurant group:
 - Custom QR art matched to each restaurant's brand
@@ -93,7 +93,7 @@ To unsubscribe from future emails, reply with "unsubscribe".`
 
 As Michigan's largest cannabis company, Lume's packaging is seen by thousands daily. Your QR codes don't have to be boring black squares.
 
-I create AI-generated artistic QR codes — scannable art that matches your brand. 25-40% more engagement than standard codes.
+I create AI-generated artistic QR codes — scannable art matched to your brand, tested on iPhone, Android and tablet before delivery.
 
 $49/design or $199 for 5. 100% scan guarantee. 24-hour delivery.
 
@@ -143,7 +143,7 @@ To unsubscribe from future emails, reply with "unsubscribe".`
 
 I saw your partnership with Local Logic for QR-enabled signage. I'd like to propose a visual upgrade that makes your QR signs even more compelling.
 
-I run QRON — artistic QR codes see 25-40% more scans than standard codes. For agents, that means more virtual tour views and more leads.
+I run QRON — artistic QR codes that are scan-tested before delivery, designed so a sign earns a look instead of being ignored. Worth trialling on a single listing before committing to a rollout.
 
 Partnership options:
 - White-label: "Premium QR Art" add-on to existing sign orders

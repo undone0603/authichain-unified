@@ -417,19 +417,26 @@ export default function QronManagementPage({
                 </h2>
               </div>
               
+              {/* Only scan_count is recorded today. "Unique Users" was scan_count
+                  × 0.8 and "Conversion"/"Health" were constants — invented figures
+                  shown to a paying customer as if they were their own data. Metrics
+                  we do not collect yet render as em dashes rather than as numbers. */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: 'Total Scans', val: qron.scan_count || 0 },
-                  { label: 'Unique Users', val: Math.floor((qron.scan_count || 0) * 0.8) },
-                  { label: 'Conversion', val: '12.4%' },
-                  { label: 'Health', val: '99.9%' },
+                  { label: 'Total Scans', val: qron.scan_count ?? 0, measured: true },
+                  { label: 'Unique Users', val: '—', measured: false },
+                  { label: 'Conversion', val: '—', measured: false },
+                  { label: 'Health', val: '—', measured: false },
                 ].map(s => (
                   <div key={s.label} className="protocol-card p-4 text-center">
                     <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">{s.label}</p>
-                    <p className="text-xl font-black text-white">{s.val}</p>
+                    <p className={`text-xl font-black ${s.measured ? 'text-white' : 'text-zinc-700'}`}>{s.val}</p>
                   </div>
                 ))}
               </div>
+              <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-4">
+                Scans are recorded per QRON. Unique visitors, conversion and health are not instrumented yet.
+              </p>
             </section>
           </div>
         </div>

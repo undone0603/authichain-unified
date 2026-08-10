@@ -86,8 +86,11 @@ export default function EnterprisePage() {
              <div className="protocol-card p-8 bg-zinc-950/50 mt-8">
                 <Server className="w-8 h-8 text-gold mb-6" />
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-2">Availability</h4>
-                <p className="text-2xl font-black text-white">99.99%</p>
-                <p className="text-[9px] font-bold text-zinc-700 uppercase">Contractual SLA</p>
+                {/* An availability target we will contract to, not a measured
+                    figure — nothing here records uptime over a window yet, so
+                    presenting it as achieved history would be unbacked. */}
+                <p className="text-2xl font-black text-white">99.9%</p>
+                <p className="text-[9px] font-bold text-zinc-700 uppercase">Target, available in enterprise agreements</p>
              </div>
              <div className="protocol-card p-8 bg-zinc-950/50 -mt-8">
                 <Shield className="w-8 h-8 text-gold mb-6" />
