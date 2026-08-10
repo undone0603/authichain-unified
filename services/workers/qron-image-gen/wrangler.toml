@@ -1,0 +1,10 @@
+name = "qron-image-gen"
+main = "index.js"
+compatibility_date = "2024-01-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+
+[ai]
+binding = "AI"
+
+[vars]
+WORKER_VERSION = "2.0.0"

@@ -100,3 +100,6 @@ PATCH_EOF
 
 # Local git worktrees (superpowers:using-git-worktrees)
 .worktrees/
+
+.vercel
+.env*

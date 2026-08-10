@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@simplewebauthn/server": "latest"
+  }
+}

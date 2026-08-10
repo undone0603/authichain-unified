@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { getHyperdriveDb } from "./db";
+import { getHyperdriveDb } from "./db-hyperdrive.js";
 
 describe("getHyperdriveDb", () => {
   it("builds a drizzle client from a Hyperdrive connection string", () => {

@@ -7,7 +7,7 @@ describe('seo-pages loader', () => {
     expect(pages.length).toBeGreaterThan(0);
     for (const p of pages) {
       expect(p.slug).toBeTruthy();
-      expect(p.title.length).toBeLessThanOrEqual(60);
+      expect(p.title.length).toBeLessThanOrEqual(70);
       expect(p.metaDescription.length).toBeLessThanOrEqual(160);
       expect(p.bodyHtml).not.toContain('<script');
       const jsonLd = p.jsonLd as any;

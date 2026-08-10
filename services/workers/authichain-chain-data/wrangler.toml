@@ -1,0 +1,5 @@
+name = "authichain-chain-data"
+main = "index.js"
+compatibility_date = "2024-09-23"
+
+# Deploy: wrangler deploy workers/authichain-chain-data/index.js --name authichain-chain-data
