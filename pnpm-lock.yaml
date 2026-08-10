@@ -40,8 +40,8 @@ importers:
         specifier: ^1.29.0
         version: 1.29.0(zod@3.25.76)
       '@paddle/paddle-node-sdk':
-        specifier: ^3.8.0
-        version: 3.8.0
+        specifier: ^3.10.0
+        version: 3.10.0
       '@paralleldrive/cuid2':
         specifier: ^2.3.0
         version: 2.3.1
@@ -2435,8 +2435,8 @@ packages:
   '@oslojs/encoding@1.1.0':
     resolution: {integrity: sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ==}
 
-  '@paddle/paddle-node-sdk@3.8.0':
-    resolution: {integrity: sha512-4RS6AhZisloYaT2jiFgx9hwm22qwLRUx4EgIVb1gS3bS96lhDBQWq8BC1/Zow2i3CuxMkehXQUc3qKSBS77ozA==}
+  '@paddle/paddle-node-sdk@3.10.0':
+    resolution: {integrity: sha512-njqp+L6e/2aR99EYh/Ulyu6B9sIyVERTFclGOznKmLZcy11pAwHoHyIgq1BUH1ybQH+YmJQmrrUQC/Rfg8JAAw==}
     engines: {node: '>=20'}
 
   '@panva/hkdf@1.2.1':
@@ -13033,7 +13033,7 @@ snapshots:
 
   '@oslojs/encoding@1.1.0': {}
 
-  '@paddle/paddle-node-sdk@3.8.0': {}
+  '@paddle/paddle-node-sdk@3.10.0': {}
 
   '@panva/hkdf@1.2.1': {}
 

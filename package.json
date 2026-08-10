@@ -34,7 +34,7 @@
     "@hubspot/api-client": "^13.5.0",
     "@lucia-auth/adapter-drizzle": "^1.1.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@paddle/paddle-node-sdk": "^3.8.0",
+    "@paddle/paddle-node-sdk": "^3.10.0",
     "@paralleldrive/cuid2": "^2.3.0",
     "@radix-ui/react-accordion": "^1.2.20",
     "@radix-ui/react-alert-dialog": "^1.1.17",
