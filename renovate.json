@@ -1,0 +1,59 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "timezone": "America/Detroit",
+  "schedule": ["after 1am and before 6am every weekday", "every weekend"],
+  "labels": ["dependencies", "renovate"],
+  "prConcurrentLimit": 8,
+  "prHourlyLimit": 4,
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Auto-merge patch and minor updates for dev dependencies",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "Auto-merge patch updates for production dependencies",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "Require manual review for major updates",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "renovate", "major-update-review-needed"]
+    },
+    {
+      "description": "Group Cloudflare Workers ecosystem updates",
+      "matchPackagePatterns": ["^@cloudflare/", "^wrangler"],
+      "groupName": "cloudflare"
+    },
+    {
+      "description": "Group Next.js ecosystem updates",
+      "matchPackagePatterns": ["^next$", "^@next/", "^eslint-config-next"],
+      "groupName": "nextjs"
+    },
+    {
+      "description": "Group Drizzle ORM updates",
+      "matchPackagePatterns": ["^drizzle-"],
+      "groupName": "drizzle"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "automerge": false
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on the first day of the month"]
+  }
+}
