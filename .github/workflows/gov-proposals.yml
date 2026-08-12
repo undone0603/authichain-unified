@@ -43,21 +43,21 @@ jobs:
         with: { version: '10.28.2' }
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: pnpm }
-        - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile
       - name: Generate AI proposal drafts
         continue-on-error: true
         run: pnpm exec tsx scripts/generate-proposals.ts
         env:
-          OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
-          GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
-          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
-          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
-          HUGGINGFACE_API_KEY:  ${{ secrets.HUGGINGFACE_API_KEY }}
-          LOCAL_MODEL_URL:      ${{ secrets.LOCAL_MODEL_URL }}
-          MISTRAL_API_KEY:      ${{ secrets.MISTRAL_API_KEY }}
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          OPENAI_API_KEY:            ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY:              ${{ secrets.GROQ_API_KEY }}
+          ANTHROPIC_API_KEY:         ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY:            ${{ secrets.GEMINI_API_KEY }}
+          HUGGINGFACE_API_KEY:       ${{ secrets.HUGGINGFACE_API_KEY }}
+          LOCAL_MODEL_URL:           ${{ secrets.LOCAL_MODEL_URL }}
+          MISTRAL_API_KEY:           ${{ secrets.MISTRAL_API_KEY }}
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          AIRTABLE_API_KEY:     ${{ secrets.AIRTABLE_API_KEY }}
-          AIRTABLE_BASE_ID:     ${{ secrets.AIRTABLE_BASE_ID }}
-          GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+          AIRTABLE_API_KEY:          ${{ secrets.AIRTABLE_API_KEY }}
+          AIRTABLE_BASE_ID:          ${{ secrets.AIRTABLE_BASE_ID }}
+          GOVCHAIN_URL:              ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
+          DRY_RUN:                   ${{ inputs.dry_run || 'false' }}
