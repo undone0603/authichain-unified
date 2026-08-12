@@ -19,9 +19,15 @@ on:
           - reddit_only
           - content_drafts
       dry_run:
+        # STAGED ACTIVATION: defaults to true so scheduled runs and default
+        # manual runs print the LinkedIn/Reddit posts they *would* publish
+        # without posting live. To publish live for one run, dispatch manually
+        # with this unchecked. To remove the guard permanently after reviewing
+        # staged output, flip this default and the two `|| 'true'` fallbacks
+        # below back to 'false'.
         description: 'Dry run (no live posts)'
         required: false
-        default: 'false'
+        default: 'true'
         type: boolean
 
 permissions:
@@ -100,7 +106,8 @@ jobs:
         env:
           LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
           LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          # STAGED: fallback is 'true' so scheduled runs never post live.
+          DRY_RUN: ${{ inputs.dry_run || 'true' }}
         run: |
           if [ -z "$LINKEDIN_ACCESS_TOKEN" ] || [ -z "$LINKEDIN_PERSON_URN" ]; then
             echo "LinkedIn credentials not configured. Run scripts/linkedin-oauth-setup.mjs to set LINKEDIN_ACCESS_TOKEN + LINKEDIN_PERSON_URN secrets."
@@ -200,7 +207,8 @@ jobs:
           REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
           REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
           REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          # STAGED: fallback is 'true' so scheduled runs never post live.
+          DRY_RUN: ${{ inputs.dry_run || 'true' }}
         run: |
           if [ -z "$REDDIT_CLIENT_ID" ] || [ -z "$REDDIT_CLIENT_SECRET" ]; then
             echo "Reddit API credentials not configured."
