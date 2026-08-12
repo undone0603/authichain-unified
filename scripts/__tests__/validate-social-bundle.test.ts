@@ -100,9 +100,24 @@ describe('validateBundle — links', () => {
     expect(failures.join(' ')).toContain('not a route that exists');
   });
 
-  it('accepts our real routes', () => {
-    expect(validateBundle(goodBundle({ linkedin: 'See qron.space and govchain.us/protocol' }))).toEqual([]);
+  it('accepts real routes on the domain that actually has them', () => {
+    expect(validateBundle(goodBundle({ linkedin: 'See authichain.com/protocol and authichain.com/anchor' }))).toEqual([]);
   });
+
+  it('accepts the bare brand domains', () => {
+    expect(validateBundle(goodBundle({ linkedin: 'Build one at qron.space or read govchain.us' }))).toEqual([]);
+  });
+
+  it.each(['qron.space/protocol', 'govchain.us/protocol', 'strainchain.io/book'])(
+    'rejects %s — the path exists on authichain.com, not there',
+    (link) => {
+      // The brand workers handle only assets, sitemap.xml and robots.txt, then
+      // fall through to the homepage. A deep link to one of them looks valid
+      // and lands the reader on a generic page.
+      const failures = validateBundle(goodBundle({ linkedin: `Read more: ${link}` }));
+      expect(failures.join(' ')).toContain('not a route that exists on that domain');
+    },
+  );
 });
 
 describe('validateBundle — platform limits and shape', () => {

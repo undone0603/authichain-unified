@@ -87,12 +87,27 @@ jobs:
       - name: Record what was published
         if: inputs.dry_run != 'true'
         run: |
-          if git diff --quiet content/social/.published.json 2>/dev/null; then
+          set -euo pipefail
+          # `git diff` cannot see untracked files, and on the very first live
+          # publish the ledger is brand new — so checking it that way exits 0,
+          # skips the commit, and the ledger dies with the runner. The next run
+          # would then repost the same bundle to every configured channel.
+          # Stage first, then ask the index whether anything actually changed.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A content/social/.published.json
+          if git diff --cached --quiet -- content/social/.published.json; then
             echo "Ledger unchanged."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add content/social/.published.json
           git commit -m "chore(social): record published bundle [skip ci]"
-          git push
+          # The publish step already posted. If main moved on while we were
+          # posting, rebase and retry rather than failing — an unrecorded
+          # ledger is a double-post next run.
+          for attempt in 1 2 3; do
+            if git push; then exit 0; fi
+            echo "Push failed (attempt $attempt), rebasing on main..."
+            git pull --rebase origin main
+          done
+          echo "::error::Published successfully but could not record the ledger. Re-run will repost — reconcile content/social/.published.json by hand."
+          exit 1

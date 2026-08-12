@@ -140,18 +140,29 @@ def post_twitter(bundle: dict, dry: bool) -> tuple[bool, str]:
 
     reply_to = None
     first_id = None
+    posted = 0
     for tweet in bundle["twitter"]:
         payload: dict = {"text": tweet}
         if reply_to:
             payload["reply"] = {"in_reply_to_tweet_id": reply_to}
         r = session.post("https://api.twitter.com/2/tweets", json=payload, timeout=20)
         if not r.ok:
-            # Partial threads are worse than none, but the earlier tweets are
-            # already public — report how far it got rather than pretending.
-            return False, f"thread broke after {'0' if not first_id else 'some'} tweets: HTTP {r.status_code} {r.text[:150]}"
+            if first_id:
+                # Tweets already sent cannot be unsent. Reporting plain failure
+                # would leave them unrecorded, and the next run would post the
+                # opening tweet a second time. Surface the partial as a success
+                # carrying a URL so it lands in the ledger, with the breakage
+                # stated rather than hidden.
+                return True, (
+                    f"https://x.com/i/status/{first_id} "
+                    f"(PARTIAL: {posted}/{len(bundle['twitter'])} tweets — "
+                    f"thread broke on HTTP {r.status_code}; finish or delete manually)"
+                )
+            return False, f"HTTP {r.status_code}: {r.text[:150]}"
         tid = r.json()["data"]["id"]
         first_id = first_id or tid
         reply_to = tid
+        posted += 1
 
     return True, f"https://x.com/i/status/{first_id}"
 

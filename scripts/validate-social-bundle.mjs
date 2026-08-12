@@ -21,11 +21,31 @@ export const ALLOWED_DOMAINS = new Set([
   'strainchain.io',
 ]);
 
-/** Routes that actually resolve. Anything else 404s or silently serves the homepage. */
-export const ALLOWED_PATHS = new Set([
-  '/', '/protocol', '/spec', '/anchor', '/digital-product-passport', '/dpp',
-  '/pricing', '/book', '/eu-dpp', '/about', '/contact',
-]);
+/**
+ * Routes that actually resolve, per domain.
+ *
+ * This has to be per-host, not a shared list. The brand workers
+ * (workers/qron-space, workers/strainchain-io, workers/govchain-us) handle only
+ * assets, sitemap.xml and robots.txt, then fall through to `return
+ * new Response(HTML)` — so every other path on those domains silently serves
+ * the homepage rather than 404ing. "qron.space/protocol" would look like a
+ * working deep link and land the reader on a generic page, which is precisely
+ * the failure this guardrail exists to catch.
+ *
+ * authichain.com is the only host with real routes: explicit handlers in
+ * workers/authichain-com/src/index.ts plus the APP_PREFIXES it proxies to
+ * Vercel. /about and /contact appear in its sitemap but have no handler, so
+ * they fall through to the homepage too and are deliberately not listed.
+ */
+export const ALLOWED_PATHS_BY_HOST = {
+  'authichain.com': new Set([
+    '/', '/protocol', '/spec', '/anchor', '/digital-product-passport', '/dpp',
+    '/pricing', '/book', '/eu-dpp', '/enterprise', '/verify',
+  ]),
+  'qron.space': new Set(['/']),
+  'govchain.us': new Set(['/']),
+  'strainchain.io': new Set(['/']),
+};
 
 export const REQUIRED_DISCLOSURE = 'Disclosure: I work on this project.';
 
@@ -91,10 +111,12 @@ function checkText(text, label, failures) {
   // serving authichain.com falls through to the homepage rather than 404ing,
   // so the reader gets a page that does not contain what was promised.
   const urlRe = /(?:https?:\/\/)?(?:www\.)?(authichain\.com|qron\.space|govchain\.us|strainchain\.io)((?:\/[\w\-./]*)?)/gi;
-  for (const [, , path] of text.matchAll(urlRe)) {
+  for (const [, host, path] of text.matchAll(urlRe)) {
+    const key = host.toLowerCase();
     const clean = (path || '/').replace(/[.,)]+$/, '') || '/';
-    if (!ALLOWED_PATHS.has(clean)) {
-      failures.push(`${label}: links to "${clean}", which is not a route that exists`);
+    const allowed = ALLOWED_PATHS_BY_HOST[key];
+    if (!allowed?.has(clean)) {
+      failures.push(`${label}: links to "${key}${clean}", which is not a route that exists on that domain`);
     }
   }
 }

@@ -165,7 +165,31 @@ is not a claim about outcomes we have not measured.
 
 ---
 
-## Rule 8 — Write for one engineer who will check
+## Rule 8 — Every link must land where the sentence promised
+
+Routes are **per domain**, and this catches people out. Only `authichain.com`
+has real routes. The brand workers handle assets, `sitemap.xml` and
+`robots.txt`, then fall through to the homepage — so a deep link like
+`qron.space/protocol` does not 404, it silently serves the generic homepage.
+That is worse than a broken link: the reader clicks a specific promise and
+cannot tell they were sent somewhere else.
+
+| Domain | Linkable routes |
+|---|---|
+| `authichain.com` | `/` `/protocol` `/spec` `/anchor` `/digital-product-passport` `/dpp` `/pricing` `/book` `/eu-dpp` `/enterprise` `/verify` |
+| `qron.space` | `/` only |
+| `govchain.us` | `/` only |
+| `strainchain.io` | `/` only |
+
+`authichain.com/roi-calculator` does not exist. Neither do `/about` or
+`/contact` — they appear in the sitemap but have no handler.
+
+`scripts/validate-social-bundle.mjs` enforces this table per host and is the
+source of truth; if a route is added to a worker, update the validator first.
+
+---
+
+## Rule 9 — Write for one engineer who will check
 
 The reader who matters is technical, skeptical, and will click the link. Write
 for that person and the marketing audience follows; write for the marketing
