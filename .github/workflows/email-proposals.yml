@@ -8,9 +8,14 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
+        # STAGED ACTIVATION: defaults to true so scheduled runs and default
+        # manual runs log the proposal emails they *would* send without sending.
+        # To send live for one run, dispatch manually with this unchecked. To
+        # remove the guard permanently after reviewing staged output, flip this
+        # default and the `|| 'true'` fallback below back to 'false'.
         description: 'Dry run (log emails without sending)'
         required: false
-        default: 'false'
+        default: 'true'
         type: boolean
 
 concurrency:
@@ -58,7 +63,8 @@ jobs:
           EMAIL_FROM:           ${{ secrets.EMAIL_FROM || 'proposals@authichain.com' }}
           CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://calendly.com/authichain/discovery' }}
           SALES_EMAIL:          ${{ secrets.SALES_EMAIL || 'sales@authichain.com' }}
-          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+          # STAGED: fallback is 'true' so scheduled runs never send live.
+          DRY_RUN:              ${{ inputs.dry_run || 'true' }}
 
       - name: Report email job failure to Slack
         if: failure()
