@@ -2,6 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { DppCountdown } from '@/components/DppCountdown';
+import { useNow } from '@/lib/use-now';
+import {
+  listMilestones,
+  milestoneStatus,
+  formatMilestoneDate,
+  nextDeadline,
+  mostRecentInForce,
+  timelineUpdatedAt,
+  type Milestone,
+} from '@/lib/dpp-timeline';
 import {
   ShieldCheck,
   BarChart3,
@@ -26,6 +37,19 @@ export default function DPPPage() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [simStep, setSimStep] = useState<number>(0);
 
+  // Which milestone leads the page is decided by the calendar, not by whoever
+  // last edited this file. `nextDeadline` moves on by itself as dates pass, so
+  // the page stops advertising a mandate it has already crossed.
+  const milestones = listMilestones();
+  const now = useNow(timelineUpdatedAt());
+
+  const statusOf = (m: Milestone) => milestoneStatus(m, now);
+  const nextMilestone = nextDeadline(now);
+  const liveMilestone = mostRecentInForce(now);
+  const registryMilestone = milestones.find((m) => m.id === 'central-registry') ?? null;
+  const registryVerb =
+    registryMilestone && milestoneStatus(registryMilestone, now) === 'in-force' ? 'opened' : 'opens';
+
   const startDemo = () => {
     setIsSimulating(true);
     setSimStep(1);
@@ -46,24 +70,41 @@ export default function DPPPage() {
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-[10px] font-black uppercase tracking-[0.2em] mb-4">
             <Globe className="w-4 h-4" />
-            EU ESPR Compliant · Registry Live July 19, 2026
+            {liveMilestone
+              ? <>EU ESPR · {liveMilestone.label} — <DppCountdown milestone={liveMilestone} /></>
+              : <>EU ESPR Digital Product Passport</>}
           </div>
 
-          {/* Battery urgency banner */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            Battery Mandate: Feb 2027 — 7 months to compliance
-          </div>
+          {/* Next mandate. Label and countdown both come from
+              content/dpp/regulatory-timeline.json, so this banner retires itself
+              and moves to the next milestone as each deadline passes. */}
+          {nextMilestone && (
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-8 ${
+              nextMilestone.urgent
+                ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+                : 'bg-zinc-500/10 border border-zinc-700 text-zinc-400'
+            }`}>
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {nextMilestone.label}: {formatMilestoneDate(nextMilestone)} — <DppCountdown milestone={nextMilestone} />
+            </div>
+          )}
 
           <h1 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter uppercase leading-[0.9]">
             The Standard For <br />
             <span className="gold-text">Industrial</span> Passports
           </h1>
 
+          {/* "the only platform that meets every ESPR requirement" was an
+              unverifiable absolute; the offline claim below is specific and
+              checkable, which is the stronger sentence anyway. The registry
+              date is no longer written in the future tense by hand. */}
           <p className="max-w-2xl mx-auto text-zinc-400 text-lg md:text-xl font-medium mb-4 leading-relaxed">
-            The EU Digital Product Passport registry opens July 19, 2026.
-            AuthiChain is the only platform that meets every ESPR requirement —
-            including <span className="text-white font-bold">full verification with zero internet</span>.
+            {registryMilestone && (
+              <>The EU Digital Product Passport registry {registryVerb} {formatMilestoneDate(registryMilestone)}. </>
+            )}
+            AuthiChain issues ESPR-aligned passports that verify{' '}
+            <span className="text-white font-bold">with no internet connection</span> — the signature
+            checks against the issuer&apos;s published key, not against our servers.
           </p>
           <p className="max-w-xl mx-auto text-zinc-600 text-sm font-bold uppercase tracking-widest mb-12">
             Works at factory floors, border crossings, and disconnected industrial sites.
@@ -84,22 +125,36 @@ export default function DPPPage() {
 
           {/* New Trust Row */}
           <div className="mt-20 flex flex-col items-center">
+             {/* ESPR is Regulation (EU) 2024/1781 — this read 2024/1789, a
+                 wrong citation on the page whose whole subject is that
+                 regulation, and the first thing a compliance reader would
+                 check. "Aligned with" rather than "compliant": conformance is
+                 assessed per product, not asserted by a vendor. */}
              <div className="flex items-center gap-6 text-[9px] font-black uppercase tracking-[0.4em] text-zinc-700 mb-8">
                 <span>Polygon Anchored</span>
                 <div className="w-1 h-1 rounded-full bg-zinc-800" />
                 <span>Ed25519 Secured</span>
                 <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>EU 2024/1789 Compliant</span>
+                <a
+                  href="https://eur-lex.europa.eu/eli/reg/2024/1781/oj"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-zinc-400 underline underline-offset-4"
+                >
+                  Aligned to EU 2024/1781
+                </a>
              </div>
-             <div className="px-10 py-5 rounded-3xl bg-zinc-950 border border-zinc-900 inline-flex items-center gap-10">
-                <div className="text-left border-r border-zinc-900 pr-10">
-                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">Network Capacity</p>
-                    <p className="text-2xl font-black text-white tracking-tighter">1.2M <span className="text-zinc-600 font-medium text-xs tracking-normal uppercase ml-1">Assets / Day</span></p>
+             {/* "1.2M Assets / Day" was a throughput figure nobody benchmarked.
+                 What replaces it is checkable by anyone, without an account. */}
+             <div className="px-10 py-5 rounded-3xl bg-zinc-950 border border-zinc-900 inline-flex flex-wrap items-center justify-center gap-10">
+                <div className="text-left sm:border-r border-zinc-900 sm:pr-10">
+                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">Verification</p>
+                    <p className="text-2xl font-black text-white tracking-tighter">Offline <span className="text-zinc-600 font-medium text-xs tracking-normal uppercase ml-1">No Account Required</span></p>
                 </div>
-                <div className="flex items-center gap-3 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                   <Activity className="w-4 h-4 text-gold animate-pulse" />
-                   Status: Industrial Ready
-                </div>
+                <Link href="/protocol" className="flex items-center gap-3 text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-gold transition-colors">
+                   <Activity className="w-4 h-4 text-gold" />
+                   Apache-2.0 Spec &amp; Verifier
+                </Link>
              </div>
           </div>
         </div>
@@ -157,25 +212,54 @@ export default function DPPPage() {
           <div className="h-px flex-1 bg-zinc-900" />
         </div>
 
+        {/* Driven entirely by content/dpp/regulatory-timeline.json. Rows
+            re-sort and re-style themselves as dates pass, and each carries the
+            source a reader can check. */}
         <div className="space-y-4">
-          {[
-            { date: 'July 19, 2026', label: 'Central DPP Registry Opens', active: true, urgent: false },
-            { date: 'Feb 2027', label: 'Battery Passport Mandatory (EV, Industrial)', active: true, urgent: true },
-            { date: '2028–2029', label: 'Textiles & Apparel Delegation', active: false, urgent: false },
-            { date: '2029–2030', label: 'Electronics & Construction Products', active: false, urgent: false },
-          ].map((item, i) => (
-            <div key={i} className={`protocol-card p-6 flex justify-between items-center ${item.urgent ? 'bg-red-500/5 border-red-500/30' : item.active ? 'bg-gold/5 border-gold/20' : 'opacity-40'}`}>
-              <div className="flex items-center gap-6">
-                <span className={`text-sm font-black uppercase tracking-widest ${item.urgent ? 'text-red-400' : item.active ? 'text-gold' : 'text-zinc-600'}`}>
-                  {item.date}
-                </span>
-                <span className="text-sm font-bold text-zinc-300 uppercase">{item.label}</span>
+          {milestones.map((item) => {
+            const status = statusOf(item);
+            const inForce = status === 'in-force';
+            const imminent = status === 'imminent';
+            return (
+              <div
+                key={item.id}
+                className={`protocol-card p-6 flex flex-wrap gap-4 justify-between items-center ${
+                  imminent && item.urgent
+                    ? 'bg-red-500/5 border-red-500/30'
+                    : inForce
+                      ? 'bg-gold/5 border-gold/20'
+                      : 'opacity-60'
+                }`}
+              >
+                <div className="flex items-center gap-6 min-w-0">
+                  <span className={`text-sm font-black uppercase tracking-widest whitespace-nowrap ${
+                    imminent && item.urgent ? 'text-red-400' : inForce ? 'text-gold' : 'text-zinc-600'
+                  }`}>
+                    {formatMilestoneDate(item)}
+                  </span>
+                  <span className="text-sm font-bold text-zinc-300 uppercase">{item.label}</span>
+                </div>
+                <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest">
+                  <span className={imminent && item.urgent ? 'text-red-400' : inForce ? 'text-gold' : 'text-zinc-600'}>
+                    <DppCountdown milestone={item} />
+                  </span>
+                  <a
+                    href={item.source}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-zinc-600 hover:text-zinc-300 underline underline-offset-4"
+                  >
+                    Source
+                  </a>
+                  {inForce && <Sparkles className="w-4 h-4 text-gold" />}
+                </div>
               </div>
-              {item.urgent && <div className="flex items-center gap-2 text-red-400 text-[9px] font-black uppercase tracking-widest"><AlertTriangle className="w-3.5 h-3.5" />Buy Now</div>}
-              {item.active && !item.urgent && <Sparkles className="w-4 h-4 text-gold animate-pulse" />}
-            </div>
-          ))}
+            );
+          })}
         </div>
+        <p className="mt-6 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+          Timeline last reviewed {timelineUpdatedAt()}. Countdowns are computed from today&apos;s date.
+        </p>
       </section>
 
       {/* ── ESPR Requirements ─────────────────────────────────────── */}
@@ -245,12 +329,14 @@ export default function DPPPage() {
                 Verification Breaks Without Signal. <span className="gold-text">Not Anymore.</span>
               </h3>
               <p className="text-zinc-400 text-sm leading-relaxed mb-4">
-                Every competitor's DPP solution requires a cloud call to complete verification. Battery factories,
-                mining operations, and logistics hubs often have no signal — scans complete but verification silently fails.
+                Battery factories, mining operations and logistics hubs often have no signal. Where verification
+                depends on reaching a vendor&apos;s server, a scan can complete while the verification behind it
+                silently fails.
               </p>
               <p className="text-zinc-400 text-sm leading-relaxed">
-                AuthiChain's Ed25519 embedded verification runs entirely on-device. No server. No connectivity.
-                Full ESPR-compliant proof in under 2.5 seconds, anywhere on Earth.
+                AuthiChain&apos;s Ed25519 verification runs entirely on-device, checking the signature against the
+                issuer&apos;s published key. No server, no connectivity, no account. The reference verifier is
+                Apache-2.0 — run it yourself and confirm it never opens a socket.
               </p>
             </div>
           </div>
@@ -366,7 +452,9 @@ export default function DPPPage() {
           </div>
           <h2 className="text-4xl font-black mb-6 uppercase tracking-tighter leading-none">
             Be Compliant <br />
-            <span className="gold-text">Before Feb 2027</span>
+            <span className="gold-text">
+              {nextMilestone ? `Before ${formatMilestoneDate(nextMilestone)}` : 'Ahead Of The Mandate'}
+            </span>
           </h2>
           <p className="text-zinc-400 mb-4 max-w-xl mx-auto leading-relaxed">
             We're onboarding battery manufacturers and tier-1 suppliers for our EU DPP pilot.
