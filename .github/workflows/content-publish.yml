@@ -95,6 +95,8 @@ jobs:
           # Stage first, then ask the index whether anything actually changed.
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p content/social
+                    [ -f content/social/.published.json ] || echo '{}' > content/social/.published.json
           git add -A content/social/.published.json
           if git diff --cached --quiet -- content/social/.published.json; then
             echo "Ledger unchanged."
