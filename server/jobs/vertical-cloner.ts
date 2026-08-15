@@ -25,7 +25,9 @@ export async function runVerticalCloning(db: Db) {
       type: "TECH_SPRINT",
       title: `DEAL STAGED: ${industry.name} Protocol Activation`,
       description: `Autonomous vertical expansion into ${industry.name} for ${target.name}`,
-      status: "planned",
+      // missions_status_check allows only pending | active | completed | failed.
+      // "planned" violated it, so every run of this job died on the insert.
+      status: "pending",
     });
 
     await db.insert(activityLog).values({
