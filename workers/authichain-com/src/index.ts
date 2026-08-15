@@ -1,3 +1,30 @@
+// The DPP regulatory timeline is shared with the Next.js page rather than
+// duplicated here: content/dpp/regulatory-timeline.json is the single source of
+// truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
+// inlines it at build time, so the worker stays self-contained at runtime.
+import {
+  listMilestones,
+  milestoneStatus,
+  formatMilestoneDate,
+  countdownLabel,
+  nextDeadline,
+  mostRecentInForce,
+  timelineUpdatedAt,
+} from '../../../src/lib/dpp-timeline';
+
+/**
+ * Escapes text interpolated into the worker's HTML. The timeline data is
+ * written by an autonomous Routine, so it is treated as untrusted input even
+ * though it lives in our own repository.
+ */
+function escHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 // Inlined Authichain Theme Module for Cloudflare Worker compatibility
 
 const HTML_SECURITY_HEADERS: Record<string, string> = {
@@ -2449,7 +2476,7 @@ function marketReality() {
       </div>
       <div style="border-left:3px solid var(--primary);padding:1rem 1.25rem;background:var(--bg3);border-radius:0 .5rem .5rem 0">
         <div style="font-weight:700;margin-bottom:.35rem">EU DPP — Mandatory July 2026</div>
-        <div style="color:var(--text-dim);font-size:.9rem">EU ESPR regulation requires a <strong style="color:var(--text)">blockchain-readable product passport</strong> for every item sold in Europe. Registry opens July 19, 2026.</div>
+        <div style="color:var(--text-dim);font-size:.9rem">EU ESPR regulation requires a <strong style="color:var(--text)">blockchain-readable product passport</strong> for products sold in Europe, phased in by category. The central DPP registry is live; battery passports are first.</div>
       </div>
       <div style="border-left:3px solid var(--primary);padding:1rem 1.25rem;background:var(--bg3);border-radius:0 .5rem .5rem 0">
         <div style="font-weight:700;margin-bottom:.35rem">De Beers — Tracr Platform</div>
@@ -3037,13 +3064,13 @@ footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:
 </body>
 </html>`;
 
-const DPP_HTML = `<!DOCTYPE html>
+const dppHtml = (now: Date) => `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EU Digital Product Passport Compliance | AuthiChain</title>
-  <meta name="description" content="AuthiChain delivers EU Digital Product Passport (DPP) compliance via blockchain. Batteries Feb 2027, textiles 2028-29. One integration covers ESPR, EUDR, CSRD. Registry opens July 19, 2026.">
+  <meta name="description" content="AuthiChain delivers EU Digital Product Passport (DPP) tooling via blockchain. One integration covers ESPR, EUDR and CSRD. ${nextDeadline(now) ? `Next deadline: ${escHtml(nextDeadline(now)!.label)}, ${escHtml(formatMilestoneDate(nextDeadline(now)!))}.` : ''}">
   <meta name="keywords" content="EU Digital Product Passport, DPP compliance, digital product passport 2026, DPP blockchain, ESPR regulation, EU battery regulation, supply chain compliance, product passport">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <link rel="canonical" href="https://authichain.com/digital-product-passport">
@@ -3051,12 +3078,12 @@ const DPP_HTML = `<!DOCTYPE html>
   <meta name="theme-color" content="#c9a227">
   <meta property="og:type" content="website">
   <meta property="og:title" content="EU Digital Product Passport Compliance | AuthiChain">
-  <meta property="og:description" content="Blockchain-native DPP platform. Registry opens July 19, 2026. Batteries due Feb 2027. AuthiChain is live now.">
+  <meta property="og:description" content="Blockchain-native DPP platform. ${nextDeadline(now) ? `Next deadline: ${escHtml(nextDeadline(now)!.label)}, ${escHtml(formatMilestoneDate(nextDeadline(now)!))}.` : ''} Offline verification, no account required.">
   <meta property="og:url" content="https://authichain.com/digital-product-passport">
   <meta property="og:image" content="https://authichain.com/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EU Digital Product Passport | AuthiChain">
-  <meta name="twitter:description" content="ESPR DPP compliance via blockchain. Batteries Feb 2027. Live now.">
+  <meta name="twitter:description" content="ESPR DPP tooling via blockchain. ${nextDeadline(now) ? `Next: ${escHtml(nextDeadline(now)!.label)}, ${escHtml(formatMilestoneDate(nextDeadline(now)!))}.` : ''}">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport compliance for brands via blockchain certificates.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
   ${FONTS_LINK}
   <style>
@@ -3100,7 +3127,7 @@ const DPP_HTML = `<!DOCTYPE html>
 
   <section class="hero" id="hero" style="min-height:70vh">
     <div class="hero-content">
-      <div class="badge-live">● REGISTRY OPENS JULY 19, 2026</div>
+      <div class="badge-live">● ${escHtml((mostRecentInForce(now) ?? listMilestones()[0]).label.toUpperCase())} — ${escHtml(countdownLabel(mostRecentInForce(now) ?? listMilestones()[0], now).toUpperCase())}</div>
       <h1 class="hero-title" style="font-size: clamp(2.4rem, 6vw, 4.5rem)">
         EU DIGITAL<br><span class="accent">PRODUCT PASSPORT</span>
       </h1>
@@ -3118,49 +3145,23 @@ const DPP_HTML = `<!DOCTYPE html>
     <div class="container">
       <div class="section-label">REGULATION TIMELINE</div>
       <h2 class="section-title">When Does Your Industry Need DPP?</h2>
-      <p class="section-sub">ESPR rolls out in phases. The EU registry opens July 2026 — deadlines by product category follow through 2030.</p>
+      <p class="section-sub">ESPR rolls out in phases. ${nextDeadline(now) ? `Next: ${escHtml(nextDeadline(now)!.label)} — ${escHtml(countdownLabel(nextDeadline(now)!, now))}.` : 'All published deadlines are now in force.'} Reviewed ${escHtml(timelineUpdatedAt())}.</p>
 
       <div class="dpp-timeline" style="margin-top:48px">
-        <div class="dpp-phase live">
-          <div class="dpp-date">JULY 19<br>2026</div>
+        ${listMilestones().map((m) => {
+          const status = milestoneStatus(m, now);
+          const cls = status === 'in-force' ? 'live' : (status === 'imminent' && m.urgent ? 'urgent' : '');
+          const [head, tail] = formatMilestoneDate(m).split(/,\s|–/);
+          return `
+        <div class="dpp-phase ${cls}">
+          <div class="dpp-date">${escHtml(head.toUpperCase())}${tail ? `<br>${escHtml(tail)}` : ''}</div>
           <div class="dpp-content">
             <span class="dpp-dot"></span>
-            <span class="dpp-phase-title">EU DPP Registry Launch</span>
-            <div class="dpp-phase-sub">Official EU registry goes live. Brands can begin voluntary DPP issuance. AuthiChain onboarding open now.</div>
+            <span class="dpp-phase-title">${escHtml(m.label)}</span>
+            <div class="dpp-phase-sub">${escHtml(m.detail)} <a href="${escHtml(m.source)}" rel="noopener noreferrer" target="_blank" style="color:inherit;text-decoration:underline">${escHtml(countdownLabel(m, now))}</a></div>
           </div>
-        </div>
-        <div class="dpp-phase urgent">
-          <div class="dpp-date">FEB 18<br>2027</div>
-          <div class="dpp-content">
-            <span class="dpp-dot"></span>
-            <span class="dpp-phase-title">Industrial Batteries (≥2 kWh)</span>
-            <div class="dpp-phase-sub">Mandatory DPP for EV batteries, industrial storage, LMT batteries. Carbon footprint, material declaration, recycled content required.</div>
-          </div>
-        </div>
-        <div class="dpp-phase">
-          <div class="dpp-date">Q3–Q4<br>2027</div>
-          <div class="dpp-content">
-            <span class="dpp-dot"></span>
-            <span class="dpp-phase-title">Electronics & ICT Products</span>
-            <div class="dpp-phase-sub">Smartphones, tablets, laptops. Repairability scores, spare parts availability, recycled material content.</div>
-          </div>
-        </div>
-        <div class="dpp-phase">
-          <div class="dpp-date">2028–<br>2029</div>
-          <div class="dpp-content">
-            <span class="dpp-dot"></span>
-            <span class="dpp-phase-title">Textiles, Apparel & Footwear</span>
-            <div class="dpp-phase-sub">Fashion brands must declare fiber composition, recycled content, country of origin, and care instructions via DPP QR codes.</div>
-          </div>
-        </div>
-        <div class="dpp-phase">
-          <div class="dpp-date">2029–<br>2030</div>
-          <div class="dpp-content">
-            <span class="dpp-dot"></span>
-            <span class="dpp-phase-title">Furniture, Steel, Chemicals & More</span>
-            <div class="dpp-phase-sub">ESPR expands to construction products, furniture, agricultural products, and bulk chemicals. Full economic coverage by 2030.</div>
-          </div>
-        </div>
+        </div>`;
+        }).join('')}
       </div>
     </div>
   </section>
@@ -3211,7 +3212,7 @@ const DPP_HTML = `<!DOCTYPE html>
       <div class="section-label">INDUSTRIES SERVED</div>
       <h2 class="section-title">Already Working With</h2>
       <div class="industries">
-        <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory Feb 2027</div></div>
+        <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory ${escHtml(formatMilestoneDate(listMilestones().find((m) => m.id === 'batteries') ?? listMilestones()[0]))}</div></div>
         <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
         <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">FDA DSCSA + DPP</div></div>
         <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
@@ -3271,7 +3272,7 @@ export default {
       return Response.redirect('https://app.authichain.com/pricing', 302);
     }
     if (p === '/digital-product-passport' || p === '/dpp') {
-      return new Response(DPP_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+      return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
