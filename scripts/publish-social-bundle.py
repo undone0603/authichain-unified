@@ -203,26 +203,38 @@ def main() -> int:
 
     results: dict[str, str] = {}
     any_success = False
+    any_hard_failure = False  # a channel that had credentials and still failed
     for name, fn in CHANNELS.items():
         try:
             ok, detail = fn(bundle, args.dry_run)
         except Exception as exc:  # a broken channel must not abort the others
             ok, detail = False, f"error: {type(exc).__name__}: {exc}"
-        status = "ok" if ok else "FAILED"
+        if ok:
+            status = "ok"
+            any_success = True
+            if detail != "dry-run":
+                results[name] = detail
+        elif detail.startswith("skipped:"):
+            status = "skipped"  # no credentials — not a failure, just not wired up
+        else:
+            status = "FAILED"
+            any_hard_failure = True
         print(f"  {name:9s} {status}: {detail}")
-        if ok and detail != "dry-run":
-            results[name] = detail
-            any_success = True
-        elif ok:
-            any_success = True
 
     if args.dry_run:
         print("\nDry run — ledger untouched, nothing posted.")
         return 0
 
     if not any_success:
-        print("\nNo channel accepted the post. Ledger untouched so the next run retries.", file=sys.stderr)
-        return 1
+        if any_hard_failure:
+            print("\nNo channel accepted the post. Ledger untouched so the next run retries.", file=sys.stderr)
+            return 1
+        # Every channel skipped for missing credentials. That is the expected
+        # pre-launch state (OAuth secrets not set yet), not an error — idle
+        # cleanly so the pipeline does not red-CI on every push. The bundle
+        # stays unpublished and will go out once credentials are configured.
+        print("\nAll channels skipped — no social credentials configured. Nothing to publish yet.")
+        return 0
 
     entry = {
         "published_at": datetime.now(timezone.utc).isoformat(),
