@@ -224,10 +224,17 @@ def main() -> int:
         print("\nNo channel accepted the post. Ledger untouched so the next run retries.", file=sys.stderr)
         return 1
 
-    ledger.setdefault("bundles", {})[bundle_path.name] = {
+    entry = {
         "published_at": datetime.now(timezone.utc).isoformat(),
         "channels": results,
     }
+    # Carry the A/B metadata through to the ledger so each variant is traceable
+    # to the live post URLs it produced — that record is the experiment log the
+    # generating routine reads to lean the next batch toward the winning lever.
+    experiment = bundle.get("experiment")
+    if isinstance(experiment, dict):
+        entry["experiment"] = experiment
+    ledger.setdefault("bundles", {})[bundle_path.name] = entry
     save_ledger(ledger)
     print(f"\nRecorded {bundle_path.name} in {LEDGER}.")
     return 0
