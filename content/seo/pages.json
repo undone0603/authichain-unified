@@ -2502,5 +2502,389 @@
         }
       ]
     }
+  },
+  {
+    "slug": "gs1-digital-link-sunrise-2027",
+    "keyword": "gs1 digital link sunrise 2027",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "GS1 Digital Link Sunrise 2027 | QRON",
+    "metaDescription": "GS1 Sunrise 2027 moves point-of-sale scanning to QR codes carrying GS1 Digital Link URIs — the same identifier format QRON uses to attach a signed.",
+    "h1": "GS1 Digital Link Sunrise 2027",
+    "bodyHtml": "<p>GS1 Sunrise 2027 moves point-of-sale scanning to QR codes carrying GS1 Digital Link URIs — the same identifier format QRON uses to attach a signed, verifiable record to every code it issues.</p><h2>Why QRON</h2><ul><li>GS1 Digital Link is the item-identity format in the AuthiChain protocol spec, not a proprietary URL scheme</li><li>One QR code serves both GS1 Digital Link resolution and Ed25519-signed verification — no second code needed</li><li>Existing GTINs and serials map directly into a verifiable record; nothing about your GS1 numbering changes</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $29/mo.</p><h2>FAQ</h2><h3>Does Sunrise 2027 require blockchain?</h3><p>No — Sunrise 2027 is a GS1 retail-scanning standard. Anchoring the record on-chain is optional and adds tamper-evidence on top of a compliant Digital Link QR code.</p><h3>Will our current barcodes stop working?</h3><p>No — Sunrise 2027 adds 2D scanning capability at POS; linear barcodes keep working during and after the transition.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — GS1 Digital Link Sunrise 2027",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "GS1 Sunrise 2027 moves point-of-sale scanning to QR codes carrying GS1 Digital Link URIs — the same identifier format QRON uses to attach a signed, verifiable record to every code it issues.",
+          "url": "https://qron.space/p/gs1-digital-link-sunrise-2027"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "GS1 Digital Link Sunrise 2027",
+              "item": "https://qron.space/p/gs1-digital-link-sunrise-2027"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does Sunrise 2027 require blockchain?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — Sunrise 2027 is a GS1 retail-scanning standard. Anchoring the record on-chain is optional and adds tamper-evidence on top of a compliant Digital Link QR code."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Will our current barcodes stop working?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — Sunrise 2027 adds 2D scanning capability at POS; linear barcodes keep working during and after the transition."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dscsa-unit-level-traceability-2026",
+    "keyword": "dscsa unit level traceability 2026",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DSCSA Unit Level Traceability 2026 | AuthiChain",
+    "metaDescription": "DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026 — replacing PDFs and manual reconciliation with records a.",
+    "h1": "DSCSA Unit Level Traceability 2026",
+    "bodyHtml": "<p>DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026 — replacing PDFs and manual reconciliation with records a trading partner can verify without calling you.</p><h2>Why AuthiChain</h2><ul><li>EPCIS-compatible event data at the unit level, not just the case or lot</li><li>Records are Ed25519-signed Verifiable Credentials a downstream partner verifies offline, no portal login required</li><li>Every required field check runs before a record is accepted — partial or malformed data is rejected, not downgraded to a warning</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>What changes in November 2026?</h3><p>Trading partners must exchange product tracing data electronically at the unit level using interoperable systems; manual and PDF-based processes no longer satisfy the requirement.</p><h3>Does this replace our EPCIS system?</h3><p>No — it signs and anchors the records your EPCIS system already produces so a partner can verify them independently.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DSCSA Unit Level Traceability 2026",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026 — replacing PDFs and manual reconciliation with records a trading partner can verify without calling you.",
+          "url": "https://authichain.com/p/dscsa-unit-level-traceability-2026"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSCSA Unit Level Traceability 2026",
+              "item": "https://authichain.com/p/dscsa-unit-level-traceability-2026"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What changes in November 2026?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Trading partners must exchange product tracing data electronically at the unit level using interoperable systems; manual and PDF-based processes no longer satisfy the requirement."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does this replace our EPCIS system?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it signs and anchors the records your EPCIS system already produces so a partner can verify them independently."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-registry",
+    "keyword": "eu digital product passport registry",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Registry | AuthiChain",
+    "metaDescription": "Every EU Digital Product Passport must resolve from a permanent, unauthenticated URL into the EU registry — AuthiChain issues that record as a signed.",
+    "h1": "EU Digital Product Passport Registry",
+    "bodyHtml": "<p>Every EU Digital Product Passport must resolve from a permanent, unauthenticated URL into the EU registry — AuthiChain issues that record as a signed Verifiable Credential built on open, interoperable standards.</p><h2>Why AuthiChain</h2><ul><li>Records follow the W3C Verifiable Credentials Data Model 2.0 — an open format, not a proprietary schema tied to one vendor</li><li>A resolvable GS1 Digital Link URL per item, live for the product’s full lifecycle, not just at point of sale</li><li>404 on an unknown item, never a synthesized or empty-but-successful response</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When must our records be registry-ready?</h3><p>The first product-specific delegated acts land from 2026, each with an 18-month compliance window once adopted — batteries first, by February 2027.</p><h3>Does the registry need us to run a server?</h3><p>Records resolve from a permanent URL without authentication — no account or vendor call required to verify one.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Registry",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Every EU Digital Product Passport must resolve from a permanent, unauthenticated URL into the EU registry — AuthiChain issues that record as a signed Verifiable Credential built on open, interoperable standards.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-registry"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Registry",
+              "item": "https://authichain.com/p/eu-digital-product-passport-registry"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When must our records be registry-ready?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The first product-specific delegated acts land from 2026, each with an 18-month compliance window once adopted — batteries first, by February 2027."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the registry need us to run a server?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Records resolve from a permanent URL without authentication — no account or vendor call required to verify one."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-supply-chain-provenance",
+    "keyword": "verifiable credential supply chain provenance",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Supply Chain Provenance | AuthiChain",
+    "metaDescription": "W3C formed a Verifiable Supply Chain Community Group in 2026 to standardize proofs of origin and custody that any party can check without trusting the.",
+    "h1": "Verifiable Credential Supply Chain Provenance",
+    "bodyHtml": "<p>W3C formed a Verifiable Supply Chain Community Group in 2026 to standardize proofs of origin and custody that any party can check without trusting the issuer’s database — the same problem AuthiChain’s Verifiable Credentials already address.</p><h2>Why AuthiChain</h2><ul><li>Every provenance record is a W3C Verifiable Credential 2.0, not a proprietary schema</li><li>Ed25519 signatures verify offline — a partner checks authorship without a network call to AuthiChain</li><li>Apache-2.0 spec with a patent grant, so a partner’s legal team can sign off on implementing a compatible verifier</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Do we need to join the W3C group to use this?</h3><p>No — the AuthiChain protocol already implements VC 2.0 and Ed25519 signing; the community group is standardizing supply-chain-specific profiles on the same base spec.</p><h3>Can a partner verify without an AuthiChain account?</h3><p>Yes — the spec, the verifier, and the conformance suite are public. A partner runs the reference verifier or their own VC 2.0-compatible checker directly against the record.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Supply Chain Provenance",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "W3C formed a Verifiable Supply Chain Community Group in 2026 to standardize proofs of origin and custody that any party can check without trusting the issuer’s database — the same problem AuthiChain’s Verifiable Credentials already address.",
+          "url": "https://authichain.com/p/verifiable-credential-supply-chain-provenance"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Supply Chain Provenance",
+              "item": "https://authichain.com/p/verifiable-credential-supply-chain-provenance"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do we need to join the W3C group to use this?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the AuthiChain protocol already implements VC 2.0 and Ed25519 signing; the community group is standardizing supply-chain-specific profiles on the same base spec."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can a partner verify without an AuthiChain account?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — the spec, the verifier, and the conformance suite are public. A partner runs the reference verifier or their own VC 2.0-compatible checker directly against the record."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "battery-passport-qr-code-requirements",
+    "keyword": "battery passport qr code requirements",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Battery Passport QR Code Requirements | AuthiChain",
+    "metaDescription": "The EU battery passport mandate arrives February 18, 2027, with harmonised CEN-CENELEC standards covering the QR code itself, not just the data behind it.",
+    "h1": "Battery Passport QR Code Requirements",
+    "bodyHtml": "<p>The EU battery passport mandate arrives February 18, 2027, with harmonised CEN-CENELEC standards covering the QR code itself, not just the data behind it.</p><h2>Why AuthiChain</h2><ul><li>GS1 Digital Link-formatted QR per battery, the same item-identity format used in the AuthiChain protocol spec</li><li>Carbon footprint, state-of-health, and material-recovery fields anchored to the signed record behind the code</li><li>A verifier rejects a testnet anchor by default and distinguishes anchored records from unanchored ones</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>What is the compliance deadline?</h3><p>February 18, 2027, for EV, e-mobility, home-storage, and industrial batteries placed on the EU market.</p><h3>Is the QR code alone enough?</h3><p>No — the code has to resolve to a record meeting the passport’s required fields; a code that just links to a marketing page is not a passport.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Battery Passport QR Code Requirements",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU battery passport mandate arrives February 18, 2027, with harmonised CEN-CENELEC standards covering the QR code itself, not just the data behind it.",
+          "url": "https://authichain.com/p/battery-passport-qr-code-requirements"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Battery Passport QR Code Requirements",
+              "item": "https://authichain.com/p/battery-passport-qr-code-requirements"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What is the compliance deadline?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "February 18, 2027, for EV, e-mobility, home-storage, and industrial batteries placed on the EU market."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is the QR code alone enough?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the code has to resolve to a record meeting the passport’s required fields; a code that just links to a marketing page is not a passport."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "epcis-2-0-blockchain-anchoring",
+    "keyword": "epcis 2.0 blockchain anchoring",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EPCIS 2.0 Blockchain Anchoring | AuthiChain",
+    "metaDescription": "EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require — AuthiChain hashes and anchors those events so a partner can prove the record.",
+    "h1": "EPCIS 2.0 Blockchain Anchoring",
+    "bodyHtml": "<p>EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require — AuthiChain hashes and anchors those events so a partner can prove the record has not been altered after the fact.</p><h2>Why AuthiChain</h2><ul><li>SHA-256 hash of the canonical event record, anchored on Polygon with a CAIP-2 chain identifier</li><li>A verifier rejects a malformed or testnet anchor instead of displaying it as proof</li><li>EPCIS events export into a W3C Verifiable Credential without a schema rewrite</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Do we need to change our EPCIS implementation?</h3><p>No — anchoring wraps the events your EPCIS repository already emits; the event schema stays yours.</p><h3>What does anchoring add over EPCIS alone?</h3><p>EPCIS proves what was recorded; anchoring proves it has not changed since — a partner checks the hash independently instead of trusting your database.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EPCIS 2.0 Blockchain Anchoring",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require — AuthiChain hashes and anchors those events so a partner can prove the record has not been altered after the fact.",
+          "url": "https://authichain.com/p/epcis-2-0-blockchain-anchoring"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EPCIS 2.0 Blockchain Anchoring",
+              "item": "https://authichain.com/p/epcis-2-0-blockchain-anchoring"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do we need to change our EPCIS implementation?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — anchoring wraps the events your EPCIS repository already emits; the event schema stays yours."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does anchoring add over EPCIS alone?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "EPCIS proves what was recorded; anchoring proves it has not changed since — a partner checks the hash independently instead of trusting your database."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
