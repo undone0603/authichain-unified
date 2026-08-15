@@ -61,6 +61,29 @@ FIPS / HIPAA / PCI claims. No "quantum-resistant" (Ed25519 is not) or QR "L4"
   routine reads it to see which campaigns/variants already went out and, as
   engagement data accrues, leans the next batch toward the winning lever.
 
+## Publishing channels — pick the least painful credential
+
+`content-publish.yml` runs every channel; each **skips cleanly when its secrets
+are absent**, so wire up whichever subset you want. In rising order of setup pain:
+
+| Channel | Secrets | Setup | OAuth? |
+| --- | --- | --- | --- |
+| **Telegram** | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID` | BotFather gives a token in ~1 min; add the bot as a channel admin | none |
+| **Webhook fan-out** | `SOCIAL_WEBHOOK_URL` (+ optional `SOCIAL_WEBHOOK_TOKEN`) | One Zapier Zap / Make scenario / n8n flow, triggered by a Catch Hook, that posts to LinkedIn + Reddit + X. Connect those accounts **once in that tool's UI** | handled by Zapier/Make, not here |
+| LinkedIn (direct) | `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_PERSON_URN` | `scripts/linkedin-oauth-setup.mjs` | interactive OAuth |
+| Reddit (direct) | `REDDIT_CLIENT_ID/SECRET/USERNAME/PASSWORD` | Reddit "script" app | password grant |
+| X/Twitter (direct) | `TWITTER_API_KEY/SECRET`, `TWITTER_ACCESS_TOKEN/SECRET` | X developer app | OAuth 1.0a |
+
+The **webhook** is the recommended autonomous path: it collapses three OAuth
+flows and eight secrets into a single URL, and the platform authorisation lives
+in Zapier/Make (a UI connect, not a token you mint and rotate by hand). The
+publisher POSTs the validated bundle JSON (`linkedin`, `reddit`, `twitter`,
+`experiment`) to that URL; your flow maps each field to its platform. **Telegram**
+is the zero-OAuth quick win — a real channel live from a bot token alone. Both
+still post only content that passed `validate-social-bundle.mjs`.
+
+Load any of these with `set-social-secrets.yml`.
+
 ## Ledger
 
 `.published.json` is the idempotency record — a bundle listed there is never

@@ -167,7 +167,64 @@ def post_twitter(bundle: dict, dry: bool) -> tuple[bool, str]:
     return True, f"https://x.com/i/status/{first_id}"
 
 
-CHANNELS = {"linkedin": post_linkedin, "reddit": post_reddit, "twitter": post_twitter}
+def post_telegram(bundle: dict, dry: bool) -> tuple[bool, str]:
+    """Zero-OAuth channel. A BotFather token + a channel id the bot administers
+    is the entire setup — no OAuth redirect, no account password. Posts the
+    already-validated linkedin copy so nothing bypasses the guardrail."""
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat = os.environ.get("TELEGRAM_CHANNEL_ID")
+    if not token or not chat:
+        return False, "skipped: TELEGRAM_BOT_TOKEN/TELEGRAM_CHANNEL_ID not set"
+    if dry:
+        return True, "dry-run"
+
+    import requests
+
+    r = requests.post(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        json={"chat_id": chat, "text": bundle["linkedin"]},
+        timeout=20,
+    )
+    if not r.ok:
+        return False, f"HTTP {r.status_code}: {r.text[:200]}"
+    return True, f"telegram message {r.json().get('result', {}).get('message_id', 'posted')}"
+
+
+def post_webhook(bundle: dict, dry: bool) -> tuple[bool, str]:
+    """Universal fan-out. Instead of holding LinkedIn/Reddit/X OAuth tokens as
+    GitHub secrets, POST the validated bundle to one webhook — a Zapier Zap,
+    Make scenario, n8n flow, or Buffer relay that the owner authorises once in
+    that tool's UI and which fans the post out to every platform. Collapses
+    three OAuth flows and eight secrets into a single URL."""
+    url = os.environ.get("SOCIAL_WEBHOOK_URL")
+    if not url:
+        return False, "skipped: SOCIAL_WEBHOOK_URL not set"
+    if dry:
+        return True, "dry-run"
+
+    import requests
+
+    headers = {"Content-Type": "application/json"}
+    secret = os.environ.get("SOCIAL_WEBHOOK_TOKEN")
+    if secret:
+        # Optional shared secret so the receiving flow can reject forged posts.
+        headers["Authorization"] = f"Bearer {secret}"
+    r = requests.post(url, json=bundle, headers=headers, timeout=20)
+    if not r.ok:
+        return False, f"HTTP {r.status_code}: {r.text[:200]}"
+    return True, f"delivered to webhook (HTTP {r.status_code})"
+
+
+# Direct platform channels first, then the credential-light alternatives. Every
+# channel skips cleanly when its secrets are absent, so an operator can wire up
+# whichever subset they want — one webhook, or Telegram, or the raw OAuth apps.
+CHANNELS = {
+    "linkedin": post_linkedin,
+    "reddit": post_reddit,
+    "twitter": post_twitter,
+    "telegram": post_telegram,
+    "webhook": post_webhook,
+}
 
 
 # ─── Credential preflight ─────────────────────────────────────────────────────

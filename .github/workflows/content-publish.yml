@@ -96,6 +96,16 @@ jobs:
           TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
           TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
           TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+          # Credential-light alternatives to the raw OAuth apps above. Set either
+          # instead of (or alongside) the platform tokens — each channel skips
+          # cleanly when its secrets are absent.
+          # Telegram: BotFather token + a channel id the bot administers.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          # Webhook fan-out: one URL (Zapier/Make/n8n/Buffer) that posts to every
+          # platform using connections authorised once in that tool's UI.
+          SOCIAL_WEBHOOK_URL: ${{ secrets.SOCIAL_WEBHOOK_URL }}
+          SOCIAL_WEBHOOK_TOKEN: ${{ secrets.SOCIAL_WEBHOOK_TOKEN }}
         run: |
           ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
