@@ -311,10 +311,62 @@ def check_twitter() -> tuple[str, str]:
     return "ok", f"authenticated as @{handle}"
 
 
+
+def check_telegram() -> tuple[str, str]:
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat = os.environ.get("TELEGRAM_CHANNEL_ID")
+    if not token or not chat:
+        return "unconfigured", "TELEGRAM_BOT_TOKEN/TELEGRAM_CHANNEL_ID not set"
+
+    import requests
+
+    me = requests.get(f"https://api.telegram.org/bot{token}/getMe", timeout=20)
+    if me.status_code == 401:
+        return "expired", "HTTP 401 — bot token rejected. Reissue via BotFather."
+    if not me.ok:
+        return "error", f"getMe HTTP {me.status_code}: {me.text[:150]}"
+    handle = me.json().get("result", {}).get("username", "bot")
+
+    # A valid token whose bot was never added to the channel is the failure that
+    # actually happens, and getMe alone would call it healthy.
+    chat_res = requests.get(
+        f"https://api.telegram.org/bot{token}/getChat",
+        params={"chat_id": chat},
+        timeout=20,
+    )
+    if not chat_res.ok:
+        return "error", (
+            f"@{handle} authenticates but cannot read {chat} "
+            f"(HTTP {chat_res.status_code}) — add the bot to the channel as an admin."
+        )
+    title = chat_res.json().get("result", {}).get("title", chat)
+    return "ok", f"@{handle} can post to {title}"
+
+
+def check_webhook() -> tuple[str, str]:
+    """A webhook has no read-only endpoint, so this reports configuration only.
+
+    Probing it would mean POSTing, and a Zapier/Make/n8n flow treats any POST as
+    a real post — the probe would publish. Saying so plainly is better than a
+    green tick that means nothing: an unreachable or misconfigured webhook will
+    only surface on the first genuine publish.
+    """
+    url = os.environ.get("SOCIAL_WEBHOOK_URL")
+    if not url:
+        return "unconfigured", "SOCIAL_WEBHOOK_URL not set"
+    if not url.startswith("https://"):
+        return "error", "SOCIAL_WEBHOOK_URL is not https — refusing to send bundles in the clear"
+    host = url.split("/")[2] if len(url.split("/")) > 2 else url
+    auth = "with auth token" if os.environ.get("SOCIAL_WEBHOOK_TOKEN") else "no auth token"
+    return "configured", f"{host} ({auth}) — not probed; a POST here would publish"
+
+
 CREDENTIAL_CHECKS = {
     "linkedin": check_linkedin,
     "reddit": check_reddit,
     "twitter": check_twitter,
+    "telegram": check_telegram,
+    "webhook": check_webhook,
 }
 
 
@@ -326,19 +378,21 @@ def run_credential_check(strict: bool) -> int:
     only fails the run under --strict.
     """
     print("Social credential preflight (read-only, nothing is posted)\n")
-    broken, unconfigured = [], []
+    broken, unconfigured, unprobed = [], [], []
 
     for name, fn in CREDENTIAL_CHECKS.items():
         try:
             state, detail = fn()
         except Exception as exc:
             state, detail = "error", f"{type(exc).__name__}: {exc}"
-        symbol = {"ok": "✓", "unconfigured": "–", "expired": "✗", "error": "✗"}[state]
+        symbol = {"ok": "✓", "configured": "?", "unconfigured": "–", "expired": "✗", "error": "✗"}[state]
         print(f"  {symbol} {name:9s} {state:12s} {detail}")
         if state in ("expired", "error"):
             broken.append(name)
         elif state == "unconfigured":
             unconfigured.append(name)
+        elif state == "configured":
+            unprobed.append(name)
 
     print()
     if broken:
@@ -351,7 +405,9 @@ def run_credential_check(strict: bool) -> int:
     if unconfigured:
         print(f"{len(unconfigured)} channel(s) not configured: {', '.join(unconfigured)}.")
         print("These are skipped at publish time rather than failing the run.")
-    if not broken and not unconfigured:
+    if unprobed:
+        print(f"{len(unprobed)} channel(s) configured but not verifiable: {', '.join(unprobed)}.")
+    if not broken and not unconfigured and not unprobed:
         print("All channels authenticate.")
     return 0
 
