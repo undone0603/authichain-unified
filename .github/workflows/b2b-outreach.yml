@@ -18,14 +18,13 @@ on:
           - strainchain
           - qron
       dry_run:
-        # STAGED ACTIVATION: defaults to true so scheduled runs and default
-        # manual runs prospect + save to Supabase but send NO live email. To
-        # send live for one run, dispatch manually with this unchecked. To
-        # remove the guard permanently after reviewing staged output, flip this
-        # default and the `|| 'true'` fallback below back to 'false'.
+        # LIVE: staged output was reviewed and approved, so scheduled and
+        # default manual runs now send for real. Check this box on a manual
+        # dispatch to force a dry run (prospect + save to Supabase, skip the
+        # email send) without editing the workflow.
         description: 'Dry run (save to Supabase, skip email send)'
         required: false
-        default: 'true'
+        default: 'false'
         type: boolean
       flush_queued:
         description: 'Only flush already-queued leads (no new prospecting)'
@@ -80,8 +79,8 @@ jobs:
           SALES_NOTIFY_EMAIL:    ${{ secrets.SALES_NOTIFY_EMAIL || 'hello@authichain.com' }}
           CALENDLY_LINK:         ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
           AUTHICHAIN_BOOK_URL:   ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
-          # STAGED: fallback is 'true' so scheduled runs never send live.
-          DRY_RUN:               ${{ inputs.dry_run || 'true' }}
+          # LIVE: fallback is 'false' so scheduled runs send for real.
+          DRY_RUN:               ${{ inputs.dry_run || 'false' }}
           FLUSH_QUEUED_ONLY:     ${{ inputs.flush_queued || 'false' }}
           # Guardrail/caps layer — every send is check/record-gated through
           # this. Missing secret fails closed (nothing sends), so this must
