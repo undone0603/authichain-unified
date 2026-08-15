@@ -41,10 +41,17 @@ const FIT_THRESHOLD_HIGH = 70;  // Only pursue high-fit opportunities
 const FIT_THRESHOLD_BORDERLINE = 60; // Manual review queue threshold
 
 async function scoreOpportunities(): Promise<{ scored: number; failed: number; total: number }> {
+  // Reachability-first ordering: score opportunities that carry a point-of-contact
+  // email ahead of unreachable ones, so the fraction of the backlog that can
+  // actually convert to a delivered proposal moves through scoring first. The
+  // scorer only processes 50/run, and the 'new' queue mixes ~1.5k emailable
+  // notices with a larger pool that has no contact — arbitrary order starved the
+  // sendable funnel. (nullsFirst:false sends contactless opportunities to the back.)
   const { data: opps, error } = await supabase
     .from('gov_opportunities')
     .select('*')
     .eq('status', 'new')
+    .order('contact_email', { ascending: false, nullsFirst: false })
     .limit(50);
 
   if (error) throw error;
