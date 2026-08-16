@@ -94,7 +94,7 @@ jobs:
           STRIPE_PRICE_PRO: ${{ secrets.STRIPE_PRICE_PRO }}
           STRIPE_PRICE_ENTERPRISE: ${{ secrets.STRIPE_PRICE_ENTERPRISE }}
         run: |
-          put_secret () {
+          put_secret() {
             local key="$1"
             local value="$2"
 
@@ -106,20 +106,4 @@ jobs:
           }
 
           put_secret SUPABASE_URL "$SUPABASE_URL"
-          put_secret SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
-          put_secret STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY"
-          put_secret STRIPE_WEBHOOK_SECRET "$STRIPE_WEBHOOK_SECRET"
-          put_secret STRIPE_PRICE_BASIC "$STRIPE_PRICE_BASIC"
-          put_secret STRIPE_PRICE_PRO "$STRIPE_PRICE_PRO"
-          put_secret STRIPE_PRICE_ENTERPRISE "$STRIPE_PRICE_ENTERPRISE"
-
-      - name: Deploy worker
-        if: steps.secrets_check.outputs.skip != 'true'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: wrangler deploy --config api/wrangler.toml
-
-      - name: Deploy skipped
-        if: steps.secrets_check.outputs.skip == 'true'
-        run: echo "Edge worker deploy skipped — configure CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in GitHub repo secrets."
+          put_secret SUPABASE_SERVICE_ROLE_KEY 
