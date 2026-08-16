@@ -18,7 +18,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "sync-secrets": "bash scripts/sync-secrets.sh"
+    "sync-secrets": "bash scripts/sync-secrets.sh",
+    "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.65",
@@ -150,7 +152,9 @@
     "husky": "^8.0.0",
     "lint-staged": "^14.0.0",
     "ioredis": "file:./stubs/empty-redis",
-    "redis": "file:./stubs/empty-redis"
+    "redis": "file:./stubs/empty-redis",
+    "husky": "^8.0.0",
+    "lint-staged": "^14.0.0"
   },
   "pnpm": {
     "overrides": {
