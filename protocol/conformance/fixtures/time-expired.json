@@ -1,0 +1,37 @@
+{
+  "id": "time-expired",
+  "description": "validUntil in the year 2000 — expired under any plausible clock.",
+  "record": {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://authichain.com/protocol/v1"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "ProvenanceRecord"
+    ],
+    "issuer": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+    "validFrom": "2020-01-01T00:00:00Z",
+    "credentialSubject": {
+      "id": "https://id.gs1.org/01/09506000134352/21/SERIAL123",
+      "gtin": "09506000134352",
+      "serial": "SERIAL123"
+    },
+    "validUntil": "2000-01-01T00:00:00Z",
+    "proof": {
+      "type": "Ed25519Signature2020",
+      "created": "2020-01-01T00:00:00Z",
+      "verificationMethod": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG#key-1",
+      "proofPurpose": "assertionMethod",
+      "proofValue": "z3friMq4c3LZKVjdixTv9M3k32FUN4XtHvT7XfXkEkuwUGcHyzCL7nQV3hNyszZAfWhJP1Np975angQHEEbJTtdtp"
+    }
+  },
+  "anchor": null,
+  "options": {},
+  "expect": {
+    "verdict": "invalid",
+    "reasonsInclude": [
+      "expired"
+    ]
+  }
+}

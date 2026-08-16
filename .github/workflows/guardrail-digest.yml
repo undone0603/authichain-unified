@@ -1,0 +1,20 @@
+# .github/workflows/guardrail-digest.yml
+name: Guardrail Daily Digest
+
+on:
+  schedule:
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run guardrail evaluator + send digest
+        run: |
+          STATUS=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+            -H "x-internal-secret: ${{ secrets.INTERNAL_API_SECRET }}" \
+            "https://app.authichain.com/api/guardrail/digest")
+          cat /tmp/resp.json
+          echo "HTTP $STATUS"
+          [[ "$STATUS" =~ ^2 ]] || exit 1

@@ -62,7 +62,7 @@ export default function PrivacyPage() {
               3. Data Security
             </h2>
             <p className="text-zinc-400 leading-relaxed">
-              We implement industry-standard safeguards, including end-to-end encryption (TLS/SSL), secure Supabase authentication, and PCI-DSS compliant payment processing through Stripe.
+              We implement industry-standard safeguards, including encryption in transit (TLS), Supabase-managed authentication, and payment processing handled entirely by Stripe, which is PCI-DSS Level 1 certified. Card details never reach our servers. We hold no PCI certification of our own because we never touch card data.
             </p>
           </section>
 

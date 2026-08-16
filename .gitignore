@@ -78,13 +78,12 @@ SYSTEM_STATE.md
 .next/
 dist/
 
-# Externally cloned repos (exploration only) — anchored to root so
-# apps/* consolidated copies stay trackable
-/authichain_premium/
-/qron-platform/
-/qron/
-/govchain.us/
-/maison-elite-ai-dropship/
+# Externally cloned repos (exploration only)
+authichain_premium/
+qron-platform/
+qron/
+govchain.us/
+maison-elite-ai-dropship/
 
 # Debug/lint output artifacts
 eslint_errors.txt

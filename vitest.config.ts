@@ -15,5 +15,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["server/**/*.test.ts", "server/**/*.spec.ts", "shared/**/*.test.ts", "src/**/*.test.ts", "src/**/*.spec.ts"],
+    // protocol/ is the Apache-2.0 reference verifier and ships as plain .mjs so
+    // anyone can run it without this repo's toolchain — hence the extra pattern.
+    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "shared/**/*.test.ts", "src/**/*.test.ts", "src/**/*.spec.ts", "worker-app/**/*.test.ts", "scripts/**/*.test.ts", "client/**/*.test.ts", "client/**/*.test.tsx", "workers/**/*.test.ts", "protocol/**/*.test.mjs"],
   },
 });

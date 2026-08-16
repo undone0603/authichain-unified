@@ -13,7 +13,12 @@ describe('seo-pages loader', () => {
       const jsonLd = p.jsonLd as any;
       const graph = jsonLd['@graph'];
       const entity = Array.isArray(graph) ? graph[0] : jsonLd;
-      expect(['Product', 'Service']).toContain(entity?.['@type']);
+      // Article belongs here: two committed pages are explainers rather than
+      // offerings ("What Is a Digital Product Passport?", "EU DPP Compliance
+      // Checklist"). Typing editorial content as Product would be inaccurate
+      // structured data, which search engines penalise — so the assertion
+      // widens rather than the content changing to match it.
+      expect(['Product', 'Service', 'Article']).toContain(entity?.['@type']);
     }
   });
 

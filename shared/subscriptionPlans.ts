@@ -75,7 +75,7 @@ export const SUBSCRIPTION_PLANS = {
       "50,000 authentications/month",
       "ISO 13485 Compliance Module",
       "Clinical Trial Fraud Prevention AI",
-      "FIPS 140-2 HSM Crypto Module",
+      "Ed25519 signing (FIPS 186-5) with managed key rotation",
       "W3C Verifiable Credentials",
       "Blockchain-anchored Proof of Purity",
       "Priority 24/7 Concierge Support",

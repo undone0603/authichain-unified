@@ -18,11 +18,13 @@ import httpx
 
 class LMStudioManager:
     """Manages model lifecycle using native LM Studio v1 REST API."""
-    def __init__(self, base_url="http://localhost:1234"):
+    def __init__(self, base_url="http://192.168.254.10:1234"):
         self.base_url = base_url
 
     def load_model(self, model_identifier: str):
         """Loads a model via v1 API."""
+        if model_identifier == "local-model":
+            model_identifier = "google/gemma-4-e4b"
         url = f"{self.base_url}/api/v1/models/load"
         try:
             with httpx.Client() as client:
@@ -34,6 +36,8 @@ class LMStudioManager:
 
     def unload_model(self, model_identifier: str):
         """Unloads a model via v1 API."""
+        if model_identifier == "local-model":
+            model_identifier = "google/gemma-4-e4b"
         url = f"{self.base_url}/api/v1/models/unload"
         try:
             with httpx.Client() as client:
@@ -176,10 +180,12 @@ class LimitProofLLM:
 
     @staticmethod
     def _local_base_url() -> str:
-        base = os.environ.get("LOCAL_MODEL_URL", "http://localhost:1234").rstrip("/")
-        if not base.endswith("/v1"):
-            base += "/v1"
+        # Some LM Studio versions might not use /v1 in the path for management
+        base = os.environ.get("LOCAL_MODEL_URL", "http://192.168.254.10:1234").rstrip("/")
+        # If the API is at /api/v1/models/load, the base should be /api/v1, but the current code does /v1.
+        # Let's try just the base without adding /v1 automatically if it doesn't end in it.
         return base
+
 
     def _get_lmstudio(self):
         llm = ChatOpenAI(

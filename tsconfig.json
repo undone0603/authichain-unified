@@ -53,7 +53,6 @@
     "node_modules",
     "build",
     "dist",
-    "apps/**/*",
     "workers/**/*",
     "worker/**/*",
     "mobile/**/*",
@@ -65,7 +64,6 @@
     "server/scripts/**/*",
     "app/**/*",
     "src/db/qron_schema.ts",
-    "src/gateway.ts",
     "sentry.client.config.ts",
     "sentry.edge.config.ts",
     "sentry.server.config.ts"

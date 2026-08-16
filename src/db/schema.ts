@@ -975,37 +975,34 @@ export const checkpointBatches = pgTable("checkpoint_batches", {
 });
 
 // ─── Missions ────────────────────────────────────────────────────────────────
-// Column names below map the ORM to the columns that actually exist in the
-// live Postgres database (snake_case, uuid ids). JS property names are kept
-// stable so callers (server/db.ts, server/missions/missions.db.ts, task-runner)
-// need no changes. `kind`, `priority`, `error`, `scheduledAt` are supplied by
-// migration 013 (additive, nullable/defaulted).
 export const missions = pgTable("missions", {
-  id: uuid("id").primaryKey(),
+  id: varchar("id", { length: 64 }).primaryKey(),
   type: varchar("type", { length: 64 }).notNull(),
   title: varchar("title", { length: 256 }).notNull(),
   description: text("description"),
-  status: text("status").default("pending").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  status: varchar("status", { length: 50 }).default("pending").notNull(),
+  priority: integer("priority").default(0).notNull(),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 // ─── Mission Tasks ───────────────────────────────────────────────────────────
 export const missionTasks = pgTable("mission_tasks", {
-  id: uuid("id").primaryKey(),
-  missionId: uuid("mission_id").notNull(),
-  kind: varchar("kind", { length: 128 }),
+  id: varchar("id", { length: 64 }).primaryKey(),
+  missionId: varchar("missionId", { length: 64 }).notNull(),
+  kind: varchar("kind", { length: 128 }).notNull(),
   title: varchar("title", { length: 256 }).notNull(),
   description: text("description"),
-  status: text("status").default("pending").notNull(),
+  status: varchar("status", { length: 50 }).default("pending").notNull(),
   priority: integer("priority").default(0).notNull(),
-  order: integer("task_order").default(0).notNull(),
-  payload: jsonb("payload"),
-  result: jsonb("result"),
+  order: integer("order").default(0).notNull(),
+  payload: json("payload"),
+  result: json("result"),
   error: text("error"),
-  scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  scheduledAt: timestamp("scheduledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 // ─── Platform Fees ───────────────────────────────────────────────────────────
@@ -1242,33 +1239,29 @@ export type Proposal = typeof proposals.$inferSelect;
 export type InsertProposal = typeof proposals.$inferInsert;
 
 // ─── Inbound Email Replies ───────────────────────────────────────────────────────
-// NOTE: JS keys stay camelCase (all call sites use them); the DB column-name
-// strings are snake_case to match the live `inbound_replies` table. They were
-// previously camelCase, which threw `column "leadId" does not exist` on every
-// query, so the whole reply-nurture flow (/api/cron/nurture-replies) was dead.
 export const inboundReplies = pgTable("inbound_replies", {
   id: uuid("id").primaryKey().defaultRandom(),
-  leadId: integer("lead_id"), // FK to leads.id, null if unmatched
-  leadEmail: varchar("lead_email", { length: 320 }).notNull(),
-  senderName: varchar("sender_name", { length: 256 }),
+  leadId: integer("leadId"), // FK to leads.id, null if unmatched
+  leadEmail: varchar("leadEmail", { length: 320 }).notNull(),
+  senderName: varchar("senderName", { length: 256 }),
   subject: varchar("subject", { length: 512 }),
-  bodyPlaintext: text("body_plaintext"),
-  bodyHtml: text("body_html"),
-  messageId: varchar("message_id", { length: 256 }).notNull().unique(), // Resend ID for deduplication
+  bodyPlaintext: text("bodyPlaintext"),
+  bodyHtml: text("bodyHtml"),
+  messageId: varchar("messageId", { length: 256 }).notNull().unique(), // Resend ID for deduplication
   sentiment: varchar("sentiment", { length: 32 }), // positive|neutral|negative|objection
-  objectionType: varchar("objection_type", { length: 64 }), // budget|timeline|competitor|decision_maker|other
-  objectionDetails: text("objection_details"),
+  objectionType: varchar("objectionType", { length: 64 }), // budget|timeline|competitor|decision_maker|other
+  objectionDetails: text("objectionDetails"),
   confidence: real("confidence"), // 0.0-1.0 from Claude
-  proposalMatchId: varchar("proposal_match_id", { length: 64 }), // FK to proposals.id
-  matchConfidence: real("match_confidence"), // how sure we are about the match
+  proposalMatchId: varchar("proposalMatchId", { length: 64 }), // FK to proposals.id
+  matchConfidence: real("matchConfidence"), // how sure we are about the match
   status: varchar("status", { length: 32 }).default("new"), // new|contacted|deal_won|disqualified|nurture_paused
-  manualOverride: boolean("manual_override").default(false),
-  manualSentiment: varchar("manual_sentiment", { length: 32 }),
-  overriddenBy: integer("overridden_by"), // userId who overrode
-  overriddenAt: timestamp("overridden_at"),
+  manualOverride: boolean("manualOverride").default(false),
+  manualSentiment: varchar("manualSentiment", { length: 32 }),
+  overriddenBy: integer("overriddenBy"), // userId who overrode
+  overriddenAt: timestamp("overriddenAt"),
   metadata: jsonb("metadata").default({}), // raw headers, thread info
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 }, (table) => ({
   inboundRepliesLeadIdx: index("idx_inbound_replies_lead").on(table.leadId),
   inboundRepliesEmailIdx: index("idx_inbound_replies_email").on(table.leadEmail),
@@ -1280,23 +1273,21 @@ export type InboundReply = typeof inboundReplies.$inferSelect;
 export type InsertInboundReply = typeof inboundReplies.$inferInsert;
 
 // ─── Reply Nurture Sequences ────────────────────────────────────────────────────
-// DB column strings are snake_case to match the live `reply_sequences` table
-// (same drift as inbound_replies above); JS keys stay camelCase.
 export const replySequences = pgTable("reply_sequences", {
   id: uuid("id").primaryKey().defaultRandom(),
-  leadId: integer("lead_id").notNull(), // FK to leads.id
-  replyId: uuid("reply_id").notNull(), // FK to inbound_replies.id
-  templateType: varchar("template_type", { length: 64 }).notNull(), // objection_budget|objection_timeline|positive_followup|reminder|objection_competitor
-  sequenceNumber: integer("sequence_number").default(1), // 1,2,3... in sequence
+  leadId: integer("leadId").notNull(), // FK to leads.id
+  replyId: uuid("replyId").notNull(), // FK to inbound_replies.id
+  templateType: varchar("templateType", { length: 64 }).notNull(), // objection_budget|objection_timeline|positive_followup|reminder|objection_competitor
+  sequenceNumber: integer("sequenceNumber").default(1), // 1,2,3... in sequence
   status: varchar("status", { length: 32 }).default("pending"), // pending|sent|clicked|bounced|paused
-  sentAt: timestamp("sent_at"),
-  clickedAt: timestamp("clicked_at"),
-  nextScheduledAt: timestamp("next_scheduled_at"),
-  emailSubject: varchar("email_subject", { length: 512 }),
-  emailBody: text("email_body"),
+  sentAt: timestamp("sentAt"),
+  clickedAt: timestamp("clickedAt"),
+  nextScheduledAt: timestamp("nextScheduledAt"),
+  emailSubject: varchar("emailSubject", { length: 512 }),
+  emailBody: text("emailBody"),
   metadata: jsonb("metadata").default({}), // tracking info, link info
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 }, (table) => ({
   replySequencesLeadIdx: index("idx_reply_sequences_lead").on(table.leadId),
   replySequencesReplyIdx: index("idx_reply_sequences_reply").on(table.replyId),

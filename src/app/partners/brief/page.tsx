@@ -41,10 +41,22 @@ export default function PartnerBriefPage() {
                     <h2 className="text-2xl font-black uppercase tracking-tight">The Regulatory Catalyst</h2>
                 </div>
                 <div className="space-y-6 text-zinc-700">
+                    {/*
+                        Also fixes a rendering bug: the **bold** markers here are
+                        Markdown inside JSX, so they rendered as literal asterisks.
+                        Attribution corrected too — EO 14392 prompted the sweep, but
+                        the rule manufacturers are held to is 16 CFR Part 323.
+                    */}
                     <p className="leading-relaxed">
-                        With **EO 14392** and recent FTC enforcement sweeps (e.g., the $625k TouchTunes penalty), 
-                        American manufacturers are facing unprecedented pressure to provide **verifiable proof** 
-                        for &quot;Made in USA&quot; (MUSA) claims.
+                        The FTC&apos;s April 2026 <strong>Made in USA</strong> sweep — brought under its
+                        Made in USA Labeling Rule (<strong>16 CFR Part 323</strong>), and following
+                        Executive Order 14392 on truthful &quot;Made in America&quot; advertising —
+                        produced a $625,000 order against TouchTunes, the largest under that rule to date.
+                    </p>
+                    <p className="leading-relaxed">
+                        The rule turns on whether &quot;all or virtually all&quot; of a product is
+                        US-origin, which makes <strong>verifiable proof</strong> a documentation problem
+                        as much as a sourcing one.
                     </p>
                     <p className="leading-relaxed font-bold">
                         The era of self-certification is over. Brands now require a consumer-facing 

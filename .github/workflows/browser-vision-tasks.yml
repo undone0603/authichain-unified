@@ -32,6 +32,58 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # GitHub-hosted runners have no IPv6 route, but Supabase's pooler host
+      # sometimes hands back only/first an AAAA record — NODE_OPTIONS
+      # --dns-result-order=ipv4first (below) only *reorders* results Node's
+      # own dns.lookup() already got; it can't help if pg's connection pool
+      # ends up with the IPv6 address anyway (confirmed by prior failures:
+      # ENETUNREACH connect to a 2600:... address on port 6543 even with
+      # ipv4first set). Pinning the resolved IPv4 address into /etc/hosts
+      # short-circuits DNS entirely for this hostname, which is reliable
+      # regardless of Node/driver DNS-ordering quirks.
+      #
+      # IMPORTANT: DATABASE_URL must point at Supabase's Session Pooler
+      # (port 6543, host like aws-0-<region>.pooler.supabase.com), which is
+      # dual-stack/IPv4-reachable. Supabase's *direct* connection host
+      # (db.<project>.supabase.co, port 5432) is IPv6-only and will always
+      # fail with ENETUNREACH on these runners — the fail-fast check below
+      # catches that misconfiguration explicitly instead of hanging/erroring
+      # deep inside the pg driver with an opaque stack trace.
+      - name: Force IPv4 for Supabase pooler (runner has no IPv6 route)
+        if: steps.check.outputs.skip == 'false'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          host=$(printf '%s' "$DATABASE_URL" | sed -E 's#^[a-zA-Z]+://[^@]*@##; s#[:/].*$##')
+          port=$(printf '%s' "$DATABASE_URL" | sed -E 's#^[a-zA-Z]+://[^@]*@[^:/]*:?##; s#[/?].*$##')
+          if [ -z "$host" ]; then
+            echo "Could not parse a host out of DATABASE_URL; skipping IPv4 pin (falling back to NODE_OPTIONS ipv4first only)."
+            exit 0
+          fi
+
+          ipv4=$(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1; exit}' || true)
+          if [ -z "$ipv4" ]; then
+            ipv4=$(dig +short A "$host" 2>/dev/null | tail -1 || true)
+          fi
+
+          if [ -n "$ipv4" ]; then
+            echo "Pinning $host -> $ipv4 in /etc/hosts (forces IPv4, bypasses AAAA resolution)."
+            echo "$ipv4 $host" | sudo tee -a /etc/hosts >/dev/null
+          else
+            # No A record at all: this host is IPv6-only. On a GitHub-hosted
+            # runner (no IPv6 route) every connection attempt WILL fail with
+            # ENETUNREACH, so fail fast here with an actionable message
+            # instead of letting Playwright/pg burn the full job timeout.
+            aaaa=$(dig +short AAAA "$host" 2>/dev/null | tail -1 || true)
+            echo "::error::No IPv4 (A) record found for host '$host' (port ${port:-unknown})."
+            if [ -n "$aaaa" ]; then
+              echo "::error::Host '$host' resolves only to IPv6 ($aaaa). GitHub-hosted runners have no IPv6 route, so this WILL fail with ENETUNREACH."
+            fi
+            echo "::error::DATABASE_URL is likely pointing at Supabase's direct connection host (port 5432, IPv6-only) instead of the Session Pooler (port 6543, dual-stack). Update the DATABASE_URL repo secret to the pooler connection string (Supabase dashboard -> Project Settings -> Database -> Connection pooling -> Session mode) and re-run this workflow."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         if: steps.check.outputs.skip == 'false'
 

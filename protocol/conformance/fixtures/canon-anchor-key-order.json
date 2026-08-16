@@ -1,0 +1,38 @@
+{
+  "id": "canon-anchor-key-order",
+  "description": "Non-sorted key order with an anchor. The record hash must be computed over the JCS form, so the anchor still matches.",
+  "record": {
+    "proof": {
+      "type": "Ed25519Signature2020",
+      "created": "2020-01-01T00:00:00Z",
+      "verificationMethod": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG#key-1",
+      "proofPurpose": "assertionMethod",
+      "proofValue": "zAeEyoVN4WHNQhQmyA13FZUkTcqfMawnRx4eGgptQUKfmpQ6LWqNuZnDndTZWoAXyJzMKsEbLhTJmjaKaLg6TpeB"
+    },
+    "credentialSubject": {
+      "serial": "SERIAL123",
+      "id": "https://id.gs1.org/01/09506000134352/21/SERIAL123",
+      "gtin": "09506000134352"
+    },
+    "validFrom": "2020-01-01T00:00:00Z",
+    "issuer": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+    "type": [
+      "VerifiableCredential",
+      "ProvenanceRecord"
+    ],
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://authichain.com/protocol/v1"
+    ]
+  },
+  "anchor": {
+    "recordHash": "sha256:f87898fb9f86b08c3d3ac6e3b394382b5bece08b47cb83d1ecfc56eac7323b3d",
+    "chain": "polygon:137",
+    "txHash": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "anchoredAt": "2020-01-01T00:05:00Z"
+  },
+  "options": {},
+  "expect": {
+    "verdict": "verified"
+  }
+}

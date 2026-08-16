@@ -21,28 +21,23 @@ export async function GET(req: NextRequest) {
     const totalQrons = qronsRes.count || 0;
     const totalScans = (scansRes.data || []).reduce((sum: number, r: any) => sum + (r.total_scans || 0), 0);
 
-    // Pad with realistic minimums if DB is empty (early traction)
+    // Real counts only. Do not floor these to invented minimums and do not add
+    // hardcoded ratings, review counts, or country totals — an authenticity
+    // product cannot publish unverifiable numbers about itself. If a figure is
+    // not measured from the ledger, it does not belong in this response.
     const stats = {
-      total_users: Math.max(totalUsers, 1200),
-      total_qrons: Math.max(totalQrons, 8400),
-      total_scans: Math.max(totalScans, 92000),
-      avg_rating: 4.8,
-      review_count: 47,
-      uptime_percent: 99.9,
-      countries_served: 34,
+      total_users: totalUsers,
+      total_qrons: totalQrons,
+      total_scans: totalScans,
     };
 
     const proof = {
       stats,
+      // Only badges backed by something checkable. SOC 2 was removed: no report
+      // exists. Uptime was removed: no measured figure is read here.
       trust_badges: [
         { label: 'Stripe Secured', icon: 'stripe' },
-        { label: 'SOC 2 Ready', icon: 'shield' },
-        { label: '99.9% Uptime', icon: 'uptime' },
         { label: 'GDPR Compliant', icon: 'gdpr' },
-      ],
-      featured_in: [
-        { name: 'Product Hunt', url: 'https://producthunt.com' },
-        { name: 'Indie Hackers', url: 'https://indiehackers.com' },
       ],
       generated_at: new Date().toISOString(),
     };

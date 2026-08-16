@@ -60,9 +60,13 @@ export default function LegalPage() {
 
             <div className="grid md:grid-cols-3 gap-8">
                 {[
-                    { title: 'GDPR / CCPA', desc: 'Full compliance with international data privacy and "right to be forgotten" standards.' },
+                    // "Full compliance with GDPR/CCPA" and a bare "ISO 27001" heading
+                    // both read as certifications. Neither has an audit or a
+                    // certificate number behind it. Design intent is the honest and
+                    // still-favourable claim; a certificate is a different sentence.
+                    { title: 'GDPR / CCPA', desc: 'Built around data-subject rights, including export and erasure. No third-party audit has been performed.' },
                     { title: 'EU DPP v2', desc: 'Aligned with the upcoming European Digital Product Passport mandates for industrial goods.' },
-                    { title: 'ISO 27001', desc: 'Protocol-level security management and cryptographic key rotation standards.' }
+                    { title: 'ISO 27001 aligned', desc: 'Key rotation and access control follow ISO 27001 practice. Not certified — no audit is in progress.' }
                 ].map(item => (
                     <div key={item.title}>
                         <h4 className="font-black text-xs uppercase text-zinc-200 mb-2">{item.title}</h4>

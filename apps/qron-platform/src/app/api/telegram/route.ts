@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     // Command: Generate QRON
     if (text.startsWith('http://') || text.startsWith('https://')) {
-      await sendTelegramMessage(chatId, 'ðŸ”„ Generating your QRON. This may take up to 20 seconds...');
+      await sendTelegramMessage(chatId, '🔄 Generating your QRON. This may take up to 20 seconds...');
 
       try {
         const result = await generateLivingQR({
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
           prompt: 'futuristic tech aesthetic, neon lights, highly detailed',
         });
 
-        await sendTelegramPhoto(chatId, result.imageUrl, `âœ… Your QRON is ready!\n\nðŸ”’ Ed25519 Secured\nðŸ”— Target: ${text}`);
+        await sendTelegramPhoto(chatId, result.imageUrl, `✅ Your QRON is ready!\n\n🔒 Ed25519 Secured\n🔗 Target: ${text}`);
 
         await admin.from('automation_logs').insert({
           workflow_name: 'telegram_qron_generation',

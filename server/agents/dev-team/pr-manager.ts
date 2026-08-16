@@ -119,7 +119,7 @@ export async function runCodeReview(task: Task): Promise<void> {
     responseFormat: { type: 'json_object' },
   });
 
-  type Review = {
+  let review: {
     verdict: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
     summary: string;
     inlineComments: Array<{ path: string; line: number; body: string }>;
@@ -127,7 +127,7 @@ export async function runCodeReview(task: Task): Promise<void> {
     suggestions: string[];
   };
 
-  const review = parseLLMContent<Review>(result.choices[0].message.content);
+  review = parseLLMContent<typeof review>(result.choices[0].message.content);
 
   // Post review to GitHub
   const ghEvent = review.verdict === 'APPROVE'

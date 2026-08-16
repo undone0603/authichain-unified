@@ -9,7 +9,6 @@ import asyncio
 from typing import Optional
 from agentz.core.modes import ExecutionContext, Mode
 from agentz.core.social import generate_social_post
-from agentz.core.partnership import register_partner
 from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> Optional[str]:
@@ -32,11 +31,7 @@ def run(ctx: ExecutionContext) -> Optional[str]:
             brand = p["brand"]
             ctx.step(f"Activating Partnership Lead: {brand}...")
             
-            # 2. Register Partner (Simulation)
-            partner_info = asyncio.run(register_partner(None, brand, is_founding=True))
-            code = partner_info["referral_code"]
-            
-            # 3. Draft Personalized Partnership Message
+            # 2. Draft Personalized Partnership Message
             topic = f"Strategic alliance with AuthiChain. Integrating our Autonomous Trust Infrastructure with {brand}'s {p['focus']} stack."
             
             try:
@@ -49,7 +44,6 @@ def run(ctx: ExecutionContext) -> Optional[str]:
                 # Append special 'Founding Partner' offer
                 offer_addendum = (
                     f"\n\n--- FOUNDING PARTNER OFFER ---\n"
-                    f"Referral Code: {code}\n"
                     f"Incentive: 20% setup fee share ($500/deal) + 3% share of founder income distributions for the first year."
                 )
                 final_message = invitation + offer_addendum

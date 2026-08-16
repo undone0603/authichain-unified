@@ -110,7 +110,7 @@ workflows:
     requires: [n8n_api_key, resend_api_key]
     prerequisites: []
     description: |
-      Verify Resend key (***REMOVED***) is
+      Verify Resend key (re_Lc5G2g2X_2o73cM6xhL8xZUeGvv12AQXE) is
       injected into n8n environment, then activate each of the 10
       blueprints sequentially with a 30s health-check between each.
 
@@ -189,7 +189,7 @@ workflows:
     handler: handlers.authichain_email
     type: api
     estimated_minutes: 5
-    requires: [hubspot_token, gemini_api_key, gmail_user, gmail_app_password]
+    requires: [hubspot_token, gemini_api_key]
     prerequisites: []
     confirm_before_run: false
     description: |
@@ -787,174 +787,3 @@ workflows:
     estimated_minutes: 15
     requires: [reddit_session] # twitter for simulation
     prerequisites: [gsc_setup_govchain, pinecone_trial_decision]
-
-  # =================================================================
-  # AUTONOMOUS GROWTH
-  # =================================================================
-
-  - id: reinvestment_handler
-    title: "Sovereign Flywheel: Autonomous Growth and Reinvestment"
-    priority: critical
-    blocks_revenue: false
-    handler: handlers.reinvestment_handler
-    type: api
-    estimated_minutes: 5
-    requires: []
-    prerequisites: []
-    description: |
-      The AuthiChain Sovereign Flywheel: Autonomously scales outreach and
-      reinvests revenue into new market capability development.
-    confirm_before_run: true
-  - id: grant_application
-    title: "Blockchain Foundation Grant Application (Arbitrum/Polygon/Ethereum)"
-    priority: medium
-    blocks_revenue: false
-    handler: handlers.grant_application
-    type: composite
-    estimated_minutes: 30
-    requires: []
-    prerequisites: []
-    confirm_before_run: true
-    description: |
-      Submits a technical/ecosystem grant application (Arbitrum, Polygon, or
-      Ethereum foundation, chosen by workflow id) using narratives loaded
-      from the AgentZ knowledge base (GRANT_NARRATIVES). Browser-automated
-      via browser-use + local Ollama. Supports dry-run.
-
-  - id: govchain_traffic_boost
-    title: "GovChain.us Organic Traffic Boost (LinkedIn/Reddit/X)"
-    priority: medium
-    blocks_revenue: false
-    handler: handlers.govchain_traffic_boost
-    type: composite
-    estimated_minutes: 15
-    requires: [linkedin_session, reddit_session, twitter_session, openai_api_key]
-    prerequisites: []
-    confirm_before_run: true
-    description: |
-      Posts the GovChain Sovereign Document Passport launch announcement
-      (CAGE 1PUJ6, W3C Verifiable Credentials) to LinkedIn, Reddit, and X
-      via browser-use automation. Supports dry-run.
-
-  - id: medtech_traffic_boost
-    title: "AuthiChain MedTech Vertical Traffic Boost (LinkedIn/Reddit/X)"
-    priority: medium
-    blocks_revenue: false
-    handler: handlers.medtech_traffic_boost
-    type: composite
-    estimated_minutes: 15
-    requires: [linkedin_session, reddit_session, twitter_session, openai_api_key]
-    prerequisites: []
-    confirm_before_run: true
-    description: |
-      Posts the AuthiChain MedTech / ISO 13485 compliance vertical launch
-      announcement to LinkedIn, Reddit, and X via browser-use automation.
-      Supports dry-run.
-
-  - id: qron_traffic_boost
-    title: "QRON.space Dimensional Gateways Traffic Boost (LinkedIn/Reddit/X)"
-    priority: medium
-    blocks_revenue: false
-    handler: handlers.qron_traffic_boost
-    type: composite
-    estimated_minutes: 15
-    requires: [linkedin_session, reddit_session, twitter_session, openai_api_key]
-    prerequisites: []
-    confirm_before_run: true
-    description: |
-      Posts the QRON.space "Dimensional Gateways" AI-generated QR launch
-      announcement to LinkedIn, Reddit, and X via browser-use automation.
-      Supports dry-run.
-
-  - id: strainchain_traffic_boost
-    title: "StrainChain.io Truth Layer Traffic Boost (LinkedIn/Reddit/X)"
-    priority: medium
-    blocks_revenue: false
-    handler: handlers.strainchain_traffic_boost
-    type: composite
-    estimated_minutes: 15
-    requires: [linkedin_session, reddit_session, twitter_session, openai_api_key]
-    prerequisites: []
-    confirm_before_run: true
-    description: |
-      Posts the StrainChain.io METRC/Bitcoin-L1 "Proof of Purity" launch
-      announcement to LinkedIn, Reddit, and X via browser-use automation.
-      Supports dry-run.
-
-  - id: sam_gov_dhs_svip
-    title: "SAM.gov CAGE Link + DHS SVIP Phase I Grant Submission ($200K)"
-    priority: high
-    blocks_revenue: false
-    handler: handlers.sam_gov_dhs
-    type: composite
-    estimated_minutes: 45
-    requires: [sam_gov_session, dhs_portal_session, openai_api_key]
-    prerequisites: []
-    confirm_before_run: true
-    description: |
-      Links CAGE code 1PUJ6 to the AuthiChain, Inc. SAM.gov entity
-      registration, then submits a $200,000 Phase I application to the DHS
-      Science & Technology Directorate Silicon Valley Innovation Program
-      (SVIP) for "Preventing Forgery and Counterfeiting." Browser-automated;
-      real government submission — always review dry-run output first.
-
-  - id: sentinel_threat_hunting
-    title: "Sentinel: Marketplace Counterfeit/Protocol-Abuse Threat Hunt"
-    priority: medium
-    blocks_revenue: false
-    handler: handlers.sentinel_threat_hunting
-    type: composite
-    estimated_minutes: 20
-    requires: [supabase_url, supabase_anon]
-    prerequisites: []
-    confirm_before_run: true
-    description: |
-      Scans marketplaces (eBay, etc.) for unauthorized "Verified by
-      AuthiChain" or QRON claims, cross-references each QRON id against
-      the product_qrons table, and files protocol_anomalies rows for any
-      unverifiable claims found. Supports dry-run.
-
-  - id: shopify_app_draft
-    title: "Shopify App Store Draft Listing: AuthiChain Truth Layer"
-    priority: low
-    blocks_revenue: false
-    handler: handlers.shopify_setup
-    type: composite
-    estimated_minutes: 20
-    requires: []
-    prerequisites: []
-    confirm_before_run: true
-    description: |
-      Drafts (does not submit for review) a Shopify Partner Dashboard app
-      listing for "AuthiChain Truth Layer" using ecosystem strategy context
-      from the AgentZ knowledge base. Supports dry-run.
-
-  - id: twitter_thread_post
-    title: "X/Twitter Strategic Thread Post"
-    priority: low
-    blocks_revenue: false
-    handler: handlers.twitter_post
-    type: composite
-    estimated_minutes: 10
-    requires: []
-    prerequisites: []
-    confirm_before_run: true
-    description: |
-      Posts a strategic thread to X/Twitter using a template from the
-      AgentZ outreach template library (OUTREACH_TEMPLATES). Browser-
-      automated via browser-use + local Ollama. Supports dry-run.
-
-  - id: linkedin_strategic_post
-    title: "LinkedIn Strategic Authority Post"
-    priority: low
-    blocks_revenue: false
-    handler: handlers.linkedin_post
-    type: composite
-    estimated_minutes: 10
-    requires: []
-    prerequisites: []
-    confirm_before_run: true
-    description: |
-      Posts a strategic case-study-style post to LinkedIn using the
-      AgentZ ecosystem strategy doc (ECOSYSTEM_STRATEGY). Browser-automated
-      via browser-use + local Ollama. Supports dry-run.
