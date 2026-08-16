@@ -92,3 +92,70 @@ and the machinery to do so is already built and waiting.
 4. A message that has produced at least one real reply when sent by hand
 
 Until all four hold, the schedules stay off.
+
+---
+
+## Update 2026-08-16: two more failures found underneath the first
+
+The 2026-08-07 diagnosis above ("the messages are not reaching inboxes") was right about the
+symptom and incomplete about the cause. Re-checking the live systems found that for most of
+this period **nothing was being sent at all**, for two stacked reasons that both fail before
+DNS or copy can matter.
+
+### Finding 1 — the stored Resend key is dead
+
+The scheduled B2B outreach runs on 2026-08-03 and 2026-08-10 both failed, every send:
+
+```
+⚠️  Resend error for FASTSIGNS: { statusCode: 401, name: 'validation_error', message: 'API key is invalid' }
+Totals — attempted: 12 | sent: 0 | send failures: 7
+```
+
+The Resend account holds exactly one API key, created 2026-07-20. The value stored in Actions
+predates it, so every automated send has been rejected since.
+
+### Finding 2 — the From domain was never verified
+
+The account has **one** verified sending domain: `strainchain.io`. Both outreach scripts
+defaulted their sender to `@authichain.com`, which Resend rejects outright. So even after the
+key is rotated, every send from those defaults would still fail. The DNS work prescribed in
+§1 above was never completed for `authichain.com` — that section remains the fix.
+
+The only mail that has actually left the account came from `hello@strainchain.io`
+(12 messages, 2026-07-31 and 2026-08-05; 3 bounced, 0 replies).
+
+### What changed in the repo
+
+| Change | File | Why |
+|---|---|---|
+| Sender preflight before any send loop | `scripts/lib/resend-preflight.ts` | Probes `delivered@resend.dev` once per sender. A dead key or unverified domain now fails in the first second with a named cause, instead of after the prospect list is burned |
+| Per-segment sender addresses | `scripts/b2b-cold-outreach.ts` | A GovChain pitch sent from a cannabis-compliance domain reads as spam. Each segment can send under its own brand via `OUTREACH_FROM_GOVCHAIN` / `_STRAINCHAIN` / `_QRON` |
+| Defaults moved to the verified domain | both outreach scripts, `src/app/api/book/route.ts`, both workflows | Ships in a state that can actually send. Override once `authichain.com` is verified |
+| Failed preflight queues instead of dropping | `scripts/b2b-cold-outreach.ts` | Drafts are still written with `status=queued`; `flushQueuedLeads()` drains them once the sender works, with no duplicate outreach |
+
+### The one manual step this cannot do for itself
+
+Generate a key at <https://resend.com/api-keys> and store it as the `RESEND_API_KEY` Actions
+secret (the **Set Outreach Secret** workflow does this). Then run **Verify Outreach Secrets**
+to confirm, and dispatch **B2B Cold Outreach** with `flush_queued=true` to drain the backlog.
+
+Until that key is rotated, the preflight will keep the pipeline red and honest rather than
+green and empty — which is the state it was in for the previous three months.
+
+## Related: the lead table was measuring fabricated demand
+
+Two separate sources were writing undeliverable addresses into `leads`, so funnel metrics
+counted rows that could never convert:
+
+- **The gov engine synthesised contacts** by slugifying the SAM.gov office hierarchy —
+  `procurement@homeland-security,-department-of.us-coast-guard.hq-contract-operations-(cg-912)(000.gov`.
+  `scripts/qualify-leads.ts` now requires a real `contact_email` on the opportunity and skips
+  the rest (`scripts/lib/contact-email.ts`, calibrated against the 1,739 genuine agency
+  addresses already in `gov_opportunities`).
+- **The `/book` form had no bot defence.** Every `book_page` lead on record was automated —
+  gmail dot-trick addresses with random company names — all landing as `demo_requested`,
+  indistinguishable from real interest. A honeypot field plus a minimum fill time now drop
+  those silently (`src/app/api/book/bot-detection.ts`).
+
+Neither change adds a customer. Both stop the pipeline from reporting demand that does not
+exist, which is a precondition for the manual-outreach phase above being measurable.

@@ -75,7 +75,14 @@ jobs:
           RESEND_API_KEY:        ${{ secrets.RESEND_API_KEY }}
           APOLLO_API_KEY:        ${{ secrets.APOLLO_API_KEY }}
           HUBSPOT_TOKEN:         ${{ secrets.HUBSPOT_TOKEN }}
-          OUTREACH_FROM_EMAIL:   ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
+          # Fallback sender must be a domain verified on the Resend account —
+          # an unverified From is rejected for every recipient. Per-segment
+          # overrides let each product send under its own brand once its domain
+          # is verified; unset segments fall back to OUTREACH_FROM_EMAIL.
+          OUTREACH_FROM_EMAIL:   ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@strainchain.io' }}
+          OUTREACH_FROM_GOVCHAIN:    ${{ secrets.OUTREACH_FROM_GOVCHAIN }}
+          OUTREACH_FROM_STRAINCHAIN: ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
+          OUTREACH_FROM_QRON:        ${{ secrets.OUTREACH_FROM_QRON }}
           SALES_NOTIFY_EMAIL:    ${{ secrets.SALES_NOTIFY_EMAIL || 'hello@authichain.com' }}
           CALENDLY_LINK:         ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
           AUTHICHAIN_BOOK_URL:   ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
@@ -94,6 +101,9 @@ jobs:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
-          OUTREACH_FROM_EMAIL:  ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
+          OUTREACH_FROM_EMAIL:  ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@strainchain.io' }}
+          OUTREACH_FROM_GOVCHAIN:    ${{ secrets.OUTREACH_FROM_GOVCHAIN }}
+          OUTREACH_FROM_STRAINCHAIN: ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
+          OUTREACH_FROM_QRON:        ${{ secrets.OUTREACH_FROM_QRON }}
           CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
           INTERNAL_API_SECRET:  ${{ secrets.INTERNAL_API_SECRET }}

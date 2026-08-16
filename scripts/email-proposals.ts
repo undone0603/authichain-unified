@@ -5,11 +5,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { checkSender, reportSenderFailure } from './lib/resend-preflight';
 
 const isDryRun = process.env.DRY_RUN === 'true';
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const GOVCHAIN = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
-const FROM_EMAIL = process.env.EMAIL_FROM ?? 'proposals@authichain.com';
+// Defaults to the one domain currently verified on the Resend account.
+// proposals@authichain.com cannot send until authichain.com is verified there.
+const FROM_EMAIL = process.env.EMAIL_FROM ?? 'hello@strainchain.io';
 const CALENDAR_LINK = process.env.CALENDLY_LINK ?? 'https://calendly.com/authichain/discovery';
 const SALES_EMAIL = process.env.SALES_EMAIL ?? 'sales@authichain.com';
 
@@ -275,6 +278,19 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
   if (!proposals?.length) {
     console.log('No proposals ready for email delivery.');
     return { sent: 0, failed: 0, total: 0 };
+  }
+
+  // Preflight once, before the send loop. A bad key or unverified sender
+  // rejects every proposal identically, and each rejection would otherwise be
+  // recorded as a per-proposal failure — burying one infrastructure problem
+  // under 50 identical-looking data problems.
+  if (!isDryRun) {
+    const check = await checkSender(FROM_EMAIL);
+    if (!check.ok) {
+      reportSenderFailure(check, 'gov-proposals');
+      throw new Error(`Sender preflight failed for ${FROM_EMAIL}: ${check.reason}`);
+    }
+    console.log(`✅ Sender verified: ${FROM_EMAIL}`);
   }
 
   let sent = 0;

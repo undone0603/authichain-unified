@@ -60,7 +60,9 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
           GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          EMAIL_FROM:           ${{ secrets.EMAIL_FROM || 'proposals@authichain.com' }}
+          # Must be a domain verified on the Resend account. proposals@authichain.com
+          # is rejected until authichain.com is verified there.
+          EMAIL_FROM:           ${{ secrets.EMAIL_FROM || 'hello@strainchain.io' }}
           CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://calendly.com/authichain/discovery' }}
           SALES_EMAIL:          ${{ secrets.SALES_EMAIL || 'sales@authichain.com' }}
           # STAGED: fallback is 'true' so scheduled runs never send live.

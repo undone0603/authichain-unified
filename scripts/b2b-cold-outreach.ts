@@ -13,6 +13,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { guardrailCheck, guardrailRecord } from './lib/guardrail-client';
+import { checkSender, reportSenderFailure } from './lib/resend-preflight';
 
 const GUARDRAIL_CHANNEL = 'email.b2b-cold';
 
@@ -32,7 +33,19 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 const resend   = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM     = process.env.OUTREACH_FROM_EMAIL ?? 'hello@authichain.com';
+
+// Sender addresses are per-segment because the three segments are separately
+// branded products — a GovChain pitch arriving from a cannabis-compliance
+// domain reads as spam to the recipient and to their filters. Each falls back
+// to OUTREACH_FROM_EMAIL, then to the one domain currently verified on the
+// Resend account. Once authichain.com is verified, set OUTREACH_FROM_EMAIL (or
+// the per-segment overrides) and every segment sends under its own brand.
+const FALLBACK_FROM = process.env.OUTREACH_FROM_EMAIL ?? 'hello@strainchain.io';
+const SEGMENT_FROM: Record<string, string> = {
+  govchain:    process.env.OUTREACH_FROM_GOVCHAIN    ?? FALLBACK_FROM,
+  strainchain: process.env.OUTREACH_FROM_STRAINCHAIN ?? FALLBACK_FROM,
+  qron:        process.env.OUTREACH_FROM_QRON        ?? FALLBACK_FROM,
+};
 // Falls back to the built-in /book page — Calendly is optional, not required
 const CALENDLY = process.env.CALENDLY_LINK ?? 'https://app.authichain.com/book';
 
@@ -355,8 +368,27 @@ async function processTargets<T extends { company: string; email: string; name?:
   let sent = 0; let saved = 0; let queued = 0;
   totalAttempted += targets.length;
 
+  const from = SEGMENT_FROM[segmentName] ?? FALLBACK_FROM;
+
   if (!resend && !isDryRun) {
     console.warn(`  ⚠️  RESEND_API_KEY not set — emails will be queued in Supabase (status=queued) and sent on next run when key is present`);
+  }
+
+  // Preflight before touching the prospect list. A dead key or an unverified
+  // sender fails identically on every target, so discovering it after the loop
+  // means the whole segment is burned for nothing. Drafts still get written —
+  // they queue and drain via flushQueuedLeads() once the sender is fixed.
+  let senderOk = true;
+  if (resend && !isDryRun) {
+    const check = await checkSender(from);
+    senderOk = check.ok;
+    if (!check.ok) {
+      reportSenderFailure(check, `b2b:${segmentName}`);
+      console.warn(`  ⚠️  Skipping sends for [${segmentName}] — drafts will be queued instead`);
+      sendFailures.push(`${segmentName} sender ${from}: ${check.reason}`);
+    } else {
+      console.log(`  ✅ Sender verified: ${from}`);
+    }
   }
 
   for (const t of targets) {
@@ -373,6 +405,7 @@ async function processTargets<T extends { company: string; email: string; name?:
     const dbStatus = isDryRun ? 'draft'
       : !email              ? 'pending_email'   // Apollo found nothing; manual lookup needed
       : !resend             ? 'queued'           // Has email but no Resend key yet
+      : !senderOk           ? 'queued'           // Sender preflight failed; drain later
       :                       'draft';           // Ready to send
 
     const { error: dbErr } = await supabase.from('leads').upsert({
@@ -411,6 +444,12 @@ async function processTargets<T extends { company: string; email: string; name?:
       continue;
     }
 
+    if (!senderOk) {
+      console.log(`     📬 Queued: ${email} — will send once ${from} can send`);
+      queued++;
+      continue;
+    }
+
     // Guardrail gate: every send must be checked/reserved before it fires.
     // Fails closed — unreachable API, missing secret, disabled channel, cap
     // reached, or a suppressed recipient all deny the send. A policy denial
@@ -426,7 +465,7 @@ async function processTargets<T extends { company: string; email: string; name?:
     }
 
     try {
-      const res = await resend.emails.send({ from: FROM, to: email, subject, html });
+      const res = await resend.emails.send({ from, to: email, subject, html });
       if (res.data?.id) {
         sent++;
         console.log(`  ✉️  Sent: ${email} — "${subject}"`);
@@ -470,6 +509,19 @@ export async function flushQueuedLeads(): Promise<void> {
     const meta = lead.metadata as any;
     if (!meta?.subject || !meta?.html_preview) continue;
 
+    // Recover the segment the draft was written for so the flush sends under
+    // the same brand the copy was written in. checkSender caches per address,
+    // so this costs one probe per distinct sender across the whole flush.
+    const leadSegment = String(lead.source ?? '').replace('b2b_outreach_', '');
+    const from = SEGMENT_FROM[leadSegment] ?? FALLBACK_FROM;
+
+    const senderCheck = await checkSender(from);
+    if (!senderCheck.ok) {
+      reportSenderFailure(senderCheck, `b2b-flush:${leadSegment}`);
+      console.warn(`  ⚠️  Leaving ${lead.email} queued — ${from} cannot send`);
+      continue;
+    }
+
     const gate = await guardrailCheck(GUARDRAIL_CHANNEL, { recipient: lead.email });
     if (!gate.allowed) {
       // An errored check (guardrail unreachable) vs. a policy denial (cap/
@@ -482,7 +534,7 @@ export async function flushQueuedLeads(): Promise<void> {
     }
 
     try {
-      const res = await resend.emails.send({ from: FROM, to: lead.email, subject: meta.subject, html: meta.html_preview });
+      const res = await resend.emails.send({ from, to: lead.email, subject: meta.subject, html: meta.html_preview });
       if (res.data?.id) {
         await supabase.from('leads').update({ status: 'contacted', updatedAt: new Date().toISOString() }).eq('email', lead.email);
         console.log(`  ✉️  Flushed: ${lead.email}`);
