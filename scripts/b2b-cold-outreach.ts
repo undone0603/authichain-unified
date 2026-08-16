@@ -43,16 +43,14 @@ const supabase = createClient(
 const hasResendKey = CREDENTIAL_ENV_VARS.some(name => !!process.env[name]);
 
 /**
- * Provenance of the hardcoded contact addresses.
+ * Default provenance for a target that does not declare one.
  *
- * These are functional-role addresses gathered by hand in June 2026. That is
- * not the same as verified: `compliance@`, `innovation@` and `b2b@` are exactly
- * the shape a plausible guess takes, and the guard exists to stop us mailing
- * guesses. They are declared `unknown` so the guard rejects them until they are
- * actually verified — Apollo resolution upgrades a target to `apollo_verified`
- * at run time, which is the intended path to sending.
- *
- * This is deliberately conservative: it lowers send volume rather than raise it.
+ * `unknown` means the send guard refuses it. Each target carries an explicit
+ * `source` where research established one — see the notes beside each address.
+ * Researched 2026-08-16: of the seven addresses originally hand-written here,
+ * none was published by its owner; two were replaced with the address the
+ * company actually publishes, three were blanked for Apollo to resolve, and one
+ * company no longer exists.
  */
 const RESEARCHED_SOURCE: VerificationSource = 'unknown';
 
@@ -178,12 +176,22 @@ const GOVCHAIN_TARGETS = [
   },
 ];
 
+// Addresses researched 2026-08-16 against what each company actually publishes.
+// None of the original hand-written addresses survived: every one was a
+// plausible-shaped guess, which is precisely what the send guard exists to
+// refuse. They are blanked so Apollo resolves a real contact at run time —
+// shipping a guess is what produced a 37% bounce rate on the July batch.
 const STRAINCHAIN_TARGETS = [
   {
     company: 'Trulieve Cannabis',
     name: 'Head of Compliance',
     title: 'VP Compliance / Director of Operations',
-    email: 'compliance@trulieve.com',
+    // Was compliance@trulieve.com — not published anywhere. Trulieve publishes
+    // ir@ and media@ only, and staff mail is first.last@ (78% of addresses).
+    // ir@/media@ are the wrong desk for a compliance product, so resolve a
+    // named contact rather than pitch investor relations.
+    email: '',
+    source: 'unknown' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/trulieve/',
     pain: 'Multi-state operator with 130+ dispensaries; METRC across FL, PA, AZ, GA — COA integrity + custody reconciliation today, DPP-ready export for EU entry',
     states: 'FL, PA, AZ, GA, WV',
@@ -193,22 +201,19 @@ const STRAINCHAIN_TARGETS = [
     company: 'Curaleaf',
     name: 'Compliance Team',
     title: 'SVP Compliance',
-    email: 'compliance@curaleaf.com',
+    // Was compliance@curaleaf.com — not published. Curaleaf publishes IR@ and
+    // media@ only. Same reasoning as Trulieve.
+    email: '',
+    source: 'unknown' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/curaleaf/',
     pain: 'Largest MSO by revenue (40+ states) — METRC reconciliation across 40 state systems; blockchain COA hashing; DPP-ready before cannabis is scheduled',
     states: '40+ states',
     website: 'https://curaleaf.com',
   },
-  {
-    company: 'Harvest Health & Recreation',
-    name: 'Head of Compliance',
-    title: 'Director of Compliance',
-    email: 'compliance@harvestinc.com',
-    linkedin: 'https://www.linkedin.com/company/harvest-health-recreation/',
-    pain: 'Mid-market MSO in 5 states — METRC compliance gaps in AZ + PA; wants blockchain COA as competitive differentiator for premium products',
-    states: 'AZ, PA, FL, MD, AR',
-    website: 'https://harvestinc.com',
-  },
+  // Harvest Health & Recreation removed: Trulieve completed its acquisition on
+  // 2021-10-01, so it has not been an independent operator for nearly five
+  // years. The entry described it as a "mid-market MSO in 5 states" and would
+  // have duplicated the Trulieve pitch into a dead domain.
 ];
 
 const QRON_TARGETS = [
@@ -216,7 +221,11 @@ const QRON_TARGETS = [
     company: 'FASTSIGNS',
     name: 'Innovation Lead',
     title: 'VP Product / Innovation',
-    email: 'innovation@fastsigns.com',
+    // Was innovation@fastsigns.com — not published. FASTSIGNS publishes
+    // franchiseinfo@fastsigns.com for exactly this kind of approach, which is
+    // both a real address and the right desk for a franchise-network pitch.
+    email: 'franchiseinfo@fastsigns.com',
+    source: 'published_contact' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/fastsigns/',
     pain: 'Franchise network looking for premium "smart label" upsell — AI QR codes with brand aesthetics at commercial print margins',
     demo_prompt: 'bold industrial signage, glowing neon, sharp commercial aesthetic',
@@ -226,7 +235,10 @@ const QRON_TARGETS = [
     company: 'MOO',
     name: 'Product Manager',
     title: 'Head of Product',
-    email: 'product@moo.com',
+    // Was product@moo.com — not published. MOO publishes inquiries@moo.com for
+    // business and partnership enquiries.
+    email: 'inquiries@moo.com',
+    source: 'published_contact' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/moo/',
     pain: 'Premium print brand targeting luxury clients — QR codes on business cards / packaging need to match visual standards; current QR tools produce ugly codes',
     demo_prompt: 'premium textured business card, gold foil embossing, luxury paper texture, minimalist',
@@ -236,7 +248,11 @@ const QRON_TARGETS = [
     company: '4imprint',
     name: 'B2B Sales Head',
     title: 'VP B2B Sales',
-    email: 'b2b@4imprint.com',
+    // Was b2b@4imprint.com — no published b2b@ found, and 4imprint.com is
+    // unreachable from CI so it could not be confirmed either way. Blanked
+    // rather than shipped on an assumption.
+    email: '',
+    source: 'unknown' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/4imprint/',
     pain: 'Corporate promotional merchandise clients want branded QR codes on swag — current QR tools cannot match brand guidelines; white-label API needed',
     demo_prompt: 'corporate promotional merchandise, high quality product photography, clean studio',
@@ -246,7 +262,11 @@ const QRON_TARGETS = [
     company: 'Signarama',
     name: 'Franchise Director',
     title: 'VP Franchise Development',
-    email: 'franchise@signarama.com',
+    // Was franchise@signarama.com — not published. Signarama staff mail is
+    // first@signarama.com and franchise intake runs through a web form, so
+    // there is no role address to send to.
+    email: '',
+    source: 'unknown' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/signarama/',
     pain: 'Franchise chain with 900 locations — needs white-label QR API for branded retail signage; clients want scannable QRs that match storefront aesthetics',
     demo_prompt: 'vibrant commercial storefront sign, glowing neon colors, sharp vector art',
@@ -474,7 +494,7 @@ async function processTargets<T extends { company: string; email: string; name?:
     // provenance: Apollo returns addresses it has verified, which is precisely
     // the trusted source the send guard is looking for.
     let email = t.email;
-    let source: VerificationSource = RESEARCHED_SOURCE;
+    let source: VerificationSource = (t as any).source ?? RESEARCHED_SOURCE;
     if (!email && (t as any).linkedin !== undefined) {
       email = await apolloFindEmail((t as any).name ?? t.company, t.company, t.website ?? '');
       if (email) {
