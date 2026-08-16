@@ -51,7 +51,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { SEGMENT_PRIORS } from './_core/bayesian';
-import { bayesianPriors } from '../drizzle/schema';
+import { bayesianPriors, scheduledJobRuns } from '../drizzle/schema';
 
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
@@ -1569,4 +1569,71 @@ export async function updateQron(
 export function getHyperdriveDb(env: { HYPERDRIVE: { connectionString: string } }): ReturnType<typeof drizzle> {
   const workersPool = new Pool({ connectionString: env.HYPERDRIVE.connectionString });
   return drizzle(workersPool);
+}
+
+// Node-singleton counterpart of server/_core/db-helpers.ts's Db-parameterized
+// getOpsSummary — same job-run aggregation, using getDb() internally like
+// every other function in this file.
+export async function getOpsSummary(windowHours = 24) {
+  const db = await getDb();
+  const since = new Date(Date.now() - windowHours * 3600_000);
+  const runs = await db
+    .select()
+    .from(scheduledJobRuns)
+    .where(gte(scheduledJobRuns.startedAt, since))
+    .orderBy(desc(scheduledJobRuns.startedAt))
+    .limit(500);
+
+  const toUiStatus = (s: string) => (s === 'completed' ? 'success' : s === 'failed' ? 'failure' : s);
+
+  type SummaryEntry = { success: number; failure: number; lastSeen: Date; lastError: string | null };
+  const byJob = new Map<string, SummaryEntry>();
+  for (const r of runs) {
+    const entry = byJob.get(r.jobName) ?? { success: 0, failure: 0, lastSeen: r.startedAt, lastError: null };
+    if (r.status === 'completed') entry.success++;
+    if (r.status === 'failed') {
+      entry.failure++;
+      entry.lastError ??= r.error || '(no message)';
+    }
+    if (r.startedAt > entry.lastSeen) entry.lastSeen = r.startedAt;
+    byJob.set(r.jobName, entry);
+  }
+
+  const summary = Array.from(byJob.entries())
+    .map(([name, v]) => ({
+      workflow: name,
+      success: v.success,
+      failure: v.failure,
+      last_seen: v.lastSeen.toISOString(),
+      last_error: v.lastError,
+    }))
+    .sort((a, b) => b.failure - a.failure || b.success - a.success);
+
+  const failures = runs
+    .filter(r => r.status === 'failed')
+    .slice(0, 50)
+    .map(r => ({
+      workflow: r.jobName,
+      error: r.error,
+      payload: r.result ? JSON.stringify(r.result) : null,
+      at: r.startedAt.toISOString(),
+    }));
+
+  const recent = runs.slice(0, 50).map(r => ({
+    workflow: r.jobName,
+    status: toUiStatus(r.status),
+    at: r.startedAt.toISOString(),
+  }));
+
+  return {
+    window_hours: windowHours,
+    generated_at: new Date().toISOString(),
+    totals: {
+      success: runs.filter(r => r.status === 'completed').length,
+      failure: runs.filter(r => r.status === 'failed').length,
+    },
+    summary,
+    failures,
+    recent,
+  };
 }
