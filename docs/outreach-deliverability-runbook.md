@@ -184,3 +184,52 @@ counted rows that could never convert:
 
 Neither change adds a customer. Both stop the pipeline from reporting demand that does not
 exist, which is a precondition for the manual-outreach phase above being measurable.
+
+---
+
+## Address provenance research, 2026-08-16
+
+Every contact address in `scripts/b2b-cold-outreach.ts` was checked against what the
+company itself publishes. **None of the seven hand-written addresses was published by its
+owner.** All were plausible-shaped guesses — `compliance@`, `innovation@`, `b2b@`,
+`franchise@` — which is the exact failure mode `server/outreach/send-guard.ts` exists to
+stop, and a likely contributor to the 37% bounce rate on the July batch.
+
+| Target | Hand-written | Verdict | What the company actually publishes |
+|---|---|---|---|
+| Trulieve | `compliance@trulieve.com` | guess | `ir@`, `media@`; staff mail `first.last@` |
+| Curaleaf | `compliance@curaleaf.com` | guess | `IR@`, `media@` |
+| Harvest Health | `compliance@harvestinc.com` | **defunct** | acquired by Trulieve 2021-10-01 |
+| FASTSIGNS | `innovation@fastsigns.com` | guess | **`franchiseinfo@fastsigns.com`** |
+| MOO | `product@moo.com` | guess | **`inquiries@moo.com`** |
+| 4imprint | `b2b@4imprint.com` | guess | `sales@` (role inbox), `webart@` (order support) |
+| Signarama | `franchise@signarama.com` | guess | none — intake is a web form |
+
+### The general finding
+
+**These companies do not publish a correct-desk email for cold first contact.** They route
+it through web forms, or publish only role inboxes — `sales@`, `media@`, `ir@`,
+`webmaster@` — which the guard blocks, or which reach the wrong desk. Pitching a compliance
+product to investor relations is worse than not sending.
+
+The same holds for the GovChain targets: CTC, ITC Federal, RealmOne and Integrated Data
+Services all use contact forms, and what is discoverable is only their staff *email format*
+(`last+initial@ctc.com`, `first.last@realmone.com`, `f.last@itcfederal.com`).
+
+**A format is not an address.** Synthesising `jdoe@ctc.com` from a known pattern is
+pattern-guessing — the precise thing that produced the fabricated-CRM problem. Do not do it,
+and do not treat RocketReach / LeadIQ / ZoomInfo / ContactOut / Seamless output as
+"published": those are data brokers, not the company, and an address from them is
+`scraped` provenance at best.
+
+### What to do instead
+
+1. **Apollo is the working path.** `APOLLO_API_KEY` is configured and authenticating
+   (HTTP 200 on the last verify run). Blank-email targets resolve through it at run time and
+   are upgraded to `apollo_verified`, which the guard accepts. This is why the targets are
+   blanked rather than filled with guesses.
+2. **The two genuinely published addresses are in use** — FASTSIGNS' `franchiseinfo@` and
+   MOO's `inquiries@`, marked `published_contact`. Both were confirmed to clear the guard;
+   a generic `info@` still does not, even when published, which is intended.
+3. **Web forms and LinkedIn are the honest fallback** for the rest. Every target already
+   carries a LinkedIn URL. That is a different channel from this script, not a gap in it.
