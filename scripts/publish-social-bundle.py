@@ -52,9 +52,19 @@ def save_ledger(ledger: dict) -> None:
 
 
 def pick_bundle(ledger: dict) -> Path | None:
-    """Oldest unpublished bundle. Filenames are date-prefixed, so sorted() is chronological."""
+    """Oldest unpublished bundle. Filenames are date-prefixed, so sorted() is chronological.
+
+    Path.glob("*.json") also matches the dotfile ledger (.published.json) — and
+    since "." sorts before any digit, it would be picked ahead of every real
+    YYYY-MM-DD-*.json bundle and fail validation as a non-bundle, stalling the
+    whole loop. Skip dotfiles so only real bundles are ever candidates.
+    """
     published = ledger.get("bundles", {})
-    candidates = sorted(p for p in SOCIAL_DIR.glob("*.json") if p.name not in published)
+    candidates = sorted(
+        p
+        for p in SOCIAL_DIR.glob("*.json")
+        if not p.name.startswith(".") and p.name not in published
+    )
     return candidates[0] if candidates else None
 
 

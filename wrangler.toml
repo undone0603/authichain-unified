@@ -21,7 +21,8 @@ id = "7c8e9466e57843199f6f768615e42a5c"
 # Create with: wrangler kv:namespace create MICROSITES_KV
 [[kv_namespaces]]
 binding = "MICROSITES_KV"
-id = "a992900da1db4b998af1cdf4eccf550a"
+id = "REPLACE_WITH_YOUR_MICROSITES_KV_ID"
+
 # D1 database
 [[d1_databases]]
 binding = "DB"
@@ -32,8 +33,3 @@ database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 [[r2_buckets]]
 binding = "MICROSITES_BUCKET"
 bucket_name = "authichain-microsites"
-
-# Hyperdrive binding for Postgres connection pooling
-[[hyperdrive]]
-binding = "HYPERDRIVE"
-id = "97d767ff69584161a0672cd942e9364a"

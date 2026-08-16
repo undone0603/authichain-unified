@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
-import { logErrorDetail } from '@/lib/log-error-detail';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -31,13 +30,7 @@ export async function GET(request: Request) {
   const started = Date.now();
   try {
     const { runPipelineTick } = await import('../../../../../server/jobs/pipeline-tick');
-    // Documented bridge: this Next.js API route is a standalone cron entry
-    // point (src/app/api/**, not yet migrated off the db.ts singleton), so it
-    // obtains its own db and threads it into the already-migrated
-    // server/jobs/pipeline-tick.ts (Task 2b-2 scope).
-    const { getDb } = await import('../../../../../server/db');
-    const db = await getDb();
-    const result = await runPipelineTick(db, { force: true });
+    const result = await runPipelineTick({ force: true });
     return NextResponse.json({
       ok: true,
       durationMs: Date.now() - started,
@@ -45,8 +38,8 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
-    const detail = logErrorDetail(err);
-    console.error('[CronPipeline]', detail);
-    return NextResponse.json({ error: detail.message, durationMs: Date.now() - started }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[CronPipeline]', message);
+    return NextResponse.json({ error: message, durationMs: Date.now() - started }, { status: 500 });
   }
 }

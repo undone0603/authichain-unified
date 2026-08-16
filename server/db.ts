@@ -29,7 +29,6 @@ import {
   abTests,
   whiteLabelClients,
   activityLog,
-  scheduledJobRuns,
   fraudAlerts,
   customerHealthScores,
   revenueRecords,
@@ -45,48 +44,17 @@ import {
   stakingPositions,
   budgetConfig,
   proposals,
-  webhookEvents,
   type Product,
   type InsertProduct,
   type InsertNotification,
   type InsertUser,
-} from "../drizzle/schema.js";
-import { ENV } from './_core/env.js';
-import { SEGMENT_PRIORS } from './_core/bayesian.js';
-import { bayesianPriors } from '../drizzle/schema.js';
+} from "../drizzle/schema";
+import { ENV } from './_core/env';
+import { SEGMENT_PRIORS } from './_core/bayesian';
+import { bayesianPriors } from '../drizzle/schema';
 
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
-
-// Supabase's pooler presents a chain rooted in its own self-signed CA
-// ("Supabase Root 2021 CA"), which isn't in Node's default trust store.
-// Newer pg-connection-string versions map the URL's sslmode=require to
-// verify-full, so every pooled query fails with SELF_SIGNED_CERT_IN_CHAIN
-// unless this CA is pinned explicitly. Embedded (rather than read from disk)
-// so it's guaranteed to be present in the serverless bundle.
-const SUPABASE_POOLER_CA = `-----BEGIN CERTIFICATE-----
-MIIDxDCCAqygAwIBAgIUbLxMod62P2ktCiAkxnKJwtE9VPYwDQYJKoZIhvcNAQEL
-BQAwazELMAkGA1UEBhMCVVMxEDAOBgNVBAgMB0RlbHdhcmUxEzARBgNVBAcMCk5l
-dyBDYXN0bGUxFTATBgNVBAoMDFN1cGFiYXNlIEluYzEeMBwGA1UEAwwVU3VwYWJh
-c2UgUm9vdCAyMDIxIENBMB4XDTIxMDQyODEwNTY1M1oXDTMxMDQyNjEwNTY1M1ow
-azELMAkGA1UEBhMCVVMxEDAOBgNVBAgMB0RlbHdhcmUxEzARBgNVBAcMCk5ldyBD
-YXN0bGUxFTATBgNVBAoMDFN1cGFiYXNlIEluYzEeMBwGA1UEAwwVU3VwYWJhc2Ug
-Um9vdCAyMDIxIENBMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqQXW
-QyHOB+qR2GJobCq/CBmQ40G0oDmCC3mzVnn8sv4XNeWtE5XcEL0uVih7Jo4Dkx1Q
-DmGHBH1zDfgs2qXiLb6xpw/CKQPypZW1JssOTMIfQppNQ87K75Ya0p25Y3ePS2t2
-GtvHxNjUV6kjOZjEn2yWEcBdpOVCUYBVFBNMB4YBHkNRDa/+S4uywAoaTWnCJLUi
-cvTlHmMw6xSQQn1UfRQHk50DMCEJ7Cy1RxrZJrkXXRP3LqQL2ijJ6F4yMfh+Gyb4
-O4XajoVj/+R4GwywKYrrS8PrSNtwxr5StlQO8zIQUSMiq26wM8mgELFlS/32Uclt
-NaQ1xBRizkzpZct9DwIDAQABo2AwXjALBgNVHQ8EBAMCAQYwHQYDVR0OBBYEFKjX
-uXY32CztkhImng4yJNUtaUYsMB8GA1UdIwQYMBaAFKjXuXY32CztkhImng4yJNUt
-aUYsMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAB8spzNn+4VU
-tVxbdMaX+39Z50sc7uATmus16jmmHjhIHz+l/9GlJ5KqAMOx26mPZgfzG7oneL2b
-VW+WgYUkTT3XEPFWnTp2RJwQao8/tYPXWEJDc0WVQHrpmnWOFKU/d3MqBgBm5y+6
-jB81TU/RG2rVerPDWP+1MMcNNy0491CTL5XQZ7JfDJJ9CCmXSdtTl4uUQnSuv/Qx
-Cea13BX2ZgJc7Au30vihLhub52De4P/4gonKsNHYdbWjg7OWKwNv/zitGDVDB9Y2
-CMTyZKG3XEu5Ghl1LEnI3QmEKsqaCLv12BnVjbkSeZsMnevJPs1Ye6TjjJwdik5P
-o/bKiIz+Fq8=
------END CERTIFICATE-----`;
 
 export async function getDb() {
   if (_db) return _db;
@@ -96,19 +64,8 @@ export async function getDb() {
   }
 
   try {
-    // sslmode is stripped so it can't override the ssl option below (newer
-    // pg-connection-string versions derive their own verify-full ssl object
-    // from it, which would conflict with the pinned CA). Parsed as a URL
-    // rather than regex-stripped so sibling params (e.g. Supabase's
-    // pgbouncer=true) survive intact regardless of param order.
-    const url = new URL(process.env.DATABASE_URL);
-    url.searchParams.delete("sslmode");
     const pool = new Pool({
-      connectionString: url.toString(),
-      // Pinned to the Supabase pooler's own CA rather than the system trust
-      // store (see SUPABASE_POOLER_CA above). This project only ever
-      // connects to Supabase, so no host check is needed here.
-      ssl: { ca: SUPABASE_POOLER_CA },
+      connectionString: process.env.DATABASE_URL,
     });
     _db = drizzle(pool);
     return _db;
@@ -567,7 +524,7 @@ export async function hasUserActionLogged(userId: number, action: string, sinceD
 // MISSIONS CRUD (used by missions/router.ts)
 // ─────────────────────────────────────────────────────────────
 
-import type { MissionType, MissionStatus } from "./missions/types.js";
+import type { MissionType, MissionStatus } from "./missions/types";
 
 export async function getMissions(statusFilter?: string) {
   const d = await getDb();
@@ -734,112 +691,10 @@ export async function incrementScanCount(id: number) {
   await db.update(qrCodes).set({ scanCount: sql`${qrCodes.scanCount} + 1`, lastScannedAt: new Date() }).where(eq(qrCodes.id, id));
 }
 
-export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string; userId?: number }) {
+export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string }) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(qrScanEvents).values({
-    qrCodeId: data.qrCodeId,
-    productId: data.productId,
-    isAuthentic: data.isAuthentic,
-    userAgent: data.userAgent,
-  });
-
-  if (data.userId && data.isAuthentic) {
-    await recordReputationEvent(data.userId, "scan_authenticity_confirmed", 1);
-  }
-}
-
-export async function recordReputationEvent(userId: number, eventType: string, pointsDelta: number) {
-  const db = await getDb();
-  if (!db) return;
-  await db.execute(sql`
-    INSERT INTO reputation_events (user_id, event_type, points_delta)
-    VALUES (${userId}, ${eventType}, ${pointsDelta})
-  `);
-  await db.execute(sql`
-    INSERT INTO user_reputation (user_id, points, trust_level)
-    VALUES (${userId}, ${pointsDelta}, 'novice')
-    ON CONFLICT (user_id) DO UPDATE SET
-      points = user_reputation.points + EXCLUDED.points,
-      last_updated_at = now()
-  `);
-}
-
-// Ops console aggregation over scheduled_job_runs (client/src/pages/OpsDashboard.tsx).
-// Job statuses are running/completed/failed; the console speaks success/failure.
-export async function getOpsSummary(windowHours = 24) {
-  const db = await getDb();
-  if (!db) throw new Error("database not available");
-
-  const since = new Date(Date.now() - windowHours * 3600_000);
-  const runs = await db
-    .select()
-    .from(scheduledJobRuns)
-    .where(gte(scheduledJobRuns.startedAt, since))
-    .orderBy(desc(scheduledJobRuns.startedAt))
-    .limit(500);
-
-  const toUiStatus = (s: string) => (s === "completed" ? "success" : s === "failed" ? "failure" : s);
-
-  type SummaryEntry = { success: number; failure: number; lastSeen: Date; lastError: string | null };
-  const byJob = new Map<string, SummaryEntry>();
-  for (const r of runs) {
-    const entry = byJob.get(r.jobName) ?? { success: 0, failure: 0, lastSeen: r.startedAt, lastError: null };
-    if (r.status === "completed") entry.success++;
-    if (r.status === "failed") {
-      entry.failure++;
-      entry.lastError ??= r.error || "(no message)";
-    }
-    if (r.startedAt > entry.lastSeen) entry.lastSeen = r.startedAt;
-    byJob.set(r.jobName, entry);
-  }
-
-  const summary = Array.from(byJob.entries())
-    .map(([name, v]) => ({
-      workflow: name,
-      success: v.success,
-      failure: v.failure,
-      last_seen: v.lastSeen.toISOString(),
-      last_error: v.lastError,
-    }))
-    .sort((a, b) => b.failure - a.failure || b.success - a.success);
-
-  const failures = runs
-    .filter(r => r.status === "failed")
-    .slice(0, 50)
-    .map(r => ({
-      workflow: r.jobName,
-      error: r.error,
-      payload: r.result ? JSON.stringify(r.result) : null,
-      at: r.startedAt.toISOString(),
-    }));
-
-  const recent = runs.slice(0, 50).map(r => ({
-    workflow: r.jobName,
-    status: toUiStatus(r.status),
-    at: r.startedAt.toISOString(),
-  }));
-
-  return {
-    window_hours: windowHours,
-    generated_at: new Date().toISOString(),
-    totals: {
-      success: runs.filter(r => r.status === "completed").length,
-      failure: runs.filter(r => r.status === "failed").length,
-    },
-    summary,
-    failures,
-    recent,
-  };
-}
-
-export async function resolveFraudAlert(alertId: number, userId: number, isVerifiedCounterfeit: boolean) {
-  const db = await getDb();
-  if (!db) return;
-  await db.update(fraudAlerts).set({ status: "resolved" }).where(eq(fraudAlerts.id, alertId));
-  if (isVerifiedCounterfeit) {
-    await recordReputationEvent(userId, "counterfeit_verified", 50);
-  }
+  await db.insert(qrScanEvents).values(data);
 }
 
 export async function getRecentScanEvents(productId: number, limit = 20) {
@@ -1482,39 +1337,7 @@ export async function hasWebhookEventProcessed(eventId: string): Promise<boolean
   return (row?.count ?? 0) > 0;
 }
 
-// ─── Webhook Idempotency Helpers ──────────────────────────────────────────────
-
-export async function claimWebhookEvent(
-  provider: string,
-  eventId: string,
-  eventType: string,
-): Promise<{ id: number } | null> {
-  const db = await getDb();
-  if (!db) return null;
-  try {
-    const result = await db
-      .insert(webhookEvents)
-      .values({ provider, eventId, eventType })
-      .onConflictDoNothing({ target: [webhookEvents.provider, webhookEvents.eventId] })
-      .returning({ id: webhookEvents.id });
-    return result.length > 0 ? result[0] : null;
-  } catch (e) {
-    console.error(`[Webhook] Claim failed: ${e}`);
-    return null;
-  }
-}
-
-export async function markWebhookEventProcessed(
-  provider: string,
-  eventId: string,
-): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  await db
-    .update(webhookEvents)
-    .set({ processedAt: new Date() })
-    .where(and(eq(webhookEvents.provider, provider), eq(webhookEvents.eventId, eventId)));
-}
+// ─── Paddle Subscription Helpers ──────────────────────────────────────────────
 
 export async function upsertPaddleSubscription(data: {
   userId: number;
@@ -1700,22 +1523,4 @@ export async function updateQron(
   await d.update(qrCodes)
     .set({ metadata: merged, updatedAt: new Date() })
     .where(eq(qrCodes.id, row.id));
-}
-
-
-// ============================================================================
-// Hyperdrive-backed DB accessor for Workers runtime
-// ============================================================================
-// Per-request factory for Cloudflare Workers environment where Hyperdrive
-// connection pooling is available via env.HYPERDRIVE binding.
-// Unlike getDb() above (async, module-level singleton for Node.js),
-// this factory creates a fresh drizzle client for each Workers request.
-//
-// Usage (in Workers handler / tRPC context):
-//   const db = getHyperdriveDb(env);
-//   const users = await db.query.users.findMany();
-
-export function getHyperdriveDb(env: { HYPERDRIVE: { connectionString: string } }): ReturnType<typeof drizzle> {
-  const workersPool = new Pool({ connectionString: env.HYPERDRIVE.connectionString });
-  return drizzle(workersPool);
 }

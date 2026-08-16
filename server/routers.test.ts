@@ -53,7 +53,6 @@ vi.mock("./db", async (importOriginal) => {
     getUserReferrals: vi.fn(async () => []),
     // white-label
     getWhiteLabelByApiKey: vi.fn(async () => null),
-    getWhiteLabelClients: vi.fn(async () => []),
     // subscriptions
     getUserSubscription: vi.fn(async () => null),
     // autopilot
@@ -76,140 +75,9 @@ vi.mock("./db", async (importOriginal) => {
     getOpenFraudAlerts: vi.fn(async () => []),
     getAllHealthScores: vi.fn(async () => []),
     getRecentActivity: vi.fn(async () => []),
+    getWhiteLabelClients: vi.fn(async () => []),
     // make getDb return null so character/scheduler null-guards activate
     getDb: vi.fn(async () => null),
-  };
-});
-
-// server/admin/db-repository.ts and server/subscriptions/router.ts were
-// migrated (Task 2b-4) to call server/db-helpers.ts's db-parameterized
-// reimplementations instead of server/db.ts's named exports directly, so
-// the admin dashboard functions and getUserSubscription now need to be
-// mocked here too (the values below intentionally mirror the "./db" mock
-// above so existing test expectations don't change).
-vi.mock("./db-helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./db-helpers")>();
-  return {
-    ...actual,
-    getAdminDashboardMetrics: vi.fn(async () => ({ totalUsers: 0, totalProducts: 0, totalAuthentications: 0, totalRevenue: 0, totalLeads: 0, totalNfts: 0 })),
-    getAllUsers: vi.fn(async () => []),
-    getRevenueAnalytics: vi.fn(async () => []),
-    getSubscriptionAnalytics: vi.fn(async () => []),
-    getOpenFraudAlerts: vi.fn(async () => []),
-    getAllHealthScores: vi.fn(async () => []),
-    getRecentActivity: vi.fn(async () => []),
-    getUserSubscription: vi.fn(async () => null),
-  };
-});
-
-// server/staking/router.ts, server/referral/router.ts,
-// server/white-label/router.ts, server/affiliate/router.ts,
-// server/nft/router.ts, and server/certificates/router.ts were migrated
-// (Task 2b-5) to call server/identity-db-helpers.ts's db-parameterized
-// reimplementations instead of server/db.ts's named exports directly, so
-// the functions those public/authenticated tests below actually exercise
-// need to be mocked here too (the values below intentionally mirror the
-// "./db" mock above so existing test expectations don't change).
-vi.mock("./identity-db-helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./identity-db-helpers")>();
-  return {
-    ...actual,
-    getCertificateByNumber: vi.fn(async () => null),
-    listNfts: vi.fn(async () => []),
-    listCollections: vi.fn(async () => []),
-    getActiveAuctions: vi.fn(async () => []),
-    getReferralByCode: vi.fn(async () => undefined),
-    getUserReferrals: vi.fn(async () => []),
-    getWhiteLabelByApiKey: vi.fn(async () => null),
-    getWhiteLabelClients: vi.fn(async () => []),
-    getAffiliateByUserId: vi.fn(async () => null),
-  };
-});
-
-// server/ab-testing/router.ts, server/notifications/router.ts,
-// server/email-campaigns/router.ts, server/email-drafts/router.ts,
-// server/marketing/router.ts, server/blockchain/router.ts,
-// server/dashboard/router.ts, and server/hubspot/automation.ts were
-// migrated (Task 2b-6) to call server/content-db-helpers.ts's
-// db-parameterized reimplementations instead of server/db.ts's named
-// exports directly, so the functions those tests below actually exercise
-// need to be mocked here too (the values below intentionally mirror the
-// "./db" mock above -- including the same in-memory `store` for
-// notifications/leads -- so existing test expectations don't change).
-vi.mock("./content-db-helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./content-db-helpers")>();
-  return {
-    ...actual,
-    createNotification: vi.fn(async (_db: any, data: any) => {
-      const id = store.nextNotifId();
-      store.notifications.push({ ...data, id, createdAt: new Date() });
-      return { id };
-    }),
-    getUserNotifications: vi.fn(async (_db: any, userId: number, limit = 50) => {
-      return store.notifications.filter((n: any) => n.userId === userId).slice(0, limit);
-    }),
-    getUnreadNotificationCount: vi.fn(async (_db: any, userId: number) => {
-      return store.notifications.filter((n: any) => n.userId === userId && n.isRead === 0).length;
-    }),
-    markNotificationRead: vi.fn(async (_db: any, id: number, userId: number) => {
-      const n = store.notifications.find((n: any) => n.id === id && n.userId === userId);
-      if (n) n.isRead = 1;
-    }),
-    markAllNotificationsRead: vi.fn(async (_db: any, userId: number) => {
-      store.notifications.filter((n: any) => n.userId === userId).forEach((n: any) => { n.isRead = 1; });
-    }),
-    deleteNotification: vi.fn(async (_db: any, id: number, userId: number) => {
-      const idx = store.notifications.findIndex((n: any) => n.id === id && n.userId === userId);
-      if (idx >= 0) store.notifications.splice(idx, 1);
-    }),
-    createLead: vi.fn(async (_db: any, _data: any) => ({ id: store.nextLeadId() })),
-    getAllLeads: vi.fn(async () => []),
-    updateLeadScore: vi.fn(async () => undefined),
-    updateLeadStatus: vi.fn(async () => undefined),
-    getCertificateByNumber: vi.fn(async () => null),
-    getProductById: vi.fn(async () => undefined),
-    getUserById: vi.fn(async () => null),
-    hasUserActionLogged: vi.fn(async () => false),
-    logActivity: vi.fn(async () => undefined),
-    getAutopilotConfig: vi.fn(async () => undefined),
-    getRecentDecisions: vi.fn(async () => []),
-    getUserEmailCampaigns: vi.fn(async () => []),
-    createEmailCampaign: vi.fn(async (_db: any, data: any) => ({ id: 1, ...data })),
-    updateEmailCampaign: vi.fn(async () => undefined),
-    getPendingDrafts: vi.fn(async () => []),
-    createEmailDraft: vi.fn(async (_db: any, data: any) => ({ id: 1, ...data })),
-    updateDraftStatus: vi.fn(async () => undefined),
-    getAllAbTests: vi.fn(async () => []),
-    createAbTest: vi.fn(async (_db: any, data: any) => ({ id: 1, ...data })),
-    getWhiteLabelByApiKey: vi.fn(async () => null),
-    getDashboardMetrics: vi.fn(async () => ({ totalProducts: 0, totalAuthentications: 0, totalCertificates: 0, totalNfts: 0 })),
-    getRecentActivity: vi.fn(async () => []),
-  };
-});
-
-// server/character-service.ts was migrated (Task 2b-6) to take an explicit
-// `db` instead of resolving getDb() (and its now-removed dead `if (!db)`
-// guards) itself. This test file's "./db" mock intentionally sets
-// `getDb: () => null` (see comment above), which used to make those dead
-// guards return graceful empty defaults for the "character" describe block
-// below; now that db is required (never null in practice -- getDb() throws
-// instead), that path is mocked directly here instead, returning the same
-// empty-database values the old guards produced so existing test
-// expectations don't change.
-vi.mock("./character-service", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./character-service")>();
-  return {
-    ...actual,
-    getNetworkStats: vi.fn(async () => ({
-      totalAgents: 0, totalVerifications: 0, totalConsensus: 0,
-      totalQRONDistributed: "0", totalCheckpoints: 0,
-      agentsByType: [], recentActivity: [],
-    })),
-    getAgentLeaderboard: vi.fn(async () => []),
-    getUserGenerations: vi.fn(async () => []),
-    getUserCharacterAssets: vi.fn(async () => []),
-    getAgentByUser: vi.fn(async () => null),
-    rewardAgentForVerification: vi.fn(async () => undefined),
   };
 });
 
@@ -238,8 +106,6 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     res: {
       clearCookie: vi.fn(),
     } as unknown as TrpcContext["res"],
-    secure: true,
-    setCookieHeader: () => {},
   };
 }
 
@@ -253,8 +119,6 @@ function createPublicContext(): TrpcContext {
     res: {
       clearCookie: vi.fn(),
     } as unknown as TrpcContext["res"],
-    secure: true,
-    setCookieHeader: () => {},
   };
 }
 
@@ -884,6 +748,22 @@ describe("AuthiChain Unified Platform Routers", () => {
       await expect(caller.analytics.myStats()).rejects.toThrow();
     });
 
+    it("returns aggregated stats for authenticated user (empty when db unavailable)", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      const stats = await caller.analytics.myStats();
+      expect(stats).toBeDefined();
+      expect(typeof stats).toBe("object");
+    });
+  });
+
+  describe("personalization", () => {
+    it("getPersonalizedContent returns null when db unavailable", async () => {
+      const caller = appRouter.createCaller(createPublicContext());
+      const result = await caller.personalization.getPersonalizedContent({
+        sessionId: "test-session-123",
+      });
+      expect(result).toBeNull();
+    });
   });
 
   describe("products", () => {

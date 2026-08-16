@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { getPaddle } from '../paddle-service';
 import { ENV } from '../_core/env';
-import type { Db } from '../db-helpers';
 import {
   logActivity,
   logAutomationAudit,
@@ -9,9 +8,10 @@ import {
   recordRevenue,
   upsertPaddleSubscription,
   setSubscriptionStatusByPaddleId,
+  getSubscriptionByPaddleSubscriptionId,
   createSystemNotification,
   createInvoice,
-} from '../db-helpers';
+} from '../db';
 import { getPlanQuota } from '../stripe-products';
 
 type PaddlePlan = "starter" | "professional" | "enterprise";
@@ -32,7 +32,7 @@ function detectPlanFromPaddleData(priceId: string | null | undefined, amountCent
  * Paddle webhook handler
  * Processes payment events from Paddle
  */
-export async function handlePaddleWebhook(db: Db, req: Request, res: Response) {
+export async function handlePaddleWebhook(req: Request, res: Response) {
   const signature = req.headers['paddle-signature'] as string;
   const rawBody = req.body.toString();
   const webhookSecret = ENV.paddleWebhookSecret;
@@ -64,11 +64,11 @@ export async function handlePaddleWebhook(db: Db, req: Request, res: Response) {
 
   // Idempotency — skip if already processed
   const paddleEventId = `${eventData.eventType}:${eventData.data?.id ?? 'unknown'}`;
-  if (await hasWebhookEventProcessed(db, paddleEventId)) {
+  if (await hasWebhookEventProcessed(paddleEventId)) {
     console.log(`[Paddle Webhook] Duplicate event ignored: ${paddleEventId}`);
     return res.json({ received: true, duplicate: true });
   }
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'webhook_received',
     entityType: 'webhook',
@@ -79,7 +79,7 @@ export async function handlePaddleWebhook(db: Db, req: Request, res: Response) {
   try {
     switch (eventData.eventType) {
       case 'transaction.completed':
-        await handleTransactionCompleted(db, eventData.data);
+        await handleTransactionCompleted(eventData.data);
         break;
 
       case 'transaction.paid':
@@ -87,19 +87,19 @@ export async function handlePaddleWebhook(db: Db, req: Request, res: Response) {
         break;
 
       case 'transaction.payment_failed':
-        await handleTransactionPaymentFailed(db, eventData.data);
+        await handleTransactionPaymentFailed(eventData.data);
         break;
 
       case 'subscription.created':
-        await handleSubscriptionCreated(db, eventData.data);
+        await handleSubscriptionCreated(eventData.data);
         break;
 
       case 'subscription.updated':
-        await handleSubscriptionUpdated(db, eventData.data);
+        await handleSubscriptionUpdated(eventData.data);
         break;
 
       case 'subscription.canceled':
-        await handleSubscriptionCanceled(db, eventData.data);
+        await handleSubscriptionCanceled(eventData.data);
         break;
 
       default:
@@ -113,7 +113,7 @@ export async function handlePaddleWebhook(db: Db, req: Request, res: Response) {
   }
 }
 
-async function handleTransactionCompleted(db: Db, data: any) {
+async function handleTransactionCompleted(data: any) {
   console.log(`[Paddle] Transaction completed: ${data.id}`);
 
   const customData = data.customData || {};
@@ -126,7 +126,7 @@ async function handleTransactionCompleted(db: Db, data: any) {
   const plan = detectPlanFromPaddleData(priceId, amountCents);
 
   if (amountUsd > 0) {
-    await recordRevenue(db, {
+    await recordRevenue({
       source: 'paddle',
       amount: amountUsd.toFixed(2),
       currency,
@@ -142,7 +142,7 @@ async function handleTransactionCompleted(db: Db, data: any) {
   }
 
   if (userId) {
-    await createInvoice(db, {
+    await createInvoice({
       userId,
       amount: amountUsd.toFixed(2),
       currency,
@@ -150,7 +150,7 @@ async function handleTransactionCompleted(db: Db, data: any) {
     });
   }
 
-  await logAutomationAudit(db, 'billing_paddle_transaction_completed', {
+  await logAutomationAudit('billing_paddle_transaction_completed', {
     transactionId: data.id,
     amountUsd,
     currency,
@@ -161,7 +161,7 @@ async function handleTransactionCompleted(db: Db, data: any) {
   console.log(`[Paddle] Transaction completed recorded: ${data.id} amount=${amountUsd}`);
 }
 
-async function handleTransactionPaymentFailed(db: Db, data: any) {
+async function handleTransactionPaymentFailed(data: any) {
   console.log(`[Paddle] Transaction payment failed: ${data.id}`);
 
   const customData = data.customData || {};
@@ -169,12 +169,11 @@ async function handleTransactionPaymentFailed(db: Db, data: any) {
   const subscriptionId = data.subscriptionId ?? null;
 
   if (subscriptionId) {
-    await setSubscriptionStatusByPaddleId(db, subscriptionId, 'past_due');
+    await setSubscriptionStatusByPaddleId(subscriptionId, 'past_due');
   }
 
   if (userId) {
     await createSystemNotification(
-      db,
       userId,
       'Payment Failed',
       'A payment for your AuthiChain subscription failed. Please update your payment method to avoid service interruption.',
@@ -183,14 +182,14 @@ async function handleTransactionPaymentFailed(db: Db, data: any) {
     );
   }
 
-  await logAutomationAudit(db, 'billing_paddle_payment_failed', {
+  await logAutomationAudit('billing_paddle_payment_failed', {
     transactionId: data.id,
     paddleSubscriptionId: subscriptionId ?? null,
     userId: userId ?? null,
   }, userId ?? undefined);
 }
 
-async function handleSubscriptionCreated(db: Db, data: any) {
+async function handleSubscriptionCreated(data: any) {
   console.log(`[Paddle] Subscription created: ${data.id}`);
 
   const customData = data.customData || {};
@@ -216,7 +215,7 @@ async function handleSubscriptionCreated(db: Db, data: any) {
     ? new Date(data.currentBillingPeriod.startsAt)
     : now;
 
-  await upsertPaddleSubscription(db, {
+  await upsertPaddleSubscription({
     userId,
     plan,
     status: 'active',
@@ -229,7 +228,6 @@ async function handleSubscriptionCreated(db: Db, data: any) {
   });
 
   await createSystemNotification(
-    db,
     userId,
     'Subscription Activated',
     `Your AuthiChain ${plan} plan is now active. Welcome!`,
@@ -237,7 +235,7 @@ async function handleSubscriptionCreated(db: Db, data: any) {
     '/subscriptions',
   );
 
-  await logAutomationAudit(db, 'billing_paddle_subscription_created', {
+  await logAutomationAudit('billing_paddle_subscription_created', {
     paddleSubscriptionId: data.id,
     paddleCustomerId: data.customerId ?? null,
     plan,
@@ -248,7 +246,7 @@ async function handleSubscriptionCreated(db: Db, data: any) {
   console.log(`[Paddle] Subscription created: ${data.id} user=${userId} plan=${plan}`);
 }
 
-async function handleSubscriptionUpdated(db: Db, data: any) {
+async function handleSubscriptionUpdated(data: any) {
   console.log(`[Paddle] Subscription updated: ${data.id}`);
 
   const firstItem = data.items?.[0];
@@ -279,7 +277,7 @@ async function handleSubscriptionUpdated(db: Db, data: any) {
     firstItem?.price?.billingCycle?.interval === 'year' ? 'annual' : 'monthly';
 
   if (userId) {
-    await upsertPaddleSubscription(db, {
+    await upsertPaddleSubscription({
       userId,
       plan,
       status,
@@ -291,10 +289,10 @@ async function handleSubscriptionUpdated(db: Db, data: any) {
       currentPeriodEnd: periodEnd,
     });
   } else {
-    await setSubscriptionStatusByPaddleId(db, data.id, status);
+    await setSubscriptionStatusByPaddleId(data.id, status);
   }
 
-  await logAutomationAudit(db, 'billing_paddle_subscription_updated', {
+  await logAutomationAudit('billing_paddle_subscription_updated', {
     paddleSubscriptionId: data.id,
     plan,
     status,
@@ -304,18 +302,17 @@ async function handleSubscriptionUpdated(db: Db, data: any) {
   console.log(`[Paddle] Subscription updated: ${data.id} status=${status} plan=${plan}`);
 }
 
-async function handleSubscriptionCanceled(db: Db, data: any) {
+async function handleSubscriptionCanceled(data: any) {
   console.log(`[Paddle] Subscription canceled: ${data.id}`);
 
   const customData = data.customData || {};
   const userId = customData.userId ? parseInt(customData.userId) : null;
 
   const cancelledAt = data.canceledAt ? new Date(data.canceledAt) : new Date();
-  await setSubscriptionStatusByPaddleId(db, data.id, 'cancelled', cancelledAt);
+  await setSubscriptionStatusByPaddleId(data.id, 'cancelled', cancelledAt);
 
   if (userId) {
     await createSystemNotification(
-      db,
       userId,
       'Subscription Cancelled',
       'Your AuthiChain subscription has been cancelled. You will retain access until the end of your billing period.',
@@ -324,7 +321,7 @@ async function handleSubscriptionCanceled(db: Db, data: any) {
     );
   }
 
-  await logAutomationAudit(db, 'billing_paddle_subscription_cancelled', {
+  await logAutomationAudit('billing_paddle_subscription_cancelled', {
     paddleSubscriptionId: data.id,
     paddleCustomerId: data.customerId ?? null,
     cancelledAt: cancelledAt.toISOString(),

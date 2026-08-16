@@ -1,7 +1,6 @@
 import { adminProcedure, router } from "../_core/trpc";
 import { DbAdminRepository } from "./db-repository";
-import { getDb } from "../db";
-import { logActivity } from "../db-helpers";
+import { logActivity } from "../db";
 import { z } from "zod";
 
 export const adminRouter = router({
@@ -110,11 +109,7 @@ export const adminRouter = router({
     value: z.number().min(0),
     description: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
-    // ctx.db does not exist on the live TrpcContext (server/_core/context.ts) —
-    // only the separate Workers context has it. Documented bridge until this
-    // router is wired up to a real per-request db.
-    const db = await getDb();
-    await logActivity(db, {
+    await logActivity({
       userId: ctx.user.id,
       action: 'sovereign_deal_created',
       entityType: 'deal',

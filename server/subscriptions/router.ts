@@ -1,11 +1,5 @@
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
-import {
-  getUserSubscription,
-  createSubscription,
-  logActivity,
-  getUserInvoices,
-} from "../db-helpers";
+import * as db from "../db";
 import * as stripeService from "../stripe-service";
 import * as paddleService from "../paddle-service";
 import { z } from "zod";
@@ -21,11 +15,7 @@ const PADDLE_PRICES: Record<string, Record<string, string>> = {
 
 export const subscriptionsRouter = router({
   current: protectedProcedure.query(async ({ ctx }) => {
-    // ctx.db does not exist on the live TrpcContext (server/_core/context.ts) —
-    // only the separate Workers context has it. Documented bridge until this
-    // router is wired up to a real per-request db.
-    const db = await getDb();
-    const sub = await getUserSubscription(db, ctx.user.id);
+    const sub = await db.getUserSubscription(ctx.user.id);
     return sub ?? null;
   }),
   // Admin-only: grants a subscription without going through Stripe/Paddle checkout
@@ -44,26 +34,20 @@ export const subscriptionsRouter = router({
       enterprise: SUBSCRIPTION_PLANS.enterprise.monthlyQuota,
       medtech: SUBSCRIPTION_PLANS.medtech.monthlyQuota,
     };
-    // Documented bridge — see current above.
-    const db = await getDb();
-    const result = await createSubscription(db, {
+    const result = await db.createSubscription({
       userId: input.userId, plan: input.plan as any, monthlyQuota: quotas[input.plan] ?? 0,
       usedQuota: 0, billingCycle: input.billingCycle, status: "active",
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + (input.billingCycle === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000),
     });
-    await logActivity(db, { userId: ctx.user.id, action: "subscription_granted_by_admin", entityType: "subscription", entityId: result.id, details: { grantedTo: input.userId, plan: input.plan } });
+    await db.logActivity({ userId: ctx.user.id, action: "subscription_granted_by_admin", entityType: "subscription", entityId: result.id, details: { grantedTo: input.userId, plan: input.plan } });
     return result;
   }),
   invoices: protectedProcedure.query(async ({ ctx }) => {
-    // Documented bridge — see current above.
-    const db = await getDb();
-    return await getUserInvoices(db, ctx.user.id);
+    return await db.getUserInvoices(ctx.user.id);
   }),
   usage: protectedProcedure.query(async ({ ctx }) => {
-    // Documented bridge — see current above.
-    const db = await getDb();
-    const sub = await getUserSubscription(db, ctx.user.id);
+    const sub = await db.getUserSubscription(ctx.user.id);
     if (!sub) return { plan: null, used: 0, limit: 0, percentage: 0 };
     return { plan: sub.plan, used: sub.usedQuota || 0, limit: sub.monthlyQuota, percentage: Math.round(((sub.usedQuota || 0) / sub.monthlyQuota) * 100) };
   }),
@@ -106,9 +90,7 @@ export const subscriptionsRouter = router({
     return { checkoutUrl };
   }),
   cancel: protectedProcedure.mutation(async ({ ctx }) => {
-    // Documented bridge — see current above.
-    const db = await getDb();
-    const sub = await getUserSubscription(db, ctx.user.id);
+    const sub = await db.getUserSubscription(ctx.user.id);
     if (!sub?.stripeSubscriptionId) throw new TRPCError({ code: "NOT_FOUND", message: "No active Stripe subscription" });
     await stripeService.cancelSubscription(sub.stripeSubscriptionId);
     return { success: true, message: "Subscription will cancel at end of billing period" };

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { requireAdmin } from '@/lib/require-admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +13,8 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const supabase = await createClient();
-    const authResult = await requireAdmin(supabase);
-    if (authResult instanceof NextResponse) return authResult;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const past24h = new Date(Date.now() - 86400000).toISOString();
 

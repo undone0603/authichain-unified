@@ -62,7 +62,7 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Deploy Worker
         if: env.CLOUDFLARE_ACCOUNT_ID != '' && env.COMPATIBILITY_DATE != ''
         run: npx wrangler deploy --minify --config wrangler.toml

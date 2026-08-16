@@ -7,6 +7,8 @@ on:
         required: false
         type: string
     secrets:
+      ALCHEMY_API_KEY:
+        required: true
       POLYGON_PRIVATE_KEY:
         required: true
       GOVCHAIN_NFT_CONTRACT:
@@ -21,7 +23,6 @@ on:
 jobs:
   mint:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     continue-on-error: true
 
     steps:
@@ -30,14 +31,15 @@ jobs:
         with: { version: '10.28.2' }
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile
 
       - name: Mint GovChain NFTs
         run: pnpm exec tsx scripts/mint-govchain-nfts.ts
         env:
-          WALLET_PRIVATE_KEY:        ${{ secrets.POLYGON_PRIVATE_KEY }}
-          CONTRACT_ADDRESS:          ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
-          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GOVCHAIN_URL:              ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN:                   ${{ inputs.dry_run || 'false' }}
+          ALCHEMY_API_KEY:       ${{ secrets.ALCHEMY_API_KEY }}
+          WALLET_PRIVATE_KEY:    ${{ secrets.POLYGON_PRIVATE_KEY }}
+          CONTRACT_ADDRESS:      ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
+          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOVCHAIN_URL:          ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
+          DRY_RUN:               ${{ inputs.dry_run || 'false' }}
