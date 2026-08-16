@@ -24,7 +24,11 @@ const DEMOS = [
     name: 'FTC "Made in USA" Shield',
     style: 'Patriotic Heritage',
     image: '/media/usa/unnamed.jpg',
-    description: 'EO 14392 compliant origin proof for American manufacturing.',
+    // Not "EO 14392 compliant": an Executive Order directs agencies, it is not
+    // something a product complies with. The rule a seller is held to is the
+    // FTC Made in USA Labeling Rule (16 CFR Part 323), and evidence supports a
+    // claim rather than conferring compliance on it.
+    description: 'Origin evidence for "Made in USA" claims under FTC 16 CFR Part 323.',
     hash: '0x8f2a...1b9c'
   },
   {

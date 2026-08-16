@@ -96,6 +96,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2:      ${{ secrets.RESEND_API_KEY2 }}
           DRY_RUN:              ${{ inputs.dry_run || 'false' }}
 
   # ── Phase 4: Notify AgentZ webhook ──────────────────────────────────────────

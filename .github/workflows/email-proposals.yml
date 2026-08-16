@@ -58,13 +58,27 @@ jobs:
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # authichain.com is verified on the second account; the preflight
+          # picks whichever credential owns EMAIL_FROM.
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2:      ${{ secrets.RESEND_API_KEY2 }}
           GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
           EMAIL_FROM:           ${{ secrets.EMAIL_FROM || 'proposals@authichain.com' }}
           CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://calendly.com/authichain/discovery' }}
           SALES_EMAIL:          ${{ secrets.SALES_EMAIL || 'sales@authichain.com' }}
           # STAGED: fallback is 'true' so scheduled runs never send live.
           DRY_RUN:              ${{ inputs.dry_run || 'true' }}
+          # CAN-SPAM requires a physical postal address in every commercial
+          # email, and guardedSend fails CLOSED without one. This is NOT a
+          # secret — the whole point is that it is printed in every message —
+          # so it is a plain default rather than a repo secret, and the channel
+          # works out of the box. Value is the address already filed on the DHS
+          # SVIP application and the state partnership proposals
+          # (docs/submissions/, docs/strategy/). Override with the secret if the
+          # registered address changes.
+          MAILING_ADDRESS:      ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
+          UNSUBSCRIBE_URL:      ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          RESEND_REPLY_TO:      ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Report email job failure to Slack
         if: failure()
