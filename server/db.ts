@@ -1552,3 +1552,21 @@ export async function updateQron(
     .set({ metadata: merged, updatedAt: new Date() })
     .where(eq(qrCodes.id, row.id));
 }
+
+
+// ============================================================================
+// Hyperdrive-backed DB accessor for Workers runtime
+// ============================================================================
+// Per-request factory for Cloudflare Workers environment where Hyperdrive
+// connection pooling is available via env.HYPERDRIVE binding.
+// Unlike getDb() above (async, module-level singleton for Node.js),
+// this factory creates a fresh drizzle client for each Workers request.
+//
+// Usage (in Workers handler / tRPC context):
+//   const db = getHyperdriveDb(env);
+//   const users = await db.query.users.findMany();
+
+export function getHyperdriveDb(env: { HYPERDRIVE: { connectionString: string } }): ReturnType<typeof drizzle> {
+  const workersPool = new Pool({ connectionString: env.HYPERDRIVE.connectionString });
+  return drizzle(workersPool);
+}
