@@ -690,7 +690,8 @@ registerJob({
  */
 const SYSTEM_PR_MISSION_ID = "00000000-0000-4000-8000-0000000000ab";
 
-async function ensureSystemPrMission(db: Db): Promise<string> {
+async function ensureSystemPrMission(): Promise<string> {
+  const db = await getDb();
   await db.execute(sql`
     insert into missions (id, type, title, description, status)
     values (
@@ -715,16 +716,11 @@ registerJob({
   enabled: true,
   handler: async (): Promise<JobResult> => {
     const { runNewsjackingMonitor } = await import("./agents/news-pr");
-    // Simulate a task object for the agent
-    await runNewsjackingMonitor({ 
-      missionId: "SYSTEM_PR", 
-      payload: { topics: ['medical device recall', 'counterfeit pharma', 'luxury forgery'] } 
-    } as any);
-    const missionId = await ensureSystemPrMission(db);
+    const missionId = await ensureSystemPrMission();
     await runNewsjackingMonitor({
       missionId,
       payload: { topics: ['medical device recall', 'counterfeit pharma', 'luxury forgery'] }
-    } as any, db);
+    } as any);
     return { itemsProcessed: 1, details: { status: "news_scan_complete" } };
   },
 });
