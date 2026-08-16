@@ -69,6 +69,5 @@
     "sentry.client.config.ts",
     "sentry.edge.config.ts",
     "sentry.server.config.ts",
-    "content/seo/pages.json"
   ]
 }
