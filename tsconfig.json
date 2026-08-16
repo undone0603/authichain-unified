@@ -66,6 +66,6 @@
     "src/db/qron_schema.ts",
     "sentry.client.config.ts",
     "sentry.edge.config.ts",
-    "sentry.server.config.ts"
+    "sentry.server.config.ts",
   ]
 }
