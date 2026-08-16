@@ -11,9 +11,15 @@
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=qron
 
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { guardrailCheck, guardrailRecord } from './lib/guardrail-client';
-import { checkSender, reportSenderFailure, CREDENTIAL_ENV_VARS, type CredentialName } from './lib/resend-preflight';
+import { checkSender, reportSenderFailure, CREDENTIAL_ENV_VARS } from './lib/resend-preflight';
+import { guardedSend, type VerificationSource } from '../server/outreach/send-guard';
+import {
+  mostRecentInForce,
+  nextDeadline,
+  formatMilestoneDate,
+  countdownLabel,
+} from '../src/lib/dpp-timeline';
 
 const GUARDRAIL_CHANNEL = 'email.b2b-cold';
 
@@ -36,16 +42,19 @@ const supabase = createClient(
 // used for a given sender is resolved per-address by the preflight.
 const hasResendKey = CREDENTIAL_ENV_VARS.some(name => !!process.env[name]);
 
-/** Resend clients, one per credential, built lazily and reused. */
-const resendClients = new Map<CredentialName, Resend>();
-function resendFor(credential: CredentialName): Resend {
-  let client = resendClients.get(credential);
-  if (!client) {
-    client = new Resend(process.env[credential]!);
-    resendClients.set(credential, client);
-  }
-  return client;
-}
+/**
+ * Provenance of the hardcoded contact addresses.
+ *
+ * These are functional-role addresses gathered by hand in June 2026. That is
+ * not the same as verified: `compliance@`, `innovation@` and `b2b@` are exactly
+ * the shape a plausible guess takes, and the guard exists to stop us mailing
+ * guesses. They are declared `unknown` so the guard rejects them until they are
+ * actually verified — Apollo resolution upgrades a target to `apollo_verified`
+ * at run time, which is the intended path to sending.
+ *
+ * This is deliberately conservative: it lowers send volume rather than raise it.
+ */
+const RESEARCHED_SOURCE: VerificationSource = 'unknown';
 
 // Sender addresses are per-segment because the three segments are separately
 // branded products — a GovChain pitch arriving from a cannabis-compliance
@@ -176,7 +185,7 @@ const STRAINCHAIN_TARGETS = [
     title: 'VP Compliance / Director of Operations',
     email: 'compliance@trulieve.com',
     linkedin: 'https://www.linkedin.com/company/trulieve/',
-    pain: 'Multi-state operator with 130+ dispensaries; METRC across FL, PA, AZ, GA — blockchain DPP required for EU market entry by July 2026',
+    pain: 'Multi-state operator with 130+ dispensaries; METRC across FL, PA, AZ, GA — COA integrity + custody reconciliation today, DPP-ready export for EU entry',
     states: 'FL, PA, AZ, GA, WV',
     website: 'https://trulieve.com',
   },
@@ -186,7 +195,7 @@ const STRAINCHAIN_TARGETS = [
     title: 'SVP Compliance',
     email: 'compliance@curaleaf.com',
     linkedin: 'https://www.linkedin.com/company/curaleaf/',
-    pain: 'Largest MSO by revenue (40+ states) — EU DPP mandate July 2026 creates export compliance gap; METRC + blockchain COA hashing needed',
+    pain: 'Largest MSO by revenue (40+ states) — METRC reconciliation across 40 state systems; blockchain COA hashing; DPP-ready before cannabis is scheduled',
     states: '40+ states',
     website: 'https://curaleaf.com',
   },
@@ -287,40 +296,69 @@ function govchainEmail(t: typeof GOVCHAIN_TARGETS[0]): { subject: string; html: 
   return { subject, html };
 }
 
+/**
+ * The previous version of this email led with "the DPP mandate takes effect for
+ * cannabis-adjacent products in July 2026". Two things were wrong with it, and
+ * both are the kind a compliance buyer checks first:
+ *
+ *   1. It was sent in August, about a July date — in the future tense.
+ *   2. `content/dpp/regulatory-timeline.json` has no cannabis milestone at all.
+ *      The dated waves are batteries, electronics, textiles and construction.
+ *      The claim was not supported by our own sourced timeline.
+ *
+ * The rewrite only asserts what that file can back: the registry is live, the
+ * next dated wave is whatever the timeline says it is, and cannabis is not yet
+ * scheduled — which is stated plainly rather than implied away. Every date is
+ * read from the timeline at send time, so this copy cannot go stale the way the
+ * last one did.
+ */
 function strainchaineEmail(t: typeof STRAINCHAIN_TARGETS[0]): { subject: string; html: string } {
-  const subject = `EU Digital Product Passport for ${t.company} — July 2026 deadline`;
+  const now = new Date();
+  const registry = mostRecentInForce(now);
+  const next = nextDeadline(now);
+
+  const registryLine = registry
+    ? `The EU's Digital Product Passport registry went live on ${formatMilestoneDate(registry)} — it is operating now, not pending.`
+    : `The EU's Digital Product Passport registry is being stood up now.`;
+  const nextLine = next
+    ? `The next mandated category is ${next.label} (${formatMilestoneDate(next)} — ${countdownLabel(next, now).toLowerCase()}), with further waves dated after it.`
+    : '';
+
+  const subject = registry
+    ? `EU DPP registry is live — what it means for ${t.company}`
+    : `EU Digital Product Passport — what it means for ${t.company}`;
+
   const html = `
 <div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
   <p>Hi,</p>
 
-  <p>The EU's Digital Product Passport (DPP) mandate takes effect for cannabis-adjacent
-  products in July 2026. For MSOs like ${t.company} with any EU distribution or
-  licensing deals, this means every package needs a blockchain-anchored provenance
-  record — lab certificate hash, METRC tag, custody timestamp, and a scannable QR
-  that verifies on-chain in under 2 seconds.</p>
+  <p>${registryLine} ${nextLine}</p>
 
-  <p>StrainChain (<a href="https://strainchain.io">strainchain.io</a>) does exactly this:
+  <p><strong>Cannabis is not in a dated wave yet</strong> — I'd rather tell you that than
+  invent a deadline. What the schedule does tell you is the direction of travel, and that
+  the operators who are ready when their category lands are the ones who started while it
+  was optional. For an MSO of ${t.company}'s footprint (${t.states}), the work is the same
+  either way, and it pays for itself before any EU rule applies:</p>
+
   <ul>
-    <li>METRC sync — custody events auto-anchored on Polygon at every handoff</li>
-    <li>COA hashing — lab certificates stored immutably; tampering is instantly detectable</li>
-    <li>EU DPP v2 compliant passport per package (ISO 18013-5 / EPCIS 2.0)</li>
-    <li>Consumer-facing QR scan: full chain-of-custody + test results in 1.2 seconds</li>
-  </ul></p>
+    <li>METRC sync — custody events anchored on Polygon at every handoff, so your state audit trail reconciles itself</li>
+    <li>COA hashing — lab certificates stored immutably; an altered result is detectable instead of arguable</li>
+    <li>Consumer-facing QR: full chain-of-custody plus test results on scan</li>
+    <li>Passport export in the EU DPP data model (ISO 18013-5 / EPCIS 2.0) — ready the day it is asked for</li>
+  </ul>
 
-  <p>Theater 1 plan is <strong>$499/month</strong> for 5,000 package scans.
-  7-day free trial, no integration required to start the demo.</p>
+  <p>The near-term value is the METRC reconciliation and COA integrity, today, under the
+  rules you already operate under. The DPP readiness is what you get for free by doing it.</p>
 
-  <p><a href="https://strainchain.io/demo">Watch the 90-second demo</a> or
-  <a href="${CALENDLY}">book a call</a> — I can have a sandbox live for
-  ${t.company} in under an hour.</p>
+  <p>Theater 1 is <strong>$499/month</strong> for 5,000 package scans, with a 7-day trial
+  and no integration needed to see it working.
+  <a href="${CALENDLY}">Book 20 minutes</a> and I'll walk through it against your own
+  ${t.states.split(',')[0].trim()} data.</p>
 
   <p>Best,<br>
   Zachary<br>
   StrainChain / AuthiChain<br>
   <a href="https://strainchain.io">strainchain.io</a></p>
-
-  <p style="font-size:12px;color:#9ca3af;margin-top:24px">
-  <a href="https://strainchain.io/unsubscribe">Unsubscribe</a></p>
 </div>`;
   return { subject, html };
 }
@@ -391,7 +429,7 @@ async function processTargets<T extends { company: string; email: string; name?:
   // means the whole segment is burned for nothing. Drafts still get written —
   // they queue and drain via flushQueuedLeads() once the sender is fixed.
   let senderOk = true;
-  let resend: Resend | null = null;
+  let credential: string | undefined;
   if (hasResendKey && !isDryRun) {
     const check = await checkSender(from);
     senderOk = check.ok;
@@ -400,17 +438,23 @@ async function processTargets<T extends { company: string; email: string; name?:
       console.warn(`  ⚠️  Skipping sends for [${segmentName}] — drafts will be queued instead`);
       sendFailures.push(`${segmentName} sender ${from}: ${check.reason}`);
     } else {
-      resend = resendFor(check.credential!);
+      credential = check.credential;
       console.log(`  ✅ Sender verified: ${from} (via ${check.credential})`);
     }
   }
 
   for (const t of targets) {
-    // Auto-populate email via Apollo if missing
+    // Auto-populate email via Apollo if missing. A hit upgrades the target's
+    // provenance: Apollo returns addresses it has verified, which is precisely
+    // the trusted source the send guard is looking for.
     let email = t.email;
+    let source: VerificationSource = RESEARCHED_SOURCE;
     if (!email && (t as any).linkedin !== undefined) {
       email = await apolloFindEmail((t as any).name ?? t.company, t.company, t.website ?? '');
-      if (email) (t as any).email = email; // mutate for DB save
+      if (email) {
+        (t as any).email = email; // mutate for DB save
+        source = 'apollo_verified';
+      }
     }
 
     const { subject, html } = buildEmail(t);
@@ -427,7 +471,9 @@ async function processTargets<T extends { company: string; email: string; name?:
       company:  t.company,
       source:   `b2b_outreach_${segmentName}`,
       status:   dbStatus,
-      metadata: { subject, html_preview: html.slice(0, 500), target: t },
+      // `source` is persisted so a later flush re-applies the same provenance
+      // decision instead of silently downgrading an Apollo-verified address.
+      metadata: { subject, html_preview: html.slice(0, 500), target: t, source },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }, { onConflict: 'email' });
@@ -447,12 +493,6 @@ async function processTargets<T extends { company: string; email: string; name?:
 
     if (!email) {
       console.log(`     ℹ️  No email found for ${t.company} — update leads table manually or set APOLLO_API_KEY`);
-      queued++;
-      continue;
-    }
-
-    if (!resend) {
-      console.log(`     📬 Queued: ${email} — will send when RESEND_API_KEY is set`);
       queued++;
       continue;
     }
@@ -478,19 +518,39 @@ async function processTargets<T extends { company: string; email: string; name?:
     }
 
     try {
-      const res = await resend.emails.send({ from, to: email, subject, html });
-      if (res.data?.id) {
+      // Routed through the send guard rather than the Resend client directly,
+      // so every cold send carries a reply-to, one-click List-Unsubscribe
+      // headers and the CAN-SPAM postal address — and so unverified recipients
+      // are refused before any network call.
+      const res = await guardedSend({
+        to: email,
+        source,
+        subject,
+        html,
+        from,
+        company: 'AuthiChain',
+        apiKey: credential ? process.env[credential] : undefined,
+      });
+      if (res.sent) {
         sent++;
         console.log(`  ✉️  Sent: ${email} — "${subject}"`);
         await supabase.from('leads')
           .update({ status: 'contacted', updatedAt: new Date().toISOString() })
           .eq('email', email);
-        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: true, reason: 'sent', metadata: { email, resendId: res.data.id } });
-      } else {
-        console.warn(`  ⚠️  Resend error for ${t.company}:`, res.error);
-        sendFailures.push(`${t.company}: ${res.error?.message ?? 'unknown Resend error'}`);
+        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: true, reason: 'sent', metadata: { email, resendId: res.id } });
+      } else if (res.assessment.status === 'reject' || res.reason === 'no_mx') {
+        // A refused recipient is the guard doing its job, not a broken
+        // pipeline: it must not turn the run red or it trains everyone to
+        // ignore the signal. It stays queued so verifying the address later
+        // is enough to send it.
+        console.log(`     🛑 Refused by send guard: ${email} — ${res.reason}`);
         queued++;
-        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: res.error?.message ?? 'unknown Resend error', metadata: { email } });
+        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: `guard:${res.reason}`, metadata: { email } });
+      } else {
+        console.warn(`  ⚠️  Send failed for ${t.company}: ${res.reason}`);
+        sendFailures.push(`${t.company}: ${res.reason ?? 'unknown send failure'}`);
+        queued++;
+        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: res.reason ?? 'unknown send failure', metadata: { email } });
       }
     } catch (err: any) {
       console.warn(`  ⚠️  Send failed for ${t.company}: ${err.message}`);
@@ -550,13 +610,24 @@ export async function flushQueuedLeads(): Promise<void> {
     }
 
     try {
-      const res = await resendFor(senderCheck.credential!).emails.send({ from, to: lead.email, subject: meta.subject, html: meta.html_preview });
-      if (res.data?.id) {
+      // The stored draft is a truncated preview, so a flush re-sends whatever
+      // was captured — the guard still applies the footer and headers.
+      const res = await guardedSend({
+        to: lead.email,
+        source: (meta.source as VerificationSource) ?? RESEARCHED_SOURCE,
+        subject: meta.subject,
+        html: meta.html_preview,
+        from,
+        company: 'AuthiChain',
+        apiKey: process.env[senderCheck.credential!],
+      });
+      if (res.sent) {
         await supabase.from('leads').update({ status: 'contacted', updatedAt: new Date().toISOString() }).eq('email', lead.email);
         console.log(`  ✉️  Flushed: ${lead.email}`);
-        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: true, reason: 'sent', metadata: { email: lead.email, resendId: res.data.id } });
+        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: true, reason: 'sent', metadata: { email: lead.email, resendId: res.id } });
       } else {
-        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: res.error?.message ?? 'unknown Resend error', metadata: { email: lead.email } });
+        console.log(`  🛑 Left queued: ${lead.email} — ${res.reason}`);
+        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: res.reason ?? 'unknown send failure', metadata: { email: lead.email } });
       }
     } catch (err: any) {
       console.warn(`  ⚠️  Flush failed for ${lead.email}: ${err.message?.slice(0, 80)}`);

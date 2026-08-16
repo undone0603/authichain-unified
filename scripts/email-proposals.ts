@@ -4,8 +4,8 @@
 // sends personalized HTML emails via Resend, updates delivery status.
 
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { checkSender, reportSenderFailure, CREDENTIAL_ENV_VARS } from './lib/resend-preflight';
+import { guardedSend } from '../server/outreach/send-guard';
 
 const isDryRun = process.env.DRY_RUN === 'true';
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -23,8 +23,8 @@ if (!CREDENTIAL_ENV_VARS.some(name => process.env[name])) {
   process.exit(0);
 }
 
-// Bound to the credential the preflight resolves for FROM_EMAIL.
-let resend: Resend;
+// Resolved by the preflight to whichever account owns FROM_EMAIL.
+let resendApiKey: string | undefined;
 
 interface Proposal {
   notice_id: string;
@@ -292,7 +292,7 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
       reportSenderFailure(check, 'gov-proposals');
       throw new Error(`Sender preflight failed for ${FROM_EMAIL}: ${check.reason}`);
     }
-    resend = new Resend(process.env[check.credential!]!);
+    resendApiKey = process.env[check.credential!];
     console.log(`✅ Sender verified: ${FROM_EMAIL} (via ${check.credential})`);
   }
 
@@ -311,15 +311,23 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
       const subject = `GovChain Proposal: ${proposal.agency} — ${proposal.fit_score}/100 Match`;
 
       if (!isDryRun) {
-        const response = await resend.emails.send({
-          from: FROM_EMAIL,
+        // Routed through the send guard so every proposal carries a reply-to,
+        // one-click List-Unsubscribe headers and the CAN-SPAM postal address.
+        // `published_contact`: these addresses are the points-of-contact the
+        // agency itself printed on the SAM.gov solicitation, so they are
+        // published-by-the-owner rather than guessed.
+        const response = await guardedSend({
           to: proposal.contact_email,
+          source: 'published_contact',
           subject,
           html,
+          from: FROM_EMAIL,
+          company: 'GovChain / AuthiChain',
+          apiKey: resendApiKey,
         });
 
-        if (!response.data?.id) {
-          throw new Error(`Resend returned no message ID: ${JSON.stringify(response.error)}`);
+        if (!response.sent) {
+          throw new Error(`Send refused or failed: ${response.reason}`);
         }
 
         // Update proposal status to 'sent' and record timestamp

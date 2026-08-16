@@ -99,6 +99,12 @@ jobs:
           # this. Missing secret fails closed (nothing sends), so this must
           # be set for the channel to ever actually send once enabled.
           INTERNAL_API_SECRET:   ${{ secrets.INTERNAL_API_SECRET }}
+          # CAN-SPAM requires a physical postal address in every commercial
+          # email. guardedSend fails CLOSED when this is unset rather than ship
+          # a placeholder, so outreach cannot send until it is configured.
+          MAILING_ADDRESS:      ${{ secrets.MAILING_ADDRESS }}
+          UNSUBSCRIBE_URL:      ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          RESEND_REPLY_TO:      ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Flush queued leads (if RESEND_API_KEY available)
         if: ${{ inputs.flush_queued == 'true' }}
@@ -114,3 +120,9 @@ jobs:
           OUTREACH_FROM_QRON:        ${{ secrets.OUTREACH_FROM_QRON }}
           CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
           INTERNAL_API_SECRET:  ${{ secrets.INTERNAL_API_SECRET }}
+          # CAN-SPAM requires a physical postal address in every commercial
+          # email. guardedSend fails CLOSED when this is unset rather than ship
+          # a placeholder, so outreach cannot send until it is configured.
+          MAILING_ADDRESS:      ${{ secrets.MAILING_ADDRESS }}
+          UNSUBSCRIBE_URL:      ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          RESEND_REPLY_TO:      ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}

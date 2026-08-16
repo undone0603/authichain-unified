@@ -68,6 +68,12 @@ jobs:
           SALES_EMAIL:          ${{ secrets.SALES_EMAIL || 'sales@authichain.com' }}
           # STAGED: fallback is 'true' so scheduled runs never send live.
           DRY_RUN:              ${{ inputs.dry_run || 'true' }}
+          # CAN-SPAM requires a physical postal address in every commercial
+          # email. guardedSend fails CLOSED when this is unset rather than ship
+          # a placeholder, so outreach cannot send until it is configured.
+          MAILING_ADDRESS:      ${{ secrets.MAILING_ADDRESS }}
+          UNSUBSCRIBE_URL:      ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          RESEND_REPLY_TO:      ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Report email job failure to Slack
         if: failure()
