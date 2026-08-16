@@ -84,6 +84,50 @@ still post only content that passed `validate-social-bundle.mjs`.
 
 Load any of these with `set-social-secrets.yml`.
 
+### Webhook Zap wiring
+
+A concrete Zapier build for the webhook fan-out. `post_webhook` POSTs the whole
+validated bundle to `SOCIAL_WEBHOOK_URL` with `Content-Type: application/json`
+and, when set, `Authorization: Bearer <SOCIAL_WEBHOOK_TOKEN>`. Nested objects
+flatten with a double-underscore in the Catch Hook; the `twitter` array exposes
+each element as a line item.
+
+Incoming field reference:
+
+| Payload path | Catch Hook key |
+| --- | --- |
+| `linkedin` | `linkedin` |
+| `reddit.subreddit` | `reddit__subreddit` (bare name, no `r/`) |
+| `reddit.title` | `reddit__title` |
+| `reddit.body` | `reddit__body` |
+| `twitter[0..2]` | `twitter` (items `twitter[]`) |
+| `experiment.*` | `experiment__campaign` / `__variant` / `__hypothesis` (metadata — ignore or log) |
+
+Steps:
+
+1. **Webhooks by Zapier → Catch Hook.** Copy the generated URL → that is
+   `SOCIAL_WEBHOOK_URL`. Configure the field-picker by sending one test POST
+   (run the publisher against a throwaway bundle, or paste a sample payload).
+2. **(Optional) Filter by Zapier** — enforce `SOCIAL_WEBHOOK_TOKEN`: continue
+   only if the `Authorization` header exactly matches `Bearer <token>`.
+3. **LinkedIn → Create Share Update**: Comment ← `linkedin`; Visible To ← `Anyone`.
+4. **Reddit → Submit Text Post**: Subreddit ← `reddit__subreddit`;
+   Title ← `reddit__title`; Text ← `reddit__body`.
+5. **Twitter/X → Create Tweet ×3** (thread, three separate actions):
+   Tweet 1 ← `twitter[0]`; Tweet 2 ← `twitter[1]`, In Reply To ← Tweet 1's ID;
+   Tweet 3 ← `twitter[2]`, In Reply To ← Tweet 2's ID.
+
+Two gotchas:
+
+- **LinkedIn Create Share Update can silently no-op** — return success with an
+  empty body and not post. Zapier Autoreplay only retries hard errors, not
+  empty-success, so spot-check LinkedIn after the first live runs (or add a
+  Delay + a recent-share read to confirm). Reddit and X return real IDs, so
+  they self-verify.
+- **X thread order matters**: each Create Tweet returns the ID the next step
+  replies to; if Tweet 1 fails, Tweets 2–3 error on the missing reply ID (that
+  run just doesn't post the thread — acceptable, the next run retries).
+
 ## Ledger
 
 `.published.json` is the idempotency record — a bundle listed there is never
