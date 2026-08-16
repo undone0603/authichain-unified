@@ -1,7 +1,5 @@
 import { ENV } from "./_core/env";
-// nodemailer is loaded lazily: it needs Node net/tls, which the Workers
-// runtime lacks. Resend (HTTP) is the primary provider; SMTP is the
-// Node-only fallback.
+import nodemailer from "nodemailer";
 
 // ─── Gmail token cache (auto-refresh) ────────────────────────────────────────
 
@@ -130,7 +128,6 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   // ─── Method 1: SMTP via App Password (Reliable Fallback) ───────────────────
   if (fromEmail && appPassword) {
     try {
-      const { default: nodemailer } = await import("nodemailer");
       const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: { user: fromEmail, pass: appPassword },

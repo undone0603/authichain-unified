@@ -1,18 +1,14 @@
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { db } from "../db";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 import { bonuses } from "../../drizzle/schema";
 
 export const bonusesRouter = router({
   getUserBonuses: protectedProcedure.query(async ({ ctx }) => {
-    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
-    // context does. Bridge via getDb() until this router has a ctx.db to use.
-    const db = await getDb();
     return await db.select().from(bonuses).where(eq(bonuses.userId, ctx.user.id));
   }),
   claimBonus: protectedProcedure.input(z.object({ bonusId: z.number() })).mutation(async ({ ctx, input }) => {
-    const db = await getDb(); // see getUserBonuses() above
     const [bonus] = await db.select().from(bonuses)
       .where(and(eq(bonuses.id, input.bonusId), eq(bonuses.userId, ctx.user.id)))
       .limit(1);
@@ -33,7 +29,6 @@ export const bonusesRouter = router({
     tier: z.enum(["starter", "professional", "enterprise", "agency"]).optional(),
     deliveryMethod: z.string().optional().default("account_credit"),
   })).mutation(async ({ input }) => {
-    const db = await getDb(); // see getUserBonuses() above
     const [row] = await db.insert(bonuses).values({
       userId: input.userId,
       bonusType: input.bonusType,

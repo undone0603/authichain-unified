@@ -1,18 +1,5 @@
 import { NextResponse } from 'next/server';
 
-// NOTE (2026-08-01 audit): unlike /api/v1/generate (real API-key auth, real
-// rate limiting, real Supabase persistence via `qrons`/`increment_generations_used`)
-// and /api/qron/scan-validate (real auth check, real env-gated proxy), this
-// route does neither -- POST never writes to Supabase despite claiming
-// `success: true` and a 201, and GET always returns the same 3 hardcoded
-// fake scan records regardless of qron_id. Not linked from anywhere in this
-// app (grepped src/) and not documented on /docs (only /api/v1/generate and
-// /api/qron/scan-validate are), so this is very likely orphaned scaffolding
-// from an earlier "public analytics API" idea rather than a live surface.
-// Left as-is rather than deleted or wired to the real `scan_events` table:
-// it's a versioned "v1" route, and an external caller already depending on
-// this exact (fake) response shape is a real enough possibility that
-// changing behavior here needs a product decision, not a drive-by guess.
 // POST /api/v1/scan - Record a scan event
 export async function POST(req: Request) {
   const body = await req.json();

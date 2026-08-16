@@ -98,15 +98,6 @@ export async function DELETE(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Scope to the caller's own brand — without this, any authenticated user
-    // could delete any other brand's webhook by guessing/enumerating `id`.
-    const { data: brand } = await supabase
-      .from('brands')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-    if (!brand) return NextResponse.json({ error: 'No brand profile found' }, { status: 400 });
-
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
@@ -114,8 +105,7 @@ export async function DELETE(req: NextRequest) {
     const { error } = await supabase
       .from('brand_webhooks')
       .delete()
-      .eq('id', id)
-      .eq('brand_id', brand.id);
+      .eq('id', id);
 
     if (error) throw error;
     return NextResponse.json({ ok: true });

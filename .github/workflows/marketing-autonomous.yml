@@ -49,7 +49,7 @@ jobs:
 
       - name: Ping IndexNow for all domains
         run: |
-          KEY="***REMOVED***indexnow"
+          KEY="authichain2026indexnow"
           for DOMAIN in authichain.com qron.space strainchain.io govchain.us; do
             echo "Pinging IndexNow for $DOMAIN..."
             curl -s -o /dev/null -w "%{http_code}" \

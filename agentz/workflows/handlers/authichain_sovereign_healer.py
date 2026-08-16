@@ -14,7 +14,7 @@ from agentz.core.llm import lm_manager
 logger = logging.getLogger("agentz.sovereign_healer")
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("google/gemma-4-e4b")
+    lm_manager.load_model("local-model")
     try:
         ctx.step("[^] --- INITIALIZING SOVEREIGN INFRASTRUCTURE HEALER --- [^]")
         
@@ -50,4 +50,4 @@ def run(ctx: ExecutionContext) -> str:
         else:
             return f"Infrastructure in state '{infra_status}'. No automated recovery path defined."
     finally:
-        lm_manager.unload_model("google/gemma-4-e4b")
+        lm_manager.unload_model("local-model")

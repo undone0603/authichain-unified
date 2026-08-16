@@ -4,7 +4,7 @@
 // job suite (live-systems-check checks *internal* SaaS integrations —
 // Stripe/HubSpot/Gmail/PostHog/GA4) watches whether the actual public
 // sites are reachable from the outside.
-import { logActivity, type Db } from "./db-helpers";
+import { logActivity } from "../db";
 import { collectTokenMetrics } from "./token-metrics";
 
 const DOMAINS = [
@@ -60,7 +60,7 @@ export interface EcosystemHealthResult {
   overallStatus: "HEALTHY" | "DEGRADED";
 }
 
-export async function runEcosystemHealthCheck(db: Db): Promise<EcosystemHealthResult> {
+export async function runEcosystemHealthCheck(): Promise<EcosystemHealthResult> {
   const [domains, tokenSnapshot] = await Promise.all([
     Promise.all(DOMAINS.map(checkDomain)),
     collectTokenMetrics().catch(() => null),
@@ -76,7 +76,7 @@ export async function runEcosystemHealthCheck(db: Db): Promise<EcosystemHealthRe
     overallStatus: domainsHealthy === domains.length ? "HEALTHY" : "DEGRADED",
   };
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: "ecosystem_health_check",
     entityType: "automation",

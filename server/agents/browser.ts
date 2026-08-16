@@ -1,5 +1,5 @@
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity, enqueueTask, type Db } from './db-helpers.js';
+import { logActivity, getDb, enqueueTask } from '../db.js';
 import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
@@ -115,7 +115,7 @@ export interface BrowseResearchLeadPayload {
   segment?: string;
 }
 
-export async function runBrowseResearchLead(task: Task, db: Db): Promise<void> {
+export async function runBrowseResearchLead(task: Task): Promise<void> {
   const payload = task.payload as BrowseResearchLeadPayload;
   const domain = payload.domain ?? payload.leadOrg.toLowerCase().replace(/\s+/g, '') + '.com';
   const startUrl = domain.startsWith('http') ? domain : `https://${domain}`;
@@ -149,15 +149,18 @@ Return JSON: { "summary": "...", "hookSentence": "one-sentence opener for a cold
   );
 
   // Write research back to lead record
-  await db.update(leads)
-    .set({
-      notes: `[browser_research]\n${summary}`,
-      updatedAt: new Date(),
-    })
-    .where(eq(leads.email, payload.leadEmail.toLowerCase()));
+  const db = await getDb();
+  if (db) {
+    await db.update(leads)
+      .set({
+        notes: `[browser_research]\n${summary}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(leads.email, payload.leadEmail.toLowerCase()));
+  }
 
   // Enqueue outbound email with enriched hook
-  await enqueueTask(db, task.missionId, 'DRAFT_OUTBOUND_EMAIL', {
+  await enqueueTask(task.missionId, 'DRAFT_OUTBOUND_EMAIL', {
     segment,
     sequence: 1,
     leadEmail: payload.leadEmail,
@@ -167,7 +170,7 @@ Return JSON: { "summary": "...", "hookSentence": "one-sentence opener for a cold
     researchHook: hookSentence,
   });
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'browse_research_lead_completed',
     entityType: 'task',
@@ -191,7 +194,7 @@ export interface BrowseCompetitorPayload {
   focusAreas?: string[];
 }
 
-export async function runBrowseCompetitorMonitor(task: Task, db: Db): Promise<void> {
+export async function runBrowseCompetitorMonitor(task: Task): Promise<void> {
   const payload = task.payload as BrowseCompetitorPayload;
   const focus = (payload.focusAreas ?? ['pricing', 'features', 'customers', 'partnerships']).join(', ');
 
@@ -221,7 +224,7 @@ Return JSON: { "pricingModel": "...", "theirStrengths": [...], "authichainEdges"
 
   const brief = parseLLMContent<Record<string, unknown>>(analysis.choices[0].message.content);
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'browse_competitor_monitor_completed',
     entityType: 'automation',
@@ -243,7 +246,7 @@ export interface BrowseNewsPayload {
   enqueueNewsTask?: boolean;
 }
 
-export async function runBrowseScrapeIndustryNews(task: Task, db: Db): Promise<void> {
+export async function runBrowseScrapeIndustryNews(task: Task): Promise<void> {
   const payload = task.payload as BrowseNewsPayload;
   const startUrl = payload.sourceUrl ?? `https://news.google.com/search?q=${encodeURIComponent(payload.keyword + ' counterfeiting supply chain')}&hl=en`;
 
@@ -267,14 +270,14 @@ Return JSON: { "stories": [{ "headline": "...", "source": "...", "summary": "...
   const { stories } = parseLLMContent<{ stories: unknown[] }>(result.choices[0].message.content);
 
   if (payload.enqueueNewsTask && Array.isArray(stories) && stories.length > 0) {
-    await enqueueTask(db, task.missionId, 'MONITOR_NEWS_FOR_PR', {
+    await enqueueTask(task.missionId, 'MONITOR_NEWS_FOR_PR', {
       stories,
       keyword: payload.keyword,
       source: 'browser_agent',
     });
   }
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'browse_scrape_news_completed',
     entityType: 'automation',
@@ -297,7 +300,7 @@ export interface BrowseVerifyProductPayload {
   expectedBrand?: string;
 }
 
-export async function runBrowseVerifyProductUrl(task: Task, db: Db): Promise<void> {
+export async function runBrowseVerifyProductUrl(task: Task): Promise<void> {
   const payload = task.payload as BrowseVerifyProductPayload;
 
   const objective = `Visit this product listing page and check whether it is a genuine AuthiChain-authenticated product.
@@ -328,7 +331,7 @@ JSON: { "verdict": "authentic|suspicious|counterfeit|inconclusive", "confidence"
     authichainMarkerFound: boolean;
   }>(verdictResult.choices[0].message.content);
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'browse_verify_product_completed',
     entityType: 'automation',

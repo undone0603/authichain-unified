@@ -71,7 +71,7 @@ function getStripe(): Stripe {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error('STRIPE_SECRET_KEY not configured');
-    _stripe = new Stripe(key, { apiVersion: '2026-06-24.dahlia' as const });
+    _stripe = new Stripe(key, { apiVersion: '2026-05-27.dahlia' as const });
   }
   return _stripe;
 }
@@ -122,29 +122,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Webhook Error: ${lastErr}` }, { status: 400 });
   }
 
-  // Idempotency: claim the event by inserting its id (event_id is the PK) BEFORE
-  // running any side effects. Stripe retries and can redeliver the same event —
-  // a duplicate/concurrent delivery loses this insert on the unique violation and
-  // is skipped, so commission accrual, referral credit, provisioning and funnel
-  // writes run at most once per event. On a processing failure the claim is
-  // released in the catch below, so Stripe's retry can reprocess (at-least-once).
-  {
-    const { error: claimErr } = await getSupabase()
+  // Idempotency: Stripe retries deliveries. Skip events we've already recorded
+  // so commission accrual and other side effects run at most once per event.
+  try {
+    const { data: seen } = await getSupabase()
       .from('stripe_events')
-      .insert({
-        event_id: event.id,
-        event_type: event.type,
-        processed_at: new Date().toISOString(),
-      });
-    if (claimErr) {
-      if (claimErr.code === '23505') {
-        // Unique violation — already claimed by another (concurrent/retried) delivery.
-        return NextResponse.json({ received: true, duplicate: true });
-      }
-      // Claim unavailable for another reason (e.g. table temporarily unreachable):
-      // fall through and process at-least-once rather than dropping the event.
-      console.error('[webhook] stripe_events claim failed (processing anyway):', claimErr.message);
+      .select('event_id')
+      .eq('event_id', event.id)
+      .maybeSingle();
+    if (seen) {
+      return NextResponse.json({ received: true, duplicate: true });
     }
+  } catch {
+    // Dedup check unavailable — fall through and process (at-least-once).
   }
 
   try {
@@ -153,11 +143,7 @@ export async function POST(req: NextRequest) {
         const session = event.data.object;
         const md = session.metadata || {};
         const userId = md.user_id;
-        // Accept both metadata conventions: the live /api/checkout route sets
-        // `plan`, but other checkout entry points set `plan_id`. Tolerating both
-        // means a paying customer is always provisioned with the right credits,
-        // regardless of which route created the session.
-        const plan = md.plan ?? md.plan_id;
+        const plan = md.plan;
         const brand = getBrandIdFromMetadata(md);
         const customerId = session.customer;
         const subscriptionId = session.subscription;
@@ -391,12 +377,16 @@ export async function POST(req: NextRequest) {
         console.log(`Unhandled Stripe event: ${event.type}`);
     }
 
-    // Event was already claimed at the top of the handler; nothing to record here.
+    // Log all events
+    await getSupabase().from('stripe_events').insert({
+      event_id: event.id,
+      event_type: event.type,
+      processed_at: new Date().toISOString(),
+    }).select();
+
     return NextResponse.json({ received: true, type: event.type });
   } catch (err: any) {
     console.error('Webhook processing error:', err);
-    // Release the idempotency claim so Stripe's retry can reprocess this event.
-    await getSupabase().from('stripe_events').delete().eq('event_id', event.id).catch(() => {});
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

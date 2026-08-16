@@ -1,10 +1,8 @@
 import { eq, desc, and, sql } from "drizzle-orm";
+import { db } from "../db";
 import { aiModels, modelPurchases, modelReviews } from "../../drizzle/schema";
-import type { getHyperdriveDb } from "../db";
 
-type Db = ReturnType<typeof getHyperdriveDb>;
-
-export async function listModels(db: Db, filters?: { category?: string; status?: string; limit?: number }) {
+export async function listModels(filters?: { category?: string; status?: string; limit?: number }) {
   let query = db.select().from(aiModels);
   const conditions = [];
   if (filters?.status) conditions.push(eq(aiModels.status, filters.status as any));
@@ -15,12 +13,12 @@ export async function listModels(db: Db, filters?: { category?: string; status?:
   return await query.orderBy(desc(aiModels.downloads)).limit(filters?.limit || 50);
 }
 
-export async function getModelById(db: Db, id: number): Promise<typeof aiModels.$inferSelect | undefined> {
+export async function getModelById(id: number): Promise<typeof aiModels.$inferSelect | undefined> {
   const [model] = await db.select().from(aiModels).where(eq(aiModels.id, id)).limit(1);
   return model;
 }
 
-export async function createModel(db: Db, data: {
+export async function createModel(data: {
   name: string;
   description?: string;
   category?: string;
@@ -31,7 +29,7 @@ export async function createModel(db: Db, data: {
   return { id: result.id };
 }
 
-export async function purchaseModel(db: Db, data: {
+export async function purchaseModel(data: {
   userId: number;
   modelId: number;
   pricePaid: number;
@@ -46,13 +44,13 @@ export async function purchaseModel(db: Db, data: {
   return { id: result.id };
 }
 
-export async function getUserPurchases(db: Db, userId: number) {
+export async function getUserPurchases(userId: number) {
   return await db.select().from(modelPurchases)
     .where(eq(modelPurchases.userId, userId))
     .orderBy(desc(modelPurchases.createdAt));
 }
 
-export async function addReview(db: Db, data: { modelId: number; userId: number; rating: number; review?: string }) {
+export async function addReview(data: { modelId: number; userId: number; rating: number; review?: string }) {
   const [result] = await db.insert(modelReviews).values(data).returning();
   // Update model rating average
   const [avg] = await db.select({ avg: sql<string>`AVG(rating)`, count: sql<number>`COUNT(*)` })
@@ -64,7 +62,7 @@ export async function addReview(db: Db, data: { modelId: number; userId: number;
   return { id: result.id };
 }
 
-export async function getModelReviews(db: Db, modelId: number) {
+export async function getModelReviews(modelId: number) {
   return await db.select().from(modelReviews)
     .where(eq(modelReviews.modelId, modelId))
     .orderBy(desc(modelReviews.createdAt));

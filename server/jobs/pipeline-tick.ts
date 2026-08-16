@@ -1,8 +1,7 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { ENV } from "../_core/env";
-import { getDb } from "../db";
-import { logActivity, getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes, type Db } from "./db-helpers";
+import { logActivity } from "../db";
 import { runBudgetMonitor } from "./budget-monitor";
 import { runDunningEscalation } from "./dunning";
 import { runRetentionAutomation } from "./retention";
@@ -10,29 +9,30 @@ import { runWeeklyDigestDispatch } from "./weekly-digest";
 import { runQuarterlyValueReportDispatch } from "./quarterly-value";
 import { runOrganicTrafficAutomation } from "./organic-traffic";
 import { runBrowserAgentJobs } from "./browser-jobs";
+import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
 
-export async function runPipelineTick(db: Db, options?: { force?: boolean }) {
+export async function runPipelineTick(options?: { force?: boolean }) {
   if (!ENV.autonomousPipelineEnabled && !options?.force) {
     return { enabled: false, skipped: true, reason: "AUTONOMOUS_PIPELINE_ENABLED=false" };
   }
 
-  const budgetMonitor = await runBudgetMonitor(db);
-  const dunning = await runDunningEscalation(db);
-  const retention = await runRetentionAutomation(db);
-  const weeklyDigest = await runWeeklyDigestDispatch(db);
-  const quarterlyValue = await runQuarterlyValueReportDispatch(db);
-  const organicTraffic = await runOrganicTrafficAutomation(db);
-  const browserJobs = await runBrowserAgentJobs(db);
+  const budgetMonitor = await runBudgetMonitor();
+  const dunning = await runDunningEscalation();
+  const retention = await runRetentionAutomation();
+  const weeklyDigest = await runWeeklyDigestDispatch();
+  const quarterlyValue = await runQuarterlyValueReportDispatch();
+  const organicTraffic = await runOrganicTrafficAutomation();
+  const browserJobs = await runBrowserAgentJobs();
 
   // Mission task orchestration — UCB1 prioritisation
   // Score each task's kind by: E[conversion] + exploration bonus.
   // Unexplored task kinds get Infinity (always tried first).
   const [dueTasks, runCount, adaptivePriors] = await Promise.all([
-    getDueTasks(db),
-    getRunTaskCount(db),
-    getAdaptivePriors(db),
+    getDueTasks(),
+    getRunTaskCount(),
+    getAdaptivePriors(),
   ]);
   // totalTasks must reflect cumulative history — using only the current batch would
   // make the exploration bonus a constant (ln(batchSize)) rather than growing with experience.
@@ -60,7 +60,7 @@ export async function runPipelineTick(db: Db, options?: { force?: boolean }) {
   };
 
   const scored = dueTasks.map(task => {
-    const seg = kindToSegment[task.kind ?? ''] ?? 'DEFAULT';
+    const seg = kindToSegment[task.kind] ?? 'DEFAULT';
     const prior = adaptivePriors[seg] ?? adaptivePriors.DEFAULT;
     return { task, score: ucb1Score(prior, totalTasks) };
   });
@@ -69,7 +69,7 @@ export async function runPipelineTick(db: Db, options?: { force?: boolean }) {
 
   const taskResults = { total: dueTasks.length, ran: 0, errors: 0 };
   for (const { task } of scored) {
-    const result = await runTask(db, task);
+    const result = await runTask(task);
     if (result.ok) {
       taskResults.ran++;
     } else {
@@ -83,14 +83,14 @@ export async function runPipelineTick(db: Db, options?: { force?: boolean }) {
     GOV:    { missionType: 'GOV_PILOT',    threshold: 0.12 },
     RETAIL: { missionType: 'RETAIL_PILOT', threshold: 0.10 },
   };
-  const activeMissionTypes = await getActiveMissionTypes(db);
+  const activeMissionTypes = await getActiveMissionTypes();
   const pmfCreated: string[] = [];
   for (const [seg, { missionType, threshold }] of Object.entries(PMF_THRESHOLDS)) {
     const prior = adaptivePriors[seg];
     if (!prior) continue;
     const mean = betaMean(prior);
     if (mean >= threshold && !activeMissionTypes.includes(missionType)) {
-      await createMission(db, missionType as any);
+      await createMission(missionType as any);
       pmfCreated.push(missionType);
     }
   }
@@ -108,7 +108,7 @@ export async function runPipelineTick(db: Db, options?: { force?: boolean }) {
     pmfCreated,
   };
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: "pipeline_tick_executed",
     entityType: "automation",
@@ -122,10 +122,7 @@ export async function runPipelineTick(db: Db, options?: { force?: boolean }) {
 const isMain = !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
-  // Documented bridge: standalone CLI entry point has no caller to thread a
-  // db instance from, so it obtains one from the legacy Node singleton itself.
-  getDb()
-    .then(db => runPipelineTick(db))
+  runPipelineTick()
     .then(result => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);

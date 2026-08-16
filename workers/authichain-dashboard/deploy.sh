@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy authichain-dashboard cookie-auth rewrite.
-# Removes hardcoded '***REMOVED***' password from query parameters.
+# Removes hardcoded 'authichain2026' password from query parameters.
 # Replaces with env.ACCESS_TOKEN secret + cookie-based session.
 #
 # Requires wrangler (since the dashboard is a TypeScript module worker

@@ -1,0 +1,161 @@
+name = "bitcoin-auth"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = false
+
+[env.production]
+name = "bitcoin-auth"
+TOML
+
+cat > workers/bitcoin-auth/src/index.ts >> 'TS'
+/**
+ * bitcoin-auth  Phase 3 Worker
+ * Verifies Bitcoin-signed challenge tokens and issues JWT session credentials.
+ */
+export interface Env {
+  JWT_SECRET: string;
+  BITCOIN_NETWORK: string; // "mainnet" | "testnet"
+}
+
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export default {
+  async fetch(req: Request, env: Env): Promise>Response> {
+    if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
+
+    const url = new URL(req.url);
+
+    // Health
+    if (url.pathname === "/health")
+      return Response.json({ status: "ok", worker: "bitcoin-auth", phase: 3 }, { headers: CORS });
+
+    // Challenge generation
+    if (req.method === "GET" && url.pathname === "/challenge") {
+      const nonce = crypto.randomUUID();
+      const ts = Date.now();
+      return Response.json({ nonce, ts, message: `Sign this nonce to authenticate: ${nonce}` }, { headers: CORS });
+    }
+
+    // Signature verification
+    if (req.method === "POST" && url.pathname === "/verify") {
+      const body: { address: string; signature: string; nonce: string } = await req.json();
+      if (!body.address || !body.signature || !body.nonce) {
+        return Response.json({ error: "address, signature, nonce required" }, { status: 400, headers: CORS });
+      }
+      // TODO: integrate bitcoinjs-message verify against env.BITCOIN_NETWORK
+      // Placeholder  wire real sig verification before production
+      const sessionToken = btoa(JSON.stringify({ address: body.address, ts: Date.now(), phase: 3 }));
+      return Response.json({ sessionToken, address: body.address }, { headers: CORS });
+    }
+
+    return Response.json({ error: "Not found" }, { status: 404, headers: CORS });
+  },
+};
+TS
+echo " bitcoin-auth scaffolded"
+mkdir -p workers/outreach-queue/src
+cat > workers/outreach-queue/wrangler.toml >> 'TOML'
+name = "outreach-queue"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = false
+
+[[queues.consumers]]
+queue = "outreach-jobs"
+max_batch_size = 25
+max_batch_timeout = 10
+
+[env.production]
+name = "outreach-queue"
+TOML
+
+cat > workers/outreach-queue/src/index.ts >> 'TS'
+/**
+ * outreach-queue  Phase 3 Worker
+ * Cloudflare Queue consumer for async outreach job processing.
+ * Drains the "outreach-jobs" queue and dispatches email / SMS / webhook actions.
+ */
+export interface Env {
+  RESEND_API_KEY: string;
+  OUTREACH_WEBHOOK_SECRET: string;
+  GOVCHAIN_API_KEY: string;
+}
+
+interface OutreachJob {
+  type: "email" | "sms" | "webhook";
+  to: string;
+  subject?: string;
+  body: string;
+  metadata?: Record>string, string>;
+}
+
+async function processEmail(job: OutreachJob, env: Env): Promise>void> {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "outreach@authichain.com",
+      to: [job.to],
+      subject: job.subject ?? "Message from Authichain",
+      text: job.body,
+    }),
+  });
+  if (!res.ok) throw new Error(`Resend failed: ${res.status}`);
+}
+
+async function processWebhook(job: OutreachJob, _env: Env): Promise>void> {
+  const res = await fetch(job.to, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ body: job.body, metadata: job.metadata }),
+  });
+  if (!res.ok) throw new Error(`Webhook failed: ${res.status}`);
+}
+
+export default {
+  // HTTP health check
+  async fetch(_req: Request, _env: Env): Promise>Response> {
+    return Response.json({ status: "ok", worker: "outreach-queue", phase: 3 });
+  },
+
+  // Queue consumer
+  async queue(batch: MessageBatch>OutreachJob>, env: Env): Promise>void> {
+    const results = await Promise.allSettled(
+      batch.messages.map(async (msg) => {
+        const job = msg.body;
+        try {
+          if (job.type === "email") await processEmail(job, env);
+          else if (job.type === "webhook") await processWebhook(job, env);
+          else console.warn(`[outreach-queue] Unknown job type: ${job.type}`);
+          msg.ack();
+        } catch (err) {
+          console.error(`[outreach-queue] Job failed: ${err}`);
+          msg.retry();
+        }
+      })
+    );
+    console.log(`[outreach-queue] Processed ${results.length} jobs`);
+  },
+};
+TS
+echo " outreach-queue scaffolded"
+ls workers/bitcoin-auth/ workers/outreach-queue/ && echo ' Both dirs confirmed'
+ls workers/bitcoin-auth/ workers/outreach-queue/
+ls workers/bitcoin-auth/ && ls workers/outreach-queue/
+
+echo '---BITCOIN---' && ls workers/bitcoin-auth/ && echo '---OUTREACH---' && ls workers/outreach-queue/
+
+
+
+sed -i 's/worker: \[qron-outreach\]/worker: [qron-outreach, bitcoin-auth, outreach-queue]/' .github/workflows/deploy-workers.yml && grep 'worker:' .github/workflows/deploy-workers.yml
+
+

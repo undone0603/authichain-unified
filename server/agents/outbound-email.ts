@@ -1,7 +1,7 @@
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { ENV } from '../_core/env.js';
 import { sendEmail } from '../email-service.js';
-import { logActivity, markTaskWaitingHuman, enqueueTask, type Db } from './db-helpers.js';
+import { logActivity, getDb, markTaskWaitingHuman, enqueueTask } from '../db.js';
 import { emailDrafts, leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
@@ -56,7 +56,7 @@ const toneGuidance: Record<EmailTone, string> = {
   story:   'Open with a one-sentence customer story or stat that creates curiosity, then pitch.',
 };
 
-export async function runOutboundEmail(task: Task, db: Db): Promise<void> {
+export async function runOutboundEmail(task: Task): Promise<void> {
   const payload = task.payload as OutboundEmailPayload;
   const segment = payload.segment ?? 'GOV';
   const sequence = payload.sequence ?? 1;
@@ -118,20 +118,23 @@ Return JSON: { "subject": "...", "body": "..." }`;
   if (!body) throw new Error('LLM returned empty email body');
 
   if (ENV.requireOutreachApproval) {
-    await db.insert(emailDrafts).values({
-      prospectEmail:   payload.leadEmail ?? 'unknown@unknown.com',
-      prospectName:    payload.leadName ?? undefined,
-      prospectCompany: payload.leadOrg ?? undefined,
-      prospectTitle:   payload.leadTitle ?? undefined,
-      subject,
-      body,
-      status:      'pending',
-      generatedBy: 'agentz',
-      taskId:      task.id,
-    });
+    const db = await getDb();
+    if (db) {
+      await db.insert(emailDrafts).values({
+        prospectEmail:   payload.leadEmail ?? 'unknown@unknown.com',
+        prospectName:    payload.leadName ?? undefined,
+        prospectCompany: payload.leadOrg ?? undefined,
+        prospectTitle:   payload.leadTitle ?? undefined,
+        subject,
+        body,
+        status:      'pending',
+        generatedBy: 'agentz',
+        taskId:      task.id,
+      });
+    }
 
-    await markTaskWaitingHuman(db, task.id);
-    await logActivity(db, { userId: null, action: 'outbound_email_draft_pending_approval', entityType: 'task', entityId: 0, details: {
+    await markTaskWaitingHuman(task.id);
+    await logActivity({ userId: null, action: 'outbound_email_draft_pending_approval', entityType: 'task', entityId: 0, details: {
       taskId: task.id, segment, sequence, leadEmail: payload.leadEmail,
       subject, tone, conversionEstimate: conversionEstimate.toFixed(3),
     }});
@@ -148,24 +151,27 @@ Return JSON: { "subject": "...", "body": "..." }`;
   const source: VerificationSource = payload.verificationSource ?? 'unknown';
   const assessment = assessRecipient(payload.leadEmail, source);
   if (!canSend(assessment) || !(await domainAcceptsMail(assessment.email))) {
-    await logActivity(db, { userId: null, action: 'outbound_email_blocked_unverified', entityType: 'task', entityId: 0, details: {
+    await logActivity({ userId: null, action: 'outbound_email_blocked_unverified', entityType: 'task', entityId: 0, details: {
       taskId: task.id, segment, sequence, leadEmail: payload.leadEmail,
       source, reasons: assessment.reasons.length ? assessment.reasons : ['no_mx'],
     }});
-    await markTaskWaitingHuman(db, task.id);
+    await markTaskWaitingHuman(task.id);
     return;
   }
 
   const sendResult = await sendEmail({ to: payload.leadEmail, subject, body });
 
-  await db.update(leads)
-    .set({ status: 'CONTACTED', lastContactedAt: new Date(), updatedAt: new Date() })
-    .where(eq(leads.email, payload.leadEmail.toLowerCase()));
+  const db = await getDb();
+  if (db) {
+    await db.update(leads)
+      .set({ status: 'CONTACTED', lastContactedAt: new Date(), updatedAt: new Date() })
+      .where(eq(leads.email, payload.leadEmail.toLowerCase()));
+  }
 
   // Enqueue reply check in 48h so closer agent can pick up the thread
   if (sendResult.status === 'sent') {
     const check48h = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    await enqueueTask(db, task.missionId, 'CHECK_REPLIES', {
+    await enqueueTask(task.missionId, 'CHECK_REPLIES', {
       threadId: sendResult.threadId,
       leadEmail:  payload.leadEmail,
       leadName:   payload.leadName,
@@ -177,7 +183,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
     }, check48h);
   }
 
-  await logActivity(db, { userId: null, action: 'outbound_email_sent', entityType: 'task', entityId: 0, details: {
+  await logActivity({ userId: null, action: 'outbound_email_sent', entityType: 'task', entityId: 0, details: {
     taskId: task.id, segment, sequence, leadEmail: payload.leadEmail,
     subject, sendStatus: sendResult.status,
     tone, conversionEstimate: conversionEstimate.toFixed(3),

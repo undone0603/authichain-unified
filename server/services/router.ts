@@ -2,13 +2,7 @@ import { z } from "zod";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { SERVICE_LIST, SERVICE_CATALOG, SERVICE_KEYS, type ServiceType } from "../service-catalog";
 import { ORDER_STATUSES, type OrderStatus } from "../../shared/const";
-import { getDb } from "../db";
-import {
-  getServiceOrdersByUser,
-  getAllServiceOrders,
-  updateServiceOrderStatus,
-  createServiceOrder,
-} from "../db-helpers";
+import * as db from "../db";
 import { createPaymentCheckout } from "../stripe-service";
 
 const serviceKeyEnum = z.enum(SERVICE_KEYS as [ServiceType, ...ServiceType[]]);
@@ -20,26 +14,18 @@ export const servicesRouter = router({
   }),
 
   myOrders: protectedProcedure.query(async ({ ctx }) => {
-    // ctx.db does not exist on the live TrpcContext (server/_core/context.ts) —
-    // only the separate Workers context has it. Documented bridge until this
-    // router is wired up to a real per-request db.
-    const db = await getDb();
-    return await getServiceOrdersByUser(db, ctx.user.id);
+    return await db.getServiceOrdersByUser(ctx.user.id);
   }),
 
   allOrders: adminProcedure.query(async () => {
-    // Documented bridge — see myOrders above.
-    const db = await getDb();
-    return await getAllServiceOrders(db);
+    return await db.getAllServiceOrders();
   }),
 
   updateStatus: adminProcedure.input(z.object({
     id: z.number(),
     status: orderStatusEnum,
   })).mutation(async ({ input }) => {
-    // Documented bridge — see myOrders above.
-    const db = await getDb();
-    await updateServiceOrderStatus(db, input.id, input.status);
+    await db.updateServiceOrderStatus(input.id, input.status);
     return { success: true };
   }),
 
@@ -73,9 +59,7 @@ export const servicesRouter = router({
       },
     });
 
-    // Documented bridge — see myOrders above.
-    const db = await getDb();
-    await createServiceOrder(db, {
+    await db.createServiceOrder({
       userId: ctx.user.id,
       serviceType: service.key,
       status: "pending",

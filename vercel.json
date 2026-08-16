@@ -2,11 +2,10 @@
   "version": 2,
   "buildCommand": "next build",
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "redirects": [
+  "rewrites": [
     {
       "source": "/gov",
-      "destination": "https://govchain.us",
-      "permanent": false
+      "destination": "https://govchain.us"
     }
   ]
 }
