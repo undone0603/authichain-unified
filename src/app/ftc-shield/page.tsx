@@ -12,7 +12,8 @@ import {
 
 export const metadata: Metadata = {
   title: 'FTC Made in USA Shield | AuthiChain Protocol',
-  description: 'Instantly verify your "Made in USA" claims. Protect your brand from the FTC sweep (EO 14392) with cryptographically anchored origin proofs.',
+  description:
+    'Substantiate your "Made in USA" claims under the FTC Made in USA Labeling Rule (16 CFR Part 323) with cryptographically anchored origin evidence.',
 };
 
 export default function FtcShieldPage() {
@@ -23,18 +24,30 @@ export default function FtcShieldPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-red-500/5 blur-[120px] rounded-full opacity-50 pointer-events-none" />
         
         <div className="max-w-5xl mx-auto text-center relative z-10">
+          {/*
+            Was "URGENT: FTC ENFORCEMENT SWEEP ACTIVE (EO 14392)". Two problems.
+            An Executive Order is issued by the President and directs agencies —
+            there is no "FTC EO", and the rule a seller is actually held to is
+            the FTC's Made in USA Labeling Rule (16 CFR Part 323). And a sweep
+            announced in April 2026 is not "ACTIVE" in the present tense months
+            later; a banner that dates itself is wrong on every day but one.
+            Now states what happened and when, which stays true.
+          */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
             <AlertTriangle className="w-4 h-4" />
-            URGENT: FTC ENFORCEMENT SWEEP ACTIVE (EO 14392)
+            FTC MADE IN USA SWEEP — APRIL 2026
           </div>
-          
+
           <h1 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter uppercase leading-[0.9]">
             PROVE IT&apos;S <br />
             <span className="text-red-500">MADE IN USA.</span>
           </h1>
-          
+
           <p className="max-w-2xl mx-auto text-zinc-400 text-lg md:text-xl font-medium mb-12 leading-relaxed">
-            The FTC is cracking down on unverified origin claims. Turn your packaging into an irrefutable, blockchain-anchored shield that proves your American supply chain instantly.
+            The FTC&apos;s Made in USA Labeling Rule (16 CFR Part 323) turns on whether
+            &ldquo;all or virtually all&rdquo; of a product is US-origin — and the largest order in
+            its April 2026 sweep was $625,000. Turn your packaging into blockchain-anchored
+            origin evidence, so the substantiation exists before anyone asks for it.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
