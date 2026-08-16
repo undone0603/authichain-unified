@@ -8,7 +8,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 const resend = new Resend(process.env.RESEND_API_KEY);
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' as const });
 
 // Called by Stripe webhook on invoice.payment_failed OR daily cron for past_due cleanup
 export async function POST(req: NextRequest) {
