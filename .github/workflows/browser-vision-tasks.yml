@@ -84,7 +84,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.check.outputs.skip == 'false'
 
       - name: Setup pnpm
@@ -95,7 +95,7 @@ jobs:
 
       - name: Setup Node 22
         if: steps.check.outputs.skip == 'false'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: 'pnpm'
