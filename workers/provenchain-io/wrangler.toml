@@ -1,0 +1,13 @@
+name = "provenchain-io"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = false
+
+[[routes]]
+pattern = "provenchain.io/*"
+zone_name = "provenchain.io"
+
+[[routes]]
+pattern = "www.provenchain.io/*"
+zone_name = "provenchain.io"

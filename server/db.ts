@@ -29,7 +29,6 @@ import {
   abTests,
   whiteLabelClients,
   activityLog,
-  scheduledJobRuns,
   fraudAlerts,
   customerHealthScores,
   revenueRecords,
@@ -692,112 +691,10 @@ export async function incrementScanCount(id: number) {
   await db.update(qrCodes).set({ scanCount: sql`${qrCodes.scanCount} + 1`, lastScannedAt: new Date() }).where(eq(qrCodes.id, id));
 }
 
-export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string; userId?: number }) {
+export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string }) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(qrScanEvents).values({
-    qrCodeId: data.qrCodeId,
-    productId: data.productId,
-    isAuthentic: data.isAuthentic,
-    userAgent: data.userAgent,
-  });
-
-  if (data.userId && data.isAuthentic) {
-    await recordReputationEvent(data.userId, "scan_authenticity_confirmed", 1);
-  }
-}
-
-export async function recordReputationEvent(userId: number, eventType: string, pointsDelta: number) {
-  const db = await getDb();
-  if (!db) return;
-  await db.execute(sql`
-    INSERT INTO reputation_events (user_id, event_type, points_delta)
-    VALUES (${userId}, ${eventType}, ${pointsDelta})
-  `);
-  await db.execute(sql`
-    INSERT INTO user_reputation (user_id, points, trust_level)
-    VALUES (${userId}, ${pointsDelta}, 'novice')
-    ON CONFLICT (user_id) DO UPDATE SET
-      points = user_reputation.points + EXCLUDED.points,
-      last_updated_at = now()
-  `);
-}
-
-// Ops console aggregation over scheduled_job_runs (client/src/pages/OpsDashboard.tsx).
-// Job statuses are running/completed/failed; the console speaks success/failure.
-export async function getOpsSummary(windowHours = 24) {
-  const db = await getDb();
-  if (!db) throw new Error("database not available");
-
-  const since = new Date(Date.now() - windowHours * 3600_000);
-  const runs = await db
-    .select()
-    .from(scheduledJobRuns)
-    .where(gte(scheduledJobRuns.startedAt, since))
-    .orderBy(desc(scheduledJobRuns.startedAt))
-    .limit(500);
-
-  const toUiStatus = (s: string) => (s === "completed" ? "success" : s === "failed" ? "failure" : s);
-
-  type SummaryEntry = { success: number; failure: number; lastSeen: Date; lastError: string | null };
-  const byJob = new Map<string, SummaryEntry>();
-  for (const r of runs) {
-    const entry = byJob.get(r.jobName) ?? { success: 0, failure: 0, lastSeen: r.startedAt, lastError: null };
-    if (r.status === "completed") entry.success++;
-    if (r.status === "failed") {
-      entry.failure++;
-      entry.lastError ??= r.error || "(no message)";
-    }
-    if (r.startedAt > entry.lastSeen) entry.lastSeen = r.startedAt;
-    byJob.set(r.jobName, entry);
-  }
-
-  const summary = Array.from(byJob.entries())
-    .map(([name, v]) => ({
-      workflow: name,
-      success: v.success,
-      failure: v.failure,
-      last_seen: v.lastSeen.toISOString(),
-      last_error: v.lastError,
-    }))
-    .sort((a, b) => b.failure - a.failure || b.success - a.success);
-
-  const failures = runs
-    .filter(r => r.status === "failed")
-    .slice(0, 50)
-    .map(r => ({
-      workflow: r.jobName,
-      error: r.error,
-      payload: r.result ? JSON.stringify(r.result) : null,
-      at: r.startedAt.toISOString(),
-    }));
-
-  const recent = runs.slice(0, 50).map(r => ({
-    workflow: r.jobName,
-    status: toUiStatus(r.status),
-    at: r.startedAt.toISOString(),
-  }));
-
-  return {
-    window_hours: windowHours,
-    generated_at: new Date().toISOString(),
-    totals: {
-      success: runs.filter(r => r.status === "completed").length,
-      failure: runs.filter(r => r.status === "failed").length,
-    },
-    summary,
-    failures,
-    recent,
-  };
-}
-
-export async function resolveFraudAlert(alertId: number, userId: number, isVerifiedCounterfeit: boolean) {
-  const db = await getDb();
-  if (!db) return;
-  await db.update(fraudAlerts).set({ status: "resolved" }).where(eq(fraudAlerts.id, alertId));
-  if (isVerifiedCounterfeit) {
-    await recordReputationEvent(userId, "counterfeit_verified", 50);
-  }
+  await db.insert(qrScanEvents).values(data);
 }
 
 export async function getRecentScanEvents(productId: number, limit = 20) {

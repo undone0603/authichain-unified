@@ -5,7 +5,6 @@
 // gate, so this is safe to run fully autonomously (e.g. from /api/automation/cron).
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { logActivity } from '../db.js';
-import sanitizeHtml from 'sanitize-html';
 
 export interface BrandSeoConfig {
   brand: string;
@@ -98,12 +97,10 @@ Return JSON:
   const title = clamp(String(raw.title ?? `${config.brand} — ${keyword}`), 60);
   const metaDescription = clamp(String(raw.metaDescription ?? config.facts), 155);
   const h1 = String(raw.h1 ?? title);
-  // Sanitize LLM-generated HTML via allowlist (sanitize-html).
-  // Allowlist approach is the only reliable XSS defense vs regex denylist.
-  const bodyHtml = sanitizeHtml(String(raw.bodyHtml ?? ''), {
-    allowedTags: ['h2', 'h3', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'a', 'br', 'span'],
-    allowedAttributes: { 'a': ['href', 'title', 'rel'] },
-  });  const url = `https://${config.domain}/${slugify(keyword)}`;
+  // Strip any script tags defensively — generated HTML must be safe to render.
+  const bodyHtml = String(raw.bodyHtml ?? '').replace(/<script[\s\S]*?<\/script>/gi, '');
+
+  const url = `https://${config.domain}/${slugify(keyword)}`;
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',

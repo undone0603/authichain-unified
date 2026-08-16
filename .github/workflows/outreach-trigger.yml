@@ -1,8 +1,13 @@
-name: Trigger QRON Outreach (every 4h)
+name: Trigger QRON Outreach (manual)
 
+# Schedule disabled 2026-08-07. The QRON outreach queue (6/6 sent) is exhausted, so every firing was a
+# no-op that still burned CI minutes and masked the fact that outreach is dead.
+# Re-enable only once the queue is repopulated AND sender authentication is fixed
+# (see docs/outreach-deliverability-runbook.md) — sending into a 16% bounce rate
+# from an unauthenticated domain makes the deliverability problem worse, not better.
 on:
-  schedule:
-    - cron: '0 */4 * * *'
+  # schedule:
+  #   - cron: '0 */4 * * *'
   workflow_dispatch:
 
 jobs:

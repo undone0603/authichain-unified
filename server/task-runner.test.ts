@@ -97,6 +97,8 @@ describe('runTask — routing', () => {
     { kind: 'BROWSE_COMPETITOR_MONITOR',      module: './agents/browser.js',         fn: 'runBrowseCompetitorMonitor'   },
     { kind: 'BROWSE_SCRAPE_INDUSTRY_NEWS',    module: './agents/browser.js',         fn: 'runBrowseScrapeIndustryNews'  },
     { kind: 'BROWSE_VERIFY_PRODUCT_URL',      module: './agents/browser.js',         fn: 'runBrowseVerifyProductUrl'    },
+    { kind: 'BROWSE_VISION_RESEARCH_LEAD',    module: './agents/browser-vision.js',  fn: 'runVisionResearchLead'        },
+    { kind: 'BROWSE_VISION_FREEFORM',         module: './agents/browser-vision.js',  fn: 'runVisionFreeform'            },
   ];
 
   for (const { kind, module: mod, fn } of routingCases) {
@@ -108,20 +110,6 @@ describe('runTask — routing', () => {
       await runTask(makeTask(kind));
 
       expect(agent).toHaveBeenCalledOnce();
-    });
-  }
-
-  // Vision tasks need a Playwright-capable host: runTask must leave them
-  // unclaimed (still PENDING) so scripts/run-vision-tasks.ts picks them up.
-  for (const kind of ['BROWSE_VISION_RESEARCH_LEAD', 'BROWSE_VISION_FREEFORM']) {
-    it(`leaves ${kind} pending for the Playwright runner`, async () => {
-      const { runTask }         = await import('./jobs/task-runner.js');
-      const { markTaskRunning } = await import('./db.js');
-
-      const result = await runTask(makeTask(kind));
-
-      expect(result).toEqual({ ok: true });
-      expect(vi.mocked(markTaskRunning)).not.toHaveBeenCalled();
     });
   }
 });

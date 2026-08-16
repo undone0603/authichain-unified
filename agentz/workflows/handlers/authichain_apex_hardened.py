@@ -46,7 +46,7 @@ def run(ctx: ExecutionContext) -> str:
         config = ctx.step(
             "Generate and publish extension manifest",
             action=lambda: asyncio.run(publish_extension_config(supabase))
-        )
+        ) or {}
         ctx.step(f"   -> Extension Config Live. Monitoring {len(config.get('verified_domains', []))} domains.")
 
         # 4. Phygital NFC Integration (Luxury Hardening)

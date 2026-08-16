@@ -11,7 +11,7 @@ function maskEmail(email: string): string {
 }
 import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../thirdweb';
 import { ENV } from '../_core/env';
-import { sendEmail } from '../email-service';
+import { sendCertificateEmail as sendCrispCertificateEmail } from './crispService';
 
 /**
  * Automated Certificate Generation Service
@@ -341,36 +341,21 @@ async function sendCertificateEmail(
     return;
   }
 
-  const isAuthentic = certificateData.isAuthentic === 1;
-  const verdict = isAuthentic ? 'AUTHENTIC ✅' : 'COUNTERFEIT ❌';
-
-  const body = [
-    `Hi ${user.name || 'there'},`,
-    ``,
-    `Your AuthiChain ${certificateData.tier?.toUpperCase?.() || 'authentication'} certificate is ready.`,
-    ``,
-    `Product:        ${certificateData.productName}`,
-    `Certificate #:  ${certificateData.certificateNumber}`,
-    `Result:         ${verdict}`,
-    `Confidence:     ${certificateData.confidenceScore}%`,
-    `NFT Token:      ${nftData.tokenId}`,
-    ``,
-    `View certificate: ${certificateUrl}`,
-    ``,
-    `Your certificate is permanently stored on the blockchain and can be verified anytime.`,
-    ``,
-    `— The AuthiChain Team`,
-  ].join('\n');
-
-  const result = await sendEmail({
+  const emailSent = await sendCrispCertificateEmail({
     to: customerEmail,
-    subject: `Your AuthiChain Certificate — ${certificateData.productName}`,
-    body,
+    customerName: user.name || undefined,
+    certificateNumber: certificateData.certificateNumber,
+    productName: certificateData.productName,
+    tier: certificateData.tier,
+    isAuthentic: certificateData.isAuthentic === 1,
+    confidenceScore: certificateData.confidenceScore,
+    certificateUrl,
+    nftTokenId: nftData.tokenId,
   });
 
-  if (result.status === 'sent') {
-    console.log(`[Email] Certificate email sent to ${maskEmail(customerEmail)} via ${result.provider}`);
+  if (emailSent) {
+    console.log(`[Email] Certificate email sent successfully to ${maskEmail(customerEmail)}`);
   } else {
-    console.error(`[Email] Certificate email ${result.status} for ${maskEmail(customerEmail)}: ${result.reason ?? 'unknown'}`);
+    console.error(`[Email] Failed to send certificate email to ${maskEmail(customerEmail)}`);
   }
 }

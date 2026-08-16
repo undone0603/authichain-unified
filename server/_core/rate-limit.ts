@@ -16,7 +16,7 @@ class RateLimiter {
       }
     }
 
-    const entry = this.store.get(key);
+    let entry = this.store.get(key);
     if (!entry || now >= entry.resetAt) {
       this.store.set(key, { count: 1, resetAt: now + windowMs });
       return { ok: true, retryAfterMs: 0 };
@@ -68,9 +68,6 @@ export const gptRateLimit = expressLimit(gptLimiter, 60, 60_000);
 
 /** Catch-all API guard: 300 requests per minute per IP */
 export const globalApiRateLimit = expressLimit(globalLimiter, 300, 60_000);
-
-/** Admin ops: 30 requests per 15 min per IP (strict, admin-only route) */
-export const adminRateLimit = expressLimit(new RateLimiter(), 30, 15 * 60_000);
 
 // ─── tRPC middleware (attach to publicProcedure mutations in trpc.ts) ────────
 

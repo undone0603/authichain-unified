@@ -1,0 +1,33 @@
+{
+  "id": "canon-unicode",
+  "description": "Non-ASCII and U+2028 in the subject. Exercises UTF-8 handling and JCS string escaping.",
+  "record": {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://authichain.com/protocol/v1"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "ProvenanceRecord"
+    ],
+    "issuer": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+    "validFrom": "2020-01-01T00:00:00Z",
+    "credentialSubject": {
+      "id": "https://id.gs1.org/01/09506000134352/21/S%C3%89RIE-1",
+      "gtin": "09506000134352",
+      "serial": "SÉRIE-Ω-123   emoji:🔒"
+    },
+    "proof": {
+      "type": "Ed25519Signature2020",
+      "created": "2020-01-01T00:00:00Z",
+      "verificationMethod": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG#key-1",
+      "proofPurpose": "assertionMethod",
+      "proofValue": "z3aSacNCHnjRL2uf2eykyTZ9huPZsumSTirfHaJvykzB39PYb1DUSkTNfMYoDKTAWCGdUS4CuDefXbfL5PMAyHeKW"
+    }
+  },
+  "anchor": null,
+  "options": {},
+  "expect": {
+    "verdict": "valid-unanchored"
+  }
+}

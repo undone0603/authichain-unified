@@ -1,0 +1,13 @@
+# Marks this directory as its own pnpm workspace root. Without this, `pnpm
+# install` run from inside workers/authichain-com silently walks up to the repo root's
+# pnpm-workspace.yaml and inherits its "overrides" — any future change to
+# root's security overrides then makes a frozen-lockfile install here fail
+# with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH (this is what broke the authichain-com
+# Cloudflare Workers Build after the root overrides list grew). Same fix
+# already applied to worker/ after it hit the same failure mode once before.
+packages:
+  - "."
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true

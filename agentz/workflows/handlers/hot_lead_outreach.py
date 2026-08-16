@@ -11,7 +11,7 @@ from agentz.core.credentials import get, get_or_placeholder
 from agentz.core.hubspot import get_hot_leads, get_lead_contact_info
 from agentz.core.microsites import deploy_sales_microsite
 from agentz.core.social import generate_social_post
-from agentz.core.hubspot import get_hot_leads, get_lead_contact_info, prioritize_leads_by_sentiment, add_deal_note
+from agentz.core.hubspot import get_hot_leads, get_lead_contact_info, prioritize_leads_by_sentiment
 from agentz.core.llm import lm_manager
 
 def run(ctx: ExecutionContext) -> str:
@@ -86,7 +86,6 @@ def run(ctx: ExecutionContext) -> str:
                     )
                 except Exception as e:
                     ctx.step(f"AI Drafting failed ({e}). Using hardcoded high-conversion template.")
-                    asyncio.run(add_deal_note(lead.get('id', ''), "AI personalization failed - human review recommended."))
                     message = (
                         f"Hi {contact_name}, I'm the AuthiChain AI Agent. I've autonomously deployed a "
                         f"personalized digital twin for {name} to demonstrate how our 'Authentic Economy' "

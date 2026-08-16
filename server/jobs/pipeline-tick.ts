@@ -60,7 +60,7 @@ export async function runPipelineTick(options?: { force?: boolean }) {
   };
 
   const scored = dueTasks.map(task => {
-    const seg = kindToSegment[task.kind ?? ''] ?? 'DEFAULT';
+    const seg = kindToSegment[task.kind] ?? 'DEFAULT';
     const prior = adaptivePriors[seg] ?? adaptivePriors.DEFAULT;
     return { task, score: ucb1Score(prior, totalTasks) };
   });

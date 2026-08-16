@@ -15,7 +15,13 @@ One Express app (`server/_core/app.ts`), deployed as the Vercel `qron-platform` 
 - **AI/media:** `ai`, `heygen` (video), `macrohard`, `qron` (QR art gen)
 - **Ops/internal:** `notifications`, `dashboard`, `hubspot`, `missions`, `tasks`, `devTeam`, `scheduler`, `executive`
 
-Health: `pnpm check` 0 errors · `pnpm test` 503/503 · `pnpm build` green.
+Health (verified 2026-08-07): `pnpm check` 0 errors · `pnpm test` 704/704 · `pnpm build` green.
+
+> The previous figure here read "503/503" while the suite actually had 3 failures
+> across 2 files, and "0 errors" while `pnpm check` reported 20. Both are true as
+> of this edit. If you change this line, re-run both commands first — a health
+> claim nobody re-checks is the same defect this repo spent a night removing from
+> its marketing surfaces.
 
 ## 2. Next API routes (~60 groups under `src/app/api/`)
 

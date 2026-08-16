@@ -12,6 +12,14 @@ export type VerificationSource =
   | "reacher_verified"   // deliverable + non-catch-all per self-hosted Reacher (free OSS)
   | "inbound_optin"
   | "confirmed_reply"
+  /**
+   * The counterparty published this address itself for exactly this purpose —
+   * e.g. the point-of-contact printed on a SAM.gov solicitation. That is a
+   * different thing from a guess that happens to look plausible: the owner
+   * chose to publish it, so it is neither fabricated nor scraped from an
+   * unrelated context.
+   */
+  | "published_contact"
   | "pattern_guess"
   | "scraped"
   | "unknown";
@@ -21,6 +29,7 @@ const TRUSTED_SOURCES: ReadonlySet<VerificationSource> = new Set([
   "reacher_verified",
   "inbound_optin",
   "confirmed_reply",
+  "published_contact",
 ]);
 
 // Generic/role inboxes — never a real decision-maker; reject so we don't hit
@@ -83,9 +92,30 @@ export function unsubscribeFooter(opts: { company: string; address: string; unsu
   return `\n\n—\n${opts.company}\n${opts.address}\nUnsubscribe: ${opts.unsubscribeUrl}`;
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+}
+
+/**
+ * HTML twin of `unsubscribeFooter`. An HTML message whose postal address only
+ * exists in the plain-text alternative is not compliant for the recipients who
+ * read the HTML part — which is nearly all of them.
+ */
+export function unsubscribeFooterHtml(opts: { company: string; address: string; unsubscribeUrl: string }): string {
+  return (
+    `<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px">` +
+    `<p style="font-size:12px;color:#9ca3af;line-height:1.5;margin:0">` +
+    `${escapeHtml(opts.company)}<br>${escapeHtml(opts.address)}<br>` +
+    `<a href="${escapeHtml(opts.unsubscribeUrl)}" style="color:#9ca3af">Unsubscribe</a>` +
+    `</p>`
+  );
+}
+
 export interface GuardedSendResult {
   sent: boolean;
   reason?: string;
+  /** Resend message id, present only on a successful send. */
+  id?: string;
   assessment: RecipientAssessment;
 }
 
@@ -98,11 +128,22 @@ export async function guardedSend(args: {
   to: string;
   source: VerificationSource;
   subject: string;
-  body: string;
+  /** Plain-text body. Optional only when `html` is supplied. */
+  body?: string;
+  /** HTML body. The CAN-SPAM footer is appended to this too, not just to text. */
+  html?: string;
   from?: string;
+  replyTo?: string;
   company?: string;
   address?: string;
   unsubscribeUrl?: string;
+  /**
+   * Credential to send with. The verified sending domains are split across two
+   * Resend accounts, so the caller resolves which one owns `from` (see
+   * scripts/lib/resend-preflight.ts) and passes it here. Falls back to
+   * RESEND_API_KEY for callers that only ever use the first account.
+   */
+  apiKey?: string;
 }): Promise<GuardedSendResult> {
   const assessment = assessRecipient(args.to, args.source);
   if (!canSend(assessment)) {
@@ -112,7 +153,7 @@ export async function guardedSend(args: {
     return { sent: false, reason: "no_mx", assessment };
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = args.apiKey ?? process.env.RESEND_API_KEY;
   if (!apiKey) return { sent: false, reason: "resend_not_configured", assessment };
 
   const footer = unsubscribeFooter({
@@ -120,17 +161,46 @@ export async function guardedSend(args: {
     address: args.address ?? process.env.MAILING_ADDRESS ?? "AuthiChain, [physical address required]",
     unsubscribeUrl: args.unsubscribeUrl ?? process.env.UNSUBSCRIBE_URL ?? "https://authichain.com/unsubscribe",
   });
+  // CAN-SPAM requires a valid physical postal address in every commercial email.
+  // Fail CLOSED if none is configured, rather than ship a placeholder — so
+  // autopilot can never send a non-compliant message.
+  const address = args.address ?? process.env.MAILING_ADDRESS;
+  if (!address) {
+    return { sent: false, reason: "mailing_address_not_configured", assessment };
+  }
+  const unsubscribeUrl =
+    args.unsubscribeUrl ?? process.env.UNSUBSCRIBE_URL ?? "https://authichain.com/unsubscribe";
+
+  const footerOpts = { company: args.company ?? "AuthiChain", address, unsubscribeUrl };
+  const footer = unsubscribeFooter(footerOpts);
+
+  if (args.body === undefined && args.html === undefined) {
+    return { sent: false, reason: "no_body", assessment };
+  }
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: args.from ?? process.env.RESEND_FROM ?? "AuthiChain <noreply@authichain.com>",
+      // A cold email from noreply@ with no reply-to cannot be replied to at all,
+      // and mailbox providers treat the combination as a spam signal. Outreach has
+      // recorded zero replies ever against a 16% bounce rate; this is part of why.
+      // RESEND_FROM should be a human, monitored address on an authenticated
+      // sending domain — see docs/outreach-deliverability-runbook.md.
+      from: args.from ?? process.env.RESEND_FROM ?? "AuthiChain <hello@authichain.com>",
+      reply_to: args.replyTo ?? process.env.RESEND_REPLY_TO ?? "hello@authichain.com",
       to: assessment.email,
       subject: args.subject,
       text: args.body + footer,
+      ...(args.body !== undefined ? { text: args.body + footer } : {}),
+      ...(args.html !== undefined ? { html: args.html + unsubscribeFooterHtml(footerOpts) } : {}),
+      // One-click unsubscribe (RFC 8058) — improves compliance + deliverability.
+      headers: { "List-Unsubscribe": `<${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
     }),
   });
 
-  return { sent: res.ok, reason: res.ok ? undefined : `resend_http_${res.status}`, assessment };
+  if (!res.ok) return { sent: false, reason: `resend_http_${res.status}`, assessment };
+
+  const payload = (await res.json().catch(() => ({}))) as { id?: string };
+  return { sent: true, id: payload.id, assessment };
 }

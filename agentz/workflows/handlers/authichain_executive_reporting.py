@@ -78,8 +78,9 @@ def run(ctx: ExecutionContext) -> str:
         if deals:
             target_deal = deals[0]
             brand = target_deal.get("name", "Strategic Partner")
-            # Estimate metrics based on deal size or use optimistic defaults
-            metrics = {"scans": 1500, "rewards": 8500, "retention": "28%"}
+            # No real usage data exists for a CRM deal until the merchant goes live;
+            # report honest zeros rather than fabricated placeholder numbers.
+            metrics = {"scans": 0, "rewards": 0, "retention": "No data yet"}
         else:
             brand = "Detroit Artisan Brews"
             metrics = {"scans": 154, "rewards": 1200, "retention": "22%"}

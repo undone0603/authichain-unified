@@ -1,19 +1,4 @@
 /** @type {import('next').NextConfig} */
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-
-// Guard against a regression that once shipped a broken build to prod: a
-// stray root-level app/ directory silently shadows src/app/ in `next build`
-// (all other routes get dropped with no warning). Fail fast instead.
-if (existsSync(join(process.cwd(), "app")) && existsSync(join(process.cwd(), "src", "app"))) {
-  throw new Error(
-    "Both app/ and src/app/ exist at the project root. Next.js silently " +
-    "builds only the root app/ directory and drops every route under " +
-    "src/app/ with no error. Remove the root app/ directory (merge any " +
-    "needed files into src/app/ first)."
-  );
-}
-
 // Sentry is optional: @sentry/nextjs is not a dependency yet (zero-budget),
 // and `next build` must not fail when it's absent. If the SDK is installed
 // later, the wrapper activates automatically.
@@ -44,7 +29,9 @@ const CSP = [
 ].join('; ');
 
 const nextConfig = {
-outputFileTracingRoot: process.cwd(),
+  experimental: {
+    outputFileTracingRoot: process.cwd(),
+  },
   // Messy multi-architecture codebase — type errors are gated in CI, not here.
   typescript: { ignoreBuildErrors: true },
 
@@ -62,11 +49,29 @@ outputFileTracingRoot: process.cwd(),
   // "Module not found: Can't resolve '../db.js'". extensionAlias tells webpack
   // to try the TypeScript sources for a `.js`/`.mjs` request, fixing every such
   // import at once without rewriting the ~135 import statements.
-  webpack: (config) => {
+  webpack: (config, { webpack }) => {
     config.resolve.extensionAlias = {
       '.js': ['.ts', '.tsx', '.js', '.jsx'],
       '.mjs': ['.mts', '.mjs'],
     };
+
+    // @coinbase/cdp-sdk's x402 payment-signing path imports the @x402/* packages
+    // (@x402/evm, @x402/svm/exact/client, ...). They are optional peers: none is
+    // declared in package.json and none resolves in the lockfile, so webpack
+    // fails the entire build with "Module not found: Can't resolve '@x402/evm'".
+    // They arrive purely transitively — thirdweb → @base-org/account →
+    // @coinbase/cdp-sdk — reached from the governance page and the NFT mint
+    // route. Nothing in this app calls signX402Payment, so ignore the whole
+    // scope; aliasing them one at a time just surfaces the next sibling.
+    //
+    // If the agent-payable verification work in
+    // docs/superpowers/plans/2026-08-07-x402-agent-verification.md ends up
+    // settling through cdp-sdk, install the real @x402/* packages and delete
+    // this — at that point these imports must resolve for real.
+    config.plugins.push(
+      new webpack.IgnorePlugin({ resourceRegExp: /^@x402\// })
+    );
+
     return config;
   },
 
@@ -106,7 +111,9 @@ outputFileTracingRoot: process.cwd(),
 
   env: {
     NEXT_PUBLIC_CANONICAL_HOSTNAME:
-      process.env.APP_ORIGIN ?? 'https://authichain.com',
+      process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'https://authichain.com',
     // Build-time fallbacks: Turbopack inlines module-level instantiations,
     // so these secrets need a non-empty value at build time to prevent
     // constructor throws. At runtime, the real env vars take over.

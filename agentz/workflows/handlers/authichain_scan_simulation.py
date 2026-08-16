@@ -52,7 +52,7 @@ def run(ctx: ExecutionContext) -> str:
         reward_res = ctx.step(
             "Run Growth Agent: Reward Issuance",
             action=lambda: asyncio.run(reward_repeat_scans(supabase, wallet_address, product_id))
-        )
+        ) or {}
         ctx.step(f"   -> Reward Issued: {reward_res.get('reward_amount')} QRON")
         ctx.step(f"   -> On-chain Tx: {reward_res.get('tx_hash')}")
         

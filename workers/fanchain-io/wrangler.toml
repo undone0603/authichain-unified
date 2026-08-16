@@ -1,0 +1,13 @@
+name = "fanchain-io"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = false
+
+[[routes]]
+pattern = "fanchain.io/*"
+zone_name = "fanchain.io"
+
+[[routes]]
+pattern = "www.fanchain.io/*"
+zone_name = "fanchain.io"
