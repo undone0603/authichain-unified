@@ -13,16 +13,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # pnpm must exist before setup-node runs: `cache: pnpm` resolves the store
+      # path by invoking pnpm, so installing it afterwards is too late and the
+      # step fails with "Unable to locate executable file: pnpm".
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+        with:
+          version: '10.28.2'
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
-
-      - name: Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
