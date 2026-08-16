@@ -76,45 +76,23 @@ jobs:
 
       # Textual 3-way merges of pnpm-lock.yaml (a large generated file) can
       # silently produce duplicated mapping keys without registering as a git
-      # conflict — this happened repeatedly on this repo. Every prior check
-      # above validates the PR branch in isolation; none of them prove the
-      # *merged* tree still has a working lockfile. So build the actual merge
-      # preview and run a real frozen install against it before merging.
-      # This checks out PR-controlled content inside a privileged
-      # pull_request_target trigger — a "pwn request" shape CodeQL flags on
-      # sight. The concrete risk is lifecycle-script code execution with
-      # access to the job's GITHUB_TOKEN, so it's closed at the source:
-      # persist-credentials is off (the token is never written to disk for
-      # checked-out code to find) and every install below runs
-      # --ignore-scripts (no postinstall/prepare script from the PR, or from
-      # any dependency it bumped, ever executes). The job only reads pnpm's
-      # own resolution-graph validation output; nothing else touches the
-      # checkout. Scope stays narrow: eligibility (including author ==
-      # dependabot[bot]) is already resolved before this step runs.
-      - name: Checkout merge preview
-        if: steps.resolve.outputs.eligible == 'true'
-        uses: actions/checkout@v4
-        with:
-          ref: refs/pull/${{ steps.resolve.outputs.pr_number }}/merge
-          persist-credentials: false
-
-      - name: Install pnpm
-        if: steps.resolve.outputs.eligible == 'true'
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-        with:
-          version: '10.28.2'
-
-      - name: Setup Node.js
-        if: steps.resolve.outputs.eligible == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Verify lockfile integrity on the merged tree
-        if: steps.resolve.outputs.eligible == 'true'
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
+      # conflict — this happened repeatedly on this repo. It's tempting to
+      # "fix" that here by checking out the merge preview and running a real
+      # install before merging — but that means checking out PR-controlled
+      # content inside a privileged pull_request_target trigger, a "pwn
+      # request" shape CodeQL correctly flags regardless of mitigations
+      # (--ignore-scripts, persist-credentials: false — tried both, still
+      # flagged, and rightly so: the checkout itself is the risk surface).
+      #
+      # It also turns out to be unnecessary: ci.yml and main.yml already
+      # trigger on plain `pull_request`, and GitHub's default checkout for
+      # that event *is* the merge-preview commit (refs/pull/<n>/merge) —
+      # reported back as a check run against the PR's head SHA. So the
+      # checks.listForRef() call above already inspects a check that
+      # validates the actual merged tree, with zero privileged-checkout risk.
+      # (This only holds now that ci.yml/main.yml correctly run
+      # `pnpm install --frozen-lockfile` — see the pnpm-setup fix landed
+      # alongside this comment.)
       - name: Merge PR
         if: steps.resolve.outputs.eligible == 'true'
         uses: actions/github-script@v6
