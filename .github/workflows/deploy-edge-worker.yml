@@ -28,21 +28,22 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Install pnpm
+        if: steps.secrets_check.outputs.skip != 'true'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: '10.28.2'
+
       - name: Setup Node
         if: steps.secrets_check.outputs.skip != 'true'
         uses: actions/setup-node@v7
         with:
           node-version: '22'
+          cache: 'pnpm'
 
       - name: Install wrangler
         if: steps.secrets_check.outputs.skip != 'true'
         run: npm install -g wrangler@latest
-
-      - name: Install pnpm
-        if: steps.secrets_check.outputs.skip != 'true'
-        uses: pnpm/action-setup@v6
-        with:
-          version: latest
 
       - name: Install dependencies
         if: steps.secrets_check.outputs.skip != 'true'
