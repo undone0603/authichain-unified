@@ -7,21 +7,21 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { requireAdmin } from '@/lib/require-admin';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/admin/leads
- *
+ * 
  * Fetches all ecosystem leads with filtering and search.
  */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
-
-    const authResult = await requireAdmin(supabase);
-    if (authResult instanceof NextResponse) return authResult;
+    
+    // Auth Check
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -53,9 +53,10 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createClient();
-
-    const authResult = await requireAdmin(supabase);
-    if (authResult instanceof NextResponse) return authResult;
+    
+    // Auth Check
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id, status, score } = await request.json();
 

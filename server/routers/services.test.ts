@@ -6,16 +6,7 @@ import { SERVICE_LIST, SERVICE_CATALOG } from "../service-catalog.js";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
-// server/services/router.ts resolves its own db via getDb() (documented
-// bridge — ctx.db doesn't exist on the live TrpcContext) and threads it
-// into server/db-helpers.ts's functions.
-const FAKE_DB = {} as any;
-
 vi.mock("../db.js", () => ({
-  getDb: vi.fn().mockResolvedValue(FAKE_DB),
-}));
-
-vi.mock("../db-helpers.js", () => ({
   getServiceOrdersByUser: vi.fn().mockResolvedValue([]),
   getAllServiceOrders: vi.fn().mockResolvedValue([]),
   updateServiceOrderStatus: vi.fn().mockResolvedValue(undefined),
@@ -76,13 +67,11 @@ describe("servicesRouter — myOrders", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("calls getServiceOrdersByUser with the ctx user id", async () => {
-    const { getDb } = await import("../db.js");
-    vi.mocked(getDb).mockResolvedValue(FAKE_DB);
-    const { getServiceOrdersByUser } = await import("../db-helpers.js");
+    const { getServiceOrdersByUser } = await import("../db.js");
     const { servicesRouter } = await import("../services/router.js");
     const ctx = { user: { id: 99 } };
     await (servicesRouter as any).myOrders._fn({ ctx });
-    expect(vi.mocked(getServiceOrdersByUser)).toHaveBeenCalledWith(FAKE_DB, 99);
+    expect(vi.mocked(getServiceOrdersByUser)).toHaveBeenCalledWith(99);
   });
 });
 
@@ -98,8 +87,6 @@ describe("servicesRouter — checkout", () => {
   });
 
   it("calls createPaymentCheckout and returns checkoutUrl", async () => {
-    const { getDb } = await import("../db.js");
-    vi.mocked(getDb).mockResolvedValue(FAKE_DB);
     const { createPaymentCheckout } = await import("../stripe-service.js");
     const { servicesRouter } = await import("../services/router.js");
     const ctx = { user: { id: 1, email: "a@b.com", name: "Test" } };
@@ -116,14 +103,12 @@ describe("servicesRouter — updateStatus", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("delegates to updateServiceOrderStatus and returns success", async () => {
-    const { getDb } = await import("../db.js");
-    vi.mocked(getDb).mockResolvedValue(FAKE_DB);
-    const { updateServiceOrderStatus } = await import("../db-helpers.js");
+    const { updateServiceOrderStatus } = await import("../db.js");
     const { servicesRouter } = await import("../services/router.js");
     const result = await (servicesRouter as any).updateStatus._fn({
       input: { id: 7, status: "completed" },
     });
-    expect(vi.mocked(updateServiceOrderStatus)).toHaveBeenCalledWith(FAKE_DB, 7, "completed");
+    expect(vi.mocked(updateServiceOrderStatus)).toHaveBeenCalledWith(7, "completed");
     expect(result.success).toBe(true);
   });
 });

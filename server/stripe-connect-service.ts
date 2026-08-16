@@ -6,7 +6,7 @@
  * Uses V2 Core API where applicable (as per tests).
  */
 import { getStripe } from "./stripe-service";
-import type { Db } from "./db-helpers";
+import * as db from "./db";
 import { whiteLabelClients } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
@@ -21,7 +21,7 @@ function generateIdempotencyKey(operation: string, id: string | number) {
 /**
  * Step: Create and onboard a connected account (V2 Core)
  */
-export async function provisionVendorAccount(db: Db, userId: number, displayName: string, email: string, countryCode = 'US') {
+export async function provisionVendorAccount(userId: number, displayName: string, email: string, countryCode = 'US') {
   const stripe = getStripe();
 
   // Use rawRequest for V2 Core Account as per tests
@@ -38,7 +38,8 @@ export async function provisionVendorAccount(db: Db, userId: number, displayName
   catch { throw new Error("Stripe V2 provisionVendorAccount: unparseable response body"); }
   const accountId = body.id;
 
-  await db.update(whiteLabelClients)
+  const d = await db.getDb();
+  await d.update(whiteLabelClients)
     .set({ apiSecret: accountId })
     .where(eq(whiteLabelClients.userId, userId));
 

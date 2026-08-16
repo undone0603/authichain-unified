@@ -1,16 +1,14 @@
 import type { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
-import { listSeoPagesWithDb } from '@/lib/seo-pages';
-import { getDb } from '../../server/db';
+import { listSeoPages } from '@/lib/seo-pages';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const headersList = await headers();
   const host = headersList.get('host') || 'qron.space';
   const BASE = `https://${host}`;
   const now = new Date();
-  // Programmatic-SEO landing pages: statically committed (content/seo) plus
-  // the daily cron batch persisted to the seo_pages table.
-  const seoEntries: MetadataRoute.Sitemap = (await listSeoPagesWithDb(await getDb())).map((page) => ({
+  // Programmatic-SEO landing pages (generated + committed in content/seo).
+  const seoEntries: MetadataRoute.Sitemap = listSeoPages().map((page) => ({
     url: `${BASE}/p/${page.slug}`,
     lastModified: now,
     changeFrequency: 'weekly' as const,
@@ -166,18 +164,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly' as const,
       priority: 0.8,
     },
-    // GovChain pages (served at govchain.us).
-    { url: `${BASE}/grants`, lastModified: now, changeFrequency: 'daily' as const, priority: 0.9 },
-    { url: `${BASE}/verify`, lastModified: now, changeFrequency: 'daily' as const, priority: 0.8 },
-    // AuthiChain sub-pages.
-    { url: `${BASE}/authichain/technology`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
-    { url: `${BASE}/authichain/pilots`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
-    { url: `${BASE}/authichain/about`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.6 },
-    // Product / vertical pages.
-    { url: `${BASE}/supply-chain`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
-    { url: `${BASE}/stamps`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-    { url: `${BASE}/governance/tokenomics`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.7 },
-    { url: `${BASE}/governance/proposals`, lastModified: now, changeFrequency: 'daily' as const, priority: 0.7 },
     // Lead-magnet / resource pages.
     {
       url: `${BASE}/resources/eu-dpp-guide`,

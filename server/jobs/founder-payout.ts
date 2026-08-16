@@ -4,7 +4,7 @@
 // the remainder is the operating budget. The actual transfer (Stripe payout to
 // the founder's connected bank) is the credential-gated integration point: it
 // needs a verified bank + payout config before any money moves.
-import { logActivity, getRevenueAnalytics, type Db } from "./db-helpers";
+import { logActivity, getRevenueAnalytics } from "../db";
 import { notifyOwner } from "../_core/notification";
 
 export interface PayoutSplit {
@@ -61,10 +61,10 @@ const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
  * INTEGRATION POINT: trigger a Stripe payout of `plan.founderCents` to the
  * founder's connected account where indicated, once payout/bank is configured.
  */
-export async function runFounderPayout(db: Db, grossCents: number): Promise<PayoutPlan> {
+export async function runFounderPayout(grossCents: number): Promise<PayoutPlan> {
   const plan = computePayout(grossCents);
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: "founder_payout_computed",
     entityType: "payout",
@@ -97,8 +97,8 @@ export function lastMonthRange(now: Date = new Date()): { start: Date; end: Date
 }
 
 /** Sum real collected revenue (revenueRecords.amount is in dollars) for a window, in cents. */
-export async function collectedRevenueCents(db: Db, start: Date, end: Date): Promise<number> {
-  const rows = await getRevenueAnalytics(db, start, end);
+export async function collectedRevenueCents(start: Date, end: Date): Promise<number> {
+  const rows = await getRevenueAnalytics(start, end);
   const dollarsTotal = (rows as Array<{ amount?: string | null }>).reduce(
     (sum, r) => sum + (parseFloat(r?.amount ?? "0") || 0),
     0,
@@ -107,8 +107,8 @@ export async function collectedRevenueCents(db: Db, start: Date, end: Date): Pro
 }
 
 /** Monthly entry point: read last month's collected revenue and run the split. */
-export async function runMonthlyFounderPayout(db: Db, now: Date = new Date()): Promise<PayoutPlan> {
+export async function runMonthlyFounderPayout(now: Date = new Date()): Promise<PayoutPlan> {
   const { start, end } = lastMonthRange(now);
-  const grossCents = await collectedRevenueCents(db, start, end);
-  return runFounderPayout(db, grossCents);
+  const grossCents = await collectedRevenueCents(start, end);
+  return runFounderPayout(grossCents);
 }

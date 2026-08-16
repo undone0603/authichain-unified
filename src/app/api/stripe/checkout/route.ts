@@ -22,9 +22,7 @@ export async function POST(req: NextRequest) {
       payment_method_types: ['card'],
       customer_email,
       line_items: [{ price: price_id, quantity: 1 }],
-      // Emit the canonical `plan` key the webhook/provisioning reads (keep
-      // `plan_id` for backwards compatibility) so credits are always granted.
-      metadata: { plan: plan_id, plan_id, brand },
+      metadata: { plan_id, brand },
       success_url: `${base_url}/dashboard?brand=${brand}&session_id={CHECKOUT_SESSION_ID}&status=success`,
       cancel_url: `${base_url}/pricing?brand=${brand}&status=cancelled`,
       allow_promotion_codes: true,

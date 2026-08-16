@@ -24,7 +24,7 @@ function ensureLogDir() {
 
 function trimLogFile(logPath: string, maxSize: number) {
   try {
-        if (fs.statSync(logPath).size <= maxSize) { // CodeQL #210/#211: removed existsSync TOCTOU; catch handles ENOENT
+    if (!fs.existsSync(logPath) || fs.statSync(logPath).size <= maxSize) {
       return;
     }
 

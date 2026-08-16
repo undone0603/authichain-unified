@@ -18,11 +18,13 @@ import httpx
 
 class LMStudioManager:
     """Manages model lifecycle using native LM Studio v1 REST API."""
-    def __init__(self, base_url="http://localhost:1234"):
+    def __init__(self, base_url="http://192.168.254.10:1234"):
         self.base_url = base_url
 
     def load_model(self, model_identifier: str):
         """Loads a model via v1 API."""
+        if model_identifier == "local-model":
+            model_identifier = "google/gemma-4-e4b"
         url = f"{self.base_url}/api/v1/models/load"
         try:
             with httpx.Client() as client:
@@ -34,6 +36,8 @@ class LMStudioManager:
 
     def unload_model(self, model_identifier: str):
         """Unloads a model via v1 API."""
+        if model_identifier == "local-model":
+            model_identifier = "google/gemma-4-e4b"
         url = f"{self.base_url}/api/v1/models/unload"
         try:
             with httpx.Client() as client:
@@ -176,16 +180,18 @@ class LimitProofLLM:
 
     @staticmethod
     def _local_base_url() -> str:
-        base = os.environ.get("LOCAL_MODEL_URL", "http://localhost:1234").rstrip("/")
-        if not base.endswith("/v1"):
-            base += "/v1"
+        # Some LM Studio versions might not use /v1 in the path for management
+        base = os.environ.get("LOCAL_MODEL_URL", "http://192.168.254.10:1234").rstrip("/")
+        # If the API is at /api/v1/models/load, the base should be /api/v1, but the current code does /v1.
+        # Let's try just the base without adding /v1 automatically if it doesn't end in it.
         return base
+
 
     def _get_lmstudio(self):
         llm = ChatOpenAI(
-            model=os.environ.get("LOCAL_MODEL_ID", "mistralai/mistral-7b-instruct-v0.3"),
+            model=os.environ.get("LOCAL_MODEL_ID", "google/gemma-4-e4b"),
             temperature=self.temperature, api_key="not-needed",
-            base_url=self._local_base_url(), max_retries=1, timeout=300
+            base_url=self._local_base_url(), max_retries=0, timeout=120
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
@@ -193,14 +199,14 @@ class LimitProofLLM:
         llm = ChatOpenAI(
             model=os.environ.get("LOCAL_MODEL_ID_FALLBACK", "nvidia/nemotron-3-nano-4b"),
             temperature=self.temperature, api_key="not-needed",
-            base_url=self._local_base_url(), max_retries=1, timeout=300
+            base_url=self._local_base_url(), max_retries=0, timeout=120
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def _get_openai(self):
         api_key = get("openai_api_key", required=False) or os.environ.get("OPENAI_API_KEY")
         if not api_key: raise RuntimeError("Missing OpenAI Key")
-        llm = ChatOpenAI(model="gpt-4o", temperature=self.temperature, api_key=api_key, max_retries=1, request_timeout=300)
+        llm = ChatOpenAI(model="gpt-4o", temperature=self.temperature, api_key=api_key, max_retries=1)
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def _get_openrouter(self):
@@ -212,7 +218,6 @@ class LimitProofLLM:
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
             max_retries=1,
-            request_timeout=300,
         )
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 

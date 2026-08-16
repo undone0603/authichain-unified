@@ -4,8 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getSeoPageBySlugWithDb, listSeoSlugs } from '@/lib/seo-pages';
-import { getDb } from '../../../../server/db';
+import { getSeoPageBySlug, listSeoSlugs } from '@/lib/seo-pages';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -41,7 +40,7 @@ export async function generateMetadata(
   { params }: PageProps,
 ): Promise<Metadata> {
   const { serial } = await params;
-  const seoPage = await getSeoPageBySlugWithDb(serial, await getDb());
+  const seoPage = getSeoPageBySlug(serial);
   if (!seoPage) return {};
   const canonical = typeof seoPage.jsonLd.url === 'string' ? seoPage.jsonLd.url : undefined;
   return {
@@ -55,17 +54,14 @@ export async function generateMetadata(
 export default async function CertificationPage({ params }: PageProps) {
   const { serial } = await params;
 
-  const seoPage = await getSeoPageBySlugWithDb(serial, await getDb());
+  const seoPage = getSeoPageBySlug(serial);
   if (seoPage) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-12 prose prose-invert">
         {/* JSON-LD structured data — the signal AI search engines cite. */}
-        {/* `<` escaped so a literal "</script>" in DB-sourced content (LLM
-            output, unlike the hand-written static JSON) can't break out of
-            the script context. */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(seoPage.jsonLd).replace(/</g, '\\u003c') }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(seoPage.jsonLd) }}
         />
         <h1>{seoPage.h1}</h1>
         {/* bodyHtml is sanitized at generation time (script tags stripped). */}

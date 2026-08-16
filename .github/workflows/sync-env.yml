@@ -22,55 +22,18 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           API_KEY: ${{ secrets.API_KEY }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          # Postgres connection string (Supabase QRON-v2 session pooler). The
-          # origin serves /api/cron/* — without this pointing at the live DB the
-          # DB-backed cron jobs 500 with "Failed query" even though the DB is
-          # healthy. Set the DATABASE_URL repo secret to enable this sync.
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          # Push each GitHub secret to the Vercel production env.
-          # Vercel Cron reads CRON_SECRET from the project env and sends it as
-          # the Bearer token, and the API routes validate against the same var —
-          # so GitHub's value is the source of truth for both sides once synced.
-          #
-          # Two Vercel projects deploy this repo: the VERCEL_PROJECT_ID secret
-          # (authichain-unified-v2, microsite subdomains) and authichain-unified
-          # (prj_tt39…), which owns authichain-unified.vercel.app — the origin the
-          # authichain.com worker proxies /api/* to. Both need the same env or the
-          # cron endpoints 401 on one of them.
-          LIVE_PROJECT_ID="prj_tt39I3tljDqlhXFfAC1fbeieajNO"
-          sync_var() {
-            local project="$1" name="$2" value="$3"
-            if [ -z "$value" ]; then
-              echo "::warning::$name secret is empty - skipping sync"
-              return 0
-            fi
-            # Remove existing env var if it exists, then re-add with current value
-            VERCEL_PROJECT_ID="$project" vercel env rm "$name" production \
-              --token="$VERCEL_TOKEN" \
-              --scope="$VERCEL_ORG_ID" \
-              --yes 2>/dev/null || true
-            printf '%s' "$value" | VERCEL_PROJECT_ID="$project" vercel env add "$name" production \
-              --token="$VERCEL_TOKEN" \
-              --scope="$VERCEL_ORG_ID" \
-              --yes
-            echo "$name synced to Vercel production environment (project $project)"
-          }
-          for project in "$VERCEL_PROJECT_ID" "$LIVE_PROJECT_ID"; do
-            # DATABASE_URL first: the DB-backed cron jobs (pipeline, scheduled
-            # job runner) fail closed without a valid connection string on the
-            # serving origin. Skipped automatically if the secret is unset.
-            sync_var "$project" DATABASE_URL "$DATABASE_URL"
-            sync_var "$project" API_KEY "$API_KEY"
-            sync_var "$project" CRON_SECRET "$CRON_SECRET"
-            # Master switch for the autonomous business pipeline (pipeline-tick,
-            # AgentZ supervisor, cron jobs). Not a secret — plain "true".
-            sync_var "$project" AUTONOMOUS_PIPELINE_ENABLED "true"
-          done
-          # Env changes only apply to new deployments — redeploy the live
-          # project's current production deployment so the sync takes effect.
-          VERCEL_PROJECT_ID="$LIVE_PROJECT_ID" vercel redeploy authichain-unified.vercel.app \
+          if [ -z "$API_KEY" ]; then
+            echo "::warning::API_KEY secret is empty - skipping sync"
+            exit 0
+          fi
+          # Remove existing env var if it exists, then re-add with current value
+          vercel env rm API_KEY production \
             --token="$VERCEL_TOKEN" \
             --scope="$VERCEL_ORG_ID" \
-            || echo "::warning::redeploy failed - trigger a production deploy manually so the env change takes effect"
+            --yes 2>/dev/null || true
+          echo "$API_KEY" | vercel env add API_KEY production \
+            --token="$VERCEL_TOKEN" \
+            --scope="$VERCEL_ORG_ID" \
+            --yes
+          echo "API_KEY synced to Vercel production environment"

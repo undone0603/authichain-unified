@@ -156,6 +156,11 @@ export async function guardedSend(args: {
   const apiKey = args.apiKey ?? process.env.RESEND_API_KEY;
   if (!apiKey) return { sent: false, reason: "resend_not_configured", assessment };
 
+  const footer = unsubscribeFooter({
+    company: args.company ?? "AuthiChain",
+    address: args.address ?? process.env.MAILING_ADDRESS ?? "AuthiChain, [physical address required]",
+    unsubscribeUrl: args.unsubscribeUrl ?? process.env.UNSUBSCRIBE_URL ?? "https://authichain.com/unsubscribe",
+  });
   // CAN-SPAM requires a valid physical postal address in every commercial email.
   // Fail CLOSED if none is configured, rather than ship a placeholder — so
   // autopilot can never send a non-compliant message.
@@ -186,6 +191,7 @@ export async function guardedSend(args: {
       reply_to: args.replyTo ?? process.env.RESEND_REPLY_TO ?? "hello@authichain.com",
       to: assessment.email,
       subject: args.subject,
+      text: args.body + footer,
       ...(args.body !== undefined ? { text: args.body + footer } : {}),
       ...(args.html !== undefined ? { html: args.html + unsubscribeFooterHtml(footerOpts) } : {}),
       // One-click unsubscribe (RFC 8058) — improves compliance + deliverability.
