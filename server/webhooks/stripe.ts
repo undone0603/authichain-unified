@@ -20,19 +20,14 @@ function maskEmail(email: string): string {
   if (!domain) return '***';
   return `${local?.[0] ?? ''}***@${domain}`;
 }
-import {
-  logActivity,
-  logAutomationAudit,
-  recordRevenue,
-  upsertStripeSubscription,
-  setSubscriptionStatusByStripeId,
-  getSubscriptionByStripeSubscriptionId,
-  createSystemNotification,
-  hasWebhookEventProcessed,
-  claimWebhookEvent,
-  markWebhookEventProcessed,
-  getDb,
-} from "../db";
+import * as db from "../db";
+const logActivity = (db as any).logActivity;
+const logAutomationAudit = (db as any).logAutomationAudit;
+const recordRevenue = (db as any).recordRevenue;
+const upsertStripeSubscription = (db as any).upsertStripeSubscription;
+const setSubscriptionStatusByStripeId = (db as any).setSubscriptionStatusByStripeId;
+const getSubscriptionByStripeSubscriptionId = (db as any).getSubscriptionByStripeSubscriptionId;
+const createSystemNotification = (db as any).createSystemNotification;
 import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
 import { handleServiceOrderPayment } from "../services/order-payment-handler";
 import { sendEmail } from "../email-service";
@@ -475,5 +470,4 @@ export async function handleStripeWebhook(
 
   return { received: true, type: event.type, handled: true };
 
-}
 }
