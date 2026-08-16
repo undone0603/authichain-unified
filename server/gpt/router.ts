@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getDb } from "../db";
+import { db } from "../db";
 import { products, certificates } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
@@ -8,10 +8,6 @@ const router = Router();
 /**
  * GPT Plugin REST endpoints
  * These correspond to the paths in knowledge/GPT_OPENAPI_SPEC.yaml
- *
- * This is a plain Express router (not a tRPC procedure, so there's no
- * ctx.db to thread) -- each handler resolves its own db via a documented
- * getDb() bridge below.
  */
 
 // POST /api/gpt/verify - Verify product authenticity
@@ -21,7 +17,6 @@ router.post("/verify", async (req, res) => {
     if (!productId) {
       return res.status(400).json({ error: "productId required" });
     }
-    const db = await getDb();
     const [product] = await db.select().from(products).where(eq(products.id, Number(productId))).limit(1);
     if (!product) {
       return res.json({
@@ -72,7 +67,6 @@ router.get("/certificates/verify", async (req, res) => {
     const { certNumber } = req.query;
     if (!certNumber) return res.status(400).json({ error: "certNumber required" });
     if (String(certNumber).length > 64) return res.status(400).json({ error: "certNumber too long" });
-    const db = await getDb();
     const [cert] = await db.select().from(certificates).where(eq(certificates.certificateNumber, String(certNumber))).limit(1);
     if (!cert) return res.json({ valid: false, message: "Certificate not found" });
     return res.json({
@@ -95,7 +89,6 @@ router.post("/cannabis/verify", async (req, res) => {
     if (!batchId && !strainName) {
       return res.status(400).json({ error: "strainName or batchId required" });
     }
-    const db = await getDb();
     const [product] = strainName
       ? await db.select().from(products).where(eq(products.name, strainName)).limit(1)
       : [];
@@ -120,7 +113,6 @@ router.post("/trust-score", async (req, res) => {
   try {
     const { productId } = req.body;
     if (!productId) return res.status(400).json({ error: "productId required" });
-    const db = await getDb();
     const [product] = await db.select().from(products).where(eq(products.id, Number(productId))).limit(1);
     if (!product) return res.json({ trustScore: 0, verdict: "UNKNOWN", message: "Product not found" });
     const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);

@@ -1,41 +1,13 @@
 import type { Metadata } from 'next';
 import { FileSearch, Sparkles, FileText, Trophy, Bell, Landmark } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 import { BrandLanding } from '../_home/BrandLanding';
-import { OpportunityRadar } from './OpportunityRadar';
-
-export const dynamic = 'force-dynamic';
-export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: 'Federal Opportunities | GovChain',
   description: 'Automated SAM.gov ingestion, AI bid scoring, proposal drafting, and on-chain proof-of-win NFTs for federal contractors.',
 };
 
-async function getLiveStats() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  try {
-    const sb = createClient(url, key);
-    const [scored, highFit, proposals] = await Promise.all([
-      sb.from('gov_opportunities').select('*', { count: 'exact', head: true }),
-      sb.from('gov_opportunities').select('*', { count: 'exact', head: true }).gte('fit_score', 70),
-      sb.from('gov_proposals').select('*', { count: 'exact', head: true }),
-    ]);
-    return {
-      scored: scored.count ?? 0,
-      highFit: highFit.count ?? 0,
-      proposals: proposals.count ?? 0,
-    };
-  } catch {
-    return null;
-  }
-}
-
-export default async function GrantsPage() {
-  const live = await getLiveStats();
-
+export default function GrantsPage() {
   return (
     <BrandLanding
       brandId="govchain"
@@ -45,21 +17,12 @@ export default async function GrantsPage() {
       subhead="Automated SAM.gov ingestion, AI win-probability scoring, draft proposals, and verifiable on-chain proof-of-win — your full capture pipeline."
       primaryCta={{ label: 'See Plans', href: '/pricing' }}
       secondaryCta={{ label: 'Open Dashboard', href: '/dashboard' }}
-      stats={
-        live
-          ? [
-              { value: String(live.scored), label: 'Opportunities Scored' },
-              { value: String(live.highFit), label: 'High-Fit (70+)' },
-              { value: String(live.proposals), label: 'Proposals Drafted' },
-              { value: 'On-chain', label: 'Proof-of-win' },
-            ]
-          : [
-              { value: 'SAM.gov', label: 'Auto-ingest' },
-              { value: 'AI', label: 'Scored bids' },
-              { value: 'Draft', label: 'Proposals' },
-              { value: 'On-chain', label: 'Proof-of-win' },
-            ]
-      }
+      stats={[
+        { value: 'SAM.gov', label: 'Auto-ingest' },
+        { value: 'AI', label: 'Scored bids' },
+        { value: 'Draft', label: 'Proposals' },
+        { value: 'On-chain', label: 'Proof-of-win' },
+      ]}
       features={[
         {
           icon: <FileSearch className="h-6 w-6" />,
@@ -93,8 +56,6 @@ export default async function GrantsPage() {
         },
       ]}
       closingLine="Government Opportunities, Proven On-Chain."
-    >
-      <OpportunityRadar />
-    </BrandLanding>
+    />
   );
 }

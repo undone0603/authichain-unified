@@ -1,6 +1,5 @@
 import { protectedProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
-import { getAffiliateByUserId, getAffiliateCommissions, createAffiliate, getUserReferrals } from "../identity-db-helpers";
+import * as db from "../db";
 import { z } from "zod";
 import { generateAffiliateCode, AFFILIATE_BONUS_TIERS, COMMISSION_RATES } from "../referral/core";
 
@@ -15,16 +14,12 @@ const AFFILIATE_BASE_RATE = (() => {
 
 export const affiliateRouter = router({
   getStatus: protectedProcedure.query(async ({ ctx }) => {
-    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
-    // context does. Bridge via getDb() until this router has a ctx.db to use.
-    const db = await getDb();
-    return await getAffiliateByUserId(db, ctx.user.id);
+    return await db.getAffiliateByUserId(ctx.user.id);
   }),
   getStats: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb(); // see getStatus() above
-    const affiliate = await getAffiliateByUserId(db, ctx.user.id);
+    const affiliate = await db.getAffiliateByUserId(ctx.user.id);
     if (!affiliate) return null;
-    const commissions = await getAffiliateCommissions(db, affiliate.id);
+    const commissions = await db.getAffiliateCommissions(affiliate.id);
     const totalEarned = parseFloat(affiliate.totalEarnings || "0");
     const pendingPayout = parseFloat(affiliate.pendingPayout || "0");
     const nextTier = AFFILIATE_BONUS_TIERS.find(t => (affiliate.totalReferrals || 0) < t.threshold);
@@ -41,11 +36,10 @@ export const affiliateRouter = router({
     paypalEmail: z.string().email().optional(),
     payoutMethod: z.string().optional().default("paypal"),
   })).mutation(async ({ ctx, input }) => {
-    const db = await getDb(); // see getStatus() above
-    const existing = await getAffiliateByUserId(db, ctx.user.id);
+    const existing = await db.getAffiliateByUserId(ctx.user.id);
     if (existing) return { success: false, message: "Already enrolled in affiliate program" };
     const code = generateAffiliateCode(ctx.user.id);
-    const result = await createAffiliate(db, {
+    const result = await db.createAffiliate({
       userId: ctx.user.id,
       affiliateCode: code,
       status: "active",
@@ -56,7 +50,6 @@ export const affiliateRouter = router({
     return { success: true, affiliateCode: code, id: result.id };
   }),
   getReferrals: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb(); // see getStatus() above
-    return await getUserReferrals(db, ctx.user.id);
+    return await db.getUserReferrals(ctx.user.id);
   }),
 });

@@ -90,22 +90,12 @@ export async function handleVerificationEvent(ev: VerificationEvent) {
 
 export async function handleCertificateMint(ev: CertificateMintedEvent) {
   try {
-    // The `certificates` table is shared with the admin certification
-    // workflow (src/app/api/admin/certifications) and doesn't have
-    // seal_id/rarity_score/brand columns — only id, user_id, product_id,
-    // name, issuer, issued_at, expires_at, certificate_url, blockchain_tx,
-    // status, metadata. Map onto the real columns where one exists
-    // (blockchain_tx, issuer) and keep the rest in metadata.
     const certRow = {
       product_id: ev.product_id,
-      issuer: ev.brand,
-      blockchain_tx: ev.polygon_nft_tx || null,
-      status: "valid",
-      metadata: {
-        seal_id: ev.seal_id,
-        rarity_score: ev.rarity_score ?? null,
-        brand: ev.brand,
-      },
+      seal_id: ev.seal_id,
+      rarity_score: ev.rarity_score ?? null,
+      polygon_nft_tx: ev.polygon_nft_tx ?? null,
+      brand: ev.brand,
     };
     const inserted = await supabaseInsert("certificates", certRow);
     const certId = inserted[0]?.id;

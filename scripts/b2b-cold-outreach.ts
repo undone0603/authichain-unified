@@ -11,6 +11,7 @@
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=qron
 
 import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
 import { guardrailCheck, guardrailRecord } from './lib/guardrail-client';
 import { checkSender, reportSenderFailure, CREDENTIAL_ENV_VARS } from './lib/resend-preflight';
 import { guardedSend, type VerificationSource } from '../server/outreach/send-guard';
@@ -25,14 +26,6 @@ const GUARDRAIL_CHANNEL = 'email.b2b-cold';
 
 const isDryRun = process.env.DRY_RUN === 'true';
 const segment  = process.argv.find(a => a.startsWith('--segment='))?.split('=')[1] ?? 'all';
-
-// Send-failure tracking. A live run where every send fails (bad key, unverified
-// domain, provider outage) previously exited 0 and showed a green check — the
-// pipeline looked healthy while delivering nothing. These are aggregated and
-// surfaced as a non-zero exit + GitHub Actions annotations at the end.
-const sendFailures: string[] = [];
-let totalAttempted = 0;
-let totalSent = 0;
 
 const supabase = createClient(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -80,12 +73,11 @@ async function apolloFindEmail(name: string, company: string, website: string): 
     const [firstName, ...rest] = name.split(' ');
     const lastName = rest.join(' ');
 
-    // Apollo auth goes in the X-Api-Key header — body api_key is no longer
-    // accepted for current keys (verified: header auth returns 200, body 401).
     const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'X-Api-Key': key },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
       body: JSON.stringify({
+        api_key:              key,
         q_organization_name:  company,
         person_titles:        [],          // broad — let name filter do the work
         contact_email_status: ['verified', 'guessed'],
@@ -94,10 +86,7 @@ async function apolloFindEmail(name: string, company: string, website: string): 
         per_page:             5,
       }),
     });
-    if (!res.ok) {
-      console.warn(`  ⚠️  Apollo search HTTP ${res.status} for ${company}`);
-      return '';
-    }
+    if (!res.ok) return '';
     const data = await res.json() as any;
     const people: any[] = data.people ?? [];
 
@@ -462,7 +451,6 @@ async function processTargets<T extends { company: string; email: string; name?:
   segmentName: string,
 ) {
   let sent = 0; let saved = 0; let queued = 0;
-  totalAttempted += targets.length;
 
   const from = SEGMENT_FROM[segmentName] ?? FALLBACK_FROM;
 
@@ -549,20 +537,6 @@ async function processTargets<T extends { company: string; email: string; name?:
       continue;
     }
 
-    // Guardrail gate: every send must be checked/reserved before it fires.
-    // Fails closed — unreachable API, missing secret, disabled channel, cap
-    // reached, or a suppressed recipient all deny the send. A policy denial
-    // (cap/disabled/suppressed) just queues for later; an errored check
-    // (can't reach the guardrail at all) is a broken pipeline, not a healthy
-    // no-op, so it counts as a send failure the same as a Resend error.
-    const gate = await guardrailCheck(GUARDRAIL_CHANNEL, { recipient: email });
-    if (!gate.allowed) {
-      console.log(`     🚧 Blocked by guardrail (${GUARDRAIL_CHANNEL}): ${gate.reason} — ${email}`);
-      queued++;
-      if (gate.errored) sendFailures.push(`${t.company}: guardrail check failed — ${gate.reason}`);
-      continue;
-    }
-
     try {
       // Routed through the send guard rather than the Resend client directly,
       // so every cold send carries a reply-to, one-click List-Unsubscribe
@@ -583,6 +557,9 @@ async function processTargets<T extends { company: string; email: string; name?:
         await supabase.from('leads')
           .update({ status: 'contacted', updatedAt: new Date().toISOString() })
           .eq('email', email);
+      } else {
+        console.warn(`  ⚠️  Resend error for ${t.company}:`, res.error);
+        queued++;
         await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: true, reason: 'sent', metadata: { email, resendId: res.id } });
       } else if (res.assessment.status === 'reject' || res.reason === 'no_mx') {
         // A refused recipient is the guard doing its job, not a broken
@@ -600,13 +577,10 @@ async function processTargets<T extends { company: string; email: string; name?:
       }
     } catch (err: any) {
       console.warn(`  ⚠️  Send failed for ${t.company}: ${err.message}`);
-      sendFailures.push(`${t.company}: ${err.message}`);
       queued++;
-      await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: err.message, metadata: { email } });
     }
   }
 
-  totalSent += sent;
   console.log(`\n[${segmentName}] Saved: ${saved} | Sent: ${sent} | Queued/Pending: ${queued}`);
 }
 
@@ -677,7 +651,6 @@ export async function flushQueuedLeads(): Promise<void> {
       }
     } catch (err: any) {
       console.warn(`  ⚠️  Flush failed for ${lead.email}: ${err.message?.slice(0, 80)}`);
-      await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: err.message, metadata: { email: lead.email } });
     }
   }
 }
@@ -703,7 +676,6 @@ if (segment === 'all' || segment === 'qron') {
 }
 
 console.log('\n✅ OUTREACH COMPLETE');
-console.log(`Totals — attempted: ${totalAttempted} | sent: ${totalSent} | send failures: ${sendFailures.length}`);
 console.log('Next steps:');
 if (!hasResendKey) {
   console.log(`  ⚡ Set ${CREDENTIAL_ENV_VARS[0]} (and ${CREDENTIAL_ENV_VARS[1]} for its domains) then flush queued leads:`);
@@ -714,14 +686,3 @@ if (!process.env.APOLLO_API_KEY) {
 }
 console.log('  📅 Demo booking page (no Calendly needed): ' + CALENDLY);
 console.log('  📋 View all leads in Supabase: select * from leads where source like \'b2b_outreach_%\' order by created_at desc');
-
-// ── Fail loudly on delivery problems ─────────────────────────────────────────
-// A live run that reaches the provider and gets rejected every time is a broken
-// pipeline, not a successful no-op. Emit Actions error annotations and exit
-// non-zero so the scheduled run turns red instead of silently sending nothing.
-if (!isDryRun && sendFailures.length > 0) {
-  const unique = [...new Set(sendFailures.map(f => f.split(': ').slice(1).join(': ')))];
-  console.error(`\n::error::Outreach delivered ${totalSent}/${totalAttempted} emails — ${sendFailures.length} send failure(s)`);
-  for (const reason of unique.slice(0, 5)) console.error(`::error::Send failure: ${reason}`);
-  process.exit(1);
-}

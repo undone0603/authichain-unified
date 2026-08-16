@@ -1,36 +1,36 @@
 // server/missions/missions.db.ts
-import type { getHyperdriveDb } from "../db";
+import { getDb } from "../db";
 import { missions, missionTasks } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { missionTemplates, taskTemplates } from "./templates";
 import type { MissionType, MissionStatus } from "./types";
 
-export type Db = ReturnType<typeof getHyperdriveDb>;
-
 // ─── Read ────────────────────────────────────────────────────────────────────
 
-export async function getMissions(db: Db, statusFilter?: string) {
+export async function getMissions(statusFilter?: string) {
+  const d = await getDb();
   if (statusFilter) {
-    return db
+    return d
       .select()
       .from(missions)
       .where(eq(missions.status, statusFilter as any))
       .orderBy(desc(missions.createdAt))
       .limit(200);
   }
-  return db.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
+  return d.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
 }
 
-export async function getMissionById(db: Db, id: string) {
-  const [mission] = await db
+export async function getMissionById(id: string) {
+  const d = await getDb();
+  const [mission] = await d
     .select()
     .from(missions)
     .where(eq(missions.id, id))
     .limit(1);
   if (!mission) return null;
 
-  const tasks = await db
+  const tasks = await d
     .select()
     .from(missionTasks)
     .where(eq(missionTasks.missionId, id))
@@ -41,12 +41,13 @@ export async function getMissionById(db: Db, id: string) {
 
 // ─── Write ───────────────────────────────────────────────────────────────────
 
-export async function createMission(db: Db, type: MissionType) {
+export async function createMission(type: MissionType) {
+  const d = await getDb();
   const template = missionTemplates[type];
   if (!template) throw new Error(`Unknown mission type: ${type}`);
 
   const id = randomUUID();
-  await db.insert(missions).values({
+  await d.insert(missions).values({
     id,
     type,
     title: template.title,
@@ -66,14 +67,15 @@ export async function createMission(db: Db, type: MissionType) {
       status: "pending" as const,
       order: index + 1,
     }));
-    await db.insert(missionTasks).values(taskRows);
+    await d.insert(missionTasks).values(taskRows);
   }
 
   return id;
 }
 
-export async function updateMissionStatus(db: Db, id: string, status: MissionStatus) {
-  await db
+export async function updateMissionStatus(id: string, status: MissionStatus) {
+  const d = await getDb();
+  await d
     .update(missions)
     .set({ status: status.toLowerCase() as any })
     .where(eq(missions.id, id));
@@ -81,25 +83,27 @@ export async function updateMissionStatus(db: Db, id: string, status: MissionSta
 
 // ─── Tasks ───────────────────────────────────────────────────────────────────
 
-export async function getTasksByMission(db: Db, missionId: string) {
-  return db
+export async function getTasksByMission(missionId: string) {
+  const d = await getDb();
+  return d
     .select()
     .from(missionTasks)
     .where(eq(missionTasks.missionId, missionId))
     .orderBy(missionTasks.order);
 }
 
-export async function retryTask(db: Db, id: string) {
-  await db
+export async function retryTask(id: string) {
+  const d = await getDb();
+  await d
     .update(missionTasks)
     .set({ status: "pending" })
     .where(eq(missionTasks.id, id));
 }
 
 export async function updateTaskStatus(
-  db: Db,
   id: string,
   status: "pending" | "in_progress" | "completed" | "failed"
 ) {
-  await db.update(missionTasks).set({ status }).where(eq(missionTasks.id, id));
+  const d = await getDb();
+  await d.update(missionTasks).set({ status }).where(eq(missionTasks.id, id));
 }

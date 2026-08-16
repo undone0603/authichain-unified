@@ -17,7 +17,6 @@ on:
 jobs:
   ingest-opportunities:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +30,7 @@ jobs:
         continue-on-error: true
         run: pnpm exec tsx scripts/ingest-sam.ts
         env:
-          SAM_GOV_API_KEY: ${{ secrets.SAM_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          SAM_GOV_API_KEY:        ${{ secrets.SAM_API_KEY }}
+          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY:   ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DRY_RUN:                ${{ inputs.dry_run || 'false' }}

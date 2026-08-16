@@ -1,5 +1,5 @@
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity, type Db } from './db-helpers.js';
+import { logActivity } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 interface RetailPayload {
@@ -7,7 +7,7 @@ interface RetailPayload {
   skuCount?: number;
 }
 
-export async function runFinalizeRetailSignage(task: Task, db: Db): Promise<void> {
+export async function runFinalizeRetailSignage(task: Task): Promise<void> {
   const payload = task.payload as RetailPayload;
   const vertical = payload.vertical ?? 'dispensary';
 
@@ -28,13 +28,13 @@ Return JSON: { "posScan": "...", "shelfTalker": "...", "counterCard": { "headlin
 
   const signage = parseLLMContent<unknown>(result.choices[0].message.content);
 
-  await logActivity(db, { userId: null, action: 'retail_signage_finalized', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity({ userId: null, action: 'retail_signage_finalized', entityType: 'task', entityId: 0, details: { taskId: task.id,
     vertical,
     missionId: task.missionId,
   }});
 }
 
-export async function runPackageSkuOnboarding(task: Task, db: Db): Promise<void> {
+export async function runPackageSkuOnboarding(task: Task): Promise<void> {
   const payload = task.payload as RetailPayload;
   const skuCount = payload.skuCount ?? 10;
   const vertical = payload.vertical ?? 'dispensary';
@@ -57,7 +57,7 @@ Return JSON: { "sections": [{ "heading": "...", "steps": ["..."] }] }`;
 
   const onboarding = parseLLMContent<unknown>(result.choices[0].message.content);
 
-  await logActivity(db, { userId: null, action: 'sku_onboarding_packaged', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity({ userId: null, action: 'sku_onboarding_packaged', entityType: 'task', entityId: 0, details: { taskId: task.id,
     vertical,
     skuCount,
     missionId: task.missionId,

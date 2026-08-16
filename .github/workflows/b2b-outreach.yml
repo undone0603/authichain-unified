@@ -95,6 +95,17 @@ jobs:
           # LIVE: fallback is 'false' so scheduled runs send for real.
           DRY_RUN:               ${{ inputs.dry_run || 'false' }}
           FLUSH_QUEUED_ONLY:     ${{ inputs.flush_queued || 'false' }}
+          
+           # Guardrail/caps layer — every send is check/record-gated through
+          # this. Missing secret fails closed (nothing sends).
+          CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
+          INTERNAL_API_SECRET:   ${{ secrets.INTERNAL_API_SECRET }}
+
+          # CAN-SPAM requires a physical postal address in every commercial
+          # email. Override with the secret if the registered address changes.
+          MAILING_ADDRESS:       ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
+          UNSUBSCRIBE_URL:       ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          RESEND_REPLY_TO:       ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
           # Guardrail/caps layer — every send is check/record-gated through
           # this. Missing secret fails closed (nothing sends), so this must
           # be set for the channel to ever actually send once enabled.

@@ -31,7 +31,7 @@ def run(ctx: ExecutionContext) -> str:
     # Only load the local model if we explicitly requested it, preventing Errno 111 in the cloud
     if use_local_model:
         try:
-            lm_manager.load_model("google/gemma-4-e4b")
+            lm_manager.load_model("local-model")
         except Exception as e:
             ctx.step(f"Warning: Local model could not be loaded: {e}")
 
@@ -93,6 +93,6 @@ def run(ctx: ExecutionContext) -> str:
         # Only attempt to unload if we tried to load it
         if use_local_model:
             try:
-                lm_manager.unload_model("google/gemma-4-e4b")
+                lm_manager.unload_model("local-model")
             except Exception:
                 pass
