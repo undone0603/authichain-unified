@@ -14,23 +14,16 @@
  */
 
 import Stripe from "stripe";
+import * as db from "../db";
+import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
+import { handleServiceOrderPayment } from "../services/order-payment-handler";
+import { sendEmail } from "../email-service";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
   if (!domain) return '***';
   return `${local?.[0] ?? ''}***@${domain}`;
 }
-import * as db from "../db";
-const logActivity = (db as any).logActivity;
-const logAutomationAudit = (db as any).logAutomationAudit;
-const recordRevenue = (db as any).recordRevenue;
-const upsertStripeSubscription = (db as any).upsertStripeSubscription;
-const setSubscriptionStatusByStripeId = (db as any).setSubscriptionStatusByStripeId;
-const getSubscriptionByStripeSubscriptionId = (db as any).getSubscriptionByStripeSubscriptionId;
-const createSystemNotification = (db as any).createSystemNotification;
-import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
-import { handleServiceOrderPayment } from "../services/order-payment-handler";
-import { sendEmail } from "../email-service";
 
 // ─── Stripe client (lazy, uses env at call time) ─────────────────────────────
 
@@ -40,7 +33,7 @@ function getStripeClient(): Stripe {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error("[stripe-webhook] STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(key, { apiVersion: "2026-06-24.dahlia" as const });
+    _stripe = new Stripe(key, { apiVersion: "2026-05-27.dahlia" as const });
   }
   return _stripe;
 }
@@ -167,7 +160,7 @@ export async function handleStripeWebhook(
   // Idempotency — claim step skipped in test environments where only hasWebhookEventProcessed is mocked.
 
   // Mark in-flight immediately so a concurrent duplicate delivery sees it as processed.
-  await logActivity({
+  await db.logActivity({
     userId: null,
     action: "webhook_received",
     entityType: "webhook",
@@ -191,7 +184,7 @@ export async function handleStripeWebhook(
       const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
       if (userId) {
-        await upsertStripeSubscription({
+        await db.upsertStripeSubscription({
           userId,
           plan,
           status,
@@ -233,7 +226,7 @@ export async function handleStripeWebhook(
         }
       }
 
-      await logAutomationAudit(
+      await db.logAutomationAudit(
         event.type === "customer.subscription.created"
           ? "billing_subscription_created"
           : "billing_subscription_updated",
@@ -259,9 +252,9 @@ export async function handleStripeWebhook(
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
       const userId = await resolveUserId(stripe, customerId, sub.metadata);
 
-      await setSubscriptionStatusByStripeId(sub.id, "cancelled", new Date());
+      await db.setSubscriptionStatusByStripeId(sub.id, "cancelled", new Date());
 
-      await logAutomationAudit(
+      await db.logAutomationAudit(
         "billing_subscription_cancelled",
         {
           eventId: event.id,
@@ -288,7 +281,7 @@ export async function handleStripeWebhook(
       // Resolve userId — try subscription metadata first, then customer
       let userId: number | undefined;
       if (subscriptionId) {
-        const localSub = await getSubscriptionByStripeSubscriptionId(subscriptionId);
+        const localSub = await db.getSubscriptionByStripeSubscriptionId(subscriptionId);
         userId = localSub?.userId ?? undefined;
       }
       if (!userId) {
@@ -306,7 +299,7 @@ export async function handleStripeWebhook(
       const plan = detectPlan(priceId, amountCents, null, invBillingCycle);
 
       await Promise.all([
-        amountUsd > 0 ? recordRevenue({
+        amountUsd > 0 ? db.recordRevenue({
           source: "stripe",
           amount: amountUsd.toFixed(2),
           currency,
@@ -320,8 +313,8 @@ export async function handleStripeWebhook(
             plan,
           },
         }) : Promise.resolve(),
-        subscriptionId ? setSubscriptionStatusByStripeId(subscriptionId, "active") : Promise.resolve(),
-        logAutomationAudit(
+        subscriptionId ? db.setSubscriptionStatusByStripeId(subscriptionId, "active") : Promise.resolve(),
+        db.logAutomationAudit(
           "billing_invoice_paid",
           {
             eventId: event.id,
@@ -351,11 +344,11 @@ export async function handleStripeWebhook(
 
       let userId: number | undefined;
       if (subscriptionId) {
-        const localSub = await getSubscriptionByStripeSubscriptionId(subscriptionId);
+        const localSub = await db.getSubscriptionByStripeSubscriptionId(subscriptionId);
         userId = localSub?.userId ?? undefined;
         await Promise.all([
-          setSubscriptionStatusByStripeId(subscriptionId, "past_due"),
-          userId ? createSystemNotification(
+          db.setSubscriptionStatusByStripeId(subscriptionId, "past_due"),
+          userId ? db.createSystemNotification(
             userId,
             "Payment Failed",
             "A payment for your AuthiChain subscription failed. Please update your billing details to avoid service interruption.",
@@ -365,7 +358,7 @@ export async function handleStripeWebhook(
         ]);
       }
 
-      await logAutomationAudit(
+      await db.logAutomationAudit(
         "billing_dunning_started",
         {
           eventId: event.id,
@@ -396,7 +389,7 @@ export async function handleStripeWebhook(
       const customerId = typeof session.customer === "string" ? session.customer : undefined;
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : undefined;
 
-      await logAutomationAudit(
+      await db.logAutomationAudit(
         "billing_checkout_completed",
         {
           eventId: event.id,
@@ -428,7 +421,7 @@ export async function handleStripeWebhook(
       const email = session.customer_email || session.metadata?.customer_email;
       const name = session.metadata?.customer_name || "there";
 
-      await logAutomationAudit(
+      await db.logAutomationAudit(
         "checkout_abandoned",
         {
           eventId: event.id,

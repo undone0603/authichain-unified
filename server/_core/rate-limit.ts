@@ -42,6 +42,7 @@ const contactLimiter = new RateLimiter();
 const gptLimiter = new RateLimiter();
 const trpcPublicLimiter = new RateLimiter();
 const globalLimiter = new RateLimiter();
+const adminLimiter = new RateLimiter();
 
 /** Express middleware factory */
 function expressLimit(limiter: RateLimiter, max: number, windowMs: number) {
@@ -68,6 +69,9 @@ export const gptRateLimit = expressLimit(gptLimiter, 60, 60_000);
 
 /** Catch-all API guard: 300 requests per minute per IP */
 export const globalApiRateLimit = expressLimit(globalLimiter, 300, 60_000);
+
+/** Admin endpoints: 60 requests per minute per IP */
+export const adminRateLimit = expressLimit(adminLimiter, 60, 60_000);
 
 // ─── tRPC middleware (attach to publicProcedure mutations in trpc.ts) ────────
 

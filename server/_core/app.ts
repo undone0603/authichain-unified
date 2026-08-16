@@ -17,6 +17,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { sdk } from "./sdk";
 import { createInternalRouter } from "../internal-api";
 import { brandMiddleware } from "./brand-middleware";
 import contactRouter from "../contact";
@@ -26,7 +27,10 @@ import {
   contactRateLimit,
   gptRateLimit,
   globalApiRateLimit,
+  adminRateLimit,
 } from "./rate-limit";
+import { getDb } from "../db";
+import { getOpsSummary } from "./db-helpers";
 
 /**
  * Creates and configures the Express app without binding to a port.
@@ -161,6 +165,24 @@ export function createApp() {
 
   app.use(express.json({ limit: "5mb" }));
   app.use(express.urlencoded({ limit: "5mb", extended: true }));
+
+  // ─── Admin ops console (client/src/pages/OpsDashboard.tsx) ───────────────
+  app.get("/api/admin/ops", adminRateLimit, async (req, res) => {
+    const user = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user || user.role !== "admin") {
+      return res.status(user ? 403 : 401).json({ error: user ? "Admin only" : "Not signed in" });
+    }
+    try {
+      // Express ops-console route (Node-only deployment path, not the
+      // Workers/tRPC path — no ctx.db reachable here). Calling getDb() is a
+      // documented bridge to the legacy server/db.ts singleton.
+      const db = await getDb();
+      const summary = await getOpsSummary(db);
+      res.json(summary);
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "ops query failed" });
+    }
+  });
 
   // ─── OAuth callback: stricter rate limit ─────────────────────────────────
   app.use("/api/oauth", oauthRateLimit);
