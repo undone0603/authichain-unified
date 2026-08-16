@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:client": "vitest -c client/vitest.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -146,6 +147,7 @@
     "vite": "^6.4.3",
     "vitest": "^3.2.6",
     "wrangler": "^4.107.0",
+    "@testing-library/react": "^14.0.0",
     "ioredis": "file:./stubs/empty-redis",
     "redis": "file:./stubs/empty-redis"
   },
