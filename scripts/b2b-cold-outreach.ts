@@ -403,7 +403,18 @@ function qronEmail(t: typeof QRON_TARGETS[0]): { subject: string; html: string }
     <li>5 visual modes: Static, Stereographic, Holographic, Memory, Custom Prompt</li>
     <li>Ed25519-signed on Polygon — tamper-proof authenticity certificate on every scan</li>
     <li>White-label API: your brand, your dashboard, fractions of a cent per generation</li>
-    <li>FTC EO 14392 compliant origin verification (MADE IN USA shield support)</li>
+    <!--
+      Was "FTC EO 14392 compliant origin verification". Both halves were off.
+      An Executive Order is issued by the President and directs agencies — the
+      FTC does not issue EOs, and a company does not "comply with" one. What
+      binds a seller is the FTC's Made in USA Labeling Rule (16 CFR Part 323),
+      which is what the April 2026 sweep was brought under. EO 14392 is real
+      ("Ensuring Truthful Advertising of Products Claiming To Be Made in
+      America") and prompted that sweep, so it belongs as context, not as the
+      obligation. A QR code also cannot confer compliance — it carries the
+      evidence a claim is substantiated with.
+    -->
+    <li>Origin evidence for "Made in USA" claims under the FTC's Made in USA Labeling Rule (16 CFR Part 323) — the rule behind the April 2026 enforcement sweep</li>
   </ul>
 
   <p>Creator Pack is <strong>$99 for 500 generations</strong> if you just want to
