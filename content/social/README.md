@@ -42,7 +42,11 @@ publisher posts the oldest filename first, so the date prefix orders the queue):
 
 No percentages, currency figures, large-number or customer-count claims, latency
 claims, or absolutes ("100% scannable", "guaranteed"). No SOC 2 / ISO 27001 /
-FIPS / HIPAA / PCI claims. No "quantum-resistant" (Ed25519 is not) or QR "L4"
+FIPS / HIPAA / PCI claims, no FedRAMP-authorization claims ("FedRAMP compliant /
+ready / certified"), and no "government-grade / government compliant" claims —
+the claim forms are banned, but a factual sentence that merely names FedRAMP or
+NIST as requirements to evaluate with the customer still passes. No
+"quantum-resistant" (Ed25519 is not) or QR "L4"
 (levels are L/M/Q/H). Links may only point at `authichain.com`, `qron.space`,
 `govchain.us`, `strainchain.io`, and only at routes that actually resolve —
 `authichain.com` has real deep links (`/verify`, `/dpp`, `/pricing`, `/book`,
