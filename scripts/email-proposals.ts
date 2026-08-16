@@ -5,24 +5,26 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import { checkSender, reportSenderFailure } from './lib/resend-preflight';
+import { checkSender, reportSenderFailure, CREDENTIAL_ENV_VARS } from './lib/resend-preflight';
 
 const isDryRun = process.env.DRY_RUN === 'true';
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const GOVCHAIN = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
-// Defaults to the one domain currently verified on the Resend account.
-// proposals@authichain.com cannot send until authichain.com is verified there.
-const FROM_EMAIL = process.env.EMAIL_FROM ?? 'hello@strainchain.io';
+// authichain.com is verified on the second Resend account (RESEND_API_KEY2);
+// the preflight resolves which credential owns this sender at run time.
+const FROM_EMAIL = process.env.EMAIL_FROM ?? 'proposals@authichain.com';
 const CALENDAR_LINK = process.env.CALENDLY_LINK ?? 'https://calendly.com/authichain/discovery';
 const SALES_EMAIL = process.env.SALES_EMAIL ?? 'sales@authichain.com';
 
-// Gracefully skip if Resend isn't configured.
-if (!process.env.RESEND_API_KEY) {
-  console.warn('⚠️  RESEND_API_KEY not configured — skipping email delivery.');
+// Gracefully skip if no Resend credential is configured. The two accounts hold
+// different verified domains, so either may be the one that owns FROM_EMAIL.
+if (!CREDENTIAL_ENV_VARS.some(name => process.env[name])) {
+  console.warn(`⚠️  No Resend credential configured (${CREDENTIAL_ENV_VARS.join(' / ')}) — skipping email delivery.`);
   process.exit(0);
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Bound to the credential the preflight resolves for FROM_EMAIL.
+let resend: Resend;
 
 interface Proposal {
   notice_id: string;
@@ -290,7 +292,8 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
       reportSenderFailure(check, 'gov-proposals');
       throw new Error(`Sender preflight failed for ${FROM_EMAIL}: ${check.reason}`);
     }
-    console.log(`✅ Sender verified: ${FROM_EMAIL}`);
+    resend = new Resend(process.env[check.credential!]!);
+    console.log(`✅ Sender verified: ${FROM_EMAIL} (via ${check.credential})`);
   }
 
   let sent = 0;

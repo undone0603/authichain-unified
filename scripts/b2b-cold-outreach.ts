@@ -13,7 +13,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { guardrailCheck, guardrailRecord } from './lib/guardrail-client';
-import { checkSender, reportSenderFailure } from './lib/resend-preflight';
+import { checkSender, reportSenderFailure, CREDENTIAL_ENV_VARS, type CredentialName } from './lib/resend-preflight';
 
 const GUARDRAIL_CHANNEL = 'email.b2b-cold';
 
@@ -32,18 +32,30 @@ const supabase = createClient(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
-const resend   = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Any configured Resend credential is enough to attempt sending; which one is
+// used for a given sender is resolved per-address by the preflight.
+const hasResendKey = CREDENTIAL_ENV_VARS.some(name => !!process.env[name]);
+
+/** Resend clients, one per credential, built lazily and reused. */
+const resendClients = new Map<CredentialName, Resend>();
+function resendFor(credential: CredentialName): Resend {
+  let client = resendClients.get(credential);
+  if (!client) {
+    client = new Resend(process.env[credential]!);
+    resendClients.set(credential, client);
+  }
+  return client;
+}
 
 // Sender addresses are per-segment because the three segments are separately
 // branded products — a GovChain pitch arriving from a cannabis-compliance
-// domain reads as spam to the recipient and to their filters. Each falls back
-// to OUTREACH_FROM_EMAIL, then to the one domain currently verified on the
-// Resend account. Once authichain.com is verified, set OUTREACH_FROM_EMAIL (or
-// the per-segment overrides) and every segment sends under its own brand.
-const FALLBACK_FROM = process.env.OUTREACH_FROM_EMAIL ?? 'hello@strainchain.io';
+// domain reads as spam to the recipient and to their filters. Defaults use the
+// parent brand, with StrainChain on its own verified domain. Both domains are
+// verified, just on different Resend accounts, which the preflight resolves.
+const FALLBACK_FROM = process.env.OUTREACH_FROM_EMAIL ?? 'hello@authichain.com';
 const SEGMENT_FROM: Record<string, string> = {
   govchain:    process.env.OUTREACH_FROM_GOVCHAIN    ?? FALLBACK_FROM,
-  strainchain: process.env.OUTREACH_FROM_STRAINCHAIN ?? FALLBACK_FROM,
+  strainchain: process.env.OUTREACH_FROM_STRAINCHAIN ?? 'hello@strainchain.io',
   qron:        process.env.OUTREACH_FROM_QRON        ?? FALLBACK_FROM,
 };
 // Falls back to the built-in /book page — Calendly is optional, not required
@@ -370,8 +382,8 @@ async function processTargets<T extends { company: string; email: string; name?:
 
   const from = SEGMENT_FROM[segmentName] ?? FALLBACK_FROM;
 
-  if (!resend && !isDryRun) {
-    console.warn(`  ⚠️  RESEND_API_KEY not set — emails will be queued in Supabase (status=queued) and sent on next run when key is present`);
+  if (!hasResendKey && !isDryRun) {
+    console.warn(`  ⚠️  No Resend credential set (${CREDENTIAL_ENV_VARS.join(' / ')}) — emails will be queued in Supabase (status=queued) and sent on next run when a key is present`);
   }
 
   // Preflight before touching the prospect list. A dead key or an unverified
@@ -379,7 +391,8 @@ async function processTargets<T extends { company: string; email: string; name?:
   // means the whole segment is burned for nothing. Drafts still get written —
   // they queue and drain via flushQueuedLeads() once the sender is fixed.
   let senderOk = true;
-  if (resend && !isDryRun) {
+  let resend: Resend | null = null;
+  if (hasResendKey && !isDryRun) {
     const check = await checkSender(from);
     senderOk = check.ok;
     if (!check.ok) {
@@ -387,7 +400,8 @@ async function processTargets<T extends { company: string; email: string; name?:
       console.warn(`  ⚠️  Skipping sends for [${segmentName}] — drafts will be queued instead`);
       sendFailures.push(`${segmentName} sender ${from}: ${check.reason}`);
     } else {
-      console.log(`  ✅ Sender verified: ${from}`);
+      resend = resendFor(check.credential!);
+      console.log(`  ✅ Sender verified: ${from} (via ${check.credential})`);
     }
   }
 
@@ -404,8 +418,7 @@ async function processTargets<T extends { company: string; email: string; name?:
     // Determine initial status
     const dbStatus = isDryRun ? 'draft'
       : !email              ? 'pending_email'   // Apollo found nothing; manual lookup needed
-      : !resend             ? 'queued'           // Has email but no Resend key yet
-      : !senderOk           ? 'queued'           // Sender preflight failed; drain later
+      : !senderOk           ? 'queued'           // No usable credential for this sender; drain later
       :                       'draft';           // Ready to send
 
     const { error: dbErr } = await supabase.from('leads').upsert({
@@ -492,10 +505,13 @@ async function processTargets<T extends { company: string; email: string; name?:
 }
 
 // ── Flush queued leads: send emails that were saved with status=queued ─────────
-// Run this after setting RESEND_API_KEY to drain the queue without re-running
-// the full outreach script and risking duplicate outreach.
+// Run this after fixing the sender to drain the queue without re-running the
+// full outreach script and risking duplicate outreach.
 export async function flushQueuedLeads(): Promise<void> {
-  if (!resend) { console.warn('RESEND_API_KEY still not set — nothing to flush'); return; }
+  if (!hasResendKey) {
+    console.warn(`No Resend credential set (${CREDENTIAL_ENV_VARS.join(' / ')}) — nothing to flush`);
+    return;
+  }
 
   const { data: leads } = await supabase
     .from('leads')
@@ -534,7 +550,7 @@ export async function flushQueuedLeads(): Promise<void> {
     }
 
     try {
-      const res = await resend.emails.send({ from, to: lead.email, subject: meta.subject, html: meta.html_preview });
+      const res = await resendFor(senderCheck.credential!).emails.send({ from, to: lead.email, subject: meta.subject, html: meta.html_preview });
       if (res.data?.id) {
         await supabase.from('leads').update({ status: 'contacted', updatedAt: new Date().toISOString() }).eq('email', lead.email);
         console.log(`  ✉️  Flushed: ${lead.email}`);
@@ -572,8 +588,8 @@ if (segment === 'all' || segment === 'qron') {
 console.log('\n✅ OUTREACH COMPLETE');
 console.log(`Totals — attempted: ${totalAttempted} | sent: ${totalSent} | send failures: ${sendFailures.length}`);
 console.log('Next steps:');
-if (!resend) {
-  console.log('  ⚡ Set RESEND_API_KEY then flush queued leads:');
+if (!hasResendKey) {
+  console.log(`  ⚡ Set ${CREDENTIAL_ENV_VARS[0]} (and ${CREDENTIAL_ENV_VARS[1]} for its domains) then flush queued leads:`);
   console.log('     pnpm exec tsx -e "import { flushQueuedLeads } from \'./scripts/b2b-cold-outreach.ts\'; await flushQueuedLeads()"');
 }
 if (!process.env.APOLLO_API_KEY) {

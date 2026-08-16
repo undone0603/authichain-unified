@@ -114,14 +114,34 @@ Totals — attempted: 12 | sent: 0 | send failures: 7
 The Resend account holds exactly one API key, created 2026-07-20. The value stored in Actions
 predates it, so every automated send has been rejected since.
 
-### Finding 2 — the From domain was never verified
+### Finding 2 — the sender was right, the credential was wrong
 
-The account has **one** verified sending domain: `strainchain.io`. Both outreach scripts
-defaulted their sender to `@authichain.com`, which Resend rejects outright. So even after the
-key is rotated, every send from those defaults would still fail. The DNS work prescribed in
-§1 above was never completed for `authichain.com` — that section remains the fix.
+Both outreach scripts defaulted their sender to `@authichain.com`, and every probe with the
+configured key came back 403 "domain is not verified". The obvious reading — that §1's DNS
+work was never done — was wrong.
 
-The only mail that has actually left the account came from `hello@strainchain.io`
+**There are two Resend accounts.** The estate stores a second credential,
+`RESEND_API_KEY2`, and the domains are split across them. Measured 2026-08-16 by
+`verify-outreach-secrets.yml` with `probe_matrix`:
+
+| Key | Sender | Result |
+|---|---|---|
+| `RESEND_API_KEY` | `hello@strainchain.io` | ✅ CAN SEND |
+| `RESEND_API_KEY` | `*@authichain.com` | ❌ domain not on this account |
+| `RESEND_API_KEY2` | `hello@authichain.com` | ✅ CAN SEND |
+| `RESEND_API_KEY2` | `proposals@authichain.com` | ✅ CAN SEND |
+| `RESEND_API_KEY2` | `hello@strainchain.io` | ❌ domain not on this account |
+| either | `hello@mail.authichain.com` | ❌ subdomain not registered |
+
+So `authichain.com` **was already fully authenticated** — §1's SPF/DKIM/DMARC work is done,
+on the second account. The code simply never knew that credential existed, and a single-key
+client cannot express "these two domains live in different accounts."
+
+Note this also means the apex cannot be added to the first account: Resend returns
+`The authichain.com domain is registered to another team`. Claiming it would reissue the DKIM
+keys and break the account that legitimately holds it. Nothing needed claiming.
+
+The only mail that has actually left came from `hello@strainchain.io`
 (12 messages, 2026-07-31 and 2026-08-05; 3 bounced, 0 replies).
 
 ### What changed in the repo
@@ -130,17 +150,22 @@ The only mail that has actually left the account came from `hello@strainchain.io
 |---|---|---|
 | Sender preflight before any send loop | `scripts/lib/resend-preflight.ts` | Probes `delivered@resend.dev` once per sender. A dead key or unverified domain now fails in the first second with a named cause, instead of after the prospect list is burned |
 | Per-segment sender addresses | `scripts/b2b-cold-outreach.ts` | A GovChain pitch sent from a cannabis-compliance domain reads as spam. Each segment can send under its own brand via `OUTREACH_FROM_GOVCHAIN` / `_STRAINCHAIN` / `_QRON` |
-| Defaults moved to the verified domain | both outreach scripts, `src/app/api/book/route.ts`, both workflows | Ships in a state that can actually send. Override once `authichain.com` is verified |
+| Credential resolved per sender | `scripts/lib/resend-preflight.ts` | The preflight probes each configured credential and reports which one Resend accepted, so the send path binds to the account that owns that domain. Chosen over a hand-maintained domain→key table, which would silently drift the moment a domain moved between accounts |
+| Defaults restored to real brands | both outreach scripts, both workflows | GovChain/QRON send from `authichain.com`, StrainChain from `strainchain.io`, proposals from `proposals@authichain.com` — all verified, just on different accounts |
 | Failed preflight queues instead of dropping | `scripts/b2b-cold-outreach.ts` | Drafts are still written with `status=queued`; `flushQueuedLeads()` drains them once the sender works, with no duplicate outreach |
 
-### The one manual step this cannot do for itself
+### Status: resolved 2026-08-16
 
-Generate a key at <https://resend.com/api-keys> and store it as the `RESEND_API_KEY` Actions
-secret (the **Set Outreach Secret** workflow does this). Then run **Verify Outreach Secrets**
-to confirm, and dispatch **B2B Cold Outreach** with `flush_queued=true` to drain the backlog.
+`RESEND_API_KEY` was rotated and verified (HTTP 200 from `hello@strainchain.io`), and
+`RESEND_API_KEY2` covers `authichain.com`. Apollo and HubSpot tokens also return 200. Both
+credentials are now passed to every outreach workflow.
 
-Until that key is rotated, the preflight will keep the pipeline red and honest rather than
-green and empty — which is the state it was in for the previous three months.
+To re-check at any time, dispatch **Verify Outreach Secrets** — it probes every configured
+sender and fails the run on any rejection. Add the `probe_matrix` input to print the full
+key × sender grid when a domain appears to have moved between accounts.
+
+There was no backlog to drain: `flushQueuedLeads()` consumes `status='queued'` and there are
+none. The 12 rows from 2026-07-01 are `status='draft'` and predate the queueing behaviour.
 
 ## Related: the lead table was measuring fabricated demand
 

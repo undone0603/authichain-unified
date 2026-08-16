@@ -21,16 +21,37 @@
 const PROBE_RECIPIENT = 'delivered@resend.dev';
 const TIMEOUT_MS = 10_000;
 
+/**
+ * Credentials to try, in order. The estate has two Resend accounts holding
+ * different verified domains — measured 2026-08-16:
+ *
+ *   RESEND_API_KEY   → strainchain.io
+ *   RESEND_API_KEY2  → authichain.com
+ *
+ * Which key can send from a given address is therefore not knowable from the
+ * address alone. Rather than hand-maintaining a domain→key table that silently
+ * drifts whenever a domain moves between accounts, the sender check probes the
+ * candidates and reports which one Resend actually accepted.
+ */
+export const CREDENTIAL_ENV_VARS = ['RESEND_API_KEY', 'RESEND_API_KEY2'] as const;
+export type CredentialName = (typeof CREDENTIAL_ENV_VARS)[number];
+
 export interface SenderCheck {
   ok: boolean;
   from: string;
+  /**
+   * Env var holding the credential that can send from `from`. The name, not
+   * the value — callers read the secret themselves so it is never carried
+   * around in a return value or logged by accident.
+   */
+  credential?: CredentialName;
   /** Human-readable failure cause, absent when ok. */
   reason?: string;
   /**
-   * Distinguishes the two failure modes so callers can report them
-   * differently: a bad key breaks every channel at once and needs a secret
-   * rotation, while an unverified domain breaks only the channels using that
-   * From address and needs a DNS change.
+   * Distinguishes the failure modes so callers can report them differently: a
+   * bad key breaks every channel at once and needs a secret rotation, while an
+   * unverified sender breaks only the channels using that From address and
+   * needs the domain added to one of the accounts.
    */
   kind?: 'invalid_key' | 'unverified_sender' | 'unreachable' | 'rejected';
 }
@@ -48,28 +69,13 @@ function classify(status: number, message: string): SenderCheck['kind'] {
   return 'rejected';
 }
 
-/**
- * Attempts one throwaway send from `from`. Returns ok:true only when Resend
- * accepts it, which proves the key authenticates *and* the sending domain is
- * verified — the two conditions every real send depends on.
- */
-export async function checkSender(from: string): Promise<SenderCheck> {
-  const cached = cache.get(from);
-  if (cached) return cached;
-
-  const key = process.env.RESEND_API_KEY;
+/** One probe send with one credential. */
+async function probe(from: string, credential: CredentialName): Promise<SenderCheck> {
+  const key = process.env[credential];
   if (!key) {
-    const result: SenderCheck = {
-      ok: false,
-      from,
-      reason: 'RESEND_API_KEY is not set',
-      kind: 'invalid_key',
-    };
-    cache.set(from, result);
-    return result;
+    return { ok: false, from, reason: `${credential} is not set`, kind: 'invalid_key' };
   }
 
-  let result: SenderCheck;
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -86,23 +92,51 @@ export async function checkSender(from: string): Promise<SenderCheck> {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
 
-    if (res.ok) {
-      result = { ok: true, from };
-    } else {
-      // Resend error bodies carry no secret material, so the message is safe
-      // to surface verbatim into CI logs.
-      const body = (await res.json().catch(() => ({}))) as { message?: string };
-      const message = body.message ?? `HTTP ${res.status}`;
-      result = { ok: false, from, reason: message, kind: classify(res.status, message) };
-    }
+    if (res.ok) return { ok: true, from, credential };
+
+    // Resend error bodies carry no secret material, so the message is safe
+    // to surface verbatim into CI logs.
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    const message = body.message ?? `HTTP ${res.status}`;
+    return { ok: false, from, reason: message, kind: classify(res.status, message) };
   } catch (err: any) {
-    result = {
-      ok: false,
-      from,
-      reason: err?.message ?? 'network error',
-      kind: 'unreachable',
-    };
+    return { ok: false, from, reason: err?.message ?? 'network error', kind: 'unreachable' };
   }
+}
+
+/**
+ * Finds a credential that can send from `from`, by attempting one throwaway
+ * send per candidate. A success proves the key authenticates *and* owns the
+ * sending domain — the two conditions every real send depends on.
+ *
+ * On total failure the most actionable diagnosis wins: if some account
+ * recognised the key but rejected the domain, that is an
+ * `unverified_sender` problem (add the domain), which is more specific than
+ * the `invalid_key` a missing second secret would otherwise report.
+ */
+export async function checkSender(from: string): Promise<SenderCheck> {
+  const cached = cache.get(from);
+  if (cached) return cached;
+
+  const failures: SenderCheck[] = [];
+  let result: SenderCheck | undefined;
+
+  for (const credential of CREDENTIAL_ENV_VARS) {
+    const attempt = await probe(from, credential);
+    if (attempt.ok) {
+      result = attempt;
+      break;
+    }
+    failures.push(attempt);
+    // A network problem is not evidence about the other credential, and
+    // retrying through a broken path just doubles the wait.
+    if (attempt.kind === 'unreachable') break;
+  }
+
+  result ??=
+    failures.find(f => f.kind === 'unverified_sender') ??
+    failures.find(f => f.kind === 'unreachable') ??
+    failures[0] ?? { ok: false, from, reason: 'no credentials configured', kind: 'invalid_key' };
 
   cache.set(from, result);
   return result;
@@ -115,15 +149,16 @@ export function reportSenderFailure(check: SenderCheck, channel: string): void {
   switch (check.kind) {
     case 'invalid_key':
       console.error(
-        '::error::RESEND_API_KEY is missing or no longer valid. Generate a key at ' +
-          'https://resend.com/api-keys and store it with the "Set Outreach Secret" workflow.',
+        `::error::No usable Resend credential (${CREDENTIAL_ENV_VARS.join(', ')}). Generate a key ` +
+          'at https://resend.com/api-keys and store it with the "Set Outreach Secret" workflow.',
       );
       break;
     case 'unverified_sender':
       console.error(
-        `::error::The domain of ${check.from} is not a verified sending domain on this Resend ` +
-          'account. Verify it at https://resend.com/domains, or point OUTREACH_FROM_EMAIL / ' +
-          'EMAIL_FROM at a domain that already is.',
+        `::error::The domain of ${check.from} is not verified on any configured Resend account. ` +
+          'Verify it at https://resend.com/domains, or point OUTREACH_FROM_EMAIL / EMAIL_FROM at ' +
+          'a domain that already is. Run "Verify Outreach Secrets" with probe_matrix to see which ' +
+          'key owns which domain.',
       );
       break;
     default:

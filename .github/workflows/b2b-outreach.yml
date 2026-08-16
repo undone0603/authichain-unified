@@ -72,14 +72,20 @@ jobs:
         env:
           SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Two Resend accounts hold different verified domains
+          # (strainchain.io on the first, authichain.com on the second). The
+          # preflight resolves which one owns each sender at run time, so both
+          # must be present for all segments to send.
           RESEND_API_KEY:        ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2:       ${{ secrets.RESEND_API_KEY2 }}
           APOLLO_API_KEY:        ${{ secrets.APOLLO_API_KEY }}
           HUBSPOT_TOKEN:         ${{ secrets.HUBSPOT_TOKEN }}
-          # Fallback sender must be a domain verified on the Resend account —
-          # an unverified From is rejected for every recipient. Per-segment
-          # overrides let each product send under its own brand once its domain
-          # is verified; unset segments fall back to OUTREACH_FROM_EMAIL.
-          OUTREACH_FROM_EMAIL:   ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@strainchain.io' }}
+          # Fallback sender must be verified on one of the accounts above — an
+          # unverified From is rejected for every recipient. Per-segment
+          # overrides let each product send under its own brand; unset segments
+          # fall back to OUTREACH_FROM_EMAIL, except strainchain which defaults
+          # to its own domain in the script.
+          OUTREACH_FROM_EMAIL:   ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
           OUTREACH_FROM_GOVCHAIN:    ${{ secrets.OUTREACH_FROM_GOVCHAIN }}
           OUTREACH_FROM_STRAINCHAIN: ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
           OUTREACH_FROM_QRON:        ${{ secrets.OUTREACH_FROM_QRON }}
@@ -101,7 +107,8 @@ jobs:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
-          OUTREACH_FROM_EMAIL:  ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@strainchain.io' }}
+          RESEND_API_KEY2:      ${{ secrets.RESEND_API_KEY2 }}
+          OUTREACH_FROM_EMAIL:  ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
           OUTREACH_FROM_GOVCHAIN:    ${{ secrets.OUTREACH_FROM_GOVCHAIN }}
           OUTREACH_FROM_STRAINCHAIN: ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
           OUTREACH_FROM_QRON:        ${{ secrets.OUTREACH_FROM_QRON }}

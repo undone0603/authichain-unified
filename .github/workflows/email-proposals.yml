@@ -58,11 +58,12 @@ jobs:
         env:
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # authichain.com is verified on the second account; the preflight
+          # picks whichever credential owns EMAIL_FROM.
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2:      ${{ secrets.RESEND_API_KEY2 }}
           GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          # Must be a domain verified on the Resend account. proposals@authichain.com
-          # is rejected until authichain.com is verified there.
-          EMAIL_FROM:           ${{ secrets.EMAIL_FROM || 'hello@strainchain.io' }}
+          EMAIL_FROM:           ${{ secrets.EMAIL_FROM || 'proposals@authichain.com' }}
           CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://calendly.com/authichain/discovery' }}
           SALES_EMAIL:          ${{ secrets.SALES_EMAIL || 'sales@authichain.com' }}
           # STAGED: fallback is 'true' so scheduled runs never send live.
