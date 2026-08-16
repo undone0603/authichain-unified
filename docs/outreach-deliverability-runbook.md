@@ -92,3 +92,95 @@ and the machinery to do so is already built and waiting.
 4. A message that has produced at least one real reply when sent by hand
 
 Until all four hold, the schedules stay off.
+
+---
+
+## Update 2026-08-16: two more failures found underneath the first
+
+The 2026-08-07 diagnosis above ("the messages are not reaching inboxes") was right about the
+symptom and incomplete about the cause. Re-checking the live systems found that for most of
+this period **nothing was being sent at all**, for two stacked reasons that both fail before
+DNS or copy can matter.
+
+### Finding 1 — the stored Resend key is dead
+
+The scheduled B2B outreach runs on 2026-08-03 and 2026-08-10 both failed, every send:
+
+```
+⚠️  Resend error for FASTSIGNS: { statusCode: 401, name: 'validation_error', message: 'API key is invalid' }
+Totals — attempted: 12 | sent: 0 | send failures: 7
+```
+
+The Resend account holds exactly one API key, created 2026-07-20. The value stored in Actions
+predates it, so every automated send has been rejected since.
+
+### Finding 2 — the sender was right, the credential was wrong
+
+Both outreach scripts defaulted their sender to `@authichain.com`, and every probe with the
+configured key came back 403 "domain is not verified". The obvious reading — that §1's DNS
+work was never done — was wrong.
+
+**There are two Resend accounts.** The estate stores a second credential,
+`RESEND_API_KEY2`, and the domains are split across them. Measured 2026-08-16 by
+`verify-outreach-secrets.yml` with `probe_matrix`:
+
+| Key | Sender | Result |
+|---|---|---|
+| `RESEND_API_KEY` | `hello@strainchain.io` | ✅ CAN SEND |
+| `RESEND_API_KEY` | `*@authichain.com` | ❌ domain not on this account |
+| `RESEND_API_KEY2` | `hello@authichain.com` | ✅ CAN SEND |
+| `RESEND_API_KEY2` | `proposals@authichain.com` | ✅ CAN SEND |
+| `RESEND_API_KEY2` | `hello@strainchain.io` | ❌ domain not on this account |
+| either | `hello@mail.authichain.com` | ❌ subdomain not registered |
+
+So `authichain.com` **was already fully authenticated** — §1's SPF/DKIM/DMARC work is done,
+on the second account. The code simply never knew that credential existed, and a single-key
+client cannot express "these two domains live in different accounts."
+
+Note this also means the apex cannot be added to the first account: Resend returns
+`The authichain.com domain is registered to another team`. Claiming it would reissue the DKIM
+keys and break the account that legitimately holds it. Nothing needed claiming.
+
+The only mail that has actually left came from `hello@strainchain.io`
+(12 messages, 2026-07-31 and 2026-08-05; 3 bounced, 0 replies).
+
+### What changed in the repo
+
+| Change | File | Why |
+|---|---|---|
+| Sender preflight before any send loop | `scripts/lib/resend-preflight.ts` | Probes `delivered@resend.dev` once per sender. A dead key or unverified domain now fails in the first second with a named cause, instead of after the prospect list is burned |
+| Per-segment sender addresses | `scripts/b2b-cold-outreach.ts` | A GovChain pitch sent from a cannabis-compliance domain reads as spam. Each segment can send under its own brand via `OUTREACH_FROM_GOVCHAIN` / `_STRAINCHAIN` / `_QRON` |
+| Credential resolved per sender | `scripts/lib/resend-preflight.ts` | The preflight probes each configured credential and reports which one Resend accepted, so the send path binds to the account that owns that domain. Chosen over a hand-maintained domain→key table, which would silently drift the moment a domain moved between accounts |
+| Defaults restored to real brands | both outreach scripts, both workflows | GovChain/QRON send from `authichain.com`, StrainChain from `strainchain.io`, proposals from `proposals@authichain.com` — all verified, just on different accounts |
+| Failed preflight queues instead of dropping | `scripts/b2b-cold-outreach.ts` | Drafts are still written with `status=queued`; `flushQueuedLeads()` drains them once the sender works, with no duplicate outreach |
+
+### Status: resolved 2026-08-16
+
+`RESEND_API_KEY` was rotated and verified (HTTP 200 from `hello@strainchain.io`), and
+`RESEND_API_KEY2` covers `authichain.com`. Apollo and HubSpot tokens also return 200. Both
+credentials are now passed to every outreach workflow.
+
+To re-check at any time, dispatch **Verify Outreach Secrets** — it probes every configured
+sender and fails the run on any rejection. Add the `probe_matrix` input to print the full
+key × sender grid when a domain appears to have moved between accounts.
+
+There was no backlog to drain: `flushQueuedLeads()` consumes `status='queued'` and there are
+none. The 12 rows from 2026-07-01 are `status='draft'` and predate the queueing behaviour.
+
+## Related: the lead table was measuring fabricated demand
+
+Two separate sources were writing undeliverable addresses into `leads`, so funnel metrics
+counted rows that could never convert:
+
+- **The gov engine synthesised contacts** by slugifying the SAM.gov office hierarchy —
+  `procurement@homeland-security,-department-of.us-coast-guard.hq-contract-operations-(cg-912)(000.gov`.
+  `scripts/qualify-leads.ts` now requires a real `contact_email` on the opportunity and skips
+  the rest (`scripts/lib/contact-email.ts`, calibrated against the 1,739 genuine agency
+  addresses already in `gov_opportunities`).
+- **The `/book` form had no bot defence.** Every `book_page` lead on record was automated —
+  gmail dot-trick addresses with random company names — all landing as `demo_requested`,
+  indistinguishable from real interest. A honeypot field plus a minimum fill time now drop
+  those silently (`src/app/api/book/bot-detection.ts`).
+
+Neither change adds a customer. Both stop the pipeline from reporting demand that does not
+exist, which is a precondition for the manual-outreach phase above being measurable.
