@@ -14,7 +14,8 @@ jobs:
       checks: read
       pull-requests: write
     steps:
-      - name: Auto-merge Dependabot PRs
+      - name: Resolve dependabot PR eligibility
+        id: resolve
         uses: actions/github-script@v6
         with:
           script: |
@@ -32,6 +33,7 @@ jobs:
 
             if (!pr_number) {
               core.info('No associated PR found for event, exiting.');
+              core.setOutput('eligible', 'false');
               return;
             }
 
@@ -39,6 +41,7 @@ jobs:
             const author = pr.user && pr.user.login;
             if (!author || !author.startsWith('dependabot')) {
               core.info(`PR #${pr_number} author is ${author}; not a dependabot PR.`);
+              core.setOutput('eligible', 'false');
               return;
             }
 
@@ -46,6 +49,7 @@ jobs:
             const refreshed = await github.rest.pulls.get({owner, repo, pull_number: pr_number});
             if (refreshed.data.mergeable_state !== 'clean') {
               core.info(`PR #${pr_number} mergeable_state=${refreshed.data.mergeable_state}; skipping.`);
+              core.setOutput('eligible', 'false');
               return;
             }
 
@@ -54,6 +58,7 @@ jobs:
             const status = await github.rest.repos.getCombinedStatusForRef({owner, repo, ref});
             if (status.data.state !== 'success') {
               core.info(`Combined status for ${ref} is ${status.data.state}; skipping.`);
+              core.setOutput('eligible', 'false');
               return;
             }
 
@@ -62,10 +67,49 @@ jobs:
             const failing = checks.data.check_runs.find(c => c.conclusion !== 'success' && c.conclusion !== 'neutral' && c.conclusion !== null);
             if (failing) {
               core.info(`Found failing check run: ${failing.name} (${failing.conclusion}); skipping.`);
+              core.setOutput('eligible', 'false');
               return;
             }
 
-            // Merge the PR (squash to keep history tidy)
-            await github.rest.pulls.merge({owner, repo, pull_number: pr_number, merge_method: 'squash'});
-            core.info(`Merged PR #${pr_number} (Dependabot).`);
+            core.setOutput('eligible', 'true');
+            core.setOutput('pr_number', String(pr_number));
 
+      # Textual 3-way merges of pnpm-lock.yaml (a large generated file) can
+      # silently produce duplicated mapping keys without registering as a git
+      # conflict — this happened repeatedly on this repo. Every prior check
+      # above validates the PR branch in isolation; none of them prove the
+      # *merged* tree still has a working lockfile. So build the actual merge
+      # preview and run a real frozen install against it before merging.
+      - name: Checkout merge preview
+        if: steps.resolve.outputs.eligible == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ steps.resolve.outputs.pr_number }}/merge
+
+      - name: Install pnpm
+        if: steps.resolve.outputs.eligible == 'true'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: '10.28.2'
+
+      - name: Setup Node.js
+        if: steps.resolve.outputs.eligible == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Verify lockfile integrity on the merged tree
+        if: steps.resolve.outputs.eligible == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Merge PR
+        if: steps.resolve.outputs.eligible == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr_number = Number('${{ steps.resolve.outputs.pr_number }}');
+            await github.rest.pulls.merge({ owner, repo, pull_number: pr_number, merge_method: 'squash' });
+            core.info(`Merged PR #${pr_number} (Dependabot).`);
