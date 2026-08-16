@@ -80,11 +80,23 @@ jobs:
       # above validates the PR branch in isolation; none of them prove the
       # *merged* tree still has a working lockfile. So build the actual merge
       # preview and run a real frozen install against it before merging.
+      # This checks out PR-controlled content inside a privileged
+      # pull_request_target trigger — a "pwn request" shape CodeQL flags on
+      # sight. The concrete risk is lifecycle-script code execution with
+      # access to the job's GITHUB_TOKEN, so it's closed at the source:
+      # persist-credentials is off (the token is never written to disk for
+      # checked-out code to find) and every install below runs
+      # --ignore-scripts (no postinstall/prepare script from the PR, or from
+      # any dependency it bumped, ever executes). The job only reads pnpm's
+      # own resolution-graph validation output; nothing else touches the
+      # checkout. Scope stays narrow: eligibility (including author ==
+      # dependabot[bot]) is already resolved before this step runs.
       - name: Checkout merge preview
         if: steps.resolve.outputs.eligible == 'true'
         uses: actions/checkout@v4
         with:
           ref: refs/pull/${{ steps.resolve.outputs.pr_number }}/merge
+          persist-credentials: false
 
       - name: Install pnpm
         if: steps.resolve.outputs.eligible == 'true'
@@ -101,7 +113,7 @@ jobs:
 
       - name: Verify lockfile integrity on the merged tree
         if: steps.resolve.outputs.eligible == 'true'
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Merge PR
         if: steps.resolve.outputs.eligible == 'true'
