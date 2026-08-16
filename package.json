@@ -148,6 +148,8 @@
     "vitest": "^3.2.6",
     "wrangler": "^4.107.0",
     "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "jsdom": "^22.0.0",
     "ioredis": "file:./stubs/empty-redis",
     "redis": "file:./stubs/empty-redis"
   },
