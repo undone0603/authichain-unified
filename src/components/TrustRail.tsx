@@ -1,17 +1,20 @@
 import type { ReactNode } from 'react';
-import { Globe, Zap, ShieldCheck, BadgeCheck, Award } from 'lucide-react';
+import { Globe, Zap, BadgeCheck } from 'lucide-react';
 
 export interface TrustRailItem {
   icon: ReactNode;
   label: string;
 }
 
+// Keep this list to claims we can back up without a certificate/award number
+// on file. Regulatory/award badges ("DFARS / FAR Compliant", "NSF SBIR
+// Awardee") were dropped repo-wide — no substantiating record exists, and
+// they were rendering unchanged (and off-topic, e.g. DFARS on a cannabis
+// site) on every brand. Re-add only with a real cert/award reference.
 const DEFAULT_ITEMS: TrustRailItem[] = [
   { icon: <Globe className="h-4 w-4" />, label: '38 Global Markets' },
   { icon: <Zap className="h-4 w-4" />, label: '< 1 Second Verification' },
-  { icon: <ShieldCheck className="h-4 w-4" />, label: 'DFARS / FAR Compliant' },
   { icon: <BadgeCheck className="h-4 w-4" />, label: 'EU DPP Ready' },
-  { icon: <Award className="h-4 w-4" />, label: 'NSF SBIR Awardee' },
 ];
 
 /**

@@ -20,7 +20,7 @@ const BRANDS = {
 
 const slugify = (s) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-const ACRONYMS = { qr: 'QR', eu: 'EU', us: 'US' };
+const ACRONYMS = { qr: 'QR', eu: 'EU', us: 'US', gs1: 'GS1', epcis: 'EPCIS', dscsa: 'DSCSA', dpp: 'DPP', eudr: 'EUDR' };
 const titleCase = (s) =>
   s.split(/\b/).map((w) => {
     const lw = w.toLowerCase();
@@ -34,6 +34,26 @@ function clampMeta(s, max) {
   const cut = s.slice(0, max);
   const lastSpace = cut.lastIndexOf(' ');
   return cut.slice(0, lastSpace > 0 ? lastSpace : max).replace(/[\s,;:.]+$/, '') + '.';
+}
+
+// Search results truncate around 60 characters, and src/lib/seo-pages.test.ts
+// asserts the limit. Titles were assembled unclamped, so a long keyword pushed
+// "Product Authentication For Government Supply Chain | GovChain" to 61 and the
+// regeneration workflow committed it straight to main under [skip ci] — the
+// test only ran on the next unrelated push.
+//
+// The brand suffix is kept and the keyword is trimmed at a word boundary: the
+// brand is the part that earns the click, so it is the wrong end to lose.
+function clampTitle(kwTitle, brand, max = 60) {
+  const suffix = ` | ${brand}`;
+  const full = `${kwTitle}${suffix}`;
+  if (full.length <= max) return full;
+
+  const room = max - suffix.length;
+  const cut = kwTitle.slice(0, room);
+  const lastSpace = cut.lastIndexOf(' ');
+  const kw = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s|,;:-]+$/, '');
+  return `${kw}${suffix}`;
 }
 
 // Each entry: keyword, brand, schemaType, lead, bullets[3], close, faqs[{q,a}]
@@ -179,6 +199,50 @@ const DATA = [
     lead: 'Trace automotive parts and vehicles across the supply chain with blockchain provenance that proves origin, quality, and safety-critical genealogy.',
     bullets: ['Safety-critical part genealogy', 'Supplier quality and recall targeting', 'Warranty and service history on-chain'],
     faqs: [{ q: 'Can it target recalls?', a: 'Yes — affected parts and vehicles can be identified precisely and fast.' }, { q: 'Does it cover suppliers?', a: 'Multi-tier supplier provenance is supported down to the component.' }] },
+
+  // ── standards & regulatory deadlines (2026 research) ──────────────
+  { keyword: 'gs1 digital link sunrise 2027', brand: 'qron', schemaType: 'Service',
+    lead: 'GS1 Sunrise 2027 moves point-of-sale scanning to QR codes carrying GS1 Digital Link URIs — the same identifier format QRON uses to attach a signed, verifiable record to every code it issues.',
+    bullets: ['GS1 Digital Link is the item-identity format in the AuthiChain protocol spec, not a proprietary URL scheme', 'One QR code serves both GS1 Digital Link resolution and Ed25519-signed verification — no second code needed', 'Existing GTINs and serials map directly into a verifiable record; nothing about your GS1 numbering changes'],
+    faqs: [{ q: 'Does Sunrise 2027 require blockchain?', a: 'No — Sunrise 2027 is a GS1 retail-scanning standard. Anchoring the record on-chain is optional and adds tamper-evidence on top of a compliant Digital Link QR code.' }, { q: 'Will our current barcodes stop working?', a: 'No — Sunrise 2027 adds 2D scanning capability at POS; linear barcodes keep working during and after the transition.' }] },
+  { keyword: 'dscsa unit level traceability 2026', brand: 'authichain', schemaType: 'Service',
+    lead: 'DSCSA enforcement moves to unit-level, electronic interoperable data exchange in November 2026 — replacing PDFs and manual reconciliation with records a trading partner can verify without calling you.',
+    bullets: ['EPCIS-compatible event data at the unit level, not just the case or lot', 'Records are Ed25519-signed Verifiable Credentials a downstream partner verifies offline, no portal login required', 'Every required field check runs before a record is accepted — partial or malformed data is rejected, not downgraded to a warning'],
+    faqs: [{ q: 'What changes in November 2026?', a: 'Trading partners must exchange product tracing data electronically at the unit level using interoperable systems; manual and PDF-based processes no longer satisfy the requirement.' }, { q: 'Does this replace our EPCIS system?', a: 'No — it signs and anchors the records your EPCIS system already produces so a partner can verify them independently.' }] },
+  { keyword: 'eu digital product passport registry', brand: 'authichain', schemaType: 'Service',
+    lead: 'Every EU Digital Product Passport must resolve from a permanent, unauthenticated URL into the EU registry — AuthiChain issues that record as a signed Verifiable Credential built on open, interoperable standards.',
+    bullets: ['Records follow the W3C Verifiable Credentials Data Model 2.0 — an open format, not a proprietary schema tied to one vendor', 'A resolvable GS1 Digital Link URL per item, live for the product’s full lifecycle, not just at point of sale', '404 on an unknown item, never a synthesized or empty-but-successful response'],
+    faqs: [{ q: 'When must our records be registry-ready?', a: 'The first product-specific delegated acts land from 2026, each with an 18-month compliance window once adopted — batteries first, by February 2027.' }, { q: 'Does the registry need us to run a server?', a: 'Records resolve from a permanent URL without authentication — no account or vendor call required to verify one.' }] },
+  { keyword: 'verifiable credential supply chain provenance', brand: 'authichain', schemaType: 'Service',
+    lead: 'W3C formed a Verifiable Supply Chain Community Group in 2026 to standardize proofs of origin and custody that any party can check without trusting the issuer’s database — the same problem AuthiChain’s Verifiable Credentials already address.',
+    bullets: ['Every provenance record is a W3C Verifiable Credential 2.0, not a proprietary schema', 'Ed25519 signatures verify offline — a partner checks authorship without a network call to AuthiChain', 'Apache-2.0 spec with a patent grant, so a partner’s legal team can sign off on implementing a compatible verifier'],
+    faqs: [{ q: 'Do we need to join the W3C group to use this?', a: 'No — the AuthiChain protocol already implements VC 2.0 and Ed25519 signing; the community group is standardizing supply-chain-specific profiles on the same base spec.' }, { q: 'Can a partner verify without an AuthiChain account?', a: 'Yes — the spec, the verifier, and the conformance suite are public. A partner runs the reference verifier or their own VC 2.0-compatible checker directly against the record.' }] },
+  { keyword: 'battery passport qr code requirements', brand: 'authichain', schemaType: 'Service',
+    lead: 'The EU battery passport mandate arrives February 18, 2027, with harmonised CEN-CENELEC standards covering the QR code itself, not just the data behind it.',
+    bullets: ['GS1 Digital Link-formatted QR per battery, the same item-identity format used in the AuthiChain protocol spec', 'Carbon footprint, state-of-health, and material-recovery fields anchored to the signed record behind the code', 'A verifier rejects a testnet anchor by default and distinguishes anchored records from unanchored ones'],
+    faqs: [{ q: 'What is the compliance deadline?', a: 'February 18, 2027, for EV, e-mobility, home-storage, and industrial batteries placed on the EU market.' }, { q: 'Is the QR code alone enough?', a: 'No — the code has to resolve to a record meeting the passport’s required fields; a code that just links to a marketing page is not a passport.' }] },
+  { keyword: 'epcis 2.0 blockchain anchoring', brand: 'authichain', schemaType: 'Service',
+    lead: 'EPCIS 2.0 is the event data standard DSCSA and GS1 traceability rules require — AuthiChain hashes and anchors those events so a partner can prove the record has not been altered after the fact.',
+    bullets: ['SHA-256 hash of the canonical event record, anchored on Polygon with a CAIP-2 chain identifier', 'A verifier rejects a malformed or testnet anchor instead of displaying it as proof', 'EPCIS events export into a W3C Verifiable Credential without a schema rewrite'],
+    faqs: [{ q: 'Do we need to change our EPCIS implementation?', a: 'No — anchoring wraps the events your EPCIS repository already emits; the event schema stays yours.' }, { q: 'What does anchoring add over EPCIS alone?', a: 'EPCIS proves what was recorded; anchoring proves it has not changed since — a partner checks the hash independently instead of trusting your database.' }] },
+
+  // ── standards & regulatory deadlines, round 2 (2026 research) ─────
+  { keyword: 'eu dpp qr code data carrier requirements', brand: 'authichain', schemaType: 'Service',
+    lead: 'ESPR Article 10 requires a Digital Product Passport’s data carrier to stay on the product for its full service life, using open, interoperable formats — not a proprietary code locked to one vendor’s scanner.',
+    bullets: ['GS1 Digital Link is the open URL format the AuthiChain protocol spec already uses for item identity — interoperable by construction, not a workaround', 'The signed record behind the code is a W3C Verifiable Credential, readable by any conforming verifier, not one vendor’s app', 'An unknown or malformed code returns 404, not a synthesized response — a scan either resolves to a real record or says so'],
+    faqs: [{ q: 'Does the data carrier have to be a QR code?', a: 'Article 10 lets manufacturers choose the carrier — QR code, RFID, or NFC — as long as it is durable, accessible, and built on open standards. QR is the most common choice today.' }, { q: 'What standard covers the carrier itself?', a: 'EN 18220:2026, referenced in the Official Journal in July 2026, sets the data-carrier requirements; product-specific delegated acts still set size, durability, and error-correction parameters per category.' }] },
+  { keyword: 'right to repair spare parts verification', brand: 'authichain', schemaType: 'Service',
+    lead: 'The EU Right to Repair Directive, in force from July 31, 2026, requires manufacturers to give repairers unambiguous model and serial identification — a scan should confirm a part is genuine, not decide whether a repair is allowed to proceed.',
+    bullets: ['Genuine-part verification runs offline against the signed record — no network call to a manufacturer database required', 'A signature proves a part was issued by the manufacturer; it does not gate installation the way a paired-parts lockout does', 'Model and serial data travel in a W3C Verifiable Credential any repairer’s tool can read, not one tied to a single OEM app'],
+    faqs: [{ q: 'Does this stop third-party or reused parts from being installed?', a: 'No — verification confirms whether a specific part is OEM-genuine. It does not disable a device or block a non-OEM part from being installed.' }, { q: 'What must manufacturers provide under the directive?', a: 'Unambiguous product identification — model and serial number — plus repair and maintenance information, for the product categories the directive covers.' }] },
+  { keyword: 'eudr deforestation traceability blockchain', brand: 'authichain', schemaType: 'Service',
+    lead: 'The EU Deforestation Regulation requires proof that cocoa, coffee, palm oil, rubber, soy, timber, and cattle are traceable to the plot of land where they were grown — a claim that only holds up if a buyer can check it without asking you.',
+    bullets: ['Geolocation and chain-of-custody events hashed and anchored per batch for tamper-evidence', 'Records are W3C Verifiable Credentials, so an importer’s compliance system can verify them without an AuthiChain account', 'Large and medium operators are in scope from December 30, 2026; small and micro enterprises from June 30, 2027'],
+    faqs: [{ q: 'What commodities does EUDR cover?', a: 'Cattle, cocoa, coffee, oil palm, rubber, soy, and wood, plus derived products such as leather, chocolate, and furniture.' }, { q: 'Does blockchain anchoring satisfy EUDR by itself?', a: 'No — EUDR requires a geolocation and legality due-diligence statement. Anchoring makes the supporting documentation tamper-evident; it does not replace the statement itself.' }] },
+  { keyword: 'cannabis product recall traceability', brand: 'strainchain', schemaType: 'Service',
+    lead: 'When a cannabis batch fails a pesticide or mold retest, the question is how fast you can isolate every package it touched — StrainChain ties each unit to its METRC/BioTrack batch record so a recall targets units, not an entire product line.',
+    bullets: ['Unit-level recall targeting instead of a blanket pull across every dispensary carrying the SKU', 'Lab retest results attach to the same on-chain record consumers already scan for COAs', 'Chain-of-custody events are tamper-evident, so a recall trace does not depend on trusting one dispensary’s paperwork'],
+    faqs: [{ q: 'Does this replace our METRC recall workflow?', a: 'No — it runs alongside METRC/BioTrack and narrows a recall to the specific units and batches affected, using the compliance data you already report.' }, { q: 'Can dispensaries check recall status by scan?', a: 'Yes — the same QR code customers use for lab results shows recall status if a batch has been flagged.' }] },
 ];
 
 function buildEntry(d) {
@@ -186,7 +250,7 @@ function buildEntry(d) {
   const kwTitle = titleCase(d.keyword);
   const slug = slugify(d.keyword);
   const url = `https://${b.domain}/p/${slug}`;
-  const title = `${kwTitle} | ${b.name}`;
+  const title = clampTitle(kwTitle, b.name);
   const firstSentence = d.lead.split('. ')[0].replace(/\.$/, '');
   const metaDescription = clampMeta(`${firstSentence}. ${b.name} — ${b.price}`, 158);
   const h1 = kwTitle;

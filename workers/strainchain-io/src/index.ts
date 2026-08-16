@@ -164,7 +164,7 @@ fetch('https://authichain-unified.vercel.app/api/strainchain/stats')
     <div class="compliance-card"><h3>METRC Integration</h3><p>Real-time tag sync. Automatic manifest generation. Zero manual data entry for 24 METRC states.</p></div>
     <div class="compliance-card"><h3>BioTrack THC</h3><p>Full WA, NH, NM, and HI compliance. Bidirectional sync with state seed-to-sale systems.</p></div>
     <div class="compliance-card"><h3>CCRS (California)</h3><p>Cannabis Cultivation Policy compliance. DCC reporting automated via API with on-chain backup.</p></div>
-    <div class="compliance-card"><h3>SOC 2 Type II</h3><p>Annual audit trail export. Automated evidence collection. Regulator-ready reports in one click.</p></div>
+    <div class="compliance-card"><h3>Audit Evidence Export</h3><p>Annual audit trail export. Automated evidence collection. Regulator-ready reports in one click.</p></div>
   </div>
 </section>
 

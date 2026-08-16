@@ -47,6 +47,14 @@ vi.mock("../services/order-payment-handler.js", () => ({
   handleServiceOrderPayment: vi.fn().mockResolvedValue(undefined),
 }));
 
+// The Stripe SDK is mocked above, so these values are never used to reach
+// Stripe — they only satisfy the guards in getStripeClient() and
+// handleStripeWebhook(), which throw when the secrets are absent. Without them
+// both tests fail on configuration rather than on behaviour, which is what they
+// were doing. Set lazily-read env before any handler call.
+process.env.STRIPE_SECRET_KEY ||= 'sk_test_dummy_for_unit_tests';
+process.env.STRIPE_WEBHOOK_SECRET ||= 'whsec_dummy_for_unit_tests';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeEvent(type: string, id: string, data: object) {

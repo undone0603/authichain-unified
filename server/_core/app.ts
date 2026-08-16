@@ -75,6 +75,10 @@ export function createApp() {
     }
     try {
       const { handleStripeWebhook } = await import("../webhooks/stripe");
+      // handleStripeWebhook takes (rawBody, sig) — it was migrated off the
+      // server/db.ts singleton in Task 2b-4 and no longer needs a db handle.
+      // This call site was not updated then, so it passed db as rawBody and
+      // req.body as sig, which cannot verify a Stripe signature.
       const result = await handleStripeWebhook(req.body, sig);
       res.json(result);
     } catch (err: any) {

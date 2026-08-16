@@ -39,15 +39,23 @@ export class AutonomousController {
           continue;
         }
 
+        // Attribution corrected: the FTC does not issue Executive Orders, and a
+        // company does not "comply with" one. The binding obligation is the
+        // FTC's Made in USA Labeling Rule (16 CFR Part 323) — the authority the
+        // April 2026 sweep and the $625k TouchTunes order were brought under.
+        // EO 14392 is real and prompted the sweep, so it stays as context.
+        // "Action Required" and "your claims are at regulatory risk" are also
+        // dropped: we have no knowledge of this recipient's sourcing, so
+        // asserting they are exposed is a claim we cannot make.
         const msg = `Attention ${p.name || 'Operations Lead'},\n\n` +
-          `With the recent FTC $625k MUSA penalties and EO 14392, your current "Made in USA" claims are at regulatory risk.\n\n` +
-          `AuthiChain has launched the FTC Shield — the first cryptographic provenance seal for American manufacturing.\n\n` +
-          `View your prepared compliance dashboard: https://qron.space/ftc-shield`;
+          `The FTC ran a Made in USA enforcement sweep in April 2026 under its Made in USA Labeling Rule (16 CFR Part 323), following Executive Order 14392 on truthful "Made in America" advertising. The largest order in that sweep was $625,000.\n\n` +
+          `The rule turns on whether "all or virtually all" of a product is US-origin — which is a documentation problem as much as a sourcing one. AuthiChain's FTC Shield anchors per-unit origin evidence cryptographically, so the substantiation exists before anyone asks for it.\n\n` +
+          `Have a look: https://qron.space/ftc-shield`;
 
         const result = await sendEmail({
           from: 'AuthiChain Compliance <compliance@qron.space>',
           to: p.email,
-          subject: 'Action Required: FTC Made-in-USA Compliance (EO 14392)',
+          subject: 'Substantiating "Made in USA" claims after the April FTC sweep',
           text: msg,
         });
 
@@ -276,7 +284,7 @@ export class AutonomousController {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            text: `The Protocol has detected a new trend: ${currentTrend}. ðŸš€\n\nBehold this autonomous creation, cryptographically anchored by AuthiChain.\n\n#AIArt #TrendWatch #${currentTrend.replace(/\s/g, '')}`,
+            text: `The Protocol has detected a new trend: ${currentTrend}. 🚀\n\nBehold this autonomous creation, cryptographically anchored by AuthiChain.\n\n#AIArt #TrendWatch #${currentTrend.replace(/\s/g, '')}`,
             media: { picture: data.downloadUrl },
           }),
         });
@@ -426,7 +434,7 @@ export class AutonomousController {
         const yesPercent = totalVotes > 0 ? (proposal.yes_votes / totalVotes) * 100 : 0;
         
         // 3. Draft Executive Summary
-        const alertMsg = `âš–ï¸  DAO ALERT: Voting closes in < 24h for ${proposal.id}!\n\n` +
+        const alertMsg = `⚖️  DAO ALERT: Voting closes in < 24h for ${proposal.id}!\n\n` +
           `**Title**: ${proposal.title}\n` +
           `**Sentiment**: ${yesPercent.toFixed(1)}% YES (${proposal.yes_votes} QRON)\n\n` +
           `Your voice determines the protocol's future. Vote now at govchain.us`;
@@ -707,7 +715,7 @@ export class AutonomousController {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: `Today's Featured QRON! ðŸŽ¨\n\nMode: ${showcase.mode}\nPrompt: ${showcase.prompt}\n\nCreate your own verified QR art at qron.space`,
+          text: `Today's Featured QRON! 🎨\n\nMode: ${showcase.mode}\nPrompt: ${showcase.prompt}\n\nCreate your own verified QR art at qron.space`,
           media: { picture: showcase.imageUrl },
         }),
       });

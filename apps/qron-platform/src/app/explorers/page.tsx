@@ -79,7 +79,7 @@ export default function ExplorersPage() {
 
         <footer className="mt-32 pt-12 border-t border-zinc-900 text-center">
             <p className="text-[10px] font-black text-zinc-800 uppercase tracking-[0.4em] mb-4">
-                Distributed Consensus Â· 2026 AuthiChain Inc.
+                Distributed Consensus · 2026 AuthiChain Inc.
             </p>
             <div className="flex justify-center gap-8 text-zinc-600 text-[9px] font-black uppercase tracking-widest">
                 <Link href="/governance" className="hover:text-gold transition-colors">Governance</Link>

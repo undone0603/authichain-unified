@@ -1,0 +1,50 @@
+{
+  "id": "canon-nested",
+  "description": "Nested objects and arrays. Object keys sort at every depth; array order is significant and must NOT be sorted.",
+  "record": {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://authichain.com/protocol/v1"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "ProvenanceRecord"
+    ],
+    "issuer": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+    "validFrom": "2020-01-01T00:00:00Z",
+    "credentialSubject": {
+      "id": "https://id.gs1.org/01/09506000134352/21/NEST",
+      "events": [
+        {
+          "stage": "manufactured",
+          "at": "2020-01-01T09:00:00Z",
+          "location": "US-MI"
+        },
+        {
+          "at": "2020-02-01T09:00:00Z",
+          "location": "US-CA",
+          "stage": "shipped"
+        }
+      ],
+      "meta": {
+        "z": 1,
+        "a": {
+          "y": 2,
+          "b": 3
+        }
+      }
+    },
+    "proof": {
+      "type": "Ed25519Signature2020",
+      "created": "2020-01-01T00:00:00Z",
+      "verificationMethod": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG#key-1",
+      "proofPurpose": "assertionMethod",
+      "proofValue": "z2nLjDTGZJTMsEt85i7dEp1gGn7dqbfhp35nZvmtckSPcnah17akPJZktmdj9UCJYS3QsjNCMMNtacsdUUKeaekY6"
+    }
+  },
+  "anchor": null,
+  "options": {},
+  "expect": {
+    "verdict": "valid-unanchored"
+  }
+}

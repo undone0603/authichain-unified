@@ -72,7 +72,7 @@ export const govchainRouter = router({
       activeAgencies: 12,
       passportsIssued: 1420,
       complianceScore: 99.9,
-      network: "GovChain Federal Hub (FIPS 140-2)"
+      network: "GovChain Federal Hub (Ed25519 / FIPS 186-5)"
     };
   }),
 });

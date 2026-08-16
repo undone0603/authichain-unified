@@ -157,7 +157,6 @@ const PLANS = [
       'SSO / SAML',
       'Custom SLA',
       'Dedicated account manager',
-      'SOC 2 reports',
       'Net-30 invoicing',
     ],
     cta: 'Contact Sales',

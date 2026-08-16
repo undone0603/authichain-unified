@@ -64,14 +64,28 @@ export async function executeJob(job: JobDefinition): Promise<void> {
     console.log(`[Scheduler] Completed ${job.name} in ${duration}ms (${result.itemsProcessed} items)`);
   } catch (error: any) {
     const duration = Date.now() - startTime;
-    console.error(`[Scheduler] Failed ${job.name}:`, error.message);
+
+    // Drizzle wraps database failures so that error.message is only
+    // "Failed query: <sql>" — the actual Postgres reason (missing column,
+    // constraint violation, permission denied) lives on error.cause. Logging
+    // just the message is why these jobs failed hundreds of times over days
+    // without anyone being able to say why. Surface the cause.
+    const cause = error?.cause;
+    const detail = cause
+      ? [cause.code && `[${cause.code}]`, cause.message, cause.detail, cause.hint]
+          .filter(Boolean)
+          .join(' ')
+      : undefined;
+    const message = detail ? `${error.message} — ${detail}` : (error.message || "Unknown error");
+
+    console.error(`[Scheduler] Failed ${job.name}:`, message);
 
     await db.update(scheduledJobRuns)
       .set({
         status: "failed",
         completedAt: new Date(),
         duration,
-        error: error.message || "Unknown error",
+        error: message,
       })
       .where(eq(scheduledJobRuns.id, Number(runId)));
   }
@@ -660,6 +674,37 @@ registerJob({
   },
 });
 
+
+/**
+ * The newsjacking monitor has no originating mission — it is triggered by the
+ * clock, not by a plan. It previously passed the literal string "SYSTEM_PR" as
+ * a missionId behind an `as any`, which defeated the typecheck and then failed
+ * on every run: mission_tasks.mission_id is a uuid with a foreign key to
+ * missions(id), so the string was rejected as malformed before the FK was even
+ * considered.
+ *
+ * A syntactically valid UUID alone would not fix it — the FK requires a row
+ * that exists. This upserts one stable system mission and returns its id, so
+ * clock-triggered tasks hang off a real parent and stay grouped together
+ * instead of being scattered or orphaned.
+ */
+const SYSTEM_PR_MISSION_ID = "00000000-0000-4000-8000-0000000000ab";
+
+async function ensureSystemPrMission(db: Db): Promise<string> {
+  await db.execute(sql`
+    insert into missions (id, type, title, description, status)
+    values (
+      ${SYSTEM_PR_MISSION_ID}::uuid,
+      'NEWSJACK',
+      'System: newsjacking monitor',
+      'Standing parent mission for clock-triggered newsjacking tasks.',
+      'active'
+    )
+    on conflict (id) do nothing
+  `);
+  return SYSTEM_PR_MISSION_ID;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // JOB 12: Newsjacking Monitor (Runs every 30 minutes)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -675,6 +720,11 @@ registerJob({
       missionId: "SYSTEM_PR", 
       payload: { topics: ['medical device recall', 'counterfeit pharma', 'luxury forgery'] } 
     } as any);
+    const missionId = await ensureSystemPrMission(db);
+    await runNewsjackingMonitor({
+      missionId,
+      payload: { topics: ['medical device recall', 'counterfeit pharma', 'luxury forgery'] }
+    } as any, db);
     return { itemsProcessed: 1, details: { status: "news_scan_complete" } };
   },
 });

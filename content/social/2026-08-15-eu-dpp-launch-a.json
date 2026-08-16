@@ -1,0 +1,18 @@
+{
+  "linkedin": "The EU's Digital Product Passport requirement is reshaping how physical products carry verifiable data. AuthiChain is built to generate and anchor that data trail — from raw material sourcing to point of sale — using signed QR codes and on-chain anchoring, so a product's provenance record travels with it instead of living in a spreadsheet somewhere else.\n\nEach unit gets a cryptographically signed QR code. Scanning it surfaces the product's passport: origin, custody events, and certifications tied to that SKU. The underlying record is anchored to a public ledger, so the passport history can't be quietly edited after the fact.\n\nWe built AuthiChain because brands preparing for the DPP rollout need infrastructure that treats provenance as a data layer, not a marketing microsite. If you're mapping your supply chain against EU DPP requirements and want to see how a signed passport works end to end, take a look.\n\nhttps://authichain.com/eu-dpp?utm_source=linkedin&utm_medium=social&utm_campaign=eu-dpp-launch&utm_content=a\n\n#DigitalProductPassport #SupplyChain #Provenance #EUDPP",
+  "reddit": {
+    "subreddit": "supplychain",
+    "title": "Anyone else building for the EU Digital Product Passport requirement?",
+    "body": "I've been working on AuthiChain, a system for generating signed QR-based product passports and anchoring the provenance record each one points to, so the history can't be silently rewritten after the fact. It's aimed at brands that need to trace a product's history — origin, custody, certifications — from raw material to shelf, ahead of EU DPP requirements.\n\nCurious how others here are approaching the technical side: building the passport layer in-house, using a vendor's DPP platform, or bolting a QR code onto an existing ERP? What's been the hardest part — the data model, the QR issuance side, or getting suppliers to actually submit clean data?\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "The EU Digital Product Passport is turning \"where did this come from\" into a required field on packaging, not a nice-to-have on your about page.",
+    "AuthiChain generates a signed QR code per unit and anchors the provenance record it points to, so the passport data can't be quietly rewritten once a scan history exists.",
+    "If you're mapping supply chain data against DPP requirements, here's how the passport layer works: https://authichain.com/eu-dpp?utm_source=twitter&utm_medium=social&utm_campaign=eu-dpp-launch&utm_content=a"
+  ],
+  "experiment": {
+    "campaign": "eu-dpp-launch",
+    "variant": "a",
+    "hypothesis": "capability-led hook (what the signed passport does) outperforms a deadline-led hook (EU DPP compliance deadline framing) on click-through to /eu-dpp"
+  }
+}

@@ -16,6 +16,10 @@ export function GovchainHome() {
         { value: '92', label: 'Max Fit Score' },
         { value: 'FAR/DFARS', label: 'Compliant' },
         { value: '24/7', label: 'Monitoring' },
+        { value: '256-bit', label: 'SHA-3 Hash' },
+        { value: 'Instant', label: 'Seal Time' },
+        { value: 'No Login', label: 'To Verify' },
+        { value: 'Open', label: 'Verification' },
       ]}
       features={[
         {

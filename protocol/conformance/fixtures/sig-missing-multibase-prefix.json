@@ -1,0 +1,33 @@
+{
+  "id": "sig-missing-multibase-prefix",
+  "description": "proofValue without the base58btc \"z\" prefix.",
+  "record": {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://authichain.com/protocol/v1"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "ProvenanceRecord"
+    ],
+    "issuer": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+    "validFrom": "2020-01-01T00:00:00Z",
+    "credentialSubject": {
+      "id": "https://id.gs1.org/01/09506000134352/21/SERIAL123",
+      "gtin": "09506000134352",
+      "serial": "SERIAL123"
+    },
+    "proof": {
+      "type": "Ed25519Signature2020",
+      "created": "2020-01-01T00:00:00Z",
+      "verificationMethod": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG#key-1",
+      "proofPurpose": "assertionMethod",
+      "proofValue": "AeEyoVN4WHNQhQmyA13FZUkTcqfMawnRx4eGgptQUKfmpQ6LWqNuZnDndTZWoAXyJzMKsEbLhTJmjaKaLg6TpeB"
+    }
+  },
+  "anchor": null,
+  "options": {},
+  "expect": {
+    "verdict": "invalid"
+  }
+}

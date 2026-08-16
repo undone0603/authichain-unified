@@ -1,9 +1,90 @@
+// YouTube embeds need an explicit frame-src: without one it falls back to
+// default-src 'self', which silently blocks every player iframe. Uses the
+// -nocookie host so no tracking cookie is set until a visitor hits play.
 const HTML_SECURITY_HEADERS: Record<string, string> = {
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-ancestors 'none'",
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-src https://www.youtube-nocookie.com https://www.youtube.com; frame-ancestors 'none'",
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
 };
+
+// ── YouTube: latest uploads via the channel's public RSS feed ────────────────
+// The feed needs no API key, quota, or OAuth — the credential-free path. Parsed
+// with a narrow regex rather than a DOM lib to keep the worker dependency-free.
+// Failures degrade to an empty list so a YouTube outage can never break the page.
+const YT_CHANNEL_ID = 'UCCm-myVgS90meDtrAtAuLqw';
+
+interface YtVideo { id: string; title: string; published: string }
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+}
+
+// Feed values arrive already XML-escaped, so escaping them again would render
+// a title containing "&" as the literal "&amp;". Decode first, then re-escape
+// once for HTML — that keeps the output correct and still injection-safe.
+function decodeXml(s: string): string {
+  return s
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+async function fetchLatestVideos(limit = 6): Promise<YtVideo[]> {
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/feeds/videos.xml?channel_id=${YT_CHANNEL_ID}`,
+      { cf: { cacheTtl: 1800, cacheEverything: true } } as RequestInit,
+    );
+    if (!res.ok) return [];
+    const xml = await res.text();
+    const out: YtVideo[] = [];
+    const entries = xml.split('<entry>').slice(1);
+    for (const e of entries.slice(0, limit)) {
+      const id = e.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1];
+      const title = decodeXml(e.match(/<title>([^<]*)<\/title>/)?.[1] ?? '');
+      const published = e.match(/<published>([^<]+)<\/published>/)?.[1] ?? '';
+      if (id) out.push({ id, title, published });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function renderVideosSection(videos: YtVideo[]): string {
+  // No uploads yet (or the feed failed) — link to the channel instead of
+  // rendering an empty grid.
+  if (!videos.length) {
+    return `<section id="videos">
+  <h2>Watch &amp; Learn</h2>
+  <p class="section-sub">New protocol explainers every week.</p>
+  <div style="text-align:center;margin-top:1.5rem">
+    <a href="https://www.youtube.com/channel/${YT_CHANNEL_ID}" target="_blank" rel="noopener" class="btn btn-outline">Visit the channel →</a>
+  </div>
+</section>`;
+  }
+  const cards = videos.map((v) => `
+    <div class="video-card">
+      <div class="video-frame">
+        <iframe src="https://www.youtube-nocookie.com/embed/${v.id}" title="${escapeHtml(v.title)}"
+          loading="lazy" allowfullscreen
+          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      </div>
+      <h3>${escapeHtml(v.title)}</h3>
+      <time datetime="${escapeHtml(v.published)}">${escapeHtml(v.published.slice(0, 10))}</time>
+    </div>`).join('');
+  return `<section id="videos">
+  <h2>Watch &amp; Learn</h2>
+  <p class="section-sub">New protocol explainers every week.</p>
+  <div class="video-grid">${cards}</div>
+  <div style="text-align:center;margin-top:2rem">
+    <a href="https://www.youtube.com/channel/${YT_CHANNEL_ID}?sub_confirmation=1" target="_blank" rel="noopener" class="btn btn-primary">Subscribe on YouTube</a>
+  </div>
+</section>`;
+}
 
 export default {
   async fetch(request: Request): Promise<Response> {
@@ -11,6 +92,29 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "qron.space", ts: Date.now() });
     }
+    const p = url.pathname;
+    if (p === '/og-image.png') return pngResponse(OG_IMAGE_PNG_B64);
+    if (p === '/og-image.svg') return assetResponse(OG_IMAGE_SVG);
+    if (p === '/favicon.svg') return assetResponse(FAVICON_SVG);
+    if (p === '/sitemap.xml') {
+      return new Response(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://qron.space/</loc></url>
+  <url><loc>https://qron.space/#advantages</loc></url>
+  <url><loc>https://qron.space/#staking</loc></url>
+  <url><loc>https://qron.space/#governance</loc></url>
+  <url><loc>https://qron.space/#bridge</loc></url>
+  <url><loc>https://qron.space/#tokenomics</loc></url>
+</urlset>`, {
+        headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
+      });
+    }
+    if (p === '/robots.txt') {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://qron.space/sitemap.xml\n', {
+        headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' },
+      });
+    }
+    const videosHtml = renderVideosSection(await fetchLatestVideos());
     const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>$QRON Token Hub — Stake, Govern, Bridge</title>
@@ -20,6 +124,13 @@ export default {
 :root{--bg:#020817;--surface:#0d1425;--border:#1e2d4a;--cyan:#06b6d4;--purple:#8b5cf6;--text:#e2e8f0;--muted:#64748b}
 body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;line-height:1.6}
 a{color:var(--cyan);text-decoration:none}
+.video-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem;margin-top:2rem}
+.video-card{background:rgba(15,23,42,.6);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s}
+.video-card:hover{border-color:var(--cyan)}
+.video-frame{position:relative;width:100%;padding-top:56.25%}
+.video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video-card h3{font-size:1rem;margin:.9rem 1rem .3rem;line-height:1.4}
+.video-card time{display:block;font-size:.8rem;color:var(--muted);margin:0 1rem 1rem}
 .nav{display:flex;justify-content:space-between;align-items:center;padding:1.2rem 2rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(2,8,23,.95);backdrop-filter:blur(12px);z-index:100}
 .logo{font-size:1.4rem;font-weight:700;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .nav-links{display:flex;gap:1.5rem;list-style:none}
@@ -92,6 +203,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
     <li><a href="#governance">Governance</a></li>
     <li><a href="#bridge">Bridge</a></li>
     <li><a href="#tokenomics">Tokenomics</a></li>
+    <li><a href="#videos">Videos</a></li>
   </ul>
   <a href="https://authichain.com/dapp" class="btn btn-primary">Connect Wallet</a>
 </nav>
@@ -204,6 +316,8 @@ fetch('https://authichain-unified.vercel.app/api/qron/stats')
     <div class="price-card"><h3>Enterprise</h3><div class="price-amount">$99</div><div class="price-period">per month</div><ul class="price-features"><li>2,000 $QRON monthly airdrop</li><li>Custom staking pools</li><li>5x governance weight</li><li>White-label bridge</li><li>Dedicated support</li></ul><a href="https://authichain.com/dapp" class="btn btn-outline" style="width:100%;text-align:center">Contact Sales</a></div>
   </div>
 </section>
+
+${videosHtml}
 
 <div class="cta-section">
   <h2>Ready to stake $QRON?</h2>

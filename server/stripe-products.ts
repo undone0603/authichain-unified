@@ -50,13 +50,13 @@ export const STRIPE_PRODUCTS = {
   },
   medtech: {
     name: "AuthiChain MedTech Enterprise",
-    description: "High-compliance authentication for medical device and pharma supply chains. ISO 13485 Audit Integrity Shield, FIPS 140-2 HSM crypto, and unlimited SKU identification.",
+    description: "High-compliance authentication for medical device and pharma supply chains. ISO 13485 audit-trail tooling, Ed25519 signing (FIPS 186-5), and unlimited SKU identification.",
     priceMonthly: 1250000, // $12,500.00 in cents
     priceAnnual: 15000000, // $150,000.00/year in cents
     features: [
       "50,000 AI authentications/month",
       "ISO 13485 Compliance Module",
-      "FIPS 140-2 HSM Crypto Module",
+      "Ed25519 signing (FIPS 186-5) with managed key rotation",
       "Clinical Trial Fraud Prevention AI",
       "W3C Verifiable Credentials",
       "Blockchain-anchored Proof of Purity",
