@@ -100,9 +100,14 @@ jobs:
           # be set for the channel to ever actually send once enabled.
           INTERNAL_API_SECRET:   ${{ secrets.INTERNAL_API_SECRET }}
           # CAN-SPAM requires a physical postal address in every commercial
-          # email. guardedSend fails CLOSED when this is unset rather than ship
-          # a placeholder, so outreach cannot send until it is configured.
-          MAILING_ADDRESS:      ${{ secrets.MAILING_ADDRESS }}
+          # email, and guardedSend fails CLOSED without one. This is NOT a
+          # secret — the whole point is that it is printed in every message —
+          # so it is a plain default rather than a repo secret, and the channel
+          # works out of the box. Value is the address already filed on the DHS
+          # SVIP application and the state partnership proposals
+          # (docs/submissions/, docs/strategy/). Override with the secret if the
+          # registered address changes.
+          MAILING_ADDRESS:      ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
           UNSUBSCRIBE_URL:      ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
           RESEND_REPLY_TO:      ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
@@ -121,8 +126,13 @@ jobs:
           CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
           INTERNAL_API_SECRET:  ${{ secrets.INTERNAL_API_SECRET }}
           # CAN-SPAM requires a physical postal address in every commercial
-          # email. guardedSend fails CLOSED when this is unset rather than ship
-          # a placeholder, so outreach cannot send until it is configured.
-          MAILING_ADDRESS:      ${{ secrets.MAILING_ADDRESS }}
+          # email, and guardedSend fails CLOSED without one. This is NOT a
+          # secret — the whole point is that it is printed in every message —
+          # so it is a plain default rather than a repo secret, and the channel
+          # works out of the box. Value is the address already filed on the DHS
+          # SVIP application and the state partnership proposals
+          # (docs/submissions/, docs/strategy/). Override with the secret if the
+          # registered address changes.
+          MAILING_ADDRESS:      ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
           UNSUBSCRIBE_URL:      ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
           RESEND_REPLY_TO:      ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}

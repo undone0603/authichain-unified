@@ -290,8 +290,7 @@ function govchainEmail(t: typeof GOVCHAIN_TARGETS[0]): { subject: string; html: 
   <a href="https://govchain.us">govchain.us</a></p>
 
   <p style="font-size:12px;color:#9ca3af;margin-top:24px">
-  You're receiving this because ${t.company} is registered on SAM.gov.
-  <a href="https://govchain.us/unsubscribe">Unsubscribe</a></p>
+  You're receiving this because ${t.company} is registered on SAM.gov.</p>
 </div>`;
   return { subject, html };
 }
@@ -363,25 +362,43 @@ function strainchaineEmail(t: typeof STRAINCHAIN_TARGETS[0]): { subject: string;
   return { subject, html };
 }
 
+/**
+ * Two claims were removed here because the code says they are not true.
+ *
+ *   "I ran ${company} through our AI QR engine and generated a custom demo"
+ *   "We've pre-provisioned a white-label sandbox for ${company}"
+ *
+ * Neither /demo page reads `searchParams` or a `company` param at all — the only
+ * place a company name is handled is the POST form where a visitor types their
+ * own. So `qron.space/demo?company=X` served a generic page, and the recipient's
+ * first click disproved the email's first sentence. Fabricated personalisation
+ * is worse than none: it is the one thing a prospect can check in one click.
+ *
+ * The rewrite keeps the specificity in the product and the pricing, which are
+ * real, and invites them to generate their own QR rather than claiming we
+ * already did.
+ */
 function qronEmail(t: typeof QRON_TARGETS[0]): { subject: string; html: string } {
-  const subject = `AI QR codes for ${t.company} — white-label API (custom demo inside)`;
+  const subject = `AI-designed QR codes for ${t.company} — white-label API from $0.002/QR`;
   const html = `
 <div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
   <p>Hi,</p>
 
-  <p>I ran <strong>${t.company}</strong> through our AI QR engine and generated
-  a custom demo — takes 3 seconds, matches your visual language:</p>
+  <p>You print and ship a lot of QR codes. The usual complaint about them is that
+  they are ugly, and the usual fix — sticking a logo in the middle — is what makes
+  them fail to scan. QRON generates codes that carry brand styling and stay
+  scannable, because the styling is generated with the error-correction budget
+  rather than pasted on top of it.</p>
 
   <p style="text-align:center">
-    <a href="https://qron.space/demo?company=${encodeURIComponent(t.company)}"
+    <a href="https://qron.space/demo"
        style="background:#6366f1;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">
-      View ${t.company} Demo QR →
+      Generate one on your own artwork →
     </a>
   </p>
 
-  <p>QRON (<a href="https://qron.space">qron.space</a>) generates AI-designed
-  QR codes that match brand aesthetics — cryptographically signed, guaranteed
-  scannable, available via white-label API:</p>
+  <p>QRON (<a href="https://qron.space">qron.space</a>) is available via
+  white-label API:</p>
   <ul>
     <li>5 visual modes: Static, Stereographic, Holographic, Memory, Custom Prompt</li>
     <li>Ed25519-signed on Polygon — tamper-proof authenticity certificate on every scan</li>
@@ -389,21 +406,19 @@ function qronEmail(t: typeof QRON_TARGETS[0]): { subject: string; html: string }
     <li>FTC EO 14392 compliant origin verification (MADE IN USA shield support)</li>
   </ul>
 
-  <p>We've pre-provisioned a white-label sandbox for ${t.company}.
-  Creator Pack: <strong>$99 for 500 generations</strong>.
-  White-label API: usage-based from $0.002/QR.</p>
+  <p>Creator Pack is <strong>$99 for 500 generations</strong> if you just want to
+  try it on live jobs; the white-label API is usage-based from $0.002/QR, so
+  reselling it at ${t.company}'s volume costs less than the ink.</p>
 
-  <p>10-minute call?
+  <p>Worth 10 minutes?
   <a href="${CALENDLY}?company=${encodeURIComponent(t.company)}">Book here</a>
-  or reply and I'll send the API docs.</p>
+  or reply and I'll send the API docs — happy to set up a sandbox on your account
+  before any call.</p>
 
   <p>Best,<br>
   Zachary<br>
   QRON / AuthiChain<br>
   <a href="https://qron.space">qron.space</a></p>
-
-  <p style="font-size:12px;color:#9ca3af;margin-top:24px">
-  <a href="https://qron.space/unsubscribe">Unsubscribe</a></p>
 </div>`;
   return { subject, html };
 }
