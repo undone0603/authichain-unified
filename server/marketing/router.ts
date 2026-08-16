@@ -1,16 +1,12 @@
-import { z } from "zod";
 import { protectedProcedure, publicProcedure, adminProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
-import { getAllLeads, createLead, updateLeadScore, updateLeadStatus } from "../content-db-helpers";
+import * as db from "../db";
 import * as hubspot from "../hubspot-service";
+import { z } from "zod";
 import { invokeLLM } from "../_core/llm";
 
 export const marketingRouter = router({
   leads: adminProcedure.query(async () => {
-    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
-    // context does. Bridge via getDb() until this router has a ctx.db to use.
-    const db = await getDb();
-    return await getAllLeads(db);
+    return await db.getAllLeads();
   }),
   createLead: publicProcedure.input(z.object({
     email: z.string().email(),
@@ -18,21 +14,18 @@ export const marketingRouter = router({
     company: z.string().optional(),
     source: z.string().optional(),
   })).mutation(async ({ input }) => {
-    const db = await getDb();
-    const result = await createLead(db, input);
+    const result = await db.createLead(input);
     try {
       await hubspot.syncLeadToHubSpot(input);
     } catch (e) { /* HubSpot sync is best-effort */ }
     return result;
   }),
   updateLeadScore: adminProcedure.input(z.object({ id: z.number(), score: z.number() })).mutation(async ({ input }) => {
-    const db = await getDb();
-    await updateLeadScore(db, input.id, input.score);
+    await db.updateLeadScore(input.id, input.score);
     return { success: true };
   }),
   updateLeadStatus: adminProcedure.input(z.object({ id: z.number(), status: z.string() })).mutation(async ({ input }) => {
-    const db = await getDb();
-    await updateLeadStatus(db, input.id, input.status);
+    await db.updateLeadStatus(input.id, input.status);
     return { success: true };
   }),
   generateContent: protectedProcedure.input(z.object({

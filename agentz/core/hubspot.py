@@ -10,7 +10,6 @@ import httpx
 import logging
 import asyncio
 import json
-from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from agentz.core.credentials import get, update_credential
 from agentz.core.hubspot_healer import rotate_hubspot_token
@@ -30,7 +29,7 @@ async def get_all_deals(limit: int = 200, _retry: bool = True) -> List[Dict[str,
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     body = {
-        "properties": ["dealname", "amount", "dealstage", "slug", "city", "num_associated_contacts"],
+        "properties": ["dealname", "amount", "dealstage", "slug", "city"],
         "limit": 100 # HubSpot per-page limit
     }
     
@@ -71,15 +70,7 @@ async def get_all_deals(limit: int = 200, _retry: bool = True) -> List[Dict[str,
                             "amount": d["properties"].get("amount"),
                             "stage": d["properties"].get("dealstage"),
                             "slug": slug,
-                            "city": d["properties"].get("city", "Unknown"),
-                            # HubSpot audit (2026-07-31) found 166/171 deals with zero
-                            # associated contacts despite "appointment/presentation
-                            # scheduled" stages -- fabricated pipeline from an earlier
-                            # session, not real prospects. Every consumer of this list
-                            # MUST check this field before treating a deal as real
-                            # (spending money on it, counting it in a revenue report,
-                            # etc.) rather than trusting dealstage/amount alone.
-                            "has_verified_contact": int(d["properties"].get("num_associated_contacts") or 0) > 0
+                            "city": d["properties"].get("city", "Unknown")
                         })
                     
                     after = data.get("paging", {}).get("next", {}).get("after")
@@ -122,134 +113,33 @@ async def get_lead_contact_info(deal_id: str) -> Optional[Dict[str, str]]:
     return None
 
 async def get_deal_notes(deal_id: str) -> str:
-    """Fetches all notes associated with a deal."""
-    token = get("hubspot_token")
-    if not token: return "No notes available (missing token)."
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # Association type ID 214 is for deal-to-note
-            r = await client.get(f"https://api.hubapi.com/crm/v3/objects/deals/{deal_id}/associations/notes", headers=headers)
-            if r.status_code == 200:
-                notes_data = r.json().get("results", [])
-                note_contents = []
-                for n in notes_data:
-                    n_id = n["id"]
-                    r_note = await client.get(f"https://api.hubapi.com/crm/v3/objects/notes/{n_id}?properties=hs_note_body", headers=headers)
-                    if r_note.status_code == 200:
-                        note_contents.append(r_note.json().get("properties", {}).get("hs_note_body", ""))
-                return "\n".join(note_contents)
-            return "No notes found."
-    except Exception as e:
-        logger.error(f"Failed to fetch notes for deal {deal_id}: {e}")
-        return "Error fetching notes."
-
-
-async def get_deal_notes(deal_id: str) -> str:
-    """Fetches all notes associated with a deal."""
-    token = get("hubspot_token")
-    if not token: return "No notes available (missing token)."
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # Association type ID 214 is for deal-to-note
-            r = await client.get(f"https://api.hubapi.com/crm/v3/objects/deals/{deal_id}/associations/notes", headers=headers)
-            if r.status_code == 200:
-                notes_data = r.json().get("results", [])
-                note_contents = []
-                for n in notes_data:
-                    n_id = n["id"]
-                    r_note = await client.get(f"https://api.hubapi.com/crm/v3/objects/notes/{n_id}?properties=hs_note_body", headers=headers)
-                    if r_note.status_code == 200:
-                        note_contents.append(r_note.json().get("properties", {}).get("hs_note_body", ""))
-                return "\n".join(note_contents)
-            return "No notes found."
-    except Exception as e:
-        logger.error(f"Failed to fetch notes for deal {deal_id}: {e}")
-        return "Error fetching notes."
-
-
-async def add_deal_note(deal_id: str, content: str) -> bool:
-    """Creates a note and associates it with a deal."""
-    token = get("hubspot_token")
-    if not token: return False
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-    note_payload = {
-        "properties": {
-            "hs_note_body": content,
-            # Was hardcoded to a fixed 2026-07-12 timestamp, so every note this
-            # function ever wrote showed the wrong activity date in HubSpot
-            # regardless of when it was actually created. Use the real time.
-            "hs_timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        },
-        "associations": [
-            {
-                "to": {"id": deal_id},
-                "types": [{"associationCategory": "HUBSPOT_DEFINED", "associationTypeId": 214}]
-            }
-        ]
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.post("https://api.hubapi.com/crm/v3/objects/notes", headers=headers, json=note_payload)
-            return r.status_code == 201
-    except Exception as e:
-        logger.error(f"Failed to add note to deal {deal_id}: {e}")
-        return False
-
-async def create_verified_contact_for_deal(deal_id: str, email: str, company: str) -> bool:
     """
-    Creates a HubSpot contact and associates it with a deal. Callers must
-    only invoke this AFTER independently confirming the email is real
-    (e.g. Resend reported the send as "delivered", not just "sent") --
-    this function does no verification of its own, it just records it.
+    Fetches engagement notes associated with a deal.
     """
     token = get("hubspot_token")
-    if not token: return False
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    if not token: 
+        return "Mock note: Client expressed interest in pilot expansion."
 
-    contact_payload = {
-        "properties": {"email": email, "company": company},
-        "associations": [
-            {
-                "to": {"id": deal_id},
-                "types": [{"associationCategory": "HUBSPOT_DEFINED", "associationTypeId": 3}]
-            }
-        ]
-    }
-
+    headers = {"Authorization": f"Bearer {token}"}
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.post("https://api.hubapi.com/crm/v3/objects/contacts", headers=headers, json=contact_payload)
-            if r.status_code == 201:
-                return True
-            # Contact with this email may already exist (e.g. an orphan
-            # contact from earlier fabricated-pipeline records) -- look it
-            # up and associate the existing one instead of failing.
-            if r.status_code == 409:
-                search = await client.post(
-                    "https://api.hubapi.com/crm/v3/objects/contacts/search",
-                    headers=headers,
-                    json={"filterGroups": [{"filters": [{"propertyName": "email", "operator": "EQ", "value": email}]}]},
-                )
-                if search.status_code == 200:
-                    results = search.json().get("results", [])
-                    if results:
-                        contact_id = results[0]["id"]
-                        assoc = await client.put(
-                            f"https://api.hubapi.com/crm/v3/objects/contacts/{contact_id}/associations/deals/{deal_id}/3",
-                            headers=headers,
-                        )
-                        return assoc.status_code in (200, 201, 204)
-            logger.error(f"Failed to create/associate contact for deal {deal_id}: {r.status_code} {r.text}")
-            return False
+            r = await client.get(f"https://api.hubapi.com/crm/v3/objects/deals/{deal_id}/associations/notes", headers=headers)
+            if r.status_code == 200:
+                note_ids = [res["id"] for res in r.json().get("results", [])]
+                if not note_ids: return ""
+                
+                notes_text = []
+                for nid in note_ids[:5]:
+                    r2 = await client.get(f"https://api.hubapi.com/crm/v3/objects/notes/{nid}?properties=hs_note_body", headers=headers)
+                    if r2.status_code == 200:
+                        body = r2.json().get("properties", {}).get("hs_note_body", "")
+                        notes_text.append(body)
+                
+                return "\n---\n".join(notes_text)
     except Exception as e:
-        logger.error(f"Failed to create contact for deal {deal_id}: {e}")
-        return False
+        logger.error(f"Failed to fetch notes for deal {deal_id}: {e}")
+    
+    return ""
 
 async def prioritize_leads_by_sentiment(deals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """

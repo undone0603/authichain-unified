@@ -19,7 +19,7 @@
  */
 
 import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
-import { logActivity, type Db } from '../db-helpers.js';
+import { logActivity, getDb } from '../../db.js';
 import { missionTasks } from '../../../drizzle/schema.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
 import {
@@ -87,7 +87,7 @@ IMPORTANT: Always return COMPLETE file content. Never use "..." or "existing cod
 
 // ─── PLAN_SPRINT ─────────────────────────────────────────────────────────
 
-export async function runPlanSprint(task: Task, db: Db): Promise<void> {
+export async function runPlanSprint(task: Task): Promise<void> {
   const p = task.payload as {
     feature: string;
     context?: string;
@@ -140,7 +140,7 @@ Rules:
     responseFormat: { type: 'json_object' },
   });
 
-  type Plan = {
+  let plan: {
     branch: string;
     prTitle: string;
     prBody: string;
@@ -148,12 +148,13 @@ Rules:
     followupTasks: Array<{ kind: string; payload: Record<string, unknown> }>;
   };
 
-  const plan = parseLLMContent<Plan>(result.choices[0].message.content);
+  plan = parseLLMContent<typeof plan>(result.choices[0].message.content);
 
   // Create the feature branch
   await createBranch(plan.branch);
 
   // Enqueue all planned tasks (WRITE_CODE + OPEN_PR + RUN_TESTS + CODE_REVIEW)
+  const db = await getDb();
   const allTasks = [...plan.tasks, ...plan.followupTasks];
 
   await db.insert(missionTasks).values(
@@ -168,7 +169,7 @@ Rules:
     }))
   );
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'sprint_planned',
     entityType: 'task',
@@ -185,7 +186,7 @@ Rules:
 
 // ─── WRITE_CODE ───────────────────────────────────────────────────────────
 
-export async function runWriteCode(task: Task, db: Db): Promise<void> {
+export async function runWriteCode(task: Task): Promise<void> {
   const p = task.payload as {
     branch: string;
     feature: string;
@@ -247,7 +248,7 @@ Write the code changes. Return the full JSON response as specified in your syste
     responseFormat: { type: 'json_object' },
   });
 
-  type CodeResult = {
+  let codeResult: {
     files: Array<{
       path: string;
       content: string;
@@ -258,7 +259,7 @@ Write the code changes. Return the full JSON response as specified in your syste
     nextSteps: string[];
   };
 
-  const codeResult = parseLLMContent<CodeResult>(result.choices[0].message.content);
+  codeResult = parseLLMContent<typeof codeResult>(result.choices[0].message.content);
 
   if (!codeResult.files?.length) {
     throw new Error('WRITE_CODE: LLM returned no files');
@@ -278,7 +279,7 @@ Write the code changes. Return the full JSON response as specified in your syste
     committedFiles.push(file.path);
   }
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'code_written',
     entityType: 'task',

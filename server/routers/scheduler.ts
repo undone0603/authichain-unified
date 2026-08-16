@@ -22,7 +22,7 @@ export const schedulerRouter = router({
   runManually: adminProcedure.input(z.object({
     jobName: z.string(),
   })).mutation(async ({ input }) => {
-    const success = await runJobManually(input.jobName, { force: true });
+    const success = await runJobManually(input.jobName);
     if (!success) throw new TRPCError({ code: "NOT_FOUND", message: `Job "${input.jobName}" not found` });
     return { success, message: `Job "${input.jobName}" started successfully` };
   }),

@@ -38,31 +38,10 @@ vi.mock("./db", async (importOriginal) => {
   return {
     ...actual,
     db: mockDrizzle,
-    // referral/affiliate/bonuses/marketplace routers (Task 2b-5) now resolve
-    // their own db via a documented getDb() bridge (no ctx.db on TrpcContext)
-    // instead of importing the `db` proxy directly.
-    getDb: async () => mockDrizzle,
     getReferralByCode: async () => undefined,
     getUserReferrals: async () => [],
     getAffiliateByUserId: async () => undefined,
     getUserReferralCommissions: async () => [],
-  };
-});
-
-// ─── Mock ./identity-db-helpers ────────────────────────────────────────────────
-// server/referral/router.ts and server/affiliate/router.ts were migrated
-// (Task 2b-5) to call server/identity-db-helpers.ts's db-parameterized
-// reimplementations instead of server/db.ts's named exports directly, so the
-// referral/affiliate helpers need to be mocked here too (the values below
-// intentionally mirror the "./db" mock above so existing test expectations
-// don't change).
-vi.mock("./identity-db-helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./identity-db-helpers")>();
-  return {
-    ...actual,
-    getReferralByCode: async () => undefined,
-    getUserReferrals: async () => [],
-    getAffiliateByUserId: async () => undefined,
   };
 });
 
@@ -91,8 +70,6 @@ function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
     res: {
       clearCookie: vi.fn(),
     } as unknown as TrpcContext["res"],
-    secure: true,
-    setCookieHeader: () => {},
   };
 }
 
@@ -106,8 +83,6 @@ function createPublicContext(): TrpcContext {
     res: {
       clearCookie: vi.fn(),
     } as unknown as TrpcContext["res"],
-    secure: true,
-    setCookieHeader: () => {},
   };
 }
 

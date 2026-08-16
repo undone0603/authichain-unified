@@ -46,9 +46,6 @@ sync_key DATABASE_URL
 # APIs
 sync_key SAM_GOV_API_KEY             SAM_API_KEY
 sync_key HUBSPOT_TOKEN               HUBSPOT_ACCESS_TOKEN
-# b2b-outreach.yml reads secrets.HUBSPOT_TOKEN — sync under that name too
-sync_key HUBSPOT_TOKEN               HUBSPOT_TOKEN
-sync_key APOLLO_API_KEY
 sync_key RESEND_API_KEY
 sync_key STRIPE_SECRET_KEY
 sync_key AIRTABLE_API_KEY

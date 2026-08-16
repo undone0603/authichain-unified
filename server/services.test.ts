@@ -11,22 +11,6 @@ vi.mock("./db", async (importOriginal) => {
   };
 });
 
-// server/services/router.ts was migrated (Task 2b-4) to call
-// server/db-helpers.ts's db-parameterized reimplementations instead of
-// server/db.ts's named exports directly, so these need to be mocked here
-// too (mirrors the "./db" mock above so existing test expectations don't
-// change; the `db` argument itself is never dereferenced since these are
-// full mocks).
-vi.mock("./db-helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./db-helpers")>();
-  return {
-    ...actual,
-    getServiceOrdersByUser: vi.fn(async () => []),
-    getAllServiceOrders: vi.fn(async () => []),
-    updateServiceOrderStatus: vi.fn(async () => undefined),
-  };
-});
-
 import { appRouter } from "./routers";
 
 const publicCaller = appRouter.createCaller({ user: null } as any);

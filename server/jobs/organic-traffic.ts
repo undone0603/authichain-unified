@@ -1,9 +1,7 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { invokeLLM, parseLLMContent } from "../_core/llm";
-import { ENV } from "../_core/env";
-import { getDb } from "../db";
-import { logActivity, type Db } from "./db-helpers";
+import { logActivity } from "../db";
 
 type OrganicContentPlanItem = {
   segment: string;
@@ -171,11 +169,11 @@ async function emitAnalyticsEvents(itemCount: number) {
   }
 }
 
-export async function runOrganicTrafficAutomation(db: Db) {
+export async function runOrganicTrafficAutomation() {
   let items = buildFallbackPlan();
   let generatedBy = "template";
 
-  if (ENV.anthropicApiKey) {
+  if (process.env.BUILT_IN_FORGE_API_KEY) {
     try {
       const llmItems = await buildLlmPlan();
       if (llmItems.length > 0) {
@@ -195,7 +193,7 @@ export async function runOrganicTrafficAutomation(db: Db) {
     items,
   };
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: "organic_content_plan_generated",
     entityType: "marketing",
@@ -209,10 +207,7 @@ export async function runOrganicTrafficAutomation(db: Db) {
 const isMain = !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
-  // Documented bridge: standalone CLI entry point has no caller to thread a
-  // db instance from, so it obtains one from the legacy Node singleton itself.
-  getDb()
-    .then(db => runOrganicTrafficAutomation(db))
+  runOrganicTrafficAutomation()
     .then(result => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);

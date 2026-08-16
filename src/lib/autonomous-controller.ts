@@ -39,15 +39,23 @@ export class AutonomousController {
           continue;
         }
 
+        // Attribution corrected: the FTC does not issue Executive Orders, and a
+        // company does not "comply with" one. The binding obligation is the
+        // FTC's Made in USA Labeling Rule (16 CFR Part 323) — the authority the
+        // April 2026 sweep and the $625k TouchTunes order were brought under.
+        // EO 14392 is real and prompted the sweep, so it stays as context.
+        // "Action Required" and "your claims are at regulatory risk" are also
+        // dropped: we have no knowledge of this recipient's sourcing, so
+        // asserting they are exposed is a claim we cannot make.
         const msg = `Attention ${p.name || 'Operations Lead'},\n\n` +
-          `With the recent FTC $625k MUSA penalties and EO 14392, your current "Made in USA" claims are at regulatory risk.\n\n` +
-          `AuthiChain has launched the FTC Shield — the first cryptographic provenance seal for American manufacturing.\n\n` +
-          `View your prepared compliance dashboard: https://qron.space/ftc-shield`;
+          `The FTC ran a Made in USA enforcement sweep in April 2026 under its Made in USA Labeling Rule (16 CFR Part 323), following Executive Order 14392 on truthful "Made in America" advertising. The largest order in that sweep was $625,000.\n\n` +
+          `The rule turns on whether "all or virtually all" of a product is US-origin — which is a documentation problem as much as a sourcing one. AuthiChain's FTC Shield anchors per-unit origin evidence cryptographically, so the substantiation exists before anyone asks for it.\n\n` +
+          `Have a look: https://qron.space/ftc-shield`;
 
         const result = await sendEmail({
           from: 'AuthiChain Compliance <compliance@qron.space>',
           to: p.email,
-          subject: 'Action Required: FTC Made-in-USA Compliance (EO 14392)',
+          subject: 'Substantiating "Made in USA" claims after the April FTC sweep',
           text: msg,
         });
 
@@ -282,11 +290,7 @@ export class AutonomousController {
         });
       }
 
-      // downloadUrl is a multi-hundred-KB base64 data URL — log its size, not the blob
-      await logAutomation(workflowName, 'cron', 'success', {
-        trend: currentTrend,
-        imageKB: Math.round((data.downloadUrl?.length ?? 0) / 1024),
-      });
+      await logAutomation(workflowName, 'cron', 'success', { trend: currentTrend, imageUrl: data.downloadUrl });
     } catch (err: unknown) {
       await logAutomation(workflowName, 'cron', 'failure', null, formatErr(err));
     }

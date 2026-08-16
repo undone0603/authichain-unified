@@ -1,10 +1,10 @@
 /**
  * StrainChain METRC Bridge Service
- * Facilitates real-time synchronization between state seed-to-sale data
+ * Facilitates real-time synchronization between state seed-to-sale data 
  * and the AuthiChain Bitcoin L1 Truth Layer.
  */
 import { ENV } from "./_core/env";
-import { logActivity, type Db } from "./identity-db-helpers";
+import * as db from "./db";
 import { broadcastSocialProof } from "./social-service";
 
 interface MetrcAuth {
@@ -30,7 +30,7 @@ export interface MetrcTransfer {
  * Fetches active wholesale transfers for a given license.
  * Cascading fallback: MI Primary -> MI Backup
  */
-export async function syncMetrcTransfers(db: Db, auth: MetrcAuth) {
+export async function syncMetrcTransfers(auth: MetrcAuth) {
   const { vendorKey, userKey, licenseNumber } = auth;
   const authHeader = `Basic ${Buffer.from(`${vendorKey}:${userKey}`).toString('base64')}`;
 
@@ -55,20 +55,20 @@ export async function syncMetrcTransfers(db: Db, auth: MetrcAuth) {
           // Process transfers...
           for (const transfer of transfers) {
             if (transfer.status === 'Shipped' || transfer.status === 'Received') {
-              await logActivity(db, {
+              await db.logActivity({
                 userId: 1, action: 'metrc_manifest_synced',
                 entityType: 'manifest', entityId: transfer.id,
-                details: {
+                details: { 
                   manifestNumber: transfer.manifestNumber,
                   value: transfer.wholesalePrice,
-                  taxDue: transfer.wholesalePrice * 0.24
+                  taxDue: transfer.wholesalePrice * 0.24 
                 }
               });
             }
           }
           return transfers;
         }
-
+        
         console.warn(`[METRC] ${baseUrl} failed with ${response.status}`);
         await new Promise(r => setTimeout(r, attempt * 1000));
 
@@ -88,16 +88,16 @@ export async function syncMetrcTransfers(db: Db, auth: MetrcAuth) {
  * Anchors a METRC package to a Bitcoin Inscription.
  * This turns a state compliance record into a permanent brand asset.
  */
-export async function anchorPackageToTruthLayer(db: Db, packageTag: string, manifestId: string) {
+export async function anchorPackageToTruthLayer(packageTag: string, manifestId: string) {
   // 1. Verify manifest existence in DB
   // 2. Trigger Inscription via qron-ordinal-worker
   // 3. Update AuthiChain certificate status
-
+  
   console.log(`🔗 Anchoring METRC Package ${packageTag} to Bitcoin L1...`);
-
+  
   // 4. Trigger Social Proof Bridge
   try {
-    await broadcastSocialProof(db, {
+    await broadcastSocialProof({
       type: 'inscription',
       brandName: "Michigan Processor", // Dynamically resolve brand name from DB in real scenario
       productName: `Package ${packageTag}`,
@@ -107,7 +107,7 @@ export async function anchorPackageToTruthLayer(db: Db, packageTag: string, mani
   } catch (socialErr) {
     console.warn("[Social Bridge] Trigger failed during anchoring:", socialErr);
   }
-
+  
   return {
     success: true,
     txId: "btc_pending_hash_...",

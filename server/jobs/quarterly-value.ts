@@ -1,35 +1,32 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
-import { getDb } from "../db";
 import {
   createSystemNotification,
   getAllUsers,
   getQuarterlyValueReport,
   hasActionLogged,
   logActivity,
-  type Db,
-} from "./db-helpers";
+} from "../db";
 
-export async function runQuarterlyValueReportDispatch(db: Db) {
-  const report = await getQuarterlyValueReport(db);
+export async function runQuarterlyValueReportDispatch() {
+  const report = await getQuarterlyValueReport();
   const periodAction = `report_generated_quarterly_value_${report.period}`;
-  if (await hasActionLogged(db, periodAction)) {
+  if (await hasActionLogged(periodAction)) {
     return { admins: 0, delivered: 0, skipped: true, period: report.period };
   }
-  const users = await getAllUsers(db);
+  const users = await getAllUsers();
   const admins = users.filter(u => u.role === "admin");
 
   let delivered = 0;
   for (const admin of admins) {
     await createSystemNotification(
-      db,
       admin.id,
       "Quarterly Value Report",
       report.roiSummary,
       "system",
       "/admin",
     );
-    await logActivity(db, {
+    await logActivity({
       userId: admin.id,
       action: periodAction,
       entityType: "reporting",
@@ -45,10 +42,7 @@ export async function runQuarterlyValueReportDispatch(db: Db) {
 const isMain = !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
-  // Documented bridge: standalone CLI entry point has no caller to thread a
-  // db instance from, so it obtains one from the legacy Node singleton itself.
-  getDb()
-    .then(db => runQuarterlyValueReportDispatch(db))
+  runQuarterlyValueReportDispatch()
     .then(result => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);

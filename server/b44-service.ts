@@ -4,7 +4,7 @@
  * URL: https://chain-pay-a81f7780.base44.app/
  */
 import { ENV } from "./_core/env";
-import { getAutopilotDecisionCountByMonth, createAutopilotDecision, type Db } from "./identity-db-helpers";
+import * as db from "./db";
 
 const B44_BASE_URL = "https://chain-pay-a81f7780.base44.app";
 const FREE_TIER_MONTHLY_LIMIT = 50; // Assumed free tier cap for ProductDNA analysis
@@ -12,8 +12,8 @@ const FREE_TIER_MONTHLY_LIMIT = 50; // Assumed free tier cap for ProductDNA anal
 /**
  * Checks if B44 usage is within the free tier limit for the current month.
  */
-async function isWithinB44FreeTier(db: Db) {
-  const { data: usageCount } = await getAutopilotDecisionCountByMonth(db, "dna_verification");
+async function isWithinB44FreeTier() {
+  const { data: usageCount } = await db.getAutopilotDecisionCountByMonth("dna_verification");
   return usageCount < FREE_TIER_MONTHLY_LIMIT;
 }
 
@@ -21,8 +21,8 @@ async function isWithinB44FreeTier(db: Db) {
  * Analyzes a product image using B44 ProductDNA logic.
  * Respects the monthly free tier constraint.
  */
-export async function analyzeProductDNA(db: Db, imageUrl: string, productType: string) {
-  if (!(await isWithinB44FreeTier(db))) {
+export async function analyzeProductDNA(imageUrl: string, productType: string) {
+  if (!(await isWithinB44FreeTier())) {
     console.warn("🛑 B44 Free Tier limit reached. Skipping DNA analysis.");
     return { success: false, error: "Monthly free tier limit reached" };
   }
@@ -45,7 +45,7 @@ export async function analyzeProductDNA(db: Db, imageUrl: string, productType: s
     const result = await response.json();
 
     // Log the DNA analysis in Autopilot Decisions for tracking
-    await createAutopilotDecision(db, {
+    await db.createAutopilotDecision({
       type: "dna_verification",
       action: "ProductDNA Snapshot",
       reasoning: "Utilized B44 Base44 Super Agent for high-fidelity image analysis.",

@@ -2,15 +2,7 @@ import { z } from "zod";
 import { router, rateLimitedPublicProcedure, protectedProcedure } from "../_core/trpc";
 import { calculateROI } from "./roi-service";
 import { calculateLeadScore } from "./scoring-service";
-import { getDb } from "../db";
-import {
-  getLeadByEmail,
-  createLead,
-  updateLead,
-  createMission,
-  enqueueTask,
-  incrementInteractionCount,
-} from "../db-helpers";
+import * as db from "../db";
 import { ENV } from "../_core/env";
 
 const INDUSTRY_TO_SEGMENT: Record<string, string> = {
@@ -65,26 +57,22 @@ export const salesRouter = router({
 
       // Track lead if email provided
       if (input.userEmail) {
-        // ctx.db does not exist on the live TrpcContext (server/_core/context.ts) —
-        // only the separate Workers context has it. Documented bridge until
-        // this router is wired up to a real per-request db.
-        const db = await getDb();
-        let lead = await getLeadByEmail(db, input.userEmail);
+        let lead = await db.getLeadByEmail(input.userEmail);
         if (!lead) {
-          lead = await createLead(db, {
+          lead = await db.createLead({
             email: input.userEmail,
             industry: input.industry,
             source: "roi_calculator"
           });
         }
 
-        await updateLead(db, lead.id, {
+        await db.updateLead(lead.id, {
           roiCalculated: true,
           numProducts: input.numProducts,
           roiSavings: results.year1Savings
         });
 
-        await calculateLeadScore(db, lead.id);
+        await calculateLeadScore(lead.id);
 
         // Immediately enqueue outreach when the pipeline is enabled.
         // New leads from the ROI calculator are warm (self-identified intent) —
@@ -93,8 +81,8 @@ export const salesRouter = router({
           try {
             const segment = INDUSTRY_TO_SEGMENT[input.industry] ?? "RETAIL";
             const missionType = (INDUSTRY_TO_MISSION[input.industry] ?? "RETAIL_PILOT") as any;
-            const missionId = await createMission(db, missionType);
-            await enqueueTask(db, missionId, "DRAFT_OUTBOUND_EMAIL", {
+            const missionId = await db.createMission(missionType);
+            await db.enqueueTask(missionId, "DRAFT_OUTBOUND_EMAIL", {
               leadEmail: input.userEmail,
               segment,
               sequence: 1,
@@ -119,15 +107,13 @@ export const salesRouter = router({
       event: z.enum(["demo_start", "demo_complete", "demo_interaction", "demo_feature_view"]),
     }))
     .mutation(async ({ input }) => {
-      // Documented bridge — see calculateRoi above.
-      const db = await getDb();
-      const lead = await getLeadByEmail(db, input.email);
+      const lead = await db.getLeadByEmail(input.email);
       if (lead) {
-        await incrementInteractionCount(db, lead.id);
+        await db.incrementInteractionCount(lead.id);
         if (input.event === "demo_start") {
-          await updateLead(db, lead.id, { demoStarted: true });
+          await db.updateLead(lead.id, { demoStarted: true });
         }
-        await calculateLeadScore(db, lead.id);
+        await calculateLeadScore(lead.id);
       }
       return { success: true };
     }),
@@ -137,8 +123,6 @@ export const salesRouter = router({
    */
   getLeadStatus: protectedProcedure
     .query(async ({ ctx }) => {
-      // Documented bridge — see calculateRoi above.
-      const db = await getDb();
-      return await getLeadByEmail(db, ctx.user.email ?? "");
+      return await db.getLeadByEmail(ctx.user.email ?? "");
     }),
 });

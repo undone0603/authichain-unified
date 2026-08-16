@@ -1,0 +1,16 @@
+{
+  "date": "2026-08-15",
+  "slug": "dpp-live-timeline",
+  "source_commit": "96a59677b556498b62e7aac865ac099154246d8d",
+  "linkedin": "Our EU Digital Product Passport page pulls every date on it from one JSON timeline file, not hardcoded copy. A weekly automated regulatory-watch check updates that file, and the same file drives both the marketing page and the Cloudflare Worker that serves the production URL — one source of truth instead of two copies that can quietly drift apart.\n\nEach milestone re-labels itself (live, urgent, or upcoming) against the current date, instead of shipping as a static string that says \"opens July 2026\" forever, including after July 2026. The page also carries a \"Reviewed <date>\" line, so staleness is visible rather than hidden.\n\nCheck it yourself: authichain.com/dpp shows the reviewed date and the live status of the next deadline. It tracks published EU regulatory dates — ESPR, batteries, textiles — not legal advice, and it deliberately won't guess a date the Commission hasn't set yet.",
+  "reddit": {
+    "subreddit": "supplychain",
+    "title": "We rebuilt our EU DPP deadline page so every date comes from one file, not hardcoded copy",
+    "body": "Context: authichain.com/dpp tracks the EU Digital Product Passport (ESPR) rollout — the central registry, battery passports, textiles, and so on.\n\nWe rebuilt it so every date, status badge and meta description comes from one JSON timeline file instead of strings baked into the page at build time. A weekly automated regulatory-watch check updates that file, and the same file drives both the marketing page and the Cloudflare Worker that serves the production URL — one source of truth instead of two copies that can quietly drift apart.\n\nEach milestone now re-labels itself (live / urgent / upcoming) against the current date, and the page shows a \"Reviewed <date>\" line so you can tell whether the data is current without taking our word for it.\n\nIt tracks published EU regulatory dates — it's not legal advice, and it deliberately won't guess a date the Commission hasn't set yet.\n\nCurious whether others tracking ESPR/DPP deadlines for their own supply chain find a page like this useful, or would rather have the raw JSON/API directly.\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "1/ Our EU DPP compliance page pulls every deadline from one JSON timeline file instead of hardcoded copy. A weekly automated check updates it, and the same file drives the marketing page and the Cloudflare Worker serving it — one source of truth, not two copies that drift.",
+    "2/ Each milestone re-labels itself live/urgent/upcoming against the actual date, instead of shipping as a static string that reads \"opens July 2026\" forever, including after July 2026. The page also shows a \"Reviewed <date>\" line, so staleness is visible, not hidden.",
+    "3/ Check it yourself: authichain.com/dpp shows the reviewed date and the live status of the next deadline. It tracks published EU regulatory dates (ESPR, batteries, textiles) — not legal advice, and it won't guess a date the Commission hasn't set."
+  ]
+}

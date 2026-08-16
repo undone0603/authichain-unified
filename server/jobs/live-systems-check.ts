@@ -1,8 +1,7 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { getDb } from "../db";
-import { logActivity, type Db } from "./db-helpers";
+import { logActivity } from "../db";
 
 type IntegrationCheckResult = {
   configured: boolean;
@@ -184,7 +183,7 @@ async function checkGa4(): Promise<IntegrationCheckResult> {
   }
 }
 
-export async function runLiveSystemsCheck(db: Db): Promise<LiveSystemsCheckResult> {
+export async function runLiveSystemsCheck(): Promise<LiveSystemsCheckResult> {
   const [stripe, hubspot, gmail, posthog, ga4] = await Promise.all([
     checkStripe(),
     checkHubSpot(),
@@ -207,7 +206,7 @@ export async function runLiveSystemsCheck(db: Db): Promise<LiveSystemsCheckResul
     blockers,
   };
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: "live_systems_check",
     entityType: "automation",
@@ -221,10 +220,7 @@ export async function runLiveSystemsCheck(db: Db): Promise<LiveSystemsCheckResul
 const isMain = !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
-  // Documented bridge: standalone CLI entry point has no caller to thread a
-  // db instance from, so it obtains one from the legacy Node singleton itself.
-  getDb()
-    .then(db => runLiveSystemsCheck(db))
+  runLiveSystemsCheck()
     .then(result => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);

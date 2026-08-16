@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { chat } from './lib/llm.ts';
+import { normalizeContactEmail } from './lib/contact-email.ts';
 
 const isDryRun = process.env.DRY_RUN === 'true';
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -84,7 +85,7 @@ Generate a detailed lead scoring breakdown (JSON only) with four dimensions (eac
   }
 }
 
-async function qualifyLeads(): Promise<{ qualified: number; failed: number; total: number }> {
+async function qualifyLeads(): Promise<{ qualified: number; failed: number; skippedNoContact: number; total: number }> {
   // Fetch high-fit opportunities not yet qualified. Qualification is tracked via
   // qualified_at (not status) so this pipeline never competes with
   // generate-proposals.ts, which consumes status='scored'.
@@ -100,11 +101,12 @@ async function qualifyLeads(): Promise<{ qualified: number; failed: number; tota
   if (error) throw error;
   if (!opps?.length) {
     console.log(`No opportunities with fit_score >= ${FIT_THRESHOLD} to qualify.`);
-    return { qualified: 0, failed: 0, total: 0 };
+    return { qualified: 0, failed: 0, skippedNoContact: 0, total: 0 };
   }
 
   let qualified = 0;
   let failed = 0;
+  let skippedNoContact = 0;
 
   for (const opp of opps) {
     try {
@@ -114,11 +116,33 @@ async function qualifyLeads(): Promise<{ qualified: number; failed: number; tota
       // Extract agency name as lead name (try to parse contact info from description)
       const agency_name = opp.agency || 'Unknown Agency';
 
+      // Only opportunities carrying a real, deliverable contact address become
+      // leads. This previously synthesised one by slugifying the SAM.gov office
+      // hierarchy — producing addresses like
+      //   procurement@homeland-security,-department-of.us-coast-guard.(cg-912).gov
+      // which are not merely wrong but syntactically invalid. Nothing could ever
+      // be sent to them, yet they counted as "qualified leads", so every
+      // downstream funnel metric measured fabricated demand.
+      const contactEmail = normalizeContactEmail(opp.contact_email);
+      if (!contactEmail) {
+        skippedNoContact++;
+        console.log(`  ⏭️  ${opp.notice_id} — qualified, but no contact email on the opportunity`);
+        if (!isDryRun) {
+          // Still advance the opportunity so it isn't re-scored forever; it just
+          // doesn't become a lead until a contact is attached.
+          await supabase
+            .from('gov_opportunities')
+            .update({ qualified_at: new Date().toISOString() })
+            .eq('notice_id', opp.notice_id);
+        }
+        continue;
+      }
+
       if (!isDryRun) {
         // Upsert into leads table with gov_engine specific fields
         const { error: insertError } = await supabase.from('leads').upsert(
           {
-            email: `procurement@${agency_name.toLowerCase().replace(/\s+/g, '-')}.gov`,
+            email: contactEmail,
             name: agency_name,
             company: opp.agency,
             source: 'gov_engine',
@@ -172,14 +196,23 @@ async function qualifyLeads(): Promise<{ qualified: number; failed: number; tota
     }
   }
 
-  return { qualified, failed, total: opps.length };
+  return { qualified, failed, skippedNoContact, total: opps.length };
 }
 
-const { qualified, failed, total } = await qualifyLeads();
-console.log(`✅ Qualified ${qualified}/${total} leads (${failed} failed)`);
+const { qualified, failed, skippedNoContact, total } = await qualifyLeads();
+console.log(`✅ Qualified ${qualified}/${total} leads (${failed} failed, ${skippedNoContact} without a contact email)`);
 
-// Only fail if we had opportunities but qualified exactly zero
-if (total > 0 && qualified === 0) {
+if (skippedNoContact > 0) {
+  console.log(
+    `ℹ️  ${skippedNoContact} opportunity(ies) scored well but carry no usable contact address. ` +
+      'They are advanced but not counted as leads — attach a real contact to gov_opportunities.contact_email to convert them.',
+  );
+}
+
+// Only fail if we had opportunities but qualified exactly zero. An opportunity
+// batch that is entirely contactless is a sourcing gap, not a pipeline failure,
+// so it must not turn the scheduled run red.
+if (total > 0 && qualified === 0 && skippedNoContact < total) {
   console.error('❌ All lead qualification attempts failed — see errors above.');
   process.exit(1);
 }

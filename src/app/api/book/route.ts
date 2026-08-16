@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { detectBot } from './bot-detection';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +78,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'name and email are required' }, { status: 400 });
     }
 
+    // Drop silently with a 200. Returning an error would tell the operator
+    // which of their submissions tripped the trap, letting them tune around it;
+    // an indistinguishable success teaches them nothing. Nothing is written, so
+    // no notification fires and no CRM record is created.
+    const botReason = detectBot(body);
+    if (botReason) {
+      console.info('[api/book] dropped automated submission:', botReason);
+      return NextResponse.json({ ok: true });
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY!,
@@ -112,7 +123,10 @@ export async function POST(req: NextRequest) {
     if (process.env.RESEND_API_KEY) {
       const { Resend } = await import('resend');
       const resend = new Resend(process.env.RESEND_API_KEY);
-      const from   = process.env.OUTREACH_FROM_EMAIL ?? 'hello@authichain.com';
+      // Falls back to the one domain verified on the Resend account — an
+      // unverified From silently drops the one notification that tells us a
+      // real person asked for a demo.
+      const from   = process.env.OUTREACH_FROM_EMAIL ?? 'hello@strainchain.io';
       const notify = process.env.SALES_NOTIFY_EMAIL  ?? 'hello@authichain.com';
 
       await resend.emails.send({

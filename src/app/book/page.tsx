@@ -1,12 +1,25 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 function BookForm() {
   const params = useSearchParams();
   const prospectId = params.get('prospect_id') ?? '';
   const campaign   = params.get('utm_campaign') ?? '';
+
+  // Anti-automation pair, both checked server-side.
+  // `company_website` is a decoy: hidden from people, irresistible to the
+  // form-filling bots that were submitting every field on this page. A real
+  // submission always leaves it empty.
+  const [honeypot, setHoneypot] = useState('');
+  // Mount time gives us elapsed-time-to-submit. A human reading four fields
+  // cannot complete this in under a couple of seconds; a script always can.
+  // Stamped in an effect rather than during render — Date.now() is impure, and
+  // a re-render would otherwise reset the clock. The server treats a missing
+  // value as inconclusive, so the honeypot still covers the pre-effect window.
+  const renderedAt = useRef<number | null>(null);
+  useEffect(() => { renderedAt.current = Date.now(); }, []);
 
   const [form, setForm] = useState({
     name:      '',
@@ -27,7 +40,13 @@ function BookForm() {
       const res = await fetch('/api/book', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, prospect_id: prospectId, utm_campaign: campaign }),
+        body: JSON.stringify({
+          ...form,
+          prospect_id: prospectId,
+          utm_campaign: campaign,
+          company_website: honeypot,
+          elapsed_ms: renderedAt.current === null ? null : Date.now() - renderedAt.current,
+        }),
       });
       setStatus(res.ok ? 'sent' : 'error');
     } catch {
@@ -50,6 +69,24 @@ function BookForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/*
+        Decoy field. Positioned off-screen rather than display:none — some bots
+        skip fields that are outright hidden. aria-hidden + tabIndex keep it out
+        of the accessibility tree and keyboard order, so it is invisible to
+        screen-reader and keyboard users alike.
+      */}
+      <div aria-hidden="true" className="absolute left-[-9999px] top-0 h-0 w-0 overflow-hidden">
+        <label htmlFor="company_website">Company website (leave blank)</label>
+        <input
+          id="company_website"
+          name="company_website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={honeypot}
+          onChange={e => setHoneypot(e.target.value)}
+        />
+      </div>
       <div className="grid md:grid-cols-2 gap-5">
         <div>
           <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Name *</label>

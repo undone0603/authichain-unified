@@ -5,7 +5,6 @@ import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
-import { globalApiRateLimit } from "./rate-limit";
 
 // Simple in-memory rate limiter for development
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
@@ -39,7 +38,6 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
-  app.use(globalApiRateLimit); // CodeQL: js/missing-rate-limiting
   app.use(vite.middlewares);
   // Path-less middleware (Express 5 / path-to-regexp v8 reject a bare "*" path).
   app.use(async (req, res, next) => {
@@ -86,7 +84,6 @@ export function serveStatic(app: Express) {
   }
 
   // Serve the built client assets (JS/CSS/images).
-  app.use(globalApiRateLimit); // CodeQL: js/missing-rate-limiting
   app.use(express.static(distPath));
 
   // SPA fallback: GET requests that weren't handled by an API route above and

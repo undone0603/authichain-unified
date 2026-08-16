@@ -6,10 +6,6 @@ import { DbAdminRepository } from '../../../../../server/admin/db-repository';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-// Some procedures (executive.generate's blog-post/analysis prompts) can run
-// long. Vercel Hobby's function-duration ceiling is 60s — set explicitly
-// since the default without this is 10s, which those calls can exceed.
-export const maxDuration = 60;
 
 /**
  * Next.js (App Router) tRPC endpoint. When Vercel builds with framework: nextjs,
@@ -23,7 +19,7 @@ async function handler(req: Request): Promise<Response> {
     endpoint: '/api/trpc',
     req,
     router: appRouter,
-    createContext: async ({ resHeaders }) => {
+    createContext: async () => {
       let user = null;
       try {
         const cookie = req.headers.get('cookie') ?? '';
@@ -35,14 +31,6 @@ async function handler(req: Request): Promise<Response> {
         req: { headers: Object.fromEntries(req.headers) } as never,
         res: { clearCookie: () => {}, cookie: () => {} } as never,
         user,
-        // Vercel production traffic is always HTTPS.
-        secure: true,
-        // Real cookie writer (fixes logout not clearing the session cookie
-        // on this live Next.js path — it was previously a no-op). The tRPC
-        // fetch adapter merges resHeaders into the final response, so a
-        // Set-Cookie appended here (e.g. by auth.logout) actually reaches
-        // the browser.
-        setCookieHeader: (value: string) => { resHeaders.append('Set-Cookie', value); },
         missionsRepo: new DbMissionsRepository(),
         adminRepo: new DbAdminRepository(),
       };
