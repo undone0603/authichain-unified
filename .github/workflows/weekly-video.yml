@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Fail fast and legibly rather than burning render credits on a job that
       # cannot possibly upload. Mirrors the outreach preflight pattern.
