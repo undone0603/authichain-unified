@@ -28,7 +28,7 @@ jobs:
     name: Qualify Leads
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with: { version: '${{ env.PNPM_VERSION }}' }
       - uses: actions/setup-node@v7
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: qualify-leads
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with: { version: '${{ env.PNPM_VERSION }}' }
       - uses: actions/setup-node@v7
@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: sync-mi-leads
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with: { version: '${{ env.PNPM_VERSION }}' }
       - uses: actions/setup-node@v7
