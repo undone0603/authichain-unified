@@ -85,6 +85,14 @@ const BANNED_PATTERNS = [
   { re: /\bHIPAA[- ]compliant\b/i, why: 'not a covered entity and no BAA is offered' },
   { re: /\bPCI[- ]?DSS\b(?![^.]*Stripe)/i, why: 'PCI-DSS belongs to Stripe, not to us' },
 
+  // Government-authorization claims. FedRAMP is an agency assessment/authorization
+  // posture, not a vendor badge, and a certification never confers it. These match
+  // only the *claim* forms, so a factual sentence ("we evaluate FedRAMP and NIST
+  // requirements with the customer") still passes — the ban is on asserting we
+  // hold an authorization we do not.
+  { re: /\bFedRAMP[- ]?(?:compliant|ready|certified|authorized|authorised)\b/i, why: 'FedRAMP is an agency authorization, not a vendor badge' },
+  { re: /\bgovernment[- ]?(?:grade|compliant|certified|approved)\b/i, why: 'government claim with no defined control scope or contractual basis' },
+
   // Factually wrong regardless of substantiation.
   { re: /quantum[- ]resistant|post[- ]quantum secure/i, why: 'Ed25519 is broken by Shor — this is false, not merely unproven' },
   { re: /\berror[- ]correction\s*(?:to\s*)?L4\b/i, why: 'QR error-correction levels are L/M/Q/H; L4 does not exist' },
