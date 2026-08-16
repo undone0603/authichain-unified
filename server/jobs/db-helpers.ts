@@ -224,7 +224,7 @@ export async function createMission(db: Db, type: MissionType) {
 
 export async function getActiveMissionTypes(db: Db): Promise<string[]> {
   const rows = await db.select({ title: missions.title }).from(missions).where(eq(missions.status, 'active'));
-  return rows.map(r => r.title);
+  return rows.map((r: { title: string }) => r.title);
 }
 
 // ─── Subscriptions / Dunning ────────────────────────────────────────────────
@@ -246,7 +246,7 @@ export async function getRevenueAnalytics(db: Db, startDate?: Date, endDate?: Da
 export async function getWeeklyRevenueDigest(db: Db) {
   const weekAgo = new Date(Date.now() - 7 * 86400000);
   const rows = await db.select().from(revenueRecords).where(gte(revenueRecords.createdAt, weekAgo));
-  const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+  const total = rows.reduce((s: number, r: { amount: string }) => s + Number(r.amount), 0);
   return {
     leads: rows.length,
     mqlToSql: 0,
@@ -264,7 +264,7 @@ export async function getQuarterlyValueReport(db: Db) {
   const now = new Date();
   const q = `${now.getFullYear()}-Q${Math.ceil((now.getMonth() + 1) / 3)}`;
   const rows = await db.select().from(revenueRecords).where(gte(revenueRecords.createdAt, quarterAgo));
-  const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+  const total = rows.reduce((s: number, r: { amount: string }) => s + Number(r.amount), 0);
   return {
     period: q,
     roiSummary: `Q${Math.ceil((now.getMonth() + 1) / 3)} revenue: $${total.toFixed(2)} across ${rows.length} records.`,

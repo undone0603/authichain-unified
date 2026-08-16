@@ -1,4 +1,15 @@
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+
+// Minimal shape of the Workers runtime's ExecutionContext. This file lives
+// under src/ (checked by the root tsconfig, typed against Node/DOM) rather
+// than a workers/<name>/ project with its own @cloudflare/workers-types
+// devDependency, so the real ambient type isn't resolvable here — declaring
+// just the two methods this file's signature needs avoids adding a root-level
+// dependency for a single file.
+interface ExecutionContext {
+  waitUntil(promise: Promise<unknown>): void;
+  passThroughOnException(): void;
+}
 
 export interface Env {
   GATEWAY_SECRET: string;
@@ -155,7 +166,7 @@ async function handleAnchor(request: Request, env: Env): Promise<Response> {
     .single();
 
   if (error || !data) {
-    return json({ ok: false, error: "queue_insert_failed", detail: error }, 500);
+    return json({ ok: false, error: "queue_insert_failed", detail: error?.message ?? "unknown" }, 500);
   }
 
   const queueId = data.id;
