@@ -47,6 +47,10 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          # check-schema-drift.mjs reports drift through its exit code, and it is
+          # piped into tee. Without pipefail the step takes tee's status — always
+          # 0 — so drift would report green. Keep this line.
+          set -o pipefail
           if [ -z "$DATABASE_URL" ]; then
             echo "DATABASE_URL repo secret not set — skipping."
             echo "Set it to have this check run against the live database."
