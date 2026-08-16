@@ -24,9 +24,7 @@
     }
   },
   "include": [
-    "server/webhooks/**/*",
-    "server/_core/**/*",
-    "server/stripe-service.ts"
+    "server/webhooks/**/*"
   ],
   "exclude": [
     "node_modules",
