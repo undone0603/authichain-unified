@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check required secrets
         id: secrets_check
@@ -30,7 +30,7 @@ jobs:
 
       - name: Setup Node
         if: steps.secrets_check.outputs.skip != 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -40,7 +40,7 @@ jobs:
 
       - name: Install pnpm
         if: steps.secrets_check.outputs.skip != 'true'
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: latest
 
