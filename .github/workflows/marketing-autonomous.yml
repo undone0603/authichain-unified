@@ -35,7 +35,9 @@ jobs:
   seo-refresh:
     name: SEO — Sitemap refresh + IndexNow ping
     runs-on: ubuntu-latest
+    # Guard: set vars.PIPELINE_ENABLED = 'true' in repo Settings → Variables to enable scheduled runs
     if: |
+      (vars.PIPELINE_ENABLED == 'true' && github.event_name == 'schedule') ||
       github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'seo_only') ||
       github.event_name == 'schedule'
     steps:

@@ -1,0 +1,30 @@
+# CODEOWNERS — auto-assigns reviewers based on file paths.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default: everything requires a review from the core team
+*                           @undone0603
+
+# CI / GitHub Actions — extra scrutiny on workflow changes
+.github/                    @undone0603
+
+# Blockchain & smart contracts — high-risk surface
+contracts/                  @undone0603
+src/lib/blockchain*         @undone0603
+workers/authichain-chain-data/ @undone0603
+
+# Python agent core — autonomous outreach & spend
+agentz/core/                @undone0603
+agentz/workflows/           @undone0603
+
+# Database schema & migrations
+src/db/                     @undone0603
+drizzle/                    @undone0603
+
+# Auth & security
+src/middleware.ts            @undone0603
+src/lib/auth*               @undone0603
+
+# Environment & secrets documentation
+.env.example                @undone0603
+.env.local.example          @undone0603
+.env.template               @undone0603
