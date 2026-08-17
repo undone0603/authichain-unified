@@ -6,14 +6,14 @@ Welcome to the unified repository for the **QRON Platform** and the **AuthiChain
 
 This repository is the central hub for the QRON ecosystem, integrating a high-performance frontend with a sophisticated autonomous agent orchestration layer.
 
-- **QRON Platform**: A Next.js 14 multi-domain architecture serving specialized brands (qron.space, authichain.com, govchain.us, strainchain.io) with Cloudflare Edge integration and Drizzle ORM.
+- **QRON Platform**: A Next.js 15 multi-domain architecture serving specialized brands (qron.space, authichain.com, govchain.us, strainchain.io) with Cloudflare Edge integration and Drizzle ORM.
 - **AuthiChain Unified Core (AgentZ)**: A Python-based workflow orchestrator that manages autonomous agents for infrastructure fixing, revenue operations, and high-entropy supply chain audits.
 
 ---
 
 ## 🌐 1. QRON Platform (Frontend & Edge)
 
-A Next.js application with a Cloudflare Edge Worker and Drizzle ORM.
+A Next.js 15 application with a Cloudflare Edge Worker and Drizzle ORM.
 
 ### Ecosystem & Multi-Domain Architecture
 
@@ -28,15 +28,30 @@ The QRON platform operates as a unified codebase serving four distinct branded e
 Traffic is routed based on the `Host` header. Shared application routes (like `/dashboard`, `/login`, and `/api`) remain unified across all domains, while the root path (`/`) serves the brand-specific landing page.
 
 ### Tech Stack
-- **Framework**: [Next.js](https://nextjs.org) (App Router)
-- **Database**: [Drizzle ORM](https://orm.drizzle.team) with PostgreSQL
-- **Edge Runtime**: Cloudflare Workers
+- **Framework**: [Next.js 15](https://nextjs.org) (App Router)
+- **Database**: [Drizzle ORM](https://orm.drizzle.team) with PostgreSQL (Supabase)
+- **Edge Runtime**: Cloudflare Workers (via OpenNext)
 - **Styling**: Tailwind CSS
+- **Package Manager**: [pnpm](https://pnpm.io)
 
 ### Getting Started (Frontend)
-1. **Setup Environment**: `cp .env.example .env`
-2. **Install Dependencies**: `npm install`
-3. **Run Development Server**: `npm run dev`
+
+> **Prerequisite**: Install [pnpm](https://pnpm.io/installation) (`npm install -g pnpm`) and Node.js 22+.
+
+```bash
+# 1. Set up environment
+cp .env.example .env
+# Fill in the required values in .env
+
+# 2. Install dependencies
+pnpm install
+
+# 3. Run development server (Next.js)
+pnpm next:dev
+
+# 4. (Alternative) Run the standalone Express server
+pnpm dev
+```
 
 ---
 
@@ -50,8 +65,16 @@ The `agentz/` directory contains the control-plane layer for autonomous operatio
 - **Dependency Resolution**: Automated ordering of prerequisite tasks.
 - **Audit Logging**: Comprehensive run history in `agentz/runs.jsonl`.
 
-### Usage (Python Agents)
-```powershell
+### Getting Started (Python Agents)
+
+```bash
+# Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+
+# Install agent dependencies
+pip install -r requirements-agentz.txt
+
 # Inspect registered workflows
 python -m agentz.cli list
 
@@ -67,9 +90,11 @@ python -m agentz.cli run --all --revenue-only --mode auto
 ## 🛠️ Unified Database & Infrastructure
 
 - **ORM**: Drizzle is used for schema management.
-- **Migrations**: `npm run db:generate` and `npm run db:push`.
+- **Migrations**: `pnpm db:generate` then `pnpm db:migrate`.
 - **Edge**: Managed via `wrangler.toml` in the root.
-- **Agents**: Python environment requires `pip install -r requirements-agentz.txt`.
+- **Cloudflare Deploy**: `pnpm deploy:cf` (uses OpenNext + Wrangler).
+
+---
 
 ## ⚖️ Legal & Intellectual Property
 

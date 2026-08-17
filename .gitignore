@@ -1,17 +1,21 @@
 # Dependencies
 node_modules/
-/dist
-/build
 
 # Next.js
 /.next/
 /out/
 
-# Secrets & Env
+# Build outputs
+/dist/
+/build/
+/worker-dist/
+
+# Secrets & Env — NEVER commit real .env files
 .env
 .env.*
 !.env.example
 !.env.template
+!.env.local.example
 *.pem
 *.key
 supabase/key.txt
@@ -33,6 +37,7 @@ yarn-debug.log*
 pnpm-debug.log*
 agentz/logs/
 agentz/runs.jsonl
+dev.log
 
 # OS & Editors
 .DS_Store
@@ -46,13 +51,15 @@ Thumbs.db
 next-env.d.ts
 
 # Vercel & Wrangler
-.vercel
+.vercel/
 .wrangler/
-/worker-dist/
+
+# Open-Next
+.open-next/
 
 # Testing
-/coverage
-/.nyc_output
+/coverage/
+/.nyc_output/
 
 # Temporary
 tmp/
@@ -60,7 +67,7 @@ temp/
 .cache/
 .parcel-cache/
 
-# Lockfiles
+# Lockfiles — only pnpm is canonical
 package-lock.json
 yarn.lock
 
@@ -68,23 +75,24 @@ yarn.lock
 *.db
 *.sqlite
 *.sqlite3
-/drizzle/migrations
 
-# Authichain specifics
+# Sensitive data files
+gov_pursue_list.csv
+
+# Authichain operational artifacts
+CI_FIX_REPORT.md
+SAM_PREP.md
 AUTHENTICITY_INDEX.md
 SIGNATURE_MANIFEST.md
 SYSTEM_STATE.md
-.open-next/
-.next/
-dist/
 
-# Externally cloned repos (exploration only) — anchored to root so
-# apps/* consolidated copies stay trackable
-/authichain_premium/
-/qron-platform/
-/qron/
-/govchain.us/
-/maison-elite-ai-dropship/
+# Debug/scratch test files at root
+test-circular.ts
+test-export.ts
+test-export-2.ts
+test-import.ts
+test-import-3.ts
+test-mocking.ts
 
 # Debug/lint output artifacts
 eslint_errors.txt
@@ -94,12 +102,16 @@ test-output.txt
 # Patch artifacts
 PATCH_EOF
 
-# Wrangler local cache
-.wrangler/
-.env*
+# Externally cloned repos (exploration only) — anchored to root so
+# apps/* consolidated copies stay trackable
+/authichain_premium/
+/qron-platform/
+/qron/
+/govchain.us/
+/maison-elite-ai-dropship/
 
-# Local git worktrees (superpowers:using-git-worktrees)
+# Local git worktrees
 .worktrees/
 
-.vercel
-.env*
+# pnpm local store
+.pnpm-store/

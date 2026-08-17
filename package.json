@@ -141,7 +141,7 @@
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.23.1",
     "eslint": "^9.9.1",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "15.5.21",
     "ioredis": "file:./stubs/empty-redis",
     "postcss": "^8.5.18",
     "prettier": "^3.3.3",
