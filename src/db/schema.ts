@@ -15,6 +15,8 @@ import {
   jsonb,
   primaryKey,
   real,
+  date,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
@@ -1297,3 +1299,105 @@ export const replySequences = pgTable("reply_sequences", {
 
 export type ReplySequence = typeof replySequences.$inferSelect;
 export type InsertReplySequence = typeof replySequences.$inferInsert;
+
+// ── Restored 2026-08-17 ────────────────────────────────────────────────────────
+// #663 ("Sync repository state") deleted 185 lines from this file, including
+// every definition below, and added nothing in their place. Six of the seven are
+// still imported by live code — src/lib/guardrail.ts, guardrail-anomaly.ts, the
+// two /api/guardrail routes, server/email-service.ts and revenue-orchestrator.ts
+// — so `pnpm check` has failed repo-wide ever since, blocking `ci`, `test` and
+// `lint` on every PR.
+//
+// All of these tables exist in the live database and several hold data
+// (guardrail_events 294 rows, guardrail_counters 7, guardrail_channels 6,
+// seo_pages 7), so their removal was a stale-snapshot accident rather than an
+// intentional schema change. Restored verbatim from 9313fdfd^.
+
+export const seoPages = pgTable("seo_generated_pages", {
+  id: serial("id").primaryKey(),
+  slug: varchar("slug", { length: 80 }).notNull().unique(),
+  keyword: varchar("keyword", { length: 256 }).notNull(),
+  brand: varchar("brand", { length: 64 }).notNull(),
+  domain: varchar("domain", { length: 128 }).notNull(),
+  title: varchar("title", { length: 60 }).notNull(),
+  metaDescription: varchar("metaDescription", { length: 155 }).notNull(),
+  h1: varchar("h1", { length: 256 }).notNull(),
+  bodyHtml: text("bodyHtml").notNull(),
+  jsonLd: jsonb("jsonLd").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const webhookEvents = pgTable(
+  "webhook_events",
+  {
+    id: serial("id").primaryKey(),
+    provider: varchar("provider", { length: 32 }).notNull(),
+    eventId: varchar("eventId", { length: 128 }).notNull(),
+    eventType: varchar("eventType", { length: 128 }).notNull(),
+    receivedAt: timestamp("receivedAt").defaultNow().notNull(),
+    processedAt: timestamp("processedAt"),
+  },
+  (t) => ({
+    uniqProviderEvent: uniqueIndex("webhook_events_provider_eventId_uniq").on(
+      t.provider,
+      t.eventId
+    ),
+  })
+);
+
+export const guardrailChannels = pgTable("guardrail_channels", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  category: varchar("category", { length: 32 }).notNull(), // email|content|contract|spend
+  dailyCap: integer("daily_cap").notNull(),
+  enabled: boolean("enabled").default(false).notNull(),
+  spendCeilingCents: integer("spend_ceiling_cents").default(0).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  guardrailChannelsNameUniq: uniqueIndex("guardrail_channels_name_uniq").on(table.name),
+}));
+
+export const guardrailCounters = pgTable("guardrail_counters", {
+  id: serial("id").primaryKey(),
+  channelId: integer("channel_id").notNull(),
+  day: date("day").notNull(),
+  count: integer("count").default(0).notNull(),
+}, (table) => ({
+  guardrailCountersChannelDayUniq: uniqueIndex("guardrail_counters_channel_day_uniq").on(table.channelId, table.day),
+}));
+
+export const suppressionList = pgTable("guardrail_suppression_list", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  reason: varchar("reason", { length: 32 }).notNull(), // bounced|complained|manual|unsubscribed
+  source: varchar("source", { length: 64 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  suppressionListEmailUniq: uniqueIndex("guardrail_suppression_list_email_uniq").on(table.email),
+}));
+
+export const killSwitches = pgTable("kill_switches", {
+  id: serial("id").primaryKey(),
+  scope: varchar("scope", { length: 128 }).notNull(), // "global" or a channel name
+  enabled: boolean("enabled").default(false).notNull(), // true = tripped/blocked
+  reason: text("reason"),
+  updatedBy: varchar("updated_by", { length: 64 }).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  killSwitchesScopeUniq: uniqueIndex("kill_switches_scope_uniq").on(table.scope),
+}));
+
+export const guardrailEvents = pgTable("guardrail_events", {
+  id: serial("id").primaryKey(),
+  channelId: integer("channel_id"),
+  action: varchar("action", { length: 32 }).notNull(), // check|record|suppress|kill_toggle
+  allowed: boolean("allowed"),
+  reason: text("reason"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  guardrailEventsChannelIdx: index("idx_guardrail_events_channel").on(table.channelId),
+  guardrailEventsCreatedIdx: index("idx_guardrail_events_created").on(table.createdAt),
+}));
