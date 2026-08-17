@@ -1,0 +1,65 @@
+import { z } from "zod";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { SERVICE_LIST, SERVICE_CATALOG, SERVICE_KEYS } from "../service-catalog";
+import { ORDER_STATUSES } from "../../shared/const";
+import * as db from "../db";
+import { createPaymentCheckout } from "../stripe-service";
+const serviceKeyEnum = z.enum(SERVICE_KEYS);
+const orderStatusEnum = z.enum(ORDER_STATUSES);
+export const servicesRouter = router({
+    catalog: publicProcedure.query(() => {
+        return SERVICE_LIST;
+    }),
+    myOrders: protectedProcedure.query(async ({ ctx }) => {
+        return await db.getServiceOrdersByUser(ctx.user.id);
+    }),
+    allOrders: adminProcedure.query(async () => {
+        return await db.getAllServiceOrders();
+    }),
+    updateStatus: adminProcedure.input(z.object({
+        id: z.number(),
+        status: orderStatusEnum,
+    })).mutation(async ({ input }) => {
+        await db.updateServiceOrderStatus(input.id, input.status);
+        return { success: true };
+    }),
+    checkout: protectedProcedure.input(z.object({
+        serviceKey: serviceKeyEnum.optional(),
+        serviceType: serviceKeyEnum.optional(),
+        origin: z.string().optional(),
+        businessName: z.string().optional(),
+        businessType: z.string().optional(),
+        businessUrl: z.string().optional(),
+        notes: z.string().optional(),
+    })).mutation(async ({ ctx, input }) => {
+        const key = input.serviceKey ?? input.serviceType;
+        if (!key)
+            throw new Error("serviceKey or serviceType is required");
+        const service = SERVICE_CATALOG[key];
+        const { url, sessionId } = await createPaymentCheckout({
+            userId: ctx.user.id,
+            userEmail: ctx.user.email || "",
+            userName: ctx.user.name || "",
+            description: service.name,
+            amount: service.price,
+            origin: input.origin ?? "https://authichain.com",
+            metadata: {
+                service_key: service.key,
+                type: "one_time_service",
+                business_name: input.businessName || "",
+                business_type: input.businessType || "",
+                business_url: input.businessUrl || "",
+                notes: input.notes || "",
+            },
+        });
+        await db.createServiceOrder({
+            userId: ctx.user.id,
+            serviceType: service.key,
+            status: "pending",
+            amount: service.price,
+            stripeSessionId: sessionId,
+            customerName: ctx.user.name || null,
+        });
+        return { checkoutUrl: url };
+    }),
+});
