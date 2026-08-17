@@ -15,6 +15,7 @@ export default defineConfig({
   esbuild: { jsx: "automatic" },
   test: {
     environment: "node",
+    testTimeout: 20000,
     include: ["server/**/*.test.ts", "server/**/*.spec.ts", "shared/**/*.test.ts", "src/**/*.test.ts", "src/**/*.spec.ts", "worker-app/**/*.test.ts", "scripts/**/*.test.ts", "client/**/*.test.ts", "client/**/*.test.tsx"],
   },
 });

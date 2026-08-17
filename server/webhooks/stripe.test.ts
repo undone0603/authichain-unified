@@ -44,6 +44,7 @@ describe('Stripe Webhook Idempotency & Functionality', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+    process.env.STRIPE_SECRET_KEY = 'sk_test_mock';
   });
 
   it('should process the event on the first call and ignore the second call', async () => {

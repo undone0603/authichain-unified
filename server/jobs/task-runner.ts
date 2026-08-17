@@ -7,6 +7,7 @@ import { runBuildPilotPacket, runDraftIntelDossier } from '../agents/pilot-packe
 import { runCrmUpdate } from '../agents/crm-update.js';
 import { runFinalizeRetailSignage, runPackageSkuOnboarding } from '../agents/retail.js';
 import { runCheckDnsConfig, runVerifySsl, runLighthouseAudit } from '../agents/infra.js';
+import { runEmailCampaign } from '../agents/campaign.js';
 import {
   runGenerateLaunchChecklist,
   runDraftLaunchEmail,
@@ -77,6 +78,10 @@ export async function runTask(db: Db, task: Task): Promise<{ ok: boolean }> {
 
       case 'CRM_UPDATE':
         await runCrmUpdate(task, db);
+        break;
+
+      case 'EMAIL_CAMPAIGN':
+        await runEmailCampaign(task, db);
         break;
 
       case 'FINALIZE_RETAIL_SIGNAGE':

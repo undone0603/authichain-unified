@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { eq, desc, and, or, gte, lte, isNull, like, sql, SQL } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import {
@@ -66,10 +66,11 @@ export async function getDb() {
   }
 
   try {
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
-    _db = drizzle(pool);
+    // `prepare: false` makes postgres.js compatible with Supabase's transaction
+    // pooler (pgbouncer, port 6543) — avoids exhausting connections from
+    // short-lived serverless/Express requests. Matches src/db/index.ts.
+    const client = postgres(process.env.DATABASE_URL, { prepare: false });
+    _db = drizzle(client);
     return _db;
   } catch (error) {
     console.error("[Database] Failed to connect:", error);

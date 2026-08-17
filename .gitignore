@@ -10,6 +10,9 @@ node_modules/
 /build/
 /worker-dist/
 
+# Compiled server artifacts (source of truth is the .ts file)
+server/db.js
+
 # Secrets & Env — NEVER commit real .env files
 .env
 .env.*
