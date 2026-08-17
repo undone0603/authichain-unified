@@ -1,0 +1,374 @@
+/**
+ * Stripe Webhook Handler — server/webhooks/stripe.ts
+ *
+ * Provides handleStripeWebhook(rawBody, sig) which:
+ *  1. Verifies the Stripe signature using STRIPE_WEBHOOK_SECRET
+ *  2. Handles key lifecycle events and writes to activity_log and revenue_records
+ *  3. Updates subscription status in the subscriptions table
+ *
+ * This module is intentionally side-effect-free at import time so it can be
+ * loaded by the main server and imported by tests without starting Stripe.
+ *
+ * Route registration (POST /webhooks/stripe) lives in server/_core/index.ts.
+ * The existing /api/stripe/webhook route remains unchanged for backwards compat.
+ */
+import Stripe from "stripe";
+function maskEmail(email) {
+    const [local, domain] = email.split('@');
+    if (!domain)
+        return '***';
+    return `${local?.[0] ?? ''}***@${domain}`;
+}
+import { logActivity, logAutomationAudit, recordRevenue, upsertStripeSubscription, setSubscriptionStatusByStripeId, getSubscriptionByStripeSubscriptionId, createSystemNotification, claimWebhookEvent, markWebhookEventProcessed, } from "../db";
+import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
+import { handleServiceOrderPayment } from "../services/order-payment-handler";
+import { sendEmail } from "../email-service";
+// ─── Stripe client (lazy, uses env at call time) ─────────────────────────────
+let _stripe = null;
+function getStripeClient() {
+    if (!_stripe) {
+        const key = process.env.STRIPE_SECRET_KEY;
+        if (!key)
+            throw new Error("[stripe-webhook] STRIPE_SECRET_KEY not configured");
+        _stripe = new Stripe(key, { apiVersion: "2026-06-24.dahlia" });
+    }
+    return _stripe;
+}
+function detectPlanFromPriceId(priceId) {
+    if (!priceId)
+        return "starter";
+    const lower = priceId.toLowerCase();
+    if (lower.includes("medtech"))
+        return "medtech";
+    if (lower.includes("enterprise"))
+        return "enterprise";
+    if (lower.includes("professional") || lower.includes("pro"))
+        return "professional";
+    if (lower.includes("starter"))
+        return "starter";
+    return "starter";
+}
+function detectPlanFromAmount(amountCents, billingCycle) {
+    // Normalize to monthly equivalent before comparing against monthly thresholds.
+    // Annual amounts: starter=$470 (47000), pro=$1908 (190800), enterprise=$7668 (766800), medtech=$150000 (15000000)
+    const monthly = billingCycle === "annual" ? Math.round(amountCents / 12) : amountCents;
+    if (monthly >= 1000000)
+        return "medtech"; // $10,000+/mo
+    if (monthly >= 70000)
+        return "enterprise";
+    if (monthly >= 15000)
+        return "professional";
+    return "starter";
+}
+function detectPlan(priceId, amountCents, metaPlan, billingCycle) {
+    // Metadata plan is most reliable (set by checkout session subscription_data.metadata)
+    if (metaPlan === "enterprise" || metaPlan === "professional" || metaPlan === "starter" || metaPlan === "medtech") {
+        return metaPlan;
+    }
+    if (priceId) {
+        const fromId = detectPlanFromPriceId(priceId);
+        if (fromId !== "starter" || priceId.toLowerCase().includes("starter"))
+            return fromId;
+    }
+    return detectPlanFromAmount(amountCents, billingCycle);
+}
+function mapStripeStatus(s) {
+    switch (s) {
+        case "active": return "active";
+        case "trialing": return "trialing";
+        case "past_due": return "past_due";
+        case "canceled":
+        case "unpaid":
+        case "incomplete_expired": return "cancelled";
+        case "incomplete": return "past_due";
+        case "paused": return "paused";
+        default: return "active";
+    }
+}
+// ─── Helper: resolve userId from subscription or customer metadata ─────────
+async function resolveUserId(stripe, customerId, subscriptionMeta) {
+    if (subscriptionMeta?.user_id) {
+        const id = parseInt(subscriptionMeta.user_id, 10);
+        if (!isNaN(id))
+            return id;
+    }
+    if (!customerId)
+        return undefined;
+    try {
+        const customer = await stripe.customers.retrieve(customerId);
+        if (!customer.deleted && customer.metadata?.user_id) {
+            const id = parseInt(customer.metadata.user_id, 10);
+            if (!isNaN(id))
+                return id;
+        }
+    }
+    catch {
+        // Best-effort; return undefined
+    }
+    return undefined;
+}
+export async function handleStripeWebhook(rawBody, sig) {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+        throw new Error("[stripe-webhook] STRIPE_WEBHOOK_SECRET not configured");
+    }
+    const stripe = getStripeClient();
+    const event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    console.log(`[stripe-webhook] Received: ${event.type} (${event.id})`);
+    // Allow test verification events through without idempotency check
+    if (event.id.startsWith("evt_test_")) {
+        console.log("[stripe-webhook] Test event, returning verified");
+        return { received: true, type: event.type };
+    }
+    // Idempotency — claim this event for processing
+    const eventClaim = await claimWebhookEvent("stripe", event.id, event.type);
+    if (!eventClaim) {
+        console.log(`[stripe-webhook] Duplicate event ignored (or already claimed): ${event.id}`);
+        return { received: true, type: event.type, duplicate: true };
+    }
+    // Mark in-flight immediately so a concurrent duplicate delivery sees it as processed.
+    await logActivity({
+        userId: null,
+        action: "webhook_received",
+        entityType: "webhook",
+        entityId: 0,
+        details: { eventId: event.id, type: event.type },
+    });
+    let handled = false;
+    try {
+        switch (event.type) {
+            // ── Subscription created / updated ──────────────────────────────────────
+            case "customer.subscription.created":
+            case "customer.subscription.updated": {
+                const sub = event.data.object;
+                const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+                const firstItem = sub.items?.data?.[0];
+                const priceId = firstItem?.price?.id ?? null;
+                const amountCents = firstItem?.price?.unit_amount ?? 0;
+                const billingCycle = firstItem?.price?.recurring?.interval === "year" ? "annual" : "monthly";
+                const metaPlan = sub.metadata?.plan ?? null;
+                const plan = detectPlan(priceId, amountCents, metaPlan, billingCycle);
+                const status = mapStripeStatus(sub.status);
+                const userId = await resolveUserId(stripe, customerId, sub.metadata);
+                if (userId) {
+                    await upsertStripeSubscription({
+                        userId,
+                        plan,
+                        status,
+                        monthlyQuota: getPlanQuota(plan),
+                        billingCycle,
+                        stripeCustomerId: customerId ?? null,
+                        stripeSubscriptionId: sub.id,
+                        currentPeriodStart: sub.current_period_start
+                            ? new Date(sub.current_period_start * 1000)
+                            : new Date(),
+                        currentPeriodEnd: sub.current_period_end
+                            ? new Date(sub.current_period_end * 1000)
+                            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                        trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+                    });
+                    // Send welcome email on new subscription activation
+                    if (event.type === "customer.subscription.created" &&
+                        (status === "active" || status === "trialing")) {
+                        try {
+                            const customer = await stripe.customers.retrieve(customerId);
+                            const email = !customer.deleted ? customer.email ?? null : null;
+                            const name = !customer.deleted ? (customer.name ?? "there") : "there";
+                            if (email) {
+                                const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
+                                await sendEmail({
+                                    to: email,
+                                    subject: `Welcome to AuthiChain ${product.name}`,
+                                    body: `Hi ${name},\n\nYour AuthiChain ${product.name} subscription is now active.\n\nHere's what you get:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nGet started at https://authichain.com/dashboard\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
+                                    fromName: "AuthiChain",
+                                });
+                                console.log(`[stripe-webhook] Welcome email sent to ${maskEmail(email)}`);
+                            }
+                        }
+                        catch (err) {
+                            console.warn("[stripe-webhook] Welcome email failed (non-fatal):", err);
+                        }
+                    }
+                }
+                await logAutomationAudit(event.type === "customer.subscription.created"
+                    ? "billing_subscription_created"
+                    : "billing_subscription_updated", {
+                    eventId: event.id,
+                    stripeSubscriptionId: sub.id,
+                    stripeCustomerId: customerId ?? null,
+                    plan,
+                    status,
+                    billingCycle,
+                    userId: userId ?? null,
+                }, userId);
+                console.log(`[stripe-webhook] Subscription ${event.type === "customer.subscription.created" ? "created" : "updated"}: ${sub.id} → plan=${plan} status=${status}`);
+                break;
+            }
+            // ── Subscription deleted (cancelled) ────────────────────────────────────
+            case "customer.subscription.deleted": {
+                const sub = event.data.object;
+                const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+                const userId = await resolveUserId(stripe, customerId, sub.metadata);
+                await setSubscriptionStatusByStripeId(sub.id, "cancelled", new Date());
+                await logAutomationAudit("billing_subscription_cancelled", {
+                    eventId: event.id,
+                    stripeSubscriptionId: sub.id,
+                    stripeCustomerId: customerId ?? null,
+                    userId: userId ?? null,
+                }, userId);
+                console.log(`[stripe-webhook] Subscription cancelled: ${sub.id}`);
+                break;
+            }
+            // ── Invoice payment succeeded ────────────────────────────────────────────
+            case "invoice.payment_succeeded":
+            case "invoice.paid": {
+                const inv = event.data.object;
+                const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
+                const subscriptionId = typeof inv.subscription === "string"
+                    ? inv.subscription
+                    : inv.subscription?.id;
+                // Resolve userId — try subscription metadata first, then customer
+                let userId;
+                if (subscriptionId) {
+                    const localSub = await getSubscriptionByStripeSubscriptionId(subscriptionId);
+                    userId = localSub?.userId ?? undefined;
+                }
+                if (!userId) {
+                    userId = await resolveUserId(stripe, customerId);
+                }
+                const amountCents = inv.amount_paid ?? 0;
+                const amountUsd = amountCents / 100;
+                const currency = (inv.currency ?? "usd").toUpperCase();
+                // Detect plan from invoice line items
+                const firstLine = inv.lines?.data?.[0];
+                const priceId = firstLine?.price?.id ?? null;
+                const invBillingCycle = firstLine?.price?.recurring?.interval === "year" ? "annual" : "monthly";
+                const plan = detectPlan(priceId, amountCents, null, invBillingCycle);
+                await Promise.all([
+                    amountUsd > 0 ? recordRevenue({
+                        source: "stripe",
+                        amount: amountUsd.toFixed(2),
+                        currency,
+                        type: "subscription",
+                        userId: userId ?? null,
+                        metadata: {
+                            eventId: event.id,
+                            invoiceId: inv.id,
+                            stripeSubscriptionId: subscriptionId ?? null,
+                            stripeCustomerId: customerId ?? null,
+                            plan,
+                        },
+                    }) : Promise.resolve(),
+                    subscriptionId ? setSubscriptionStatusByStripeId(subscriptionId, "active") : Promise.resolve(),
+                    logAutomationAudit("billing_invoice_paid", {
+                        eventId: event.id,
+                        invoiceId: inv.id,
+                        stripeSubscriptionId: subscriptionId ?? null,
+                        stripeCustomerId: customerId ?? null,
+                        amountUsd,
+                        currency,
+                        plan,
+                        userId: userId ?? null,
+                    }, userId),
+                ]);
+                console.log(`[stripe-webhook] Invoice paid: ${inv.id} amount=${amountUsd} ${currency}`);
+                break;
+            }
+            // ── Invoice payment failed ───────────────────────────────────────────────
+            case "invoice.payment_failed": {
+                const inv = event.data.object;
+                const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id;
+                const subscriptionId = typeof inv.subscription === "string"
+                    ? inv.subscription
+                    : inv.subscription?.id;
+                let userId;
+                if (subscriptionId) {
+                    const localSub = await getSubscriptionByStripeSubscriptionId(subscriptionId);
+                    userId = localSub?.userId ?? undefined;
+                    await Promise.all([
+                        setSubscriptionStatusByStripeId(subscriptionId, "past_due"),
+                        userId ? createSystemNotification(userId, "Payment Failed", "A payment for your AuthiChain subscription failed. Please update your billing details to avoid service interruption.", "alert", "/subscriptions") : Promise.resolve(),
+                    ]);
+                }
+                await logAutomationAudit("billing_dunning_started", {
+                    eventId: event.id,
+                    invoiceId: inv.id,
+                    stripeSubscriptionId: subscriptionId ?? null,
+                    stripeCustomerId: customerId ?? null,
+                    attemptCount: inv.attempt_count ?? 1,
+                    dunningStep: "day_0",
+                    userId: userId ?? null,
+                }, userId);
+                console.log(`[stripe-webhook] Payment failed: invoice=${inv.id} sub=${subscriptionId}`);
+                break;
+            }
+            // ── Checkout session completed ───────────────────────────────────────────
+            case "checkout.session.completed": {
+                const session = event.data.object;
+                const userId = session.metadata?.user_id
+                    ? parseInt(session.metadata.user_id, 10)
+                    : undefined;
+                const plan = session.metadata?.plan ?? "starter";
+                const billingCycle = session.metadata?.billing === "annual" ? "annual" : "monthly";
+                const amountCents = session.amount_total ?? 0;
+                const amountUsd = amountCents / 100;
+                const customerId = typeof session.customer === "string" ? session.customer : undefined;
+                const subscriptionId = typeof session.subscription === "string" ? session.subscription : undefined;
+                await logAutomationAudit("billing_checkout_completed", {
+                    eventId: event.id,
+                    userId: userId ?? null,
+                    plan,
+                    billingCycle,
+                    amountUsd,
+                    stripeSubscriptionId: subscriptionId ?? null,
+                    stripeCustomerId: customerId ?? null,
+                }, userId);
+                if (session.metadata?.type === "one_time_service") {
+                    await handleServiceOrderPayment({ id: session.id, payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : undefined });
+                }
+                console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);
+                break;
+            }
+            // ── Checkout session expired (abandoned) ─────────────────────────────────
+            case "checkout.session.expired": {
+                const session = event.data.object;
+                const userId = session.metadata?.user_id
+                    ? parseInt(session.metadata.user_id, 10)
+                    : undefined;
+                const plan = session.metadata?.plan ?? "starter";
+                const email = session.customer_email || session.metadata?.customer_email;
+                const name = session.metadata?.customer_name || "there";
+                await logAutomationAudit("checkout_abandoned", {
+                    eventId: event.id,
+                    userId: userId ?? null,
+                    plan: plan ?? null,
+                    email: email ?? null,
+                }, userId);
+                if (email) {
+                    const product = STRIPE_PRODUCTS[plan] ?? STRIPE_PRODUCTS.starter;
+                    const monthlyPrice = (product.priceMonthly / 100).toFixed(0);
+                    await sendEmail({
+                        to: email,
+                        subject: `You left something behind — complete your AuthiChain ${product.name} setup`,
+                        body: `Hi ${name},\n\nWe noticed you started setting up AuthiChain ${product.name} ($${monthlyPrice}/mo) but didn't complete checkout.\n\nHere's what you're missing out on:\n${product.features.map(f => `• ${f}`).join("\n")}\n\nReady to pick up where you left off? Visit https://authichain.com/subscriptions to continue.\n\nAs a thank-you for your interest, use code COMEBACK20 at checkout for 20% off your first month.\n\nBest,\nThe AuthiChain Team\nhttps://authichain.com`,
+                        fromName: "AuthiChain",
+                    });
+                    console.log(`[stripe-webhook] Checkout recovery email sent to ${maskEmail(email)}`);
+                }
+                console.log(`[stripe-webhook] Checkout expired/abandoned: user=${userId} plan=${plan}`);
+                break;
+            }
+            default:
+                console.log(`[stripe-webhook] Unhandled event type: ${event.type}`);
+                return { received: true, type: event.type, handled: false };
+        }
+        // Mark as processed successfully
+        await markWebhookEventProcessed("stripe", event.id);
+        handled = true;
+    }
+    catch (error) {
+        console.error(`[stripe-webhook] Error processing ${event.id}:`, error);
+        throw error;
+    }
+    return { received: true, type: event.type, handled };
+}
