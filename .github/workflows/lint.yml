@@ -15,7 +15,7 @@ jobs:
       
       - name: Install pnpm
         # Fixed: Simplified to the standard @v4 tag for consistency
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: '10.28.2'
           
