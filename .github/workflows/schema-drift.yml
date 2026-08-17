@@ -1,14 +1,6 @@
 name: Schema Drift Check
 
 # Compares src/db/schema.ts against the live database.
-#
-# This exists because the disagreement between them was found the expensive
-# way: on 2026-08-15, 750 of 982 scheduled job runs were failing — 76% — and
-# had been for months. Nothing surfaced it, because Drizzle's second argument
-# is the *physical* column name, so `integer('userId')` against a `user_id`
-# column type-checks perfectly and fails only against a real database. Neither
-# `pnpm check` nor the test suite can see it.
-#
 # Read-only: it queries information_schema and writes nothing.
 
 on:
@@ -37,19 +29,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
-        with: { node-version: '22' }
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
 
-      - name: Install pg
-        run: npm install --no-save pg@8
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prod=false
 
       - name: Check for drift
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          # check-schema-drift.mjs reports drift through its exit code, and it is
-          # piped into tee. Without pipefail the step takes tee's status — always
-          # 0 — so drift would report green. Keep this line.
           set -o pipefail
           if [ -z "$DATABASE_URL" ]; then
             echo "DATABASE_URL repo secret not set — skipping."
