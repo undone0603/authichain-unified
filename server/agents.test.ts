@@ -3,6 +3,20 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MissionTask } from '../drizzle/schema';
+import { invokeLLM, parseLLMContent } from './_core/llm.js';
+import { logActivity, enqueueTask, markTaskWaitingHuman, getAdaptivePriors } from './agents/db-helpers.js';
+import { apolloSearchLeads } from './apollo-service.js';
+import { sendEmail, checkThreadReplies, isSuppressed } from './email-service.js';
+import { syncLeadToHubSpot, isHubSpotConfigured } from './hubspot-service.js';
+import { runLeadFinder } from './agents/lead-finder.js';
+import { runOutboundEmail } from './agents/outbound-email.js';
+import { runFollowupSequence } from './agents/followup.js';
+import { runBuildPilotPacket, runDraftIntelDossier } from './agents/pilot-packet.js';
+import { runCrmUpdate } from './agents/crm-update.js';
+import { runFinalizeRetailSignage, runPackageSkuOnboarding } from './agents/retail.js';
+import { runEmailCampaign } from './agents/campaign.js';
+import { runGenerateLaunchChecklist, runDraftLaunchEmail, runDraftPressRelease, runScheduleSocialPosts } from './agents/content.js';
+import { runCheckDnsConfig, runVerifySsl, runLighthouseAudit } from './agents/infra.js';
 
 // ─── Shared mutable mock state ────────────────────────────────────────────────
 
@@ -130,27 +144,17 @@ function llmJsonResponse(data: unknown): import('./_core/llm.js').InvokeResult {
 // ─── lead-finder ─────────────────────────────────────────────────────────────
 
 describe('runLeadFinder', () => {
-  let invokeLLM: ReturnType<typeof vi.fn>;
-  let enqueueTask: ReturnType<typeof vi.fn>;
-  let logActivity: ReturnType<typeof vi.fn>;
-
   beforeEach(async () => {
     vi.clearAllMocks();
-    const llmMod    = await import('./_core/llm.js');
-    const dbMod     = await import('./agents/db-helpers.js');
-    invokeLLM  = vi.mocked(llmMod.invokeLLM);
-    enqueueTask = vi.mocked(dbMod.enqueueTask);
-    logActivity = vi.mocked(dbMod.logActivity);
   });
 
   it('enqueues a BROWSE_RESEARCH_LEAD task for each valid lead', async () => {
     // Apollo returns 2 leads; LLM scoring assigns fit probabilities
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse([
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse([
       { index: 0, fitProbability: 0.8, fitNotes: 'strong procurement fit' },
       { index: 1, fitProbability: 0.6, fitNotes: 'moderate fit' },
     ]));
 
-    const { runLeadFinder } = await import('./agents/lead-finder.js');
     await runLeadFinder(makeTask('FIND_GOV_LEADS', { count: 2, segment: 'GOV' }), fakeDb);
 
     expect(enqueueTask).toHaveBeenCalledTimes(2);
@@ -163,24 +167,21 @@ describe('runLeadFinder', () => {
   });
 
   it('skips leads without email or org', async () => {
-    const { apolloSearchLeads } = await import('./apollo-service.js');
     vi.mocked(apolloSearchLeads).mockResolvedValueOnce([
       { name: 'Valid', org: 'ValidCorp', email: 'valid@corp.com', title: 'Director', firstName: 'Valid', lastName: 'User' },
     ]);
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse([
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse([
       { index: 0, fitProbability: 0.7, fitNotes: 'good fit' },
     ]));
 
-    const { runLeadFinder } = await import('./agents/lead-finder.js');
     await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }), fakeDb);
 
     expect(enqueueTask).toHaveBeenCalledTimes(1);
   });
 
   it('falls back gracefully when LLM scoring returns unparseable JSON', async () => {
-    invokeLLM.mockResolvedValueOnce({ choices: [{ message: { content: 'not json {{{{' } }] });
+    vi.mocked(invokeLLM).mockResolvedValueOnce({ choices: [{ message: { content: 'not json {{{{' } }] });
 
-    const { runLeadFinder } = await import('./agents/lead-finder.js');
     // Should NOT throw — uses fallback 0.5 score for each lead
     await expect(runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }), fakeDb)).resolves.toBeUndefined();
     // Both Apollo leads get enqueued despite bad scoring
@@ -188,20 +189,18 @@ describe('runLeadFinder', () => {
   });
 
   it('uses RETAIL segment for FIND_RETAIL_LEADS task kind', async () => {
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse([]));
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse([]));
 
-    const { runLeadFinder } = await import('./agents/lead-finder.js');
     await runLeadFinder(makeTask('FIND_RETAIL_LEADS'), fakeDb);
 
     // LLM scoring prompt should mention RETAIL
-    const prompt = invokeLLM.mock.calls[0][0].messages[0].content as string;
+    const prompt = vi.mocked(invokeLLM).mock.calls[0][0].messages[0].content as string;
     expect(prompt).toContain('RETAIL');
   });
 
   it('logs activity on completion', async () => {
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse([]));
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse([]));
 
-    const { runLeadFinder } = await import('./agents/lead-finder.js');
     await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }), fakeDb);
 
     expect(logActivity).toHaveBeenCalledWith(
@@ -211,12 +210,11 @@ describe('runLeadFinder', () => {
   });
 
   it('Bayesian preamble appears in LLM scoring prompt', async () => {
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse([]));
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse([]));
 
-    const { runLeadFinder } = await import('./agents/lead-finder.js');
     await runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }), fakeDb);
 
-    const prompt = invokeLLM.mock.calls[0][0].messages[0].content as string;
+    const prompt = vi.mocked(invokeLLM).mock.calls[0][0].messages[0].content as string;
     expect(prompt).toContain('[BAYESIAN REASONING]');
     expect(prompt).toContain('Expected value per converted lead');
   });
@@ -225,27 +223,14 @@ describe('runLeadFinder', () => {
 // ─── outbound-email ───────────────────────────────────────────────────────────
 
 describe('runOutboundEmail', () => {
-  let invokeLLM: ReturnType<typeof vi.fn>;
-  let sendEmail: ReturnType<typeof vi.fn>;
-  let markTaskWaitingHuman: ReturnType<typeof vi.fn>;
-  let logActivity: ReturnType<typeof vi.fn>;
-
   beforeEach(async () => {
     vi.clearAllMocks();
-    const llmMod   = await import('./_core/llm.js');
-    const emailMod = await import('./email-service.js');
-    const dbMod    = await import('./agents/db-helpers.js');
-    invokeLLM           = vi.mocked(llmMod.invokeLLM);
-    sendEmail           = vi.mocked(emailMod.sendEmail);
-    markTaskWaitingHuman = vi.mocked(dbMod.markTaskWaitingHuman);
-    logActivity         = vi.mocked(dbMod.logActivity);
+    mockEnv.requireOutreachApproval = false;
   });
 
   it('sends email directly when requireOutreachApproval is false', async () => {
-    mockEnv.requireOutreachApproval = false;
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse({ subject: 'Hello', body: 'Test body' }));
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ subject: 'Hello', body: 'Test body' }));
 
-    const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', sequence: 1, leadEmail: 'lead@gov.com', leadName: 'Alice', leadOrg: 'GovCorp',
       verificationSource: 'apollo_verified',
@@ -257,9 +242,8 @@ describe('runOutboundEmail', () => {
 
   it('saves draft and marks WAITING_HUMAN when requireOutreachApproval is true', async () => {
     mockEnv.requireOutreachApproval = true;
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse({ subject: 'Hello', body: 'Test body' }));
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ subject: 'Hello', body: 'Test body' }));
 
-    const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', leadEmail: 'lead@gov.com',
     }), fakeDb);
@@ -269,43 +253,35 @@ describe('runOutboundEmail', () => {
   });
 
   it('throws if LLM returns unparseable JSON', async () => {
-    mockEnv.requireOutreachApproval = false;
-    invokeLLM.mockResolvedValueOnce({ choices: [{ message: { content: 'bad json' } }] });
+    vi.mocked(invokeLLM).mockResolvedValueOnce({ choices: [{ message: { content: 'bad json' } }] });
 
-    const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await expect(runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', leadEmail: 'x@y.com',
     }), fakeDb)).rejects.toThrow(/unparseable JSON/);
   });
 
   it('throws if no leadEmail on direct send', async () => {
-    mockEnv.requireOutreachApproval = false;
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse({ subject: 'Hi', body: 'Body' }));
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ subject: 'Hi', body: 'Body' }));
 
-    const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await expect(runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', { segment: 'GOV' }), fakeDb))
       .rejects.toThrow(/No leadEmail/);
   });
 
   it('Bayesian preamble appears in LLM prompt', async () => {
-    mockEnv.requireOutreachApproval = false;
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse({ subject: 'S', body: 'B' }));
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ subject: 'S', body: 'B' }));
 
-    const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', leadEmail: 'a@b.com',
     }), fakeDb);
 
-    const prompt = invokeLLM.mock.calls[0][0].messages[0].content as string;
+    const prompt = vi.mocked(invokeLLM).mock.calls[0][0].messages[0].content as string;
     expect(prompt).toContain('[BAYESIAN REASONING]');
     expect(prompt).toContain('[END REASONING]');
   });
 
   it('logs activity after sending', async () => {
-    mockEnv.requireOutreachApproval = false;
-    invokeLLM.mockResolvedValueOnce(llmJsonResponse({ subject: 'Hi', body: 'Body' }));
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ subject: 'Hi', body: 'Body' }));
 
-    const { runOutboundEmail } = await import('./agents/outbound-email.js');
     await runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', leadEmail: 'a@b.com', verificationSource: 'apollo_verified',
     }), fakeDb);
@@ -462,20 +438,34 @@ describe('runFinalizeRetailSignage', () => {
   });
 });
 
-describe('runPackageSkuOnboarding', () => {
-  beforeEach(() => vi.clearAllMocks());
+describe('runEmailCampaign', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+  });
 
-  it('calls LLM and logs sku_onboarding_packaged', async () => {
-    const { invokeLLM } = await import('./_core/llm.js');
-    const { logActivity } = await import('./agents/db-helpers.js');
-    vi.mocked(invokeLLM).mockResolvedValueOnce(llmJsonResponse({ sections: [] }));
+  it('iterates through leads and sends personalized emails', async () => {
+    // Mock db.query.leads.findMany
+    fakeDb.query = {
+      leads: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: 1, name: 'Alice', org: 'GovCorp', email: 'alice@gov.com' },
+          { id: 2, name: 'Bob', org: 'GovInc', email: 'bob@gov.com' },
+        ]),
+      },
+    };
 
-    const { runPackageSkuOnboarding } = await import('./agents/retail.js');
-    await runPackageSkuOnboarding(makeTask('PACKAGE_SKU_ONBOARDING', { skuCount: 5 }), fakeDb);
+    vi.mocked(invokeLLM).mockResolvedValue(llmJsonResponse({ subject: 'Hello', body: 'Body' }));
 
-    expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
-      fakeDb,
-      expect.objectContaining({ action: 'sku_onboarding_packaged' }),
+    await runEmailCampaign(makeTask('EMAIL_CAMPAIGN', { 
+        segment: 'GOV', 
+        templateId: 'tmpl_1', 
+        campaignId: 'camp_1' 
+    }), fakeDb);
+
+    expect(sendEmail).toHaveBeenCalledTimes(2);
+    expect(logActivity).toHaveBeenCalledWith(
+        fakeDb,
+        expect.objectContaining({ action: 'email_campaign_completed' }),
     );
   });
 });

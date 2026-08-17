@@ -32,17 +32,10 @@
       "@/*": ["./src/*"],
       "@services/*": ["./services/*"],
       "@packages/*": ["./packages/*"],
-      "@apps/*": ["./apps/*"]
-    }
-
-        "./client/src/*"
-      ],
-      "@shared/*": [
-        "./shared/*"
-      ],
-      "@server/*": [
-        "./server/*"
-      ]
+      "@apps/*": ["./apps/*"],
+      "@client/*": ["./client/src/*"],
+      "@shared/*": ["./shared/*"],
+      "@server/*": ["./server/*"]
     }
   },
   "include": [
