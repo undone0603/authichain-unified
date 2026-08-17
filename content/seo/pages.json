@@ -3718,5 +3718,261 @@
         }
       ]
     }
+  },
+  {
+    "slug": "cen-cenelec-digital-product-passport-standards",
+    "keyword": "cen cenelec digital product passport standards",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "CEN CENELEC Digital Product Passport Standards | AuthiChain",
+    "metaDescription": "CEN and CENELEC published the first six harmonised European standards for the Digital Product Passport — the EN 18216–18223 series — on 1 June 2026, covering.",
+    "h1": "CEN CENELEC Digital Product Passport Standards",
+    "bodyHtml": "<p>CEN and CENELEC published the first six harmonised European standards for the Digital Product Passport — the EN 18216–18223 series — on 1 June 2026, covering digital identifiers, data carriers, and interoperable APIs; the building blocks this protocol already uses line up with what that series formalizes.</p><h2>Why AuthiChain</h2><ul><li>The series specifies APIs and system interoperability, not just the QR code — a record built as a W3C Verifiable Credential over a GS1 Digital Link identifier already matches that shape</li><li>EN 18220 covers the data carrier specifically; protocol/SPEC.md already requires GS1 Digital Link identity and an open, non-proprietary carrier format</li><li>A harmonised standard gives every manufacturer one spec to build against instead of guessing at each Member State’s implementation — the same reason this protocol publishes its own spec under Apache-2.0</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>What do the EN 18216–18223 standards cover?</h3><p>Digital identifiers, data carriers, passport data architecture, APIs, cybersecurity, and interoperability between different DPP systems — the technical layer beneath the ESPR’s legal requirements.</p><h3>Does AuthiChain formally conform to these standards today?</h3><p>The underlying building blocks — GS1 Digital Link identity, W3C Verifiable Credentials, an open data carrier — match what the series formalizes. A formal conformance claim waits on published test suites for each standard.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — CEN CENELEC Digital Product Passport Standards",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "CEN and CENELEC published the first six harmonised European standards for the Digital Product Passport — the EN 18216–18223 series — on 1 June 2026, covering digital identifiers, data carriers, and interoperable APIs; the building blocks this protocol already uses line up with what that series formalizes.",
+          "url": "https://authichain.com/p/cen-cenelec-digital-product-passport-standards"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "CEN CENELEC Digital Product Passport Standards",
+              "item": "https://authichain.com/p/cen-cenelec-digital-product-passport-standards"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What do the EN 18216–18223 standards cover?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Digital identifiers, data carriers, passport data architecture, APIs, cybersecurity, and interoperability between different DPP systems — the technical layer beneath the ESPR’s legal requirements."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain formally conform to these standards today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The underlying building blocks — GS1 Digital Link identity, W3C Verifiable Credentials, an open data carrier — match what the series formalizes. A formal conformance claim waits on published test suites for each standard."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "espr-priority-product-list-timeline",
+    "keyword": "espr priority product list timeline",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ESPR Priority Product List Timeline | AuthiChain",
+    "metaDescription": "The European Commission’s first ESPR Working Plan (2025–2030) sequences Digital Product Passport delegated acts by product group — iron and steel targeted.",
+    "h1": "ESPR Priority Product List Timeline",
+    "bodyHtml": "<p>The European Commission’s first ESPR Working Plan (2025–2030) sequences Digital Product Passport delegated acts by product group — iron and steel targeted for 2026, textiles and apparel for 2027, furniture for 2028, then electronics, chemicals, construction products, and tyres from 2029 — so which category is asked to comply first is already public.</p><h2>Why AuthiChain</h2><ul><li>A delegated act’s adoption date, not the product’s market size, decides when a DPP becomes mandatory for that category — check the working plan itself, not general ESPR press coverage</li><li>AuthiChain already issues DPP records for six of these categories; the record format does not change when a category’s delegated act formally adopts, only the compliance deadline does</li><li>Sixteen energy-related product groups carried over from the old Ecodesign Directive run on a separate track alongside the new ESPR categories, not instead of them</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Which product category is first?</h3><p>Iron and steel, targeted for a 2026 delegated act, followed by textiles and apparel in 2027 and furniture in 2028.</p><h3>Does the working plan cover my product if it is not listed?</h3><p>Not yet — the current plan runs through 2030 and lists specific priority groups. A product outside those groups has no DPP delegated act pending as of this writing.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ESPR Priority Product List Timeline",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The European Commission’s first ESPR Working Plan (2025–2030) sequences Digital Product Passport delegated acts by product group — iron and steel targeted for 2026, textiles and apparel for 2027, furniture for 2028, then electronics, chemicals, construction products, and tyres from 2029 — so which category is asked to comply first is already public.",
+          "url": "https://authichain.com/p/espr-priority-product-list-timeline"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ESPR Priority Product List Timeline",
+              "item": "https://authichain.com/p/espr-priority-product-list-timeline"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Which product category is first?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Iron and steel, targeted for a 2026 delegated act, followed by textiles and apparel in 2027 and furniture in 2028."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the working plan cover my product if it is not listed?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet — the current plan runs through 2030 and lists specific priority groups. A product outside those groups has no DPP delegated act pending as of this writing."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "nft-certificate-of-authenticity-vs-verifiable-credential",
+    "keyword": "nft certificate of authenticity vs verifiable credential",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "NFT Certificate Of Authenticity Vs Verifiable | AuthiChain",
+    "metaDescription": "An NFT and a W3C Verifiable Credential both anchor a claim to a public ledger, but they answer different questions — an NFT proves who currently holds a.",
+    "h1": "NFT Certificate Of Authenticity Vs Verifiable Credential",
+    "bodyHtml": "<p>An NFT and a W3C Verifiable Credential both anchor a claim to a public ledger, but they answer different questions — an NFT proves who currently holds a token, while a Verifiable Credential proves who signed a specific, checkable statement — which is why AuthiChain issues both: one for resale ownership, one for provenance.</p><h2>Why AuthiChain</h2><ul><li>A Verifiable Credential’s signature is checkable against a fixed statement — reword it after signing and the signature breaks; an NFT’s metadata can point at content that changes after mint unless the token itself commits to a hash</li><li>Ownership and authorship are separate claims — a stolen or resold NFT changes who holds the token, not who issued the original provenance record</li><li>ERC-721 certificates on Polygon carry resale ownership; the provenance record underneath stays the same signed Verifiable Credential the new holder inherits, not a re-issued claim</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Do I need both an NFT and a Verifiable Credential?</h3><p>Only if you need transferable ownership as well as provenance. A Verifiable Credential alone proves authenticity; the NFT layer is what makes that authenticity travel cleanly through resale.</p><h3>Can a fake NFT impersonate a real certificate?</h3><p>A screenshot or cloned image can be posted anywhere, but it will not correspond to a genuine mint at the item’s actual contract address — checking that address directly is the verification step, not trusting how a marketplace listing looks.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — NFT Certificate Of Authenticity Vs Verifiable Credential",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "An NFT and a W3C Verifiable Credential both anchor a claim to a public ledger, but they answer different questions — an NFT proves who currently holds a token, while a Verifiable Credential proves who signed a specific, checkable statement — which is why AuthiChain issues both: one for resale ownership, one for provenance.",
+          "url": "https://authichain.com/p/nft-certificate-of-authenticity-vs-verifiable-credential"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "NFT Certificate Of Authenticity Vs Verifiable Credential",
+              "item": "https://authichain.com/p/nft-certificate-of-authenticity-vs-verifiable-credential"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do I need both an NFT and a Verifiable Credential?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Only if you need transferable ownership as well as provenance. A Verifiable Credential alone proves authenticity; the NFT layer is what makes that authenticity travel cleanly through resale."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can a fake NFT impersonate a real certificate?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A screenshot or cloned image can be posted anywhere, but it will not correspond to a genuine mint at the item’s actual contract address — checking that address directly is the verification step, not trusting how a marketplace listing looks."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dscsa-saleable-returns-verification-requirement",
+    "keyword": "dscsa saleable returns verification requirement",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DSCSA Saleable Returns Verification Requirement | AuthiChain",
+    "metaDescription": "DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it.",
+    "h1": "DSCSA Saleable Returns Verification Requirement",
+    "bodyHtml": "<p>DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it goes back into sellable inventory, not just confirm a serial number is present — and the FDA has already issued warning letters over exactly that gap.</p><h2>Why AuthiChain</h2><ul><li>Verification happens at receiving, checking the returned package’s history against what the distributor originally shipped — a signed record a scanner checks offline does that without a portal lookup</li><li>A verified record confirms the package matches what was issued; it does not replace the physical inspection a saleable-returns program still requires</li><li>The same unit-level serialization this protocol issues for DSCSA traceability is what a returns-verification check runs against — no separate data model for returns</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When did the saleable-returns requirement take effect?</h3><p>27 August 2025. Verification at the point a returned package is determined saleable is an active FDA enforcement focus, with warning letters issued over failures to verify transaction history before accepting returns.</p><h3>Does electronic verification replace physical inspection of returns?</h3><p>No — electronic verification confirms the package’s data matches what was shipped. Physical inspection for damage, tampering, or expiry stays a separate step.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DSCSA Saleable Returns Verification Requirement",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it goes back into sellable inventory, not just confirm a serial number is present — and the FDA has already issued warning letters over exactly that gap.",
+          "url": "https://authichain.com/p/dscsa-saleable-returns-verification-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSCSA Saleable Returns Verification Requirement",
+              "item": "https://authichain.com/p/dscsa-saleable-returns-verification-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When did the saleable-returns requirement take effect?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "27 August 2025. Verification at the point a returned package is determined saleable is an active FDA enforcement focus, with warning letters issued over failures to verify transaction history before accepting returns."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does electronic verification replace physical inspection of returns?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — electronic verification confirms the package’s data matches what was shipped. Physical inspection for damage, tampering, or expiry stays a separate step."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
