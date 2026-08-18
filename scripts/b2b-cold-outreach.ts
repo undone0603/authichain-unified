@@ -584,7 +584,9 @@ async function processTargets<T extends { company: string; email: string; name?:
           .update({ status: 'contacted', updatedAt: new Date().toISOString() })
           .eq('email', email);
         await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: true, reason: 'sent', metadata: { email, resendId: res.id } });
-      } else if (res.assessment.status === 'reject' || res.reason === 'no_mx') {
+      }
+      
+      else if (res.assessment.status === 'reject' || res.reason === 'no_mx') {
         // A refused recipient is the guard doing its job, not a broken
         // pipeline: it must not turn the run red or it trains everyone to
         // ignore the signal. It stays queued so verifying the address later
