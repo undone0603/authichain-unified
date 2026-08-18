@@ -30,23 +30,23 @@ export type FAQInput = {
 
 export class ExecutiveAgent {
   draftSalesEmail(input: EmailInput): string {
-    const subject = input.subject ?? "Quick note about " + (input.product ?? "our solution");
+    const subject = input.subject ?? `Quick note about ${input.product ?? "our solution"}`;
     return [
       `Subject: ${subject}`,
       "",
-      `Hi,`,
+      "Hi,",
       "",
-      input.prompt ||
+      input.prompt ??
         `I wanted to reach out about ${input.product ?? "our platform"} and how it can help you ${
           input.context ?? "hit your next set of growth targets"
         }.`,
       "",
       input.offer ? `We’re currently offering ${input.offer}.` : "",
       "",
-      `If this sounds interesting, I’d be happy to share a short walkthrough.`,
+      "If this sounds interesting, I’d be happy to share a short walkthrough.",
       "",
-      `Best,`,
-      `ExecutiveAgent`,
+      "Best,",
+      "ExecutiveAgent",
     ]
       .filter(Boolean)
       .join("\n");
@@ -57,26 +57,26 @@ export class ExecutiveAgent {
     return [
       `Subject: ${subject}`,
       "",
-      `Hi,`,
+      "Hi,",
       "",
-      input.prompt ||
+      input.prompt ??
         `I’ve been following your work in ${input.context ?? "your space"} and I think there’s a strong opportunity for us to collaborate.`,
       "",
-      `I’d love to explore how a partnership could create value for both sides—whether through co-marketing, product integration, or joint campaigns.`,
+      "I’d love to explore how a partnership could create value for both sides—whether through co-marketing, product integration, or joint campaigns.",
       "",
-      `If you’re open to it, could we schedule a brief call to compare notes?`,
+      "If you’re open to it, could we schedule a brief call to compare notes?",
       "",
-      `Best,`,
-      `ExecutiveAgent`,
+      "Best,",
+      "ExecutiveAgent",
     ].join("\n");
   }
 
   generateLinkedInPost(input: SocialInput): string {
     return [
-      `Platform: LinkedIn`,
+      "Platform: LinkedIn",
       "",
-      input.prompt ||
-        `Sharing a quick update on how we’re helping teams build trustworthy, tamper‑evident pipelines across their data and workflows.`,
+      input.prompt ??
+        "Sharing a quick update on how we’re helping teams build trustworthy, tamper‑evident pipelines across their data and workflows.",
       "",
       input.context ? `Context: ${input.context}` : "",
       "",
@@ -90,17 +90,17 @@ export class ExecutiveAgent {
     return [
       `Title: ${input.subject ?? "Building authentic, verifiable systems at scale"}`,
       "",
-      input.prompt ||
-        `In this post, we’ll walk through why authenticity, provenance, and tamper‑evidence are becoming core requirements for modern systems.`,
+      input.prompt ??
+        "In this post, we’ll walk through why authenticity, provenance, and tamper‑evidence are becoming core requirements for modern systems.",
       "",
       input.context
         ? `We’ll focus specifically on ${input.context}, and how teams can move from ad‑hoc scripts to autonomous, trustworthy pipelines.`
         : "",
       "",
-      `We’ll cover:`,
-      `- The shift from opaque automation to transparent, auditable flows`,
-      `- How to design agents that act within clear guardrails`,
-      `- Practical steps to introduce authenticity without slowing teams down`,
+      "We’ll cover:",
+      "- The shift from opaque automation to transparent, auditable flows",
+      "- How to design agents that act within clear guardrails",
+      "- Practical steps to introduce authenticity without slowing teams down",
     ]
       .filter(Boolean)
       .join("\n");
@@ -110,14 +110,14 @@ export class ExecutiveAgent {
     return [
       `Subject: ${input.subject ?? "New release: authentic, autonomous pipelines"}`,
       "",
-      `We’re excited to announce a new set of capabilities designed to make your pipelines both autonomous and verifiable.`,
+      "We’re excited to announce a new set of capabilities designed to make your pipelines both autonomous and verifiable.",
       "",
-      input.prompt ||
-        `With this release, teams can wire agents into their workflows while keeping a clear, tamper‑evident record of what happened and why.`,
+      input.prompt ??
+        "With this release, teams can wire agents into their workflows while keeping a clear, tamper‑evident record of what happened and why.",
       "",
       input.context ? `This is especially useful for ${input.context}.` : "",
       "",
-      `You can start using these features today in your existing environment—no major migration required.`,
+      "You can start using these features today in your existing environment—no major migration required.",
     ]
       .filter(Boolean)
       .join("\n");
@@ -128,12 +128,12 @@ export class ExecutiveAgent {
     return [
       `Platform: ${platform}`,
       "",
-      input.prompt ||
-        `Autonomous systems are powerful—but without authenticity and provenance, they’re just black boxes. We’re changing that.`,
+      input.prompt ??
+        "Autonomous systems are powerful—but without authenticity and provenance, they’re just black boxes. We’re changing that.",
       "",
       input.context ? `Context: ${input.context}` : "",
       "",
-      `#authenticity #agents #provenance`,
+      "#authenticity #agents #provenance",
     ]
       .filter(Boolean)
       .join("\n");
@@ -144,17 +144,17 @@ export class ExecutiveAgent {
       `Competitor analysis: ${input.name}`,
       input.url ? `URL: ${input.url}` : "",
       "",
-      `Focus areas:`,
+      "Focus areas:",
       `- Product positioning: ${input.productLine ?? "not specified"}`,
-      `- Differentiation:`,
-      `  • Where they lean on automation vs authenticity`,
-      `  • How clearly they communicate trust, provenance, and guardrails`,
+      "- Differentiation:",
+      "  • Where they lean on automation vs authenticity",
+      "  • How clearly they communicate trust, provenance, and guardrails",
       "",
       input.notes ? `Additional notes: ${input.notes}` : "",
       "",
-      `Opportunities:`,
-      `- Emphasize transparent, tamper‑evident flows`,
-      `- Show how agents act within clear, auditable constraints`,
+      "Opportunities:",
+      "- Emphasize transparent, tamper‑evident flows",
+      "- Show how agents act within clear, auditable constraints",
     ]
       .filter(Boolean)
       .join("\n");
@@ -162,18 +162,17 @@ export class ExecutiveAgent {
 
   summarizeText(input: TextInput): string {
     return [
-      `Summary:`,
+      "Summary:",
       "",
-      input.prompt
-        ? `Core idea: ${input.prompt}`
-        : `This text focuses on building authentic, verifiable systems and the tradeoffs between speed and trust.`,
+      input.prompt ??
+        "This text focuses on building authentic, verifiable systems and the tradeoffs between speed and trust.",
       "",
       input.context ? `Context: ${input.context}` : "",
       "",
-      `Key points:`,
-      `- Authenticity and provenance are becoming baseline requirements`,
-      `- Autonomous agents must operate within clear guardrails`,
-      `- Teams need practical patterns, not just theory`,
+      "Key points:",
+      "- Authenticity and provenance are becoming baseline requirements",
+      "- Autonomous agents must operate within clear guardrails",
+      "- Teams need practical patterns, not just theory",
     ]
       .filter(Boolean)
       .join("\n");
@@ -181,11 +180,11 @@ export class ExecutiveAgent {
 
   improveWriting(input: TextInput): string {
     return [
-      `Improved version:`,
+      "Improved version:",
       "",
       input.prompt
         ? `Let’s make this clearer and more direct:\n\n${input.prompt}`
-        : `We help teams build autonomous pipelines that are both powerful and trustworthy—every action is traceable, every decision auditable.`,
+        : "We help teams build autonomous pipelines that are both powerful and trustworthy—every action is traceable, every decision auditable.",
       "",
       `Tone: ${input.tone ?? "neutral"}`,
     ]
@@ -198,17 +197,17 @@ export class ExecutiveAgent {
     return [
       `Campaign subject: ${subject}`,
       "",
-      `Email 1: Problem`,
-      `- Highlight the risk of opaque automation`,
-      `- Show why authenticity and provenance matter`,
+      "Email 1: Problem",
+      "- Highlight the risk of opaque automation",
+      "- Show why authenticity and provenance matter",
       "",
-      `Email 2: Solution`,
-      `- Introduce your authentic, agentic pipeline`,
-      `- Explain how it keeps a tamper‑evident record of actions`,
+      "Email 2: Solution",
+      "- Introduce your authentic, agentic pipeline",
+      "- Explain how it keeps a tamper‑evident record of actions",
       "",
-      `Email 3: Proof`,
-      `- Share a case study or example`,
-      `- Invite readers to try a small, low‑risk pilot`,
+      "Email 3: Proof",
+      "- Share a case study or example",
+      "- Invite readers to try a small, low‑risk pilot",
     ].join("\n");
   }
 
@@ -216,9 +215,9 @@ export class ExecutiveAgent {
     return [
       `Q: ${input.question}`,
       "",
-      `A:`,
-      input.prompt ||
-        `We designed our system to make autonomous workflows both powerful and trustworthy. Every action is recorded in a way that’s tamper‑evident, so you can always see what happened, when, and why.`,
+      "A:",
+      input.prompt ??
+        "We designed our system to make autonomous workflows both powerful and trustworthy. Every action is recorded in a tamper‑evident, auditable format.",
       "",
       input.product ? `This applies directly to ${input.product}.` : "",
       input.audience ? `For ${input.audience}, this means clearer accountability and easier audits.` : "",
