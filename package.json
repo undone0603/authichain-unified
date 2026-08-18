@@ -113,7 +113,7 @@
     "sanitize-html": "^2.13.0",
     "sonner": "^1.5.0",
     "streamdown": "^2.5.0",
-    "stripe": "^22.1.1",
+    "stripe": "^22.5.0",
     "superjson": "^2.2.6",
     "tailwind-merge": "^2.5.2",
     "thirdweb": "^5.120.0",
