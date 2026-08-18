@@ -412,6 +412,262 @@
     }
   },
   {
+    "slug": "ppwr-digital-labelling-qr-code",
+    "keyword": "ppwr digital labelling qr code",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "PPWR Digital Labelling QR Code | AuthiChain",
+    "metaDescription": "PPWR (EU) 2025/40 requires a QR code or standardized digital data carrier on packaging with sorting and material information from August 2026, and a full.",
+    "h1": "PPWR Digital Labelling QR Code",
+    "bodyHtml": "<p>PPWR (EU) 2025/40 requires a QR code or standardized digital data carrier on packaging with sorting and material information from August 2026, and a full Digital Product Passport alongside it from August 2028 — the same GS1 Digital Link identifier and signed-record model this protocol already issues.</p><h2>Why AuthiChain</h2><ul><li>The QR/digital carrier supplements the printed label under PPWR — it is not allowed to replace it, and the record behind it can be the same signed, anchored format used for product authentication</li><li>General PPWR provisions bind from 12 August 2026; the combined packaging DPP plus standardized QR labelling requirement follows on 12 August 2028</li><li>One GS1 Digital Link identifier per packaging SKU works for both the near-term sorting-data QR and the later DPP resolution — no second code to add in 2028</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the QR code replace the printed recycling label?</h3><p>No — PPWR requires the digital carrier to supplement the mandatory printed label, not substitute for it.</p><h3>What is the deadline?</h3><p>Most PPWR provisions, including the digital labelling requirement, become binding on 12 August 2026; the packaging Digital Product Passport requirement follows on 12 August 2028.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — PPWR Digital Labelling QR Code",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "PPWR (EU) 2025/40 requires a QR code or standardized digital data carrier on packaging with sorting and material information from August 2026, and a full Digital Product Passport alongside it from August 2028 — the same GS1 Digital Link identifier and signed-record model this protocol already issues.",
+          "url": "https://authichain.com/p/ppwr-digital-labelling-qr-code"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "PPWR Digital Labelling QR Code",
+              "item": "https://authichain.com/p/ppwr-digital-labelling-qr-code"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the QR code replace the printed recycling label?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — PPWR requires the digital carrier to supplement the mandatory printed label, not substitute for it."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is the deadline?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Most PPWR provisions, including the digital labelling requirement, become binding on 12 August 2026; the packaging Digital Product Passport requirement follows on 12 August 2028."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "untp-digital-product-passport",
+    "keyword": "untp digital product passport",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "UNTP Digital Product Passport | AuthiChain",
+    "metaDescription": "UNTP — the UN Transparency Protocol — is targeting a 1.0 Digital Product Passport specification release on 1 September 2026, built on the same W3C Verifiable.",
+    "h1": "UNTP Digital Product Passport",
+    "bodyHtml": "<p>UNTP — the UN Transparency Protocol — is targeting a 1.0 Digital Product Passport specification release on 1 September 2026, built on the same W3C Verifiable Credentials Data Model 2.0 this protocol’s records already use.</p><h2>Why AuthiChain</h2><ul><li>UNTP issues every credential, including its Digital Product Passport, as a W3C VC 2.0 object — the identical base data model documented in SPEC.md §2, not a competing format</li><li>UNTP is UN/CEFACT and UNECE work, currently on 0.6.x pilot releases; SPEC.md is a v0.1.0 draft — both are pre-1.0 specs published for implementers to compare, not finished standards</li><li>The 28-fixture conformance suite and reference verifier are public, so the gap between a ProvenanceRecord and a UNTP DigitalProductPassport credential is something an implementer can check directly, not take on faith</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is a record issued under this protocol a valid UNTP DigitalProductPassport credential?</h3><p>Not directly — UNTP defines its own credential type and JSON-LD context on top of VC 2.0. This protocol’s ProvenanceRecord shares the base standard but is a different schema; mapping between them is inspectable, not assumed.</p><h3>When does UNTP 1.0 ship?</h3><p>The UNTP team is targeting a 1.0 release on 1 September 2026; current releases are versioned 0.6.x and marked suitable for pilot implementations.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — UNTP Digital Product Passport",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "UNTP — the UN Transparency Protocol — is targeting a 1.0 Digital Product Passport specification release on 1 September 2026, built on the same W3C Verifiable Credentials Data Model 2.0 this protocol’s records already use.",
+          "url": "https://authichain.com/p/untp-digital-product-passport"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "UNTP Digital Product Passport",
+              "item": "https://authichain.com/p/untp-digital-product-passport"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is a record issued under this protocol a valid UNTP DigitalProductPassport credential?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not directly — UNTP defines its own credential type and JSON-LD context on top of VC 2.0. This protocol’s ProvenanceRecord shares the base standard but is a different schema; mapping between them is inspectable, not assumed."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "When does UNTP 1.0 ship?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The UNTP team is targeting a 1.0 release on 1 September 2026; current releases are versioned 0.6.x and marked suitable for pilot implementations."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "battery-passport-due-diligence-requirement",
+    "keyword": "battery passport due diligence requirement",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Battery Passport Due Diligence Requirement | AuthiChain",
+    "metaDescription": "The EU Battery Regulation’s due-diligence obligation — sourcing checks on cobalt, lithium, nickel, and natural graphite — was postponed by Regulation (EU).",
+    "h1": "Battery Passport Due Diligence Requirement",
+    "bodyHtml": "<p>The EU Battery Regulation’s due-diligence obligation — sourcing checks on cobalt, lithium, nickel, and natural graphite — was postponed by Regulation (EU) 2025/1561 from 18 August 2025 to 18 August 2027, separate from the battery passport’s own 18 February 2027 deadline.</p><h2>Why AuthiChain</h2><ul><li>Regulation (EU) 2025/1561, published 30 July 2025, is the amendment that moved the due-diligence start date two years — it does not delay the battery passport itself</li><li>Due diligence is a raw-material sourcing report; the battery passport carries carbon footprint, state-of-health, and material-recovery data on the same GS1 Digital Link and VC 2.0 base this protocol specifies — two obligations under one regulation, on two different dates</li><li>A sourcing claim in a due-diligence report can be issued as its own signed Verifiable Credential and hashed to an anchor, so the claim is checkable independent of the PDF it started as</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Did the due-diligence deadline change?</h3><p>Yes — Regulation (EU) 2025/1561, published 30 July 2025, postponed it from 18 August 2025 to 18 August 2027.</p><h3>Does the battery passport already satisfy due diligence?</h3><p>No — they are separate obligations under the same regulation. The passport carries product data; due diligence is a raw-material sourcing report for large economic operators.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Battery Passport Due Diligence Requirement",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU Battery Regulation’s due-diligence obligation — sourcing checks on cobalt, lithium, nickel, and natural graphite — was postponed by Regulation (EU) 2025/1561 from 18 August 2025 to 18 August 2027, separate from the battery passport’s own 18 February 2027 deadline.",
+          "url": "https://authichain.com/p/battery-passport-due-diligence-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Battery Passport Due Diligence Requirement",
+              "item": "https://authichain.com/p/battery-passport-due-diligence-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Did the due-diligence deadline change?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — Regulation (EU) 2025/1561, published 30 July 2025, postponed it from 18 August 2025 to 18 August 2027."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the battery passport already satisfy due diligence?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — they are separate obligations under the same regulation. The passport carries product data; due diligence is a raw-material sourcing report for large economic operators."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "digital-product-passport-access-rights",
+    "keyword": "digital product passport access rights",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Digital Product Passport Access Rights | AuthiChain",
+    "metaDescription": "ESPR splits Digital Product Passport access into tiers — public, professional/economic-operator, and authority — and the registry rule this protocol already.",
+    "h1": "Digital Product Passport Access Rights",
+    "bodyHtml": "<p>ESPR splits Digital Product Passport access into tiers — public, professional/economic-operator, and authority — and the registry rule this protocol already implements, a permanent URL with no authentication, is exactly what the public tier requires.</p><h2>Why AuthiChain</h2><ul><li>Annex XIII and the Article 77(9) implementing act govern which fields each tier sees; the split is defined per product-group delegated act, not by this protocol</li><li>SPEC.md §6 requires records to resolve from a permanent URL without authentication — verification that requires an account is not public verification, and that is the public tier by definition</li><li>Field-level restriction for confidential technical data is not in spec v0.1.0 — every field in a record issued today is visible to anyone who resolves its URL, which is the public-tier behavior and not yet the professional or authority tiers</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does this protocol already support ESPR-style tiered access?</h3><p>Not yet — v0.1.0 issues one record with one visibility level. Tiering confidential fields for repairers, recyclers, or authorities is a real requirement the delegated acts will define, and it is not built here.</p><h3>Is a single public record still useful before tiering exists?</h3><p>Yes, for the tier ESPR requires to be free and unauthenticated — which is how every record resolves today.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Digital Product Passport Access Rights",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "ESPR splits Digital Product Passport access into tiers — public, professional/economic-operator, and authority — and the registry rule this protocol already implements, a permanent URL with no authentication, is exactly what the public tier requires.",
+          "url": "https://authichain.com/p/digital-product-passport-access-rights"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Digital Product Passport Access Rights",
+              "item": "https://authichain.com/p/digital-product-passport-access-rights"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does this protocol already support ESPR-style tiered access?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet — v0.1.0 issues one record with one visibility level. Tiering confidential fields for repairers, recyclers, or authorities is a real requirement the delegated acts will define, and it is not built here."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is a single public record still useful before tiering exists?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, for the tier ESPR requires to be free and unauthenticated — which is how every record resolves today."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     "slug": "blockchain-qr-code-for-cannabis",
     "keyword": "blockchain qr code for cannabis",
     "brand": "StrainChain",
@@ -2888,48 +3144,835 @@
     }
   },
   {
-    "slug": "untp-digital-product-passport",
-    "keyword": "untp digital product passport",
+    "slug": "eu-dpp-qr-code-data-carrier-requirements",
+    "keyword": "eu dpp qr code data carrier requirements",
     "brand": "AuthiChain",
     "domain": "authichain.com",
-    "title": "UNTP Digital Product Passport | AuthiChain",
-    "metaDescription": "UNTP — the UN Transparency Protocol — is targeting a 1.0 Digital Product Passport specification release on 1 September 2026, built on the same W3C Verifiable.",
-    "h1": "UNTP Digital Product Passport",
-    "bodyHtml": "<p>UNTP — the UN Transparency Protocol — is targeting a 1.0 Digital Product Passport specification release on 1 September 2026, built on the same W3C Verifiable Credentials Data Model 2.0 this protocol’s records already use.</p><h2>Why AuthiChain</h2><ul><li>UNTP issues every credential, including its Digital Product Passport, as a W3C VC 2.0 object — the identical base data model documented in SPEC.md §2, not a competing format</li><li>UNTP is UN/CEFACT and UNECE work, currently on 0.6.x pilot releases; SPEC.md is a v0.1.0 draft — both are pre-1.0 specs published for implementers to compare, not finished standards</li><li>The 28-fixture conformance suite and reference verifier are public, so the gap between a ProvenanceRecord and a UNTP DigitalProductPassport credential is something an implementer can check directly, not take on faith</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is a record issued under this protocol a valid UNTP DigitalProductPassport credential?</h3><p>Not directly — UNTP defines its own credential type and JSON-LD context on top of VC 2.0. This protocol’s ProvenanceRecord shares the base standard but is a different schema; mapping between them is inspectable, not assumed.</p><h3>When does UNTP 1.0 ship?</h3><p>The UNTP team is targeting a 1.0 release on 1 September 2026; current releases are versioned 0.6.x and marked suitable for pilot implementations.</p>",
-    "name": "What standard covers the carrier itself?",
-    "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "EN 18220:2026, referenced in the Official Journal in July 2026, sets the data-carrier requirements; product-specific delegated acts still set size, durability, and error-correction parameters per category."
+    "title": "EU DPP QR Code Data Carrier Requirements | AuthiChain",
+    "metaDescription": "ESPR Article 10 requires a Digital Product Passport’s data carrier to stay on the product for its full service life, using open, interoperable formats — not.",
+    "h1": "EU DPP QR Code Data Carrier Requirements",
+    "bodyHtml": "<p>ESPR Article 10 requires a Digital Product Passport’s data carrier to stay on the product for its full service life, using open, interoperable formats — not a proprietary code locked to one vendor’s scanner.</p><h2>Why AuthiChain</h2><ul><li>GS1 Digital Link is the open URL format the AuthiChain protocol spec already uses for item identity — interoperable by construction, not a workaround</li><li>The signed record behind the code is a W3C Verifiable Credential, readable by any conforming verifier, not one vendor’s app</li><li>An unknown or malformed code returns 404, not a synthesized response — a scan either resolves to a real record or says so</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the data carrier have to be a QR code?</h3><p>Article 10 lets manufacturers choose the carrier — QR code, RFID, or NFC — as long as it is durable, accessible, and built on open standards. QR is the most common choice today.</p><h3>What standard covers the carrier itself?</h3><p>EN 18220:2026, referenced in the Official Journal in July 2026, sets the data-carrier requirements; product-specific delegated acts still set size, durability, and error-correction parameters per category.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU DPP QR Code Data Carrier Requirements",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "ESPR Article 10 requires a Digital Product Passport’s data carrier to stay on the product for its full service life, using open, interoperable formats — not a proprietary code locked to one vendor’s scanner.",
+          "url": "https://authichain.com/p/eu-dpp-qr-code-data-carrier-requirements"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU DPP QR Code Data Carrier Requirements",
+              "item": "https://authichain.com/p/eu-dpp-qr-code-data-carrier-requirements"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the data carrier have to be a QR code?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Article 10 lets manufacturers choose the carrier — QR code, RFID, or NFC — as long as it is durable, accessible, and built on open standards. QR is the most common choice today."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What standard covers the carrier itself?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "EN 18220:2026, referenced in the Official Journal in July 2026, sets the data-carrier requirements; product-specific delegated acts still set size, durability, and error-correction parameters per category."
+              }
+            }
+          ]
+        }
+      ]
     }
   },
   {
-    "slug": "battery-passport-due-diligence-requirement",
-    "keyword": "battery passport due diligence requirement",
+    "slug": "right-to-repair-spare-parts-verification",
+    "keyword": "right to repair spare parts verification",
     "brand": "AuthiChain",
     "domain": "authichain.com",
-    "title": "Battery Passport Due Diligence Requirement | AuthiChain",
-    "metaDescription": "The EU Battery Regulation’s due-diligence obligation — sourcing checks on cobalt, lithium, nickel, and natural graphite — was postponed by Regulation (EU).",
-    "h1": "Battery Passport Due Diligence Requirement",
-    "bodyHtml": "<p>The EU Battery Regulation’s due-diligence obligation — sourcing checks on cobalt, lithium, nickel, and natural graphite — was postponed by Regulation (EU) 2025/1561 from 18 August 2025 to 18 August 2027, separate from the battery passport’s own 18 February 2027 deadline.</p><h2>Why AuthiChain</h2><ul><li>Regulation (EU) 2025/1561, published 30 July 2025, is the amendment that moved the due-diligence start date two years — it does not delay the battery passport itself</li><li>Due diligence is a raw-material sourcing report; the battery passport carries carbon footprint, state-of-health, and material-recovery data on the same GS1 Digital Link and VC 2.0 base this protocol specifies — two obligations under one regulation, on two different dates</li><li>A sourcing claim in a due-diligence report can be issued as its own signed Verifiable Credential and hashed to an anchor, so the claim is checkable independent of the PDF it started as</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Did the due-diligence deadline change?</h3><p>Yes — Regulation (EU) 2025/1561, published 30 July 2025, postponed it from 18 August 2025 to 18 August 2027.</p><h3>Does the battery passport already satisfy due diligence?</h3><p>No — they are separate obligations under the same regulation. The passport carries product data; due diligence is a raw-material sourcing report for large economic operators.</p>",
-    "name": "What must manufacturers provide under the directive?",
-    "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "Unambiguous product identification — model and serial number — plus repair and maintenance information, for the product categories the directive covers."
+    "title": "Right To Repair Spare Parts Verification | AuthiChain",
+    "metaDescription": "The EU Right to Repair Directive, in force from July 31, 2026, requires manufacturers to give repairers unambiguous model and serial identification — a scan.",
+    "h1": "Right To Repair Spare Parts Verification",
+    "bodyHtml": "<p>The EU Right to Repair Directive, in force from July 31, 2026, requires manufacturers to give repairers unambiguous model and serial identification — a scan should confirm a part is genuine, not decide whether a repair is allowed to proceed.</p><h2>Why AuthiChain</h2><ul><li>Genuine-part verification runs offline against the signed record — no network call to a manufacturer database required</li><li>A signature proves a part was issued by the manufacturer; it does not gate installation the way a paired-parts lockout does</li><li>Model and serial data travel in a W3C Verifiable Credential any repairer’s tool can read, not one tied to a single OEM app</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does this stop third-party or reused parts from being installed?</h3><p>No — verification confirms whether a specific part is OEM-genuine. It does not disable a device or block a non-OEM part from being installed.</p><h3>What must manufacturers provide under the directive?</h3><p>Unambiguous product identification — model and serial number — plus repair and maintenance information, for the product categories the directive covers.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Right To Repair Spare Parts Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU Right to Repair Directive, in force from July 31, 2026, requires manufacturers to give repairers unambiguous model and serial identification — a scan should confirm a part is genuine, not decide whether a repair is allowed to proceed.",
+          "url": "https://authichain.com/p/right-to-repair-spare-parts-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Right To Repair Spare Parts Verification",
+              "item": "https://authichain.com/p/right-to-repair-spare-parts-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does this stop third-party or reused parts from being installed?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — verification confirms whether a specific part is OEM-genuine. It does not disable a device or block a non-OEM part from being installed."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What must manufacturers provide under the directive?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Unambiguous product identification — model and serial number — plus repair and maintenance information, for the product categories the directive covers."
+              }
+            }
+          ]
+        }
+      ]
     }
   },
   {
-    "slug": "digital-product-passport-access-rights",
-    "keyword": "digital product passport access rights",
+    "slug": "eudr-deforestation-traceability-blockchain",
+    "keyword": "eudr deforestation traceability blockchain",
     "brand": "AuthiChain",
     "domain": "authichain.com",
-    "title": "Digital Product Passport Access Rights | AuthiChain",
-    "metaDescription": "ESPR splits Digital Product Passport access into tiers — public, professional/economic-operator, and authority — and the registry rule this protocol already.",
-    "h1": "Digital Product Passport Access Rights",
-    "bodyHtml": "<p>ESPR splits Digital Product Passport access into tiers — public, professional/economic-operator, and authority — and the registry rule this protocol already implements, a permanent URL with no authentication, is exactly what the public tier requires.</p><h2>Why AuthiChain</h2><ul><li>Annex XIII and the Article 77(9) implementing act govern which fields each tier sees; the split is defined per product-group delegated act, not by this protocol</li><li>SPEC.md §6 requires records to resolve from a permanent URL without authentication — verification that requires an account is not public verification, and that is the public tier by definition</li><li>Field-level restriction for confidential technical data is not in spec v0.1.0 — every field in a record issued today is visible to anyone who resolves its URL, which is the public-tier behavior and not yet the professional or authority tiers</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does this protocol already support ESPR-style tiered access?</h3><p>Not yet — v0.1.0 issues one record with one visibility level. Tiering confidential fields for repairers, recyclers, or authorities is a real requirement the delegated acts will define, and it is not built here.</p><h3>Is a single public record still useful before tiering exists?</h3><p>Yes, for the tier ESPR requires to be free and unauthenticated — which is how every record resolves today.</p>",
-    "name": "Does blockchain anchoring satisfy EUDR by itself?",
-    "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "No — EUDR requires a geolocation and legality due-diligence statement. Anchoring makes the supporting documentation tamper-evident; it does not replace the statement itself."
+    "title": "EUDR Deforestation Traceability Blockchain | AuthiChain",
+    "metaDescription": "The EU Deforestation Regulation requires proof that cocoa, coffee, palm oil, rubber, soy, timber, and cattle are traceable to the plot of land where they.",
+    "h1": "EUDR Deforestation Traceability Blockchain",
+    "bodyHtml": "<p>The EU Deforestation Regulation requires proof that cocoa, coffee, palm oil, rubber, soy, timber, and cattle are traceable to the plot of land where they were grown — a claim that only holds up if a buyer can check it without asking you.</p><h2>Why AuthiChain</h2><ul><li>Geolocation and chain-of-custody events hashed and anchored per batch for tamper-evidence</li><li>Records are W3C Verifiable Credentials, so an importer’s compliance system can verify them without an AuthiChain account</li><li>Large and medium operators are in scope from December 30, 2026; small and micro enterprises from June 30, 2027</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>What commodities does EUDR cover?</h3><p>Cattle, cocoa, coffee, oil palm, rubber, soy, and wood, plus derived products such as leather, chocolate, and furniture.</p><h3>Does blockchain anchoring satisfy EUDR by itself?</h3><p>No — EUDR requires a geolocation and legality due-diligence statement. Anchoring makes the supporting documentation tamper-evident; it does not replace the statement itself.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EUDR Deforestation Traceability Blockchain",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU Deforestation Regulation requires proof that cocoa, coffee, palm oil, rubber, soy, timber, and cattle are traceable to the plot of land where they were grown — a claim that only holds up if a buyer can check it without asking you.",
+          "url": "https://authichain.com/p/eudr-deforestation-traceability-blockchain"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EUDR Deforestation Traceability Blockchain",
+              "item": "https://authichain.com/p/eudr-deforestation-traceability-blockchain"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What commodities does EUDR cover?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Cattle, cocoa, coffee, oil palm, rubber, soy, and wood, plus derived products such as leather, chocolate, and furniture."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does blockchain anchoring satisfy EUDR by itself?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — EUDR requires a geolocation and legality due-diligence statement. Anchoring makes the supporting documentation tamper-evident; it does not replace the statement itself."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "cannabis-product-recall-traceability",
+    "keyword": "cannabis product recall traceability",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "Cannabis Product Recall Traceability | StrainChain",
+    "metaDescription": "When a cannabis batch fails a pesticide or mold retest, the question is how fast you can isolate every package it touched — StrainChain ties each unit to its.",
+    "h1": "Cannabis Product Recall Traceability",
+    "bodyHtml": "<p>When a cannabis batch fails a pesticide or mold retest, the question is how fast you can isolate every package it touched — StrainChain ties each unit to its METRC/BioTrack batch record so a recall targets units, not an entire product line.</p><h2>Why StrainChain</h2><ul><li>Unit-level recall targeting instead of a blanket pull across every dispensary carrying the SKU</li><li>Lab retest results attach to the same on-chain record consumers already scan for COAs</li><li>Chain-of-custody events are tamper-evident, so a recall trace does not depend on trusting one dispensary’s paperwork</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $199/mo.</p><h2>FAQ</h2><h3>Does this replace our METRC recall workflow?</h3><p>No — it runs alongside METRC/BioTrack and narrows a recall to the specific units and batches affected, using the compliance data you already report.</p><h3>Can dispensaries check recall status by scan?</h3><p>Yes — the same QR code customers use for lab results shows recall status if a batch has been flagged.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "StrainChain — Cannabis Product Recall Traceability",
+          "provider": {
+            "@type": "Organization",
+            "name": "StrainChain",
+            "url": "https://strainchain.io"
+          },
+          "description": "When a cannabis batch fails a pesticide or mold retest, the question is how fast you can isolate every package it touched — StrainChain ties each unit to its METRC/BioTrack batch record so a recall targets units, not an entire product line.",
+          "url": "https://strainchain.io/p/cannabis-product-recall-traceability"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "StrainChain",
+              "item": "https://strainchain.io"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Cannabis Product Recall Traceability",
+              "item": "https://strainchain.io/p/cannabis-product-recall-traceability"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does this replace our METRC recall workflow?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it runs alongside METRC/BioTrack and narrows a recall to the specific units and batches affected, using the compliance data you already report."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can dispensaries check recall status by scan?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — the same QR code customers use for lab results shows recall status if a batch has been flagged."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "ppwr-packaging-qr-code-labeling-requirements",
+    "keyword": "ppwr packaging qr code labeling requirements",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "PPWR Packaging QR Code Labeling Requirements | AuthiChain",
+    "metaDescription": "PPWR requires harmonised packaging labels from 12 August 2028 (or 24 months after the Commission’s implementing acts, whichever is later) and lets.",
+    "h1": "PPWR Packaging QR Code Labeling Requirements",
+    "bodyHtml": "<p>PPWR requires harmonised packaging labels from 12 August 2028 (or 24 months after the Commission’s implementing acts, whichever is later) and lets manufacturers attach a QR code for sorting and disposal data — the same signed-record format AuthiChain already issues for product authentication.</p><h2>Why AuthiChain</h2><ul><li>A W3C Verifiable Credential is legible to any conforming reader, matching PPWR’s requirement that packaging information not depend on one proprietary app</li><li>One record and one QR code can carry both PPWR sorting data and product authentication — no second code printed on the pack</li><li>PPWR treats the QR code as supplementary: it does not replace the physical label the regulation still requires</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When does the QR code labeling requirement take effect?</h3><p>Harmonised labels are required from 12 August 2028, or 24 months after the Commission’s implementing acts (due by 12 August 2026), whichever is later. Reusable-packaging labeling follows roughly six months after that.</p><h3>Can a QR code replace the printed PPWR label?</h3><p>No — PPWR requires the physical label regardless. A QR code can carry additional detail like disposal instructions, but it is not a substitute for what has to be printed on the pack.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — PPWR Packaging QR Code Labeling Requirements",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "PPWR requires harmonised packaging labels from 12 August 2028 (or 24 months after the Commission’s implementing acts, whichever is later) and lets manufacturers attach a QR code for sorting and disposal data — the same signed-record format AuthiChain already issues for product authentication.",
+          "url": "https://authichain.com/p/ppwr-packaging-qr-code-labeling-requirements"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "PPWR Packaging QR Code Labeling Requirements",
+              "item": "https://authichain.com/p/ppwr-packaging-qr-code-labeling-requirements"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When does the QR code labeling requirement take effect?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Harmonised labels are required from 12 August 2028, or 24 months after the Commission’s implementing acts (due by 12 August 2026), whichever is later. Reusable-packaging labeling follows roughly six months after that."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can a QR code replace the printed PPWR label?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — PPWR requires the physical label regardless. A QR code can carry additional detail like disposal instructions, but it is not a substitute for what has to be printed on the pack."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-revocation-bitstring-status-list",
+    "keyword": "verifiable credential revocation bitstring status list",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Revocation Bitstring | AuthiChain",
+    "metaDescription": "W3C’s Bitstring Status List reached full Recommendation status in 2025, giving Verifiable Credential issuers a standard way to revoke or suspend a record.",
+    "h1": "Verifiable Credential Revocation Bitstring Status List",
+    "bodyHtml": "<p>W3C’s Bitstring Status List reached full Recommendation status in 2025, giving Verifiable Credential issuers a standard way to revoke or suspend a record after it is signed — the exact gap AuthiChain’s protocol spec names as open until v0.2.</p><h2>Why AuthiChain</h2><ul><li>Bitstring Status List compresses revocation state for many credentials into one small, privacy-preserving bitstring a verifier checks alongside the signature</li><li>AuthiChain records are already W3C Verifiable Credentials 2.0 — adding credentialStatus is a spec extension, not a rewrite</li><li>Until v0.2 ships, a record signed by a since-compromised key stays cryptographically valid — documented in protocol/SPEC.md §8, not a footnote</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain support revocation today?</h3><p>No. protocol/SPEC.md documents this as an open gap: a record signed with a since-compromised key still verifies as valid. Revocation via credentialStatus is planned for v0.2.</p><h3>What does Bitstring Status List actually do?</h3><p>It lets a Verifiable Credential point to a status list a verifier checks to see if that specific credential was revoked or suspended, without the check itself revealing which credential is being looked up.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Revocation Bitstring Status List",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "W3C’s Bitstring Status List reached full Recommendation status in 2025, giving Verifiable Credential issuers a standard way to revoke or suspend a record after it is signed — the exact gap AuthiChain’s protocol spec names as open until v0.2.",
+          "url": "https://authichain.com/p/verifiable-credential-revocation-bitstring-status-list"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Revocation Bitstring Status List",
+              "item": "https://authichain.com/p/verifiable-credential-revocation-bitstring-status-list"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain support revocation today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. protocol/SPEC.md documents this as an open gap: a record signed with a since-compromised key still verifies as valid. Revocation via credentialStatus is planned for v0.2."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does Bitstring Status List actually do?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It lets a Verifiable Credential point to a status list a verifier checks to see if that specific credential was revoked or suspended, without the check itself revealing which credential is being looked up."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "construction-products-digital-product-passport",
+    "keyword": "construction products digital product passport",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Construction Products Digital Product Passport | AuthiChain",
+    "metaDescription": "The revised EU Construction Products Regulation (2024/3110) makes a digital product passport mandatory 18 months after the Commission adopts the delegated.",
+    "h1": "Construction Products Digital Product Passport",
+    "bodyHtml": "<p>The revised EU Construction Products Regulation (2024/3110) makes a digital product passport mandatory 18 months after the Commission adopts the delegated act under Article 75(1) — AuthiChain issues that record as a signed Verifiable Credential, the same model already used for battery and textile passports.</p><h2>Why AuthiChain</h2><ul><li>Performance, safety, and life-cycle data structured for the construction DPP system the pending delegated act will define</li><li>Records resolve as W3C Verifiable Credentials, so a specifier or building inspector verifies without an AuthiChain account</li><li>CPR keeps CE marking in place; the DPP runs alongside it and adds environmental-impact data the mark alone does not carry</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When is the construction DPP mandatory?</h3><p>CPR has applied in stages since 8 January 2026. The DPP duty itself starts 18 months after the Commission adopts the delegated act under Article 75(1) — that act had not been adopted as of this writing.</p><h3>Does the construction DPP replace CE marking?</h3><p>No — CPR retains CE marking and requires the DPP in addition to it, covering data the mark does not include.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Construction Products Digital Product Passport",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The revised EU Construction Products Regulation (2024/3110) makes a digital product passport mandatory 18 months after the Commission adopts the delegated act under Article 75(1) — AuthiChain issues that record as a signed Verifiable Credential, the same model already used for battery and textile passports.",
+          "url": "https://authichain.com/p/construction-products-digital-product-passport"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Construction Products Digital Product Passport",
+              "item": "https://authichain.com/p/construction-products-digital-product-passport"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When is the construction DPP mandatory?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "CPR has applied in stages since 8 January 2026. The DPP duty itself starts 18 months after the Commission adopts the delegated act under Article 75(1) — that act had not been adopted as of this writing."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the construction DPP replace CE marking?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — CPR retains CE marking and requires the DPP in addition to it, covering data the mark does not include."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "qr-code-phishing-product-packaging-security",
+    "keyword": "qr code phishing product packaging security",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "QR Code Phishing Product Packaging Security | AuthiChain",
+    "metaDescription": "Quishing — QR codes cloned or altered to redirect a scan to a fake destination — is a documented, rising attack pattern in 2026, and a plain QR code has no.",
+    "h1": "QR Code Phishing Product Packaging Security",
+    "bodyHtml": "<p>Quishing — QR codes cloned or altered to redirect a scan to a fake destination — is a documented, rising attack pattern in 2026, and a plain QR code has no way to prove what it points to is genuine; a signed AuthiChain record does.</p><h2>Why AuthiChain</h2><ul><li>Verification checks an Ed25519 signature against the record itself, not just that a URL resolves — a cloned code pointing to fabricated content fails the check</li><li>Offline verification means a scanner is not just trusting whichever server happens to answer at scan time</li><li>A signature proves who issued the record, not that the physical item in hand matches it — stated plainly in protocol/SPEC.md §8</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can a counterfeit copy an AuthiChain QR code and still pass?</h3><p>The printed code can be copied, but reproducing a valid Ed25519 signature over fabricated content cannot — a cloned code pointing anywhere but the genuine record fails signature verification.</p><h3>Does this protect against quishing generally?</h3><p>It stops a cloned code from passing as a genuine AuthiChain record. It does not secure QR codes outside this protocol — any code that is not signed is a separate risk a scanner has to judge on its own.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — QR Code Phishing Product Packaging Security",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Quishing — QR codes cloned or altered to redirect a scan to a fake destination — is a documented, rising attack pattern in 2026, and a plain QR code has no way to prove what it points to is genuine; a signed AuthiChain record does.",
+          "url": "https://authichain.com/p/qr-code-phishing-product-packaging-security"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "QR Code Phishing Product Packaging Security",
+              "item": "https://authichain.com/p/qr-code-phishing-product-packaging-security"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can a counterfeit copy an AuthiChain QR code and still pass?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The printed code can be copied, but reproducing a valid Ed25519 signature over fabricated content cannot — a cloned code pointing anywhere but the genuine record fails signature verification."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does this protect against quishing generally?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It stops a cloned code from passing as a genuine AuthiChain record. It does not secure QR codes outside this protocol — any code that is not signed is a separate risk a scanner has to judge on its own."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "did-key-vs-did-web-for-verifiable-credentials",
+    "keyword": "did key vs did web for verifiable credentials",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DID Key Vs DID Web For Verifiable Credentials | AuthiChain",
+    "metaDescription": "A Verifiable Credential’s issuer identifier has to resolve to a public key somehow — did:key embeds the key directly in the identifier so no network lookup.",
+    "h1": "DID Key Vs DID Web For Verifiable Credentials",
+    "bodyHtml": "<p>A Verifiable Credential’s issuer identifier has to resolve to a public key somehow — did:key embeds the key directly in the identifier so no network lookup is needed, while did:web ties resolution to a domain you control, which is why AuthiChain’s protocol spec uses did:key by default.</p><h2>Why AuthiChain</h2><ul><li>did:key needs no DNS, hosting, or network call to resolve — the public key is the identifier, which is what makes offline verification possible at all</li><li>did:web ties portability to a domain: lose the domain and every credential issued under that method stops resolving</li><li>protocol/SPEC.md §5 step 2 resolves the issuer key from did:key with zero network access, matching the spec’s offline-verification requirement</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Why not use did:web since we already control a domain?</h3><p>You can — the spec does not forbid it. But did:web makes verification depend on your DNS and hosting staying reachable, which works against the goal of a verifier reaching a verdict without contacting anyone.</p><h3>Does did:key support key rotation?</h3><p>Not on its own — a new key is a new identifier. That gap is part of what credentialStatus and revocation, planned for v0.2, are meant to address.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DID Key Vs DID Web For Verifiable Credentials",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "A Verifiable Credential’s issuer identifier has to resolve to a public key somehow — did:key embeds the key directly in the identifier so no network lookup is needed, while did:web ties resolution to a domain you control, which is why AuthiChain’s protocol spec uses did:key by default.",
+          "url": "https://authichain.com/p/did-key-vs-did-web-for-verifiable-credentials"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DID Key Vs DID Web For Verifiable Credentials",
+              "item": "https://authichain.com/p/did-key-vs-did-web-for-verifiable-credentials"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Why not use did:web since we already control a domain?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "You can — the spec does not forbid it. But did:web makes verification depend on your DNS and hosting staying reachable, which works against the goal of a verifier reaching a verdict without contacting anyone."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does did:key support key rotation?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not on its own — a new key is a new identifier. That gap is part of what credentialStatus and revocation, planned for v0.2, are meant to address."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "cen-cenelec-digital-product-passport-standards",
+    "keyword": "cen cenelec digital product passport standards",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "CEN CENELEC Digital Product Passport Standards | AuthiChain",
+    "metaDescription": "CEN and CENELEC published the first six harmonised European standards for the Digital Product Passport — the EN 18216–18223 series — on 1 June 2026, covering.",
+    "h1": "CEN CENELEC Digital Product Passport Standards",
+    "bodyHtml": "<p>CEN and CENELEC published the first six harmonised European standards for the Digital Product Passport — the EN 18216–18223 series — on 1 June 2026, covering digital identifiers, data carriers, and interoperable APIs; the building blocks this protocol already uses line up with what that series formalizes.</p><h2>Why AuthiChain</h2><ul><li>The series specifies APIs and system interoperability, not just the QR code — a record built as a W3C Verifiable Credential over a GS1 Digital Link identifier already matches that shape</li><li>EN 18220 covers the data carrier specifically; protocol/SPEC.md already requires GS1 Digital Link identity and an open, non-proprietary carrier format</li><li>A harmonised standard gives every manufacturer one spec to build against instead of guessing at each Member State’s implementation — the same reason this protocol publishes its own spec under Apache-2.0</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>What do the EN 18216–18223 standards cover?</h3><p>Digital identifiers, data carriers, passport data architecture, APIs, cybersecurity, and interoperability between different DPP systems — the technical layer beneath the ESPR’s legal requirements.</p><h3>Does AuthiChain formally conform to these standards today?</h3><p>The underlying building blocks — GS1 Digital Link identity, W3C Verifiable Credentials, an open data carrier — match what the series formalizes. A formal conformance claim waits on published test suites for each standard.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — CEN CENELEC Digital Product Passport Standards",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "CEN and CENELEC published the first six harmonised European standards for the Digital Product Passport — the EN 18216–18223 series — on 1 June 2026, covering digital identifiers, data carriers, and interoperable APIs; the building blocks this protocol already uses line up with what that series formalizes.",
+          "url": "https://authichain.com/p/cen-cenelec-digital-product-passport-standards"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "CEN CENELEC Digital Product Passport Standards",
+              "item": "https://authichain.com/p/cen-cenelec-digital-product-passport-standards"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What do the EN 18216–18223 standards cover?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Digital identifiers, data carriers, passport data architecture, APIs, cybersecurity, and interoperability between different DPP systems — the technical layer beneath the ESPR’s legal requirements."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain formally conform to these standards today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The underlying building blocks — GS1 Digital Link identity, W3C Verifiable Credentials, an open data carrier — match what the series formalizes. A formal conformance claim waits on published test suites for each standard."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "espr-priority-product-list-timeline",
+    "keyword": "espr priority product list timeline",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ESPR Priority Product List Timeline | AuthiChain",
+    "metaDescription": "The European Commission’s first ESPR Working Plan (2025–2030) sequences Digital Product Passport delegated acts by product group — iron and steel targeted.",
+    "h1": "ESPR Priority Product List Timeline",
+    "bodyHtml": "<p>The European Commission’s first ESPR Working Plan (2025–2030) sequences Digital Product Passport delegated acts by product group — iron and steel targeted for 2026, textiles and apparel for 2027, furniture for 2028, then electronics, chemicals, construction products, and tyres from 2029 — so which category is asked to comply first is already public.</p><h2>Why AuthiChain</h2><ul><li>A delegated act’s adoption date, not the product’s market size, decides when a DPP becomes mandatory for that category — check the working plan itself, not general ESPR press coverage</li><li>AuthiChain already issues DPP records for six of these categories; the record format does not change when a category’s delegated act formally adopts, only the compliance deadline does</li><li>Sixteen energy-related product groups carried over from the old Ecodesign Directive run on a separate track alongside the new ESPR categories, not instead of them</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Which product category is first?</h3><p>Iron and steel, targeted for a 2026 delegated act, followed by textiles and apparel in 2027 and furniture in 2028.</p><h3>Does the working plan cover my product if it is not listed?</h3><p>Not yet — the current plan runs through 2030 and lists specific priority groups. A product outside those groups has no DPP delegated act pending as of this writing.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ESPR Priority Product List Timeline",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The European Commission’s first ESPR Working Plan (2025–2030) sequences Digital Product Passport delegated acts by product group — iron and steel targeted for 2026, textiles and apparel for 2027, furniture for 2028, then electronics, chemicals, construction products, and tyres from 2029 — so which category is asked to comply first is already public.",
+          "url": "https://authichain.com/p/espr-priority-product-list-timeline"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ESPR Priority Product List Timeline",
+              "item": "https://authichain.com/p/espr-priority-product-list-timeline"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Which product category is first?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Iron and steel, targeted for a 2026 delegated act, followed by textiles and apparel in 2027 and furniture in 2028."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the working plan cover my product if it is not listed?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet — the current plan runs through 2030 and lists specific priority groups. A product outside those groups has no DPP delegated act pending as of this writing."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "nft-certificate-of-authenticity-vs-verifiable-credential",
+    "keyword": "nft certificate of authenticity vs verifiable credential",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "NFT Certificate Of Authenticity Vs Verifiable | AuthiChain",
+    "metaDescription": "An NFT and a W3C Verifiable Credential both anchor a claim to a public ledger, but they answer different questions — an NFT proves who currently holds a.",
+    "h1": "NFT Certificate Of Authenticity Vs Verifiable Credential",
+    "bodyHtml": "<p>An NFT and a W3C Verifiable Credential both anchor a claim to a public ledger, but they answer different questions — an NFT proves who currently holds a token, while a Verifiable Credential proves who signed a specific, checkable statement — which is why AuthiChain issues both: one for resale ownership, one for provenance.</p><h2>Why AuthiChain</h2><ul><li>A Verifiable Credential’s signature is checkable against a fixed statement — reword it after signing and the signature breaks; an NFT’s metadata can point at content that changes after mint unless the token itself commits to a hash</li><li>Ownership and authorship are separate claims — a stolen or resold NFT changes who holds the token, not who issued the original provenance record</li><li>ERC-721 certificates on Polygon carry resale ownership; the provenance record underneath stays the same signed Verifiable Credential the new holder inherits, not a re-issued claim</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Do I need both an NFT and a Verifiable Credential?</h3><p>Only if you need transferable ownership as well as provenance. A Verifiable Credential alone proves authenticity; the NFT layer is what makes that authenticity travel cleanly through resale.</p><h3>Can a fake NFT impersonate a real certificate?</h3><p>A screenshot or cloned image can be posted anywhere, but it will not correspond to a genuine mint at the item’s actual contract address — checking that address directly is the verification step, not trusting how a marketplace listing looks.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — NFT Certificate Of Authenticity Vs Verifiable Credential",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "An NFT and a W3C Verifiable Credential both anchor a claim to a public ledger, but they answer different questions — an NFT proves who currently holds a token, while a Verifiable Credential proves who signed a specific, checkable statement — which is why AuthiChain issues both: one for resale ownership, one for provenance.",
+          "url": "https://authichain.com/p/nft-certificate-of-authenticity-vs-verifiable-credential"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "NFT Certificate Of Authenticity Vs Verifiable Credential",
+              "item": "https://authichain.com/p/nft-certificate-of-authenticity-vs-verifiable-credential"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do I need both an NFT and a Verifiable Credential?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Only if you need transferable ownership as well as provenance. A Verifiable Credential alone proves authenticity; the NFT layer is what makes that authenticity travel cleanly through resale."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can a fake NFT impersonate a real certificate?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A screenshot or cloned image can be posted anywhere, but it will not correspond to a genuine mint at the item’s actual contract address — checking that address directly is the verification step, not trusting how a marketplace listing looks."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dscsa-saleable-returns-verification-requirement",
+    "keyword": "dscsa saleable returns verification requirement",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DSCSA Saleable Returns Verification Requirement | AuthiChain",
+    "metaDescription": "DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it.",
+    "h1": "DSCSA Saleable Returns Verification Requirement",
+    "bodyHtml": "<p>DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it goes back into sellable inventory, not just confirm a serial number is present — and the FDA has already issued warning letters over exactly that gap.</p><h2>Why AuthiChain</h2><ul><li>Verification happens at receiving, checking the returned package’s history against what the distributor originally shipped — a signed record a scanner checks offline does that without a portal lookup</li><li>A verified record confirms the package matches what was issued; it does not replace the physical inspection a saleable-returns program still requires</li><li>The same unit-level serialization this protocol issues for DSCSA traceability is what a returns-verification check runs against — no separate data model for returns</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When did the saleable-returns requirement take effect?</h3><p>27 August 2025. Verification at the point a returned package is determined saleable is an active FDA enforcement focus, with warning letters issued over failures to verify transaction history before accepting returns.</p><h3>Does electronic verification replace physical inspection of returns?</h3><p>No — electronic verification confirms the package’s data matches what was shipped. Physical inspection for damage, tampering, or expiry stays a separate step.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DSCSA Saleable Returns Verification Requirement",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "DSCSA’s saleable-returns requirement took effect 27 August 2025 — a distributor must verify a returned drug package against its transaction history before it goes back into sellable inventory, not just confirm a serial number is present — and the FDA has already issued warning letters over exactly that gap.",
+          "url": "https://authichain.com/p/dscsa-saleable-returns-verification-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSCSA Saleable Returns Verification Requirement",
+              "item": "https://authichain.com/p/dscsa-saleable-returns-verification-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When did the saleable-returns requirement take effect?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "27 August 2025. Verification at the point a returned package is determined saleable is an active FDA enforcement focus, with warning letters issued over failures to verify transaction history before accepting returns."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does electronic verification replace physical inspection of returns?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — electronic verification confirms the package’s data matches what was shipped. Physical inspection for damage, tampering, or expiry stays a separate step."
+              }
+            }
+          ]
+        }
+      ]
     }
   }
 ]

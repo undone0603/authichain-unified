@@ -1,14 +1,6 @@
 name: Schema Drift Check
 
 # Compares src/db/schema.ts against the live database.
-#
-# This exists because the disagreement between them was found the expensive
-# way: on 2026-08-15, 750 of 982 scheduled job runs were failing — 76% — and
-# had been for months. Nothing surfaced it, because Drizzle's second argument
-# is the *physical* column name, so `integer('userId')` against a `user_id`
-# column type-checks perfectly and fails only against a real database. Neither
-# `pnpm check` nor the test suite can see it.
-#
 # Read-only: it queries information_schema and writes nothing.
 
 on:
@@ -29,24 +21,44 @@ on:
 permissions:
   contents: read
 
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.28.2'
+
 jobs:
   drift:
     name: Compare schema to database
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-      - name: Install pg
-        run: npm install --no-save pg@8
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      # `npm install --no-save pg@8` used to stand here, and it could never
+      # succeed: this repo has no package-lock.json, so npm resolved the whole
+      # package.json tree from scratch and died on an ERESOLVE peer conflict
+      # (@simplewebauthn/browser vs @auth/core) before the drift check ran. The
+      # job failed during install every time, so the comparison this workflow
+      # exists to perform has not actually happened.
+      #
+      # pg is already a dependency (^8.22.0), so the normal install is all that
+      # was ever needed.
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
 
       - name: Check for drift
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set -o pipefail
           if [ -z "$DATABASE_URL" ]; then
             echo "DATABASE_URL repo secret not set — skipping."
             echo "Set it to have this check run against the live database."

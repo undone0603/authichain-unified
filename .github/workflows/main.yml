@@ -11,18 +11,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
+        # Fixed: Changed from @v7 to @v4
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        # Fixed: Simplified to the standard @v4 tag
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.28.2'
+
       - name: Setup Node.js
+        # Fixed: Changed from @v7 to @v4
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
-
-      - name: Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

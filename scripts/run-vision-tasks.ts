@@ -32,7 +32,6 @@ async function main() {
     if (!claimed) continue;
     try {
       await VISION_RUNNERS[task.kind!](task, db);
-      // markTaskDone guards with WHERE status='RUNNING', matching task-runner
       await markTaskDone(task.id);
       ran++;
     } catch (err) {

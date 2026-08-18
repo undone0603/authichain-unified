@@ -69,6 +69,11 @@ describe('validateBundle — certification claims', () => {
     ['ISO 27001 certified infrastructure', /ISO 27001/],
     ['FIPS 140-2 HSM crypto module', /CMVP/],
     ['Fully HIPAA-compliant records', /covered entity/],
+    ['FedRAMP compliant cloud', /FedRAMP/],
+    ['Our platform is FedRAMP-ready', /FedRAMP/],
+    ['FedRAMP authorized deployment', /FedRAMP/],
+    ['Government-grade security', /government claim/],
+    ['Fully government compliant', /government claim/],
   ])('rejects %s', (text, expected) => {
     const failures = validateBundle(goodBundle({ linkedin: text }));
     expect(failures.join(' ')).toMatch(expected);
@@ -76,6 +81,15 @@ describe('validateBundle — certification claims', () => {
 
   it('allows "ISO 27001 aligned", which is the honest form', () => {
     const failures = validateBundle(goodBundle({ linkedin: 'Key rotation is ISO 27001 aligned.' }));
+    expect(failures).toEqual([]);
+  });
+
+  it('allows naming FedRAMP/NIST as requirements to evaluate — the honest form', () => {
+    // The ban is on claiming an authorization, not on the words. The approved
+    // prospect language names them as things scoped with the customer.
+    const failures = validateBundle(
+      goodBundle({ linkedin: 'For federal data we evaluate FedRAMP and NIST requirements with the customer.' }),
+    );
     expect(failures).toEqual([]);
   });
 });

@@ -51,7 +51,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { SEGMENT_PRIORS } from './_core/bayesian';
-import { bayesianPriors } from '../drizzle/schema';
+import { bayesianPriors, scheduledJobRuns } from '../drizzle/schema';
 
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
@@ -691,10 +691,38 @@ export async function incrementScanCount(id: number) {
   await db.update(qrCodes).set({ scanCount: sql`${qrCodes.scanCount} + 1`, lastScannedAt: new Date() }).where(eq(qrCodes.id, id));
 }
 
-export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string }) {
+// Node-singleton counterpart of identity-db-helpers.ts's Db-parameterized
+// recordReputationEvent — same two-statement event-log-then-upsert, using
+// getDb() internally like every other function in this file.
+export async function recordReputationEvent(userId: number, eventType: string, pointsDelta: number) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(qrScanEvents).values(data);
+  await db.execute(sql`
+    INSERT INTO reputation_events (user_id, event_type, points_delta)
+    VALUES (${userId}, ${eventType}, ${pointsDelta})
+  `);
+  await db.execute(sql`
+    INSERT INTO user_reputation (user_id, points, trust_level)
+    VALUES (${userId}, ${pointsDelta}, 'novice')
+    ON CONFLICT (user_id) DO UPDATE SET
+      points = user_reputation.points + EXCLUDED.points,
+      last_updated_at = now()
+  `);
+}
+
+export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string; userId?: number }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(qrScanEvents).values({
+    qrCodeId: data.qrCodeId,
+    productId: data.productId,
+    isAuthentic: data.isAuthentic,
+    userAgent: data.userAgent,
+  });
+
+  if (data.userId && data.isAuthentic) {
+    await recordReputationEvent(data.userId, "scan_authenticity_confirmed", 1);
+  }
 }
 
 export async function getRecentScanEvents(productId: number, limit = 20) {
@@ -1523,4 +1551,89 @@ export async function updateQron(
   await d.update(qrCodes)
     .set({ metadata: merged, updatedAt: new Date() })
     .where(eq(qrCodes.id, row.id));
+}
+
+
+// ============================================================================
+// Hyperdrive-backed DB accessor for Workers runtime
+// ============================================================================
+// Per-request factory for Cloudflare Workers environment where Hyperdrive
+// connection pooling is available via env.HYPERDRIVE binding.
+// Unlike getDb() above (async, module-level singleton for Node.js),
+// this factory creates a fresh drizzle client for each Workers request.
+//
+// Usage (in Workers handler / tRPC context):
+//   const db = getHyperdriveDb(env);
+//   const users = await db.query.users.findMany();
+
+export function getHyperdriveDb(env: { HYPERDRIVE: { connectionString: string } }): ReturnType<typeof drizzle> {
+  const workersPool = new Pool({ connectionString: env.HYPERDRIVE.connectionString });
+  return drizzle(workersPool);
+}
+
+// Node-singleton counterpart of server/_core/db-helpers.ts's Db-parameterized
+// getOpsSummary — same job-run aggregation, using getDb() internally like
+// every other function in this file.
+export async function getOpsSummary(windowHours = 24) {
+  const db = await getDb();
+  const since = new Date(Date.now() - windowHours * 3600_000);
+  const runs = await db
+    .select()
+    .from(scheduledJobRuns)
+    .where(gte(scheduledJobRuns.startedAt, since))
+    .orderBy(desc(scheduledJobRuns.startedAt))
+    .limit(500);
+
+  const toUiStatus = (s: string) => (s === 'completed' ? 'success' : s === 'failed' ? 'failure' : s);
+
+  type SummaryEntry = { success: number; failure: number; lastSeen: Date; lastError: string | null };
+  const byJob = new Map<string, SummaryEntry>();
+  for (const r of runs) {
+    const entry = byJob.get(r.jobName) ?? { success: 0, failure: 0, lastSeen: r.startedAt, lastError: null };
+    if (r.status === 'completed') entry.success++;
+    if (r.status === 'failed') {
+      entry.failure++;
+      entry.lastError ??= r.error || '(no message)';
+    }
+    if (r.startedAt > entry.lastSeen) entry.lastSeen = r.startedAt;
+    byJob.set(r.jobName, entry);
+  }
+
+  const summary = Array.from(byJob.entries())
+    .map(([name, v]) => ({
+      workflow: name,
+      success: v.success,
+      failure: v.failure,
+      last_seen: v.lastSeen.toISOString(),
+      last_error: v.lastError,
+    }))
+    .sort((a, b) => b.failure - a.failure || b.success - a.success);
+
+  const failures = runs
+    .filter(r => r.status === 'failed')
+    .slice(0, 50)
+    .map(r => ({
+      workflow: r.jobName,
+      error: r.error,
+      payload: r.result ? JSON.stringify(r.result) : null,
+      at: r.startedAt.toISOString(),
+    }));
+
+  const recent = runs.slice(0, 50).map(r => ({
+    workflow: r.jobName,
+    status: toUiStatus(r.status),
+    at: r.startedAt.toISOString(),
+  }));
+
+  return {
+    window_hours: windowHours,
+    generated_at: new Date().toISOString(),
+    totals: {
+      success: runs.filter(r => r.status === 'completed').length,
+      failure: runs.filter(r => r.status === 'failed').length,
+    },
+    summary,
+    failures,
+    recent,
+  };
 }

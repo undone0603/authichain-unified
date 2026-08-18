@@ -18,10 +18,6 @@ on:
           - strainchain
           - qron
       dry_run:
-        # LIVE: staged output was reviewed and approved, so scheduled and
-        # default manual runs now send for real. Check this box on a manual
-        # dispatch to force a dry run (prospect + save to Supabase, skip the
-        # email send) without editing the workflow.
         description: 'Dry run (save to Supabase, skip email send)'
         required: false
         default: 'false'
@@ -51,15 +47,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
@@ -70,80 +66,40 @@ jobs:
       - name: Run B2B cold outreach
         run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
         env:
-          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # Two Resend accounts hold different verified domains
-          # (strainchain.io on the first, authichain.com on the second). The
-          # preflight resolves which one owns each sender at run time, so both
-          # must be present for all segments to send.
-          RESEND_API_KEY:        ${{ secrets.RESEND_API_KEY }}
-          RESEND_API_KEY2:       ${{ secrets.RESEND_API_KEY2 }}
-          APOLLO_API_KEY:        ${{ secrets.APOLLO_API_KEY }}
-          HUBSPOT_TOKEN:         ${{ secrets.HUBSPOT_TOKEN }}
-          # Fallback sender must be verified on one of the accounts above — an
-          # unverified From is rejected for every recipient. Per-segment
-          # overrides let each product send under its own brand; unset segments
-          # fall back to OUTREACH_FROM_EMAIL, except strainchain which defaults
-          # to its own domain in the script.
-          OUTREACH_FROM_EMAIL:   ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
-          OUTREACH_FROM_GOVCHAIN:    ${{ secrets.OUTREACH_FROM_GOVCHAIN }}
-          OUTREACH_FROM_STRAINCHAIN: ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
-          OUTREACH_FROM_QRON:        ${{ secrets.OUTREACH_FROM_QRON }}
-          SALES_NOTIFY_EMAIL:    ${{ secrets.SALES_NOTIFY_EMAIL || 'hello@authichain.com' }}
-          CALENDLY_LINK:         ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
-          AUTHICHAIN_BOOK_URL:   ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
-          # LIVE: fallback is 'false' so scheduled runs send for real.
-          DRY_RUN:               ${{ inputs.dry_run || 'false' }}
-          FLUSH_QUEUED_ONLY:     ${{ inputs.flush_queued || 'false' }}
-          
-           # Guardrail/caps layer — every send is check/record-gated through
-          # this. Missing secret fails closed (nothing sends).
-          CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
-          INTERNAL_API_SECRET:   ${{ secrets.INTERNAL_API_SECRET }}
-
-          # CAN-SPAM requires a physical postal address in every commercial
-          # email. Override with the secret if the registered address changes.
-          MAILING_ADDRESS:       ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
-          UNSUBSCRIBE_URL:       ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
-          RESEND_REPLY_TO:       ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
-          # Guardrail/caps layer — every send is check/record-gated through
-          # this. Missing secret fails closed (nothing sends), so this must
-          # be set for the channel to ever actually send once enabled.
-          INTERNAL_API_SECRET:   ${{ secrets.INTERNAL_API_SECRET }}
-          # CAN-SPAM requires a physical postal address in every commercial
-          # email, and guardedSend fails CLOSED without one. This is NOT a
-          # secret — the whole point is that it is printed in every message —
-          # so it is a plain default rather than a repo secret, and the channel
-          # works out of the box. Value is the address already filed on the DHS
-          # SVIP application and the state partnership proposals
-          # (docs/submissions/, docs/strategy/). Override with the secret if the
-          # registered address changes.
-          MAILING_ADDRESS:      ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
-          UNSUBSCRIBE_URL:      ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
-          RESEND_REPLY_TO:      ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
+          RESEND_API_KEY:             ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2:            ${{ secrets.RESEND_API_KEY2 }}
+          APOLLO_API_KEY:             ${{ secrets.APOLLO_API_KEY }}
+          HUBSPOT_TOKEN:              ${{ secrets.HUBSPOT_TOKEN }}
+          OUTREACH_FROM_EMAIL:        ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
+          OUTREACH_FROM_GOVCHAIN:     ${{ secrets.OUTREACH_FROM_GOVCHAIN }}
+          OUTREACH_FROM_STRAINCHAIN:  ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
+          OUTREACH_FROM_QRON:         ${{ secrets.OUTREACH_FROM_QRON }}
+          SALES_NOTIFY_EMAIL:         ${{ secrets.SALES_NOTIFY_EMAIL || 'hello@authichain.com' }}
+          CALENDLY_LINK:              ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
+          AUTHICHAIN_BOOK_URL:        ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
+          DRY_RUN:                    ${{ inputs.dry_run || 'false' }}
+          FLUSH_QUEUED_ONLY:          ${{ inputs.flush_queued || 'false' }}
+          INTERNAL_API_SECRET:        ${{ secrets.INTERNAL_API_SECRET }}
+          MAILING_ADDRESS:            ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
+          UNSUBSCRIBE_URL:            ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          RESEND_REPLY_TO:            ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Flush queued leads (if RESEND_API_KEY available)
         if: ${{ inputs.flush_queued == 'true' }}
         run: pnpm exec tsx -e "import { flushQueuedLeads } from './scripts/b2b-cold-outreach.ts'; flushQueuedLeads().then(n => console.log('Flushed', n, 'leads'));"
         env:
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
-          RESEND_API_KEY2:      ${{ secrets.RESEND_API_KEY2 }}
-          OUTREACH_FROM_EMAIL:  ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
-          OUTREACH_FROM_GOVCHAIN:    ${{ secrets.OUTREACH_FROM_GOVCHAIN }}
-          OUTREACH_FROM_STRAINCHAIN: ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
-          OUTREACH_FROM_QRON:        ${{ secrets.OUTREACH_FROM_QRON }}
-          CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
-          INTERNAL_API_SECRET:  ${{ secrets.INTERNAL_API_SECRET }}
-          # CAN-SPAM requires a physical postal address in every commercial
-          # email, and guardedSend fails CLOSED without one. This is NOT a
-          # secret — the whole point is that it is printed in every message —
-          # so it is a plain default rather than a repo secret, and the channel
-          # works out of the box. Value is the address already filed on the DHS
-          # SVIP application and the state partnership proposals
-          # (docs/submissions/, docs/strategy/). Override with the secret if the
-          # registered address changes.
-          MAILING_ADDRESS:      ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
-          UNSUBSCRIBE_URL:      ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
-          RESEND_REPLY_TO:      ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
+          SUPABASE_URL:               ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY:   ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY:              ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2:             ${{ secrets.RESEND_API_KEY2 }}
+          OUTREACH_FROM_EMAIL:         ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
+          OUTREACH_FROM_GOVCHAIN:      ${{ secrets.OUTREACH_FROM_GOVCHAIN }}
+          OUTREACH_FROM_STRAINCHAIN:   ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
+          OUTREACH_FROM_QRON:          ${{ secrets.OUTREACH_FROM_QRON }}
+          CALENDLY_LINK:               ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
+          INTERNAL_API_SECRET:         ${{ secrets.INTERNAL_API_SECRET }}
+          MAILING_ADDRESS:             ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
+          UNSUBSCRIBE_URL:             ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          RESEND_REPLY_TO:             ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
