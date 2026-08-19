@@ -28,7 +28,7 @@ export type Db = ReturnType<typeof getHyperdriveDb>;
 
 export async function logActivity(
   db: Db,
-  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number; details?: any },
+  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any },
   details?: string,
 ): Promise<void> {
   if (typeof actionOrData === 'string') {
@@ -38,7 +38,7 @@ export async function logActivity(
       userId: actionOrData.userId ?? undefined,
       action: actionOrData.action,
       entityType: actionOrData.entityType,
-      entityId: actionOrData.entityId,
+      entityId: actionOrData.entityId == null ? undefined : String(actionOrData.entityId),
       details: actionOrData.details,
     });
   }
@@ -116,7 +116,7 @@ export async function getAllAdminIds(db: Db): Promise<number[]> {
 export async function createNotification(
   db: Db,
   data: Omit<InsertNotification, 'id' | 'createdAt'>,
-): Promise<{ id: number }> {
+): Promise<{ id: string }> {
   const [result] = await db.insert(notifications).values(data).returning();
   return { id: result.id };
 }
@@ -155,8 +155,8 @@ export async function createSystemNotification(
   message: string,
   type: InsertNotification['type'],
   actionUrl?: string,
-): Promise<{ id: number }> {
-  return createNotification(db, { userId, type: type as any, title, message, isRead: 0, actionUrl });
+): Promise<{ id: string }> {
+  return createNotification(db, { userId, type: type as any, title, message, isRead: false, actionUrl });
 }
 
 export async function createTask(db: Db, data: any): Promise<string> {

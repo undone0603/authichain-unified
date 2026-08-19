@@ -23,7 +23,7 @@ export const emailCampaignsRouter = router({
     });
   }),
   send: protectedProcedure.input(z.object({
-    campaignId: z.number(),
+    campaignId: z.string().uuid(),
     targetEmail: z.string().email(),
   })).mutation(async ({ ctx, input }) => {
     const campaigns = await db.getUserEmailCampaigns(ctx.user.id);

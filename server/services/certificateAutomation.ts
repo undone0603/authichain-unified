@@ -19,7 +19,7 @@ import { sendCertificateEmail as sendCrispCertificateEmail } from './crispServic
  */
 
 interface CertificateData {
-  certificateId: number;
+  certificateId: string;
   userId: number;
   productName: string;
   tier: 'basic' | 'premium' | 'enterprise';
@@ -33,7 +33,7 @@ interface CertificateData {
  * Generate certificate automatically after payment
  * This is called by the Paddle webhook handler
  */
-export async function generateCertificateAfterPayment(certificateId: number): Promise<void> {
+export async function generateCertificateAfterPayment(certificateId: string): Promise<void> {
   const db = await getDb();
   if (!db) {
     console.error('[Certificate Automation] Database not available');

@@ -17,7 +17,7 @@ export const emailDraftsRouter = router({
   })).mutation(async ({ input }) => {
     return await db.createEmailDraft({ ...input, status: "pending", generatedBy: "ai_manager" });
   }),
-  approve: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
+  approve: adminProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ ctx, input }) => {
     const drafts = await db.getPendingDrafts();
     const draft = drafts.find(d => d.id === input.id);
     await db.updateDraftStatus(input.id, "approved", ctx.user.id);
@@ -36,11 +36,11 @@ export const emailDraftsRouter = router({
     }
     return { success: true };
   }),
-  reject: adminProcedure.input(z.object({ id: z.number(), notes: z.string().optional() })).mutation(async ({ ctx, input }) => {
+  reject: adminProcedure.input(z.object({ id: z.string().uuid(), notes: z.string().optional() })).mutation(async ({ ctx, input }) => {
     await db.updateDraftStatus(input.id, "rejected", ctx.user.id);
     return { success: true };
   }),
-  bulkApprove: adminProcedure.input(z.object({ ids: z.array(z.number()) })).mutation(async ({ ctx, input }) => {
+  bulkApprove: adminProcedure.input(z.object({ ids: z.array(z.string().uuid()) })).mutation(async ({ ctx, input }) => {
     await Promise.all(input.ids.map(id => db.updateDraftStatus(id, "approved", ctx.user.id)));
     return { success: true, count: input.ids.length };
   }),
