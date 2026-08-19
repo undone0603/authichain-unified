@@ -65,6 +65,32 @@ NIST as requirements to evaluate with the customer still passes. No
   routine reads it to see which campaigns/variants already went out and, as
   engagement data accrues, leans the next batch toward the winning lever.
 
+## Picking a subreddit
+
+The validator only checks the subreddit name is well-formed — it can't tell
+whether the sub is on-topic or whether disclosed self-promotion is welcome
+there, so that judgment call is on whoever writes the bundle. Both bundles so
+far (`dpp-live-timeline`, `eu-dpp-launch-a/b`) posted to `r/supplychain`;
+repeating the same sub for every campaign concentrates repeat self-posts from
+one account in one community, which reads as spam even when each post is
+individually disclosed and on-topic. Rotate the sub with the brand/angle
+instead of defaulting back to `r/supplychain`:
+
+- **AuthiChain / EU DPP** — supply-chain and compliance-adjacent subs
+  (`r/supplychain` is the one already used; a regulatory-compliance sub is a
+  plausible second angle).
+- **QRON** — subs about QR codes, cryptographic signing, or verification
+  tooling rather than general supply chain.
+- **GovChain** — federal-contracting / GovCon communities, not general
+  blockchain subs — the CMMC/provenance angle is specific to that audience.
+- **StrainChain** — cannabis-industry business subs where METRC/seed-to-sale
+  compliance is a live topic, not general cannabis discussion subs.
+
+Verify the exact sub still exists, is on-topic, and its rules permit a
+disclosed self-post **before** using it — don't carry a name forward from
+memory without checking, since subreddit names, mod rules and whether a sub
+is even still active all drift.
+
 ## Publishing channels — pick the least painful credential
 
 `content-publish.yml` runs every channel; each **skips cleanly when its secrets
