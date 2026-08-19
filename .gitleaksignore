@@ -1,17 +1,22 @@
-HUBSPOT_PRIVATE_APP_TOKEN=
-
-# Historical archive files with legacy credentials (no longer valid)
-# Format: <commit-sha>:<rule-id>
-42ffbcc90895899e088cd6bde386843e52ae8864:generic-api-key
-42ffbcc90895899e088cd6bde386843e52ae8864:stripe-access-token
-42ffbcc90895899e088cd6bde386843e52ae8864:jwt
-42ffbcc90895899e088cd6bde386843e52ae8864:curl-auth-user
-860d77ba32b218b1e902595c232f039d1308c550:jwt
-861502b2ea1a0129a731ed3499a416296214bfd4:jwt
-f31f331232ac613318a73092621646358bdc72f9:generic-api-key
-2065593eb0ecca6a6fd292b1bae7c810f0a2bc87:stripe-access-token
-77dd93a6d487b375a0dadba6246f4eb2596e3569:stripe-access-token
-7d5b09e242cd8000bdb12b2286414e2131505b10:curl-auth-user
-8d95634563888689a1ad369fa8e41c33253b7da6:generic-api-key
-2f4f3c4c49745d66174a64c36116cc0b528803a9:airtable-api-key
-a6fdb4d15ead69d327678f51c2c8025441cb8a7f:openai-api-key
+# Historical findings that were remediated and are retained only in Git history.
+# Format: <commit-sha>:<file-path>:<rule-id>:<line>
+42ffbcc90895899e088cd6bde386843e52ae8864:docs/archive/cf-workers/qron-stripe-webhook.js:telegram-bot-token:7
+42ffbcc90895899e088cd6bde386843e52ae8864:docs/archive/cf-workers/qron-stripe-webhook.js:telegram-bot-token:8
+42ffbcc90895899e088cd6bde386843e52ae8864:docs/archive/cf-workers/qron-stripe-webhook.js:stripe-live-key:5
+42ffbcc90895899e088cd6bde386843e52ae8864:docs/archive/cf-workers/qron-stripe-webhook.js:stripe-webhook-secret:6
+860d77ba32b218b1e902595c232f039d1308c550:docs/archive/cf-workers/qron-fiverr.js:stripe-live-key:5
+860d77ba32b218b1e902595c232f039d1308c550:docs/archive/cf-workers/qrontoken-telegram-bot.js:telegram-bot-token:5
+a6fdb4d15ead69d327678f51c2c8025441cb8a7f:docs/SECURITY-REMEDIATION-CRITICAL.md:groq-key:103
+a6fdb4d15ead69d327678f51c2c8025441cb8a7f:docs/SECURITY-REMEDIATION-CRITICAL.md:telegram-bot-token:90
+a6fdb4d15ead69d327678f51c2c8025441cb8a7f:docs/SECURITY-REMEDIATION-CRITICAL.md:telegram-bot-token:91
+a6fdb4d15ead69d327678f51c2c8025441cb8a7f:docs/SECURITY-REMEDIATION-CRITICAL.md:stripe-live-key:26
+a6fdb4d15ead69d327678f51c2c8025441cb8a7f:docs/SECURITY-REMEDIATION-CRITICAL.md:stripe-webhook-secret:39
+a6fdb4d15ead69d327678f51c2c8025441cb8a7f:scripts/mi-cannabis-extraction.ts:openai-key:25
+a6fdb4d15ead69d327678f51c2c8025441cb8a7f:scripts/test-truth-layer-loop.ts:openai-key:48
+3d6f7ae9dc39255d688a3cec15692bc5a56fb2d8:docs/SECURITY-REMEDIATION-CRITICAL.md:stripe-live-key:26
+3d6f7ae9dc39255d688a3cec15692bc5a56fb2d8:docs/SECURITY-REMEDIATION-CRITICAL.md:stripe-webhook-secret:39
+3d6f7ae9dc39255d688a3cec15692bc5a56fb2d8:docs/SECURITY-REMEDIATION-CRITICAL.md:groq-key:103
+3d6f7ae9dc39255d688a3cec15692bc5a56fb2d8:docs/SECURITY-REMEDIATION-CRITICAL.md:telegram-bot-token:90
+3d6f7ae9dc39255d688a3cec15692bc5a56fb2d8:docs/SECURITY-REMEDIATION-CRITICAL.md:telegram-bot-token:91
+3d6f7ae9dc39255d688a3cec15692bc5a56fb2d8:scripts/mi-cannabis-extraction.ts:openai-key:25
+3d6f7ae9dc39255d688a3cec15692bc5a56fb2d8:scripts/test-truth-layer-loop.ts:openai-key:48
