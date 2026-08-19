@@ -35,4 +35,18 @@ jobs:
 
           vercel env rm AUTONOMOUS_PIPELINE_ENABLED production --yes --token="$VERCEL_TOKEN" || true
           printf '%s\n' "$PIPELINE_ENABLED" | vercel env add AUTONOMOUS_PIPELINE_ENABLED production --token="$VERCEL_TOKEN"
-          echo "AUTONOMOUS_PIPELINE_ENABLED configured for Vercel production."
+
+          production_deployment_id="$(
+            curl --fail --silent --show-error \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&target=production&limit=1" |
+              jq --exit-status --raw-output '.deployments[0].uid // .deployments[0].id'
+          )"
+          if [ -z "$production_deployment_id" ] || [ "$production_deployment_id" = "null" ]; then
+            echo "::error::No existing Vercel production deployment is available to redeploy."
+            exit 1
+          fi
+
+          echo "Redeploying production deployment $production_deployment_id with the updated runtime configuration."
+          vercel redeploy "$production_deployment_id" --target production --token="$VERCEL_TOKEN"
+          echo "AUTONOMOUS_PIPELINE_ENABLED is active in the Vercel production runtime."
