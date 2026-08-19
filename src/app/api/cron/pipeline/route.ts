@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   const started = Date.now();
   try {
     const { runPipelineTick } = await import('../../../../../server/jobs/pipeline-tick');
-    const result = await runPipelineTick({ force: true });
+    const result = await runPipelineTick();
     return NextResponse.json({
       ok: true,
       durationMs: Date.now() - started,
