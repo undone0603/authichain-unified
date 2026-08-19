@@ -43,11 +43,13 @@
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "client/src/**/*",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     "shared/**/*",
-    "server/**/*"
+    "server/**/*.ts",
+    "server/**/*.tsx",
+    "worker-app/**/*.ts",
+    "worker-app/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
@@ -61,9 +63,15 @@
     "scripts/**/*",
     "libs/**/*",
     "client/**/*",
+    "apps/**/*",
+    "api/**/*",
     "server/src/**/*",
     "server/scripts/**/*",
+    "server/executive/**/*",
+    "server/_core/context.workers.ts",
+    "server/_core/context.workers.test.ts",
     "app/**/*",
+    "open-next.config.ts",
     "src/db/qron_schema.ts",
     "sentry.client.config.ts",
     "sentry.edge.config.ts",

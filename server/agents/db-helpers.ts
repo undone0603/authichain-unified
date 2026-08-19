@@ -19,12 +19,12 @@ import {
   notifications,
   seoPages,
   type InsertNotification,
-  type InsertSeoPageRow,
 } from '../../drizzle/schema';
 import { SEGMENT_PRIORS } from '../_core/bayesian';
 import type { getHyperdriveDb } from '../db';
 
 export type Db = ReturnType<typeof getHyperdriveDb>;
+type InsertSeoPage = typeof seoPages.$inferInsert;
 
 export async function logActivity(
   db: Db,
@@ -123,7 +123,7 @@ export async function createNotification(
 
 export async function upsertSeoPage(
   db: Db,
-  page: Omit<InsertSeoPageRow, 'id' | 'createdAt'>,
+  page: Omit<InsertSeoPage, 'id' | 'createdAt'>,
 ): Promise<void> {
   await db
     .insert(seoPages)
