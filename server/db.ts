@@ -1187,7 +1187,7 @@ export async function getUnreadNotificationCount(userId: number) {
   if (!db) return 0;
   const [result] = await db.select({ count: sql<number>`count(*)` })
     .from(notifications)
-    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
   return result?.count || 0;
 }
 
@@ -1195,7 +1195,7 @@ export async function markNotificationRead(id: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(notifications)
-    .set({ isRead: 1 })
+    .set({ isRead: true })
     .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
 }
 
@@ -1203,8 +1203,8 @@ export async function markAllNotificationsRead(userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(notifications)
-    .set({ isRead: 1 })
-    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+    .set({ isRead: true })
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
 }
 
 export async function deleteNotification(id: number, userId: number) {
@@ -1215,7 +1215,7 @@ export async function deleteNotification(id: number, userId: number) {
 }
 
 export async function createSystemNotification(userId: number, title: string, message: string, type: InsertNotification["type"], actionUrl?: string) {
-  return createNotification({ userId, type: type as any, title, message, isRead: 0, actionUrl });
+  return createNotification({ userId, type: type as any, title, message, isRead: false, actionUrl });
 }
 
 // ─── Automation Audit ────────────────────────────────────────────────────────

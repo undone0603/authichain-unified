@@ -130,7 +130,7 @@ export async function createSystemNotification(
   type: InsertNotification['type'],
   actionUrl?: string,
 ): Promise<{ id: number }> {
-  return createNotification(db, { userId, type: type as any, title, message, isRead: 0, actionUrl });
+  return createNotification(db, { userId, type: type as any, title, message, isRead: false, actionUrl });
 }
 
 // ─── Budget & Task Queue ────────────────────────────────────────────────────

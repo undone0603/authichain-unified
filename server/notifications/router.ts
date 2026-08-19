@@ -29,6 +29,6 @@ export const notificationsRouter = router({
     type: z.enum(["authentication", "certificate", "payment", "subscription", "nft", "referral", "system", "alert", "supply_chain", "autopilot"]),
     actionUrl: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
-    return await db.createNotification({ ...input, userId: ctx.user.id, isRead: 0 });
+    return await db.createNotification({ ...input, userId: ctx.user.id, isRead: false });
   }),
 });

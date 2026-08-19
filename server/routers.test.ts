@@ -28,14 +28,14 @@ vi.mock("./db", async (importOriginal) => {
       return store.notifications.filter((n: any) => n.userId === userId).slice(0, limit);
     }),
     getUnreadNotificationCount: vi.fn(async (userId: number) => {
-      return store.notifications.filter((n: any) => n.userId === userId && n.isRead === 0).length;
+      return store.notifications.filter((n: any) => n.userId === userId && n.isRead === false).length;
     }),
     markNotificationRead: vi.fn(async (id: number, userId: number) => {
       const n = store.notifications.find((n: any) => n.id === id && n.userId === userId);
-      if (n) n.isRead = 1;
+      if (n) n.isRead = true;
     }),
     markAllNotificationsRead: vi.fn(async (userId: number) => {
-      store.notifications.filter((n: any) => n.userId === userId).forEach((n: any) => { n.isRead = 1; });
+      store.notifications.filter((n: any) => n.userId === userId).forEach((n: any) => { n.isRead = true; });
     }),
     deleteNotification: vi.fn(async (id: number, userId: number) => {
       const idx = store.notifications.findIndex((n: any) => n.id === id && n.userId === userId);
@@ -564,7 +564,7 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(found).toBeDefined();
       expect(found?.message).toBe("Should appear in list");
       expect(found?.type).toBe("authentication");
-      expect(found?.isRead).toBe(0);
+      expect(found?.isRead).toBe(false);
     });
 
     it("notifications.markRead marks a specific notification as read", async () => {
@@ -582,7 +582,7 @@ describe("AuthiChain Unified Platform Routers", () => {
       // Verify it's read
       const list = await caller.notifications.list({ limit: 50 });
       const found = list.find((n: any) => n.id === created.id);
-      expect(found?.isRead).toBe(1);
+      expect(found?.isRead).toBe(true);
     });
 
     it("notifications.delete removes a notification", async () => {
