@@ -240,7 +240,7 @@ describe("New Features", () => {
       it("affiliate.submitApplication reports already-enrolled when affiliate exists", async () => {
         const { getAffiliateByUserId } = await import("./db");
         vi.mocked(getAffiliateByUserId).mockResolvedValueOnce({
-          id: 10, userId: 1, affiliateCode: "AFF-1-EXISTING", status: "active",
+          id: 10, userId: 1, legacyAuthUid: null, affiliateCode: "AFF-1-EXISTING", status: "active",
           commissionRate: "10.00", totalEarnings: "0", pendingPayout: "0",
           totalReferrals: 0, totalConversions: 0, payoutMethod: null, payoutDetails: null,
           createdAt: new Date(), updatedAt: new Date(),
@@ -254,7 +254,7 @@ describe("New Features", () => {
       it("affiliate.getStats returns stats object when enrolled", async () => {
         const { getAffiliateByUserId, getAffiliateCommissions } = await import("./db");
         vi.mocked(getAffiliateByUserId).mockResolvedValueOnce({
-          id: 10, userId: 1, affiliateCode: "AFF-1-GOLD", status: "active",
+          id: 10, userId: 1, legacyAuthUid: null, affiliateCode: "AFF-1-GOLD", status: "active",
           commissionRate: "15.00", totalEarnings: "250.00", pendingPayout: "50.00",
           totalReferrals: 12, totalConversions: 5, payoutMethod: "paypal", payoutDetails: null,
           createdAt: new Date(), updatedAt: new Date(),
