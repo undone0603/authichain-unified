@@ -26,6 +26,7 @@ export const tierEnum = pgEnum('tier', ['free', 'pro', 'enterprise']);
 // ─── Users & Profiles ────────────────────────────────────────────────────────
 // Merged from both schemas
 export const users = pgTable('users', {
+  authUid: uuid('auth_uid').unique(),
   id: serial('id').primaryKey(),
   openId: varchar('openId', { length: 64 }).notNull().unique(),
   name: text('name'),
@@ -235,6 +236,7 @@ export const telemetryEvents = pgTable(
 
 // ─── Supply Chain Events ─────────────────────────────────────────────────────
 export const supplyChainEvents = pgTable('supply_chain_events', {
+  userId: integer('user_id'),
   id: uuid('id').primaryKey().defaultRandom(),
   productId: uuid('product_id').notNull(),
   eventType: varchar('event_type', { length: 50 }).notNull(),
@@ -385,6 +387,7 @@ export type EmailCampaign = typeof emailCampaigns.$inferSelect;
 // ─── Email Drafts (Approval Workflow) ────────────────────────────────────────
 export const emailDrafts = pgTable("email_drafts", {
   id: uuid("id").primaryKey().defaultRandom(),
+  userId: integer("user_id"),
   prospectName: varchar("prospect_name", { length: 256 }),
   prospectEmail: varchar("prospect_email", { length: 320 }).notNull(),
   prospectCompany: varchar("prospect_company", { length: 256 }),
