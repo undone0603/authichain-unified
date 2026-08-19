@@ -442,7 +442,7 @@ describe("New Features", () => {
       it("emailDrafts.approve DOES send email when draft is in pending list", async () => {
         const { getPendingDrafts } = await import("./db");
         vi.mocked(getPendingDrafts).mockResolvedValueOnce([{
-          id: "00000000-0000-4000-8000-000000000042", prospectEmail: "lead@bigcorp.com", subject: "Our Partnership",
+          id: "00000000-0000-4000-8000-000000000042", userId: 4, prospectEmail: "lead@bigcorp.com", subject: "Our Partnership",
           body: "<p>Hello!</p>", prospectName: "Alice",
           prospectCompany: null, prospectTitle: null, industry: null,
           status: "pending", templateUsed: null, generatedBy: "ai_manager",
