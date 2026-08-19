@@ -140,7 +140,7 @@
     "husky": "^8.0.0",
     "ioredis": "file:./stubs/empty-redis",
     "jsdom": "^22.0.0",
-    "lint-staged": "^14.0.0",
+    "lint-staged": "^17.3.0",
     "postcss": "^8.5.23",
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.6",
