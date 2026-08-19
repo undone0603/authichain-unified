@@ -1,0 +1,31 @@
+name = "dpp-fulfillment"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = true
+
+# Secrets (never commit):
+#   npx wrangler secret put STRIPE_WEBHOOK_SECRET
+#   npx wrangler secret put RESEND_API_KEY
+#   npx wrangler secret put HUBSPOT_TOKEN
+#   npx wrangler secret put FOUNDER_EMAIL   (optional override)
+#
+# KV for idempotency + kill switch + daily counters:
+#   npx wrangler kv namespace create dpp-fulfillment-kv
+#   then paste id below.
+
+[[kv_namespaces]]
+binding = "KV"
+id = "fdc266b0b356450392add7e51d887123"
+preview_id = "fdc266b0b356450392add7e51d887123"
+
+[vars]
+OFFER_KEY = "dpp_readiness_2026"
+PAYMENT_LINK_URL = "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c"
+FROM_EMAIL = "AuthiChain <hello@authichain.com>"
+REPLY_TO = "hello@authichain.com"
+FOUNDER_NOTIFY = "hello@authichain.com"
+
+# Daily founder report at 13:00 UTC (~9am ET)
+# [triggers]
+# crons = ["0 13 * * *"]
