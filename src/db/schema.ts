@@ -58,7 +58,7 @@ export type InsertUser = typeof users.$inferInsert;
 
 // ─── Products ────────────────────────────────────────────────────────────────
 export const products = pgTable('products', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   userId: integer('user_id').notNull(),
   name: varchar('name', { length: 512 }).notNull(),
   brand: varchar('brand', { length: 256 }),
@@ -86,8 +86,8 @@ export type InsertProduct = typeof products.$inferInsert;
 
 // ─── Authentications ─────────────────────────────────────────────────────────
 export const authentications = pgTable('authentications', {
-  id: serial('id').primaryKey(),
-  productId: integer('product_id').notNull(),
+  id: uuid('id').primaryKey().defaultRandom(),
+  productId: uuid('product_id').notNull(),
   userId: integer('user_id').notNull(),
   result: varchar('result', { length: 50 }).notNull(),
   isPublic: integer('is_public').default(0),
@@ -104,8 +104,8 @@ export type Authentication = typeof authentications.$inferSelect;
 
 // ─── Certificates ────────────────────────────────────────────────────────────
 export const certificates = pgTable('certificates', {
-  id: serial('id').primaryKey(),
-  productId: integer('product_id').notNull(),
+  id: uuid('id').primaryKey().defaultRandom(),
+  productId: uuid('product_id').notNull(),
   userId: integer('user_id').notNull(),
   certificateNumber: varchar('certificate_number', { length: 64 }).notNull().unique(),
   status: varchar('status', { length: 50 }).default('active'),
@@ -124,8 +124,8 @@ export type Certificate = typeof certificates.$inferSelect;
 
 // ─── QR Codes & QRONs ────────────────────────────────────────────────────────
 export const qrCodes = pgTable('qr_codes', {
-  id: serial('id').primaryKey(),
-  productId: integer('product_id'),
+  id: uuid('id').primaryKey().defaultRandom(),
+  productId: uuid('product_id'),
   userId: integer('user_id').notNull(),
   name: text('name'),
   shortCode: text('short_code'),
@@ -149,8 +149,8 @@ export type QrCode = typeof qrCodes.$inferSelect;
 // ─── QR Scan Events ──────────────────────────────────────────────────────────
 export const qrScanEvents = pgTable('qr_scan_events', {
   id: serial('id').primaryKey(),
-  qrCodeId: integer('qrCodeId').notNull(),
-  productId: integer('productId').notNull(),
+  qrCodeId: uuid('qrCodeId').notNull(),
+  productId: uuid('productId').notNull(),
   isAuthentic: boolean('isAuthentic'),
   userAgent: text('userAgent'),
   scannedAt: timestamp('scannedAt').defaultNow().notNull(),
@@ -235,8 +235,8 @@ export const telemetryEvents = pgTable(
 
 // ─── Supply Chain Events ─────────────────────────────────────────────────────
 export const supplyChainEvents = pgTable('supply_chain_events', {
-  id: serial('id').primaryKey(),
-  productId: integer('product_id').notNull(),
+  id: uuid('id').primaryKey().defaultRandom(),
+  productId: uuid('product_id').notNull(),
   eventType: varchar('event_type', { length: 50 }).notNull(),
   location: varchar('location', { length: 512 }),
   latitude: numeric('location_lat', { precision: 10, scale: 7 }),
@@ -274,7 +274,7 @@ export const subscriptions = pgTable('subscriptions', {
 
 // ─── Usage Records ───────────────────────────────────────────────────────────
 export const usageRecords = pgTable("usage_records", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: integer("user_id").notNull(),
   type: varchar("resource_type", { length: 64 }).notNull(),
   quantity: integer("quantity").default(1),
@@ -284,9 +284,9 @@ export const usageRecords = pgTable("usage_records", {
 
 // ─── Invoices ────────────────────────────────────────────────────────────────
 export const invoices = pgTable("invoices", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: integer("user_id").notNull(),
-  subscriptionId: integer("subscription_id"),
+  subscriptionId: uuid("subscription_id"),
   currency: varchar("currency", { length: 8 }).default("USD"),
   status: varchar("status", { length: 50 }).default("draft"),
   stripeInvoiceId: varchar("stripe_invoice_id", { length: 128 }),
@@ -299,7 +299,7 @@ export type Invoice = typeof invoices.$inferSelect;
 
 // ─── Payments ────────────────────────────────────────────────────────────────
 export const payments = pgTable("payments", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: integer("user_id").notNull(),
   amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
   currency: varchar("currency", { length: 16 }).default("USD"),
@@ -366,7 +366,7 @@ export type Lead = typeof leads.$inferSelect;
 
 // ─── Email Campaigns ─────────────────────────────────────────────────────────
 export const emailCampaigns = pgTable("email_campaigns", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: integer("user_id").notNull(),
   name: varchar("name", { length: 256 }).notNull(),
   subject: varchar("subject", { length: 512 }).notNull(),
@@ -384,7 +384,7 @@ export type EmailCampaign = typeof emailCampaigns.$inferSelect;
 
 // ─── Email Drafts (Approval Workflow) ────────────────────────────────────────
 export const emailDrafts = pgTable("email_drafts", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   prospectName: varchar("prospect_name", { length: 256 }),
   prospectEmail: varchar("prospect_email", { length: 320 }).notNull(),
   prospectCompany: varchar("prospect_company", { length: 256 }),
@@ -458,7 +458,7 @@ export const affiliateCommissions = pgTable("affiliate_commissions", {
 
 // ─── Autopilot Config ────────────────────────────────────────────────────────
 export const autopilotConfig = pgTable("autopilot_config", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   tenantId: varchar("tenant_id", { length: 64 }).notNull().unique().default("default"),
   enabled: integer("enabled").default(0),
   mode: varchar("mode", { length: 50 }).default("balanced"),
@@ -472,7 +472,7 @@ export type AutopilotConfig = typeof autopilotConfig.$inferSelect;
 
 // ─── Autopilot Decisions ─────────────────────────────────────────────────────
 export const autopilotDecisions = pgTable("autopilot_decisions", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   type: varchar("decision_type", { length: 64 }).notNull(),
   action: varchar("action", { length: 256 }).notNull(),
   reasoning: text("reasoning"),
@@ -573,7 +573,7 @@ export type DailyAbTestMetric = typeof dailyAbTestMetrics.$inferSelect;
 
 // ─── White Label Clients ─────────────────────────────────────────────────────
 export const whiteLabelClients = pgTable("white_label_clients", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: integer("user_id").notNull(),
   companyName: varchar("company_name", { length: 256 }).notNull(),
   domain: varchar("domain", { length: 256 }),
@@ -595,8 +595,8 @@ export type WhiteLabelClient = typeof whiteLabelClients.$inferSelect;
 // ─── API Usage (Daily) ───────────────────────────────────────────────────────
 export const apiUsageDaily = pgTable("api_usage_daily", {
   id: serial("id").primaryKey(),
-  clientId: integer("clientId").notNull(),
-  tenantId: integer("tenantId"),
+  clientId: integer("clientId"),
+  tenantId: uuid("tenantId"),
   date: timestamp("date").notNull(),
   endpoint: varchar("endpoint", { length: 128 }),
   calls: integer("calls").default(0),
@@ -611,7 +611,7 @@ export const activityLog = pgTable("activity_log", {
   userId: integer("userId"),
   action: varchar("action", { length: 128 }).notNull(),
   entityType: varchar("entityType", { length: 64 }),
-  entityId: integer("entityId"),
+  entityId: text("entityId"),
   details: json("details"),
   ipAddress: varchar("ipAddress", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -619,9 +619,9 @@ export const activityLog = pgTable("activity_log", {
 
 // ─── Fraud Alerts ────────────────────────────────────────────────────────────
 export const fraudAlerts = pgTable("fraud_alerts", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: integer("user_id"),
-  productId: integer("product_id"),
+  productId: uuid("product_id"),
   alertType: varchar("alert_type", { length: 128 }).notNull(),
   severity: varchar("severity", { length: 50 }).default("medium"),
   description: text("description"),
@@ -636,7 +636,7 @@ export type FraudAlert = typeof fraudAlerts.$inferSelect;
 
 // ─── Customer Health Scores ──────────────────────────────────────────────────
 export const customerHealthScores = pgTable("customer_health_scores", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: integer("user_id").notNull(),
   score: integer("score").notNull(),
   factors: json("factors"),
@@ -647,7 +647,7 @@ export const customerHealthScores = pgTable("customer_health_scores", {
 
 // ─── Revenue Records ─────────────────────────────────────────────────────────
 export const revenueRecords = pgTable("revenue_records", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   source: varchar("source", { length: 128 }).notNull(),
   amount: numeric("amount", { precision: 18, scale: 2 }).notNull(),
   currency: varchar("currency", { length: 8 }).default("USD"),
@@ -659,7 +659,7 @@ export const revenueRecords = pgTable("revenue_records", {
 
 // ─── Notifications ──────────────────────────────────────────────────────────
 export const notifications = pgTable("notifications", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: integer("userId").notNull(),
   type: varchar("type", { length: 50 }).notNull(),
   title: varchar("title", { length: 256 }).notNull(),
@@ -940,7 +940,7 @@ export const checkpointBatches = pgTable("checkpoint_batches", {
 
 // ─── Missions ────────────────────────────────────────────────────────────────
 export const missions = pgTable("missions", {
-  id: varchar("id", { length: 64 }).primaryKey(),
+  id: uuid("id").primaryKey(),
   type: varchar("type", { length: 64 }).notNull(),
   title: varchar("title", { length: 256 }).notNull(),
   description: text("description"),
@@ -952,8 +952,8 @@ export const missions = pgTable("missions", {
 
 // ─── Mission Tasks ───────────────────────────────────────────────────────────
 export const missionTasks = pgTable("mission_tasks", {
-  id: varchar("id", { length: 64 }).primaryKey(),
-  missionId: varchar("mission_id", { length: 64 }).notNull(),
+  id: uuid("id").primaryKey(),
+  missionId: uuid("mission_id").notNull(),
   kind: varchar("kind", { length: 128 }).notNull(),
   title: varchar("title", { length: 256 }).notNull(),
   description: text("description"),
@@ -1021,7 +1021,7 @@ export const nftCollections = pgTable("nft_collections", {
 
 // ─── NFTs ─────────────────────────────────────────────────────────────────────
 export const nfts = pgTable("nfts", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   collectionId: integer("collection_id"),
   tokenId: varchar("token_id", { length: 64 }),
   name: varchar("name", { length: 256 }),
@@ -1038,8 +1038,8 @@ export const nfts = pgTable("nfts", {
 
 // ─── Auctions ─────────────────────────────────────────────────────────────────
 export const auctions = pgTable("auctions", {
-  id: serial("id").primaryKey(),
-  nftId: integer("nft_id"),
+  id: uuid("id").primaryKey().defaultRandom(),
+  nftId: uuid("nft_id"),
   sellerId: integer("seller_id"),
   startPrice: numeric("start_price", { precision: 18, scale: 8 }).notNull(),
   reservePrice: numeric("reserve_price", { precision: 18, scale: 8 }),
@@ -1054,8 +1054,8 @@ export const auctions = pgTable("auctions", {
 
 // ─── Auction Bids ─────────────────────────────────────────────────────────────
 export const auctionBids = pgTable("auction_bids", {
-  id: serial("id").primaryKey(),
-  auctionId: integer("auction_id").notNull(),
+  id: uuid("id").primaryKey().defaultRandom(),
+  auctionId: uuid("auction_id").notNull(),
   bidderId: integer("bidder_id").notNull(),
   amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

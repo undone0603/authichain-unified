@@ -60,7 +60,7 @@ export async function getRecentActivity(db: Db, limit = 20) {
 
 export async function logActivity(
   db: Db,
-  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number; details?: any },
+  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any },
   details?: string,
 ): Promise<void> {
   if (typeof actionOrData === "string") {
@@ -70,7 +70,7 @@ export async function logActivity(
       userId: actionOrData.userId ?? undefined,
       action: actionOrData.action,
       entityType: actionOrData.entityType,
-      entityId: actionOrData.entityId,
+      entityId: actionOrData.entityId == null ? undefined : String(actionOrData.entityId),
       details: actionOrData.details,
     });
   }
@@ -124,7 +124,7 @@ export async function updateLeadStatus(db: Db, id: number, status: string) {
 // PRODUCTS / CERTIFICATES
 // ─────────────────────────────────────────────────────────────
 
-export async function getProductById(db: Db, id: number) {
+export async function getProductById(db: Db, id: string) {
   const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
   return result[0];
 }
@@ -152,7 +152,7 @@ export async function getUserEmailCampaigns(db: Db, userId: number) {
   return db.select().from(emailCampaigns).where(eq(emailCampaigns.userId, userId)).orderBy(desc(emailCampaigns.createdAt));
 }
 
-export async function updateEmailCampaign(db: Db, id: number, data: any) {
+export async function updateEmailCampaign(db: Db, id: string, data: any) {
   await db.update(emailCampaigns).set(data).where(eq(emailCampaigns.id, id));
 }
 
@@ -169,7 +169,7 @@ export async function getPendingDrafts(db: Db) {
   return db.select().from(emailDrafts).where(eq(emailDrafts.status, "pending")).orderBy(desc(emailDrafts.createdAt)).limit(200);
 }
 
-export async function updateDraftStatus(db: Db, id: number, status: string, approvedBy?: number) {
+export async function updateDraftStatus(db: Db, id: string, status: string, approvedBy?: number) {
   const updateData: any = { status };
   if (approvedBy) { updateData.approvedBy = approvedBy; updateData.approvedAt = new Date(); }
   if (status === "sent") updateData.sentAt = new Date();
@@ -263,7 +263,7 @@ export async function getUnreadNotificationCount(db: Db, userId: number) {
   return result?.count || 0;
 }
 
-export async function markNotificationRead(db: Db, id: number, userId: number) {
+export async function markNotificationRead(db: Db, id: string, userId: number) {
   await db.update(notifications)
     .set({ isRead: true })
     .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
@@ -275,7 +275,7 @@ export async function markAllNotificationsRead(db: Db, userId: number) {
     .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
 }
 
-export async function deleteNotification(db: Db, id: number, userId: number) {
+export async function deleteNotification(db: Db, id: string, userId: number) {
   await db.delete(notifications)
     .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
 }

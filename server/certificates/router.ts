@@ -16,7 +16,7 @@ export const certificatesRouter = router({
     const product = await db.getProductById(cert.productId);
     return { valid: true, certificate: cert, product };
   }),
-  makePublic: protectedProcedure.input(z.object({ authenticationId: z.number() })).mutation(async ({ ctx, input }) => {
+  makePublic: protectedProcedure.input(z.object({ authenticationId: z.string().uuid() })).mutation(async ({ ctx, input }) => {
     const shareToken = randomBytes(32).toString("hex");
     await db.updateAuthenticationSharing(input.authenticationId, ctx.user.id, true, shareToken);
     return { shareToken, shareUrl: `/certificate/${shareToken}` };

@@ -11,7 +11,7 @@ export const notificationsRouter = router({
   unreadCount: protectedProcedure.query(async ({ ctx }) => {
     return { count: await db.getUnreadNotificationCount(ctx.user.id) };
   }),
-  markRead: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
+  markRead: protectedProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ ctx, input }) => {
     await db.markNotificationRead(input.id, ctx.user.id);
     return { success: true };
   }),
@@ -19,7 +19,7 @@ export const notificationsRouter = router({
     await db.markAllNotificationsRead(ctx.user.id);
     return { success: true };
   }),
-  delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
+  delete: protectedProcedure.input(z.object({ id: z.string().uuid() })).mutation(async ({ ctx, input }) => {
     await db.deleteNotification(input.id, ctx.user.id);
     return { success: true };
   }),

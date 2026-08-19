@@ -35,11 +35,11 @@ describe("Reputation Engine", () => {
   });
 
   it("awards a point for an authentic scan with a known user", async () => {
-    await db.logScanEvent({ qrCodeId: 1, productId: 1, isAuthentic: true, userId: 123 });
+    await db.logScanEvent({ qrCodeId: "00000000-0000-4000-8000-000000000001", productId: "00000000-0000-4000-8000-000000000001", isAuthentic: true, userId: 123 });
 
     expect(insertValues).toHaveBeenCalledWith({
-      qrCodeId: 1,
-      productId: 1,
+      qrCodeId: "00000000-0000-4000-8000-000000000001",
+      productId: "00000000-0000-4000-8000-000000000001",
       isAuthentic: true,
       userAgent: undefined,
     });
@@ -47,7 +47,7 @@ describe("Reputation Engine", () => {
   });
 
   it("does not touch reputation for anonymous scans", async () => {
-    await db.logScanEvent({ qrCodeId: 1, productId: 1, isAuthentic: true });
+    await db.logScanEvent({ qrCodeId: "00000000-0000-4000-8000-000000000001", productId: "00000000-0000-4000-8000-000000000001", isAuthentic: true });
 
     expect(insert).toHaveBeenCalledTimes(1);
     expect(execute).not.toHaveBeenCalled();
