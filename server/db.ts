@@ -182,7 +182,7 @@ export async function getRecentDecisions(limit = 10) {
   return d.select().from(autopilotDecisions).orderBy(desc(autopilotDecisions.createdAt)).limit(limit);
 }
 
-export async function logActivity(actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number; details?: any }, details?: string) {
+export async function logActivity(actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any }, details?: string) {
   const d = await getDb();
   if (typeof actionOrData === "string") {
     await d.insert(activityLog).values({ action: actionOrData, details: details ? { text: details } : undefined });
@@ -191,7 +191,7 @@ export async function logActivity(actionOrData: string | { userId?: number | nul
       userId: actionOrData.userId ?? undefined,
       action: actionOrData.action,
       entityType: actionOrData.entityType,
-      entityId: actionOrData.entityId,
+      entityId: actionOrData.entityId == null ? undefined : String(actionOrData.entityId),
       details: actionOrData.details,
     });
   }
@@ -604,14 +604,14 @@ export async function getUserProducts(userId: number) {
   return await db.select().from(products).where(eq(products.userId, userId)).orderBy(desc(products.createdAt));
 }
 
-export async function getProductById(id: number) {
+export async function getProductById(id: string) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
   return result[0];
 }
 
-export async function updateProduct(id: number, data: any) {
+export async function updateProduct(id: string, data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(products).set(data).where(eq(products.id, id));
@@ -638,13 +638,13 @@ export async function getAuthenticationByShareToken(shareToken: string) {
   return result[0];
 }
 
-export async function updateAuthenticationSharing(id: number, userId: number, isPublic: boolean, shareToken: string) {
+export async function updateAuthenticationSharing(id: string, userId: number, isPublic: boolean, shareToken: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(authentications).set({ isPublic: isPublic ? 1 : 0, shareToken }).where(and(eq(authentications.id, id), eq(authentications.userId, userId)));
 }
 
-export async function incrementShareCount(id: number) {
+export async function incrementShareCount(id: string) {
   const db = await getDb();
   if (!db) return;
   await db.update(authentications).set({ shareCount: sql`${authentications.shareCount} + 1` }).where(eq(authentications.id, id));
@@ -679,13 +679,13 @@ export async function createQrCode(data: any) {
   return { id: result.id };
 }
 
-export async function getProductQrCodes(productId: number) {
+export async function getProductQrCodes(productId: string) {
   const db = await getDb();
   if (!db) return [];
   return await db.select().from(qrCodes).where(eq(qrCodes.productId, productId));
 }
 
-export async function incrementScanCount(id: number) {
+export async function incrementScanCount(id: string) {
   const db = await getDb();
   if (!db) return;
   await db.update(qrCodes).set({ scanCount: sql`${qrCodes.scanCount} + 1`, lastScannedAt: new Date() }).where(eq(qrCodes.id, id));
@@ -710,7 +710,7 @@ export async function recordReputationEvent(userId: number, eventType: string, p
   `);
 }
 
-export async function logScanEvent(data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string; userId?: number }) {
+export async function logScanEvent(data: { qrCodeId: string; productId: string; isAuthentic?: boolean; userAgent?: string; userId?: number }) {
   const db = await getDb();
   if (!db) return;
   await db.insert(qrScanEvents).values({
@@ -725,7 +725,7 @@ export async function logScanEvent(data: { qrCodeId: number; productId: number; 
   }
 }
 
-export async function getRecentScanEvents(productId: number, limit = 20) {
+export async function getRecentScanEvents(productId: string, limit = 20) {
   const db = await getDb();
   if (!db) return [];
   return await db
@@ -748,7 +748,7 @@ export async function listNfts(filters?: { collectionId?: number; status?: strin
   return await query.orderBy(desc(nfts.createdAt)).limit(filters?.limit || 50);
 }
 
-export async function getNftById(id: number) {
+export async function getNftById(id: string) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(nfts).where(eq(nfts.id, id)).limit(1);
@@ -796,14 +796,14 @@ export async function getActiveAuctions() {
   return await db.select().from(auctions).where(eq(auctions.status, "active")).orderBy(desc(auctions.createdAt));
 }
 
-export async function getAuctionById(id: number) {
+export async function getAuctionById(id: string) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(auctions).where(eq(auctions.id, id)).limit(1);
   return result[0];
 }
 
-export async function placeBid(auctionId: number, bidderId: number, amount: string) {
+export async function placeBid(auctionId: string, bidderId: number, amount: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.insert(auctionBids).values({ auctionId, bidderId, amount });
@@ -814,7 +814,7 @@ export async function placeBid(auctionId: number, bidderId: number, amount: stri
   }).where(eq(auctions.id, auctionId));
 }
 
-export async function getAuctionBids(auctionId: number) {
+export async function getAuctionBids(auctionId: string) {
   const db = await getDb();
   if (!db) return [];
   return await db.select().from(auctionBids).where(eq(auctionBids.auctionId, auctionId)).orderBy(desc(auctionBids.amount));
@@ -894,7 +894,7 @@ export async function getUserPayments(userId: number) {
   return await db.select().from(payments).where(eq(payments.userId, userId)).orderBy(desc(payments.createdAt));
 }
 
-export async function updatePaymentStatus(id: number, status: string) {
+export async function updatePaymentStatus(id: string, status: string) {
   const db = await getDb();
   if (!db) return;
   await db.update(payments).set({ status: status as any }).where(eq(payments.id, id));
@@ -914,7 +914,7 @@ export async function getUserEmailCampaigns(userId: number) {
   return await db.select().from(emailCampaigns).where(eq(emailCampaigns.userId, userId)).orderBy(desc(emailCampaigns.createdAt));
 }
 
-export async function updateEmailCampaign(id: number, data: any) {
+export async function updateEmailCampaign(id: string, data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(emailCampaigns).set(data).where(eq(emailCampaigns.id, id));
@@ -934,7 +934,7 @@ export async function getPendingDrafts() {
   return await db.select().from(emailDrafts).where(eq(emailDrafts.status, "pending")).orderBy(desc(emailDrafts.createdAt)).limit(200);
 }
 
-export async function updateDraftStatus(id: number, status: string, approvedBy?: number) {
+export async function updateDraftStatus(id: string, status: string, approvedBy?: number) {
   const db = await getDb();
   if (!db) return;
   const updateData: any = { status };
@@ -951,7 +951,7 @@ export async function createSupplyChainEvent(data: any) {
   return { id: result.id };
 }
 
-export async function getProductSupplyChain(productId: number) {
+export async function getProductSupplyChain(productId: string) {
   const db = await getDb();
   if (!db) return [];
   return await db.select().from(supplyChainEvents).where(eq(supplyChainEvents.productId, productId)).orderBy(supplyChainEvents.createdAt);
@@ -1187,15 +1187,15 @@ export async function getUnreadNotificationCount(userId: number) {
   if (!db) return 0;
   const [result] = await db.select({ count: sql<number>`count(*)` })
     .from(notifications)
-    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
   return result?.count || 0;
 }
 
-export async function markNotificationRead(id: number, userId: number) {
+export async function markNotificationRead(id: string, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(notifications)
-    .set({ isRead: 1 })
+    .set({ isRead: true })
     .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
 }
 
@@ -1203,11 +1203,11 @@ export async function markAllNotificationsRead(userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(notifications)
-    .set({ isRead: 1 })
-    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+    .set({ isRead: true })
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
 }
 
-export async function deleteNotification(id: number, userId: number) {
+export async function deleteNotification(id: string, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(notifications)
@@ -1215,7 +1215,7 @@ export async function deleteNotification(id: number, userId: number) {
 }
 
 export async function createSystemNotification(userId: number, title: string, message: string, type: InsertNotification["type"], actionUrl?: string) {
-  return createNotification({ userId, type: type as any, title, message, isRead: 0, actionUrl });
+  return createNotification({ userId, type: type as any, title, message, isRead: false, actionUrl });
 }
 
 // ─── Automation Audit ────────────────────────────────────────────────────────
@@ -1454,7 +1454,7 @@ export async function getQronList() {
 
 export async function createQron(data: {
   id: string;
-  productId: number;
+  productId: string;
   userId: number;
   productName?: string;
   brand?: string;
@@ -1524,10 +1524,13 @@ export async function createQronScanVerdict(data: {
   const rows = await d.select({ id: qrCodes.id, productId: qrCodes.productId })
     .from(qrCodes).where(eq(qrCodes.shortCode, data.qronId)).limit(1);
   const qr = rows[0];
-  if (!qr) return;
+  // qr_scan_events.productId is NOT NULL. The old code passed `?? 0`, inventing a
+  // product that does not exist; with uuid keys that fails outright. If the QR is
+  // not bound to a product there is no scan event to record.
+  if (!qr || !qr.productId) return;
   await d.insert(qrScanEvents).values({
     qrCodeId: qr.id,
-    productId: qr.productId ?? 0,
+    productId: qr.productId,
     isAuthentic: data.verdict === 'authentic',
     userAgent: JSON.stringify({
       verdict: data.verdict,

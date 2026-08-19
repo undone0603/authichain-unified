@@ -11,7 +11,7 @@ export const qronRouter = router({
 
   generate: protectedProcedure
     .input(z.object({
-      productId: z.number(),
+      productId: z.string().uuid(),
       productName: z.string(),
       brand: z.string().optional(),
       category: z.enum(["luxury_fashion", "pharma", "electronics", "automotive", "food_bev", "other"]).optional(),

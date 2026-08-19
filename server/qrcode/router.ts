@@ -7,7 +7,7 @@ import { invokeLLM, parseLLMContent } from "../_core/llm";
 import { verifyHash, type QRVerificationRecord } from "../_core/verification";
 import type { Product } from "../../src/db/schema";
 
-async function getOwnedProduct(productId: number, userId: number): Promise<Product> {
+async function getOwnedProduct(productId: string, userId: number): Promise<Product> {
   const product = await db.getProductById(productId);
   if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
   if (product.userId !== userId) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
@@ -16,7 +16,7 @@ async function getOwnedProduct(productId: number, userId: number): Promise<Produ
 
 export const qrcodeRouter = router({
   generate: protectedProcedure.input(z.object({
-    productId: z.number(),
+    productId: z.string().uuid(),
     size: z.number().optional().default(300),
     batchId: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
@@ -28,7 +28,7 @@ export const qrcodeRouter = router({
   }),
 
   scan: publicProcedure.input(z.object({
-    productId: z.number(),
+    productId: z.string().uuid(),
     hash: z.string().optional(),  // present when scanning a hash-signed QR code
   })).query(async ({ input }) => {
     const product = await db.getProductById(input.productId);
@@ -73,19 +73,19 @@ export const qrcodeRouter = router({
       hashVerification: hashResult,
     };
   }),
-  listForProduct: protectedProcedure.input(z.object({ productId: z.number() })).query(async ({ ctx, input }) => {
+  listForProduct: protectedProcedure.input(z.object({ productId: z.string().uuid() })).query(async ({ ctx, input }) => {
     await getOwnedProduct(input.productId, ctx.user.id);
     return await db.getProductQrCodes(input.productId);
   }),
   scanHistory: protectedProcedure.input(z.object({
-    productId: z.number(),
+    productId: z.string().uuid(),
     limit: z.number().min(1).max(100).default(20),
   })).query(async ({ ctx, input }) => {
     await getOwnedProduct(input.productId, ctx.user.id);
     return await db.getRecentScanEvents(input.productId, input.limit);
   }),
   generateStorymode: protectedProcedure.input(z.object({
-    productId: z.number(),
+    productId: z.string().uuid(),
   })).mutation(async ({ ctx, input }) => {
     const product = await getOwnedProduct(input.productId, ctx.user.id);
 
