@@ -1,0 +1,18 @@
+{
+  "linkedin": "A QR code doesn't have to look like a scrap of static on a package. QRON runs the code through an image-generation pipeline so it renders as real artwork on the label, poster, or card — while staying fully scannable. Under the artwork, each code is Ed25519-signed and anchored under the AuthiChain protocol, so a scan can verify the code's authenticity instead of just trusting whatever URL happens to be embedded.\n\nThe art isn't just decoration — the same code carries a \"Living Portal\": the destination behind it can be updated after the code is already printed, so a changed link doesn't force a reprint.\n\nIf the QR codes on your packaging today are plain black-and-white grids nobody looks at twice, take a look at what a signed, art-rendered code can do instead.\n\nhttps://qron.space/?utm_source=linkedin&utm_medium=social&utm_campaign=qron-signed-art&utm_content=b\n\n#QRCode #Provenance #DigitalIdentity",
+  "reddit": {
+    "subreddit": "QRCode",
+    "title": "We turn QR codes into actual artwork instead of a black-and-white grid — still fully scannable",
+    "body": "QRON runs each QR code through an image-generation pipeline, so what ends up on a label, poster, or card is real artwork instead of the standard black-and-white grid — while staying scannable by any reader. Under the art, each code is Ed25519-signed and anchored under the AuthiChain protocol, so a scan verifies the code's authenticity instead of trusting whatever URL happens to be embedded.\n\nThe same code also carries a \"Living Portal\": the destination behind it can be updated after the code is printed, so a changed link doesn't force a reprint.\n\nCurious whether an art-rendered QR code actually gets more people to scan it in your experience, or whether that wears off as a novelty.\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A QR code doesn't have to look like a black-and-white grid nobody looks at twice. QRON runs it through an image-generation pipeline into real artwork — while staying fully scannable.",
+    "Under the artwork, each QRON code is Ed25519-signed and anchored under the AuthiChain protocol, so a scan verifies the code's authenticity instead of just trusting whatever URL is embedded.",
+    "The same code carries a \"Living Portal\" — its destination can change after printing, no reprint needed: https://qron.space/?utm_source=twitter&utm_medium=social&utm_campaign=qron-signed-art&utm_content=b"
+  ],
+  "experiment": {
+    "campaign": "qron-signed-art",
+    "variant": "b",
+    "hypothesis": "art-generation-led hook (QR rendered as real artwork) outperforms the editable-destination-led hook from variant a (Living Portal) on click-through to qron.space"
+  }
+}
