@@ -20,6 +20,7 @@
     "db:studio": "drizzle-kit studio",
     "sync-secrets": "bash scripts/sync-secrets.sh",
     "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .",
+    "lint-staged": "lint-staged",
     "prepare": "husky install"
   },
   "dependencies": {
