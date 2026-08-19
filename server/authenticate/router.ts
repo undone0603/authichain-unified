@@ -9,7 +9,7 @@ import { rewardAgentForVerification } from "../character-service";
 
 export const authenticateRouter = router({
   analyze: protectedProcedure.input(z.object({
-    productId: z.number(),
+    productId: z.string().uuid(),
     imageUrl: z.string().url().refine(u => u.startsWith("https://"), { message: "imageUrl must use HTTPS" }),
   })).mutation(async ({ ctx, input }) => {
     const quotaResult = await db.consumeSubscriptionQuota(ctx.user.id);

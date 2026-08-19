@@ -9,7 +9,7 @@ const store = vi.hoisted(() => {
   let leadId = 1;
   return {
     notifications,
-    nextNotifId: () => notifId++,
+    nextNotifId: () => `00000000-0000-4000-8000-${String(notifId++).padStart(12, "0")}`,
     nextLeadId: () => leadId++,
     reset: () => { notifications.length = 0; notifId = 1; leadId = 1; },
   };
@@ -85,7 +85,7 @@ type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
   const user: AuthenticatedUser = {
-    id: 1,
+    id: "00000000-0000-4000-8000-000000000001",
     openId: "test-user-001",
     email: "test@authichain.com",
     name: "Test User",
@@ -368,7 +368,7 @@ describe("AuthiChain Unified Platform Routers", () => {
       const ctx = createPublicContext();
       const caller = appRouter.createCaller(ctx);
       await expect(caller.blockchain.mintCertificateNFT({
-        productId: 1, certificateNumber: "CERT-001",
+        productId: "00000000-0000-4000-8000-000000000001", certificateNumber: "CERT-001",
         walletAddress: "0x123", contractAddress: "0x456",
       })).rejects.toThrow();
     });
@@ -470,7 +470,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     it("admin router calls the injected admin repository when provided", async () => {
       const mockRepo = {
         getAdminDashboardMetrics: vi.fn(),
-        getAllUsers: vi.fn().mockResolvedValue([{ id: 1, email: "injected@admin.com" }]),
+        getAllUsers: vi.fn().mockResolvedValue([{ id: "00000000-0000-4000-8000-000000000001", email: "injected@admin.com" }]),
         getRevenueAnalytics: vi.fn().mockResolvedValue([]),
         getSubscriptionAnalytics: vi.fn().mockResolvedValue([]),
         getOpenFraudAlerts: vi.fn(),
@@ -482,7 +482,7 @@ describe("AuthiChain Unified Platform Routers", () => {
 
       const caller = appRouter.createCaller(ctx);
       const result = await caller.admin.users();
-      expect(result).toEqual([{ id: 1, email: "injected@admin.com" }]);
+      expect(result).toEqual([{ id: "00000000-0000-4000-8000-000000000001", email: "injected@admin.com" }]);
       expect(mockRepo.getAllUsers).toHaveBeenCalled();
     });
 
@@ -773,7 +773,7 @@ describe("AuthiChain Unified Platform Routers", () => {
     });
     it("getById requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.products.getById({ id: 1 })).rejects.toThrow();
+      await expect(caller.products.getById({ id: "00000000-0000-4000-8000-000000000001" })).rejects.toThrow();
     });
   });
 
@@ -890,11 +890,11 @@ describe("AuthiChain Unified Platform Routers", () => {
   describe("supplyChain", () => {
     it("getEvents requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.supplyChain.getEvents({ productId: 1 })).rejects.toThrow();
+      await expect(caller.supplyChain.getEvents({ productId: "00000000-0000-4000-8000-000000000001" })).rejects.toThrow();
     });
     it("addEvent requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.supplyChain.addEvent({ productId: 1, eventType: "shipped", location: "NYC", notes: "" })).rejects.toThrow();
+      await expect(caller.supplyChain.addEvent({ productId: "00000000-0000-4000-8000-000000000001", eventType: "shipped", location: "NYC", notes: "" })).rejects.toThrow();
     });
   });
 
@@ -951,7 +951,7 @@ describe("AuthiChain Unified Platform Routers", () => {
   describe("authenticate", () => {
     it("analyze requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.authenticate.analyze({ productId: 1, imageUrl: "https://example.com/img.jpg" })).rejects.toThrow();
+      await expect(caller.authenticate.analyze({ productId: "00000000-0000-4000-8000-000000000001", imageUrl: "https://example.com/img.jpg" })).rejects.toThrow();
     });
     it("history requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
@@ -962,11 +962,11 @@ describe("AuthiChain Unified Platform Routers", () => {
   describe("qrcode", () => {
     it("generate requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.qrcode.generate({ productId: 1 })).rejects.toThrow();
+      await expect(caller.qrcode.generate({ productId: "00000000-0000-4000-8000-000000000001" })).rejects.toThrow();
     });
     it("generateStorymode requires auth", async () => {
       const caller = appRouter.createCaller(createPublicContext());
-      await expect(caller.qrcode.generateStorymode({ productId: 1 })).rejects.toThrow();
+      await expect(caller.qrcode.generateStorymode({ productId: "00000000-0000-4000-8000-000000000001" })).rejects.toThrow();
     });
   });
 
