@@ -15,6 +15,7 @@ import {
   jsonb,
   primaryKey,
   real,
+  date,
 } from 'drizzle-orm/pg-core';
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
@@ -1297,3 +1298,58 @@ export const replySequences = pgTable("reply_sequences", {
 
 export type ReplySequence = typeof replySequences.$inferSelect;
 export type InsertReplySequence = typeof replySequences.$inferInsert;
+
+// ─── Guardrail Layer (drizzle/migrations/014_guardrail_layer.sql) ───────────
+// suppressionList maps to "suppression_list", not "guardrail_suppression_list"
+// (migration 020 landed bundled inside an unrelated dependabot dependency-bump
+// commit and only CREATEs a second, identically-shaped table — it never drops
+// or migrates rows out of the original, so it reads as accidental cruft
+// rather than a completed rename).
+export const guardrailChannels = pgTable('guardrail_channels', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 128 }).notNull().unique(),
+  category: varchar('category', { length: 32 }).notNull(),
+  dailyCap: integer('daily_cap').notNull(),
+  enabled: boolean('enabled').default(false).notNull(),
+  spendCeilingCents: integer('spend_ceiling_cents').default(0).notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const guardrailCounters = pgTable('guardrail_counters', {
+  id: serial('id').primaryKey(),
+  channelId: integer('channel_id').notNull(),
+  day: date('day').notNull(),
+  count: integer('count').default(0).notNull(),
+});
+
+export const suppressionList = pgTable('suppression_list', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 320 }).notNull().unique(),
+  reason: varchar('reason', { length: 32 }).notNull(),
+  source: varchar('source', { length: 64 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const killSwitches = pgTable('kill_switches', {
+  id: serial('id').primaryKey(),
+  scope: varchar('scope', { length: 128 }).notNull().unique(),
+  enabled: boolean('enabled').default(false).notNull(),
+  reason: text('reason'),
+  updatedBy: varchar('updated_by', { length: 64 }).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const guardrailEvents = pgTable('guardrail_events', {
+  id: serial('id').primaryKey(),
+  channelId: integer('channel_id'),
+  action: varchar('action', { length: 32 }).notNull(),
+  allowed: boolean('allowed'),
+  reason: text('reason'),
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  guardrailEventsChannelIdx: index('idx_guardrail_events_channel').on(table.channelId),
+  guardrailEventsCreatedIdx: index('idx_guardrail_events_created').on(table.createdAt),
+}));
