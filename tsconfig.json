@@ -56,6 +56,7 @@
     "workers/**/*",
     "worker/**/*",
     "worker-app/**/*",
+    "apps/**/*",
     "mobile/**/*",
     "packages/**/*",
     "scripts/**/*",
@@ -68,5 +69,6 @@
     "sentry.client.config.ts",
     "sentry.edge.config.ts",
     "sentry.server.config.ts",
+    "open-next.config.ts",
   ]
 }
