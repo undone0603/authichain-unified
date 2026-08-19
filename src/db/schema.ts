@@ -426,7 +426,8 @@ export type Referral = typeof referrals.$inferSelect;
 // ─── Affiliates ──────────────────────────────────────────────────────────────
 export const affiliates = pgTable("affiliates", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id"),
+  legacyAuthUid: uuid("legacy_auth_uid"),
   affiliateCode: varchar("affiliatecode", { length: 32 }).notNull().unique(),
   commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }).default("10.00"),
   totalEarnings: numeric("total_earnings", { precision: 18, scale: 2 }).default("0"),
@@ -676,7 +677,7 @@ export type InsertNotification = typeof notifications.$inferInsert;
 // ─── Bonuses ─────────────────────────────────────────────────────────────────
 export const bonuses = pgTable("bonuses", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id"),
   bonusType: varchar("bonus_type", { length: 64 }).notNull(),
   bonusName: varchar("bonus_name", { length: 256 }).notNull(),
   bonusValue: integer("bonus_value").notNull(),
