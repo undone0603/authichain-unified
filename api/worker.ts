@@ -33,6 +33,67 @@ function jsonResponse(data: unknown, status = 200) {
   });
 }
 
+const STRIPE_SIGNATURE_TOLERANCE_SECONDS = 300;
+
+function constantTimeHexEqual(expected: string, candidate: string): boolean {
+  const normalizedCandidate = candidate.toLowerCase();
+  if (normalizedCandidate.length !== expected.length || !/^[a-f0-9]+$/.test(normalizedCandidate)) {
+    return false;
+  }
+
+  let difference = 0;
+  for (let index = 0; index < expected.length; index++) {
+    difference |= expected.charCodeAt(index) ^ normalizedCandidate.charCodeAt(index);
+  }
+  return difference === 0;
+}
+
+export async function verifyStripeSignature(
+  body: string,
+  signatureHeader: string | null,
+  webhookSecret: string,
+): Promise<boolean> {
+  if (!signatureHeader || !webhookSecret) return false;
+
+  let timestamp: string | undefined;
+  const signatures: string[] = [];
+  for (const part of signatureHeader.split(',')) {
+    const separator = part.indexOf('=');
+    if (separator === -1) continue;
+
+    const key = part.slice(0, separator);
+    const value = part.slice(separator + 1);
+    if (key === 't') timestamp = value;
+    if (key === 'v1') signatures.push(value);
+  }
+
+  const timestampSeconds = Number(timestamp);
+  if (
+    !timestamp ||
+    !Number.isSafeInteger(timestampSeconds) ||
+    Math.abs(Date.now() / 1000 - timestampSeconds) > STRIPE_SIGNATURE_TOLERANCE_SECONDS ||
+    signatures.length === 0
+  ) {
+    return false;
+  }
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(webhookSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    new TextEncoder().encode(`${timestamp}.${body}`),
+  );
+  const expected = Array.from(new Uint8Array(signature), byte => byte.toString(16).padStart(2, '0')).join('');
+
+  return signatures.some(candidate => constantTimeHexEqual(expected, candidate));
+}
+
 async function emitCrm(env: Env, action: string, payload: Record<string, unknown>) {
   if (!env.CRM_BASE_URL || !env.CRM_API_KEY) return;
   try {
@@ -199,10 +260,14 @@ async function handleStripeCheckout(req: Request, env: Env): Promise<Response> {
 // Route: POST /stripe/webhook
 // ---------------------------------------------------------------------------
 async function handleStripeWebhook(req: Request, env: Env): Promise<Response> {
-  // Signature verification requires SubtleCrypto in Workers
-  // Full implementation: use stripe-signature header + STRIPE_WEBHOOK_SECRET
-  // For now: parse event and process (add sig verification in production)
   const body = await req.text();
+  const validSignature = await verifyStripeSignature(
+    body,
+    req.headers.get('stripe-signature'),
+    env.STRIPE_WEBHOOK_SECRET,
+  );
+  if (!validSignature) return jsonResponse({ error: 'Invalid Stripe signature' }, 400);
+
   let event: { type: string; data: { object: Record<string, unknown> } };
   try {
     event = JSON.parse(body);
