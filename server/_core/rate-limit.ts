@@ -16,7 +16,7 @@ class RateLimiter {
       }
     }
 
-    let entry = this.store.get(key);
+    const entry = this.store.get(key);
     if (!entry || now >= entry.resetAt) {
       this.store.set(key, { count: 1, resetAt: now + windowMs });
       return { ok: true, retryAfterMs: 0 };

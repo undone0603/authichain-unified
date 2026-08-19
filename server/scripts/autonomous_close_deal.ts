@@ -13,7 +13,7 @@ async function autonomousClose() {
     console.log("📡 Identifying target decision maker...");
     const leadEmail = "michael.chen@medtronic.com";
     
-    let lead = await createLead({
+    const lead = await createLead({
       email: leadEmail,
       name: "Michael Chen",
       company: "Medtronic",
