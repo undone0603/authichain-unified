@@ -1353,3 +1353,29 @@ export const guardrailEvents = pgTable('guardrail_events', {
   guardrailEventsChannelIdx: index('idx_guardrail_events_channel').on(table.channelId),
   guardrailEventsCreatedIdx: index('idx_guardrail_events_created').on(table.createdAt),
 }));
+
+// ─── Programmatic SEO Pages (drizzle/migrations/019_seo_generated_pages_rename.sql) ───
+// Maps to "seo_generated_pages", not "seo_pages" — migration 018's
+// CREATE TABLE IF NOT EXISTS "seo_pages" silently no-op'd because a
+// different, pre-existing "seo_pages" table (unrelated SEO analytics
+// schema) already occupied that name. Migration 019 explicitly renamed the
+// target to seo_generated_pages to resolve the collision; see its comment
+// for the full account. Physical column names are camelCase (quoted
+// identifiers in the migration), matching server/agents/db-helpers.ts's
+// upsertSeoPage/listPublishedSlugs usage exactly.
+export const seoPages = pgTable('seo_generated_pages', {
+  id: serial('id').primaryKey(),
+  slug: varchar('slug', { length: 80 }).notNull().unique(),
+  keyword: varchar('keyword', { length: 256 }).notNull(),
+  brand: varchar('brand', { length: 64 }).notNull(),
+  domain: varchar('domain', { length: 128 }).notNull(),
+  title: varchar('title', { length: 60 }).notNull(),
+  metaDescription: varchar('metaDescription', { length: 155 }).notNull(),
+  h1: varchar('h1', { length: 256 }).notNull(),
+  bodyHtml: text('bodyHtml').notNull(),
+  jsonLd: jsonb('jsonLd').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type SeoPageRow = typeof seoPages.$inferSelect;
+export type InsertSeoPageRow = typeof seoPages.$inferInsert;
