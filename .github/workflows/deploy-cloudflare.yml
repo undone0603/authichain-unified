@@ -10,8 +10,25 @@ permissions:
   contents: read
 
 jobs:
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_CONFIG: .gitleaks.toml
+
   deploy:
     name: Deploy Worker + Static Assets
+    needs: secret-scan
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Skip entire job if Cloudflare token not configured
