@@ -259,20 +259,20 @@ export async function getUserNotifications(db: Db, userId: number, limit = 50) {
 export async function getUnreadNotificationCount(db: Db, userId: number) {
   const [result] = await db.select({ count: sql<number>`count(*)` })
     .from(notifications)
-    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
   return result?.count || 0;
 }
 
 export async function markNotificationRead(db: Db, id: number, userId: number) {
   await db.update(notifications)
-    .set({ isRead: 1 })
+    .set({ isRead: true })
     .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
 }
 
 export async function markAllNotificationsRead(db: Db, userId: number) {
   await db.update(notifications)
-    .set({ isRead: 1 })
-    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, 0)));
+    .set({ isRead: true })
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
 }
 
 export async function deleteNotification(db: Db, id: number, userId: number) {
