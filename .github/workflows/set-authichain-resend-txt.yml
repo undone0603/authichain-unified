@@ -1,0 +1,37 @@
+name: Add Resend TXT record for authichain.com
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  add-txt-record:
+    name: Create Resend ownership TXT record
+    runs-on: ubuntu-latest
+    steps:
+      - name: Look up zone and create record
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -e
+          ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=authichain.com" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq -r '.result[0].id')
+          if [ -z "$ZONE_ID" ] || [ "$ZONE_ID" = "null" ]; then
+            echo "Could not resolve zone id for authichain.com"
+            exit 1
+          fi
+          echo "Zone ID: $ZONE_ID"
+
+          RESULT=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
+            --data '{"type":"TXT","name":"authichain.com","content":"resend-domain-verification=5afa5cf8ec397b18c194291c5ca0d339","ttl":1}')
+
+          echo "$RESULT" | jq .
+          SUCCESS=$(echo "$RESULT" | jq -r '.success')
+          if [ "$SUCCESS" != "true" ]; then
+            echo "Failed to create DNS record"
+            exit 1
+          fi
+          echo "TXT record created successfully"
