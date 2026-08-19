@@ -731,13 +731,13 @@ export type Bonus = typeof bonuses.$inferSelect;
 // ─── Referral Clicks ─────────────────────────────────────────────────────────
 export const referralClicks = pgTable("referral_clicks", {
   id: serial("id").primaryKey(),
-  referralCode: varchar("referralCode", { length: 32 }).notNull(),
-  ipAddress: varchar("ipAddress", { length: 64 }),
-  userAgent: text("userAgent"),
+  referralCode: varchar("referral_code", { length: 32 }).notNull(),
+  ipAddress: varchar("ip_address", { length: 64 }),
+  userAgent: text("user_agent"),
   referer: text("referer"),
-  landingPage: text("landingPage"),
-  convertedAt: timestamp("convertedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  landingPage: text("landing_page"),
+  convertedAt: timestamp("converted_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── AI Models (Marketplace) ─────────────────────────────────────────────────
@@ -747,13 +747,13 @@ export const aiModels = pgTable("ai_models", {
   description: text("description"),
   category: varchar("category", { length: 128 }),
   price: integer("price").notNull().default(0),
-  status: varchar("modelStatus", { length: 50 }).default("draft"),
+  status: varchar("model_status", { length: 50 }).default("draft"),
   downloads: integer("downloads").default(0),
   rating: numeric("rating", { precision: 3, scale: 2 }).default("0"),
-  reviewCount: integer("reviewCount").default(0),
-  creatorId: integer("creatorId").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  reviewCount: integer("review_count").default(0),
+  creatorId: integer("creator_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type AiModel = typeof aiModels.$inferSelect;
@@ -761,13 +761,13 @@ export type AiModel = typeof aiModels.$inferSelect;
 // ─── Model Purchases ─────────────────────────────────────────────────────────
 export const modelPurchases = pgTable("model_purchases", {
   id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
-  modelId: integer("modelId").notNull(),
-  pricePaid: integer("pricePaid").notNull(),
-  purchaseType: varchar("purchaseType", { length: 50 }).default("purchase"),
-  status: varchar("purchaseStatus", { length: 50 }).default("active"),
-  expiresAt: timestamp("expiresAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  userId: integer("user_id").notNull(),
+  modelId: integer("model_id").notNull(),
+  pricePaid: integer("price_paid").notNull(),
+  purchaseType: varchar("purchase_type", { length: 50 }).default("purchase"),
+  status: varchar("purchase_status", { length: 50 }).default("active"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type ModelPurchase = typeof modelPurchases.$inferSelect;
@@ -775,22 +775,22 @@ export type ModelPurchase = typeof modelPurchases.$inferSelect;
 // ─── Model Reviews ────────────────────────────────────────────────────────────
 export const modelReviews = pgTable("model_reviews", {
   id: serial("id").primaryKey(),
-  modelId: integer("modelId").notNull(),
-  userId: integer("userId").notNull(),
+  modelId: integer("model_id").notNull(),
+  userId: integer("user_id").notNull(),
   rating: integer("rating").notNull(),
   review: text("review"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── Prompt Cache ────────────────────────────────────────────────────────────
 export const promptCache = pgTable("prompt_cache", {
   id: serial("id").primaryKey(),
-  promptHash: varchar("promptHash", { length: 128 }).notNull().unique(),
+  promptHash: varchar("prompt_hash", { length: 128 }).notNull().unique(),
   response: text("response").notNull(),
   provider: varchar("provider", { length: 64 }),
   model: varchar("model", { length: 64 }),
   usage: json("usage"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── Scheduled Job Runs ──────────────────────────────────────────────────────
@@ -835,56 +835,56 @@ export const serviceOrders = pgTable("service_orders", {
 // ─── Character Generations ───────────────────────────────────────────────────
 export const characterGenerations = pgTable("character_generations", {
   id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
+  userId: integer("user_id").notNull(),
   archetype: varchar("archetype", { length: 32 }).notNull(),
   style: varchar("style", { length: 128 }),
   colorway: varchar("colorway", { length: 64 }),
   mood: varchar("mood", { length: 64 }),
   prompt: text("prompt").notNull(),
-  negativePrompt: text("negativePrompt"),
+  negativePrompt: text("negative_prompt"),
   provider: varchar("provider", { length: 64 }),
-  providerModel: varchar("providerModel", { length: 64 }),
-  variantCount: integer("variantCount").default(1),
+  providerModel: varchar("provider_model", { length: 64 }),
+  variantCount: integer("variant_count").default(1),
   status: varchar("status", { length: 50 }).default("pending"),
   context: text("context"),
-  bestAssetId: integer("bestAssetId"),
-  selectedAssetId: integer("selectedAssetId"),
-  completedAt: timestamp("completedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  bestAssetId: integer("best_asset_id"),
+  selectedAssetId: integer("selected_asset_id"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── Character Assets ────────────────────────────────────────────────────────
 export const characterAssets = pgTable("character_assets", {
   id: serial("id").primaryKey(),
-  generationId: integer("generationId").notNull(),
-  userId: integer("userId").notNull(),
-  imageUrl: text("imageUrl").notNull(),
+  generationId: integer("generation_id").notNull(),
+  userId: integer("user_id").notNull(),
+  imageUrl: text("image_url").notNull(),
   prompt: text("prompt"),
-  isRecommended: integer("isRecommended").default(0),
-  isSelected: integer("isSelected").default(0),
-  mintStatus: varchar("mintStatus", { length: 50 }).default("not_minted"),
-  nftTokenId: varchar("nftTokenId", { length: 64 }),
-  metadataUri: text("metadataUri"),
-  metadataHash: varchar("metadataHash", { length: 128 }),
-  imageHash: varchar("imageHash", { length: 128 }),
-  protocolFitScore: varchar("protocolFitScore", { length: 8 }),
-  thumbnailClarityScore: varchar("thumbnailClarityScore", { length: 8 }),
-  premiumFeelScore: varchar("premiumFeelScore", { length: 8 }),
-  silhouetteScore: varchar("silhouetteScore", { length: 8 }),
-  trustSymbolismScore: varchar("trustSymbolismScore", { length: 8 }),
-  mintReadinessScore: varchar("mintReadinessScore", { length: 8 }),
-  uiCompatibilityScore: varchar("uiCompatibilityScore", { length: 8 }),
-  totalScore: varchar("totalScore", { length: 8 }),
-  scoreIconity: integer("scoreIconity"),
-  scoreTrustClarity: integer("scoreTrustClarity"),
-  scorePremiumFeel: integer("scorePremiumFeel"),
-  scoreSilhouette: integer("scoreSilhouette"),
-  scoreUiCompat: integer("scoreUiCompat"),
-  scoreMintReady: integer("scoreMintReady"),
-  scoreProtocolAlign: integer("scoreProtocolAlign"),
-  audioUrl: text("audioUrl"),
-  selectedAt: timestamp("selectedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  isRecommended: integer("is_recommended").default(0),
+  isSelected: integer("is_selected").default(0),
+  mintStatus: varchar("mint_status", { length: 50 }).default("not_minted"),
+  nftTokenId: varchar("nft_token_id", { length: 64 }),
+  metadataUri: text("metadata_uri"),
+  metadataHash: varchar("metadata_hash", { length: 128 }),
+  imageHash: varchar("image_hash", { length: 128 }),
+  protocolFitScore: varchar("protocol_fit_score", { length: 8 }),
+  thumbnailClarityScore: varchar("thumbnail_clarity_score", { length: 8 }),
+  premiumFeelScore: varchar("premium_feel_score", { length: 8 }),
+  silhouetteScore: varchar("silhouette_score", { length: 8 }),
+  trustSymbolismScore: varchar("trust_symbolism_score", { length: 8 }),
+  mintReadinessScore: varchar("mint_readiness_score", { length: 8 }),
+  uiCompatibilityScore: varchar("ui_compatibility_score", { length: 8 }),
+  totalScore: varchar("total_score", { length: 8 }),
+  scoreIconity: integer("score_iconity"),
+  scoreTrustClarity: integer("score_trust_clarity"),
+  scorePremiumFeel: integer("score_premium_feel"),
+  scoreSilhouette: integer("score_silhouette"),
+  scoreUiCompat: integer("score_ui_compat"),
+  scoreMintReady: integer("score_mint_ready"),
+  scoreProtocolAlign: integer("score_protocol_align"),
+  audioUrl: text("audio_url"),
+  selectedAt: timestamp("selected_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── Protocol Agents ─────────────────────────────────────────────────────────
@@ -911,69 +911,69 @@ export const protocolAgents = pgTable("protocol_agents", {
 // ─── Verification Claims ─────────────────────────────────────────────────────
 export const verificationClaims = pgTable("verification_claims", {
   id: serial("id").primaryKey(),
-  agentId: integer("agentId").notNull(),
-  productId: integer("productId").notNull(),
-  authenticationId: integer("authenticationId"),
-  claimType: varchar("claimType", { length: 50 }).notNull(),
+  agentId: integer("agent_id").notNull(),
+  productId: integer("product_id").notNull(),
+  authenticationId: integer("authentication_id"),
+  claimType: varchar("claim_type", { length: 50 }).notNull(),
   confidence: integer("confidence").notNull(),
   evidence: text("evidence"),
   reasoning: text("reasoning"),
   weight: varchar("weight", { length: 16 }),
   status: varchar("status", { length: 50 }).default("pending"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── Consensus Results ───────────────────────────────────────────────────────
 export const consensusResults = pgTable("consensus_results", {
   id: serial("id").primaryKey(),
-  productId: integer("productId").notNull(),
-  authenticationId: integer("authenticationId").notNull(),
+  productId: integer("product_id").notNull(),
+  authenticationId: integer("authentication_id").notNull(),
   verdict: varchar("verdict", { length: 50 }).notNull(),
   confidence: integer("confidence").notNull(),
-  participantCount: integer("participantCount").default(0),
-  finalizedAt: timestamp("finalizedAt").defaultNow().notNull(),
+  participantCount: integer("participant_count").default(0),
+  finalizedAt: timestamp("finalized_at").defaultNow().notNull(),
 });
 
 // ─── QRON Reward Ledger ──────────────────────────────────────────────────────
 export const qronRewardLedger = pgTable("qron_reward_ledger", {
   id: serial("id").primaryKey(),
-  agentId: integer("agentId").notNull(),
-  userId: integer("userId").notNull(),
+  agentId: integer("agent_id").notNull(),
+  userId: integer("user_id").notNull(),
   amount: numeric("amount", { precision: 20, scale: 9 }).notNull(),
   reason: varchar("reason", { length: 64 }).notNull(),
-  referenceType: varchar("referenceType", { length: 32 }),
-  referenceId: integer("referenceId"),
+  referenceType: varchar("reference_type", { length: 32 }),
+  referenceId: integer("reference_id"),
   status: varchar("status", { length: 50 }).default("pending"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── Staking Positions ───────────────────────────────────────────────────────
 export const stakingPositions = pgTable("staking_positions", {
   id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
-  agentId: integer("agentId"),
+  userId: integer("user_id").notNull(),
+  agentId: integer("agent_id"),
   amount: numeric("amount", { precision: 20, scale: 9 }).notNull(),
   status: varchar("status", { length: 50 }).default("active"),
   multiplier: numeric("multiplier", { precision: 5, scale: 2 }).default("1.00"),
   apy: numeric("apy", { precision: 5, scale: 2 }).default("5.00"),
-  rewardsEarned: numeric("rewardsEarned", { precision: 20, scale: 9 }).default("0"),
-  lastRewardCalculation: timestamp("lastRewardCalculation"),
-  stakedAt: timestamp("stakedAt").defaultNow().notNull(),
-  releaseAt: timestamp("releaseAt"),
-  endDate: timestamp("endDate"),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  rewardsEarned: numeric("rewards_earned", { precision: 20, scale: 9 }).default("0"),
+  lastRewardCalculation: timestamp("last_reward_calculation"),
+  stakedAt: timestamp("staked_at").defaultNow().notNull(),
+  releaseAt: timestamp("release_at"),
+  endDate: timestamp("end_date"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── Checkpoint Batches ──────────────────────────────────────────────────────
 export const checkpointBatches = pgTable("checkpoint_batches", {
   id: serial("id").primaryKey(),
-  batchHash: varchar("batchHash", { length: 128 }).notNull(),
-  blockchainTxHash: varchar("blockchainTxHash", { length: 128 }),
-  claimCount: integer("claimCount").default(0),
+  batchHash: varchar("batch_hash", { length: 128 }).notNull(),
+  blockchainTxHash: varchar("blockchain_tx_hash", { length: 128 }),
+  claimCount: integer("claim_count").default(0),
   status: varchar("status", { length: 50 }).default("pending"),
-  finalizedAt: timestamp("finalizedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  finalizedAt: timestamp("finalized_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── Missions ────────────────────────────────────────────────────────────────
@@ -1014,30 +1014,30 @@ export const platformFees = pgTable("platform_fees", {
   amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
   currency: varchar("currency", { length: 16 }).default("USD"),
   status: varchar("status", { length: 50 }).default("pending"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── Transactions ────────────────────────────────────────────────────────────
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
+  userId: integer("user_id").notNull(),
   type: varchar("type", { length: 64 }).notNull(),
   amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
   currency: varchar("currency", { length: 16 }).default("USD"),
   status: varchar("status", { length: 50 }).default("pending"),
   metadata: json("metadata"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ─── Bayesian Priors ─────────────────────────────────────────────────────────
 export const bayesianPriors = pgTable("bayesian_priors", {
   id: serial("id").primaryKey(),
   segment: varchar("segment", { length: 64 }).notNull().unique(),
-  priorAlpha: numeric("priorAlpha", { precision: 10, scale: 4 }).default("2.0000"), // Successes
-  priorBeta: numeric("priorBeta", { precision: 10, scale: 4 }).default("18.0000"), // Failures (Base 10% rate)
-  currentMean: numeric("currentMean", { precision: 5, scale: 4 }).default("0.1000"),
-  observationsCount: integer("observationsCount").default(0),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  priorAlpha: numeric("prior_alpha", { precision: 10, scale: 4 }).default("2.0000"), // Successes
+  priorBeta: numeric("prior_beta", { precision: 10, scale: 4 }).default("18.0000"), // Failures (Base 10% rate)
+  currentMean: numeric("current_mean", { precision: 5, scale: 4 }).default("0.1000"),
+  observationsCount: integer("observations_count").default(0),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type BayesianPrior = typeof bayesianPriors.$inferSelect;
