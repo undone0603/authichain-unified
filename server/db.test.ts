@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import tls from "node:tls";
+import { X509Certificate } from "node:crypto";
 import { getHyperdriveDb } from "./db";
 
 
@@ -52,9 +53,9 @@ describe("getDb", () => {
     // This assertion was inverted on 2026-08-20. It previously required the
     // pooler CA to be the *only* trusted root — real pinning, and stronger in
     // principle. In practice no connection had ever verified against it: the
-    // committed default is the Entrust 2006 public root, a placeholder that was
-    // never swapped for the project's certificate, so the single-root config
-    // could only ever fail closed. Replacing the trust store also converts an
+    // default at the time was the Entrust 2006 public root, a placeholder never
+    // swapped for the project's certificate, so the single-root config could
+    // only ever fail closed. Replacing the trust store also converts an
     // ordinary publicly-rooted chain into SELF_SIGNED_CERT_IN_CHAIN, which is
     // an unhelpful way to fail. Concatenating keeps the pin usable via
     // SUPABASE_POOLER_CA while a public chain also verifies.
@@ -74,6 +75,26 @@ describe("getDb", () => {
     expect(ca![ca!.length - 1]).toContain("-----BEGIN CERTIFICATE-----");
 
     expect(config.connectionString).not.toMatch(/sslmode=/);
+  });
+
+  it("ships the Supabase pooler's actual root CA, not a placeholder", async () => {
+    // The previous default was the Entrust 2006 public root, committed as a
+    // placeholder and never replaced. It could not have verified anything: the
+    // pooler roots its chain in a private, self-signed "Supabase Root 2021 CA".
+    // This asserts the shipped default is that root and is still in date, so a
+    // wrong or expired certificate fails here rather than in a scheduled job.
+    const fakeUrl =
+      "postgresql://" + "fakeuser" + ":" + "fakepass" + "@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require";
+
+    const config = await buildPoolConfig(fakeUrl);
+    const pinned = config.ssl!.ca!.at(-1)!;
+
+    const cert = new X509Certificate(pinned);
+    expect(cert.subject).toContain("Supabase Root 2021 CA");
+    expect(cert.ca).toBe(true);
+    // Self-signed: it is the root, so it must verify under its own key.
+    expect(cert.verify(cert.publicKey)).toBe(true);
+    expect(new Date(cert.validTo).getTime()).toBeGreaterThan(Date.now());
   });
 
   it("never disables certificate verification", async () => {
