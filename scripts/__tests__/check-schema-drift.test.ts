@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-// @ts-expect-error — plain .mjs module, no type declarations
 import { parseSchema } from '../check-schema-drift.mjs';
 
 /**
