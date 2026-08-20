@@ -184,8 +184,8 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1
       crisp-api:
-        specifier: ^10.10.2
-        version: 10.10.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+        specifier: ^10.10.6
+        version: 10.10.6(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       date-fns:
         specifier: ^4.4.0
         version: 4.4.0
@@ -5965,8 +5965,8 @@ packages:
     engines: {node: '>=0.8'}
     hasBin: true
 
-  crisp-api@10.10.2:
-    resolution: {integrity: sha512-5FCNUt0J1SU2Om2QzwmJXL+bTlUrQt238F8s3g2lel3mVq6RW615I7wxnT08UaDY7VTvqNyhXDHE4a3jpn6zlw==}
+  crisp-api@10.10.6:
+    resolution: {integrity: sha512-tWSjCXGOZ51DKWEsNdJJ7rLt7Oe/wo7/3/O+HuU6iSbWsD9/dhx7pMVVyLIUt1uT5zfgo0OuSB9SZePlVYwAdQ==}
     engines: {node: '>= 16.0.0'}
 
   cross-fetch@3.2.0:
@@ -16902,7 +16902,7 @@ snapshots:
 
   crc-32@1.2.2: {}
 
-  crisp-api@10.10.2(bufferutil@4.1.0)(utf-8-validate@5.0.10):
+  crisp-api@10.10.6(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     dependencies:
       got: 11.8.5
       mitt: 3.0.1
