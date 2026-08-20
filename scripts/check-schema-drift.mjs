@@ -19,6 +19,10 @@
  *
  * Usage:
  *   DATABASE_URL=... node scripts/check-schema-drift.mjs [--json] [--strict]
+ *                                                        [--also=<other-schema.ts>]
+ *
+ * --also reports drift in another schema file without gating on it. Used for
+ * schema files owned by a sub-app that declare tables in this same database.
  *
  * Exits 1 when a declared table or column is missing from the database, since
  * that is a guaranteed runtime failure. Extra DB columns the schema does not
@@ -144,6 +148,30 @@ async function main() {
         ? `${breaking.length} finding(s) will fail at runtime — a query touching them raises 42703/42P01.`
         : 'Nothing that would fail at runtime.',
     );
+  }
+
+  // Other schema files declare tables in this same database but are not gating.
+  // They are reported so their drift is visible and owned rather than silent —
+  // this whole workflow exists because unwatched drift is what went wrong.
+  // Advisory, not fatal: they belong to a separate app with its own migrations,
+  // so the call on adding or dropping their columns is not this repo root's.
+  const advisory = process.argv
+    .filter((a) => a.startsWith('--also='))
+    .map((a) => a.slice('--also='.length));
+  for (const file of advisory) {
+    let other;
+    try {
+      other = parseSchema(readFileSync(file, 'utf8'));
+    } catch {
+      console.log(`\n[advisory] ${file}: unreadable, skipped`);
+      continue;
+    }
+    const otherBreaking = summarise(other, live).filter((f) => f.kind !== 'untracked-column');
+    console.log(
+      `\n[advisory] ${file}: ${other.length} tables, ` +
+        `${otherBreaking.length} finding(s) that would fail at runtime (not gating)`,
+    );
+    for (const f of otherBreaking) console.log(`  ${f.table}: ${f.detail}`);
   }
 
   if (breaking.length) return 1;

@@ -82,7 +82,7 @@ async function apolloFindEmail(name: string, company: string, website: string): 
 
     // Apollo auth goes in the X-Api-Key header — body api_key is no longer
     // accepted for current keys (verified: header auth returns 200, body 401).
-    const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
+    const res = await fetch('https://api.apollo.io/api/v1/mixed_people/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'X-Api-Key': key },
       body: JSON.stringify({

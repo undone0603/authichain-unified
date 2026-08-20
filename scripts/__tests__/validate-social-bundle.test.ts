@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-// @ts-expect-error — plain .mjs module, no type declarations
 import { validateBundle, REQUIRED_DISCLOSURE } from '../validate-social-bundle.mjs';
 
 /**
