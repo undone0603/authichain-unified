@@ -26,7 +26,7 @@
 import { getDb } from '../server/db';
 import { runJobManually, getRegisteredJobs } from '../server/scheduled-jobs';
 import { scheduledJobRuns } from '../drizzle/schema';
-import { gt, desc, eq, and } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
 /** The six with a 100% failure rate and no successful run on record. */
 const NEVER_SUCCEEDED = [
@@ -61,24 +61,38 @@ async function main(): Promise<number> {
   const results: { job: string; status: string; items: number | null; error: string | null }[] = [];
 
   for (const name of targets) {
-    // Anchor on the ledger's own id rather than a clock, so a slow clock or a
-    // concurrent run of the same job cannot be mistaken for this one.
-    const [latest] = await db
+    // Anchor on THIS job's most recent row, identified by id, and treat a
+    // different id afterwards as the run we just caused.
+    //
+    // The obvious version of this — remember max(id), then look for id greater
+    // than it — is wrong here, and failed on the first real run. Eight rows
+    // written in June 2026 carry Date.now() milliseconds as their id
+    // (1781630400025 and neighbours) rather than a sequence value, while the
+    // sequence itself is at ~1112. So max(id) is a 2026-06-16 sentinel, every
+    // genuine insert lands far below it, and "id > before" matches nothing:
+    // six jobs ran, five succeeded, and the script reported all six as having
+    // written no row. Ordering by id is only meaningful if every id came from
+    // the sequence, and here they did not.
+    const [previous] = await db
       .select({ id: scheduledJobRuns.id })
       .from(scheduledJobRuns)
-      .orderBy(desc(scheduledJobRuns.id))
+      .where(eq(scheduledJobRuns.jobName, name))
+      .orderBy(desc(scheduledJobRuns.startedAt))
       .limit(1);
-    const before = latest?.id ?? 0;
+    const previousId = previous?.id ?? null;
 
     process.stdout.write(`  ${name} … `);
     await runJobManually(name);
 
-    const [row] = await db
+    const [latest] = await db
       .select()
       .from(scheduledJobRuns)
-      .where(and(gt(scheduledJobRuns.id, before), eq(scheduledJobRuns.jobName, name)))
-      .orderBy(desc(scheduledJobRuns.id))
+      .where(eq(scheduledJobRuns.jobName, name))
+      .orderBy(desc(scheduledJobRuns.startedAt))
       .limit(1);
+
+    // Unchanged newest row means executeJob wrote nothing at all.
+    const row = latest && latest.id !== previousId ? latest : undefined;
 
     if (!row) {
       // executeJob returns without writing anything when getDb() comes back
