@@ -6,6 +6,8 @@
 import { guardrailCheck, guardrailRecord, guardrailSuppress } from './guardrail-client';
 // KV stores: outreach_sent (sent list), outreach_bounced (bounce suppression list)
 
+import { guardrailCheck, guardrailRecord, guardrailSuppress } from './guardrail-client';
+
 function timingSafeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder();
   const ab = enc.encode(a), bb = enc.encode(b);
@@ -549,6 +551,12 @@ async function sendAllDpp(env: any) {
 }
 
 export async function sendViaResend(email: Email, env: any): Promise<boolean> {
+  const check = await guardrailCheck(env, 'email.qron-outreach', { recipient: email.to });
+  if (!check.allowed) {
+    console.log(`Email to ${email.to}: blocked by guardrail — ${check.reason ?? 'denied'}`);
+    return false;
+  }
+
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) {
     console.error('RESEND_API_KEY not set on qron-outreach worker');
@@ -588,6 +596,7 @@ export async function sendViaResend(email: Email, env: any): Promise<boolean> {
       metadata: { recipient: email.to, resendId: result.id },
     });
     console.log(`Email to ${email.to}: ${ok ? 'sent' : 'failed'} ${result.id ?? result.message ?? ''}`);
+    await guardrailRecord(env, { channel: 'email.qron-outreach', action: 'record', allowed: ok, metadata: { recipient: email.to } });
     return ok;
   } catch (e: any) {
     await guardrailRecord(env, {
