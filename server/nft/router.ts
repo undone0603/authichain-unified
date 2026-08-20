@@ -12,7 +12,7 @@ export const nftRouter = router({
   })).query(async ({ input }) => {
     return await db.listNfts(input);
   }),
-  getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+  getById: publicProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ input }) => {
     return await db.getNftById(input.id);
   }),
   create: protectedProcedure.input(z.object({
@@ -24,7 +24,7 @@ export const nftRouter = router({
     price: z.string().optional(),
     currency: z.string().optional().default("ETH"),
     traits: z.any().optional(),
-    productId: z.number().optional(),
+    productId: z.string().uuid().optional(),
   })).mutation(async ({ ctx, input }) => {
     const result = await db.createNft({ ...input, ownerId: ctx.user.id, creatorId: ctx.user.id, status: "listed" });
     await db.logActivity({ userId: ctx.user.id, action: "nft_created", entityType: "nft", entityId: result.id });
@@ -61,13 +61,13 @@ export const nftRouter = router({
     list: publicProcedure.query(async () => {
       return await db.getActiveAuctions();
     }),
-    getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+    getById: publicProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ input }) => {
       const auction = await db.getAuctionById(input.id);
       const bids = await db.getAuctionBids(input.id);
       return { auction, bids };
     }),
     create: protectedProcedure.input(z.object({
-      nftId: z.number(),
+      nftId: z.string().uuid(),
       startPrice: z.string(),
       reservePrice: z.string().optional(),
       endsAt: z.string(),
@@ -78,7 +78,7 @@ export const nftRouter = router({
       return await db.createAuction({ ...input, sellerId: ctx.user.id, endsAt: new Date(input.endsAt) });
     }),
     bid: protectedProcedure.input(z.object({
-      auctionId: z.number(),
+      auctionId: z.string().uuid(),
       amount: z.string(),
     })).mutation(async ({ ctx, input }) => {
       const auction = await db.getAuctionById(input.auctionId);

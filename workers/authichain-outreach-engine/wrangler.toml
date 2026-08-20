@@ -1,0 +1,27 @@
+name = "authichain-outreach-engine"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = true
+
+# Secrets (set via `npx wrangler secret put <NAME>`, never in this file):
+#   OUTREACH_ADMIN_TOKEN — bearer token for /admin/* (mirrors agentz .env)
+#   RESEND_API_KEY       — Resend send key
+
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-db"
+database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
+
+# Shared outreach KV — bounce/suppression list (same namespace as qron-outreach)
+[[kv_namespaces]]
+binding = "SUPPRESS_KV"
+id = "291baff0863044998e9ba716dfc06085"
+
+[vars]
+OUTREACH_FROM_EMAIL = "AuthiChain <noreply@authichain.com>"
+OUTREACH_REPLY_TO = "authichain@gmail.com"
+BATCH_SIZE = "5"
+
+# No cron triggers on purpose — batches run only when AgentZ POSTs /admin/run.
+# (Prior wave hit 73% bounce; keep sends explicit + suppression-gated.)
