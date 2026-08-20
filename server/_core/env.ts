@@ -29,6 +29,7 @@ export const ENV = {
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
   samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
   requireOutreachApproval: process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
   requireDevApproval: process.env.REQUIRE_DEV_APPROVAL !== "false",
@@ -42,4 +43,5 @@ export const ENV = {
   qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
   makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
   smsRecipient: process.env.SMS_RECIPIENT ?? "",
+  supabasePoolerCa: process.env.SUPABASE_POOLER_CA ?? "",
 };
