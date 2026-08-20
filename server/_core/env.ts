@@ -43,4 +43,5 @@ export const ENV = {
   qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
   makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
   smsRecipient: process.env.SMS_RECIPIENT ?? "",
+  supabasePoolerCa: process.env.SUPABASE_POOLER_CA ?? "",
 };
