@@ -26,7 +26,7 @@
 import { getDb } from '../server/db';
 import { runJobManually, getRegisteredJobs } from '../server/scheduled-jobs';
 import { scheduledJobRuns } from '../drizzle/schema';
-import { desc, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 /** The six with a 100% failure rate and no successful run on record. */
 const NEVER_SUCCEEDED = [
@@ -61,42 +61,45 @@ async function main(): Promise<number> {
   const results: { job: string; status: string; items: number | null; error: string | null }[] = [];
 
   for (const name of targets) {
-    // Anchor on THIS job's most recent row, identified by id, and treat a
-    // different id afterwards as the run we just caused.
+    // Identify this run's row by diffing the set of ids for this job before
+    // and after. Not by ordering — ordering was wrong twice, for two unrelated
+    // reasons, and this table can support neither assumption:
     //
-    // The obvious version of this — remember max(id), then look for id greater
-    // than it — is wrong here, and failed on the first real run. Eight rows
-    // written in June 2026 carry Date.now() milliseconds as their id
-    // (1781630400025 and neighbours) rather than a sequence value, while the
-    // sequence itself is at ~1112. So max(id) is a 2026-06-16 sentinel, every
-    // genuine insert lands far below it, and "id > before" matches nothing:
-    // six jobs ran, five succeeded, and the script reported all six as having
-    // written no row. Ordering by id is only meaningful if every id came from
-    // the sequence, and here they did not.
-    const [previous] = await db
-      .select({ id: scheduledJobRuns.id })
-      .from(scheduledJobRuns)
-      .where(eq(scheduledJobRuns.jobName, name))
-      .orderBy(desc(scheduledJobRuns.startedAt))
-      .limit(1);
-    const previousId = previous?.id ?? null;
+    //   1. `max(id)` then `id > before`. Eight rows written in June 2026 carry
+    //      Date.now() milliseconds as their id (1781630400025 and neighbours)
+    //      instead of a sequence value, while the sequence is at ~1112. So
+    //      max(id) was a 2026-06-16 sentinel, every genuine insert landed far
+    //      below it, and nothing matched — six jobs ran, five passed, and all
+    //      six were reported as having written no row.
+    //
+    //   2. Newest row by `order by "startedAt" desc`. One vertical-cloner row
+    //      has a NULL "startedAt", and Postgres sorts NULLs FIRST under DESC,
+    //      so that row won both the before and after query and the ids matched.
+    //      Same false "no ledger row", different cause.
+    //
+    // A set difference assumes neither that ids are ordered nor that timestamps
+    // are present. It just asks which row is new.
+    const idsBefore = new Set(
+      (
+        await db
+          .select({ id: scheduledJobRuns.id })
+          .from(scheduledJobRuns)
+          .where(eq(scheduledJobRuns.jobName, name))
+      ).map((r) => String(r.id)),
+    );
 
     process.stdout.write(`  ${name} … `);
     await runJobManually(name);
 
-    const [latest] = await db
+    const after = await db
       .select()
       .from(scheduledJobRuns)
-      .where(eq(scheduledJobRuns.jobName, name))
-      .orderBy(desc(scheduledJobRuns.startedAt))
-      .limit(1);
+      .where(eq(scheduledJobRuns.jobName, name));
 
-    // Unchanged newest row means executeJob wrote nothing at all.
-    const row = latest && latest.id !== previousId ? latest : undefined;
+    // No new id means executeJob wrote nothing at all. Silence is not success.
+    const row = after.find((r) => !idsBefore.has(String(r.id)));
 
     if (!row) {
-      // executeJob returns without writing anything when getDb() comes back
-      // empty. Silence is not success.
       console.log('NO LEDGER ROW');
       results.push({ job: name, status: 'no-row', items: null, error: 'job wrote no run record' });
       continue;
