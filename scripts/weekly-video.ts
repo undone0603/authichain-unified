@@ -97,7 +97,12 @@ async function main() {
 
   // Render + upload run through the existing service layer so credential
   // handling and retries live in one place.
-  const { renderHeygenVideo } = await import('../server/agents/heygen-video.js').catch(() => ({ renderHeygenVideo: null as any }));
+  // heygen-video.ts does not currently export renderHeygenVideo; the guard below
+  // reports that loudly. Typed as optional so the check reflects that reality
+  // instead of asserting an export that is not there.
+  const heygen = (await import('../server/agents/heygen-video.js').catch(() => ({}))) as
+    { renderHeygenVideo?: (...args: any[]) => Promise<any> };
+  const renderHeygenVideo = heygen.renderHeygenVideo;
   const { uploadVideo } = await import('../server/youtube-service.js');
 
   if (!renderHeygenVideo) {

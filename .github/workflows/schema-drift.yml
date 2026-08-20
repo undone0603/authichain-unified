@@ -17,6 +17,8 @@ on:
     paths:
       - "src/db/schema.ts"
       - "supabase/migrations/**"
+      - "apps/qron-platform/src/db/schema.ts"
+      - "apps/qron-platform/drizzle/schema.ts"
 
 permissions:
   contents: read
@@ -66,4 +68,11 @@ jobs:
           fi
           ARGS=""
           if [ "${{ inputs.strict }}" = "true" ]; then ARGS="--strict"; fi
-          node scripts/check-schema-drift.mjs $ARGS | tee "$GITHUB_STEP_SUMMARY"
+          # --also files are reported but do not gate: they belong to a
+          # sub-app with its own migrations. Reported so their drift is
+          # visible rather than silent, which is the failure this whole
+          # workflow exists to prevent.
+          node scripts/check-schema-drift.mjs $ARGS \
+            --also=apps/qron-platform/src/db/schema.ts \
+            --also=apps/qron-platform/drizzle/schema.ts \
+            | tee "$GITHUB_STEP_SUMMARY"
