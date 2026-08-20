@@ -258,7 +258,12 @@ class SDKServer {
 
   async authenticateRequest(req: Request): Promise<User> {
     // Regular authentication flow
-    const cookies = this.parseCookies(req.headers.cookie);
+    // Support both Fetch API Request (headers.get()) and Express-like objects (headers.cookie)
+    const cookieHeader =
+      typeof (req.headers as any).get === "function"
+        ? (req.headers as any).get("cookie")
+        : (req.headers as any).cookie;
+    const cookies = this.parseCookies(cookieHeader);
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
 

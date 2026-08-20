@@ -13,7 +13,7 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-interface Email {
+export interface Email {
   to: string;
   name: string;
   subject: string;
@@ -414,7 +414,7 @@ async function addBounced(env: any, email: string) {
 
 // ── Bounce webhook ────────────────────────────────────────────────────────────
 
-async function handleBounceWebhook(request: Request, env: any): Promise<Response> {
+export async function handleBounceWebhook(request: Request, env: any): Promise<Response> {
   try {
     const payload: any = await request.json();
     const eventType: string = payload?.type ?? '';
@@ -544,7 +544,7 @@ async function sendAllDpp(env: any) {
   return { sent: results.filter(r => r.sent).length, failed: results.filter(r => !r.sent).length, results };
 }
 
-async function sendViaResend(email: Email, env: any): Promise<boolean> {
+export async function sendViaResend(email: Email, env: any): Promise<boolean> {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) {
     console.error('RESEND_API_KEY not set on qron-outreach worker');
