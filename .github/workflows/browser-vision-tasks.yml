@@ -2,7 +2,7 @@ name: Browser Vision Tasks (Playwright runner)
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -62,7 +62,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.db-check.outputs.skip != 'true'
         with:
-          node-version: '22'
+          node-version: "22"
           cache: pnpm
 
       - name: Install dependencies
@@ -76,7 +76,7 @@ jobs:
       - name: Run vision tasks
         if: steps.db-check.outputs.skip != 'true'
         env:
-          PLAYWRIGHT_AVAILABLE: '1'
+          PLAYWRIGHT_AVAILABLE: "1"
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

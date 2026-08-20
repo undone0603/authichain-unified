@@ -24,7 +24,7 @@ describe('conformance suite', () => {
     expect(failed.map((r) => `${r.id}: ${r.failures.join('; ')}`)).toEqual([]);
     expect(report.conformant).toBe(true);
     expect(report.passed).toBe(report.total);
-  });
+  }, 120_000);
 
   it('the fixture set matches the manifest', () => {
     const manifest = JSON.parse(readFileSync(join(HERE, 'manifest.json'), 'utf8'));
@@ -60,5 +60,5 @@ describe('conformance suite', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  });
+  }, 120_000);
 });

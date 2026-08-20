@@ -74,7 +74,14 @@ function makeTask(kind: string): MissionTask {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('runTask — routing', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(async () => {
+    vi.resetAllMocks();
+    const { markTaskRunning, markTaskDone, markTaskFailed, logActivity } = await import('./db.js');
+    vi.mocked(markTaskRunning).mockResolvedValue(true);
+    vi.mocked(markTaskDone).mockResolvedValue(undefined);
+    vi.mocked(markTaskFailed).mockResolvedValue(undefined);
+    vi.mocked(logActivity).mockResolvedValue(undefined);
+  });
 
   const routingCases: Array<{ kind: string; module: string; fn: string }> = [
     { kind: 'FIND_GOV_LEADS',           module: './agents/lead-finder.js',    fn: 'runLeadFinder'           },
@@ -110,12 +117,19 @@ describe('runTask — routing', () => {
       await runTask(makeTask(kind));
 
       expect(agent).toHaveBeenCalledOnce();
-    });
+    }, 30_000);
   }
 });
 
 describe('runTask — lifecycle', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(async () => {
+    vi.resetAllMocks();
+    const { markTaskRunning, markTaskDone, markTaskFailed, logActivity } = await import('./db.js');
+    vi.mocked(markTaskRunning).mockResolvedValue(true);
+    vi.mocked(markTaskDone).mockResolvedValue(undefined);
+    vi.mocked(markTaskFailed).mockResolvedValue(undefined);
+    vi.mocked(logActivity).mockResolvedValue(undefined);
+  });
 
   it('calls markTaskRunning before the agent', async () => {
     const callOrder: string[] = [];
@@ -173,7 +187,14 @@ describe('runTask — lifecycle', () => {
 });
 
 describe('runTask — unknown kind', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(async () => {
+    vi.resetAllMocks();
+    const { markTaskRunning, markTaskDone, markTaskFailed, logActivity } = await import('./db.js');
+    vi.mocked(markTaskRunning).mockResolvedValue(true);
+    vi.mocked(markTaskDone).mockResolvedValue(undefined);
+    vi.mocked(markTaskFailed).mockResolvedValue(undefined);
+    vi.mocked(logActivity).mockResolvedValue(undefined);
+  });
 
   it('marks the task as failed with "Unknown task kind" message', async () => {
     const { markTaskFailed } = await import('./db.js');

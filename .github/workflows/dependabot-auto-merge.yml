@@ -16,8 +16,8 @@ concurrency:
 on:
   pull_request_target:
     paths:
-      - '**/package*.json'
-      - '**/pnpm-lock.yaml'
+      - "**/package*.json"
+      - "**/pnpm-lock.yaml"
 
 jobs:
   auto-merge:

@@ -261,7 +261,7 @@ class SDKServer {
     // Support both Fetch API Request (headers.get()) and Express-like objects (headers.cookie).
     const cookieHeader =
       typeof (req.headers as { get?: (name: string) => string | null }).get === "function"
-        ? (req.headers as { get: (name: string) => string | null }).get("cookie")
+        ? (req.headers as { get: (name: string) => string | null }).get("cookie") ?? undefined
         : (req.headers as { cookie?: string }).cookie;
     const cookies = this.parseCookies(cookieHeader);
     const sessionCookie = cookies.get(COOKIE_NAME);

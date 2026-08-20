@@ -3,12 +3,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'workers/**'
-      - '.github/workflows/deploy-workers.yml'
+      - "workers/**"
+      - ".github/workflows/deploy-workers.yml"
   workflow_dispatch:
     inputs:
       worker:
-        description: 'Specific worker dir to deploy (e.g. authichain-api). Leave blank for all.'
+        description: "Specific worker dir to deploy (e.g. authichain-api). Leave blank for all."
         required: false
         type: string
 permissions:
@@ -72,12 +72,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
-          version: '10.28.2'
+          version: "10.28.2"
       - name: Setup Node 22
         uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: 'pnpm'
+          cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Deploy Worker
@@ -87,4 +87,4 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          COMPATIBILITY_DATE: '2026-06-29'
+          COMPATIBILITY_DATE: "2026-06-29"
