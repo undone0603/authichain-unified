@@ -15,7 +15,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "allowImportingTsExtensions": true,
     "baseUrl": ".",
@@ -50,7 +50,9 @@
     "server/**/*.ts",
     "server/**/*.tsx",
     "worker-app/**/*.ts",
-    "worker-app/**/*.tsx"
+    "worker-app/**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
@@ -78,6 +80,6 @@
     "scripts/ingest-sam.ts",
     "sentry.client.config.ts",
     "sentry.edge.config.ts",
-    "sentry.server.config.ts",
+    "sentry.server.config.ts"
   ]
 }
