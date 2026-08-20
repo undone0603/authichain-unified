@@ -8,6 +8,14 @@ on:
 permissions:
   contents: read
 
+# Runs every 30 minutes with a 15-minute timeout, so a slow run can still be
+# going when the next fires. This is not a correctness guard — markTaskRunning
+# claims a task with a conditional UPDATE on status='pending', so two runners
+# cannot process the same task. It just stops redundant runners piling up.
+concurrency:
+  group: browser-vision-tasks
+  cancel-in-progress: false
+
 jobs:
   run:
     name: Process pending vision tasks
@@ -69,9 +77,18 @@ jobs:
         if: steps.db-check.outputs.skip != 'true'
         run: pnpm install --frozen-lockfile
 
+      # playwright-core, not playwright. Only playwright-core is a dependency —
+      # server/agents/browser-vision.ts imports it deliberately so the full
+      # package stays out of the Workers bundle — so `pnpm exec playwright`
+      # resolved to nothing and every run died with
+      # ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL before reaching a single task.
+      #
+      # playwright-core ships the same install CLI, and using it keeps the
+      # browser build locked to the exact package version the runtime launches,
+      # which `playwright` as a separate dependency would be free to drift from.
       - name: Install Chromium
         if: steps.db-check.outputs.skip != 'true'
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright-core install --with-deps chromium
 
       - name: Run vision tasks
         if: steps.db-check.outputs.skip != 'true'
