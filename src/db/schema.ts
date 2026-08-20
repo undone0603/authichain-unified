@@ -1345,3 +1345,6 @@ export const guardrailEvents = pgTable("guardrail_events", {
   guardrailEventsChannelIdx: index("idx_guardrail_events_channel").on(table.channelId),
   guardrailEventsCreatedIdx: index("idx_guardrail_events_created").on(table.createdAt),
 }));
+
+export type SeoPageRow = typeof seoPages.$inferSelect;
+export type InsertSeoPageRow = typeof seoPages.$inferInsert;

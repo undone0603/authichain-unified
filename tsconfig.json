@@ -64,6 +64,8 @@
     "server/src/**/*",
     "server/scripts/**/*",
     "app/**/*",
+    "apps/**/*",
+    "open-next.config.ts",
     "src/db/qron_schema.ts",
     "sentry.client.config.ts",
     "sentry.edge.config.ts",
