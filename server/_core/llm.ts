@@ -263,7 +263,7 @@ function convertToolChoiceToAnthropic(
   choice: ToolChoice | undefined
 ): unknown | undefined {
   if (!choice) return undefined;
-  if (choice === "none") return { type: "any" };
+  if (choice === "none") return { type: "none" };
   if (choice === "auto") return { type: "auto" };
   if (choice === "required") return { type: "any" };
   if ("name" in choice) return { type: "tool", name: (choice as ToolChoiceByName).name };
