@@ -103,16 +103,30 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.db-check.outputs.skip != 'true'
 
-      - uses: pnpm/action-setup@v4
-        if: steps.db-check.outputs.skip != 'true'
-        with:
-          version: 10.28.2
-
       - uses: actions/setup-node@v4
         if: steps.db-check.outputs.skip != 'true'
         with:
           node-version: "22"
-          cache: pnpm
+
+      # pnpm comes from corepack, which ships with Node, rather than from
+      # pnpm/action-setup. CodeQL flags that action as an unpinned third-party
+      # dependency (`@v4` is a mutable tag that can be repointed at any commit),
+      # and pinning it would mean hardcoding a SHA. Corepack removes the
+      # third-party dependency altogether instead of pinning it.
+      #
+      # The version is stated explicitly because package.json has no
+      # `packageManager` field; it matches the 10.28.2 the other workflows use,
+      # so the lockfile is read by the same resolver everywhere.
+      #
+      # Trade-off: this drops `cache: pnpm` from setup-node, which needs pnpm on
+      # PATH before it runs. Installs are slower by roughly the download time.
+      # For a once-daily job that is not worth reintroducing the dependency for.
+      - name: Enable pnpm via corepack
+        if: steps.db-check.outputs.skip != 'true'
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.2 --activate
+          pnpm --version
 
       - name: Install dependencies
         if: steps.db-check.outputs.skip != 'true'
