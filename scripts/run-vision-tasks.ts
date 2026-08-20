@@ -7,7 +7,7 @@
  *
  * Usage: PLAYWRIGHT_AVAILABLE=1 pnpm tsx scripts/run-vision-tasks.ts
  */
-import { getDueTasks, markTaskRunning, markTaskDone, markTaskFailed, getDb } from '../server/db.js';
+import { getDueTasks, markTaskRunning, markTaskDone, markTaskFailed, getDb, describeDbTlsError } from '../server/db.js';
 import { runVisionResearchLead, runVisionFreeform } from '../server/agents/browser-vision.js';
 
 const VISION_RUNNERS: Record<string, (task: any, db: any) => Promise<unknown>> = {
@@ -45,6 +45,8 @@ async function main() {
 }
 
 main().catch(err => {
+  const tlsHint = describeDbTlsError(err);
+  if (tlsHint) console.error(`::error::${tlsHint}`);
   console.error('run-vision-tasks failed:', err);
   process.exit(1);
 });

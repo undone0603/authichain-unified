@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { eq, desc, and, or, gte, lte, isNull, like, sql, SQL } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import tls from "node:tls";
 import {
   users,
   products,
@@ -53,10 +54,30 @@ import { ENV } from './_core/env';
 import { SEGMENT_PRIORS } from './_core/bayesian';
 import { bayesianPriors, scheduledJobRuns } from '../drizzle/schema';
 
-// Supabase's Transaction Mode pooler (port 6543) chains through its own root CA
-// which is not in Node.js's default trust store.  We pin it explicitly so that
-// pg's SSL verification succeeds without disabling rejectUnauthorized.
-// Override via the SUPABASE_POOLER_CA env var to rotate without a code deploy.
+// Supabase's Transaction Mode pooler (port 6543) may chain through a root CA
+// that is not in Node.js's default trust store, so we allow an extra CA to be
+// supplied. Set SUPABASE_POOLER_CA to the certificate from the Supabase
+// dashboard (Project Settings → Database → SSL configuration) to rotate without
+// a code deploy.
+//
+// Two things this deliberately does NOT do:
+//
+//  1. It does not *replace* the trust store. Passing `ssl: { ca }` with a single
+//     certificate makes that certificate the only trusted root, so a pooler
+//     presenting an ordinary publicly-rooted chain fails with
+//     SELF_SIGNED_CERT_IN_CHAIN. We concatenate onto tls.rootCertificates
+//     instead, so both a public chain and a pinned private root verify.
+//  2. It does not fall back to rejectUnauthorized:false when verification
+//     fails. An unverified TLS session still carries the database password;
+//     silently downgrading would turn a loud failure into a quiet one.
+//
+// The default below is the Entrust Root CA (2006). It is almost certainly not
+// what the pooler presents — it was committed as a placeholder alongside the
+// comment "Replace this value with the cert from your Supabase project's SSL
+// settings if the connection fails," and nothing ever replaced it, because
+// until 2026-08-20 no CI job survived long enough to open a connection. It is
+// retained only so that any environment where it does verify keeps working;
+// it also expires 2026-11-27, after which it is inert.
 const SUPABASE_POOLER_CA_DEFAULT = `-----BEGIN CERTIFICATE-----
 MIIEkTCCA3mgAwIBAgIERWtQVDANBgkqhkiG9w0BAQUFADCBsDELMAkGA1UEBhMC
 VVMxFjAUBgNVBAoTDUVudHJ1c3QsIEluYy4xOTA3BgNVBAsTMHd3dy5lbnRydXN0
@@ -94,13 +115,42 @@ function buildPoolerConfig(url: string): ConstructorParameters<typeof Pool>[0] {
     const parsed = new URL(url);
     if (parsed.hostname.endsWith(".pooler.supabase.com")) {
       parsed.searchParams.delete("sslmode");
-      const ca = ENV.supabasePoolerCa || SUPABASE_POOLER_CA_DEFAULT;
+      const extra = ENV.supabasePoolerCa || SUPABASE_POOLER_CA_DEFAULT;
+      const ca = [...tls.rootCertificates, extra];
       return { connectionString: parsed.toString(), ssl: { ca } };
     }
   } catch {
     // URL parsing failed — fall through to plain config
   }
   return { connectionString: url };
+}
+
+/** Certificate-verification failures are a configuration problem with a known
+ *  remedy, but pg surfaces them as a bare OpenSSL code nested two `cause`
+ *  levels down inside a DrizzleQueryError. Surface the remedy instead. */
+const TLS_ERROR_CODES = new Set([
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "CERT_HAS_EXPIRED",
+]);
+
+export function describeDbTlsError(error: unknown): string | null {
+  let cursor: unknown = error;
+  for (let depth = 0; cursor && depth < 5; depth++) {
+    const code = (cursor as { code?: unknown }).code;
+    if (typeof code === "string" && TLS_ERROR_CODES.has(code)) {
+      return `Database TLS verification failed (${code}). The Supabase pooler is ` +
+        `presenting a certificate chain that neither Node's trust store nor the ` +
+        `configured SUPABASE_POOLER_CA can verify. Copy the certificate from ` +
+        `Supabase → Project Settings → Database → SSL configuration into the ` +
+        `SUPABASE_POOLER_CA secret. Do not work around this by disabling ` +
+        `certificate verification: the connection carries the database password.`;
+    }
+    cursor = (cursor as { cause?: unknown }).cause;
+  }
+  return null;
 }
 
 export async function getDb() {
