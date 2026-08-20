@@ -53,8 +53,55 @@ import { ENV } from './_core/env';
 import { SEGMENT_PRIORS } from './_core/bayesian';
 import { bayesianPriors, scheduledJobRuns } from '../drizzle/schema';
 
+// Supabase's Transaction Mode pooler (port 6543) chains through its own root CA
+// which is not in Node.js's default trust store.  We pin it explicitly so that
+// pg's SSL verification succeeds without disabling rejectUnauthorized.
+// Override via the SUPABASE_POOLER_CA env var to rotate without a code deploy.
+const SUPABASE_POOLER_CA_DEFAULT = `-----BEGIN CERTIFICATE-----
+MIIEkTCCA3mgAwIBAgIERWtQVDANBgkqhkiG9w0BAQUFADCBsDELMAkGA1UEBhMC
+VVMxFjAUBgNVBAoTDUVudHJ1c3QsIEluYy4xOTA3BgNVBAsTMHd3dy5lbnRydXN0
+Lm5ldC9DUFMgaXMgaW5jb3Jwb3JhdGVkIGJ5IHJlZmVyZW5jZTEfMB0GA1UECxMW
+KGMpIDIwMDYgRW50cnVzdCwgSW5jLjEtMCsGA1UEAxMkRW50cnVzdCBSb290IENl
+cnRpZmljYXRpb24gQXV0aG9yaXR5MB4XDTA2MTEyNzIwMjM0MloXDTI2MTEyNzIw
+NTM0MlowgbAxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1FbnRydXN0LCBJbmMuMTkw
+NwYDVQQLEzB3d3cuZW50cnVzdC5uZXQvQ1BTIGlzIGluY29ycG9yYXRlZCBieSBy
+ZWZlcmVuY2UxHzAdBgNVBAsTFihjKSAyMDA2IEVudHJ1c3QsIEluYy4xLTArBgNV
+BAMTJEVudHJ1c3QgUm9vdCBDZXJ0aWZpY2F0aW9uIEF1dGhvcml0eTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBALaVtkNC+sZtKm9I35RMOVcF7sN5EUFo
+Nu3s/poBj6E4KPz3EEZmLk0eGrEaTsbRwJWIsMn/MYszA9u3g3s+IIRe7bJWKKf4
+4LlAcTfFy0cOlypowCKVYhXbR9n10Cv/gkvJrT7eTNuQgFA/CYqEAOwwCj0Yzfv9
+KlmaI5UXLEWeH25DeW0MXJj+SKfFI0dcXv1u5x609mhF0YaDW6KKjbHjKYD+JXGIr
+b68j6xSlkuqUY3kEzEZ6E5Nn9uss2rVvDlUccp6en+Q3X0dgNmBu1kmwhH+5pPi9
+4DkZfs0Nw4pgHBNrziGLp5/V6+eF67rHMsoIV+2HNjnogQi+dPa2MsCAwEAAaOBs
+DCBrTAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zArBgNVHRAEJDAigA
+8yMDA2MTEyNzIwMjM0MlqBDzIwMjYxMTI3MjA1MzQyWjAfBgNVHSMEGDAWgBRokO
+RnpKZTgMeGZqTx90tD+4S9bTAdBgNVHQ4EFgQUaJDkZ6SmU4DHhmak8fdLQ/uEvW0
+wHQYJKoZIhvZ9B0EABBAwDhsIVjcuMTo0LjADAgSQMA0GCSqGSIb3DQEBBQUAA4IB
+AQCT1DCw1wMgKtD5Y+iRDAUgqV8ZyntyTtSx29CW+1RaGSwMCPeyvIWonX9tO1Kz
+Ktvn1ISMY/YPyyYBkVBs9F8U4pN0wBOeMDpQ47RgxRzwIkSNcUesyBrJ6ZuaAGAT
+/3B+XxFNSRuzFVJ7yVTav52Vr2ua2J7p8eRDjeIRRDq/r72DQnNSi6q7pynP9WQc
+Ck3RvKqsnyrQ/39/2n3qse0wJcGE2jTSW3iDVuycNsMm4hH2Z0kdkquM++v/eu6F
+SqdQgPCnXEqULl8FmTxSQeDNtGPPAUO6nIPcj2A781q0tHuu2guQOHXvgR1m0vdX
+cDazv/wor3ElhVsT/h5/WrQ8
+-----END CERTIFICATE-----`;
+
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
+/** Strip `sslmode=` from a postgres URL and pin the Supabase pooler CA when the
+ *  host is a Supabase Transaction Mode pooler (*.pooler.supabase.com). */
+function buildPoolerConfig(url: string): ConstructorParameters<typeof Pool>[0] {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.endsWith(".pooler.supabase.com")) {
+      parsed.searchParams.delete("sslmode");
+      const ca = ENV.supabasePoolerCa || SUPABASE_POOLER_CA_DEFAULT;
+      return { connectionString: parsed.toString(), ssl: { ca } };
+    }
+  } catch {
+    // URL parsing failed — fall through to plain config
+  }
+  return { connectionString: url };
+}
 
 export async function getDb() {
   if (_db) return _db;
@@ -64,9 +111,7 @@ export async function getDb() {
   }
 
   try {
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
+    const pool = new Pool(buildPoolerConfig(process.env.DATABASE_URL));
     _db = drizzle(pool);
     return _db;
   } catch (error) {
