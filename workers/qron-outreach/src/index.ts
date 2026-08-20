@@ -563,7 +563,7 @@ export async function sendViaResend(email: Email, env: any): Promise<boolean> {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `******`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         to: [email.to],
