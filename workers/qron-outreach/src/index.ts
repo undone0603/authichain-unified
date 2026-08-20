@@ -564,6 +564,7 @@ export async function sendViaResend(email: Email, env: any): Promise<boolean> {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         to: [email.to],
