@@ -3,6 +3,7 @@ import { logActivity, getDb, enqueueTask } from '../db.js';
 import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
+import type { VerificationSource } from '../outreach/send-guard.js';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 const MAX_PAGE_CHARS = 8_000;
@@ -124,6 +125,8 @@ Return JSON:
 // Visits a lead's company website and enriches the lead record before outreach.
 export interface BrowseResearchLeadPayload {
   leadEmail: string;
+  /** Provenance from lead discovery; forwarded unchanged to send-guard. */
+  verificationSource?: VerificationSource;
   leadOrg: string;
   leadName?: string;
   leadTitle?: string;
@@ -176,6 +179,7 @@ Focus on angles relevant to blockchain product authentication and anti-counterfe
       leadOrg:   payload.leadOrg,
       leadTitle: payload.leadTitle,
       startUrl,
+      verificationSource: payload.verificationSource,
     });
 
     await logActivity({
@@ -235,6 +239,7 @@ Return JSON: { "summary": "...", "hookSentence": "one-sentence opener for a cold
     leadOrg: payload.leadOrg,
     leadTitle: payload.leadTitle,
     researchHook: hookSentence,
+    verificationSource: payload.verificationSource,
   });
 
   await logActivity({
