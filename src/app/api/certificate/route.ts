@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { onCertificateMint } from '../../../../server/revenue-engine/loop';
+import { isBrandFeatureEnabled } from '../../../../shared/brands/config';
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,6 +22,9 @@ export async function POST(req: NextRequest) {
 
     if (!product_id || !seal_id || !brand) {
       return NextResponse.json({ error: 'product_id, seal_id, and brand are required' }, { status: 400 });
+    }
+    if (!isBrandFeatureEnabled(brand, 'enable_certificates')) {
+      return NextResponse.json({ error: 'Certificates are not enabled for this brand' }, { status: 403 });
     }
 
     const rarity_score = computeRarity(rarity_input);
