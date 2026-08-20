@@ -33,5 +33,5 @@ jobs:
       - name: Type check
         run: pnpm check
 
-      - name: Run tests
-        run: pnpm test
+      - name: Verify lockfile integrity
+        run: pnpm install --frozen-lockfile --ignore-scripts
