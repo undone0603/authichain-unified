@@ -3,8 +3,9 @@
  * recovery) and the win-back campaign (re-engage cancelled customers) in one
  * scheduled pass. Registered in vercel.json.
  *
- * Auth: Vercel Cron sends GET with `Authorization: Bearer <CRON_SECRET>`. An
- * `x-internal-secret` header is also accepted for manual/internal triggers.
+ * Auth: requires `Authorization: Bearer <CRON_SECRET>`. (enforced via
+ * `isCronAuthorized`). Requests without a valid ****** are rejected
+ * with 401.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
