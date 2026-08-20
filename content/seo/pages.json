@@ -4294,5 +4294,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eu-digital-product-passport-toys",
+    "keyword": "eu digital product passport toys",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Toys | AuthiChain",
+    "metaDescription": "Regulation (EU) 2025/2509 requires a Digital Product Passport for every toy sold in the EU, replacing the paper Declaration of Conformity, mandatory from 1.",
+    "h1": "EU Digital Product Passport Toys",
+    "bodyHtml": "<p>Regulation (EU) 2025/2509 requires a Digital Product Passport for every toy sold in the EU, replacing the paper Declaration of Conformity, mandatory from 1 August 2030 — AuthiChain issues that record as a signed Verifiable Credential, the same format already used for battery and textile passports.</p><h2>Why AuthiChain</h2><ul><li>The toy DPP’s technical format is not published yet — the Commission still owes implementing acts defining the QR code and required fields, so the record structure AuthiChain issues for other categories carries over directly once those specifics land</li><li>Safety and compliance data map to a signed W3C Verifiable Credential, letting a customs authority or retailer verify a toy without contacting the manufacturer</li><li>The regulation entered into force in December 2025 with the DPP mandate not landing until 1 August 2030 — years of runway to pilot a passport before it is required across a catalogue, not a deadline due tomorrow</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can I generate a toy DPP QR code today?</h3><p>No — the Commission has not yet published the implementing acts defining the toy DPP’s technical format, and the mandate itself does not take effect until 1 August 2030.</p><h3>What does the toy DPP replace?</h3><p>The paper EU Declaration of Conformity — the DPP becomes the digital record customs and market-surveillance authorities check instead.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Toys",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Regulation (EU) 2025/2509 requires a Digital Product Passport for every toy sold in the EU, replacing the paper Declaration of Conformity, mandatory from 1 August 2030 — AuthiChain issues that record as a signed Verifiable Credential, the same format already used for battery and textile passports.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-toys"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Toys",
+              "item": "https://authichain.com/p/eu-digital-product-passport-toys"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can I generate a toy DPP QR code today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the Commission has not yet published the implementing acts defining the toy DPP’s technical format, and the mandate itself does not take effect until 1 August 2030."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does the toy DPP replace?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The paper EU Declaration of Conformity — the DPP becomes the digital record customs and market-surveillance authorities check instead."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "digital-product-passport-verified-economic-operator-registration",
+    "keyword": "digital product passport verified economic operator registration",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Digital Product Passport Verified Economic | AuthiChain",
+    "metaDescription": "Commission Implementing Regulation (EU) 2026/1778 took effect 6 August 2026 and applies to every DPP category at once: before a business can register a.",
+    "h1": "Digital Product Passport Verified Economic Operator Registration",
+    "bodyHtml": "<p>Commission Implementing Regulation (EU) 2026/1778 took effect 6 August 2026 and applies to every DPP category at once: before a business can register a single passport, it has to complete an eIDAS identity check and become a “verified economic operator” in the EU’s central registry.</p><h2>Why AuthiChain</h2><ul><li>The registry itself opened 20 July 2026 with a public API, a separate testing environment, and technical documentation — a production system with a helpdesk, not a beta</li><li>Verified-operator status carries no product-category deadline of its own; it sits upstream of every delegated act, so a brand shipping batteries in 2027 or textiles later clears the same registration step first</li><li>AuthiChain issues each record as a W3C Verifiable Credential built to resolve at a permanent URL, matching the registry’s requirement that a passport stay retrievable without authentication</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Do we need to register before our product category has a delegated act?</h3><p>Yes, eventually — verified-operator registration has no category deadline of its own; it is a one-time identity step ahead of whichever delegated act applies to you first. Batteries, mandatory from 18 February 2027, is currently the earliest.</p><h3>What does the eIDAS check verify?</h3><p>That the entity registering passports is who it claims to be, using the EU’s electronic identification framework. Implementing Regulation 2026/1778 sets the access-management and verification rules for it.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Digital Product Passport Verified Economic Operator Registration",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Commission Implementing Regulation (EU) 2026/1778 took effect 6 August 2026 and applies to every DPP category at once: before a business can register a single passport, it has to complete an eIDAS identity check and become a “verified economic operator” in the EU’s central registry.",
+          "url": "https://authichain.com/p/digital-product-passport-verified-economic-operator-registration"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Digital Product Passport Verified Economic Operator Registration",
+              "item": "https://authichain.com/p/digital-product-passport-verified-economic-operator-registration"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do we need to register before our product category has a delegated act?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, eventually — verified-operator registration has no category deadline of its own; it is a one-time identity step ahead of whichever delegated act applies to you first. Batteries, mandatory from 18 February 2027, is currently the earliest."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does the eIDAS check verify?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "That the entity registering passports is who it claims to be, using the EU’s electronic identification framework. Implementing Regulation 2026/1778 sets the access-management and verification rules for it."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dscsa-small-dispenser-compliance-deadline-2026",
+    "keyword": "dscsa small dispenser compliance deadline 2026",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DSCSA Small Dispenser Compliance Deadline 2026 | AuthiChain",
+    "metaDescription": "Small dispensers — pharmacies with 25 or fewer full-time pharmacists or pharmacy technicians — have until 27 November 2026 before FDA enforcement discretion.",
+    "h1": "DSCSA Small Dispenser Compliance Deadline 2026",
+    "bodyHtml": "<p>Small dispensers — pharmacies with 25 or fewer full-time pharmacists or pharmacy technicians — have until 27 November 2026 before FDA enforcement discretion for DSCSA’s electronic, interoperable data-exchange requirements ends; the exemption FDA granted in June narrows to that one group and that one date.</p><h2>Why AuthiChain</h2><ul><li>Wholesale distributors have been under enforcement since 27 August 2025 and larger dispensers since 27 November 2025 — small dispensers are the last group still inside the grace window, not a general delay</li><li>FDA has stated the November 2026 date will not move again, so a record system that is not verifying transaction history electronically by then is the gap an inspection finds</li><li>The same Ed25519-signed, unit-level record AuthiChain issues for DSCSA traceability is what a small dispensary checks at receiving — no separate system for a 25-pharmacist pharmacy versus a hospital network</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does this exemption apply to my pharmacy?</h3><p>Only to dispensers with 25 or fewer full-time employees licensed as pharmacists or qualified as pharmacy technicians. Larger dispensers have been under enforcement since 27 November 2025.</p><h3>Will FDA extend the November 2026 deadline again?</h3><p>FDA has stated publicly there will be no further extensions to the stabilization period — 27 November 2026 is the date to plan against.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DSCSA Small Dispenser Compliance Deadline 2026",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Small dispensers — pharmacies with 25 or fewer full-time pharmacists or pharmacy technicians — have until 27 November 2026 before FDA enforcement discretion for DSCSA’s electronic, interoperable data-exchange requirements ends; the exemption FDA granted in June narrows to that one group and that one date.",
+          "url": "https://authichain.com/p/dscsa-small-dispenser-compliance-deadline-2026"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSCSA Small Dispenser Compliance Deadline 2026",
+              "item": "https://authichain.com/p/dscsa-small-dispenser-compliance-deadline-2026"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does this exemption apply to my pharmacy?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Only to dispensers with 25 or fewer full-time employees licensed as pharmacists or qualified as pharmacy technicians. Larger dispensers have been under enforcement since 27 November 2025."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Will FDA extend the November 2026 deadline again?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "FDA has stated publicly there will be no further extensions to the stabilization period — 27 November 2026 is the date to plan against."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "sd-jwt-vs-data-integrity-proof-verifiable-credentials",
+    "keyword": "sd-jwt vs data integrity proof verifiable credentials",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "SD-JWT Vs Data Integrity Proof Verifiable | AuthiChain",
+    "metaDescription": "W3C’s VC-JOSE-COSE specification standardizes three ways to secure a Verifiable Credential — JOSE/JWS, SD-JWT, and COSE — and AuthiChain’s protocol spec uses.",
+    "h1": "SD-JWT Vs Data Integrity Proof Verifiable Credentials",
+    "bodyHtml": "<p>W3C’s VC-JOSE-COSE specification standardizes three ways to secure a Verifiable Credential — JOSE/JWS, SD-JWT, and COSE — and AuthiChain’s protocol spec uses none of them: it signs with a Data Integrity proof (Ed25519Signature2020) over JCS-canonicalized JSON instead.</p><h2>Why AuthiChain</h2><ul><li>SD-JWT adds selective disclosure — a holder reveals some claims and withholds others from the same signed credential — a feature a provenance record for a physical item does not need, because an item’s identity and history are not secrets to partially hide</li><li>A Data Integrity proof signs the record’s JSON structure directly; JOSE and COSE wrap the credential inside a JWT or CBOR envelope first — both are valid, W3C-conformant ways to secure the same VC Data Model 2.0 payload</li><li>protocol/SPEC.md §3.2 requires RFC 8785 (JCS) canonicalization specifically so two independent verifiers derive byte-identical input from the same record — a property any of the three securing mechanisms could satisfy, but only Data Integrity is what is actually implemented today</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is a Data Integrity proof less standard than SD-JWT?</h3><p>No — both are W3C-defined ways to secure the same VC Data Model 2.0 credential. VC-JOSE-COSE and Data Integrity are parallel securing mechanisms, not a newer one replacing an older one.</p><h3>Does AuthiChain support SD-JWT credentials?</h3><p>Not today — the reference verifier implements Ed25519 Data Integrity proofs only. Selective disclosure matters more for identity credentials than for a provenance record meant to be checked in full.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — SD-JWT Vs Data Integrity Proof Verifiable Credentials",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "W3C’s VC-JOSE-COSE specification standardizes three ways to secure a Verifiable Credential — JOSE/JWS, SD-JWT, and COSE — and AuthiChain’s protocol spec uses none of them: it signs with a Data Integrity proof (Ed25519Signature2020) over JCS-canonicalized JSON instead.",
+          "url": "https://authichain.com/p/sd-jwt-vs-data-integrity-proof-verifiable-credentials"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "SD-JWT Vs Data Integrity Proof Verifiable Credentials",
+              "item": "https://authichain.com/p/sd-jwt-vs-data-integrity-proof-verifiable-credentials"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is a Data Integrity proof less standard than SD-JWT?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — both are W3C-defined ways to secure the same VC Data Model 2.0 credential. VC-JOSE-COSE and Data Integrity are parallel securing mechanisms, not a newer one replacing an older one."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain support SD-JWT credentials?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not today — the reference verifier implements Ed25519 Data Integrity proofs only. Selective disclosure matters more for identity credentials than for a provenance record meant to be checked in full."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "battery-passport-carbon-footprint-declaration-delayed",
+    "keyword": "battery passport carbon footprint declaration delayed",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Battery Passport Carbon Footprint Declaration | AuthiChain",
+    "metaDescription": "The EU battery passport’s 18 February 2027 deadline has not moved, but the carbon footprint methodology it depends on has: the delegated act needed to.",
+    "h1": "Battery Passport Carbon Footprint Declaration Delayed",
+    "bodyHtml": "<p>The EU battery passport’s 18 February 2027 deadline has not moved, but the carbon footprint methodology it depends on has: the delegated act needed to calculate and declare a battery’s carbon footprint was targeted for February 2025 and, as of this writing, is still in draft.</p><h2>Why AuthiChain</h2><ul><li>The passport’s other required fields — material composition, state-of-health, recycled content — do not wait on the carbon footprint methodology and can be structured into the signed record now</li><li>The methodology follows the Product Environmental Footprint approach under ISO 14067, so a record built to receive a PEF-style carbon figure does not need re-architecting once the delegated act lands — only the number changes</li><li>A delayed methodology delegated act does not delay the underlying implementing act for the declaration format either — both are still pending, and downstream deadlines move with them</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the carbon footprint delay push back the February 2027 battery passport deadline?</h3><p>Not on its own — 18 February 2027 remains the mandate date for the passport itself. The carbon footprint declaration is one required field inside it, and its methodology is what is delayed.</p><h3>What should we do while the methodology is still in draft?</h3><p>Structure the passport record now with the fields that are settled — composition, state-of-health, recycled content — and add the carbon footprint figure once the delegated act specifies how to calculate it.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Battery Passport Carbon Footprint Declaration Delayed",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU battery passport’s 18 February 2027 deadline has not moved, but the carbon footprint methodology it depends on has: the delegated act needed to calculate and declare a battery’s carbon footprint was targeted for February 2025 and, as of this writing, is still in draft.",
+          "url": "https://authichain.com/p/battery-passport-carbon-footprint-declaration-delayed"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Battery Passport Carbon Footprint Declaration Delayed",
+              "item": "https://authichain.com/p/battery-passport-carbon-footprint-declaration-delayed"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the carbon footprint delay push back the February 2027 battery passport deadline?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not on its own — 18 February 2027 remains the mandate date for the passport itself. The carbon footprint declaration is one required field inside it, and its methodology is what is delayed."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What should we do while the methodology is still in draft?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Structure the passport record now with the fields that are settled — composition, state-of-health, recycled content — and add the carbon footprint figure once the delegated act specifies how to calculate it."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
