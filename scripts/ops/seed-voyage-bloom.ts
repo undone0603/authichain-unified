@@ -1,4 +1,4 @@
-import { generateLivingQR } from './src/lib/hf-generation';
+import { generateLivingQR } from '../../src/lib/hf-generation';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 dotenv.config();
