@@ -68,6 +68,25 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     // Separate Expo mobile app lives here with its own toolchain.
     'mobile/**',
+    // Independently managed applications and operational bundles have their own
+    // toolchains; root lint covers only the deployable Next/server surface.
+    '.ab-testing/**',
+    'agentz/**',
+    'api/**',
+    'apps/**',
+    'artifacts/**',
+    'client/**',
+    'contracts/**',
+    'content/**',
+    'docs/archive/**',
+    'knowledge/**',
+    'libs/**',
+    'mcp/**',
+    'packages/**',
+    'protocol/**',
+    'scripts/**',
+    'worker/**',
+    'worker-app/**',
     // Standalone Cloudflare Workers: each has its own toolchain/lockfile and
     // ships large single-file bundles (src/index.ts up to ~380 KB) that blow
     // ESLint's parser stack. They are deployed via `wrangler deploy`, not the
