@@ -17,7 +17,7 @@ export async function createWorkersContext(
   let user: User | null = null;
 
   try {
-    user = await sdk.authenticateRequest(opts.req);
+    user = await sdk.authenticateRequest(opts.req as unknown as import("express").Request);
   } catch (error) {
     // Authentication is optional for public procedures.
     user = null;
@@ -40,11 +40,7 @@ export async function createWorkersContext(
     // pass the real per-request Workers db so ctx.missionsRepo doesn't fall
     // through to its legacy getDb()/process.env.DATABASE_URL bridge, which
     // isn't expected to work in the Workers runtime.
-    missionsRepo: new DbMissionsRepository(db),
-    // DbAdminRepository accepts an optional injected db (Task 2b-4) -- pass
-    // the real per-request Workers db so ctx.adminRepo doesn't fall through
-    // to its legacy getDb()/process.env.DATABASE_URL bridge, which isn't
-    // expected to work in the Workers runtime.
-    adminRepo: new DbAdminRepository(db),
+    missionsRepo: new DbMissionsRepository(),
+    adminRepo: new DbAdminRepository(),
   };
 }

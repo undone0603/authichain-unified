@@ -7,9 +7,12 @@ import { DbMissionsRepository } from "../missions/db-repository";
 import { DbAdminRepository } from "../admin/db-repository";
 
 export type TrpcContext = {
-  req: CreateExpressContextOptions["req"];
-  res: CreateExpressContextOptions["res"];
+  req?: CreateExpressContextOptions["req"];
+  res?: CreateExpressContextOptions["res"];
   user: User | null;
+  db?: unknown;
+  secure?: boolean;
+  setCookieHeader?: (value: string) => void;
   missionsRepo?: IMissionsRepository;
   adminRepo?: IAdminRepository;
 };
