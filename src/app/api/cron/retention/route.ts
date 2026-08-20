@@ -10,20 +10,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runDunningEscalation } from '@/lib/dunning';
 import { runWinbackCampaign } from '@/lib/winback';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function authorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET || process.env.INTERNAL_API_SECRET;
-  if (!secret) return true; // no secret configured → allow (dev)
-  const bearer = req.headers.get('authorization')?.replace('Bearer ', '');
-  const internal = req.headers.get('x-internal-secret');
-  return bearer === secret || internal === secret;
-}
-
 export async function GET(req: NextRequest) {
-  if (!authorized(req)) {
+  if (!isCronAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
