@@ -35,22 +35,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
-        with: { version: '10.28.2' }
+        with: { version: "10.28.2" }
       - uses: actions/setup-node@v7
-        with: { node-version: '22', cache: pnpm }
+        with: { node-version: "22", cache: pnpm }
       - run: pnpm install --no-frozen-lockfile
 
       - name: Score opportunities with AI
         run: pnpm exec tsx scripts/score-opportunities.ts
         env:
-          OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
-          GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
-          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
-          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
-          HUGGINGFACE_API_KEY:  ${{ secrets.HUGGINGFACE_API_KEY }}
-          LOCAL_MODEL_URL:      ${{ secrets.LOCAL_MODEL_URL }}
-          MISTRAL_API_KEY:      ${{ secrets.MISTRAL_API_KEY }}
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+          LOCAL_MODEL_URL: ${{ secrets.LOCAL_MODEL_URL }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+          GOVCHAIN_URL: ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}

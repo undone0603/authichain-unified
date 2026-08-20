@@ -5,10 +5,10 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx watch server/_core/index.ts",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "NODE_ENV=production node dist/index.js",
     "next:dev": "next dev",
-    "next:build": "next build",
+    "next:build": "next build --webpack",
     "next:start": "next start",
     "check": "tsc --noEmit",
     "lint": "eslint .",
@@ -19,7 +19,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "sync-secrets": "bash scripts/sync-secrets.sh",
-    "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .",
+    "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .github package.json next.config.js postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts",
     "lint-staged": "lint-staged",
     "prepare": "husky install"
   },

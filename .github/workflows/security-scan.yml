@@ -9,7 +9,7 @@ on:
       - main
   pull_request:
   schedule:
-    - cron: '0 12 * * 1' # Mondays 12:00 UTC
+    - cron: "0 12 * * 1" # Mondays 12:00 UTC
   workflow_dispatch:
 
 jobs:
