@@ -14,7 +14,10 @@ export default defineConfig({
       { find: "@/db", replacement: path.resolve(templateRoot, "src", "db") },
       { find: "@", replacement: path.resolve(templateRoot, "client", "src") },
       { find: "@shared", replacement: path.resolve(templateRoot, "shared") },
-      { find: "@assets", replacement: path.resolve(templateRoot, "attached_assets") },
+      {
+        find: "@assets",
+        replacement: path.resolve(templateRoot, "attached_assets"),
+      },
     ],
   },
   test: {

@@ -418,6 +418,12 @@ async function addBounced(env: any, email: string) {
 
 export async function handleBounceWebhook(request: Request, env: any): Promise<Response> {
   try {
+    const url = new URL(request.url);
+    const authToken = env.AUTH_TOKEN;
+    const isAuthenticated = !!authToken && (
+      timingSafeEqual(url.searchParams.get('key') ?? '', authToken)
+      || timingSafeEqual(request.headers.get('Authorization') ?? '', `Bearer ${authToken}`)
+    );
     const payload: any = await request.json();
     const eventType: string = payload?.type ?? '';
 
@@ -426,8 +432,10 @@ export async function handleBounceWebhook(request: Request, env: any): Promise<R
       const reason = eventType === 'email.bounced' ? 'bounced' : 'complained';
       for (const addr of recipients) {
         await addBounced(env, addr);
-        await guardrailSuppress(env, addr, reason, 'qron-outreach-webhook');
-        console.log(`Suppressed ${addr} (${eventType})`);
+        if (isAuthenticated) {
+          await guardrailSuppress(env, addr, reason, 'qron-outreach-webhook');
+          console.log(`Suppressed ${addr} (${eventType})`);
+        }
       }
     }
 
