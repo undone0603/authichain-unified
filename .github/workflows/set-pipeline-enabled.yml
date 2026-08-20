@@ -1,21 +1,52 @@
-name: Enable Autonomous Pipeline
+name: Configure Autonomous Pipeline
 
 on:
   workflow_dispatch:
+    inputs:
+      enabled:
+        description: "Enable live pipeline execution in the Vercel production runtime"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
-  set-secret:
+  configure-runtime:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - name: Set AUTONOMOUS_PIPELINE_ENABLED=true on Cloudflare Worker
+      - name: Install Vercel CLI
+        run: npm install --global vercel
+      - name: Set AUTONOMOUS_PIPELINE_ENABLED in Vercel production
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PIPELINE_ENABLED: ${{ inputs.enabled }}
         run: |
-          set -e
-          echo "true" | npx wrangler secret put AUTONOMOUS_PIPELINE_ENABLED
-          echo "✓ AUTONOMOUS_PIPELINE_ENABLED=true set"
+          set -euo pipefail
+          for required in VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_TOKEN; do
+            if [ -z "${!required}" ]; then
+              echo "::error::$required is required to configure the production runtime."
+              exit 1
+            fi
+          done
+
+          vercel env rm AUTONOMOUS_PIPELINE_ENABLED production --yes --token="$VERCEL_TOKEN" || true
+          printf '%s\n' "$PIPELINE_ENABLED" | vercel env add AUTONOMOUS_PIPELINE_ENABLED production --token="$VERCEL_TOKEN"
+
+          production_deployment_id="$(
+            curl --fail --silent --show-error \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&target=production&limit=1" |
+              jq --exit-status --raw-output '.deployments[0].uid // .deployments[0].id'
+          )"
+          if [ -z "$production_deployment_id" ] || [ "$production_deployment_id" = "null" ]; then
+            echo "::error::No existing Vercel production deployment is available to redeploy."
+            exit 1
+          fi
+
+          echo "Redeploying production deployment $production_deployment_id with the updated runtime configuration."
+          vercel redeploy "$production_deployment_id" --target production --token="$VERCEL_TOKEN"
+          echo "AUTONOMOUS_PIPELINE_ENABLED is active in the Vercel production runtime."
