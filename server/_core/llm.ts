@@ -362,7 +362,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const isJsonObject = resolvedFormat?.type === "json_object";
 
   // Convert messages
-  let { system, anthropicMessages } = convertMessagesToAnthropic(messages);
+  const convertedMessages = convertMessagesToAnthropic(messages);
+  let { system } = convertedMessages;
+  const { anthropicMessages } = convertedMessages;
 
   // JSON object mode: append system instruction
   if (isJsonObject) {
