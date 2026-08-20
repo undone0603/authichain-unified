@@ -109,7 +109,28 @@ jobs:
           esac
 
           url="${APP_URL}${path}"
+
+          # --fail-with-body writes the body to /tmp/resp.txt and exits 22 on a
+          # 4xx/5xx. Under `set -e` that killed the step before anything printed
+          # it, so an activation attempt reported only "exit code 22" and the
+          # server's own explanation was discarded — the first live dispatch
+          # (run 32337392873) surfaced a bare 401 with no indication of why.
+          # Capture the status instead and print what the endpoint said.
+          set +e
           code=$(curl --fail-with-body --silent --show-error --output /tmp/resp.txt \
             --write-out '%{http_code}' --request "$method" "$url" \
             --header "$auth_header")
+          status=$?
+          set -e
+
+          if [ "$status" -ne 0 ]; then
+            echo "::error::$method $path returned HTTP ${code:-000}"
+            if [ "${code:-000}" = "401" ]; then
+              echo "::error::CRON_SECRET here does not match CRON_SECRET in the deployed environment (or is unset there). The endpoint compares the bearer token against process.env.CRON_SECRET and 401s when it is absent or different. Reconcile the two, then re-dispatch."
+            fi
+            echo "Response body:"
+            cat /tmp/resp.txt || true
+            exit "$status"
+          fi
+
           echo "OK [$code] $method $path"
