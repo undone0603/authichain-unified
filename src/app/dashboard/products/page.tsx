@@ -12,7 +12,7 @@ import Link from 'next/link';
 const EMPTY_FORM = { name: '', brand: '', category: '', description: '', imageUrl: '', serialNumber: '', batchNumber: '' };
 
 export default function ProductsPage() {
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [batchId, setBatchId] = useState('');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [showNewProduct, setShowNewProduct] = useState(false);

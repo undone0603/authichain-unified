@@ -5,7 +5,7 @@ import { TRPCError } from "@trpc/server";
 import { generateProductAssets, retryFailedAssets } from "../asset-service";
 import type { Product } from "../../src/db/schema";
 
-async function getOwnedProduct(productId: number, userId: number): Promise<Product> {
+async function getOwnedProduct(productId: string, userId: number): Promise<Product> {
   const product = await db.getProductById(productId);
   if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
   if (product.userId !== userId) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
@@ -16,7 +16,7 @@ export const productsRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     return await db.getUserProducts(ctx.user.id);
   }),
-  getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ ctx, input }) => {
+  getById: protectedProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ ctx, input }) => {
     return await getOwnedProduct(input.id, ctx.user.id);
   }),
   create: protectedProcedure.input(z.object({
@@ -36,7 +36,7 @@ export const productsRouter = router({
   }),
 
   generateAssets: protectedProcedure
-    .input(z.object({ productId: z.number() }))
+    .input(z.object({ productId: z.string().uuid() }))
     .mutation(async ({ input }) => {
       await generateProductAssets(input.productId);
       return { success: true };

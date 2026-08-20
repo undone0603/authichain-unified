@@ -82,7 +82,7 @@ export async function provisionTenant(data: {
 }
 
 // ─── Report Usage to Stripe ──────────────────────────────────────────────────
-export async function reportUsageToStripe(tenantId: number, endpoint: string, quantity: number) {
+export async function reportUsageToStripe(tenantId: string, endpoint: string, quantity: number) {
   const db = await getDb();
   if (!db) return;
 
@@ -101,7 +101,6 @@ export async function reportUsageToStripe(tenantId: number, endpoint: string, qu
     endpoint,
     callCount: quantity,
     cost: (pricePerCall * quantity).toFixed(4),
-    clientId: tenantId,
   }).onConflictDoUpdate({
     target: apiUsageDaily.id,
     set: {
@@ -112,7 +111,7 @@ export async function reportUsageToStripe(tenantId: number, endpoint: string, qu
 }
 
 // ─── Get Tenant Billing Status ───────────────────────────────────────────────
-export async function getTenantBillingStatus(tenantId: number) {
+export async function getTenantBillingStatus(tenantId: string) {
   const db = await getDb();
   if (!db) return null;
 

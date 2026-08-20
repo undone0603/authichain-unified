@@ -41,7 +41,7 @@ export const autopilotRouter = router({
     return await db.getRecentDecisions(input.limit);
   }),
   overrideDecision: adminProcedure.input(z.object({
-    decisionId: z.number(),
+    decisionId: z.string().uuid(),
     reason: z.string().max(500),
   })).mutation(async ({ ctx, input }) => {
     const dbInstance = await db.getDb();
