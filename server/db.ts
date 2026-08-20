@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { eq, desc, and, or, gte, lte, isNull, like, sql, SQL } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { rootCertificates } from "tls";
 import {
   users,
   products,
@@ -56,6 +57,26 @@ import { bayesianPriors, scheduledJobRuns } from '../drizzle/schema';
 type DrizzleInstance = ReturnType<typeof drizzle>;
 let _db: DrizzleInstance | null = null;
 
+function poolConfig(databaseUrl: string) {
+  const url = new URL(databaseUrl);
+  const isSupabasePooler = url.hostname.endsWith(".pooler.supabase.com");
+
+  if (!isSupabasePooler) {
+    return { connectionString: databaseUrl };
+  }
+
+  // pg interprets sslmode itself. Remove it so the explicit verified TLS config
+  // below is not overwritten, while retaining connection options such as pgbouncer.
+  url.searchParams.delete("sslmode");
+  return {
+    connectionString: url.toString(),
+    ssl: {
+      ca: rootCertificates.join("\n"),
+      rejectUnauthorized: true,
+    },
+  };
+}
+
 export async function getDb() {
   if (_db) return _db;
 
@@ -65,7 +86,7 @@ export async function getDb() {
 
   try {
     const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      ...poolConfig(process.env.DATABASE_URL),
     });
     _db = drizzle(pool);
     return _db;

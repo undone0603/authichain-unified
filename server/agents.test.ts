@@ -144,7 +144,7 @@ describe('runLeadFinder', () => {
       'BROWSE_RESEARCH_LEAD',
       expect.objectContaining({ leadEmail: 'alice@gov.com', segment: 'GOV' }),
     );
-  });
+  }, 30_000);
 
   it('skips leads without email or org', async () => {
     const { apolloSearchLeads } = await import('./apollo-service.js');

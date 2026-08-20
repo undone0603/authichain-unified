@@ -8,17 +8,17 @@ on:
   schedule:
     # Mondays 13:00 UTC (09:00 EST) — lands before the outreach cadence so a
     # fresh video is live when prospects follow a link from an email.
-    - cron: '0 13 * * 1'
+    - cron: "0 13 * * 1"
   workflow_dispatch:
     inputs:
       topic:
-        description: 'Video topic (blank = next unused topic from the rotation)'
+        description: "Video topic (blank = next unused topic from the rotation)"
         required: false
         type: string
       dry_run:
-        description: 'Generate the script only — no render, no upload'
+        description: "Generate the script only — no render, no upload"
         required: false
-        default: 'true'
+        default: "true"
         type: boolean
 
 concurrency:
@@ -29,8 +29,8 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: '22'
-  PNPM_VERSION: '10.28.2'
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.28.2"
 
 jobs:
   produce:
@@ -47,9 +47,9 @@ jobs:
       - name: Check required secrets
         id: preflight
         env:
-          HEYGEN_API_KEY:          ${{ secrets.HEYGEN_API_KEY }}
-          YOUTUBE_CLIENT_ID:       ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET:   ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_QRON_REFRESH_TOKEN: ${{ secrets.YOUTUBE_QRON_REFRESH_TOKEN }}
         run: |
           missing=""
@@ -73,7 +73,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -81,16 +81,16 @@ jobs:
       - name: Generate script, render and publish
         run: pnpm exec tsx scripts/weekly-video.ts
         env:
-          TOPIC:      ${{ inputs.topic }}
+          TOPIC: ${{ inputs.topic }}
           # A scheduled run publishes; a manual run defaults to dry-run so the
           # script can be reviewed before spending render credits.
-          DRY_RUN:    ${{ github.event_name == 'schedule' && 'false' || (inputs.dry_run || 'true') }}
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || (inputs.dry_run || 'true') }}
           PUBLISH_OK: ${{ steps.preflight.outputs.publish }}
-          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          HEYGEN_API_KEY:            ${{ secrets.HEYGEN_API_KEY }}
-          YOUTUBE_CLIENT_ID:         ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET:     ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_QRON_REFRESH_TOKEN: ${{ secrets.YOUTUBE_QRON_REFRESH_TOKEN }}
-          YOUTUBE_QRON_CHANNEL_ID:   ${{ secrets.YOUTUBE_QRON_CHANNEL_ID || 'UCCm-myVgS90meDtrAtAuLqw' }}
-          OPENAI_API_KEY:            ${{ secrets.OPENAI_API_KEY }}
+          YOUTUBE_QRON_CHANNEL_ID: ${{ secrets.YOUTUBE_QRON_CHANNEL_ID || 'UCCm-myVgS90meDtrAtAuLqw' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

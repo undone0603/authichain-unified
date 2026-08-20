@@ -31,6 +31,9 @@ importers:
       '@clerk/themes':
         specifier: ^2.1.20
         version: 2.4.57(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@hono/trpc-server':
+        specifier: ^0.4.2
+        version: 0.4.2(@trpc/server@11.17.0(typescript@5.9.3))(hono@4.13.3)
       '@hubspot/api-client':
         specifier: ^13.5.0
         version: 13.5.0
@@ -208,6 +211,9 @@ importers:
       helmet:
         specifier: ^8.2.0
         version: 8.2.0
+      hono:
+        specifier: ^4.13.1
+        version: 4.13.3
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1460,6 +1466,13 @@ packages:
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
+
+  '@hono/trpc-server@0.4.2':
+    resolution: {integrity: sha512-3TDrc42CZLgcTFkXQba+y7JlRWRiyw1AqhLqztWyNS2IFT+3bHld0lxKdGBttCtGKHYx0505dM67RMazjhdZqw==}
+    engines: {node: '>=16.0.0'}
+    peerDependencies:
+      '@trpc/server': ^10.10.0 || >11.0.0-rc
+      hono: '>=4.0.0'
 
   '@hubspot/api-client@13.5.0':
     resolution: {integrity: sha512-zZ9ybOqudSgAZSow5dgYWRkslDPfqA2fWnERMqWQm6ASlM/XCFS6zoec0zD3d6OxeoLOfiovVo39gVpK+KWQ9Q==}
@@ -7146,6 +7159,10 @@ packages:
     resolution: {integrity: sha512-uyZtpnYxM9CmQ7QsQknM4zN8EftNqhON1qYeIKM0Se67CCEe2c44xyGURwB0axX2fBDu1dqHrHAc1hmNT8ITkw==}
     engines: {node: '>=16.9.0'}
 
+  hono@4.13.3:
+    resolution: {integrity: sha512-r8AO2mYHoLxSHkgafNeC/BXyb2vWRxD3jem4Ts+ptav8oTG5FIRifAjuJEmZI4bSvvc2ns0GxmIYiZnHqN3mMw==}
+    engines: {node: '>=16.9.0'}
+
   html-encoding-sniffer@3.0.0:
     resolution: {integrity: sha512-oWv4T4yJ52iKrufjnyZPkrN0CH3QnrUqdB6In1g5Fe1mia8GmF36gnfNySxoZtxD5+NmYw1EElVXiBk93UeskA==}
     engines: {node: '>=12'}
@@ -11341,6 +11358,11 @@ snapshots:
   '@hono/node-server@1.19.17(hono@4.12.26)':
     dependencies:
       hono: 4.12.26
+
+  '@hono/trpc-server@0.4.2(@trpc/server@11.17.0(typescript@5.9.3))(hono@4.13.3)':
+    dependencies:
+      '@trpc/server': 11.17.0(typescript@5.9.3)
+      hono: 4.13.3
 
   '@hubspot/api-client@13.5.0':
     dependencies:
@@ -18363,6 +18385,8 @@ snapshots:
       react-is: 16.13.1
 
   hono@4.12.26: {}
+
+  hono@4.13.3: {}
 
   html-encoding-sniffer@3.0.0:
     dependencies:

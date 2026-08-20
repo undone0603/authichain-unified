@@ -5,25 +5,25 @@ name: Schema Drift Check
 
 on:
   schedule:
-    - cron: '0 7 * * 1'
+    - cron: "0 7 * * 1"
   workflow_dispatch:
     inputs:
       strict:
-        description: 'Also fail on database columns the schema does not declare'
+        description: "Also fail on database columns the schema does not declare"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
   pull_request:
     paths:
-      - 'src/db/schema.ts'
-      - 'supabase/migrations/**'
+      - "src/db/schema.ts"
+      - "supabase/migrations/**"
 
 permissions:
   contents: read
 
 env:
-  NODE_VERSION: '22'
-  PNPM_VERSION: '10.28.2'
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.28.2"
 
 jobs:
   drift:
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       # `npm install --no-save pg@8` used to stand here, and it could never
       # succeed: this repo has no package-lock.json, so npm resolved the whole

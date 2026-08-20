@@ -2,6 +2,8 @@
 // Rate: 1 email per GH Actions trigger (every 4h). Cron removed — CF free plan limit hit.
 // Bounce history: April 2026 batch used guessed hello@ addresses → 73% bounce.
 // Current queue uses verified named contacts only.
+
+import { guardrailCheck, guardrailRecord, guardrailSuppress } from './guardrail-client';
 // KV stores: outreach_sent (sent list), outreach_bounced (bounce suppression list)
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -13,7 +15,7 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-interface Email {
+export interface Email {
   to: string;
   name: string;
   subject: string;
@@ -414,15 +416,17 @@ async function addBounced(env: any, email: string) {
 
 // ── Bounce webhook ────────────────────────────────────────────────────────────
 
-async function handleBounceWebhook(request: Request, env: any): Promise<Response> {
+export async function handleBounceWebhook(request: Request, env: any): Promise<Response> {
   try {
     const payload: any = await request.json();
     const eventType: string = payload?.type ?? '';
 
     if (eventType === 'email.bounced' || eventType === 'email.complained') {
       const recipients: string[] = payload?.data?.to ?? [];
+      const reason = eventType === 'email.bounced' ? 'bounced' : 'complained';
       for (const addr of recipients) {
         await addBounced(env, addr);
+        await guardrailSuppress(env, addr, reason, 'qron-outreach-webhook');
         console.log(`Suppressed ${addr} (${eventType})`);
       }
     }
@@ -544,12 +548,17 @@ async function sendAllDpp(env: any) {
   return { sent: results.filter(r => r.sent).length, failed: results.filter(r => !r.sent).length, results };
 }
 
-async function sendViaResend(email: Email, env: any): Promise<boolean> {
+export async function sendViaResend(email: Email, env: any): Promise<boolean> {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) {
     console.error('RESEND_API_KEY not set on qron-outreach worker');
     return false;
   }
+  const guardrail = await guardrailCheck(env, 'email.qron-outreach', {
+    recipient: email.to,
+  });
+  if (!guardrail.allowed) return false;
+
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -571,9 +580,23 @@ async function sendViaResend(email: Email, env: any): Promise<boolean> {
     });
     const result: any = await resp.json();
     const ok = resp.ok && !!result.id;
+    await guardrailRecord(env, {
+      channel: 'email.qron-outreach',
+      action: 'record',
+      allowed: ok,
+      reason: ok ? undefined : result.message ?? 'Resend rejected the email',
+      metadata: { recipient: email.to, resendId: result.id },
+    });
     console.log(`Email to ${email.to}: ${ok ? 'sent' : 'failed'} ${result.id ?? result.message ?? ''}`);
     return ok;
   } catch (e: any) {
+    await guardrailRecord(env, {
+      channel: 'email.qron-outreach',
+      action: 'record',
+      allowed: false,
+      reason: e.message,
+      metadata: { recipient: email.to },
+    });
     console.error(`Email error for ${email.to}:`, e.message);
     return false;
   }
