@@ -3,27 +3,21 @@
  * recovery) and the win-back campaign (re-engage cancelled customers) in one
  * scheduled pass. Registered in vercel.json.
  *
- * Auth: Vercel Cron sends GET with `Authorization: Bearer <CRON_SECRET>`. An
- * `x-internal-secret` header is also accepted for manual/internal triggers.
+ * Auth: requires `Authorization: Bearer <CRON_SECRET>`. (enforced via
+ * `isCronAuthorized`). Requests without a valid ****** are rejected
+ * with 401.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runDunningEscalation } from '@/lib/dunning';
 import { runWinbackCampaign } from '@/lib/winback';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function authorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET || process.env.INTERNAL_API_SECRET;
-  if (!secret) return true; // no secret configured → allow (dev)
-  const bearer = req.headers.get('authorization')?.replace('Bearer ', '');
-  const internal = req.headers.get('x-internal-secret');
-  return bearer === secret || internal === secret;
-}
-
 export async function GET(req: NextRequest) {
-  if (!authorized(req)) {
+  if (!isCronAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
