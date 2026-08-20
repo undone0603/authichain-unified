@@ -102,3 +102,14 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: pnpm tsx scripts/run-vision-tasks.ts
+
+      # A TLS failure reports only that the presented root is untrusted, never
+      # which root it was. The pooler hostname is inside a secret, so this is
+      # the only place the chain can be observed. Prints subjects and the root
+      # PEM; never the connection string.
+      - name: Diagnose database TLS chain
+        if: failure() && steps.db-check.outputs.skip != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_OPTIONS: --dns-result-order=ipv4first
+        run: node scripts/diagnose-db-tls.mjs
