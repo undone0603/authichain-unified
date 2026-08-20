@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createHash, randomUUID } from 'crypto';
+import { isBrandFeatureEnabled } from '../../../../shared/brands/config';
 
 export async function POST(req: NextRequest) {
   const supabase = createClient(
@@ -12,6 +13,9 @@ export async function POST(req: NextRequest) {
     const { product_id, batch_id, brand, metadata } = await req.json();
     if (!product_id || !brand) {
       return NextResponse.json({ error: 'product_id and brand are required' }, { status: 400 });
+    }
+    if (!isBrandFeatureEnabled(brand, 'enable_auth_seals')) {
+      return NextResponse.json({ error: 'Auth seals are not enabled for this brand' }, { status: 403 });
     }
 
     // 1. Generate tamper-evident QR payload (hash of product_id + batch_id + timestamp)

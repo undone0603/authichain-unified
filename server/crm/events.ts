@@ -3,6 +3,7 @@
  * into CRM contact + deal operations.
  */
 import { crmPost } from './client';
+import { getBrandConfig } from '../../shared/brands/config';
 
 // ---------------------------------------------------------------------------
 // onNewSubscription
@@ -25,12 +26,7 @@ export async function onNewSubscription(params: {
   // 2. Create deal
   await crmPost('/deals/create', {
     brand: params.brand,
-    deal_type:
-      params.brand === 'strainchain.io'
-        ? 'StrainChain Pilot'
-        : params.brand === 'govchain.us'
-        ? 'GovChain Contract'
-        : 'AuthiChain Subscription',
+    deal_type: getBrandConfig(params.brand)?.crm_deal_type ?? 'AuthiChain Subscription',
     plan_id: params.plan_id,
     mrr_usd: params.mrr_usd,
     email: params.email,

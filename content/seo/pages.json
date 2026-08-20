@@ -3974,5 +3974,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "fsma-204-food-traceability-rule-blockchain",
+    "keyword": "fsma 204 food traceability rule blockchain",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "FSMA 204 Food Traceability Rule Blockchain | AuthiChain",
+    "metaDescription": "FSMA 204 compliance moved from January 2026 to July 20, 2028 under the Continuing Appropriations Act of 2026 — the deadline changed, not the requirement.",
+    "h1": "FSMA 204 Food Traceability Rule Blockchain",
+    "bodyHtml": "<p>FSMA 204 compliance moved from January 2026 to July 20, 2028 under the Continuing Appropriations Act of 2026 — the deadline changed, not the requirement: covered entities still need Key Data Elements and Critical Tracking Events recorded for every shipment on the Food Traceability List.</p><h2>Why AuthiChain</h2><ul><li>Critical Tracking Events — harvesting, cooling, initial packing, shipping, receiving — captured as signed records instead of the spreadsheet an FDA traceback investigator has to chase down today</li><li>A Key Data Element record is Ed25519-signed and hashed to a public ledger, so a trading partner or investigator verifies it without calling AuthiChain</li><li>Records map to Food Traceability List categories — soft cheeses, shell eggs, fresh-cut fruits and vegetables, certain seafood, ready-to-eat deli salads — on the same record model, not a separate schema per category</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When does FSMA 204 actually take effect?</h3><p>July 20, 2028. The FDA delayed the original January 20, 2026 date by 30 months, and the Continuing Appropriations Act of 2026 directs the agency not to enforce before that date; the recordkeeping requirements themselves are unchanged.</p><h3>What foods are covered?</h3><p>FDA’s Food Traceability List — specific high-risk foods including soft cheeses, shell eggs, nut butter, fresh-cut fruits and vegetables, certain fin fish and crustaceans, and ready-to-eat deli salads.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — FSMA 204 Food Traceability Rule Blockchain",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "FSMA 204 compliance moved from January 2026 to July 20, 2028 under the Continuing Appropriations Act of 2026 — the deadline changed, not the requirement: covered entities still need Key Data Elements and Critical Tracking Events recorded for every shipment on the Food Traceability List.",
+          "url": "https://authichain.com/p/fsma-204-food-traceability-rule-blockchain"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "FSMA 204 Food Traceability Rule Blockchain",
+              "item": "https://authichain.com/p/fsma-204-food-traceability-rule-blockchain"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When does FSMA 204 actually take effect?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "July 20, 2028. The FDA delayed the original January 20, 2026 date by 30 months, and the Continuing Appropriations Act of 2026 directs the agency not to enforce before that date; the recordkeeping requirements themselves are unchanged."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What foods are covered?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "FDA’s Food Traceability List — specific high-risk foods including soft cheeses, shell eggs, nut butter, fresh-cut fruits and vegetables, certain fin fish and crustaceans, and ready-to-eat deli salads."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-aluminium",
+    "keyword": "eu digital product passport aluminium",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Aluminium | AuthiChain",
+    "metaDescription": "Aluminium is scheduled for its own ESPR delegated act in 2027, one year behind iron and steel — AuthiChain issues the same Digital Product Passport record.",
+    "h1": "EU Digital Product Passport Aluminium",
+    "bodyHtml": "<p>Aluminium is scheduled for its own ESPR delegated act in 2027, one year behind iron and steel — AuthiChain issues the same Digital Product Passport record model already built for steel, batteries, and textiles, structured for embodied-carbon and recycled-content reporting.</p><h2>Why AuthiChain</h2><ul><li>Embodied-carbon and scope 1–3 data captured per batch, matching the reporting shape already used for the steel passport</li><li>Recycled-content and alloy-grade declarations anchored on-chain for tamper-evidence</li><li>The record format does not change when the delegated act adopts — only the compliance deadline does, per the ESPR Working Plan’s roughly 18-month runway after adoption</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When is the aluminium DPP mandatory?</h3><p>No date yet — the ESPR Working Plan 2025–2030 targets a 2027 delegated act for aluminium, one year after iron and steel’s 2026 act. Mandatory compliance typically follows about 18 months after adoption.</p><h3>Can we start before the delegated act is finalized?</h3><p>Yes — the record is a W3C Verifiable Credential; when the act adopts, its required fields slot into the same credentialSubject structure already used for steel and batteries.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Aluminium",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Aluminium is scheduled for its own ESPR delegated act in 2027, one year behind iron and steel — AuthiChain issues the same Digital Product Passport record model already built for steel, batteries, and textiles, structured for embodied-carbon and recycled-content reporting.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-aluminium"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Aluminium",
+              "item": "https://authichain.com/p/eu-digital-product-passport-aluminium"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When is the aluminium DPP mandatory?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No date yet — the ESPR Working Plan 2025–2030 targets a 2027 delegated act for aluminium, one year after iron and steel’s 2026 act. Mandatory compliance typically follows about 18 months after adoption."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can we start before the delegated act is finalized?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — the record is a W3C Verifiable Credential; when the act adopts, its required fields slot into the same credentialSubject structure already used for steel and batteries."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "post-quantum-verifiable-credentials-signing",
+    "keyword": "post quantum verifiable credentials signing",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Post Quantum Verifiable Credentials Signing | AuthiChain",
+    "metaDescription": "NIST finalized three post-quantum signature standards — ML-DSA (FIPS 204), SLH-DSA (FIPS 205), and the key-encapsulation ML-KEM (FIPS 203) — and AuthiChain’s.",
+    "h1": "Post Quantum Verifiable Credentials Signing",
+    "bodyHtml": "<p>NIST finalized three post-quantum signature standards — ML-DSA (FIPS 204), SLH-DSA (FIPS 205), and the key-encapsulation ML-KEM (FIPS 203) — and AuthiChain’s protocol spec states plainly, in SPEC.md §8, that its current Ed25519 suite is not one of them.</p><h2>Why AuthiChain</h2><ul><li>Ed25519 (RFC 8032) is what protocol/SPEC.md specifies today — fast, small signatures, and explicitly not post-quantum secure, the same kind of direct disclosure Section 8 makes about revocation</li><li>Records signed now and read years from now carry Store-Now-Decrypt-Later exposure if an adversary archives them for a future quantum break — a risk shared by any long-lived credential, not unique to this protocol</li><li>The record’s proof.type field names the signature suite per record, so a future ML-DSA or SLH-DSA suite is a new proof type, not a rewrite of every record already issued</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is Ed25519 quantum-resistant?</h3><p>No. Ed25519 is elliptic-curve cryptography under FIPS 186-5 / RFC 8032 and falls to Shor’s algorithm on a sufficiently large quantum computer — the same limit stated in protocol/SPEC.md §8.</p><h3>Does AuthiChain support ML-DSA or SLH-DSA today?</h3><p>No — the reference verifier implements Ed25519 only. NIST published FIPS 204 and FIPS 205 as post-quantum signature standards; adopting one is a spec extension the protocol has not shipped.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Post Quantum Verifiable Credentials Signing",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "NIST finalized three post-quantum signature standards — ML-DSA (FIPS 204), SLH-DSA (FIPS 205), and the key-encapsulation ML-KEM (FIPS 203) — and AuthiChain’s protocol spec states plainly, in SPEC.md §8, that its current Ed25519 suite is not one of them.",
+          "url": "https://authichain.com/p/post-quantum-verifiable-credentials-signing"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Post Quantum Verifiable Credentials Signing",
+              "item": "https://authichain.com/p/post-quantum-verifiable-credentials-signing"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is Ed25519 quantum-resistant?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Ed25519 is elliptic-curve cryptography under FIPS 186-5 / RFC 8032 and falls to Shor’s algorithm on a sufficiently large quantum computer — the same limit stated in protocol/SPEC.md §8."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain support ML-DSA or SLH-DSA today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the reference verifier implements Ed25519 only. NIST published FIPS 204 and FIPS 205 as post-quantum signature standards; adopting one is a spec extension the protocol has not shipped."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "iso-22095-chain-of-custody-blockchain",
+    "keyword": "iso 22095 chain of custody blockchain",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ISO 22095 Chain Of Custody Blockchain | AuthiChain",
+    "metaDescription": "ISO 22095 defines five chain-of-custody models — identity preserved, segregated, controlled blending, mass balance, and book and claim — and a signed.",
+    "h1": "ISO 22095 Chain Of Custody Blockchain",
+    "bodyHtml": "<p>ISO 22095 defines five chain-of-custody models — identity preserved, segregated, controlled blending, mass balance, and book and claim — and a signed, per-unit AuthiChain record is a natural fit for the first two, not a substitute for the other three.</p><h2>Why AuthiChain</h2><ul><li>Each record ties a signature to one physical item’s identifier — the identity preserved and segregated models ISO 22095 defines, where a claim follows a specific batch rather than a pooled average</li><li>ISO published harmonized requirements for mass balance (22095-2) and book and claim (22095-3) in 2026 — models built on percentage accounting and certificate trading, not per-unit signatures</li><li>A verifier checks the signature and the anchor per record; it does not compute a mass-balance percentage or reconcile a certificate ledger, because that is a different model with different math</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain support mass balance claims?</h3><p>Not directly. Mass balance and book and claim, per ISO 22095-2 and -3, account for a percentage or trade certificates across a pool of material. AuthiChain signs a record tied to one physical item, which maps to identity preserved or segregated chain of custody instead.</p><h3>Which ISO 22095 model should we use?</h3><p>That is a supply-chain design decision, not a technology one — it depends on whether material stays physically separated (identity preserved/segregated) or gets blended (mass balance). Per-unit signing fits the former; it does not replace the accounting a mass-balance system requires.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ISO 22095 Chain Of Custody Blockchain",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "ISO 22095 defines five chain-of-custody models — identity preserved, segregated, controlled blending, mass balance, and book and claim — and a signed, per-unit AuthiChain record is a natural fit for the first two, not a substitute for the other three.",
+          "url": "https://authichain.com/p/iso-22095-chain-of-custody-blockchain"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ISO 22095 Chain Of Custody Blockchain",
+              "item": "https://authichain.com/p/iso-22095-chain-of-custody-blockchain"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain support mass balance claims?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not directly. Mass balance and book and claim, per ISO 22095-2 and -3, account for a percentage or trade certificates across a pool of material. AuthiChain signs a record tied to one physical item, which maps to identity preserved or segregated chain of custody instead."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Which ISO 22095 model should we use?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "That is a supply-chain design decision, not a technology one — it depends on whether material stays physically separated (identity preserved/segregated) or gets blended (mass balance). Per-unit signing fits the former; it does not replace the accounting a mass-balance system requires."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "seafood-import-monitoring-program-traceability",
+    "keyword": "seafood import monitoring program traceability",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Seafood Import Monitoring Program Traceability | AuthiChain",
+    "metaDescription": "SIMP requires point-of-harvest-to-entry chain-of-custody data for more than 1,100 seafood species entering the US, and NOAA’s FY2026 funding directs the.",
+    "h1": "Seafood Import Monitoring Program Traceability",
+    "bodyHtml": "<p>SIMP requires point-of-harvest-to-entry chain-of-custody data for more than 1,100 seafood species entering the US, and NOAA’s FY2026 funding directs the program specifically toward closing gaps its own action plan identified, including forced-labor risk.</p><h2>Why AuthiChain</h2><ul><li>Catch, landing, and custody events per shipment hashed and anchored, so a SIMP record survives a transfer between processors without a re-keyed paper trail</li><li>Signed records verify offline against the shipment’s identifier — a customs or NOAA reviewer does not need portal access to check what an importer submitted</li><li>Chain-of-custody events layer onto the same record model already used for DSCSA lot tracking and EUDR batch geolocation, not a separate schema per regulation</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does this replace SIMP reporting to NOAA?</h3><p>No — SIMP submissions go through NOAA’s International Trade Data System. Anchoring makes the supporting chain-of-custody documentation tamper-evident; it does not change where or how the SIMP report itself gets filed.</p><h3>Which species does SIMP cover?</h3><p>A risk-based list of more than 1,100 species. NOAA’s FY2026 action-plan funding is aimed at strengthening enforcement and traceability across that list, not narrowing it.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Seafood Import Monitoring Program Traceability",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "SIMP requires point-of-harvest-to-entry chain-of-custody data for more than 1,100 seafood species entering the US, and NOAA’s FY2026 funding directs the program specifically toward closing gaps its own action plan identified, including forced-labor risk.",
+          "url": "https://authichain.com/p/seafood-import-monitoring-program-traceability"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Seafood Import Monitoring Program Traceability",
+              "item": "https://authichain.com/p/seafood-import-monitoring-program-traceability"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does this replace SIMP reporting to NOAA?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — SIMP submissions go through NOAA’s International Trade Data System. Anchoring makes the supporting chain-of-custody documentation tamper-evident; it does not change where or how the SIMP report itself gets filed."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Which species does SIMP cover?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A risk-based list of more than 1,100 species. NOAA’s FY2026 action-plan funding is aimed at strengthening enforcement and traceability across that list, not narrowing it."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]

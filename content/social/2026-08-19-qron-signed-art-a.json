@@ -1,0 +1,18 @@
+{
+  "linkedin": "A QR code is usually a black-and-white grid nobody looks at twice — and once it's printed, the destination it points to is fixed for good. QRON generates QR codes as actual artwork through an image-generation pipeline, while keeping them scannable, and each code is Ed25519-signed and anchored under the AuthiChain protocol so its authenticity can be verified at scan time instead of just assumed.\n\nThe part worth noticing isn't the art — it's that the destination behind a QRON code can be updated after the code is already printed. A product label, a poster, or a business card doesn't need to be reprinted when what it should point to changes; the code stays put, the \"Living Portal\" behind it doesn't have to.\n\nIf you're printing static links onto physical products or packaging today and reprinting every time the destination changes, take a look at how a signed, editable QR code works.\n\nhttps://qron.space/?utm_source=linkedin&utm_medium=social&utm_campaign=qron-signed-art&utm_content=a\n\n#QRCode #Provenance #DigitalIdentity",
+  "reddit": {
+    "subreddit": "QRCode",
+    "title": "QR codes usually can't change where they point after they're printed. This one can.",
+    "body": "QRON generates QR codes as actual artwork — run through an image-generation pipeline so the code doesn't look like a plain black-and-white grid — while staying scannable. Each code is Ed25519-signed and anchored under the AuthiChain protocol, so a scan can verify the code's authenticity instead of just trusting whatever URL happens to be embedded.\n\nThe part I think is actually useful: the destination behind a QRON code (a \"Living Portal\") can be updated after the code is printed. The code on the label, poster, or card stays the same — only what it resolves to changes, so a changed destination doesn't force a reprint.\n\nCurious if others here have run into the reprint-on-change problem with static QR codes on physical products or marketing materials, and how you've worked around it.\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A QR code is usually fixed the moment it's printed — change the destination, reprint everything. QRON codes don't work that way.",
+    "Each QRON code is Ed25519-signed and anchored under the AuthiChain protocol, and it's generated as actual artwork instead of a plain black-and-white grid, while staying scannable.",
+    "The destination behind a QRON code — a \"Living Portal\" — can be updated after printing, so the label doesn't need reprinting when what it points to changes: https://qron.space/?utm_source=twitter&utm_medium=social&utm_campaign=qron-signed-art&utm_content=a"
+  ],
+  "experiment": {
+    "campaign": "qron-signed-art",
+    "variant": "a",
+    "hypothesis": "leading with the editable-destination-after-printing capability (Living Portal) outperforms an art-generation-led hook on click-through to qron.space"
+  }
+}
