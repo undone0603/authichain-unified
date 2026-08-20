@@ -56,9 +56,8 @@ import { bayesianPriors, scheduledJobRuns } from '../drizzle/schema';
 // Supabase's Transaction Mode pooler (port 6543) chains through its own root CA
 // which is not in Node.js's default trust store.  We pin it explicitly so that
 // pg's SSL verification succeeds without disabling rejectUnauthorized.
-// Replace this value with the cert from your Supabase project's SSL settings if
-// the connection fails.
-const SUPABASE_POOLER_CA = `-----BEGIN CERTIFICATE-----
+// Override via the SUPABASE_POOLER_CA env var to rotate without a code deploy.
+const SUPABASE_POOLER_CA_DEFAULT = `-----BEGIN CERTIFICATE-----
 MIIEkTCCA3mgAwIBAgIERWtQVDANBgkqhkiG9w0BAQUFADCBsDELMAkGA1UEBhMC
 VVMxFjAUBgNVBAoTDUVudHJ1c3QsIEluYy4xOTA3BgNVBAsTMHd3dy5lbnRydXN0
 Lm5ldC9DUFMgaXMgaW5jb3Jwb3JhdGVkIGJ5IHJlZmVyZW5jZTEfMB0GA1UECxMW
@@ -94,11 +93,9 @@ function buildPoolerConfig(url: string): ConstructorParameters<typeof Pool>[0] {
   try {
     const parsed = new URL(url);
     if (parsed.hostname.endsWith(".pooler.supabase.com")) {
-      const params = new URLSearchParams(parsed.search);
-      params.delete("sslmode");
-      const qs = params.toString();
-      const cleanUrl = `${parsed.protocol}//${parsed.username}:${parsed.password}@${parsed.host}${parsed.pathname}${qs ? "?" + qs : ""}`;
-      return { connectionString: cleanUrl, ssl: { ca: SUPABASE_POOLER_CA } };
+      parsed.searchParams.delete("sslmode");
+      const ca = ENV.supabasePoolerCa || SUPABASE_POOLER_CA_DEFAULT;
+      return { connectionString: parsed.toString(), ssl: { ca } };
     }
   } catch {
     // URL parsing failed — fall through to plain config

@@ -256,13 +256,13 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  async authenticateRequest(req: Request): Promise<User> {
+  async authenticateRequest(req: Request | { headers: { cookie?: string } }): Promise<User> {
     // Regular authentication flow
     // Support both Fetch API Request (headers.get()) and Express-like objects (headers.cookie).
     const cookieHeader =
-      typeof (req.headers as any).get === "function"
-        ? (req.headers as any).get("cookie")
-        : (req.headers as any).cookie;
+      typeof (req.headers as { get?: (name: string) => string | null }).get === "function"
+        ? (req.headers as { get: (name: string) => string | null }).get("cookie")
+        : (req.headers as { cookie?: string }).cookie;
     const cookies = this.parseCookies(cookieHeader);
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
