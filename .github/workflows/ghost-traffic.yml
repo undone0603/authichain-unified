@@ -2,7 +2,7 @@ name: Ghost Traffic Engine
 
 on:
   schedule:
-    - cron: '0 13 * * *'   # Fires every day at 9:00 AM EST
+    - cron: "0 13 * * *" # Fires every day at 9:00 AM EST
   workflow_dispatch:
     inputs:
       dry_run:
