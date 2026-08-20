@@ -7,20 +7,20 @@
  * "the root I was given is not one I trust", never which root was offered, and
  * the pooler hostname lives in a secret so it cannot be probed from a laptop.
  *
- * Postgres does not speak TLS on connect — it opens in cleartext and upgrades
- * only after an SSLRequest packet (8 bytes: length 8, magic 80877103) is
- * answered with 'S'. A plain tls.connect() to port 6543 therefore hangs rather
- * than handshaking, so we do the upgrade dance by hand.
+ * Implemented over `openssl s_client -starttls postgres`. Postgres does not
+ * speak TLS on connect — it opens in cleartext and upgrades only after an
+ * SSLRequest packet is answered with 'S' — and openssl performs that upgrade
+ * natively. Delegating also means this script never has to disable certificate
+ * validation to observe an untrusted chain: s_client reports a verification
+ * failure in its "Verify return code" line and prints the chain regardless,
+ * so there is no `rejectUnauthorized: false` anywhere in the codebase.
  *
- * Prints subject/issuer/validity per chain link. Never prints the connection
- * string, the username or the password.
+ * Prints subject/issuer/validity per chain link and the root as PEM. Never
+ * prints the connection string, the username or the password.
  *
  * Usage: DATABASE_URL=... node scripts/diagnose-db-tls.mjs
  */
-import net from 'node:net';
-import tls from 'node:tls';
-
-const SSL_REQUEST = Buffer.from([0, 0, 0, 8, 4, 210, 22, 47]); // len=8, code=80877103
+import { spawnSync } from 'node:child_process';
 
 function fail(msg) {
   console.error(msg);
@@ -39,57 +39,65 @@ try {
   fail('DATABASE_URL is not a parseable URL.');
 }
 
-console.log(`Probing ${host}:${port}`);
+console.log(`Probing ${host}:${port} via openssl s_client -starttls postgres`);
 
-const socket = net.connect({ host, port });
-socket.setTimeout(15_000);
-socket.on('timeout', () => fail(`Timed out connecting to ${host}:${port}.`));
-socket.on('error', err => fail(`TCP error: ${err.message}`));
+const probe = spawnSync(
+  'openssl',
+  [
+    's_client',
+    '-starttls', 'postgres',
+    '-connect', `${host}:${port}`,
+    '-servername', host,
+    '-showcerts',
+  ],
+  { input: '', encoding: 'utf8', timeout: 30_000 },
+);
 
-socket.once('connect', () => socket.write(SSL_REQUEST));
+if (probe.error) {
+  fail(probe.error.code === 'ENOENT'
+    ? 'openssl is not installed on this runner.'
+    : `Could not run openssl: ${probe.error.message}`);
+}
 
-socket.once('data', response => {
-  if (response[0] !== 0x53 /* 'S' */) {
-    fail(`Server refused TLS upgrade (replied ${JSON.stringify(String.fromCharCode(response[0]))}).`);
-  }
+const output = `${probe.stdout ?? ''}\n${probe.stderr ?? ''}`;
 
-  // rejectUnauthorized:false is correct *here* and only here: the entire point
-  // is to observe an untrusted chain. No query is issued and no credential is
-  // sent over this socket — it is torn down as soon as the chain is printed.
-  const secure = tls.connect({ socket, servername: host, rejectUnauthorized: false }, () => {
-    console.log(`\nHandshake complete. authorized=${secure.authorized}` +
-      (secure.authorizationError ? ` authorizationError=${secure.authorizationError}` : ''));
+const verifyLine = output.match(/^\s*Verify return code:.*$/m);
+if (verifyLine) console.log(`\n${verifyLine[0].trim()}`);
 
-    const seen = new Set();
-    let cert = secure.getPeerCertificate(true);
-    let depth = 0;
+const pems = output.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) ?? [];
+if (pems.length === 0) {
+  console.error('\nNo certificates were returned. Raw openssl output follows:\n');
+  // The connection string is never echoed by s_client, so this is safe to dump.
+  console.error(output.trim() || '(no output)');
+  process.exit(1);
+}
 
-    console.log('\nChain as presented:');
-    while (cert && Object.keys(cert).length && !seen.has(cert.fingerprint256)) {
-      seen.add(cert.fingerprint256);
-      const name = o => (o ? Object.entries(o).map(([k, v]) => `${k}=${v}`).join(', ') : '(none)');
-      const selfSigned = JSON.stringify(cert.subject) === JSON.stringify(cert.issuer);
-      console.log(`\n  [${depth}]${selfSigned ? ' (self-signed — this is the root)' : ''}`);
-      console.log(`    subject: ${name(cert.subject)}`);
-      console.log(`    issuer:  ${name(cert.issuer)}`);
-      console.log(`    valid:   ${cert.valid_from} → ${cert.valid_to}`);
-      if (depth === 0 && cert.subjectaltname) console.log(`    SAN:     ${cert.subjectaltname}`);
+console.log(`\nChain as presented (${pems.length} certificate${pems.length === 1 ? '' : 's'}):`);
 
-      if (selfSigned) {
-        console.log('\n  Root certificate, PEM — put this in the SUPABASE_POOLER_CA secret:\n');
-        const b64 = cert.raw.toString('base64').match(/.{1,64}/g).join('\n');
-        console.log(`-----BEGIN CERTIFICATE-----\n${b64}\n-----END CERTIFICATE-----`);
-      }
+let root = null;
 
-      const next = cert.issuerCertificate;
-      if (!next || next === cert) break;
-      cert = next;
-      depth++;
-    }
-
-    secure.end();
-    process.exit(0);
+pems.forEach((pem, depth) => {
+  const info = spawnSync('openssl', ['x509', '-noout', '-subject', '-issuer', '-dates'], {
+    input: pem,
+    encoding: 'utf8',
   });
+  const text = (info.stdout ?? '').trim();
+  const field = name => (text.match(new RegExp(`^${name}=(.*)$`, 'm'))?.[1] ?? '').trim();
 
-  secure.on('error', err => fail(`TLS error: ${err.message}`));
+  const subject = field('subject');
+  const issuer = field('issuer');
+  const selfSigned = subject !== '' && subject === issuer;
+  if (selfSigned && !root) root = pem;
+
+  console.log(`\n  [${depth}]${selfSigned ? '  (self-signed — this is the root)' : ''}`);
+  for (const line of text.split('\n')) console.log(`    ${line.trim()}`);
 });
+
+if (root) {
+  console.log('\nRoot certificate — put this in the SUPABASE_POOLER_CA secret:\n');
+  console.log(root);
+} else {
+  console.log('\nNo self-signed root was sent. The chain is rooted in a CA the server ' +
+    'did not transmit, which means a public root should verify it — check whether ' +
+    "the leaf's SAN actually covers the host above.");
+}
