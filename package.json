@@ -71,7 +71,7 @@
     "@trpc/react-query": "^11.0.0-rc.446",
     "@trpc/server": "^11.0.0-rc.446",
     "@types/express": "^5.0.6",
-    "@types/google.maps": "^3.64.1",
+    "@types/google.maps": "^3.65.5",
     "@vercel/speed-insights": "^2.0.0",
     "ai": "^7.0.22",
     "axios": "^1.7.4",
