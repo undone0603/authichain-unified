@@ -264,6 +264,25 @@ export async function POST(req: NextRequest) {
           });
         }
 
+        // subscribe funnel event — log once when a new subscription is created.
+        if (invoice.billing_reason === 'subscription_create' && subscriptionId) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId);
+            const prospectId = sub.metadata?.prospect_id;
+            if (prospectId) {
+              await getSupabase().from('funnel_events').insert({
+                prospect_id: prospectId,
+                stage: 'subscribe',
+                source: sub.metadata?.source || 'direct',
+                metadata: { subscription_id: subscriptionId },
+                timestamp: new Date().toISOString(),
+              });
+            }
+          } catch (e) {
+            console.error('[webhook] subscribe funnel insert failed:', e);
+          }
+        }
+
         // Recurring affiliate commission — credit on renewals only.
         // The first payment is handled by checkout.session.completed, so we skip
         // billing_reason 'subscription_create' here to avoid double-counting.
