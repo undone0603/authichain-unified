@@ -25,7 +25,7 @@ vi.mock('./_core/env', () => ({
   },
 }));
 
-const { sendEmail, withDryRunEmail, isDryRun } = await import('./email-service');
+const { sendEmail, withDryRunEmail, isDryRun, recordDryRunSend } = await import('./email-service');
 
 const message = { to: 'someone@example.com', subject: 'Subject', body: 'Body text' };
 
@@ -89,6 +89,27 @@ describe('withDryRunEmail', () => {
     ).rejects.toThrow('job blew up mid-tick');
 
     expect(isDryRun()).toBe(false);
+  });
+
+  it('records a send from a transport that bypasses sendEmail', async () => {
+    // guardedSend() posts to Resend directly rather than via sendEmail(),
+    // because it layers on CAN-SPAM footers and a per-domain key. The first
+    // version of this dry run did not cover it — which made the dry run wrong
+    // about cold email specifically, the one thing it gets run to inspect.
+    const { sends } = await withDryRunEmail(async () => {
+      const recorded = recordDryRunSend({ to: 'Lead@Example.com', subject: 'Intro', body: 'Hello' });
+      expect(recorded).toBe(true);
+    });
+
+    expect(sends).toHaveLength(1);
+    expect(sends[0].to).toBe('lead@example.com');
+  });
+
+  it('reports false to a bypassing transport when no dry run is active', async () => {
+    // The caller uses the return value to decide whether to skip its send, so
+    // a wrong answer here means either a missed record or a suppressed live
+    // email.
+    expect(recordDryRunSend({ to: 'lead@example.com', subject: 'Intro', body: 'Hello' })).toBe(false);
   });
 
   it('attempts the provider for real outside a dry run', async () => {

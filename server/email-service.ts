@@ -94,6 +94,27 @@ export function isDryRun() {
 }
 
 /**
+ * Records an outbound message and reports whether a dry run is active.
+ *
+ * For send paths that do not go through sendEmail(). There is one that
+ * matters: guardedSend() in server/outreach/send-guard.ts posts to the Resend
+ * API directly, because it layers on CAN-SPAM footers, one-click unsubscribe
+ * headers and a per-domain API key. It is also the cold-email path — the exact
+ * thing a dry run is run to inspect — so leaving it uncovered made the dry run
+ * wrong in the case it exists for.
+ *
+ * Any future transport must call this before it dispatches. That is a weaker
+ * guarantee than sendEmail() gets, where the interception is unavoidable, so
+ * prefer routing new senders through sendEmail() rather than adding a third
+ * caller here.
+ */
+export function recordDryRunSend(input: SendEmailInput): boolean {
+  if (dryRunLog === null) return false;
+  dryRunLog.push({ ...input, to: input.to.trim().toLowerCase(), at: new Date().toISOString() });
+  return true;
+}
+
+/**
  * Runs `fn` with every sendEmail() call recorded instead of dispatched, and
  * returns both the function's result and what it tried to send.
  *
