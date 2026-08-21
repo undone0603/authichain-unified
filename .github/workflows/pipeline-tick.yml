@@ -54,6 +54,12 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report what a live tick would do, without sending email"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: pipeline-tick
@@ -179,4 +185,18 @@ jobs:
           # the tick still runs its other stages rather than failing.
           APOLLO_API_KEY: ${{ secrets.APOLLO_API_KEY }}
           NODE_OPTIONS: --dns-result-order=ipv4first
-        run: pnpm tsx server/jobs/pipeline-tick.ts
+          # Through env rather than spliced into the run line: an input
+          # interpolated directly into a shell command is a command-injection
+          # sink, and boolean-today is string-tomorrow.
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          # A dry run bypasses the activation switch on purpose — the whole
+          # point is to see what a live tick would do while it is still off.
+          # sendEmail() records instead of dispatching, so nothing is mailed.
+          # Everything else runs for real, database writes included.
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "::notice::Dry run — email is recorded, not sent. Database writes still happen."
+            pnpm tsx server/jobs/pipeline-tick.ts --dry-run
+          else
+            pnpm tsx server/jobs/pipeline-tick.ts
+          fi
