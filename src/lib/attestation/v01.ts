@@ -1,12 +1,26 @@
-import { calculateJwkThumbprint, CompactSign, compactVerify, decodeProtectedHeader, importJWK, importPKCS8, exportJWK } from 'jose';
+import {
+  calculateJwkThumbprint,
+  CompactSign,
+  compactVerify,
+  decodeProtectedHeader,
+  exportJWK,
+  importJWK,
+  importPKCS8,
+} from "jose";
 
-export const AUTHICHAIN_ATTESTATION_V01 = '0.1' as const;
-export const AUTHICHAIN_ATTESTATION_TYP = 'AC-ATTESTATION+JWS';
+export const AUTHICHAIN_ATTESTATION_V01 = "0.1" as const;
+export const AUTHICHAIN_ATTESTATION_TYP = "AC-ATTESTATION+JWS";
 
-type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+type Json =
+  | null
+  | boolean
+  | number
+  | string
+  | Json[]
+  | { [key: string]: Json };
 
-export type AttestationDecision = 'verified' | 'warning' | 'blocked';
-export type AttestationStatus = 'active' | 'revoked' | 'unknown';
+export type AttestationDecision = "verified" | "warning" | "blocked";
+export type AttestationStatus = "active" | "revoked" | "unknown";
 
 export interface AuthiChainEvidence {
   id: string;
@@ -16,7 +30,7 @@ export interface AuthiChainEvidence {
 }
 
 export interface AuthiChainAttestationV01 {
-  version: '0.1';
+  version: "0.1";
   attestation_id: string;
   issuer: { id: string; name: string };
   subject: {
@@ -33,57 +47,129 @@ export interface AuthiChainAttestationV01 {
   evidence: AuthiChainEvidence[];
 }
 
-const ISO_DATE_TIME = (value: unknown) => typeof value === 'string' && !Number.isNaN(Date.parse(value));
+const ISO_DATE_TIME = (value: unknown) =>
+  typeof value === "string" && !Number.isNaN(Date.parse(value));
 
 export function canonicalize(value: Json): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonicalize).join(',')}]`;
-  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalize(value[key])}`).join(',')}}`;
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
+  return `{${Object.keys(value)
+    .sort()
+    .map(
+      key =>
+        `${JSON.stringify(key)}:${canonicalize(value[key])}`
+    )
+    .join(",")}}`;
 }
 
 function b64url(value: Uint8Array | string): string {
-  const bytes = typeof value === 'string' ? new TextEncoder().encode(value) : value;
-  return Buffer.from(bytes).toString('base64url');
+  const bytes =
+    typeof value === "string" ? new TextEncoder().encode(value) : value;
+  return Buffer.from(bytes).toString("base64url");
 }
 
 function fromB64url(value: string): Uint8Array {
-  return new Uint8Array(Buffer.from(value, 'base64url'));
+  return new Uint8Array(Buffer.from(value, "base64url"));
 }
 
 export function validateAttestation(input: unknown): AuthiChainAttestationV01 {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('attestation must be an object');
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("attestation must be an object");
+  }
   const value = input as Record<string, unknown>;
 
-  if (value.version !== '0.1') throw new Error('version must be 0.1');
-  if (typeof value.attestation_id !== 'string' || !value.attestation_id.trim()) throw new Error('attestation_id is required');
-
-  if (!value.issuer || typeof value.issuer !== 'object' || Array.isArray(value.issuer)) throw new Error('issuer is required');
-  const issuer = value.issuer as Record<string, unknown>;
-  if (typeof issuer.id !== 'string' || !issuer.id.trim()) throw new Error('issuer.id is required');
-  if (typeof issuer.name !== 'string' || !issuer.name.trim()) throw new Error('issuer.name is required');
-
-  if (!value.subject || typeof value.subject !== 'object' || Array.isArray(value.subject)) throw new Error('subject is required');
-  const subject = value.subject as Record<string, unknown>;
-  if (typeof subject.object_id !== 'string' || !subject.object_id.trim()) throw new Error('subject.object_id is required');
-  if (subject.gtin !== undefined && (typeof subject.gtin !== 'string' || !/^\d{8,14}$/.test(subject.gtin))) throw new Error('subject.gtin must contain 8-14 digits');
-  for (const field of ['product_class', 'serial', 'lot'] as const) {
-    if (subject[field] !== undefined && typeof subject[field] !== 'string') throw new Error(`subject.${field} must be a string`);
+  if (value.version !== "0.1") throw new Error("version must be 0.1");
+  if (
+    typeof value.attestation_id !== "string" ||
+    !value.attestation_id.trim()
+  ) {
+    throw new Error("attestation_id is required");
   }
 
-  if (!['verified', 'warning', 'blocked'].includes(String(value.decision))) throw new Error('invalid decision');
-  if (!['active', 'revoked', 'unknown'].includes(String(value.status))) throw new Error('invalid status');
-  if (!ISO_DATE_TIME(value.issued_at)) throw new Error('issued_at must be an ISO timestamp');
-  if (value.expires_at !== undefined && !ISO_DATE_TIME(value.expires_at)) throw new Error('expires_at must be an ISO timestamp');
-  if (value.expires_at !== undefined && Date.parse(value.expires_at as string) <= Date.parse(value.issued_at as string)) throw new Error('expires_at must be after issued_at');
+  if (
+    !value.issuer ||
+    typeof value.issuer !== "object" ||
+    Array.isArray(value.issuer)
+  ) {
+    throw new Error("issuer is required");
+  }
+  const issuer = value.issuer as Record<string, unknown>;
+  if (typeof issuer.id !== "string" || !issuer.id.trim()) {
+    throw new Error("issuer.id is required");
+  }
+  if (typeof issuer.name !== "string" || !issuer.name.trim()) {
+    throw new Error("issuer.name is required");
+  }
 
-  if (!Array.isArray(value.evidence)) throw new Error('evidence must be an array');
+  if (
+    !value.subject ||
+    typeof value.subject !== "object" ||
+    Array.isArray(value.subject)
+  ) {
+    throw new Error("subject is required");
+  }
+  const subject = value.subject as Record<string, unknown>;
+  if (typeof subject.object_id !== "string" || !subject.object_id.trim()) {
+    throw new Error("subject.object_id is required");
+  }
+  if (
+    subject.gtin !== undefined &&
+    (typeof subject.gtin !== "string" || !/^\d{8,14}$/.test(subject.gtin))
+  ) {
+    throw new Error("subject.gtin must contain 8-14 digits");
+  }
+  for (const field of ["product_class", "serial", "lot"] as const) {
+    if (subject[field] !== undefined && typeof subject[field] !== "string") {
+      throw new Error(`subject.${field} must be a string`);
+    }
+  }
+
+  if (
+    !["verified", "warning", "blocked"].includes(String(value.decision))
+  ) {
+    throw new Error("invalid decision");
+  }
+  if (!["active", "revoked", "unknown"].includes(String(value.status))) {
+    throw new Error("invalid status");
+  }
+  if (!ISO_DATE_TIME(value.issued_at)) {
+    throw new Error("issued_at must be an ISO timestamp");
+  }
+  if (value.expires_at !== undefined && !ISO_DATE_TIME(value.expires_at)) {
+    throw new Error("expires_at must be an ISO timestamp");
+  }
+  if (
+    value.expires_at !== undefined &&
+    Date.parse(value.expires_at as string) <= Date.parse(value.issued_at as string)
+  ) {
+    throw new Error("expires_at must be after issued_at");
+  }
+
+  if (!Array.isArray(value.evidence)) {
+    throw new Error("evidence must be an array");
+  }
   for (const [index, item] of value.evidence.entries()) {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`evidence[${index}] must be an object`);
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error(`evidence[${index}] must be an object`);
+    }
     const evidence = item as Record<string, unknown>;
-    if (typeof evidence.id !== 'string' || !evidence.id.trim()) throw new Error(`evidence[${index}].id is required`);
-    if (typeof evidence.type !== 'string' || !evidence.type.trim()) throw new Error(`evidence[${index}].type is required`);
-    if (typeof evidence.digest !== 'string' || !/^sha256:[A-Fa-f0-9]{64}$/.test(evidence.digest)) throw new Error(`evidence[${index}].digest must be sha256:<64 hex chars>`);
-    if (evidence.uri !== undefined && typeof evidence.uri !== 'string') throw new Error(`evidence[${index}].uri must be a string`);
+    if (typeof evidence.id !== "string" || !evidence.id.trim()) {
+      throw new Error(`evidence[${index}].id is required`);
+    }
+    if (typeof evidence.type !== "string" || !evidence.type.trim()) {
+      throw new Error(`evidence[${index}].type is required`);
+    }
+    if (
+      typeof evidence.digest !== "string" ||
+      !/^sha256:[A-Fa-f0-9]{64}$/.test(evidence.digest)
+    ) {
+      throw new Error(
+        `evidence[${index}].digest must be sha256:<64 hex chars>`
+      );
+    }
+    if (evidence.uri !== undefined && typeof evidence.uri !== "string") {
+      throw new Error(`evidence[${index}].uri must be a string`);
+    }
   }
 
   return input as AuthiChainAttestationV01;
@@ -91,9 +177,11 @@ export function validateAttestation(input: unknown): AuthiChainAttestationV01 {
 
 async function loadPrivateKey() {
   const raw = process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
-  if (!raw) throw new Error('AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 is not configured');
-  const pem = Buffer.from(raw, 'base64').toString('utf8');
-  return importPKCS8(pem, 'EdDSA');
+  if (!raw) {
+    throw new Error("AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 is not configured");
+  }
+  const pem = Buffer.from(raw, "base64").toString("utf8");
+  return importPKCS8(pem, "EdDSA");
 }
 
 export async function publicJwkFromPrivateKey() {
@@ -104,43 +192,61 @@ export async function publicJwkFromPrivateKey() {
 }
 
 export async function getKeyId(): Promise<string> {
-  if (process.env.AUTHICHAIN_ATTESTATION_KEY_ID) return process.env.AUTHICHAIN_ATTESTATION_KEY_ID;
+  if (process.env.AUTHICHAIN_ATTESTATION_KEY_ID) {
+    return process.env.AUTHICHAIN_ATTESTATION_KEY_ID;
+  }
   return calculateJwkThumbprint(await publicJwkFromPrivateKey());
 }
 
-export async function signAttestation(input: AuthiChainAttestationV01): Promise<string> {
+export async function signAttestation(
+  input: AuthiChainAttestationV01
+): Promise<string> {
   const attestation = validateAttestation(input);
   const key = await loadPrivateKey();
   const protectedHeader = {
-    alg: 'EdDSA',
+    alg: "EdDSA",
     kid: await getKeyId(),
     typ: AUTHICHAIN_ATTESTATION_TYP,
   };
-  const payload = new TextEncoder().encode(canonicalize(attestation as unknown as Json));
+  const payload = new TextEncoder().encode(
+    canonicalize(attestation as unknown as Json)
+  );
   return new CompactSign(payload)
     .setProtectedHeader(protectedHeader)
     .sign(key);
 }
 
-export async function verifyAttestationJws(jws: string, publicJwk: Record<string, unknown>) {
+export async function verifyAttestationJws(
+  jws: string,
+  publicJwk: Record<string, unknown>
+) {
   const header = decodeProtectedHeader(jws);
-  if (header.typ !== AUTHICHAIN_ATTESTATION_TYP || header.alg !== 'EdDSA') {
-    throw new Error('unsupported attestation JWS header');
+  if (header.typ !== AUTHICHAIN_ATTESTATION_TYP || header.alg !== "EdDSA") {
+    throw new Error("unsupported attestation JWS header");
   }
 
-  if (typeof header.kid !== 'string' || !header.kid) throw new Error('attestation JWS kid is required');
-  const expectedKid = typeof publicJwk.kid === 'string' ? publicJwk.kid : await calculateJwkThumbprint(publicJwk);
-  if (header.kid !== expectedKid) throw new Error('attestation JWS kid does not match verification key');
+  if (typeof header.kid !== "string" || !header.kid) {
+    throw new Error("attestation JWS kid is required");
+  }
+  const expectedKid =
+    typeof publicJwk.kid === "string"
+      ? publicJwk.kid
+      : await calculateJwkThumbprint(publicJwk);
+  if (header.kid !== expectedKid) {
+    throw new Error("attestation JWS kid does not match verification key");
+  }
 
-  const key = await importJWK(publicJwk, 'EdDSA');
+  const key = await importJWK(publicJwk, "EdDSA");
   const { payload } = await compactVerify(jws, key);
   const parsed = JSON.parse(new TextDecoder().decode(payload));
   return validateAttestation(parsed);
 }
 
 export function parseJws(jws: string) {
-  const [encodedHeader, encodedPayload, encodedSignature] = jws.split('.');
-  if (!encodedHeader || !encodedPayload || !encodedSignature) throw new Error('invalid compact JWS');
+  const [encodedHeader, encodedPayload, encodedSignature] = jws.split(".");
+  if (!encodedHeader || !encodedPayload || !encodedSignature) {
+    throw new Error("invalid compact JWS");
+  }
   return {
     protected: JSON.parse(new TextDecoder().decode(fromB64url(encodedHeader))),
     payload: JSON.parse(new TextDecoder().decode(fromB64url(encodedPayload))),
