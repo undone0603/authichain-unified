@@ -5,6 +5,7 @@ import { eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { missionTemplates, taskTemplates } from "./templates";
 import type { MissionType, MissionStatus } from "./types";
+import { MISSION_STATUS_TO_DB } from "./types";
 
 // ─── Read ────────────────────────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ export async function updateMissionStatus(id: string, status: MissionStatus) {
   const d = await getDb();
   await d
     .update(missions)
-    .set({ status: status.toLowerCase() as any })
+    .set({ status: MISSION_STATUS_TO_DB[status] })
     .where(eq(missions.id, id));
 }
 
