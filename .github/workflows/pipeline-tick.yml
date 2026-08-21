@@ -181,6 +181,11 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # The content agent needs this, and this workflow was not passing it:
+          # the first dry run failed all three due DRAFT_LAUNCH_EMAIL tasks with
+          # "ANTHROPIC_API_KEY is not configured". gov-proposals.yml and
+          # gov-score.yml already pass the same secret.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # Absent means apolloSearchLeads() returns [] and no leads are found —
           # the tick still runs its other stages rather than failing.
           APOLLO_API_KEY: ${{ secrets.APOLLO_API_KEY }}
