@@ -6,6 +6,7 @@
 // (Apollo-verified, inbound opt-in, or a confirmed reply), with format + MX as a
 // secondary gate, and a mandatory CAN-SPAM unsubscribe footer.
 import { promises as dns } from "node:dns";
+import { recordDryRunSend } from "../email-service";
 
 export type VerificationSource =
   | "apollo_verified"
@@ -171,6 +172,14 @@ export async function guardedSend(args: {
 
   if (args.body === undefined && args.html === undefined) {
     return { sent: false, reason: "no_body", assessment };
+  }
+
+  // Last stop before the network. Placed after every guard above so a dry run
+  // reports what a live run would really do: a recipient rejected by
+  // assessRecipient(), a domain with no MX, or a missing postal address is
+  // reported as blocked rather than as "would send".
+  if (recordDryRunSend({ to: assessment.email, subject: args.subject, body: args.body ?? args.html ?? "" })) {
+    return { sent: false, reason: "dry_run", assessment };
   }
 
   const res = await fetch("https://api.resend.com/emails", {
