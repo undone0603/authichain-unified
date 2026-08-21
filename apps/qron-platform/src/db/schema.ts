@@ -18,7 +18,7 @@ export const profiles = pgTable(
   'profiles',
   {
     id: uuid('id').primaryKey(),
-    userId: uuid('user_id'),
+    userId: uuid('user_id').notNull(),
     email: text('email'),
     fullName: text('full_name'),
     avatarUrl: text('avatarUrl'),
@@ -128,7 +128,7 @@ export const brandWebhooks = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     brandId: uuid('brand_id').notNull(),
-    brand: text('brand'),
+    brand: text('brand').notNull(),
     endpointUrl: text('endpoint_url').notNull(),
     secretKey: text('secret_key').notNull(),
     events: text('events').array().default(['qron_scanned']).notNull(),
