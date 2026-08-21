@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 export default function SupplyChain() {
   const [productFilter, setProductFilter] = useState<string | undefined>(undefined);
+  const { data: products } = trpc.products.list.useQuery();
   const { data: events, isLoading } = trpc.supplyChain.getEvents.useQuery({ productId: productFilter ?? '' }, { enabled: !!productFilter });
   // IoT data placeholder - no separate IoT query in router
   const addEvent = trpc.supplyChain.addEvent.useMutation();
@@ -77,9 +78,26 @@ export default function SupplyChain() {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card>
-            <CardHeader><CardTitle className="text-base">Supply Chain Events</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <CardTitle className="text-base">Supply Chain Events</CardTitle>
+              <Select value={productFilter ?? ""} onValueChange={setProductFilter}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Select a product" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(products ?? []).map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {!productFilter ? (
+                <div className="text-center py-12">
+                  <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">Select a product to see its supply chain.</p>
+                </div>
+              ) : isLoading ? (
                 <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
               ) : events && events.length > 0 ? (
                 <div className="space-y-3">
