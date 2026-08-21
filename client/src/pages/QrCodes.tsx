@@ -15,7 +15,7 @@ export default function QrCodes() {
   const handleGenerate = async () => {
     if (!selectedProduct) { toast.error("Select a product first"); return; }
     try {
-      const result = await generateQr.mutateAsync({ productId: parseInt(selectedProduct) });
+      const result = await generateQr.mutateAsync({ productId: selectedProduct });
       setQrResult(result);
       toast.success("QR code generated");
     } catch (e: any) {

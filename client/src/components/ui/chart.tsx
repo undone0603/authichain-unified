@@ -101,6 +101,20 @@ ${colorConfig
   );
 };
 
+// recharts 3 injects `payload` and `label` into a custom tooltip/legend
+// `content` at render time and omits them from the exported prop types
+// (they live in PropertiesReadFromContext). Declaring the shape this file
+// actually reads keeps the component typed without reaching into
+// recharts/types internals, which are not part of its public API.
+type ChartPayloadItem = {
+  type?: string | null;
+  name?: string | number;
+  dataKey?: string | number;
+  value?: number | string;
+  color?: string;
+  payload?: Record<string, any>;
+};
+
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
 function ChartTooltipContent({
@@ -117,8 +131,12 @@ function ChartTooltipContent({
   color,
   nameKey,
   labelKey,
-}: React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
-  React.ComponentProps<"div"> & {
+}: Omit<React.ComponentProps<typeof RechartsPrimitive.Tooltip>, "payload" | "label"> &
+  Omit<React.ComponentProps<"div">, "color"> & {
+    payload?: ChartPayloadItem[];
+    label?: unknown;
+    active?: boolean;
+    color?: string;
     hideLabel?: boolean;
     hideIndicator?: boolean;
     indicator?: "line" | "dot" | "dashed";
@@ -143,7 +161,7 @@ function ChartTooltipContent({
     if (labelFormatter) {
       return (
         <div className={cn("font-medium", labelClassName)}>
-          {labelFormatter(value, payload)}
+          {(labelFormatter as (v: unknown, p: unknown) => React.ReactNode)(value, payload)}
         </div>
       );
     }
@@ -183,7 +201,7 @@ function ChartTooltipContent({
           .map((item, index) => {
             const key = `${nameKey || item.name || item.dataKey || "value"}`;
             const itemConfig = getPayloadConfigFromPayload(config, item, key);
-            const indicatorColor = color || item.payload.fill || item.color;
+            const indicatorColor = color || item.payload?.fill || item.color;
 
             return (
               <div
@@ -194,7 +212,7 @@ function ChartTooltipContent({
                 )}
               >
                 {formatter && item?.value !== undefined && item.name ? (
-                  formatter(item.value, item.name, item, index, item.payload)
+                  (formatter as (...a: unknown[]) => React.ReactNode)(item.value, item.name, item, index, item.payload)
                 ) : (
                   <>
                     {itemConfig?.icon ? (
@@ -257,8 +275,9 @@ function ChartLegendContent({
   payload,
   verticalAlign = "bottom",
   nameKey,
-}: React.ComponentProps<"div"> &
-  Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+}: React.ComponentProps<"div"> & {
+    payload?: ChartPayloadItem[];
+    verticalAlign?: "top" | "middle" | "bottom";
     hideIcon?: boolean;
     nameKey?: string;
   }) {
