@@ -36,6 +36,22 @@
  * rows for months because of it, and nothing reported a problem: executeJob()
  * catches the error and records status='failed'.
  *
+ * ── What this still does not compare ─────────────────────────────────────────
+ *
+ * CHECK constraint vocabularies. missions_status_check and
+ * mission_tasks_status_check each enumerate the values their column accepts,
+ * and the code disagreed with both: markTaskWaitingHuman() wrote
+ * 'waiting_human', which mission_tasks_status_check rejected on every call, and
+ * updateMissionStatus() wrote 'planned'/'in_progress'/'blocked', three of which
+ * missions_status_check rejected. Same shape of silent [23514] as the rest of
+ * this file's history.
+ *
+ * It is not compared here because src/db/schema.ts does not declare it —
+ * `varchar('status', { length: 50 })` says nothing about permitted values, so
+ * there is no schema-side claim to check the database against. The values live
+ * in TypeScript enums instead, and server/missions/types.test.ts pins those
+ * against the constraints. Worth folding in here if a third table joins them.
+ *
  * Usage:
  *   DATABASE_URL=... node scripts/check-schema-drift.mjs [--json] [--strict]
  *                                                        [--also=<other-schema.ts>]

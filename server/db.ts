@@ -629,6 +629,7 @@ export async function hasUserActionLogged(userId: number, action: string, sinceD
 // ─────────────────────────────────────────────────────────────
 
 import type { MissionType, MissionStatus } from "./missions/types";
+import { MISSION_STATUS_TO_DB } from "./missions/types";
 
 export async function getMissions(statusFilter?: string) {
   const d = await getDb();
@@ -675,7 +676,7 @@ export async function createTask(data: any) {
 
 export async function updateMissionStatus(id: string, status: MissionStatus) {
   const d = await getDb();
-  await d.update(missions).set({ status: status.toLowerCase() as any }).where(eq(missions.id, id));
+  await d.update(missions).set({ status: MISSION_STATUS_TO_DB[status] }).where(eq(missions.id, id));
 }
 
 export async function getTasksByMission(missionId: string) {
