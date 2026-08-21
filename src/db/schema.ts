@@ -165,7 +165,7 @@ export const redirectRules = pgTable(
     id: serial('id').primaryKey(),
     qronId: integer('qron_id').notNull(),
     name: text('name').notNull(),
-    url: text('url'),
+    url: text('url').notNull(),
     priority: integer('priority').default(100).notNull(),
     ruleType: text('rule_type').notNull(),
     conditions: jsonb('conditions'),
@@ -187,7 +187,7 @@ export const brands = pgTable(
   'brands',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: integer('user_id'), // Linked to users.id
+    userId: integer('user_id').notNull(), // Linked to users.id
     name: text('name').notNull(),
     domain: text('domain'),
     logoUrl: text('logo_url'),
@@ -306,7 +306,7 @@ export const payments = pgTable("payments", {
   amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
   currency: varchar("currency", { length: 16 }).default("USD"),
   method: varchar("payment_method", { length: 50 }).notNull(),
-  status: varchar("status", { length: 50 }).default("pending"),
+  status: varchar("status", { length: 50 }).default("pending").notNull(),
   stripePaymentId: varchar("stripe_payment_id", { length: 128 }),
   metadata: json("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -947,7 +947,7 @@ export const missions = pgTable("missions", {
   id: uuid("id").primaryKey(),
   type: varchar("type", { length: 64 }).notNull(),
   title: varchar("title", { length: 256 }).notNull(),
-  description: text("description"),
+  description: text("description").notNull(),
   status: varchar("status", { length: 50 }).default("pending").notNull(),
   metadata: json("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -1150,7 +1150,7 @@ export const personalizationRules = pgTable("personalization_rules", {
   country: varchar("country", { length: 8 }),
   utmSource: varchar("utm_source", { length: 128 }),
   deviceType: varchar("device_type", { length: 32 }),
-  targetElement: varchar("targetElement", { length: 128 }),
+  targetElement: varchar("targetElement", { length: 128 }).notNull(),
   content: json("content"),
   conditions: json("conditions"),
   views: integer("views").default(0).notNull(),
@@ -1167,7 +1167,7 @@ export const personalizationEvents = pgTable("personalization_events", {
   id: serial("id").primaryKey(),
   sessionId: varchar("sessionId", { length: 128 }).notNull(),
   eventType: varchar("eventType", { length: 64 }).notNull(),
-  ruleId: integer("ruleId"),
+  ruleId: integer("ruleId").notNull(),
   metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

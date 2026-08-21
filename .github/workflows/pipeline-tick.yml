@@ -18,13 +18,32 @@ name: Pipeline Tick (direct runner)
 # ── Activation ───────────────────────────────────────────────────────────────
 # This workflow is SAFE TO SCHEDULE AS-IS. runPipelineTick() returns
 # {enabled: false, skipped: true} unless AUTONOMOUS_PIPELINE_ENABLED === "true"
-# (server/_core/env.ts:33), so until that variable is set every run is a no-op
-# that says so in the log.
+# in the process environment (server/_core/env.ts:33), so until the repository
+# variable below is set every run is a no-op that says so in the log.
 #
-# To activate: set the repository variable AUTONOMOUS_PIPELINE_ENABLED to
-# "true". To stop: unset it. No code change, no deploy, effective on the next
-# run. That is deliberately the whole switch — a variable a human sets, not a
-# default this workflow assumes.
+# To activate: set the repository variable PIPELINE_TICK_ENABLED to "true". To
+# stop: unset it. No code change, no deploy, effective on the next run. That is
+# deliberately the whole switch — a variable a human sets, not a default this
+# workflow assumes.
+#
+# ── Why the variable is not called AUTONOMOUS_PIPELINE_ENABLED ────────────────
+# Because something else already is. set-pipeline-enabled.yml writes an
+# environment variable of that exact name into the Vercel production runtime,
+# where it gates the /api/cron/pipeline HTTP endpoint. Two switches, one name,
+# two different stores, independent values, and nothing that reports a
+# disagreement between them.
+#
+# They also do not do the same thing. THIS workflow is the only thing that runs
+# the pipeline on a schedule. Nothing calls /api/cron/pipeline on a schedule at
+# all: vercel.json declares no crons, and autonomous-business-cycle.yml gates
+# its only job on `github.event_name == 'workflow_dispatch' && inputs.live`, so
+# its thirteen cron entries start a run that skips the job every time. Setting
+# the Vercel-side variable therefore activates nothing recurring — which is a
+# surprising thing for a workflow named "Configure Autonomous Pipeline" to do,
+# and the reason this one reads a distinctly named variable instead.
+#
+# The old name is still honoured so an already-set variable does not silently
+# stop working, and the run says which name it read.
 #
 # Note what activation turns on: lead discovery, research browsing, and
 # outbound email drafting. Email still passes server/outreach/send-guard.ts,
@@ -64,14 +83,21 @@ jobs:
       - name: Report activation state
         if: steps.db-check.outputs.skip != 'true'
         env:
-          AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.AUTONOMOUS_PIPELINE_ENABLED }}
+          CURRENT: ${{ vars.PIPELINE_TICK_ENABLED }}
+          LEGACY: ${{ vars.AUTONOMOUS_PIPELINE_ENABLED }}
         run: |
           # Say plainly which of the two outcomes this run is going to be, so a
-          # green check never reads as "the pipeline ran" when it did not.
-          if [ "$AUTONOMOUS_PIPELINE_ENABLED" = "true" ]; then
-            echo "::notice::AUTONOMOUS_PIPELINE_ENABLED=true — this run will execute the pipeline."
+          # green check never reads as "the pipeline ran" when it did not, and
+          # name the variable that decided it — the whole point of the rename is
+          # that a reader can tell which switch is in play.
+          if [ "$CURRENT" = "true" ]; then
+            echo "::notice::PIPELINE_TICK_ENABLED=true — this run will execute the pipeline."
+          elif [ "$LEGACY" = "true" ]; then
+            echo "::warning::Running from the legacy repository variable AUTONOMOUS_PIPELINE_ENABLED. That name is also used for a different switch in the Vercel runtime; rename this one to PIPELINE_TICK_ENABLED."
+          elif [ -n "$CURRENT" ] || [ -n "$LEGACY" ]; then
+            echo "::notice::Pipeline switch is set but not to \"true\" — this run is a no-op."
           else
-            echo "::notice::AUTONOMOUS_PIPELINE_ENABLED is not \"true\" — this run is a no-op. Set the repository variable to activate."
+            echo "::notice::PIPELINE_TICK_ENABLED is unset — this run is a no-op. Set the repository variable to \"true\" to activate."
           fi
 
       # The runner has no IPv6 route, and the Supabase pooler resolves to both.
@@ -135,8 +161,15 @@ jobs:
       - name: Run pipeline tick
         if: steps.db-check.outputs.skip != 'true'
         env:
+          # server/_core/env.ts reads AUTONOMOUS_PIPELINE_ENABLED from the
+          # process environment, so that is the name it arrives under here. The
+          # repository variable that supplies it is PIPELINE_TICK_ENABLED, kept
+          # distinct from the same-named Vercel runtime variable that gates the
+          # HTTP endpoint. The legacy name is a fallback so an already-set
+          # variable keeps working; an empty `vars.*` is falsy to `||`.
+          #
           # Absent or anything other than "true" makes the tick a no-op.
-          AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.AUTONOMOUS_PIPELINE_ENABLED }}
+          AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED || vars.AUTONOMOUS_PIPELINE_ENABLED }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
