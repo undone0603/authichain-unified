@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import tls from "node:tls";
 import { X509Certificate } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { getHyperdriveDb } from "./db";
 
 
@@ -95,6 +96,22 @@ describe("getDb", () => {
     // Self-signed: it is the root, so it must verify under its own key.
     expect(cert.verify(cert.publicKey)).toBe(true);
     expect(new Date(cert.validTo).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("ships the same certificate as certs/supabase-root-2021.pem", async () => {
+    // The CA exists twice on purpose: inlined here so the serverless bundle
+    // carries no runtime file read, and as a .pem so scripts/*.mjs — which
+    // cannot import this TypeScript module — can pin the same root instead of
+    // falling back to rejectUnauthorized:false. Two copies can drift; this is
+    // what stops them, so rotating one without the other fails here.
+    const fakeUrl =
+      "postgresql://" + "fakeuser" + ":" + "fakepass" + "@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require";
+
+    const config = await buildPoolConfig(fakeUrl);
+    const pinned = config.ssl!.ca!.at(-1)!;
+    const onDisk = readFileSync("certs/supabase-root-2021.pem", "utf8");
+
+    expect(new X509Certificate(onDisk).fingerprint256).toBe(new X509Certificate(pinned).fingerprint256);
   });
 
   it("never disables certificate verification", async () => {
