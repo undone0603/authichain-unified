@@ -30,6 +30,8 @@ export const ENV = {
   samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+  geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
   autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
   requireOutreachApproval: process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
   requireDevApproval: process.env.REQUIRE_DEV_APPROVAL !== "false",
