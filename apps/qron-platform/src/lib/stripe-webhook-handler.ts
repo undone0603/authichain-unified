@@ -561,7 +561,6 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
   const supabase = await getServiceClient();
 
   // Unlock story mode on the QRON (Permanent table)
-  const isNumeric = /^\d+$/.test(qronId);
   const { error: _qronError } = await supabase
     .from('qrons')
     .update({
@@ -569,7 +568,7 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
       story_tier: tier,
       story_unlocked_at: new Date().toISOString(),
     })
-    .eq(isNumeric ? 'id' : 'id', qronId); // Assuming id is what we get
+    .eq('id', qronId);
 
   // Also grant story_mode_enabled on user profile
   const userId = session.metadata?.userId;
@@ -581,16 +580,6 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId);
-  }
-
-  // Backup: Also try updating qron_generations if qronId is a UUID
-  if (!isNumeric) {
-    await supabase
-      .from('qron_generations')
-      .update({
-        // story_enabled: true, // We don't have this column here yet, but qrons has it
-      })
-      .eq('id', qronId);
   }
 
   // Notify customer
