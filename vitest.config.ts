@@ -21,7 +21,8 @@ export default defineConfig({
       // resolves to src/db.
       {
         find: /^@\/lib\/attestation(\/.*)?$/,
-        replacement: path.resolve(templateRoot, "src", "lib", "attestation") + "$1",
+        replacement:
+          path.resolve(templateRoot, "src", "lib", "attestation") + "$1",
       },
       {
         find: /^@\/db(\/.*)?$/,
@@ -37,7 +38,10 @@ export default defineConfig({
         replacement: path.resolve(templateRoot, "client", "src", "$1"),
       },
       { find: "@shared", replacement: path.resolve(templateRoot, "shared") },
-      { find: "@assets", replacement: path.resolve(templateRoot, "attached_assets") },
+      {
+        find: "@assets",
+        replacement: path.resolve(templateRoot, "attached_assets"),
+      },
     ],
   },
   test: {
