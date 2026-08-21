@@ -4614,5 +4614,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eu-general-product-safety-regulation-traceability-requirements",
+    "keyword": "eu general product safety regulation traceability requirements",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU General Product Safety Regulation | AuthiChain",
+    "metaDescription": "GPSR requires every product sold into the EU to carry a batch or serial number a shopper can actually see, and requires every economic operator in the chain.",
+    "h1": "EU General Product Safety Regulation Traceability Requirements",
+    "bodyHtml": "<p>GPSR requires every product sold into the EU to carry a batch or serial number a shopper can actually see, and requires every economic operator in the chain to be able to say who supplied it and where it went next.</p><h2>Why AuthiChain</h2><ul><li>The GPSR batch or serial number requirement maps onto the same unit-level identifier a signed AuthiChain record already carries — no second numbering scheme to maintain</li><li>GPSR puts a records-retention duty on every economic operator in the chain, not just the manufacturer; a record any of them can verify offline removes the need for a shared database between suppliers, importers, and distributors</li><li>GPSR does not require blockchain or cryptographic signing — only that a product stays identifiable and traceable. A signed, anchored record is one way to make that identification tamper-evident, not the only way the regulation permits</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does GPSR require blockchain-based traceability?</h3><p>No — Regulation (EU) 2023/988 requires products to be identifiable via batch or serial number and traceable through supply-chain records. It specifies no particular technology for meeting that duty.</p><h3>Who is responsible for traceability under GPSR?</h3><p>Every economic operator in the chain — manufacturer, importer, and distributor — has to be able to identify who supplied a product to them and to whom they supplied it. The regulation has applied since 13 December 2024.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU General Product Safety Regulation Traceability Requirements",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "GPSR requires every product sold into the EU to carry a batch or serial number a shopper can actually see, and requires every economic operator in the chain to be able to say who supplied it and where it went next.",
+          "url": "https://authichain.com/p/eu-general-product-safety-regulation-traceability-requirements"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU General Product Safety Regulation Traceability Requirements",
+              "item": "https://authichain.com/p/eu-general-product-safety-regulation-traceability-requirements"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does GPSR require blockchain-based traceability?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — Regulation (EU) 2023/988 requires products to be identifiable via batch or serial number and traceable through supply-chain records. It specifies no particular technology for meeting that duty."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who is responsible for traceability under GPSR?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Every economic operator in the chain — manufacturer, importer, and distributor — has to be able to identify who supplied a product to them and to whom they supplied it. The regulation has applied since 13 December 2024."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "gs1-datamatrix-point-of-care-scanning-requirements",
+    "keyword": "gs1 datamatrix point of care scanning requirements",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "GS1 Datamatrix Point Of Care Scanning | AuthiChain",
+    "metaDescription": "Hospitals, pharmacies, and infusion centers scanning DSCSA-serialized units at the point of care need camera-based imaging scanners for GS1 DataMatrix — a.",
+    "h1": "GS1 Datamatrix Point Of Care Scanning Requirements",
+    "bodyHtml": "<p>Hospitals, pharmacies, and infusion centers scanning DSCSA-serialized units at the point of care need camera-based imaging scanners for GS1 DataMatrix — a laser scanner built for linear barcodes cannot read a 2D code at all, a hardware gap separate from the retail point-of-sale transition under GS1 Sunrise 2027.</p><h2>Why AuthiChain</h2><ul><li>GS1 DataMatrix is already the required data carrier for unit-level DSCSA serialization — the point-of-care scanning gap is a hardware question, not a new identifier format</li><li>Camera-based imaging scanners read both linear barcodes and GS1 DataMatrix; legacy laser scanners common in hospital pharmacies read neither the 2D format nor anything signed inside it</li><li>A signed AuthiChain record resolves from the same GS1 Digital Link identifier encoded in the DataMatrix, so a point-of-care scan carries cryptographic verification alongside serialization data — not a second code printed on the pack</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is this the same requirement as GS1 Sunrise 2027?</h3><p>They share a data carrier but not a deadline or a setting. Sunrise 2027 targets retail point-of-sale scanning by the end of 2027; GS1 DataMatrix at the point of care is driven by DSCSA unit-level serialization, already in force for manufacturers since May 2025.</p><h3>Can our existing barcode scanners read GS1 DataMatrix?</h3><p>Only if they are camera-based imaging scanners. A laser scanner built for linear (1D) barcodes cannot read a 2D DataMatrix code — this is a hardware replacement, not a software update.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — GS1 Datamatrix Point Of Care Scanning Requirements",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Hospitals, pharmacies, and infusion centers scanning DSCSA-serialized units at the point of care need camera-based imaging scanners for GS1 DataMatrix — a laser scanner built for linear barcodes cannot read a 2D code at all, a hardware gap separate from the retail point-of-sale transition under GS1 Sunrise 2027.",
+          "url": "https://authichain.com/p/gs1-datamatrix-point-of-care-scanning-requirements"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "GS1 Datamatrix Point Of Care Scanning Requirements",
+              "item": "https://authichain.com/p/gs1-datamatrix-point-of-care-scanning-requirements"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is this the same requirement as GS1 Sunrise 2027?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "They share a data carrier but not a deadline or a setting. Sunrise 2027 targets retail point-of-sale scanning by the end of 2027; GS1 DataMatrix at the point of care is driven by DSCSA unit-level serialization, already in force for manufacturers since May 2025."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can our existing barcode scanners read GS1 DataMatrix?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Only if they are camera-based imaging scanners. A laser scanner built for linear (1D) barcodes cannot read a 2D DataMatrix code — this is a hardware replacement, not a software update."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "did-webvh-vs-did-web-verifiable-credentials",
+    "keyword": "did webvh vs did web verifiable credentials",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DID Webvh Vs DID Web Verifiable Credentials | AuthiChain",
+    "metaDescription": "did:webvh reached version 1.0 in 2026, adding a self-certifying identifier and a signed update history to plain did:web — solving the exact portability.",
+    "h1": "DID Webvh Vs DID Web Verifiable Credentials",
+    "bodyHtml": "<p>did:webvh reached version 1.0 in 2026, adding a self-certifying identifier and a signed update history to plain did:web — solving the exact portability problem AuthiChain’s protocol spec sidesteps today by defaulting to did:key instead.</p><h2>Why AuthiChain</h2><ul><li>did:webvh lets a DID move to a new web location without breaking the chain of trust back to its original keys; did:web has no equivalent — change the domain and the identifier is simply gone</li><li>Neither did:web nor did:webvh is what protocol/SPEC.md specifies today: the spec resolves the issuer key from did:key with zero network access, a property did:webvh does not match, since it still requires an HTTPS lookup to resolve</li><li>did:webvh’s verifiable history is a real answer to key rotation, a gap did:key does not solve on its own — a new did:key is a new identifier, with no cryptographic link back to the old one</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain support did:webvh today?</h3><p>No — the reference verifier resolves did:key only, per protocol/SPEC.md §5 step 2. did:webvh is a candidate for a future issuer-identity option, not something implemented today.</p><h3>Is did:webvh a replacement for did:web?</h3><p>It is an extension. did:webvh uses the same DID-to-HTTPS resolution as did:web, then adds a self-certifying identifier and signed update history, addressing did:web’s two open problems — domain lock-in and no proof of what changed on rotation.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DID Webvh Vs DID Web Verifiable Credentials",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "did:webvh reached version 1.0 in 2026, adding a self-certifying identifier and a signed update history to plain did:web — solving the exact portability problem AuthiChain’s protocol spec sidesteps today by defaulting to did:key instead.",
+          "url": "https://authichain.com/p/did-webvh-vs-did-web-verifiable-credentials"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DID Webvh Vs DID Web Verifiable Credentials",
+              "item": "https://authichain.com/p/did-webvh-vs-did-web-verifiable-credentials"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain support did:webvh today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the reference verifier resolves did:key only, per protocol/SPEC.md §5 step 2. did:webvh is a candidate for a future issuer-identity option, not something implemented today."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is did:webvh a replacement for did:web?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It is an extension. did:webvh uses the same DID-to-HTTPS resolution as did:web, then adds a self-certifying identifier and signed update history, addressing did:web’s two open problems — domain lock-in and no proof of what changed on rotation."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-battery-regulation-due-diligence-report-deadline",
+    "keyword": "eu battery regulation due diligence report deadline",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Battery Regulation Due Diligence Report | AuthiChain",
+    "metaDescription": "The EU Battery Regulation’s due diligence reporting deadline moved from 2025 to 18 August 2027 under Regulation (EU) 2025/1561 — a separate obligation and a.",
+    "h1": "EU Battery Regulation Due Diligence Report Deadline",
+    "bodyHtml": "<p>The EU Battery Regulation’s due diligence reporting deadline moved from 2025 to 18 August 2027 under Regulation (EU) 2025/1561 — a separate obligation and a separate date from the battery passport’s 18 February 2027 mandate, and the two get conflated constantly.</p><h2>Why AuthiChain</h2><ul><li>Regulation (EU) 2025/1561, in force since 31 July 2025, delays the Article 52 due diligence policy obligations to 18 August 2027 and moves the public reporting cycle from annual to every three years</li><li>The battery passport’s data — carbon footprint, state-of-health, material composition — and the Article 52 due diligence report are separate obligations under the same regulation, on separate timelines; a passport record does not by itself satisfy the due diligence duty</li><li>The Commission’s due diligence guidelines, originally due 18 February 2025, are now expected by 26 July 2026 — a battery manufacturer building a due diligence process today is building against guidance that has not shipped yet</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the due diligence delay also push back the battery passport deadline?</h3><p>No — 18 February 2027 remains the battery passport mandate. Only the separate Article 52 due diligence policy and reporting obligations moved to 18 August 2027 under Regulation (EU) 2025/1561.</p><h3>Does this delay apply to the whole Battery Regulation?</h3><p>No — it applies specifically to Article 52 due diligence policy obligations. Other Battery Regulation duties, including the 18 February 2027 passport mandate, are unaffected.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Battery Regulation Due Diligence Report Deadline",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU Battery Regulation’s due diligence reporting deadline moved from 2025 to 18 August 2027 under Regulation (EU) 2025/1561 — a separate obligation and a separate date from the battery passport’s 18 February 2027 mandate, and the two get conflated constantly.",
+          "url": "https://authichain.com/p/eu-battery-regulation-due-diligence-report-deadline"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Battery Regulation Due Diligence Report Deadline",
+              "item": "https://authichain.com/p/eu-battery-regulation-due-diligence-report-deadline"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the due diligence delay also push back the battery passport deadline?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — 18 February 2027 remains the battery passport mandate. Only the separate Article 52 due diligence policy and reporting obligations moved to 18 August 2027 under Regulation (EU) 2025/1561."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does this delay apply to the whole Battery Regulation?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it applies specifically to Article 52 due diligence policy obligations. Other Battery Regulation duties, including the 18 February 2027 passport mandate, are unaffected."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "scip-database-digital-product-passport-substances-of-concern",
+    "keyword": "scip database digital product passport substances of concern",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Scip Database Digital Product Passport | AuthiChain",
+    "metaDescription": "Any article sold into the EU containing a Candidate List substance above 0.1% weight by weight has needed a SCIP notification to ECHA since 5 January 2021 —.",
+    "h1": "Scip Database Digital Product Passport Substances Of Concern",
+    "bodyHtml": "<p>Any article sold into the EU containing a Candidate List substance above 0.1% weight by weight has needed a SCIP notification to ECHA since 5 January 2021 — and the EU Digital Product Passport is built to carry that same substances-of-concern data rather than asking manufacturers to declare it twice.</p><h2>Why AuthiChain</h2><ul><li>SCIP notification is a Waste Framework Directive Article 9(1)(i) duty, separate from and older than the ESPR — a DPP record structured to carry SCIP-format substance declarations does not need a new data model when a category’s delegated act adopts</li><li>The 0.1% w/w threshold applies per article, not per shipment or per SKU family — a bill of materials with hundreds of components can mean hundreds of individual SCIP checks, not one blanket declaration</li><li>ECHA has reported ongoing technical delays in the SCIP dissemination process through 2026; a submitted notification is not void because publication is slow — the SCIP number issued at submission is what a DPP record should reference, not the dissemination status</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a SCIP notification alone satisfy EU DPP hazardous-substance requirements?</h3><p>Not necessarily — SCIP is a Waste Framework Directive obligation that predates the DPP. A DPP record can carry the same substance-of-concern data, but each product category’s delegated act sets what the passport itself must declare.</p><h3>What triggers a SCIP notification?</h3><p>Any article placed on the EU market containing a Candidate List substance of very high concern above 0.1% weight by weight, per Article 9(1)(i) of the Waste Framework Directive, in effect since 5 January 2021.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Scip Database Digital Product Passport Substances Of Concern",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Any article sold into the EU containing a Candidate List substance above 0.1% weight by weight has needed a SCIP notification to ECHA since 5 January 2021 — and the EU Digital Product Passport is built to carry that same substances-of-concern data rather than asking manufacturers to declare it twice.",
+          "url": "https://authichain.com/p/scip-database-digital-product-passport-substances-of-concern"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Scip Database Digital Product Passport Substances Of Concern",
+              "item": "https://authichain.com/p/scip-database-digital-product-passport-substances-of-concern"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a SCIP notification alone satisfy EU DPP hazardous-substance requirements?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not necessarily — SCIP is a Waste Framework Directive obligation that predates the DPP. A DPP record can carry the same substance-of-concern data, but each product category’s delegated act sets what the passport itself must declare."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What triggers a SCIP notification?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Any article placed on the EU market containing a Candidate List substance of very high concern above 0.1% weight by weight, per Article 9(1)(i) of the Waste Framework Directive, in effect since 5 January 2021."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
