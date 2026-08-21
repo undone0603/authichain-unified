@@ -13,7 +13,8 @@ export default defineConfig({
       // Using regex to avoid prefix-matching scoped packages like @trpc, @radix.
       {
         find: /^@\/lib\/attestation(\/.*)?$/,
-        replacement: path.resolve(templateRoot, "src", "lib", "attestation"),
+        replacement:
+          path.resolve(templateRoot, "src", "lib", "attestation"),
       },
       {
         find: /^@\/db(\/.*)?$/,
@@ -29,7 +30,10 @@ export default defineConfig({
         replacement: path.resolve(templateRoot, "client", "src", "$1"),
       },
       { find: "@shared", replacement: path.resolve(templateRoot, "shared") },
-      { find: "@assets", replacement: path.resolve(templateRoot, "attached_assets") },
+      {
+        find: "@assets",
+        replacement: path.resolve(templateRoot, "attached_assets"),
+      },
     ],
   },
   test: {
