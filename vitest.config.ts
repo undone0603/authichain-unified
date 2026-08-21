@@ -10,7 +10,8 @@ export default defineConfig({
   resolve: {
     alias: [
       // Server-side carve-outs must come before the client catch-all.
-      // Using regex to avoid prefix-matching scoped packages like @trpc, @radix.
+      // Using regex to avoid prefix-matching scoped packages like @trpc and
+      // @radix.
       //
       // Each replacement must end in $1, because a regex `find` is applied as
       // id.replace(find, replacement) and these patterns are anchored with $ —
