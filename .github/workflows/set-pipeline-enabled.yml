@@ -1,4 +1,26 @@
-name: Configure Autonomous Pipeline
+name: Configure Autonomous Pipeline (Vercel runtime only)
+
+# Sets AUTONOMOUS_PIPELINE_ENABLED in the Vercel production runtime and
+# redeploys so the value takes effect.
+#
+# ── What this does NOT switch on ─────────────────────────────────────────────
+# The variable this sets gates the /api/cron/pipeline HTTP endpoint. Nothing
+# calls that endpoint on a schedule: vercel.json declares no `crons`, and
+# autonomous-business-cycle.yml gates its only job on
+# `github.event_name == 'workflow_dispatch' && inputs.live`, so each of its
+# thirteen cron entries starts a run that skips the job. Running this workflow
+# therefore changes what happens when the endpoint is called, and does not by
+# itself cause the pipeline to run again.
+#
+# The daily scheduled pipeline is pipeline-tick.yml, which invokes
+# runPipelineTick() directly on the runner and is gated by a separate
+# repository variable, PIPELINE_TICK_ENABLED. That variable and this one are
+# stored in different places, hold independent values, and neither reports a
+# disagreement with the other — they used to share the name
+# AUTONOMOUS_PIPELINE_ENABLED, which made them easy to mistake for one switch.
+#
+# To turn the recurring pipeline on, set the repository variable
+# PIPELINE_TICK_ENABLED to "true". This workflow is for the HTTP path.
 
 on:
   workflow_dispatch:
@@ -49,4 +71,13 @@ jobs:
 
           echo "Redeploying production deployment $production_deployment_id with the updated runtime configuration."
           vercel redeploy "$production_deployment_id" --target production --token="$VERCEL_TOKEN"
-          echo "AUTONOMOUS_PIPELINE_ENABLED is active in the Vercel production runtime."
+          echo "AUTONOMOUS_PIPELINE_ENABLED=$PIPELINE_ENABLED is active in the Vercel production runtime."
+
+      - name: State what is and is not now scheduled
+        # A green check here reads as "the autonomous pipeline is configured",
+        # which is true of the HTTP endpoint and not of anything recurring. Say
+        # so on the run itself rather than only in the workflow header, so the
+        # person who just dispatched it finds out now.
+        run: |
+          echo "::notice::This set the Vercel runtime variable only. It gates /api/cron/pipeline, which nothing calls on a schedule."
+          echo "::notice::The daily pipeline is pipeline-tick.yml, gated by the repository variable PIPELINE_TICK_ENABLED. This workflow does not change it."
