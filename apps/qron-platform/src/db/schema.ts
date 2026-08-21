@@ -294,20 +294,19 @@ export const leadSequences = pgTable(
 export const livingArtSchedules = pgTable(
   'living_art_schedules',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    qronId: integer('qron_id').notNull(),
-    prompt: text('prompt').notNull(),
-    style: text('style'),
-    startTime: timestamp('start_time').notNull(),
-    endTime: timestamp('end_time'),
-    isProcessed: boolean('is_processed').default(false).notNull(),
-    processedAt: timestamp('processed_at'),
-    newImageUrl: text('new_image_url'),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    id: integer('id').primaryKey(),
+    qronId: integer('qron_id'),
+    name: text('name'),
+    scheduleType: text('schedule_type'),
+    cronExpression: text('cron_expression'),
+    images: jsonb('images'),
+    isActive: boolean('is_active'),
+    lastRunAt: timestamp('last_run_at'),
+    createdAt: timestamp('created_at'),
+    updatedAt: timestamp('updated_at'),
   },
   (table) => [
     index('idx_living_art_qron').on(table.qronId),
-    index('idx_living_art_start').on(table.startTime),
   ]
 );
 
@@ -318,7 +317,8 @@ export const whiteLabelClients = pgTable(
     name: text('name').notNull(),
     domain: text('domain').unique(),
     logoUrl: text('logo_url'),
-    brandColors: jsonb('brand_colors').default({ primary: '#000000', secondary: '#ffffff' }),
+    primaryColor: text('primary_color'),
+    secondaryColor: text('secondary_color'),
     apiKeyPrefix: text('api_key_prefix').unique(),
     billingPlan: text('billing_plan').default('reseller_standard').notNull(),
     isActive: boolean('is_active').default(true).notNull(),

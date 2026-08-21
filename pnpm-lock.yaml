@@ -39,7 +39,7 @@ importers:
         version: 13.5.0
       '@lucia-auth/adapter-drizzle':
         specifier: ^1.1.0
-        version: 1.1.0(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.22.0)(postgres@3.4.9))(lucia@3.2.2)
+        version: 1.1.0(drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260821.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.22.0)(postgres@3.4.9))(lucia@3.2.2)
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@3.25.76)
@@ -198,7 +198,7 @@ importers:
         version: 16.6.1
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.22.0)(postgres@3.4.9)
+        version: 0.45.2(@cloudflare/workers-types@5.20260821.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.22.0)(postgres@3.4.9)
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@18.3.1)
@@ -317,6 +317,9 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^5.20260821.1
+        version: 5.20260821.1
       '@testing-library/jest-dom':
         specifier: ^6.0.0
         version: 6.10.0(@testing-library/dom@9.3.4)
@@ -403,7 +406,7 @@ importers:
         version: 3.2.6(@edge-runtime/vm@3.2.0)(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@1.21.7)(jsdom@22.1.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(lightningcss@1.32.0)(terser@5.47.1)(tsx@4.22.2)(yaml@2.9.0)
       wrangler:
         specifier: ^4.107.0
-        version: 4.107.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+        version: 4.107.0(@cloudflare/workers-types@5.20260821.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
 packages:
 
@@ -660,6 +663,9 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@cloudflare/workers-types@5.20260821.1':
+    resolution: {integrity: sha512-jZiTISghTPeytJ7eDt5K1AV7df998xGECMgT8oy838VfFLJLROvdLzDaJb0/Jv4WfxO00keNoWt1d6olL7URRg==}
 
   '@coinbase/cdp-sdk@1.51.2':
     resolution: {integrity: sha512-o4IEwXbyAjfhPQWoFBuqnV1JQGLk4NlUVMzH/ur4voPSjYZvlYFVuOoE/eEcsoPFN28xaWTBvqebwncQL8h8fQ==}
@@ -10738,6 +10744,8 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20260701.1':
     optional: true
 
+  '@cloudflare/workers-types@5.20260821.1': {}
+
   '@coinbase/cdp-sdk@1.51.2(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@solana-program/system': 0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))
@@ -11889,9 +11897,9 @@ snapshots:
     dependencies:
       '@lit-labs/ssr-dom-shim': 1.6.0
 
-  '@lucia-auth/adapter-drizzle@1.1.0(drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.22.0)(postgres@3.4.9))(lucia@3.2.2)':
+  '@lucia-auth/adapter-drizzle@1.1.0(drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260821.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.22.0)(postgres@3.4.9))(lucia@3.2.2)':
     dependencies:
-      drizzle-orm: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.22.0)(postgres@3.4.9)
+      drizzle-orm: 0.45.2(@cloudflare/workers-types@5.20260821.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.22.0)(postgres@3.4.9)
       lucia: 3.2.2
 
   '@lukeed/ms@2.0.2': {}
@@ -17388,8 +17396,9 @@ snapshots:
       esbuild: 0.25.4
       tsx: 4.22.2
 
-  drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.22.0)(postgres@3.4.9):
+  drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260821.1)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(mysql2@3.15.1)(pg@8.22.0)(postgres@3.4.9):
     optionalDependencies:
+      '@cloudflare/workers-types': 5.20260821.1
       '@opentelemetry/api': 1.9.1
       '@types/pg': 8.20.0
       mysql2: 3.15.1
@@ -21918,7 +21927,7 @@ snapshots:
       regexparam: 3.0.0
       use-sync-external-store: 1.6.0(react@18.3.1)
 
-  wrangler@4.107.0(bufferutil@4.1.0)(utf-8-validate@5.0.10):
+  wrangler@4.107.0(@cloudflare/workers-types@5.20260821.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260701.1)
@@ -21929,6 +21938,7 @@ snapshots:
       unenv: 2.0.0-rc.24
       workerd: 1.20260701.1
     optionalDependencies:
+      '@cloudflare/workers-types': 5.20260821.1
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil

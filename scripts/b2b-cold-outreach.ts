@@ -71,9 +71,16 @@ const CALENDLY = process.env.CALENDLY_LINK ?? 'https://app.authichain.com/book';
 // ── Apollo.io people-search: find work email by name + company domain ─────────
 // Uses /v1/mixed_people/search (not /v1/people/match which requires an email).
 // Returns empty string when APOLLO_API_KEY is absent or API returns no result.
+// Set once Apollo reports the plan does not include API access. That is a
+// property of the account, not of the request, so every remaining lookup in the
+// run would fail identically — retrying them just prints the same warning once
+// per target and makes a billing problem look like flaky network.
+let apolloEntitlementBlocked = false;
+
 async function apolloFindEmail(name: string, company: string, website: string): Promise<string> {
   const key = process.env.APOLLO_API_KEY;
   if (!key) return '';
+  if (apolloEntitlementBlocked) return '';
 
   try {
     const domain = website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
@@ -95,6 +102,22 @@ async function apolloFindEmail(name: string, company: string, website: string): 
       }),
     });
     if (!res.ok) {
+      // Apollo answers 403 with error_code API_INACCESSIBLE when the endpoint
+      // is not on the account's plan. Confirmed 2026-08-21 against this
+      // account: both mixed_people/search and people/match return it, and the
+      // credit balance is untouched because the request never reaches metering.
+      // No key rotation or retry fixes that — only a paid plan does.
+      const body = await res.text().catch(() => '');
+      if (res.status === 403 || body.includes('API_INACCESSIBLE')) {
+        apolloEntitlementBlocked = true;
+        console.warn(
+          `  ⛔ Apollo API is not enabled on this account's plan (HTTP ${res.status}).\n` +
+          `     Every remaining lookup this run is skipped; targets with a blank\n` +
+          `     email stay 'pending_email' and are never sent to. Fix by upgrading\n` +
+          `     the Apollo plan, or by filling addresses in the leads table by hand.`,
+        );
+        return '';
+      }
       console.warn(`  ⚠️  Apollo search HTTP ${res.status} for ${company}`);
       return '';
     }

@@ -158,7 +158,7 @@ const HTML = `<!DOCTYPE html>
 </html>`;
 
 export default {
-  async fetch(request) {
+  async fetch(request: Request) {
     const url = new URL(request.url);
     if (url.pathname === "/health") return new Response("OK", { status: 200 });
     return new Response(HTML, {
