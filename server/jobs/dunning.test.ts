@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { state } = vi.hoisted(() => ({ state: { subs: [] as any[], logged: new Set<string>() } }));
 
@@ -23,6 +23,41 @@ beforeEach(() => {
   state.subs = [];
   state.logged = new Set();
   sendEmail.mockClear(); createSystemNotification.mockClear(); logActivity.mockClear();
+  // These cases exercise the escalation logic, which is now behind its own
+  // switch. The gate itself is covered separately below.
+  process.env.DUNNING_ENABLED = 'true';
+});
+
+afterEach(() => {
+  delete process.env.DUNNING_ENABLED;
+});
+
+describe('the dunning gate', () => {
+  it('sends nothing unless DUNNING_ENABLED is exactly "true"', async () => {
+    // runPipelineTick() calls this before anything else, so without its own
+    // switch AUTONOMOUS_PIPELINE_ENABLED was silently also the switch that
+    // mails paying customers a final notice about their billing.
+    state.subs = [{ id: 1, userId: 10, plan: 'starter', updatedAt: daysAgo(20) }];
+
+    for (const value of [undefined, 'false', '1', 'TRUE', 'yes']) {
+      sendEmail.mockClear();
+      if (value === undefined) delete process.env.DUNNING_ENABLED;
+      else process.env.DUNNING_ENABLED = value;
+
+      const r = await runDunningEscalation();
+      expect(r.skipped, `DUNNING_ENABLED=${String(value)} should not send`).toBe(true);
+      expect(r.remindersSent).toBe(0);
+      expect(sendEmail).not.toHaveBeenCalled();
+    }
+  });
+
+  it('does not consult the database while disabled', async () => {
+    // A past-due subscription must not even be read, let alone mailed.
+    delete process.env.DUNNING_ENABLED;
+    state.subs = [{ id: 1, userId: 10, plan: 'starter', updatedAt: daysAgo(20) }];
+    const r = await runDunningEscalation();
+    expect(r.checked).toBe(0);
+  });
 });
 
 describe('runDunningEscalation', () => {
