@@ -36,7 +36,11 @@ export default {
     }
 
     try {
-      const { imageUrl, productId, industryContext } = await request.json();
+      const { imageUrl, productId, industryContext } = (await request.json()) as {
+        imageUrl?: string;
+        productId?: string;
+        industryContext?: string;
+      };
 
       if (!imageUrl || !productId) {
         return new Response(JSON.stringify({ error: "Missing required fields: imageUrl, productId" }), { status: 400 });
@@ -79,7 +83,9 @@ export default {
         throw new Error(`Vision API Error: ${errorText}`);
       }
 
-      const aiData = await aiResponse.json();
+      const aiData = (await aiResponse.json()) as {
+        choices: { message: { content: string } }[];
+      };
       const classificationResult = JSON.parse(aiData.choices[0].message.content);
 
       ctx.waitUntil(

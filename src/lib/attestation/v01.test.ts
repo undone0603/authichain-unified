@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { verifyAttestationJws, canonicalize } from '@/lib/attestation/v01';
-import fixture from '@/../fixtures/attestation-v0.1-valid.json';
-import jwks from '@/../fixtures/attestation-v0.1-jwks.json';
+import { verifyAttestationJws, canonicalize } from './v01';
+import fixture from '../../../fixtures/attestation-v0.1-valid.json';
+import jwks from '../../../fixtures/attestation-v0.1-jwks.json';
 import fs from 'node:fs';
 import path from 'node:path';
 

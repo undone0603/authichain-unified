@@ -21,14 +21,6 @@ interface OutreachJob {
   scheduledAt?: number;
 }
 
-interface QueueMessage<T> {
-  id: string;
-  body: T;
-  timestamp: Date;
-  ack(): void;
-  retry(): void;
-}
-
 function isAuthorized(request: Request, env: Env): boolean {
   if (!env.INTERNAL_SECRET) return false
   const header = request.headers.get('X-Internal-Secret') ?? ''
@@ -128,7 +120,7 @@ export default {
   },
 
   async queue(batch: MessageBatch<OutreachJob>, env: Env): Promise<void> {
-    for (const message of batch.messages as QueueMessage<OutreachJob>[]) {
+    for (const message of batch.messages) {
       const job = message.body;
       const success = await processJob(job, env);
 
