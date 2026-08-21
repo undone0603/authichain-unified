@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { ENV } from "../_core/env";
+import { withDryRunEmail } from "../email-service";
 import { logActivity } from "../db";
 import { runBudgetMonitor } from "./budget-monitor";
 import { runDunningEscalation } from "./dunning";
@@ -13,11 +14,52 @@ import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActi
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
 
-export async function runPipelineTick(options?: { force?: boolean }) {
-  if (!ENV.autonomousPipelineEnabled && !options?.force) {
-    return { enabled: false, skipped: true, reason: "AUTONOMOUS_PIPELINE_ENABLED=false" };
+/**
+ * Runs one pipeline tick.
+ *
+ * `dryRun` answers "what would a live tick actually do?" without sending mail.
+ * Until it existed the only way to find out was to read the call graph by
+ * hand — seven subsystems deep — which is a poor thing to rely on immediately
+ * before switching on something that emails people.
+ *
+ * ── What dryRun does and does not cover ──────────────────────────────────────
+ * Covered: every outbound email. sendEmail() records the message and returns
+ * without contacting a provider, so this holds for send sites that do not know
+ * the dry run exists.
+ *
+ * NOT covered, and this matters: the tick still runs for real otherwise. It
+ * writes to the database, creates missions, executes due tasks, and any
+ * non-email outward action a task takes — an HTTP call, a social post — still
+ * happens. This is deliberate, because a run that skipped all of that would
+ * not tell you what a live run does. It is not a no-op, and it is not a
+ * transaction that rolls back. Treat it as "live, minus the mail".
+ */
+export async function runPipelineTick(options?: { force?: boolean; dryRun?: boolean }) {
+  if (options?.dryRun) {
+    // dryRun implies force: the point is to see what a live tick would do
+    // while the switch is still off, which is when the question gets asked.
+    const { result, sends } = await withDryRunEmail(executeTick);
+    return {
+      ...result,
+      dryRun: {
+        emails: "recorded, not sent",
+        database: "written for real",
+        otherChannels: "live — non-email actions were not intercepted",
+      },
+      wouldHaveEmailed: sends.map(s => ({ to: s.to, subject: s.subject, preview: s.body.slice(0, 160) })),
+    };
   }
 
+  if (!ENV.autonomousPipelineEnabled && !options?.force) {
+    return { enabled: false as const, skipped: true as const, reason: "AUTONOMOUS_PIPELINE_ENABLED=false" };
+  }
+
+  return executeTick();
+}
+
+/** The tick itself. Split out so the dry-run wrapper does not have to call
+ *  runPipelineTick recursively, which left its return type uninferable. */
+async function executeTick() {
   const budgetMonitor = await runBudgetMonitor();
   const dunning = await runDunningEscalation();
   const retention = await runRetentionAutomation();
@@ -122,7 +164,9 @@ export async function runPipelineTick(options?: { force?: boolean }) {
 const isMain = !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
-  runPipelineTick()
+  // `pnpm tsx server/jobs/pipeline-tick.ts --dry-run` reports what a live tick
+  // would do, including while AUTONOMOUS_PIPELINE_ENABLED is unset.
+  runPipelineTick({ dryRun: process.argv.includes("--dry-run") })
     .then(result => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);

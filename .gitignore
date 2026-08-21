@@ -14,6 +14,14 @@ node_modules/
 !.env.example
 !.env.template
 *.pem
+# Exception: a public CA certificate, not a credential. It is the Supabase
+# pooler's self-signed root, which no public trust store contains, so scripts
+# that open a database connection need it in the repository to verify the
+# server instead of falling back to rejectUnauthorized:false. It contains no
+# private key — `openssl x509` on it prints a certificate, and the matching key
+# lives only at Supabase. server/db.ts carries the same bytes inline and
+# server/db.test.ts asserts the two match.
+!certs/supabase-root-2021.pem
 *.key
 supabase/key.txt
 

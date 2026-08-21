@@ -75,7 +75,28 @@ async function runStep(subscription: any, step: Step, message: string) {
   return true;
 }
 
+/**
+ * Sends payment-failure escalation email to customers with past-due
+ * subscriptions, up to a "final notice: account at risk of suspension".
+ *
+ * Gated separately from the pipeline. runPipelineTick() calls this before it
+ * does anything else, so until now AUTONOMOUS_PIPELINE_ENABLED was also,
+ * silently, the switch that mails existing customers about their billing.
+ * Those are not the same decision and should not share one switch: turning on
+ * lead discovery is a growth experiment, and dunning a paying customer at
+ * "final notice" is a billing action against a live relationship.
+ *
+ * It sends nothing today only because `subscriptions` is empty. That is a fact
+ * about the current data, not a safeguard, and it stops being true the first
+ * time a subscription goes past due.
+ *
+ * Set DUNNING_ENABLED=true to turn it on.
+ */
 export async function runDunningEscalation() {
+  if (process.env.DUNNING_ENABLED !== "true") {
+    return { checked: 0, remindersSent: 0, skipped: true, reason: 'DUNNING_ENABLED is not "true"' };
+  }
+
   const pastDue = await listPastDueSubscriptions();
   let sent = 0;
 
