@@ -11,8 +11,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 export default function SupplyChain() {
-  const [productFilter, setProductFilter] = useState<number | undefined>(undefined);
-  const { data: events, isLoading } = trpc.supplyChain.getEvents.useQuery({ productId: productFilter ?? 0 }, { enabled: !!productFilter });
+  const [productFilter, setProductFilter] = useState<string | undefined>(undefined);
+  const { data: events, isLoading } = trpc.supplyChain.getEvents.useQuery({ productId: productFilter ?? '' }, { enabled: !!productFilter });
   // IoT data placeholder - no separate IoT query in router
   const addEvent = trpc.supplyChain.addEvent.useMutation();
   const utils = trpc.useUtils();
@@ -24,7 +24,7 @@ export default function SupplyChain() {
     if (!form.productId || !form.location) { toast.error("Product ID and location required"); return; }
     try {
       await addEvent.mutateAsync({
-        productId: parseInt(form.productId),
+        productId: form.productId,
         eventType: form.eventType as any,
         location: form.location,
         notes: form.description || undefined,

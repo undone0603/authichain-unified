@@ -18,7 +18,6 @@ on:
       - "src/db/schema.ts"
       - "supabase/migrations/**"
       - "apps/qron-platform/src/db/schema.ts"
-      - "apps/qron-platform/drizzle/schema.ts"
 
 permissions:
   contents: read
@@ -74,5 +73,4 @@ jobs:
           # workflow exists to prevent.
           node scripts/check-schema-drift.mjs $ARGS \
             --also=apps/qron-platform/src/db/schema.ts \
-            --also=apps/qron-platform/drizzle/schema.ts \
             | tee "$GITHUB_STEP_SUMMARY"

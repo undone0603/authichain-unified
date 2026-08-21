@@ -56,8 +56,10 @@
  *   DATABASE_URL=... node scripts/check-schema-drift.mjs [--json] [--strict]
  *                                                        [--also=<other-schema.ts>]
  *
- * --also reports drift in another schema file without gating on it. Used for
- * schema files owned by a sub-app that declare tables in this same database.
+ * --also checks another schema file that declares tables in this same database.
+ * Findings in those files gate too: they were advisory while
+ * apps/qron-platform carried 18 of them, and that backlog is now cleared, so
+ * there is nothing left to grandfather.
  *
  * Exits 1 on findings that are guaranteed runtime failures: a missing table or
  * column (42703/42P01), or an insert that can never satisfy NOT NULL
@@ -350,11 +352,13 @@ async function main() {
     );
   }
 
-  // Other schema files declare tables in this same database but are not gating.
-  // They are reported so their drift is visible and owned rather than silent —
-  // this whole workflow exists because unwatched drift is what went wrong.
-  // Advisory, not fatal: they belong to a separate app with its own migrations,
-  // so the call on adding or dropping their columns is not this repo root's.
+  // Other schema files declare tables in this same database. These were
+  // report-only while apps/qron-platform carried a backlog of 18 findings; two
+  // of those turned out to be live faults (a missing scan_logs table the public
+  // redirect handler wrote to on every scan, and a missing redirect_rules
+  // column that made every redirect rule silently do nothing). Reporting
+  // without gating is how a backlog like that accumulates, so they gate now.
+  let alsoBreaking = 0;
   const advisory = process.argv
     .filter((a) => a.startsWith('--also='))
     .map((a) => a.slice('--also='.length));
@@ -368,13 +372,14 @@ async function main() {
     }
     const otherBreaking = summarise(other, live).filter((f) => BREAKING.has(f.kind));
     console.log(
-      `\n[advisory] ${file}: ${other.length} tables, ` +
-        `${otherBreaking.length} finding(s) that would fail at runtime (not gating)`,
+      `\n${file}: ${other.length} tables, ` +
+        `${otherBreaking.length} finding(s) that would fail at runtime`,
     );
     for (const f of otherBreaking) console.log(`  ${f.table}: ${f.detail}`);
+    alsoBreaking += otherBreaking.length;
   }
 
-  if (breaking.length) return 1;
+  if (breaking.length || alsoBreaking) return 1;
   return strict && findings.length ? 1 : 0;
 }
 
