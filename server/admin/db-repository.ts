@@ -33,4 +33,12 @@ export class DbAdminRepository implements IAdminRepository {
   getRecentActivity(limit: number): Promise<any[]> {
     return db.getRecentActivity(limit);
   }
+
+  getPastDueSubscriptions(): Promise<any[]> {
+    return db.listPastDueSubscriptions();
+  }
+
+  getInactiveUsers(daysSinceLastScan?: number): Promise<any[]> {
+    return db.listInactiveUsersNoRecentScans(daysSinceLastScan || 7);
+  }
 }
