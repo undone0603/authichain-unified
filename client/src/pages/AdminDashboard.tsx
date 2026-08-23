@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3, Settings, ShoppingBag, TrendingDown, Clock } from "lucide-react";
+import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, ShoppingBag, TrendingDown, Clock } from "lucide-react";
 import SystemControlPanel from "@/components/SystemControlPanel";
 import { ORDER_STATUSES, type OrderStatus } from "@shared/const";
 
