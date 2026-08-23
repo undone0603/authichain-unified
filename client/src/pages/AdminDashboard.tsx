@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3, Settings, ShoppingBag } from "lucide-react";
+import { Loader2, Shield, Users, DollarSign, AlertTriangle, Activity, BarChart3, Settings, ShoppingBag, TrendingDown, Clock } from "lucide-react";
 import SystemControlPanel from "@/components/SystemControlPanel";
 import { ORDER_STATUSES, type OrderStatus } from "@shared/const";
 
@@ -34,6 +34,8 @@ export default function AdminDashboard() {
   const { data: activity } = trpc.admin.activity.useQuery({ limit: 30 });
   const { data: subscriptions } = trpc.admin.subscriptions.useQuery();
   const { data: stakingStats } = trpc.admin.platformStaking.useQuery();
+  const { data: pastDueSubscriptions } = trpc.admin.pastDueSubscriptions.useQuery();
+  const { data: inactiveUsers } = trpc.admin.inactiveUsers.useQuery({ daysSinceLastScan: 7 });
   const serviceOrders: any[] = [];
   const updateOrderStatus = { mutate: (_: any) => {}, isPending: false };
 
@@ -59,6 +61,14 @@ export default function AdminDashboard() {
       <Tabs defaultValue="analytics">
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="churn" className={pastDueSubscriptions?.length || inactiveUsers?.length ? "bg-red-500/10" : ""}>
+            Churn & At-Risk
+            {(pastDueSubscriptions?.length || 0) + (inactiveUsers?.length || 0) > 0 && (
+              <Badge variant="destructive" className="ml-2">
+                {(pastDueSubscriptions?.length || 0) + (inactiveUsers?.length || 0)}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="users">Users ({users?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="fraud">Fraud Alerts ({fraudAlerts?.length ?? 0})</TabsTrigger>
@@ -136,6 +146,142 @@ export default function AdminDashboard() {
               </Card>
             </>
           ) : <EmptyState text="Loading analytics…" />}
+        </TabsContent>
+
+        <TabsContent value="churn" className="mt-4 space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Card className={pastDueSubscriptions?.length ? "border-red-500/30 bg-red-500/5" : ""}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingDown className="h-4 w-4 text-red-400" />
+                    Past-Due Subscriptions
+                  </CardTitle>
+                  {pastDueSubscriptions?.length ? (
+                    <Badge variant="destructive">{pastDueSubscriptions.length}</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-green-400 border-green-500/30">Healthy</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {pastDueSubscriptions && pastDueSubscriptions.length > 0 ? (
+                  <div className="space-y-2">
+                    {pastDueSubscriptions.slice(0, 20).map((s: any) => (
+                      <div key={s.id} className="p-3 rounded-lg bg-accent/30 border border-red-500/20">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium capitalize">{s.plan}</span>
+                          <span className="text-xs text-muted-foreground">User #{s.userId}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            {s.currentPeriodEnd
+                              ? `Overdue since ${new Date(s.currentPeriodEnd).toLocaleDateString()}`
+                              : "Unknown date"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {pastDueSubscriptions.length > 20 && (
+                      <p className="text-xs text-muted-foreground text-center py-2">
+                        +{pastDueSubscriptions.length - 20} more
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Shield className="h-10 w-10 text-green-400 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No past-due subscriptions</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className={inactiveUsers?.length ? "border-orange-500/30 bg-orange-500/5" : ""}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Users className="h-4 w-4 text-orange-400" />
+                    Inactive Users (7+ days)
+                  </CardTitle>
+                  {inactiveUsers?.length ? (
+                    <Badge variant="outline" className="text-orange-400 border-orange-500/30">
+                      {inactiveUsers.length}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-green-400 border-green-500/30">None</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {inactiveUsers && inactiveUsers.length > 0 ? (
+                  <div className="space-y-2">
+                    {inactiveUsers.slice(0, 20).map((u: any) => (
+                      <div key={u.id} className="p-3 rounded-lg bg-accent/30 border border-orange-500/20">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium">{u.name || `User #${u.id}`}</span>
+                          <span className="text-xs text-muted-foreground">{u.email || "—"}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            Last active{" "}
+                            {u.lastSignedIn
+                              ? new Date(u.lastSignedIn).toLocaleDateString()
+                              : "Never"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {inactiveUsers.length > 20 && (
+                      <p className="text-xs text-muted-foreground text-center py-2">
+                        +{inactiveUsers.length - 20} more
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Activity className="h-10 w-10 text-green-400 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">All users active in last 7 days</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Summary section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Churn Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                <span className="text-sm">Revenue at risk (past-due)</span>
+                <span className="font-bold text-red-400">
+                  {pastDueSubscriptions?.length} subscriptions
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                <span className="text-sm">Users at risk (no activity)</span>
+                <span className="font-bold text-orange-400">
+                  {inactiveUsers?.length} users
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                <span className="text-sm">Combined churn signals</span>
+                <span className="font-bold text-amber-400">
+                  {(pastDueSubscriptions?.length || 0) + (inactiveUsers?.length || 0)} total
+                </span>
+              </div>
+              {((pastDueSubscriptions?.length || 0) + (inactiveUsers?.length || 0)) > 0 && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-muted-foreground">
+                  <p className="font-medium text-red-400 mb-1">⚠️ Action Required</p>
+                  <p>Review dunning workflows and engagement campaigns to recover at-risk accounts.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="users" className="mt-4">
