@@ -253,6 +253,10 @@ export const supplyChainEvents = pgTable('supply_chain_events', {
 export type SupplyChainEvent = typeof supplyChainEvents.$inferSelect;
 
 // ─── Subscriptions & Billing ─────────────────────────────────────────────────
+// ⚠️ LEGACY: This table is defined in Drizzle but is NOT the active provisioning model.
+// The deployed system uses Supabase profiles.generations_limit for entitlements.
+// See docs/CREDIT_MODEL_ARCHITECTURE.md for reconciliation details.
+// This table is currently used only for admin analytics and dunning status tracking.
 export const subscriptions = pgTable('subscriptions', {
   id: serial('id').primaryKey(),
   userId: integer('userId').notNull(),
