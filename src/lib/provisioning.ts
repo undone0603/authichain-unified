@@ -9,6 +9,12 @@
  *
  * Idempotent at the row level: it resolves an existing profile by user id or
  * email, creating one only if neither exists, then upserts entitlement fields.
+ *
+ * ARCHITECTURE NOTE: This function writes to Supabase profiles.generations_limit
+ * (NOT the Drizzle subscriptions table). The profiles table is the single source
+ * of truth for generation entitlements in the deployed system. The Drizzle
+ * subscriptions table is a legacy model used only for admin analytics and
+ * dunning status. See docs/CREDIT_MODEL_ARCHITECTURE.md for reconciliation.
  */
 
 import { PLAN_CREDITS, type PlanId } from './plans';
