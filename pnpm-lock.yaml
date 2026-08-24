@@ -137,8 +137,8 @@ importers:
         specifier: ^0.15.0
         version: 0.15.0(@supabase/supabase-js@2.112.0(@opentelemetry/api@1.9.1))
       '@supabase/ssr':
-        specifier: ^0.12.0
-        version: 0.12.0(@supabase/supabase-js@2.112.0(@opentelemetry/api@1.9.1))
+        specifier: ^0.12.4
+        version: 0.12.4(@supabase/supabase-js@2.112.0(@opentelemetry/api@1.9.1))
       '@supabase/supabase-js':
         specifier: ^2.112.0
         version: 2.112.0(@opentelemetry/api@1.9.1)
@@ -4630,10 +4630,10 @@ packages:
     resolution: {integrity: sha512-McFFP+ivFDMTaCEh8JDpG+sPEmv5IjKvrP0uTH3Lbsriai4KbxB8ycY8TqPQnbjhOVjEifQm1q0y2tL1CUw9Zg==}
     engines: {node: '>=22.0.0'}
 
-  '@supabase/ssr@0.12.0':
-    resolution: {integrity: sha512-d9XV5XzJvzzZbeAIM7fWTCUYxQJZ2Ru6ny3dJHmHGp/LIrJ+o9FpD7N9Rf/UhhWEvHXSoDe8SI32Z2ouOdMjBg==}
+  '@supabase/ssr@0.12.4':
+    resolution: {integrity: sha512-xHzcgI8cC1TpBKSwJcR5Yd8CCwfIq0SBc5yb4yz/YFw5tbCrEQ0QT3a+2jymCxHgQWLfzwN93HZ6eRbcoMkOlA==}
     peerDependencies:
-      '@supabase/supabase-js': ^2.108.0
+      '@supabase/supabase-js': ^2.111.0
 
   '@supabase/storage-js@2.112.0':
     resolution: {integrity: sha512-X44Bl045X/e5e2tJqWsY+JmQvgtm04BJuijiWprIWYLn0mDvGnu8hLdzPOPcTVji7wlqbt2ZUHttsv+rGKQYXw==}
@@ -6780,6 +6780,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -14931,7 +14932,7 @@ snapshots:
       '@supabase/phoenix': 0.4.5
       tslib: 2.8.1
 
-  '@supabase/ssr@0.12.0(@supabase/supabase-js@2.112.0(@opentelemetry/api@1.9.1))':
+  '@supabase/ssr@0.12.4(@supabase/supabase-js@2.112.0(@opentelemetry/api@1.9.1))':
     dependencies:
       '@supabase/supabase-js': 2.112.0(@opentelemetry/api@1.9.1)
       cookie: 1.1.1
