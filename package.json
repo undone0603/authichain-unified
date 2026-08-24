@@ -154,7 +154,7 @@
     "tsx": "^4.17.0",
     "typescript": "^5.5.4",
     "vite": "^6.4.3",
-    "vitest": "^3.2.6",
+    "vitest": "^4.1.11",
     "wrangler": "^4.107.0"
   },
   "overrides": {
