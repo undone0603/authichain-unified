@@ -23,7 +23,7 @@
   - Adds threadId to leads
   - Creates indexes for efficient queries
   
-- ✅ `/docs/gov-engine-lead-pipeline.md` (NEW)
+- ✅ `/docs/marketing/gov-engine-lead-pipeline.md` (NEW)
   - Complete architecture & workflow guide
   - SQL query examples
   - Testing & monitoring instructions
