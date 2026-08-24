@@ -62,7 +62,7 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.db-check.outputs.skip != 'true'
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         if: steps.db-check.outputs.skip != 'true'
         with:
           version: 10.28.2
