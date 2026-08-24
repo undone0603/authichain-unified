@@ -17,8 +17,8 @@
 | `scripts/score-opportunities.ts` | ✏️ UPDATED | Scores opportunities, gates at 70/60 thresholds |
 | `scripts/qualify-leads.ts` | ✨ NEW | Converts scores into qualified leads with 4-dim breakdown |
 | `drizzle/migrations/015_lead_scoring_pipeline.sql` | ✨ NEW | Adds DB columns & indexes |
-| `docs/gov-engine-lead-pipeline.md` | 📖 NEW | Full architecture guide |
-| `docs/INTEGRATION_CHECKLIST.md` | 📖 NEW | Step-by-step deploy |
+| `gov-engine-lead-pipeline.md` | 📖 NEW | Full architecture guide |
+| `../operations/INTEGRATION_CHECKLIST.md` | 📖 NEW | Step-by-step deploy |
 
 ---
 
@@ -130,7 +130,7 @@ GROUP BY company;
 
 **"No proposals generated"** → Run: `pnpm tsx scripts/generate-proposals.ts` first
 
-**"Email not sending"** → Check RESEND_API_KEY, see `docs/email-proposals-integration.md`
+**"Email not sending"** → Check RESEND_API_KEY, see `email-proposals-integration.md`
 
 ---
 
@@ -142,15 +142,15 @@ Options:
 - **Option A (Easy):** Keep using gov_proposals table as-is
 - **Option B (Recommended):** Migrate to leads table + add fit_score breakdown
 
-See: `docs/email-proposals-integration.md`
+See: `email-proposals-integration.md`
 
 ---
 
 ## Full Documentation
 
-- **Architecture & Data Flow:** `docs/gov-engine-lead-pipeline.md`
-- **Deployment Steps:** `docs/INTEGRATION_CHECKLIST.md`
-- **Email Integration:** `docs/email-proposals-integration.md`
+- **Architecture & Data Flow:** `gov-engine-lead-pipeline.md`
+- **Deployment Steps:** `../operations/INTEGRATION_CHECKLIST.md`
+- **Email Integration:** `email-proposals-integration.md`
 - **Summary:** `LEAD_SCORING_SUMMARY.md`
 
 ---

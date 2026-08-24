@@ -30,5 +30,10 @@ These need secrets / dashboard access that are intentionally not in the repo:
 4. **Deploy the 5 ready workers** (`wrangler deploy` with `CLOUDFLARE_API_TOKEN`): autopilot, chain-data, license-issuer, qron-provenance, scan-validate.
 5. **SBIR.gov account** — needed for the NSF SBIR pitch submission (per `LAUNCH_CHECKLIST.md`).
 
+## 🧰 Repository fixes applied
+
+- Added `pnpm preflight:launch`, a read-only production preflight that checks required files, production environment variables, build-artifact warnings, and unsafe outreach configuration without printing secret values.
+- Changed `.github/workflows/deploy-workers.yml` to fail the workflow when a Worker deployment fails instead of silently continuing.
+
 ## 🟡 Known non-blockers
 - ~22 open Dependabot PRs (minor/dev/python + a few major bumps like Stripe/Clerk/Drizzle). None gate launch; the build runs on current pins. The major bumps (`stripe` 17→22, `@clerk/nextjs` 5→7, `drizzle-orm` 0.33→0.45) need a deliberate review pass and should not be auto-merged.

@@ -81,7 +81,7 @@
 
 ---
 
-### 4. `/docs/gov-engine-lead-pipeline.md`
+### 4. `/docs/marketing/gov-engine-lead-pipeline.md`
 **Status:** ✨ NEW (380 lines)
 
 **Purpose:** Complete architecture guide for lead scoring & qualification pipeline
@@ -101,7 +101,7 @@
 
 ---
 
-### 5. `/docs/INTEGRATION_CHECKLIST.md`
+### 5. `/docs/operations/INTEGRATION_CHECKLIST.md`
 **Status:** ✨ NEW (240 lines)
 
 **Purpose:** Step-by-step deployment checklist
@@ -121,7 +121,7 @@
 
 ---
 
-### 6. `/docs/email-proposals-integration.md`
+### 6. `/docs/marketing/email-proposals-integration.md`
 **Status:** ✨ NEW (280 lines)
 
 **Purpose:** Integration guide for existing email-proposals.ts script
@@ -142,7 +142,7 @@
 
 ---
 
-### 7. `/docs/QUICK_START.md`
+### 7. `/docs/marketing/QUICK_START.md`
 **Status:** ✨ NEW (180 lines)
 
 **Purpose:** 5-minute quick reference for developers
@@ -298,10 +298,10 @@ DRY_RUN=true pnpm tsx scripts/email-proposals.ts
 
 ## Support & Documentation
 
-**Quick Reference:** `docs/QUICK_START.md` (5 minutes to understand)
-**Full Architecture:** `docs/gov-engine-lead-pipeline.md` (complete guide)
-**Deployment:** `docs/INTEGRATION_CHECKLIST.md` (step-by-step)
-**Email Integration:** `docs/email-proposals-integration.md` (two options)
+**Quick Reference:** `docs/marketing/QUICK_START.md` (5 minutes to understand)
+**Full Architecture:** `docs/marketing/gov-engine-lead-pipeline.md` (complete guide)
+**Deployment:** `docs/operations/INTEGRATION_CHECKLIST.md` (step-by-step)
+**Email Integration:** `docs/marketing/email-proposals-integration.md` (two options)
 **Executive Summary:** `LEAD_SCORING_SUMMARY.md` (high-level overview)
 
 ---
@@ -334,10 +334,10 @@ feat: lead scoring & qualification pipeline
 - scripts/score-opportunities.ts (modified)
 - scripts/qualify-leads.ts (new)
 - drizzle/migrations/015_lead_scoring_pipeline.sql (new)
-- docs/gov-engine-lead-pipeline.md (new)
-- docs/INTEGRATION_CHECKLIST.md (new)
-- docs/email-proposals-integration.md (new)
-- docs/QUICK_START.md (new)
+- docs/marketing/gov-engine-lead-pipeline.md (new)
+- docs/operations/INTEGRATION_CHECKLIST.md (new)
+- docs/marketing/email-proposals-integration.md (new)
+- docs/marketing/QUICK_START.md (new)
 
 ### Testing
 - DRY_RUN=true pnpm tsx scripts/score-opportunities.ts

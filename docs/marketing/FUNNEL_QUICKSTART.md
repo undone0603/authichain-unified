@@ -321,4 +321,4 @@ await postToSlack(message);
 4. **Next week:** Run first funnel report, identify bottleneck, optimize
 5. **Ongoing:** Run daily reports, A/B test email subject lines, measure impact
 
-See `/docs/funnel-tracking.md` for complete documentation.
+See `funnel-tracking.md` for complete documentation.

@@ -11,9 +11,9 @@ This directory is the canonical root for the AgentZ autonomous trust infrastruct
 
 ## Documentation Index
 - [Master Conventions](/GEMINI.md)
-- [Platform Robustness Directive](/docs/platform-robustness.md)
-- [Architectural Decoupling Plan](/docs/decoupling.md)
-- [Configuration Standardization Plan](/docs/config-standardization.md)
+- [Platform Robustness Directive](/docs/architecture/platform-robustness.md)
+- [Architectural Decoupling Plan](/docs/architecture/decoupling.md)
+- [Configuration Standardization Plan](/docs/architecture/config-standardization.md)
 
 ## Operational Tips
 - **Run Development Environment:** `npm run dev`

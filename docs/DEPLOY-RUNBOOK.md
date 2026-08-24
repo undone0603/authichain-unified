@@ -49,7 +49,7 @@ npx wrangler d1 create authichain-provenance   # only if it doesn't exist; paste
 Requires repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 
 ## 3. Remaining founder-only items
-See `docs/LAUNCH-READINESS-2026-06-23.md` §"Founder-only":
+See `docs/operations/LAUNCH-READINESS-2026-06-23.md` §"Founder-only":
 Stripe production keys + email creds in the deploy env, and an SBIR.gov account
 for the NSF pitch.
 

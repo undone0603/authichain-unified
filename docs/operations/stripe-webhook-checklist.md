@@ -4,7 +4,7 @@
 
 - [x] `src/app/api/webhooks/stripe/route.ts` — Main webhook handler (400+ lines)
 - [x] `supabase/migrations/00003_stripe_payment_tracking.sql` — Database schema
-- [x] `docs/stripe-webhook-setup.md` — Comprehensive setup guide
+- [x] `stripe-webhook-setup.md` — Comprehensive setup guide
 - [x] This checklist
 
 ## Quick Setup (5 Steps)
@@ -250,14 +250,14 @@ WHERE DATE(created_at) >= DATE_TRUNC('month', NOW());
 
 ## Documentation
 
-- **Setup Guide:** `docs/stripe-webhook-setup.md` (comprehensive, with FAQs)
+- **Setup Guide:** `stripe-webhook-setup.md` (comprehensive, with FAQs)
 - **Code:** `src/app/api/webhooks/stripe/route.ts` (well-commented)
 - **Schema:** `supabase/migrations/00003_stripe_payment_tracking.sql` (with inline docs)
 
 ## Support
 
 For questions, check:
-1. `docs/stripe-webhook-setup.md` → Troubleshooting section
+1. `stripe-webhook-setup.md` → Troubleshooting section
 2. `src/app/api/webhooks/stripe/route.ts` → Inline comments
 3. Stripe API docs: https://docs.stripe.com/webhooks
 4. Supabase docs: https://supabase.com/docs
