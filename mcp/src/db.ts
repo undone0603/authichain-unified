@@ -1,12 +1,10 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { eq, desc } from "drizzle-orm";
 import { qrCodes } from "../../drizzle/schema.js";
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-const db = drizzle(pool);
+const client = postgres(process.env.DATABASE_URL || "", { prepare: false });
+const db = drizzle(client);
 
 export async function getQronById(qronId: string) {
   const rows = await db.select().from(qrCodes).where(eq(qrCodes.shortCode, qronId)).limit(1);

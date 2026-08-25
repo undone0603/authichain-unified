@@ -66,17 +66,17 @@ export async function POST(req: NextRequest) {
       throw new Error(`HubSpot API Error: ${res.status} - ${errText}`);
     }
 
-    const data = await res.json();
+    const responseData = await res.json();
 
     // 3. Log Success to Supabase
     await admin.from('automation_logs').insert({
       workflow_name: 'hubspot_sync',
       trigger_type: 'event',
       status: 'success',
-      payload: JSON.stringify({ email, contact_id: data.id })
+      payload: JSON.stringify({ email, contact_id: responseData.id })
     });
 
-    return NextResponse.json({ success: true, contact_id: data.id });
+    return NextResponse.json({ success: true, contact_id: responseData.id });
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

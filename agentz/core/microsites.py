@@ -65,7 +65,7 @@ async def deploy_sales_microsite(lead_data: Dict[str, Any]) -> str:
     cf_account = get("cloudflare_account", required=False)
     v_token = get("vercel_session", required=False)
 
-    project_id = "prj_mIb6SSMtMy8KsXg9gNta0T3tDJg1"
+    project_id = "prj_avIBQb2HRqlvpHE6VN2N2wBlRdgq"
     slug = lead_data.get("slug", "demo")
     industry = lead_data.get("industry", "luxury")
     domain = BRAND_DOMAIN_MAP.get(industry, "authichain.com")
@@ -101,7 +101,7 @@ async def trigger_redeploy():
     Triggers a fresh production deployment of the unified protocol.
     """
     token = get("vercel_session")
-    project_id = "prj_mIb6SSMtMy8KsXg9gNta0T3tDJg1"
+    project_id = "prj_avIBQb2HRqlvpHE6VN2N2wBlRdgq"
     
     if not token: return False
     
@@ -109,7 +109,7 @@ async def trigger_redeploy():
     url = f"https://api.vercel.com/v13/deployments"
     
     payload = {
-        "name": "authichain-unified-v2",
+        "name": "authichain-unified",
         "project": project_id,
         "gitSource": {
             "type": "github",

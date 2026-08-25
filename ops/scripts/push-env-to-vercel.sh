@@ -26,7 +26,7 @@ FILTER_PROJECT="${PROJECT:-}"
 # ── All 12 Vercel projects in the team ────────────────────────────────────────
 declare -A PROJECTS
 PROJECTS["authichain-unified"]="prj_3Z9CJRm11nYJBLEKItzD8JsOnYRd"
-PROJECTS["authichain-unified-v2"]="prj_mIb6SSMtMy8KsXg9gNta0T3tDJg1"
+PROJECTS["authichain-unified"]="prj_avIBQb2HRqlvpHE6VN2N2wBlRdgq"
 PROJECTS["authichain-unified-main"]="prj_bYTeYZE6iBivOzYUaxk1tLMOLekF"
 PROJECTS["undone0603-authichain-unified"]="prj_iWs8LAXzyafrbelPzMMqBI02EXpx"
 PROJECTS["authichain-protocol"]="prj_mQDfwxFpYAcTL3A4XzRr2NDoJ2r4"

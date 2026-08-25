@@ -35,7 +35,7 @@ jobs:
           # so GitHub's value is the source of truth for both sides once synced.
           #
           # Two Vercel projects deploy this repo: the VERCEL_PROJECT_ID secret
-          # (authichain-unified-v2, microsite subdomains) and authichain-unified
+          # (authichain-unified, microsite subdomains) and authichain-unified
           # (prj_tt39…), which owns authichain-unified.vercel.app — the origin the
           # authichain.com worker proxies /api/* to. Both need the same env or the
           # cron endpoints 401 on one of them.

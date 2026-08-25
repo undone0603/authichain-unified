@@ -8,9 +8,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "authichain-app",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2026-06-29",
+  "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
-  "account_id": "4c1869b90f13f86940aa3747839bf420",
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

@@ -1,12 +1,12 @@
 name = "authichain-license-issuer"
 main = "src/index.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
 # ──────────────────────────────────────────────────────────────────────────────
 # FIRST-TIME SETUP
 #   Run the provisioning script to replace placeholder IDs and apply migrations:
-#     cd workers/license-issuer
+#     cd workers/authichain-license-issuer
 #     bash scripts/provision.sh
 #
 # DEPLOY
@@ -34,3 +34,6 @@ id = "48d7f33917be4a7fb86c852ae0ef7033"
 
 [vars]
 ENVIRONMENT = "production"
+
+[observability]
+enabled = true

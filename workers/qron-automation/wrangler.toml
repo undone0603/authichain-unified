@@ -1,7 +1,7 @@
 name = "qron-automation"
 main = "src/index.ts"
-compatibility_date = "2026-04-01"
-account_id = "4c1869b90f13f86940aa3747839bf420"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 
 [triggers]
@@ -9,3 +9,6 @@ workers_dev = false
 # registered, so the SEO ping (0 */6) and daily digest (0 12) never fired.
 # Account cron budget (CF free plan allows 5): autopilot 1 + these 3 = 4.
 crons = ["*/30 * * * *", "0 */6 * * *", "0 12 * * *"]
+
+[observability]
+enabled = true

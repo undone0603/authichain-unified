@@ -571,7 +571,7 @@ _As of 2026-07-15. One repo = the whole network. Update when deploy targets chan
 ## Live apps
 | What | Folder | Deploys via | Domain(s) |
 |---|---|---|---|
-| AuthiChain app | client/ + server/ + src/ (root build) | Vercel `authichain-unified-v2` (team authichain-6389) | app.authichain.com, authichain-unified-v2.vercel.app |
+| AuthiChain app | client/ + server/ + src/ (root build) | Vercel `authichain-unified` (team authichain-6389) | app.authichain.com, authichain-unified.vercel.app |
 | QRON platform | apps/qron-platform (source) | ⚠ Vercel `qron-platform` still builds from old repo undone0603/qron-platform | qron.space, app.qron.space (hosts a registered Stripe webhook) |
 | GovChain site | apps/brand-sites/govchain + workers | Vercel `govchain-us` / CF worker | govchain.us |
 | StrainChain site | apps/brand-sites/strainchain + workers | Vercel `strainchain-io` / CF worker | strainchain.io |

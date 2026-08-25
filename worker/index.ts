@@ -21,7 +21,26 @@ type Bindings = {
   ASSETS: Fetcher;
   MICROSITES_KV: KVNamespace;
   PRIMARY_APP_URL: string;
+
+  // Webhooks
   GITHUB_WEBHOOK_SECRET: string;
+  STRIPE_WEBHOOK_SECRET: string;
+
+  // Stripe
+  STRIPE_SECRET_KEY: string;
+
+  // Supabase (used for Stripe webhook persistence)
+  SUPABASE_URL: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
+
+  // x402
+  X402_PAY_TO: string;
+  X402_NETWORK?: string;
+  X402_CHAIN_ID?: string;
+  X402_USDC_ASSET?: string;
+  X402_PRICE_USD?: string;
+  X402_DAILY_CAP_USD?: string;
+  X402_FACILITATOR_URL?: string;
 };
 
 const BRANDS = {
@@ -47,17 +66,17 @@ const BRANDS = {
 function cssVars(brand: keyof typeof BRANDS) {
   const b = BRANDS[brand];
   return `:root {
-    --bg: \${b.bg};
-    --bg2: \${b.bg2};
-    --bg3: \${b.bg3};
-    --text: \${b.text};
-    --text-dim: \${b.textDim};
-    --primary: \${b.primary};
-    --primary-dim: \${b.primaryDim};
-    --secondary: \${b.secondary};
-    --border: \${b.border};
-    --border-dim: \${b.borderDim};
-    --primary-glow: \${b.glowRgba};
+    --bg: ${b.bg};
+    --bg2: ${b.bg2};
+    --bg3: ${b.bg3};
+    --text: ${b.text};
+    --text-dim: ${b.textDim};
+    --primary: ${b.primary};
+    --primary-dim: ${b.primaryDim};
+    --secondary: ${b.secondary};
+    --border: ${b.border};
+    --border-dim: ${b.borderDim};
+    --primary-glow: ${b.glowRgba};
     --mono: 'JetBrains Mono', monospace;
     --display: 'Bebas Neue', cursive;
     --body: 'Outfit', sans-serif;
@@ -285,11 +304,19 @@ app.all("*", async (c) => {
   const url = new URL(c.req.url);
   const { pathname, search } = url;
 
-  // Proxy to the primary Vite/Express app
+  // Proxy to the primary Vite/Express app. Construct a fresh request instead
+  // of forwarding c.req.raw, which would leak the original Host header
+  // (authichain.com) to the upstream and cause it to misroute.
   if (c.env.PRIMARY_APP_URL) {
-    return fetch(
-      new Request(`${c.env.PRIMARY_APP_URL}${pathname}${search}`, c.req.raw)
-    );
+    const upstream = new URL(`${c.env.PRIMARY_APP_URL}${pathname}${search}`);
+    const proxyReq = new Request(upstream, {
+      method: c.req.method,
+      body: ["GET", "HEAD"].includes(c.req.method) ? null : c.req.raw.body,
+      headers: c.req.raw.headers,
+      redirect: "manual",
+    });
+    proxyReq.headers.set("Host", upstream.host);
+    return fetch(proxyReq);
   }
 
   // Fall back to Cloudflare static assets

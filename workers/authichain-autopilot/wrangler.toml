@@ -1,7 +1,10 @@
 name = "authichain-autopilot"
 main = "index.js"
-compatibility_date = "2024-01-01"
-account_id = "4c1869b90f13f86940aa3747839bf420"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
 
 [triggers]
 crons = ["0 */6 * * *"]
+
+[observability]
+enabled = true
