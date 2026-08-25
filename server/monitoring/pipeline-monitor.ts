@@ -5,7 +5,7 @@
 
 import { getDb } from '../db.js';
 import { missionTasks } from '../../drizzle/schema.js';
-import { eq, gte } from 'drizzle-orm';
+import { and, eq, gte } from 'drizzle-orm';
 
 export interface PipelineTickMetrics {
   tickId: string;
