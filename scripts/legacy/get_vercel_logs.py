@@ -5,7 +5,7 @@ from agentz.core.credentials import get
 
 def get_logs():
     token = get('vercel_session')
-    p = 'prj_mIb6SSMtMy8KsXg9gNta0T3tDJg1'
+    p = 'prj_avIBQb2HRqlvpHE6VN2N2wBlRdgq'
     url = f'https://api.vercel.com/v6/deployments?projectId={p}&limit=1'
     r = httpx.get(url, headers={'Authorization': f'Bearer {token}'})
     d = r.json().get('deployments', [{}])[0]

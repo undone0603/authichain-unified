@@ -1,6 +1,6 @@
-name = "authichain-app"
+name = "authichain-edge-router"
 main = "index.ts"
-compatibility_date = "2024-12-01"
+compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
 [assets]

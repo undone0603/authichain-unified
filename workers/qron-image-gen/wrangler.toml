@@ -1,10 +1,13 @@
 name = "qron-image-gen"
 main = "index.js"
-compatibility_date = "2024-01-01"
-account_id = "4c1869b90f13f86940aa3747839bf420"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
 
 [ai]
 binding = "AI"
 
 [vars]
 WORKER_VERSION = "2.0.0"
+
+[observability]
+enabled = true

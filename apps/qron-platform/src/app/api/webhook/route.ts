@@ -51,7 +51,7 @@ async function fulfillPlan(
       await supabase
         .from('profiles')
         .update({ generations_limit: 999999, tier })
-        .eq('user_id', userId);
+        .eq('id', userId);
     }
 
     console.log(

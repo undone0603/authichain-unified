@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
     const Stripe = (await import('stripe')).default;
     // @ts-expect-error - version mismatch in types
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-06-20' }); // Use a stable version
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-06-20' });
 
     const origin = request.headers.get('origin') || new URL(request.url).origin;
 
@@ -82,30 +82,31 @@ export async function POST(request: Request) {
           }
         : {}),
     });
-return NextResponse.json({ url: session.url });
-} catch (error: unknown) {
-console.error('[checkout] Error:', error);
 
-const err = error as { type?: string; message?: string };
-await logAutomation('checkout_session_create', 'event', 'failure', null, `${err?.type || 'Error'}: ${err?.message || 'unknown'}`);
+    return NextResponse.json({ url: session.url });
+  } catch (error: unknown) {
+    console.error('[checkout] Error:', error);
 
-if (
-  err?.type === 'StripeInvalidRequestError' &&
-  /payment.method/i.test(err?.message ?? '')
-) {
-  return NextResponse.json(
-    {
-      error:
-        'Card payments are not enabled on this Stripe account. Contact support.',
-      code: 'PAYMENT_METHOD_DISABLED',
-    },
-    { status: 503 }
-  );
-}
+    const err = error as { type?: string; message?: string };
+    await logAutomation('checkout_session_create', 'event', 'failure', null, `${err?.type || 'Error'}: ${err?.message || 'unknown'}`);
 
-return NextResponse.json(
-  { error: 'Internal Server Error', detail: err?.message },
-  { status: 500 }
-);
-}
+    if (
+      err?.type === 'StripeInvalidRequestError' &&
+      /payment.method/i.test(err?.message ?? '')
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Card payments are not enabled on this Stripe account. Contact support.',
+          code: 'PAYMENT_METHOD_DISABLED',
+        },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal Server Error', detail: err?.message },
+      { status: 500 }
+    );
+  }
 }

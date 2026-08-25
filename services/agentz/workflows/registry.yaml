@@ -46,7 +46,7 @@ workflows:
   # =================================================================
 
   - id: vercel_fix_authichain_unified
-    title: "Change authichain-unified-v2 framework preset → Vite"
+    title: "Change authichain-unified framework preset → Vite"
     priority: high
     blocks_revenue: false
     handler: handlers.vercel_fix_preset
@@ -55,7 +55,7 @@ workflows:
     requires: [vercel_session]
     prerequisites: []
     description: |
-      Open Vercel dashboard for prj_mIb6SSMtMy8KsXg9gNta0T3tDJg1,
+      Open Vercel dashboard for prj_avIBQb2HRqlvpHE6VN2N2wBlRdgq,
       navigate Settings → General → Build & Development Settings,
       change Framework Preset to "Vite", save, trigger redeploy.
       Confirms deployment turns green before exiting.

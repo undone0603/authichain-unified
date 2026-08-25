@@ -18,7 +18,7 @@ This project is optimized for Agentic Workflows. When assisting, adhere to the *
 ## 🏗 Architecture
 - **Frontend**: React + tRPC + Tailwind + Shadcn UI.
 - **Backend**: Node.js Express (Serverless on Vercel).
-- **Edge**: 1 root Cloudflare Worker (`worker/index.ts`, deployed by `.github/workflows/deploy-cloudflare.yml`) + 12 deployed standalone workers under `workers/<name>/` (with 5 scaffolded ready-to-deploy: autopilot, chain-data, license-issuer, qron-provenance, scan-validate; and 1 archived: telegram). See `docs/superpowers/plans/worker-inventory.md` for the generated per-worker inventory (regenerate with `scripts/gen-worker-inventory.sh`; checked monthly by `repo-maintenance.yml`). Multi-tenant brand routing via Host-header dispatch.
+- **Edge**: 1 root Cloudflare Worker (`worker/index.ts`, deployed by `.github/workflows/deploy-cloudflare.yml`) + 26 standalone workers under `workers/<name>/` (deployed via `deploy-workers.yml` matrix; some scaffolded/not-yet-deployed: bridge, chain-data, autopilot). The Next.js app worker is `wrangler.app.jsonc` (OpenNext build, name `authichain-app`). The Hono edge-router prototype at `worker-app/` (name `authichain-edge-router`) is tested by vitest but not deployed. See `docs/superpowers/plans/worker-inventory.md` for the generated per-worker inventory (regenerate with `scripts/gen-worker-inventory.sh`; checked monthly by `repo-maintenance.yml`). Multi-tenant brand routing via Host-header dispatch.
 - **Database**: Postgres (Supabase) + Drizzle ORM.
 - **Blockchain**: Polygon (ERC-20 $QRON, ERC-721 Certificates) + BTC Ordinals.
 

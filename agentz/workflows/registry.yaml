@@ -46,7 +46,7 @@ workflows:
   # =================================================================
 
   - id: vercel_fix_authichain_unified
-    title: "Change authichain-unified-v2 framework preset → Vite"
+    title: "Change authichain-unified framework preset → Vite"
     priority: high
     blocks_revenue: false
     handler: handlers.vercel_fix_preset
@@ -55,7 +55,7 @@ workflows:
     requires: [vercel_session]
     prerequisites: []
     description: |
-      Open Vercel dashboard for prj_mIb6SSMtMy8KsXg9gNta0T3tDJg1,
+      Open Vercel dashboard for prj_avIBQb2HRqlvpHE6VN2N2wBlRdgq,
       navigate Settings → General → Build & Development Settings,
       change Framework Preset to "Vite", save, trigger redeploy.
       Confirms deployment turns green before exiting.
@@ -957,4 +957,29 @@ workflows:
     description: |
       Posts a strategic case-study-style post to LinkedIn using the
       AgentZ ecosystem strategy doc (ECOSYSTEM_STRATEGY). Browser-automated
+      via browser-use + local Ollama. Supports dry-run.
+
+  # =================================================================
+  # META-AGENT — UNIFIED ARCHITECT
+  # =================================================================
+
+  - id: architect_cycle
+    title: "Unified Architect: fleet assessment, planning, and execution cycle"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.architect_cycle
+    type: composite
+    estimated_minutes: 15
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    max_runs_per_day: 4
+    description: |
+      Runs the Unified Architect meta-agent, which:
+        1) Assesses the health of every workflow in the registry.
+        2) Asks the LLM to generate a prioritized action plan.
+        3) Delegates execution through the existing Runner.
+        4) Produces a post-cycle review report (architect_cycles.jsonl).
+      Safe in dry-run mode (assesses and plans without executing).
+      Rate-limited to 4 runs/day to avoid runaway cycles.
       via browser-use + local Ollama. Supports dry-run.

@@ -2,7 +2,7 @@
 agentz.workflows.handlers.vercel_fix_preset
 -------------------------------------------
 Browser-use task: change framework preset from Vite -> Other on
-authichain-unified-v2 in Vercel dashboard.
+authichain-unified in Vercel dashboard.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import asyncio
 from agentz.core.credentials import get, get_or_placeholder
 from agentz.core.modes import ExecutionContext, Mode
 
-PROJECT_ID = "prj_mIb6SSMtMy8KsXg9gNta0T3tDJg1"
+PROJECT_ID = "prj_avIBQb2HRqlvpHE6VN2N2wBlRdgq"
 TEAM_ID    = "team_PKVRDwUXPRFjmGTM7PZxjNys"
 
 TASK_PROMPT = f"""\
@@ -32,7 +32,7 @@ def run(ctx: ExecutionContext) -> str:
     token = get_or_placeholder("vercel_session", ctx)  # noqa: F841 - used implicitly via cookie injection in real run
 
     if ctx.mode == Mode.DRY_RUN:
-        ctx.step("open Vercel dashboard for authichain-unified-v2")
+        ctx.step("open Vercel dashboard for authichain-unified")
         ctx.step("change Framework Preset -> Vite")
         ctx.step("click Save")
         ctx.step("trigger new deployment from main")

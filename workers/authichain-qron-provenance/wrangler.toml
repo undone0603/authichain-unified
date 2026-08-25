@@ -1,6 +1,6 @@
 name = "authichain-qron-provenance"
 main = "src/index.ts"
-compatibility_date = "2025-12-01"
+compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
@@ -20,3 +20,6 @@ name = "authichain-qron-provenance"
 
 [env.staging]
 name = "authichain-qron-provenance-staging"
+
+[observability]
+enabled = true

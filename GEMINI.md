@@ -40,7 +40,7 @@ This document defines the architectural and operational standards for the AgentZ
 - `public_reports`: `id` (Text), `data` (JSONB), `updated_at`.
 
 ## Vercel Project Configuration (Critical)
-- **Project**: `authichain-unified-v2`
+- **Project**: `authichain-unified`
 - **Framework**: Must be set to **Vite** (not Next.js).
 - **Build Command**: `pnpm run build`
 - **Output Directory**: `dist`

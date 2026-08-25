@@ -37,7 +37,7 @@ async function checkCloudflare() {
 }
 
 async function checkBlockchain() {
-    // Blockchain integration active - Polygon Mainnet via QRON smart contracts
+  // Blockchain integration active - Polygon Mainnet via QRON smart contracts
   return { operational: true, latency: '12ms', chain: 'Polygon', blockNumber: 'latest' };
   }
 

@@ -1,9 +1,12 @@
 name = "authichain-dashboard"
 main = "src/index.ts"
-compatibility_date = "2026-04-01"
-account_id = "4c1869b90f13f86940aa3747839bf420"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 
 [[routes]]
 pattern = "dashboard.authichain.com/*"
 zone_name = "authichain.com"
+
+[observability]
+enabled = true
