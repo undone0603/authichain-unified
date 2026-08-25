@@ -4,8 +4,8 @@
  */
 
 import { getDb } from '../db.js';
-import { missionTasks, systemMetrics } from '../../drizzle/schema.js';
-import { eq, gte, lte, and } from 'drizzle-orm';
+import { missionTasks } from '../../drizzle/schema.js';
+import { eq, gte, and } from 'drizzle-orm';
 
 export interface PipelineTickMetrics {
   tickId: string;
@@ -81,7 +81,7 @@ export class PipelineMonitor {
     cpuUsage?: number;
     memoryUsage?: number;
   }): Promise<void> {
-    const db = getDb();
+    const db = await getDb();
 
     // Query recent completions
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -347,7 +347,11 @@ export class PipelineMonitor {
 
   private getRecentErrors(limit: number): string[] {
     const errors: string[] = [];
-    // In real implementation, fetch from logs/database
+    for (const tick of this.tickHistory.slice(-10)) {
+      if (tick.errorRate > 0) {
+        errors.push(`Tick ${tick.tickId}: ${tick.errorRate.toFixed(1)}% error rate`);
+      }
+    }
     return errors.slice(0, limit);
   }
 

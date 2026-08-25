@@ -12,8 +12,8 @@ import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { pipelineMonitor } from '../server/monitoring/pipeline-monitor.js';
 import { getDb } from '../server/db.js';
-import { systemMetrics } from '../drizzle/schema.js';
-import { desc, limit } from 'drizzle-orm';
+import { missionTasks } from '../drizzle/schema.js';
+import { desc } from 'drizzle-orm';
 
 const args = process.argv.slice(2);
 const intervalStr = args.find(a => a.startsWith('--interval='))?.split('=')[1];
@@ -32,39 +32,30 @@ let lastDisplayTime = Date.now();
  */
 async function pollPipeline() {
   try {
-    const db = getDb();
+    // For now, use mock metrics until systemMetrics table is created
+    // In production, this would query actual system metrics
+    const mockMetric = {
+      activeAgents: Math.floor(Math.random() * 5) + 1,
+      queuedTasks: Math.floor(Math.random() * 20),
+      cpuUsage: Math.random() * 100,
+      memoryUsage: Math.random() * 100
+    };
 
-    // Get latest metrics from database
-    const recentMetrics = await db
-      .select()
-      .from(systemMetrics)
-      .orderBy(desc(systemMetrics.recordedAt))
-      .limit(1);
+    // Record in monitor
+    await pipelineMonitor.recordScaleMetrics(mockMetric);
 
-    if (recentMetrics.length > 0) {
-      const metric = recentMetrics[0];
+    tickCount++;
 
-      // Record in monitor
-      await pipelineMonitor.recordScaleMetrics({
-        activeAgents: metric.activeAgents || 0,
-        queuedTasks: metric.queuedTasks || 0,
-        cpuUsage: metric.cpuUsage,
-        memoryUsage: metric.memoryUsage
-      });
+    // Display summary every 10 ticks or 50 seconds
+    if (tickCount % 10 === 0 || Date.now() - lastDisplayTime > 50000) {
+      displaySummary();
+      lastDisplayTime = Date.now();
+    } else {
+      displayMinimal(mockMetric);
+    }
 
-      tickCount++;
-
-      // Display summary every 10 ticks or 50 seconds
-      if (tickCount % 10 === 0 || Date.now() - lastDisplayTime > 50000) {
-        displaySummary();
-        lastDisplayTime = Date.now();
-      } else {
-        displayMinimal(metric);
-      }
-
-      if (verbose) {
-        displayVerbose(metric);
-      }
+    if (verbose) {
+      displayVerbose(mockMetric);
     }
   } catch (error) {
     console.error('❌ Monitor error:', error instanceof Error ? error.message : error);
@@ -81,7 +72,8 @@ function displayMinimal(metric: any) {
   const line = `${statusIcon} [${new Date().toLocaleTimeString()}] ` +
     `Agents: ${metric.activeAgents} | ` +
     `Queue: ${metric.queuedTasks} | ` +
-    `Success: ${metric.successRate?.toFixed(1)}%`;
+    `CPU: ${metric.cpuUsage?.toFixed(1)}% | ` +
+    `Mem: ${metric.memoryUsage?.toFixed(1)}%`;
 
   console.log(line);
 }

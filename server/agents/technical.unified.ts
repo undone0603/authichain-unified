@@ -128,30 +128,24 @@ export class TechnicalAgentImpl extends AbstractAgent {
 
       const executionTimeMs = Date.now() - startTime;
 
-      if (context?.userId) {
-        await logActivity({
-          userId: context.userId,
-          action: `technical_${action}`,
-          entityType: 'agent_execution',
-          entityId: context.missionId || 0,
-          details: { executionTimeMs }
-        });
-      }
+      await logActivity({
+        action: `technical_${action}`,
+        entityType: 'agent_execution',
+        entityId: context?.missionId || 0,
+        details: { executionTimeMs }
+      });
 
       return this.createResult(true, output, undefined, [action], executionTimeMs);
     } catch (error) {
       const executionTimeMs = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : String(error);
 
-      if (context?.userId) {
-        await logActivity({
-          userId: context.userId,
-          action: `technical_${action}_failed`,
-          entityType: 'agent_execution',
-          entityId: context.missionId || 0,
-          details: { error: errorMessage }
-        });
-      }
+      await logActivity({
+        action: `technical_${action}_failed`,
+        entityType: 'agent_execution',
+        entityId: context?.missionId || 0,
+        details: { error: errorMessage }
+      });
 
       return this.createResult(false, undefined, errorMessage, undefined, executionTimeMs);
     }
