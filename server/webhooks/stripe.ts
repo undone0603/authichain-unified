@@ -32,6 +32,7 @@ import {
   markWebhookEventProcessed,
 } from "../db";
 import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
+import { db } from "../db";
 import { handleServiceOrderPayment } from "../services/order-payment-handler";
 import { sendEmail } from "../email-service";
 
@@ -413,7 +414,7 @@ export async function handleStripeWebhook(
         );
 
         if (session.metadata?.type === "one_time_service") {
-          await handleServiceOrderPayment({ id: session.id, payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : undefined });
+          await handleServiceOrderPayment(db, { id: session.id, payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : undefined });
         }
 
         console.log(`[stripe-webhook] Checkout completed: user=${userId} plan=${plan}`);

@@ -1,8 +1,8 @@
-import { Db } from '../db';
-import { Task } from '../drizzle/schema';
-import { logActivity, enqueueTask } from './db-helpers';
+import type { Db } from '../db-helpers';
+import type { MissionTask as Task } from '../../drizzle/schema';
+import { logActivity } from './db-helpers';
 import { sendEmail } from '../email-service';
-import { invokeLLM, parseLLMContent } from '../_core/llm';
+import { invokeLLM, parseLLMContent, type InvokeParams } from '../_core/llm';
 
 /**
  * runEmailCampaign Agent
@@ -29,20 +29,31 @@ export async function runEmailCampaign(task: Task, db: Db): Promise<void> {
     details: { taskId: task.id, segment, campaignId },
   });
 
-  // 1. Fetch eligible leads for this segment (simplified mock logic)
-  const leads = await db.query.leads.findMany({
-    where: (leads, { and, eq, isNull }) =>
-      and(eq(leads.segment, segment), isNull(leads.lastOutreachAt)),
+  // 1. Fetch eligible leads for this segment (not yet contacted)
+  const leadRows = await (db as any).query.leads.findMany({
+    where: (leads: any, { and, eq, isNull }: any) =>
+      and(eq(leads.segment, segment), isNull(leads.lastContactedAt)),
   });
 
-  for (const lead of leads) {
+  for (const lead of leadRows) {
     // 2. Personalize email
-    const prompt = `Write a personalized email for ${lead.name} at ${lead.org}.
+    const params: InvokeParams = {
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert B2B email copywriter. Return only valid JSON.',
+        },
+        {
+          role: 'user',
+          content: `Write a personalized email for ${lead.name} at ${lead.company ?? lead.org}.
     Template Context: ${templateId}
     Goal: AuthiChain trust infrastructure.
-    Return JSON: { "subject": "...", "body": "..." }`;
+    Return JSON: { "subject": "...", "body": "..." }`,
+        },
+      ],
+    };
 
-    const result = await invokeLLM(prompt);
+    const result = await invokeLLM(params);
     const email = parseLLMContent<{ subject: string; body: string }>(result.choices[0].message.content);
 
     // 3. Send/Queue
@@ -67,6 +78,6 @@ export async function runEmailCampaign(task: Task, db: Db): Promise<void> {
     action: 'email_campaign_completed',
     entityType: 'task',
     entityId: 0,
-    details: { taskId: task.id, campaignId, leadsProcessed: leads.length },
+    details: { taskId: task.id, campaignId, leadsProcessed: leadRows.length },
   });
 }

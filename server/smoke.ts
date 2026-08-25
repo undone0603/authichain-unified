@@ -1,21 +1,26 @@
-import { getDb } from "../src/db";
+import { getDb } from "./db";
 import { sql } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { env } from "./config";
 import { Stripe } from "stripe";
 import { getCRMStats } from "./hubspot-service";
-import { logger } from "./logger";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Minimal logger — avoids a dependency on a separate logger module.
+const logger = {
+  info: (msg: string) => console.info(`[smoke] ${msg}`),
+  warn: (msg: string) => console.warn(`[smoke] ${msg}`),
+  error: (obj: unknown, msg: string) => console.error(`[smoke] ${msg}`, obj),
+};
 
 export async function runSmokeTests(): Promise<void> {
   logger.info("Running platform smoke tests...");
 
   // 1. Verify Supabase/Database connectivity
   try {
-    const db = getDb();
+    const db = await getDb();
     await db.execute(sql`SELECT 1`);
     logger.info("Supabase/DB connection: OK");
   } catch (error) {
@@ -24,10 +29,10 @@ export async function runSmokeTests(): Promise<void> {
   }
 
   // 2. Verify Stripe connectivity (non-destructive)
-  if (env.STRIPE_SECRET_KEY) {
+  if (process.env.STRIPE_SECRET_KEY) {
     try {
-      const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: "2025-03-31.basil" as any });
-      await stripe.accounts.retrieve();
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-06-24.dahlia" as any });
+      await stripe.accounts.retrieve("self");
       logger.info("Stripe connection: OK");
     } catch (error) {
       logger.error({ error }, "Stripe connection: FAILED");
@@ -37,13 +42,13 @@ export async function runSmokeTests(): Promise<void> {
   }
 
   // 3. Verify HubSpot connectivity (non-destructive)
-  if (env.HUBSPOT_SERVICE_KEY) {
+  if (process.env.HUBSPOT_SERVICE_KEY) {
     try {
       const stats = await getCRMStats();
       if (stats.connected) {
         logger.info("HubSpot connection: OK");
       } else {
-        logger.warn({ stats }, "HubSpot: Not fully connected");
+        logger.warn("HubSpot: Not fully connected");
       }
     } catch (error) {
       logger.error({ error }, "HubSpot connection: FAILED");
@@ -56,8 +61,8 @@ export async function runSmokeTests(): Promise<void> {
   const indexPath = path.resolve(__dirname, "../../dist/index.html");
   if (!fs.existsSync(indexPath)) {
     logger.warn("Static asset check: dist/index.html NOT FOUND. Ensure build ran.");
-    if (env.NODE_ENV === "production") {
-      logger.error("Static asset check: FAILED in production");
+    if (process.env.NODE_ENV === "production") {
+      logger.error({}, "Static asset check: FAILED in production");
       process.exit(1);
     }
   } else {

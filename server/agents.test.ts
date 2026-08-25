@@ -180,7 +180,7 @@ describe('runLeadFinder', () => {
   });
 
   it('falls back gracefully when LLM scoring returns unparseable JSON', async () => {
-    vi.mocked(invokeLLM).mockResolvedValueOnce({ choices: [{ message: { content: 'not json {{{{' } }] });
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmContentResponse('not json {{{{'));
 
     // Should NOT throw — uses fallback 0.5 score for each lead
     await expect(runLeadFinder(makeTask('FIND_GOV_LEADS', { segment: 'GOV' }), fakeDb)).resolves.toBeUndefined();
@@ -253,7 +253,7 @@ describe('runOutboundEmail', () => {
   });
 
   it('throws if LLM returns unparseable JSON', async () => {
-    vi.mocked(invokeLLM).mockResolvedValueOnce({ choices: [{ message: { content: 'bad json' } }] });
+    vi.mocked(invokeLLM).mockResolvedValueOnce(llmContentResponse('bad json'));
 
     await expect(runOutboundEmail(makeTask('DRAFT_OUTBOUND_EMAIL', {
       segment: 'GOV', leadEmail: 'x@y.com',
