@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { AgentRegistry } from './base/agent.registry.js';
-import { AgentOrchestrator, AgentTask } from './base/agent.orchestrator.js';
+import { AgentOrchestrator } from './base/agent.orchestrator.js';
 import { ExecutiveAgentImpl } from './executive.unified.js';
 import { TechnicalAgentImpl } from './technical.unified.js';
 
