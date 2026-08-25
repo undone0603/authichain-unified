@@ -4,8 +4,7 @@
  */
 
 import { AgentRegistry } from './agent.registry.js';
-import { BaseAgent, AgentContext, AgentCapability, AgentExecutionResult } from './agent.interface.js';
-import { logActivity } from '../../db.js';
+import { AgentContext, AgentCapability, AgentExecutionResult } from './agent.interface.js';
 
 export interface AgentTask {
   id: string;

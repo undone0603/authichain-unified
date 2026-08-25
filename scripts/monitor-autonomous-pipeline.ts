@@ -8,12 +8,7 @@
  */
 
 import 'dotenv/config';
-import { readFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
 import { pipelineMonitor } from '../server/monitoring/pipeline-monitor.js';
-import { getDb } from '../server/db.js';
-import { missionTasks } from '../drizzle/schema.js';
-import { desc } from 'drizzle-orm';
 
 const args = process.argv.slice(2);
 const intervalStr = args.find(a => a.startsWith('--interval='))?.split('=')[1];
@@ -101,25 +96,6 @@ function displayVerbose(metric: any) {
   console.log('');
 }
 
-/**
- * Display key alerts
- */
-function checkAndDisplayAlerts() {
-  const health = pipelineMonitor.getCurrentHealth();
-
-  if (health.recommendations.length > 0) {
-    console.log('\n🔔 Recommendations:');
-    health.recommendations.forEach(rec => {
-      console.log(`  • ${rec}`);
-    });
-  }
-
-  if (health.status === 'critical') {
-    console.error('\n🚨 CRITICAL STATUS - Immediate action may be needed!');
-  } else if (health.status === 'degraded') {
-    console.warn('\n⚠️  DEGRADED STATUS - Monitor closely');
-  }
-}
 
 /**
  * Display help

@@ -3,7 +3,7 @@
  * Handles code generation, testing, deployment, and system maintenance
  */
 
-import { AbstractAgent, AgentContext, AgentCapability, AgentTool, AgentExecutionResult } from './base/agent.interface.js';
+import { AbstractAgent, AgentContext, AgentCapability, AgentExecutionResult } from './base/agent.interface.js';
 import { invokeLLM } from '../_core/llm.js';
 import { logActivity } from '../db.js';
 

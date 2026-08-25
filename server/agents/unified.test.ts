@@ -142,8 +142,6 @@ describe('Unified Agent System', () => {
     });
 
     it('should allow dynamic agent registration', () => {
-      const beforeCount = AgentRegistry.getAllAgents().length;
-
       // Create a mock agent for testing
       class MockAgent {
         name = 'MockAgent';
@@ -200,33 +198,14 @@ export async function exampleUsage() {
   const orchestrator = AgentOrchestrator.getInstance();
   await orchestrator.initialize();
 
-  // Example 1: Route executive task
-  const task1: AgentTask = {
-    id: 'task-001',
-    capability: 'executive',
-    action: 'draft_sales_email',
-    params: {
-      prospect: {
-        name: 'John Doe',
-        company: 'TechCorp',
-        industry: 'Technology',
-        city: 'San Francisco'
-      }
-    }
-  };
-
-  // Example 2: Route technical task
-  const task2: AgentTask = {
-    id: 'task-002',
-    capability: 'technical',
-    action: 'check_type_safety',
-    params: {
-      files: ['server/agents/executive.unified.ts']
-    }
-  };
-
-  // Execute in parallel
-  // const [result1, result2] = await orchestrator.executeParallel([task1, task2]);
+  // Example: Route executive task
+  // const task: AgentTask = {
+  //   id: 'task-001',
+  //   capability: 'executive',
+  //   action: 'draft_sales_email',
+  //   params: { prospect: {...} }
+  // };
+  // const result = await orchestrator.executeTask(task);
 
   // Get statistics
   // const stats = orchestrator.getStatistics();
