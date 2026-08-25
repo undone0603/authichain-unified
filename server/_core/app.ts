@@ -79,12 +79,10 @@ export function createApp() {
     }
     try {
       const { handleStripeWebhook } = await import("../webhooks/stripe");
-      // Express route (Node-only deployment path, not Workers/tRPC — no
-      // ctx.db reachable here). Calling getDb() is a documented bridge to
-      // the legacy server/db.ts singleton (server/webhooks/stripe.ts itself
-      // was migrated off it in Task 2b-4; this call site wasn't).
-      const db = await getDb();
-      const result = await handleStripeWebhook(db, req.body, sig);
+      // Express route (Node-only). server/webhooks/stripe.ts uses the
+      // module-scope db singleton internally (via server/db.ts helpers),
+      // so no db argument is threaded here.
+      const result = await handleStripeWebhook(req.body, sig);
       res.json(result);
     } catch (err: any) {
       console.error(`[Stripe Webhook] Error: ${err.message}`);
