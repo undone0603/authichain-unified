@@ -98,6 +98,16 @@ export const adminRouter = router({
     const repo = ctx.adminRepo ?? new DbAdminRepository();
     return await repo.getSubscriptionAnalytics();
   }),
+  pastDueSubscriptions: adminProcedure.query(async ({ ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getPastDueSubscriptions();
+  }),
+  inactiveUsers: adminProcedure.input(z.object({
+    daysSinceLastScan: z.number().min(1).optional(),
+  }).optional()).query(async ({ input, ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getInactiveUsers(input?.daysSinceLastScan);
+  }),
   platformStaking: adminProcedure.query(async () => {
     // stakingPositions schema table is scaffolded but not yet migrated;
     // return safe zeros until the staking feature is fully deployed.
