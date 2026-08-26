@@ -1,0 +1,18 @@
+{
+  "linkedin": "For small manufacturers selling into federal contracts, a Made-in-USA or Buy American Act domestic-content claim usually lives in a spreadsheet or a PDF — a self-attestation that a contracting officer has to take mostly on faith. GovChain hash-anchors that provenance record to Polygon instead, so the claim behind a component or product is a tamper-evident record anyone can independently check, not paperwork sitting in a folder.\n\nThe same system also watches the federal opportunity feed and scores each incoming notice against a contractor's actual capabilities, attaching a plain-English pursue / monitor / skip call to every score instead of just a keyword match — and from there it can auto-draft a starting capability statement. It also tracks certification status (ISO 9001, AS9100, CMMC) so a renewal deadline doesn't slip past unnoticed.\n\nIf your domestic-content claims are still a PDF nobody outside your own team can verify, take a look at what an anchored provenance record changes.\n\nhttps://govchain.us/?utm_source=linkedin&utm_medium=social&utm_campaign=govchain-fit-score&utm_content=b\n\n#GovCon #FederalContracting #SupplyChain",
+  "reddit": {
+    "subreddit": "govcon",
+    "title": "How do you actually document Made-in-USA / BAA domestic-content claims — anchored provenance record, or still a self-attested PDF?",
+    "body": "For federal contracts, a Made-in-USA or Buy American Act domestic-content claim usually just sits in a spreadsheet or a PDF that a contracting officer has to take mostly on faith. I've been working on GovChain, which hash-anchors that provenance record to Polygon instead, so the claim behind a component or product becomes a tamper-evident record anyone can independently check rather than paperwork in a folder.\n\nThe same tool also watches the federal opportunity feed and scores incoming notices against a contractor's actual capabilities, attaching a plain-English pursue / monitor / skip call instead of just matching keywords, and can auto-draft a starting capability statement once you decide to pursue something. It also tracks certification status (ISO 9001, AS9100, CMMC) so a renewal doesn't sneak up on you.\n\nCurious how others here handle documenting domestic-content claims today — is anyone actually anchoring or notarizing that record anywhere, or is it still all self-attested paperwork sitting in a shared drive?\n\nhttps://govchain.us/?utm_source=reddit&utm_medium=social&utm_campaign=govchain-fit-score&utm_content=b\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "For federal contracts, a Made-in-USA or Buy American Act domestic-content claim usually lives in a spreadsheet or a PDF — a self-attestation a contracting officer has to take mostly on faith.",
+    "GovChain hash-anchors that provenance record to Polygon instead, so the claim behind a component is a tamper-evident record anyone can check. It also scores incoming federal opportunities against a contractor's capabilities with a plain-English pursue/monitor/skip call.",
+    "And it tracks certification status (ISO 9001, AS9100, CMMC) so a renewal doesn't slip past: https://govchain.us/?utm_source=twitter&utm_medium=social&utm_campaign=govchain-fit-score&utm_content=b"
+  ],
+  "experiment": {
+    "campaign": "govchain-fit-score",
+    "variant": "b",
+    "hypothesis": "leading with the Made-in-USA/BAA provenance-anchoring hook outperforms the SAM-opportunity fit-scoring/triage-time-saved hook (variant a) on click-through to govchain.us"
+  }
+}
