@@ -155,7 +155,7 @@
     "typescript": "^5.5.4",
     "vite": "^6.4.3",
     "vitest": "^4.1.11",
-    "wrangler": "^4.107.0"
+    "wrangler": "^4.125.0"
   },
   "overrides": {
     "serialize-javascript": "7.0.3",
