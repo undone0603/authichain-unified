@@ -12,7 +12,7 @@ import { generateProductAudioStory } from "./audio-service";
  * Executes the "Sync-to-Verify" asset generation pipeline for a product.
  * This runs after a METRC sync or a new product creation.
  */
-export async function generateProductAssets(productId: number) {
+export async function generateProductAssets(productId: string) {
   const db = await getDb();
   const [product] = await db.select().from(products).where(eq(products.id, productId));
 

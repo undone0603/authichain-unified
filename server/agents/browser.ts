@@ -3,6 +3,7 @@ import { logActivity, getDb, enqueueTask } from '../db.js';
 import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
+import type { VerificationSource } from '../outreach/send-guard.js';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 const MAX_PAGE_CHARS = 8_000;
@@ -35,6 +36,22 @@ async function fetchPage(url: string): Promise<{ text: string; finalUrl: string 
   } catch {
     return null;
   }
+}
+
+/**
+ * Returned by browseLoop when the fetch-based scraper came away with nothing.
+ *
+ * A named constant rather than a literal at each site: runBrowseResearchLead
+ * escalates to the Playwright vision agent on exactly this value, and a typo
+ * in either half would silently disable that escalation — the failure mode
+ * would be a lead quietly researched as "No findings extracted." and pitched
+ * on the strength of it.
+ */
+export const NO_FINDINGS = 'No findings extracted.';
+
+/** True when the scraper produced no usable text for `org`. */
+export function isEmptyExtraction(research: string): boolean {
+  return !research?.trim() || research.trim() === NO_FINDINGS;
 }
 
 // ── ReAct navigation loop ───────────────────────────────────────────────────
@@ -101,13 +118,15 @@ Return JSON:
     }
   }
 
-  return findings.join('\n\n') || 'No findings extracted.';
+  return findings.join('\n\n') || NO_FINDINGS;
 }
 
 // ── Task: BROWSE_RESEARCH_LEAD ───────────────────────────────────────────────
 // Visits a lead's company website and enriches the lead record before outreach.
 export interface BrowseResearchLeadPayload {
   leadEmail: string;
+  /** Provenance from lead discovery; forwarded unchanged to send-guard. */
+  verificationSource?: VerificationSource;
   leadOrg: string;
   leadName?: string;
   leadTitle?: string;
@@ -127,6 +146,58 @@ recent news, team size, and technology stack hints.
 Focus on angles relevant to blockchain product authentication and anti-counterfeiting.`;
 
   const research = await browseLoop(startUrl, objective, 4);
+
+  // Escalate to the Playwright vision agent when the fetch-based scraper came
+  // away empty. That is the case browser-vision.ts was written for — its own
+  // docs describe BROWSE_VISION_RESEARCH_LEAD as "more thorough than the
+  // fetch-based BROWSE_RESEARCH_LEAD -- handles SPAs, JS-rendered pricing
+  // pages, and multi-step navigation" — and until now nothing ever created
+  // one, so the vision agent had no producer and never ran.
+  //
+  // The decision has to live here rather than in lead-finder, which is where
+  // the research task is enqueued: whether extraction comes back empty is only
+  // knowable after the scrape. Deciding at enqueue time would mean fetching
+  // every lead's site twice.
+  //
+  // We return *before* enqueuing DRAFT_OUTBOUND_EMAIL. runVisionResearchLead
+  // enqueues that itself with the same payload shape once it has a real hook,
+  // so doing it here as well would put two emails in front of one lead. The
+  // handoff is one-way — the vision agent never enqueues a text research task
+  // — so this cannot ping-pong.
+  //
+  // Cost of the handoff: vision tasks are left pending by the app runtime and
+  // only run on the Playwright workflow's 30-minute schedule, so an escalated
+  // lead waits up to half an hour, and if that run fails the lead stalls in
+  // `pending` rather than being emailed with a hollow hook. Stalling is the
+  // better failure: the previous behaviour pitched the lead on the strength of
+  // "No findings extracted."
+  if (isEmptyExtraction(research)) {
+    await enqueueTask(task.missionId, 'BROWSE_VISION_RESEARCH_LEAD', {
+      segment,
+      leadEmail: payload.leadEmail,
+      leadName:  payload.leadName,
+      leadOrg:   payload.leadOrg,
+      leadTitle: payload.leadTitle,
+      startUrl,
+      verificationSource: payload.verificationSource,
+    });
+
+    await logActivity({
+      userId: null,
+      action: 'browse_research_lead_escalated_to_vision',
+      entityType: 'task',
+      entityId: 0,
+      details: {
+        taskId: task.id,
+        leadEmail: payload.leadEmail,
+        leadOrg: payload.leadOrg,
+        domain: startUrl,
+        reason: 'fetch-based extraction returned no usable text',
+      },
+    });
+
+    return;
+  }
 
   // Summarise findings into a CRM note via LLM
   const summaryPrompt = `Based on this research about ${payload.leadOrg}:
@@ -168,6 +239,7 @@ Return JSON: { "summary": "...", "hookSentence": "one-sentence opener for a cold
     leadOrg: payload.leadOrg,
     leadTitle: payload.leadTitle,
     researchHook: hookSentence,
+    verificationSource: payload.verificationSource,
   });
 
   await logActivity({

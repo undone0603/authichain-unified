@@ -25,7 +25,7 @@ export default function NftMarketplace() {
   const [collOpen, setCollOpen] = useState(false);
   const [mintForm, setMintForm] = useState({ name: "", description: "", imageUrl: "", collectionId: "" });
   const [collForm, setCollForm] = useState({ name: "", description: "" });
-  const [bidAmounts, setBidAmounts] = useState<Record<number, string>>({});
+  const [bidAmounts, setBidAmounts] = useState<Record<string, string>>({});
 
   const handleMint = async () => {
     if (!mintForm.name) { toast.error("Name is required"); return; }
@@ -54,7 +54,7 @@ export default function NftMarketplace() {
     } catch (e: any) { toast.error(e.message || "Failed"); }
   };
 
-  const handleBid = async (auctionId: number) => {
+  const handleBid = async (auctionId: string) => {
     const amount = parseFloat(bidAmounts[auctionId] || "0");
     if (!amount) { toast.error("Enter a bid amount"); return; }
     try {

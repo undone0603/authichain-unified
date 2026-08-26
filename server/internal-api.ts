@@ -252,7 +252,7 @@ export function createInternalRouter(): Router {
 
       // Process each usage record
       await Promise.all(
-        records.map((r: { tenantId: number; endpoint: string; count: number }) =>
+        records.map((r: { tenantId: string; endpoint: string; count: number }) =>
           reportUsageToStripe(r.tenantId, r.endpoint, r.count),
         ),
       );

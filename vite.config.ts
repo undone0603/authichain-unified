@@ -1,4 +1,3 @@
-
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
@@ -54,7 +53,7 @@ function writeToLogFile(source: LogSource, entries: unknown[]) {
   const logPath = path.join(LOG_DIR, `${source}.log`);
 
   // Format entries with timestamps
-  const lines = entries.map((entry) => {
+  const lines = entries.map(entry => {
     const ts = new Date().toISOString();
     return `[${ts}] ${JSON.stringify(entry)}`;
   });
@@ -130,7 +129,7 @@ function vitePluginManusDebugCollector(): Plugin {
         }
 
         let body = "";
-        req.on("data", (chunk) => {
+        req.on("data", chunk => {
           body += chunk.toString();
         });
 
@@ -148,9 +147,8 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-
 export default defineConfig({
-      plugins: [react(), vitePluginManusDebugCollector()],
+  plugins: [react(), vitePluginManusDebugCollector()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

@@ -135,6 +135,11 @@ export async function runLeadFinder(task: Task): Promise<void> {
       leadName:  lead.name,
       leadOrg:   lead.org,
       leadTitle: lead.title,
+      // Provenance travels with the lead all the way to send-guard. Dropping it
+      // here is why every outbound task defaulted to 'unknown' and parked in
+      // waiting_human: the guard had no way to tell an Apollo-verified mailbox
+      // from a pattern guess, so it correctly refused to send either.
+      verificationSource: lead.verificationSource,
       domain:    lead.linkedinUrl ? undefined : undefined, // browser agent infers from org name
     });
 

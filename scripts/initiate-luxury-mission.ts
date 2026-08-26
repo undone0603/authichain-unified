@@ -1,12 +1,13 @@
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
-import type { AppRouter } from './server/_core/index'; // Adjust path if necessary
+import type { AppRouter } from '../server/routers';
 import superjson from 'superjson';
 
+// tRPC v11 moved `transformer` from the client root into the link config.
 const client = createTRPCProxyClient<AppRouter>({
-  transformer: superjson,
   links: [
     httpBatchLink({
       url: 'http://localhost:3000/api/trpc',
+      transformer: superjson,
     }),
   ],
 });

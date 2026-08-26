@@ -3,8 +3,9 @@ import { BRANDS, resolveBrand, type BrandId } from '@shared/brands';
 
 // Dynamic Open Graph image generator. Usage:
 //   /og?title=AuthiChain%20vs%20Scantrust&brand=authichain
-// Returns a 1200x630 branded card. Runs on the edge for fast, cached delivery.
-export const runtime = 'edge';
+// Returns a 1200x630 branded card. Node avoids Vercel's 1 MB Edge Function
+// bundle ceiling imposed by ImageResponse's rendering runtime.
+export const runtime = 'nodejs';
 
 const BRAND_HEX: Record<BrandId, string> = {
   authichain: '#00FFD1',

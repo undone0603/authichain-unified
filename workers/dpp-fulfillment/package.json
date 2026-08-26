@@ -1,0 +1,15 @@
+{
+  "name": "dpp-fulfillment",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250417.0",
+    "typescript": "^5.8.2",
+    "wrangler": "^4.14.0"
+  }
+}

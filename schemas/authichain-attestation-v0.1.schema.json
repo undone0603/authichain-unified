@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://authichain.com/schemas/attestation-v0.1.json",
+  "title": "AuthiChain Attestation v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "attestation_id", "issuer", "subject", "decision", "status", "issued_at", "evidence"],
+  "properties": {
+    "version": { "const": "0.1" },
+    "attestation_id": { "type": "string", "minLength": 1 },
+    "issuer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "format": "uri" },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["object_id"],
+      "properties": {
+        "object_id": { "type": "string", "minLength": 1 },
+        "product_class": { "type": "string" },
+        "gtin": { "type": "string", "pattern": "^[0-9]{8,14}$" },
+        "serial": { "type": "string" },
+        "lot": { "type": "string" }
+      }
+    },
+    "decision": { "enum": ["verified", "warning", "blocked"] },
+    "status": { "enum": ["active", "revoked", "unknown"] },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "digest"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "digest": { "type": "string", "pattern": "^sha256:[A-Fa-f0-9]{64}$" },
+          "uri": { "type": "string", "format": "uri" }
+        }
+      }
+    }
+  }
+}

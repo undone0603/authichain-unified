@@ -14,8 +14,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_CONFIG: .gitleaks.toml
+
   deploy:
     name: Deploy Revenue Worker
+    needs: secret-scan
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -24,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check required secrets
         id: secrets_check
@@ -53,21 +69,17 @@ jobs:
 
       - name: Install pnpm
         if: steps.secrets_check.outputs.skip != 'true'
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 10.28.2
           run_install: false
 
       - name: Setup Node
         if: steps.secrets_check.outputs.skip != 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
-
-      - name: Install Wrangler
-        if: steps.secrets_check.outputs.skip != 'true'
-        run: npm install -g wrangler@latest
 
       - name: Install dependencies
         if: steps.secrets_check.outputs.skip != 'true'
@@ -78,7 +90,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: wrangler whoami
+        run: pnpm exec wrangler whoami
 
       - name: Upload worker secrets
         if: steps.secrets_check.outputs.skip != 'true'
@@ -93,17 +105,38 @@ jobs:
           STRIPE_PRICE_BASIC: ${{ secrets.STRIPE_PRICE_BASIC }}
           STRIPE_PRICE_PRO: ${{ secrets.STRIPE_PRICE_PRO }}
           STRIPE_PRICE_ENTERPRISE: ${{ secrets.STRIPE_PRICE_ENTERPRISE }}
+          WORKER_API_KEY: ${{ secrets.WORKER_API_KEY }}
+          CRM_API_KEY: ${{ secrets.CRM_API_KEY }}
         run: |
           put_secret() {
             local key="$1"
             local value="$2"
 
             if [ -n "$value" ]; then
-              printf '%s' "$value" | wrangler secret put "$key" --name "$WORKER_NAME"
+              printf '%s' "$value" | pnpm exec wrangler secret put "$key" --name "$WORKER_NAME"
             else
               echo "::notice::$key not set — skipping"
             fi
           }
 
           put_secret SUPABASE_URL "$SUPABASE_URL"
-          put_secret SUPABASE_SERVICE_ROLE_KEY 
+          put_secret SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+          put_secret STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY"
+          put_secret STRIPE_WEBHOOK_SECRET "$STRIPE_WEBHOOK_SECRET"
+          put_secret STRIPE_PRICE_BASIC "$STRIPE_PRICE_BASIC"
+          put_secret STRIPE_PRICE_PRO "$STRIPE_PRICE_PRO"
+          put_secret STRIPE_PRICE_ENTERPRISE "$STRIPE_PRICE_ENTERPRISE"
+          put_secret WORKER_API_KEY "$WORKER_API_KEY"
+          put_secret CRM_API_KEY "$CRM_API_KEY"
+
+      - name: Deploy revenue worker
+        if: steps.secrets_check.outputs.skip != 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
+          CRM_BASE_URL: ${{ vars.CRM_BASE_URL }}
+        run: |
+          pnpm exec wrangler deploy --minify --config api/wrangler.toml \
+            --var "NEXT_PUBLIC_APP_URL:$APP_URL" \
+            --var "CRM_BASE_URL:$CRM_BASE_URL"

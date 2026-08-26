@@ -14,6 +14,7 @@ import { eq, and, lte } from 'drizzle-orm';
 import { sendEmail } from '@/lib/email.ts';
 import { selectTemplate } from '@/lib/email-templates';
 import { NextRequest, NextResponse } from 'next/server';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
 /**
  * Delays (in ms) before sending nurture email based on reply sentiment
@@ -29,9 +30,7 @@ const NURTURE_DELAYS = {
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret (if configured)
-    const cronSecret = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+    if (!isCronAuthorized(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

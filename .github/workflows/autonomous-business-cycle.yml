@@ -1,28 +1,51 @@
 name: Autonomous Business Cycle (Vercel Cron backup)
 
 # Redundant trigger for the same paths vercel.json declares as Vercel Cron
-# jobs, authenticated with CRON_SECRET. If Vercel's cron is silently dead,
-# this is what keeps the business running: lead-nurture drip, dunning,
-# retention, affiliate/founder payouts, GovChain sync, competitive
-# monitoring, subscription health. Until CRON_SECRET is set as a repo
-# secret, the job below skips gracefully.
+# jobs, authenticated with CRON_SECRET. It is intentionally disabled until
+# every endpoint supports a dry-run contract and a reviewed live activation
+# explicitly enables it.
 
 on:
   schedule:
-    - cron: '0 0 * * *'   # pipeline
-    - cron: '0 3 * * *'   # subscription-health-check
-    - cron: '0 5 * * *'   # customer-health-score
-    - cron: '0 6 * * *'   # automation/cron
-    - cron: '0 6 * * 1'   # competitive-monitor (Mondays)
-    - cron: '0 7 * * *'   # govchain
-    - cron: '0 8 * * *'   # dunning-escalation
-    - cron: '0 9 * * *'   # retention
-    - cron: '0 9 1 * *'   # founder-payout (1st of month)
-    - cron: '0 10 * * *'  # trial-reminder
-    - cron: '0 11 * * *'  # live-systems-check
-    - cron: '0 12 * * *'  # token-metrics
-    - cron: '0 13 * * *'  # ecosystem-health
-  workflow_dispatch: {}
+    - cron: "0 0 * * *" # pipeline
+    - cron: "0 3 * * *" # subscription-health-check
+    - cron: "0 5 * * *" # customer-health-score
+    - cron: "0 6 * * *" # automation/cron
+    - cron: "0 6 * * 1" # competitive-monitor (Mondays)
+    - cron: "0 7 * * *" # govchain
+    - cron: "0 8 * * *" # dunning-escalation
+    - cron: "0 9 * * *" # retention
+    - cron: "0 9 1 * *" # founder-payout (1st of month)
+    - cron: "0 10 * * *" # trial-reminder
+    - cron: "0 11 * * *" # live-systems-check
+    - cron: "0 12 * * *" # token-metrics
+    - cron: "0 13 * * *" # ecosystem-health
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Autonomous task to run"
+        required: true
+        default: pipeline
+        type: choice
+        options:
+          - pipeline
+          - subscription-health-check
+          - customer-health-score
+          - automation
+          - competitive-monitor
+          - govchain
+          - dunning
+          - retention
+          - founder-payout
+          - trial-reminder
+          - live-systems-check
+          - token-metrics
+          - ecosystem-health
+      live:
+        description: "Allow the selected task to make live requests"
+        required: true
+        default: false
+        type: boolean
 
 concurrency:
   group: autonomous-business-cycle
@@ -36,7 +59,8 @@ env:
 
 jobs:
   run-due-cron-paths:
-    name: Call all cron paths (backup trigger)
+    name: Call due cron path
+    if: github.event_name == 'workflow_dispatch' && inputs.live
     runs-on: ubuntu-latest
     steps:
       - name: Skip if CRON_SECRET not configured yet
@@ -49,40 +73,64 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Call every cron path (safe no-ops if not due / already run by Vercel)
+      - name: Call due cron path
         if: steps.check.outputs.skip == 'false'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          set -uo pipefail
-          paths=(
-            "/api/cron/pipeline"
-            "/api/automation/cron"
-            "/api/cron/jobs?job=subscription-health-check"
-            "/api/cron/jobs?job=customer-health-score"
-            "/api/cron/govchain"
-            "/api/cron/jobs?job=dunning-escalation"
-            "/api/cron/retention"
-            "/api/trial-reminder"
-            "/api/cron/jobs?job=founder-payout"
-            "/api/cron/competitive-monitor"
-            "/api/cron/jobs?job=live-systems-check"
-            "/api/cron/jobs?job=token-metrics"
-            "/api/cron/jobs?job=ecosystem-health"
-          )
-          fail=0
-          for p in "${paths[@]}"; do
-            url="${APP_URL}${p}"
-            code=$(curl -sS -o /tmp/resp.txt -w '%{http_code}' -X GET "$url" -H "Authorization: Bearer ${CRON_SECRET}")
-            if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
-              echo "OK  [$code] $p"
-            elif [ "$code" -eq 401 ] || [ "$code" -eq 403 ]; then
-              echo "AUTH [$code] $p"
-              cat /tmp/resp.txt
-              fail=1
-            else
-              echo "WARN [$code] $p"
-              cat /tmp/resp.txt
+          set -euo pipefail
+
+          task="${{ github.event.schedule || inputs.task }}"
+          method="GET"
+          auth_header="Authorization: Bearer ${CRON_SECRET}"
+
+          case "$task" in
+            "0 0 * * *"|pipeline) path="/api/cron/pipeline" ;;
+            "0 3 * * *"|subscription-health-check) path="/api/cron/jobs?job=subscription-health-check" ;;
+            "0 5 * * *"|customer-health-score) path="/api/cron/jobs?job=customer-health-score" ;;
+            "0 6 * * *"|automation) path="/api/automation/cron" ;;
+            "0 6 * * 1"|competitive-monitor) path="/api/cron/competitive-monitor" ;;
+            "0 7 * * *"|govchain) path="/api/cron/govchain" ;;
+            "0 8 * * *"|dunning)
+              path="/api/cron/dunning"
+              method="POST"
+              auth_header="x-internal-secret: ${CRON_SECRET}"
+              ;;
+            "0 9 * * *"|retention) path="/api/cron/retention" ;;
+            "0 9 1 * *"|founder-payout) path="/api/cron/jobs?job=founder-payout" ;;
+            "0 10 * * *"|trial-reminder) path="/api/trial-reminder" ;;
+            "0 11 * * *"|live-systems-check) path="/api/cron/jobs?job=live-systems-check" ;;
+            "0 12 * * *"|token-metrics) path="/api/cron/jobs?job=token-metrics" ;;
+            "0 13 * * *"|ecosystem-health) path="/api/cron/jobs?job=ecosystem-health" ;;
+            *)
+              echo "::error::No cron route configured for '$task'."
+              exit 1
+              ;;
+          esac
+
+          url="${APP_URL}${path}"
+
+          # --fail-with-body writes the body to /tmp/resp.txt and exits 22 on a
+          # 4xx/5xx. Under `set -e` that killed the step before anything printed
+          # it, so an activation attempt reported only "exit code 22" and the
+          # server's own explanation was discarded — the first live dispatch
+          # (run 32337392873) surfaced a bare 401 with no indication of why.
+          # Capture the status instead and print what the endpoint said.
+          set +e
+          code=$(curl --fail-with-body --silent --show-error --output /tmp/resp.txt \
+            --write-out '%{http_code}' --request "$method" "$url" \
+            --header "$auth_header")
+          status=$?
+          set -e
+
+          if [ "$status" -ne 0 ]; then
+            echo "::error::$method $path returned HTTP ${code:-000}"
+            if [ "${code:-000}" = "401" ]; then
+              echo "::error::CRON_SECRET here does not match CRON_SECRET in the deployed environment (or is unset there). The endpoint compares the bearer token against process.env.CRON_SECRET and 401s when it is absent or different. Reconcile the two, then re-dispatch."
             fi
-          done
-          exit $fail
+            echo "Response body:"
+            cat /tmp/resp.txt || true
+            exit "$status"
+          fi
+
+          echo "OK [$code] $method $path"

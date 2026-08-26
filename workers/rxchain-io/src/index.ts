@@ -2251,7 +2251,7 @@ h2{font-size:clamp(1.75rem,4vw,2.5rem);font-weight:700;margin-bottom:1rem}
 .price-period{font-size:.8rem;color:var(--muted);margin-bottom:1.5rem}
 .price-features{list-style:none;text-align:left;margin-bottom:2rem}
 .price-features li{padding:.4rem 0;font-size:.9rem;color:var(--muted)}
-.price-features li::before{content:"\2713  ";color:var(--cyan)}
+.price-features li::before{content:"\u2713  ";color:var(--cyan)}
 .cta-section{text-align:center;padding:5rem 2rem;background:linear-gradient(135deg,rgba(0,180,216,.05),rgba(56,212,240,.04));border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .cta-section h2{margin-bottom:.75rem}
 .cta-section p{color:var(--muted);max-width:560px;margin:0 auto 2rem}

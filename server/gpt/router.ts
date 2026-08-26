@@ -17,7 +17,7 @@ router.post("/verify", async (req, res) => {
     if (!productId) {
       return res.status(400).json({ error: "productId required" });
     }
-    const [product] = await db.select().from(products).where(eq(products.id, Number(productId))).limit(1);
+    const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
     if (!product) {
       return res.json({
         verified: false,
@@ -113,7 +113,7 @@ router.post("/trust-score", async (req, res) => {
   try {
     const { productId } = req.body;
     if (!productId) return res.status(400).json({ error: "productId required" });
-    const [product] = await db.select().from(products).where(eq(products.id, Number(productId))).limit(1);
+    const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
     if (!product) return res.json({ trustScore: 0, verdict: "UNKNOWN", message: "Product not found" });
     const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
     const baseScore = cert ? 85 : 15;

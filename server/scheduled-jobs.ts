@@ -304,7 +304,7 @@ registerJob({
     // Delete read notifications older than 30 days
     await db.delete(notifications)
       .where(and(
-        eq(notifications.isRead, 1),
+        eq(notifications.isRead, true),
         lt(notifications.createdAt, thirtyDaysAgo),
       ));
     details.oldNotificationsDeleted = "checked";
