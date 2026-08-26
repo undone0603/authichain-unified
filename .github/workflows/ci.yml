@@ -1,12 +1,13 @@
 name: CI
+
 on: [push, pull_request]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
-      # Fixed: Changed from @v7 to @v4
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -14,10 +15,9 @@ jobs:
           version: "10.28.2"
 
       - name: Use Node.js
-        # Fixed: Changed from @v7 to @v4
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "20"
           cache: "pnpm"
 
       - name: Install deps
@@ -26,5 +26,5 @@ jobs:
       - name: Run typecheck
         run: pnpm check
 
-      - name: Run tests
-        run: pnpm test --silent
+      - name: Run tests (workspace)
+        run: pnpm -w test
