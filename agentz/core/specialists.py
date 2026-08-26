@@ -15,6 +15,7 @@ Roles:
   4. PilotCloser       — owns conversion funnel
   5. RevenueOperator   — owns economics/budget allocation
   6. TrustHealer       — owns operational integrity, can auto-remediate
+  7. ConversionOptimizer — owns funnel analytics and messaging tuning
 
 Each role returns a SpecialistResult with findings, recommended actions,
 and whether it exercised veto power.
@@ -23,7 +24,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, List, Dict
+from agentz.core.outreach import tune_outreach_prompt
 
 logger = logging.getLogger("agentz.specialists")
 
@@ -430,6 +432,52 @@ class TrustHealer:
         return result
 
 
+# ── 7. ConversionOptimizer ───────────────────────────────────────────────────
+
+
+class ConversionOptimizerSpecialist:
+    """
+    Analyzes conversion funnel data to optimize outreach messaging.
+    """
+    ROLE = "ConversionOptimizer"
+
+    def assess(self, funnel_data: List[Dict[str, Any]]) -> SpecialistResult:
+        result = SpecialistResult(role=self.ROLE)
+        
+        # Analyze funnel (assuming funnel_data is a list of events)
+        # Fix: The original dict comprehension didn't iterate over all possible stages
+        # correctly if they weren't in the input list.
+        stages = {}
+        for e in funnel_data:
+            stage = e.get('stage')
+            if stage:
+                stages[stage] = stages.get(stage, 0) + 1
+        
+        logger.info(f"DEBUG funnel_data: {funnel_data}")
+        logger.info(f"DEBUG stages: {stages}")
+        
+        proposals = stages.get('proposal_sent', 0)
+        opened = stages.get('email_opened', 0)
+        
+        # Explicit check
+        if proposals > 0:
+            ratio = opened / proposals
+        else:
+            ratio = 0
+            
+        if ratio <= 0.5:
+            result.findings.append("Open rate below 50% — subject line optimization suggested")
+            result.recommended_actions.append({
+                "workflow_id": "optimize_outreach",
+                "suggestion": "Test shorter, curiosity-driven subject lines",
+            })
+            
+        return result
+
+    def execute(self, suggestion: Dict[str, Any]) -> None:
+        tune_outreach_prompt(suggestion)
+
+
 # ── Registry ────────────────────────────────────────────────────────────────
 
 ALL_SPECIALISTS = {
@@ -439,4 +487,5 @@ ALL_SPECIALISTS = {
     PilotCloser.ROLE: PilotCloser,
     RevenueOperator.ROLE: RevenueOperator,
     TrustHealer.ROLE: TrustHealer,
+    ConversionOptimizerSpecialist.ROLE: ConversionOptimizerSpecialist,
 }
