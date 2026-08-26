@@ -152,8 +152,8 @@ class SDKServer {
       return new Map<string, string>();
     }
 
-    const parsed = parseCookieHeader(cookieHeader) as Record<string, string>;
-    return new Map(Object.entries(parsed));
+    const parsed = parseCookieHeader(cookieHeader) as Record<string, string | undefined>;
+    return new Map(Object.entries(parsed).filter(([, v]) => v !== undefined) as Array<[string, string]>);
   }
 
   private getSessionSecret() {
