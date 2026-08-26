@@ -164,7 +164,10 @@ export default function QRONPostmaster() {
               <ul className="space-y-2 text-xs text-zinc-500">
                 <li>✓ Patient record security</li>
                 <li>✓ Prescription verification</li>
-                <li>✓ HIPAA compliance tracking</li>
+                {/* Not a HIPAA-covered entity and no BAA is offered, so the
+                    product cannot deliver "HIPAA compliance". Chain-of-custody
+                    evidence is what it actually provides. */}
+                <li>✓ Chain-of-custody records for HIPAA audits</li>
               </ul>
             </div>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-8">

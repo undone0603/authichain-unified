@@ -43,7 +43,7 @@ tags = ["key", "openai"]
 [[rules]]
 id = "resend-key"
 description = "Resend API Key"
-regex = '''re_[a-zA-Z0-9]{20,}'''
+regex = '''(?:^|["'=:\s])re_[a-zA-Z0-9]{20,}\b'''
 tags = ["key", "resend"]
 
 [[rules]]

@@ -49,7 +49,6 @@ export async function POST(req: NextRequest) {
       email: body.email,
       name: body.name,
       source: body.source,
-      product_interest: body.product_interest,
     });
 
     return NextResponse.json({ ok: true });

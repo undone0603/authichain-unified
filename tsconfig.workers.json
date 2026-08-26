@@ -1,0 +1,43 @@
+{
+  // Cloudflare Workers run on a different global environment than the Next.js
+  // app: `Request`, `Response` and friends are the workerd versions, and
+  // `ExecutionContext`, `KVNamespace`, `D1Database`, `Queue` and `MessageBatch`
+  // exist only there. Folding them into the root program would mean asserting
+  // two incompatible definitions of the same global names, so workers get their
+  // own program instead.
+  //
+  // Each worker already carried `"types": ["@cloudflare/workers-types"]` in its
+  // own tsconfig, but the package was never installed, so none of those configs
+  // could resolve it and no worker was ever actually typechecked.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*", "./client/src/*"],
+      "@shared/*": ["./shared/*"],
+      "@server/*": ["./server/*"]
+    }
+  },
+  "include": ["workers/**/*.ts", "worker/**/*.ts"],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/*.test.ts",
+    "**/vite.config.ts",
+
+    // Imports @tsndr/cloudflare-worker-jwt, which is in no package.json in the
+    // repo. The worker has no package.json of its own and no deploy workflow
+    // references it, so it has never been buildable. Excluded by name so the
+    // gap stays visible rather than adding a dependency for undeployed code.
+    "workers/authichain-bridge/**/*"
+  ]
+}

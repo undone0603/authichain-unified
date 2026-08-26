@@ -64,7 +64,7 @@ async function fulfillPlan(
   }
 }
 
-// â”€â”€â”€ Trigger Tokenomics Cycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Trigger Tokenomics Cycle ──────────────────────────────────────────
 
 async function triggerTokenomics(userId: string | null | undefined, amount: number) {
   if (!userId || amount <= 0) return;
@@ -94,7 +94,7 @@ async function triggerTokenomics(userId: string | null | undefined, amount: numb
   }
 }
 
-// â”€â”€â”€ Downgrade on subscription cancel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Downgrade on subscription cancel ────────────────────────────────────────
 
 async function downgradeUser(stripeCustomerId: string) {
   try {
@@ -117,7 +117,7 @@ async function downgradeUser(stripeCustomerId: string) {
   }
 }
 
-// â”€â”€â”€ Save Stripe customer ID to profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Save Stripe customer ID to profile ──────────────────────────────────────
 
 async function saveCustomerId(
   userId: string | null | undefined,
@@ -140,7 +140,7 @@ async function saveCustomerId(
   }
 }
 
-// â”€â”€â”€ Record delivery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Record delivery ──────────────────────────────────────────────────────────
 
 async function recordDelivery(
   sessionId: string,
@@ -169,7 +169,7 @@ async function recordDelivery(
   }
 }
 
-// â”€â”€â”€ Email QR to customer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Email QR to customer ─────────────────────────────────────────────────────
 
 async function sendQrEmail(
   to: string,
@@ -197,7 +197,7 @@ async function sendQrEmail(
         </div>
         <hr style="border:none;border-top:1px solid rgba(201,162,39,0.2);margin:24px 0;" />
         <p style="color:#3a3a3a;font-size:12px;">
-          Powered by <a href="https://qron.space" style="color:#c9a227;text-decoration:none;">QRON</a> Â·       
+          Powered by <a href="https://qron.space" style="color:#c9a227;text-decoration:none;">QRON</a> ·       
           Authenticated by <a href="https://authichain.com" style="color:#c9a227;text-decoration:none;">AuthiChain</a>
         </p>
       </div>`,
@@ -211,7 +211,7 @@ async function sendQrEmail(
   console.log(`[email] QR delivered to ${to} via ${result.provider}`);
 }
 
-// â”€â”€â”€ QR generation for one-time pack purchases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── QR generation for one-time pack purchases ───────────────────────────────
 
 async function generateAndDeliverQr(session: Stripe.Checkout.Session) {
   const { url, prompt } = session.metadata || {};
@@ -220,7 +220,7 @@ async function generateAndDeliverQr(session: Stripe.Checkout.Session) {
 
   if (!url || !prompt || !customerEmail) {
     console.warn(
-      '[webhook] Skipping QR gen â€” missing url/prompt/email in metadata'
+      '[webhook] Skipping QR gen — missing url/prompt/email in metadata'
     );
     return;
   }
@@ -244,7 +244,7 @@ async function generateAndDeliverQr(session: Stripe.Checkout.Session) {
   }
 }
 
-// â”€â”€â”€ Targeted QRON generation for custom_qron purchases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Targeted QRON generation for custom_qron purchases ──────────────────────
 
 async function generateAndDeliverTargetedQron(session: Stripe.Checkout.Session) {
   const {
@@ -260,7 +260,7 @@ async function generateAndDeliverTargetedQron(session: Stripe.Checkout.Session) 
 
   if (!url || !subject || !customerEmail) {
     console.warn(
-      '[webhook] Skipping targeted QRON â€” missing url/subject/email in metadata'
+      '[webhook] Skipping targeted QRON — missing url/subject/email in metadata'
     );
     return;
   }
@@ -365,7 +365,7 @@ async function generateAndDeliverTargetedQron(session: Stripe.Checkout.Session) 
   }
 }
 
-// â”€â”€â”€ Enhanced email for targeted QRON delivery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Enhanced email for targeted QRON delivery ───────────────────────────────
 
 async function sendTargetedQronEmail(
   to: string,
@@ -406,7 +406,7 @@ async function sendTargetedQronEmail(
 
         <div style="text-align:center;margin-bottom:28px;">
           <a href="${imageUrl}" download style="background:linear-gradient(135deg,#c9a227,#a07c10);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:800;font-size:15px;display:inline-block;">  
-            â¬‡ Download Your QRON
+            ⬇ Download Your QRON
           </a>
         </div>
 
@@ -416,7 +416,7 @@ async function sendTargetedQronEmail(
 
         <hr style="border:none;border-top:1px solid rgba(201,162,39,0.15);margin:24px 0;" />
         <p style="color:#3a3a3a;font-size:11px;text-align:center;">
-          <a href="https://qron.space" style="color:#c9a227;text-decoration:none;">qron.space</a> Â·
+          <a href="https://qron.space" style="color:#c9a227;text-decoration:none;">qron.space</a> ·
           <a href="https://authichain.com" style="color:#c9a227;text-decoration:none;">authichain.com</a>       
         </p>
       </div>`,
@@ -430,7 +430,7 @@ async function sendTargetedQronEmail(
   console.log(`[email] Custom targeted QRON delivered to ${to} via ${result.provider}`);
 }
 
-// â”€â”€â”€ Story Mode fulfillment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Story Mode fulfillment ───────────────────────────────────────────────────
 
 async function fulfillStoryMode(session: Stripe.Checkout.Session) {
   const { qronId, tier = 'pro' } = session.metadata || {};
@@ -513,7 +513,7 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
   console.log(`[webhook] Story Mode (${tier}) unlocked for QRON ${qronId}`);
 }
 
-// â”€â”€â”€ Webhook handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Webhook handler ─────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   // RETIRED: consolidated into /api/stripe/webhook. This handler had no

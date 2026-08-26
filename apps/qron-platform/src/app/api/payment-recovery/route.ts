@@ -8,7 +8,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 const resend = new Resend(process.env.RESEND_API_KEY);
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-02-24.acacia' });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' as const });
 
 // Called by Stripe webhook on invoice.payment_failed OR daily cron for past_due cleanup
 export async function POST(req: NextRequest) {
@@ -23,10 +23,9 @@ export async function POST(req: NextRequest) {
     email = user?.email || null;
     name = user?.name || null;
   } else if (stripe_customer_id) {
-    const customer = await stripe.customers.retrieve(stripe_customer_id);
-    if ('deleted' in customer) return NextResponse.json({ error: 'Customer deleted' }, { status: 410 });
+    const customer = await stripe.customers.retrieve(stripe_customer_id) as any;
     email = customer.email;
-    name = customer.name ?? null;
+    name = customer.name;
   }
 
   if (!email) return NextResponse.json({ error: 'Could not find user email' }, { status: 404 });

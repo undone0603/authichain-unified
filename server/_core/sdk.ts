@@ -1,7 +1,12 @@
 import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
-import { parse as parseCookieHeader } from "cookie";
+import * as cookie from "cookie";
+import type { Request } from "express";
+// cookie@2 renamed parse → parseCookie; keep a local alias for either shape.
+const parseCookieHeader: (str: string) => Record<string, string | undefined> =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (cookie as any).parseCookie ?? (cookie as any).parse;
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
@@ -13,10 +18,6 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from "./types/manusTypes";
-type CookieBearingRequest = {
-  headers: Headers | { cookie?: string };
-};
-
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -154,7 +155,10 @@ class SDKServer {
     }
 
     const parsed = parseCookieHeader(cookieHeader);
-    return new Map(Object.entries(parsed));
+    const entries = Object.entries(parsed).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    );
+    return new Map(entries);
   }
 
   private getSessionSecret() {
@@ -259,18 +263,14 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  private getCookieHeader(req: CookieBearingRequest): string | undefined {
-    // Fetch Request uses Headers (has get method)
-    if ('get' in req.headers) {
-      return (req.headers as Headers).get('cookie') ?? undefined;
-    }
-    // Express Request has headers.cookie property
-    return (req.headers as { cookie?: string }).cookie;
-  }
-
-  async authenticateRequest(req: CookieBearingRequest): Promise<User> {
+  async authenticateRequest(req: Request | { headers: { cookie?: string } }): Promise<User> {
     // Regular authentication flow
-    const cookies = this.parseCookies(this.getCookieHeader(req));
+    // Support both Fetch API Request (headers.get()) and Express-like objects (headers.cookie).
+    const cookieHeader =
+      typeof (req.headers as { get?: (name: string) => string | null }).get === "function"
+        ? (req.headers as { get: (name: string) => string | null }).get("cookie") ?? undefined
+        : (req.headers as { cookie?: string }).cookie;
+    const cookies = this.parseCookies(cookieHeader);
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
 

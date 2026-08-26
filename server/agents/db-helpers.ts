@@ -17,16 +17,18 @@ import {
   bayesianPriors,
   users,
   notifications,
+  seoPages,
   type InsertNotification,
 } from '../../drizzle/schema';
 import { SEGMENT_PRIORS } from '../_core/bayesian';
 import type { getHyperdriveDb } from '../db';
 
 export type Db = ReturnType<typeof getHyperdriveDb>;
+type InsertSeoPage = typeof seoPages.$inferInsert;
 
 export async function logActivity(
   db: Db,
-  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number; details?: any },
+  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any },
   details?: string,
 ): Promise<void> {
   if (typeof actionOrData === 'string') {
@@ -36,7 +38,7 @@ export async function logActivity(
       userId: actionOrData.userId ?? undefined,
       action: actionOrData.action,
       entityType: actionOrData.entityType,
-      entityId: actionOrData.entityId,
+      entityId: actionOrData.entityId == null ? undefined : String(actionOrData.entityId),
       details: actionOrData.details,
     });
   }
@@ -114,9 +116,36 @@ export async function getAllAdminIds(db: Db): Promise<number[]> {
 export async function createNotification(
   db: Db,
   data: Omit<InsertNotification, 'id' | 'createdAt'>,
-): Promise<{ id: number }> {
+): Promise<{ id: string }> {
   const [result] = await db.insert(notifications).values(data).returning();
   return { id: result.id };
+}
+
+export async function upsertSeoPage(
+  db: Db,
+  page: Omit<InsertSeoPage, 'id' | 'createdAt'>,
+): Promise<void> {
+  await db
+    .insert(seoPages)
+    .values(page)
+    .onConflictDoUpdate({
+      target: seoPages.slug,
+      set: {
+        keyword: page.keyword,
+        brand: page.brand,
+        domain: page.domain,
+        title: page.title,
+        metaDescription: page.metaDescription,
+        h1: page.h1,
+        bodyHtml: page.bodyHtml,
+        jsonLd: page.jsonLd,
+      },
+    });
+}
+
+export async function listPublishedSlugs(db: Db): Promise<string[]> {
+  const rows = await db.select({ slug: seoPages.slug }).from(seoPages);
+  return rows.map(r => r.slug);
 }
 
 export async function createSystemNotification(
@@ -126,8 +155,8 @@ export async function createSystemNotification(
   message: string,
   type: InsertNotification['type'],
   actionUrl?: string,
-): Promise<{ id: number }> {
-  return createNotification(db, { userId, type: type as any, title, message, isRead: 0, actionUrl });
+): Promise<{ id: string }> {
+  return createNotification(db, { userId, type: type as any, title, message, isRead: false, actionUrl });
 }
 
 export async function createTask(db: Db, data: any): Promise<string> {

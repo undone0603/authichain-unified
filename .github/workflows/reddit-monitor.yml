@@ -7,7 +7,7 @@ name: Reddit Market Intelligence
 
 on:
   schedule:
-    - cron: '0 */6 * * *'   # Every 6 hours
+    - cron: "0 */6 * * *" # Every 6 hours
   workflow_dispatch: {}
 
 permissions:
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Scan Reddit for relevant discussions
         run: |

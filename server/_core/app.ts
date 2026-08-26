@@ -18,8 +18,6 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { sdk } from "./sdk";
-import { getDb } from "../db";
-import { getOpsSummary } from "./db-helpers";
 import { createInternalRouter } from "../internal-api";
 import { brandMiddleware } from "./brand-middleware";
 import contactRouter from "../contact";
@@ -29,8 +27,10 @@ import {
   contactRateLimit,
   gptRateLimit,
   globalApiRateLimit,
-    adminRateLimit,
+  adminRateLimit,
 } from "./rate-limit";
+import { getDb } from "../db";
+import { getOpsSummary } from "./db-helpers";
 
 /**
  * Creates and configures the Express app without binding to a port.
@@ -79,9 +79,10 @@ export function createApp() {
     }
     try {
       const { handleStripeWebhook } = await import("../webhooks/stripe");
-      // Express route (Node-only). server/webhooks/stripe.ts uses the
-      // module-scope db singleton internally (via server/db.ts helpers),
-      // so no db argument is threaded here.
+      // handleStripeWebhook takes (rawBody, sig) — it was migrated off the
+      // server/db.ts singleton in Task 2b-4 and no longer needs a db handle.
+      // This call site was not updated then, so it passed db as rawBody and
+      // req.body as sig, which cannot verify a Stripe signature.
       const result = await handleStripeWebhook(req.body, sig);
       res.json(result);
     } catch (err: any) {
@@ -98,9 +99,7 @@ export function createApp() {
     }
     try {
       const { handlePaddleWebhook } = await import("../paddle/webhook");
-      // Documented bridge (see stripe webhook comment above) — same reason.
-      const db = await getDb();
-      await handlePaddleWebhook(db, req, res);
+      await handlePaddleWebhook(req, res);
     } catch (err: any) {
       console.error(`[Paddle Webhook] Error: ${err.message}`);
       res.status(400).json({ error: err.message });
@@ -118,9 +117,7 @@ export function createApp() {
     }
     try {
       const { handleInstantlyWebhook } = await import("../webhooks/instantly.js");
-      // Documented bridge (see stripe webhook comment above) — same reason.
-      const db = await getDb();
-      const result = await handleInstantlyWebhook(db, req.body);
+      const result = await handleInstantlyWebhook(req.body);
       res.json(result);
     } catch (err: any) {
       console.error(`[Instantly Webhook] Error: ${err.message}`);
@@ -139,9 +136,7 @@ export function createApp() {
     }
     try {
       const { handleDocuSignWebhook } = await import("../webhooks/docusign.js");
-      // Documented bridge (see stripe webhook comment above) — same reason.
-      const db = await getDb();
-      const result = await handleDocuSignWebhook(db, req.body);
+      const result = await handleDocuSignWebhook(req.body);
       res.json(result);
     } catch (err: any) {
       console.error(`[DocuSign Webhook] Error: ${err.message}`);

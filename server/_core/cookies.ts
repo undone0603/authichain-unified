@@ -1,38 +1,53 @@
-import type { CookieOptions, Request } from "express";
-import { COOKIE_NAME } from "@shared/const";
+export const COOKIE_NAME = "authichain_session";
 
-export function isSecureRequest(req: Request): boolean {
+import type { CookieOptions, Request } from "express";
+
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+function isIpAddress(host: string) {
+  // Basic IPv4 check and IPv6 presence detection.
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return true;
+  return host.includes(":");
+}
+
+function isSecureRequest(req: Request) {
   if (req.protocol === "https") return true;
+
   const forwardedProto = req.headers["x-forwarded-proto"];
   if (!forwardedProto) return false;
+
   const protoList = Array.isArray(forwardedProto)
     ? forwardedProto
     : forwardedProto.split(",");
+
   return protoList.some(proto => proto.trim().toLowerCase() === "https");
 }
 
-// Runtime-agnostic: takes a plain `secure` boolean instead of an Express
-// Request, so both the Express and Workers tRPC contexts can call it.
 export function getSessionCookieOptions(
-  secure: boolean
-): Pick<CookieOptions, "httpOnly" | "path" | "sameSite" | "secure"> {
+  req: Request
+): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
+  // const hostname = req.hostname;
+  // const shouldSetDomain =
+  //   hostname &&
+  //   !LOCAL_HOSTS.has(hostname) &&
+  //   !isIpAddress(hostname) &&
+  //   hostname !== "127.0.0.1" &&
+  //   hostname !== "::1";
+
+  // const domain =
+  //   shouldSetDomain && !hostname.startsWith(".")
+  //     ? `.${hostname}`
+  //     : shouldSetDomain
+  //       ? hostname
+  //       : undefined;
+
   return {
     httpOnly: true,
     path: "/",
     // "lax" blocks cross-site POSTs (CSRF protection) while still allowing
     // navigation-driven GET flows (OAuth redirects, email link clicks).
+    // Use "none" only if third-party iframe embedding is required.
     sameSite: "lax",
-    secure,
+    secure: isSecureRequest(req),
   };
-}
-
-// Builds a Set-Cookie header string that deletes the session cookie.
-// Attributes (Path/SameSite/Secure) match what the login side sets via
-// getSessionCookieOptions so the browser reliably matches and deletes it.
-// Runtime-agnostic — works for both Express (res.append) and Workers
-// (resHeaders.append).
-export function buildClearSessionCookieHeader(secure: boolean): string {
-  const parts = [`${COOKIE_NAME}=`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"];
-  if (secure) parts.push("Secure");
-  return parts.join("; ");
 }

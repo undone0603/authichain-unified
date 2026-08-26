@@ -6,7 +6,6 @@ type SendArgs = {
   subject: string;
   text?: string;
   html?: string;
-  headers?: Record<string, string>;
 };
 
 type SendResult = {
@@ -38,7 +37,6 @@ async function viaGmail(args: SendArgs, key: string): Promise<SendResult> {
       subject: args.subject,
       text: args.text,
       html: args.html,
-      headers: args.headers,
     });
     return { ok: !!info.messageId, provider: 'gmail' };
   } catch (e) {

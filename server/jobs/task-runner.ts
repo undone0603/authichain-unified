@@ -1,4 +1,4 @@
-import { markTaskRunning, markTaskDone, markTaskFailed, logActivity, type Db } from './db-helpers.js';
+import { markTaskRunning, markTaskDone, markTaskFailed, logActivity } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 import { runLeadFinder } from '../agents/lead-finder.js';
 import { runOutboundEmail } from '../agents/outbound-email.js';
@@ -7,7 +7,6 @@ import { runBuildPilotPacket, runDraftIntelDossier } from '../agents/pilot-packe
 import { runCrmUpdate } from '../agents/crm-update.js';
 import { runFinalizeRetailSignage, runPackageSkuOnboarding } from '../agents/retail.js';
 import { runCheckDnsConfig, runVerifySsl, runLighthouseAudit } from '../agents/infra.js';
-import { runEmailCampaign } from '../agents/campaign.js';
 import {
   runGenerateLaunchChecklist,
   runDraftLaunchEmail,
@@ -30,24 +29,13 @@ import {
   runBrowseScrapeIndustryNews,
   runBrowseVerifyProductUrl,
 } from '../agents/browser.js';
-// browser-vision (Playwright) is imported lazily inside runTask: Playwright
-// cannot load in the Workers runtime, so vision tasks are left pending there
-// and processed by the browser-vision-tasks GitHub Actions runner instead.
+import { runVisionResearchLead, runVisionFreeform } from '../agents/browser-vision.js';
 import { runPlanSprint, runWriteCode } from '../agents/dev-team/code-writer.js';
 import { runOpenPR, runCodeReview, runMergePR } from '../agents/dev-team/pr-manager.js';
 import { runTests, runMonitorDeploy, runFileBug, runAutoFix } from '../agents/dev-team/test-runner.js';
 
-const VISION_TASK_KINDS = new Set(['BROWSE_VISION_RESEARCH_LEAD', 'BROWSE_VISION_FREEFORM']);
-
-export async function runTask(db: Db, task: Task): Promise<{ ok: boolean }> {
-  // Vision tasks need a Playwright-capable Node host. Leave them unclaimed
-  // (still PENDING) unless this process declares Playwright available — the
-  // browser-vision-tasks workflow sets PLAYWRIGHT_AVAILABLE=1.
-  if (VISION_TASK_KINDS.has(task.kind ?? '') && process.env.PLAYWRIGHT_AVAILABLE !== '1') {
-    return { ok: true };
-  }
-
-  const claimed = await markTaskRunning(db, task.id);
+export async function runTask(task: Task): Promise<{ ok: boolean }> {
+  const claimed = await markTaskRunning(task.id);
   if (!claimed) return { ok: true }; // Another worker already claimed this task
 
   try {
@@ -57,176 +45,171 @@ export async function runTask(db: Db, task: Task): Promise<{ ok: boolean }> {
       case 'FIND_LUXURY_LEADS':
       case 'FIND_PHARMA_LEADS':
       case 'FIND_TIMEPIECE_LEADS':
-        await runLeadFinder(task, db);
+        await runLeadFinder(task);
         break;
 
       case 'DRAFT_OUTBOUND_EMAIL':
-        await runOutboundEmail(task, db);
+        await runOutboundEmail(task);
         break;
 
       case 'FOLLOWUP_SEQUENCE':
-        await runFollowupSequence(task, db);
+        await runFollowupSequence(task);
         break;
 
       case 'BUILD_PILOT_PACKET':
-        await runBuildPilotPacket(task, db);
+        await runBuildPilotPacket(task);
         break;
 
       case 'DRAFT_INTEL_DOSSIER':
-        await runDraftIntelDossier(task, db);
+        await runDraftIntelDossier(task);
         break;
 
       case 'CRM_UPDATE':
-        await runCrmUpdate(task, db);
-        break;
-
-      case 'EMAIL_CAMPAIGN':
-        await runEmailCampaign(task, db);
+        await runCrmUpdate(task);
         break;
 
       case 'FINALIZE_RETAIL_SIGNAGE':
-        await runFinalizeRetailSignage(task, db);
+        await runFinalizeRetailSignage(task);
         break;
 
       case 'PACKAGE_SKU_ONBOARDING':
-        await runPackageSkuOnboarding(task, db);
+        await runPackageSkuOnboarding(task);
         break;
 
       case 'CHECK_DNS_CONFIG':
-        await runCheckDnsConfig(task, db);
+        await runCheckDnsConfig(task);
         break;
 
       case 'VERIFY_SSL':
-        await runVerifySsl(task, db);
+        await runVerifySsl(task);
         break;
 
       case 'RUN_LIGHTHOUSE_AUDIT':
-        await runLighthouseAudit(task, db);
+        await runLighthouseAudit(task);
         break;
 
       case 'GENERATE_LAUNCH_CHECKLIST':
-        await runGenerateLaunchChecklist(task, db);
+        await runGenerateLaunchChecklist(task);
         break;
 
       case 'DRAFT_LAUNCH_EMAIL':
-        await runDraftLaunchEmail(task, db);
+        await runDraftLaunchEmail(task);
         break;
 
       case 'DRAFT_PRESS_RELEASE':
-        await runDraftPressRelease(task, db);
+        await runDraftPressRelease(task);
         break;
 
       case 'SCHEDULE_SOCIAL_POSTS':
-        await runScheduleSocialPosts(task, db);
+        await runScheduleSocialPosts(task);
         break;
 
       case 'CHECK_REPLIES':
-        await runCheckReplies(task, db);
+        await runCheckReplies(task);
         break;
 
       case 'SEND_DEMO_PACKET':
-        await runSendDemoPacket(task, db);
+        await runSendDemoPacket(task);
         break;
 
       case 'GENERATE_PROPOSAL':
-        await runGenerateProposal(task, db);
+        await runGenerateProposal(task);
         break;
 
       case 'SEND_CONTRACT':
-        await runSendContract(task, db);
+        await runSendContract(task);
         break;
 
       case 'AUTO_REPLY':
-        await runAutoReply(task, db);
+        await runAutoReply(task);
         break;
 
       case 'GENERATE_OUTREACH_VIDEO':
-        await runGenerateOutreachVideo(task, db);
+        await runGenerateOutreachVideo(task);
         break;
 
       case 'SECURITY_AUDIT':
-        await runSecurityAudit(task, db);
+        await runSecurityAudit(task);
         break;
 
       case 'MONITOR_NEWS_FOR_PR':
-        await runNewsjackingMonitor(task, db);
+        await runNewsjackingMonitor(task);
         break;
 
       // ── Dev Team ────────────────────────────────────────────────────────
       case 'PLAN_SPRINT':
-        await runPlanSprint(task, db);
+        await runPlanSprint(task);
         break;
 
       case 'WRITE_CODE':
-        await runWriteCode(task, db);
+        await runWriteCode(task);
         break;
 
       case 'OPEN_PR':
-        await runOpenPR(task, db);
+        await runOpenPR(task);
         break;
 
       case 'RUN_TESTS':
-        await runTests(task, db);
+        await runTests(task);
         break;
 
       case 'CODE_REVIEW':
-        await runCodeReview(task, db);
+        await runCodeReview(task);
         break;
 
       case 'MERGE_PR':
-        await runMergePR(task, db);
+        await runMergePR(task);
         break;
 
       case 'MONITOR_DEPLOY':
-        await runMonitorDeploy(task, db);
+        await runMonitorDeploy(task);
         break;
 
       case 'FILE_BUG':
-        await runFileBug(task, db);
+        await runFileBug(task);
         break;
 
       case 'AUTO_FIX':
-        await runAutoFix(task, db);
+        await runAutoFix(task);
         break;
 
       // ── Browser Agent ────────────────────────────────────────────────────
       case 'BROWSE_RESEARCH_LEAD':
-        await runBrowseResearchLead(task, db);
+        await runBrowseResearchLead(task);
         break;
 
       case 'BROWSE_COMPETITOR_MONITOR':
-        await runBrowseCompetitorMonitor(task, db);
+        await runBrowseCompetitorMonitor(task);
         break;
 
       case 'BROWSE_SCRAPE_INDUSTRY_NEWS':
-        await runBrowseScrapeIndustryNews(task, db);
+        await runBrowseScrapeIndustryNews(task);
         break;
 
       case 'BROWSE_VERIFY_PRODUCT_URL':
-        await runBrowseVerifyProductUrl(task, db);
+        await runBrowseVerifyProductUrl(task);
         break;
 
       // ── Browser Vision Agent (Playwright + Gemini vision) ────────────────
-      // Never reached here: the PLAYWRIGHT_AVAILABLE gate above leaves vision
-      // tasks pending, and scripts/run-vision-tasks.ts (the Playwright-capable
-      // GitHub Actions runner) executes them without going through this
-      // switch. Importing browser-vision here would drag playwright-core into
-      // the Workers bundle and break the build.
       case 'BROWSE_VISION_RESEARCH_LEAD':
+        await runVisionResearchLead(task);
+        break;
+
       case 'BROWSE_VISION_FREEFORM':
-        throw new Error(`${task.kind} must run via scripts/run-vision-tasks.ts (Playwright runner)`);
+        await runVisionFreeform(task);
+        break;
 
       default:
         throw new Error(`Unknown task kind: ${task.kind}`);
     }
 
     // markTaskDone guards with WHERE status='RUNNING', so WAITING_HUMAN is preserved if the agent set it
-    await markTaskDone(db, task.id);
+    await markTaskDone(task.id);
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await markTaskFailed(db, task.id, message);
-    await logActivity(db, { userId: null, action: 'task_failed', entityType: 'task', entityId: 0, details: { taskId: task.id,
+    await markTaskFailed(task.id, message);
+    await logActivity({ userId: null, action: 'task_failed', entityType: 'task', entityId: 0, details: { taskId: task.id,
       kind: task.kind,
       missionId: task.missionId,
       error: message,

@@ -319,4 +319,3 @@ if (require.main === module) {
 }
 
 // Export for testing
-export { linkedinVariants, pricingVariants };

@@ -16,7 +16,7 @@
  */
 
 import type { MissionTask as Task } from '../../drizzle/schema.js';
-import { logActivity, type Db } from './db-helpers.js';
+import { logActivity } from '../db.js';
 import {
   listAvatars,
   listVoices,
@@ -29,7 +29,7 @@ import { uploadVideo } from '../youtube-service.js';
 const POLL_INTERVAL_MS = 8_000;
 const MAX_POLLS = 30; // 4 minutes max wait
 
-export async function runGenerateOutreachVideo(task: Task, db: Db): Promise<void> {
+export async function runGenerateOutreachVideo(task: Task): Promise<void> {
   const p = task.payload as {
     leadId: number;
     firstName: string;
@@ -106,7 +106,7 @@ export async function runGenerateOutreachVideo(task: Task, db: Db): Promise<void
   }
 
   // Log as activity (stores video_url for lead enrichment)
-  await logActivity(db, {
+  await logActivity({
     userId: 0,
     action: "heygen_video_generated",
     entityType: "lead",

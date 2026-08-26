@@ -18,6 +18,12 @@ export interface Env {
   TELEGRAM_BOT_TOKEN: string
   TELEGRAM_ADMIN_CHAT_ID: string
 
+  // Email delivery of the issued licence key. Optional: sendLicenseEmail()
+  // checks for it and returns false when absent, so the worker still issues
+  // licences without it — it just does not mail them. Set via
+  // `wrangler secret put RESEND_API_KEY`.
+  RESEND_API_KEY?: string
+
   // Persistence
   DATABASE: D1Database   // license records
   SESSIONS: KVNamespace  // short-lived delivery tokens

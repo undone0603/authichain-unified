@@ -57,7 +57,7 @@ export type Db = ReturnType<typeof getHyperdriveDb>;
 
 export async function logActivity(
   db: Db,
-  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number; details?: any },
+  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any },
   details?: string,
 ): Promise<void> {
   if (typeof actionOrData === "string") {
@@ -67,7 +67,7 @@ export async function logActivity(
       userId: actionOrData.userId ?? undefined,
       action: actionOrData.action,
       entityType: actionOrData.entityType,
-      entityId: actionOrData.entityId,
+      entityId: actionOrData.entityId == null ? undefined : String(actionOrData.entityId),
       details: actionOrData.details,
     });
   }
@@ -90,7 +90,7 @@ export async function createSystemNotification(
   type: InsertNotification["type"],
   actionUrl?: string,
 ) {
-  return createNotification(db, { userId, type: type as any, title, message, isRead: 0, actionUrl });
+  return createNotification(db, { userId, type: type as any, title, message, isRead: false, actionUrl });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -197,12 +197,12 @@ export async function getUserProducts(db: Db, userId: number) {
   return await db.select().from(products).where(eq(products.userId, userId)).orderBy(desc(products.createdAt));
 }
 
-export async function getProductById(db: Db, id: number) {
+export async function getProductById(db: Db, id: string) {
   const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
   return result[0];
 }
 
-export async function updateProduct(db: Db, id: number, data: any) {
+export async function updateProduct(db: Db, id: string, data: any) {
   await db.update(products).set(data).where(eq(products.id, id));
 }
 
@@ -229,11 +229,11 @@ export async function getAuthenticationByShareToken(db: Db, shareToken: string) 
   return result[0];
 }
 
-export async function updateAuthenticationSharing(db: Db, id: number, userId: number, isPublic: boolean, shareToken: string) {
+export async function updateAuthenticationSharing(db: Db, id: string, userId: number, isPublic: boolean, shareToken: string) {
   await db.update(authentications).set({ isPublic: isPublic ? 1 : 0, shareToken }).where(and(eq(authentications.id, id), eq(authentications.userId, userId)));
 }
 
-export async function incrementShareCount(db: Db, id: number) {
+export async function incrementShareCount(db: Db, id: string) {
   await db.update(authentications).set({ shareCount: sql`${authentications.shareCount} + 1` }).where(eq(authentications.id, id));
 }
 
@@ -279,7 +279,7 @@ export async function createSupplyChainEvent(db: Db, data: any) {
   return { id: result.id };
 }
 
-export async function getProductSupplyChain(db: Db, productId: number) {
+export async function getProductSupplyChain(db: Db, productId: string) {
   return await db.select().from(supplyChainEvents).where(eq(supplyChainEvents.productId, productId)).orderBy(supplyChainEvents.createdAt);
 }
 
@@ -293,7 +293,7 @@ export async function getQronList(db: Db) {
 
 export async function createQron(db: Db, data: {
   id: string;
-  productId: number;
+  productId: string;
   userId: number;
   productName?: string;
   brand?: string;
@@ -360,10 +360,13 @@ export async function createQronScanVerdict(db: Db, data: {
   const rows = await db.select({ id: qrCodes.id, productId: qrCodes.productId })
     .from(qrCodes).where(eq(qrCodes.shortCode, data.qronId)).limit(1);
   const qr = rows[0];
-  if (!qr) return;
+  // qr_scan_events.productId is NOT NULL. The old code passed `?? 0`, inventing a
+  // product that does not exist; with uuid keys that fails outright. If the QR is
+  // not bound to a product there is no scan event to record.
+  if (!qr || !qr.productId) return;
   await db.insert(qrScanEvents).values({
     qrCodeId: qr.id,
-    productId: qr.productId ?? 0,
+    productId: qr.productId,
     isAuthentic: data.verdict === "authentic",
     userAgent: JSON.stringify({
       verdict: data.verdict,
@@ -398,15 +401,15 @@ export async function createQrCode(db: Db, data: any) {
   return { id: result.id };
 }
 
-export async function getProductQrCodes(db: Db, productId: number) {
+export async function getProductQrCodes(db: Db, productId: string) {
   return await db.select().from(qrCodes).where(eq(qrCodes.productId, productId));
 }
 
-export async function incrementScanCount(db: Db, id: number) {
+export async function incrementScanCount(db: Db, id: string) {
   await db.update(qrCodes).set({ scanCount: sql`${qrCodes.scanCount} + 1`, lastScannedAt: new Date() }).where(eq(qrCodes.id, id));
 }
 
-export async function getRecentScanEvents(db: Db, productId: number, limit = 20) {
+export async function getRecentScanEvents(db: Db, productId: string, limit = 20) {
   return await db
     .select()
     .from(qrScanEvents)
@@ -429,7 +432,7 @@ export async function recordReputationEvent(db: Db, userId: number, eventType: s
   `);
 }
 
-export async function logScanEvent(db: Db, data: { qrCodeId: number; productId: number; isAuthentic?: boolean; userAgent?: string; userId?: number }) {
+export async function logScanEvent(db: Db, data: { qrCodeId: string; productId: string; isAuthentic?: boolean; userAgent?: string; userId?: number }) {
   await db.insert(qrScanEvents).values({
     qrCodeId: data.qrCodeId,
     productId: data.productId,
@@ -455,7 +458,7 @@ export async function listNfts(db: Db, filters?: { collectionId?: number; status
   return await query.orderBy(desc(nfts.createdAt)).limit(filters?.limit || 50);
 }
 
-export async function getNftById(db: Db, id: number) {
+export async function getNftById(db: Db, id: string) {
   const result = await db.select().from(nfts).where(eq(nfts.id, id)).limit(1);
   return result[0];
 }
@@ -488,12 +491,12 @@ export async function getActiveAuctions(db: Db) {
   return await db.select().from(auctions).where(eq(auctions.status, "active")).orderBy(desc(auctions.createdAt));
 }
 
-export async function getAuctionById(db: Db, id: number) {
+export async function getAuctionById(db: Db, id: string) {
   const result = await db.select().from(auctions).where(eq(auctions.id, id)).limit(1);
   return result[0];
 }
 
-export async function placeBid(db: Db, auctionId: number, bidderId: number, amount: string) {
+export async function placeBid(db: Db, auctionId: string, bidderId: number, amount: string) {
   await db.insert(auctionBids).values({ auctionId, bidderId, amount });
   await db.update(auctions).set({
     currentBid: amount,
@@ -502,6 +505,6 @@ export async function placeBid(db: Db, auctionId: number, bidderId: number, amou
   }).where(eq(auctions.id, auctionId));
 }
 
-export async function getAuctionBids(db: Db, auctionId: number) {
+export async function getAuctionBids(db: Db, auctionId: string) {
   return await db.select().from(auctionBids).where(eq(auctionBids.auctionId, auctionId)).orderBy(desc(auctionBids.amount));
 }

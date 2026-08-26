@@ -1,55 +1,49 @@
 name: Browser Vision Tasks (Playwright runner)
 
-# BROWSE_VISION_* mission tasks need a real Chromium + Node host. The app
-# runtime (Cloudflare Workers) leaves them pending (task-runner gates on
-# PLAYWRIGHT_AVAILABLE); this workflow is the host that actually runs them.
-
 on:
   schedule:
-    - cron: '30 2,8,14,20 * * *' # every 6h, offset from the business-cycle loop
-  workflow_dispatch: {}
-
-concurrency:
-  group: browser-vision-tasks
-  cancel-in-progress: false
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# Runs every 30 minutes with a 15-minute timeout, so a slow run can still be
+# going when the next fires. This is not a correctness guard — markTaskRunning
+# claims a task with a conditional UPDATE on status='pending', so two runners
+# cannot process the same task. It just stops redundant runners piling up.
+concurrency:
+  group: browser-vision-tasks
+  cancel-in-progress: false
+
 jobs:
-  run-vision-tasks:
+  run:
     name: Process pending vision tasks
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - name: Skip if DATABASE_URL not configured
-        id: check
+        id: db-check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+          if [ -z "$DATABASE_URL" ]; then
             echo "DATABASE_URL repo secret not set — skipping."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # GitHub-hosted runners have no IPv6 route, but Supabase's pooler host
-      # sometimes hands back only/first an AAAA record — NODE_OPTIONS
-      # --dns-result-order=ipv4first (below) only *reorders* results Node's
-      # own dns.lookup() already got; it can't help if pg's connection pool
-      # ends up with the IPv6 address anyway (confirmed by prior failures:
-      # ENETUNREACH connect to a 2600:... address on port 6543 even with
-      # ipv4first set). Pinning the resolved IPv4 address into /etc/hosts
-      # short-circuits DNS entirely for this hostname, which is reliable
-      # regardless of Node/driver DNS-ordering quirks.
       - name: Force IPv4 for Supabase pooler (runner has no IPv6 route)
-        if: steps.check.outputs.skip == 'false'
+        if: steps.db-check.outputs.skip != 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set -euo pipefail
           host=$(printf '%s' "$DATABASE_URL" | sed -E 's#^[a-zA-Z]+://[^@]*@##; s#[:/].*$##')
+          port=$(printf '%s' "$DATABASE_URL" | sed -E 's#^[a-zA-Z]+://[^@]*@[^:/]*:?##; s#[/?].*$##')
           if [ -z "$host" ]; then
-            echo "Could not parse a host out of DATABASE_URL; skipping IPv4 pin (falling back to NODE_OPTIONS ipv4first only)."
+            echo "Could not parse a host out of DATABASE_URL; skipping IPv4 pin."
             exit 0
           fi
           ipv4=$(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1; exit}' || true)
@@ -57,45 +51,65 @@ jobs:
             ipv4=$(dig +short A "$host" 2>/dev/null | tail -1 || true)
           fi
           if [ -n "$ipv4" ]; then
-            echo "Pinning $host -> $ipv4 in /etc/hosts (forces IPv4, bypasses AAAA resolution)."
+            echo "Pinning $host -> $ipv4 in /etc/hosts (forces IPv4)."
             echo "$ipv4 $host" | sudo tee -a /etc/hosts >/dev/null
           else
-            echo "WARNING: no IPv4 (A) record found for $host — no /etc/hosts pin applied, relying on NODE_OPTIONS ipv4first only."
+            echo "::error::No IPv4 (A) record found for host '$host' (port ${port:-unknown})."
+            echo "::error::Use a dual-stack Supabase Session Pooler connection string (port 6543), not the direct IPv6-only database host (port 5432)."
+            exit 1
           fi
 
-      - uses: actions/checkout@v4
-        if: steps.check.outputs.skip == 'false'
+      - uses: actions/checkout@v7
+        if: steps.db-check.outputs.skip != 'true'
 
-      - name: Setup pnpm
-        if: steps.check.outputs.skip == 'false'
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+      - uses: pnpm/action-setup@v6
+        if: steps.db-check.outputs.skip != 'true'
         with:
-          version: '10.28.2'
+          version: 10.28.2
 
-      - name: Setup Node 22
-        if: steps.check.outputs.skip == 'false'
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
+        if: steps.db-check.outputs.skip != 'true'
         with:
-          node-version: 22
-          cache: 'pnpm'
+          node-version: "22"
+          cache: pnpm
 
       - name: Install dependencies
-        if: steps.check.outputs.skip == 'false'
-        run: pnpm install --no-frozen-lockfile
+        if: steps.db-check.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
 
+      # playwright-core, not playwright. Only playwright-core is a dependency —
+      # server/agents/browser-vision.ts imports it deliberately so the full
+      # package stays out of the Workers bundle — so `pnpm exec playwright`
+      # resolved to nothing and every run died with
+      # ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL before reaching a single task.
+      #
+      # playwright-core ships the same install CLI, and using it keeps the
+      # browser build locked to the exact package version the runtime launches,
+      # which `playwright` as a separate dependency would be free to drift from.
       - name: Install Chromium
-        if: steps.check.outputs.skip == 'false'
-        run: npx playwright install --with-deps chromium
+        if: steps.db-check.outputs.skip != 'true'
+        run: pnpm exec playwright-core install --with-deps chromium
 
       - name: Run vision tasks
-        if: steps.check.outputs.skip == 'false'
+        if: steps.db-check.outputs.skip != 'true'
         env:
-          PLAYWRIGHT_AVAILABLE: '1'
+          PLAYWRIGHT_AVAILABLE: "1"
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GOOGLE_GEMINI_API_KEY: ${{ secrets.GOOGLE_GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          NODE_OPTIONS: '--dns-result-order=ipv4first'
+          NODE_OPTIONS: --dns-result-order=ipv4first
         run: pnpm tsx scripts/run-vision-tasks.ts
+
+      # A TLS failure reports only that the presented root is untrusted, never
+      # which root it was. The pooler hostname is inside a secret, so this is
+      # the only place the chain can be observed. Prints subjects and the root
+      # PEM; never the connection string.
+      - name: Diagnose database TLS chain
+        if: failure() && steps.db-check.outputs.skip != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_OPTIONS: --dns-result-order=ipv4first
+        run: node scripts/diagnose-db-tls.mjs

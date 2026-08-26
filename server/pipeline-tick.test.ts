@@ -20,7 +20,20 @@ vi.mock('./jobs/organic-traffic.js',   () => ({ runOrganicTrafficAutomation:    
 vi.mock('./jobs/browser-jobs.js',      () => ({ runBrowserAgentJobs:            vi.fn().mockResolvedValue({ competitorsChecked: 0, newsKeywordsScanned: 0, skipped: 0 }) }));
 vi.mock('./jobs/task-runner.js',       () => ({ runTask:                        vi.fn().mockResolvedValue({ ok: true }) }));
 
-vi.mock('./jobs/db-helpers.js', () => ({
+// Drizzle-style chainable stub: every chain method returns the same object;
+// terminal methods (.limit, .values) resolve to empty/no-op so the blitz path
+// in pipeline-tick.ts can run without throwing.
+const dbChainStub: any = {
+  select: () => dbChainStub,
+  from:   () => dbChainStub,
+  where:  () => dbChainStub,
+  limit:  () => Promise.resolve([]),
+  insert: () => dbChainStub,
+  values: () => Promise.resolve(undefined),
+};
+
+vi.mock('./db.js', () => ({
+  getDb:                 vi.fn().mockResolvedValue(dbChainStub),
   getDueTasks:           vi.fn().mockResolvedValue([]),
   getRunTaskCount:       vi.fn().mockResolvedValue(100),
   getAdaptivePriors:     vi.fn().mockResolvedValue({
@@ -35,10 +48,6 @@ vi.mock('./jobs/db-helpers.js', () => ({
   logActivity:           vi.fn().mockResolvedValue(undefined),
 }));
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const fakeDb = {} as any;
-
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('runPipelineTick', () => {
@@ -51,7 +60,7 @@ describe('runPipelineTick', () => {
     mockEnv.autonomousPipelineEnabled = false;
 
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
-    const result = await runPipelineTick(fakeDb);
+    const result = await runPipelineTick();
 
     expect(result).toEqual({
       enabled: false,
@@ -62,7 +71,7 @@ describe('runPipelineTick', () => {
 
   it('runs all 6 sub-jobs when enabled', async () => {
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
-    await runPipelineTick(fakeDb);
+    await runPipelineTick();
 
     const { runBudgetMonitor }                = await import('./jobs/budget-monitor.js');
     const { runDunningEscalation }            = await import('./jobs/dunning.js');
@@ -81,7 +90,7 @@ describe('runPipelineTick', () => {
 
   it('returns summary with enabled: true', async () => {
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
-    const result = await runPipelineTick(fakeDb) as any;
+    const result = await runPipelineTick() as any;
 
     expect(result.enabled).toBe(true);
     expect(result).toHaveProperty('budgetMonitor');
@@ -94,18 +103,17 @@ describe('runPipelineTick', () => {
   });
 
   it('logs pipeline_tick_executed to activityLog', async () => {
-    const { logActivity } = await import('./jobs/db-helpers.js');
+    const { logActivity } = await import('./db.js');
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
-    await runPipelineTick(fakeDb);
+    await runPipelineTick();
 
     expect(vi.mocked(logActivity)).toHaveBeenCalledWith(
-      fakeDb,
       expect.objectContaining({ action: 'pipeline_tick_executed' }),
     );
   });
 
   it('calls runTask for each due task', async () => {
-    const { getDueTasks } = await import('./jobs/db-helpers.js');
+    const { getDueTasks } = await import('./db.js');
     const { runTask } = await import('./jobs/task-runner.js');
 
     vi.mocked(getDueTasks).mockResolvedValueOnce([
@@ -114,7 +122,7 @@ describe('runPipelineTick', () => {
     ]);
 
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
-    const result = await runPipelineTick(fakeDb) as any;
+    const result = await runPipelineTick() as any;
 
     expect(vi.mocked(runTask)).toHaveBeenCalledTimes(2);
     expect(result.missionTasks.total).toBe(2);
@@ -123,7 +131,7 @@ describe('runPipelineTick', () => {
   });
 
   it('increments errors count when a task throws, does not abort remaining tasks', async () => {
-    const { getDueTasks } = await import('./jobs/db-helpers.js');
+    const { getDueTasks } = await import('./db.js');
     const { runTask } = await import('./jobs/task-runner.js');
 
     vi.mocked(getDueTasks).mockResolvedValueOnce([
@@ -136,7 +144,7 @@ describe('runPipelineTick', () => {
       .mockResolvedValueOnce({ ok: true });
 
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
-    const result = await runPipelineTick(fakeDb) as any;
+    const result = await runPipelineTick() as any;
 
     expect(result.missionTasks.ran).toBe(1);
     expect(result.missionTasks.errors).toBe(1);
@@ -145,7 +153,7 @@ describe('runPipelineTick', () => {
 
   it('returns missionTasks.total=0 when getDueTasks returns empty array', async () => {
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
-    const result = await runPipelineTick(fakeDb) as any;
+    const result = await runPipelineTick() as any;
 
     expect(result.missionTasks.total).toBe(0);
     expect(result.missionTasks.ran).toBe(0);
@@ -153,7 +161,7 @@ describe('runPipelineTick', () => {
   });
 
   it('UCB1-scored tasks with known kinds run (does not crash with unknown segment mapping)', async () => {
-    const { getDueTasks } = await import('./jobs/db-helpers.js');
+    const { getDueTasks } = await import('./db.js');
     const { runTask } = await import('./jobs/task-runner.js');
 
     // Task kind not in kindToSegment map — falls back to DEFAULT prior
@@ -162,7 +170,7 @@ describe('runPipelineTick', () => {
     ]);
 
     const { runPipelineTick } = await import('./jobs/pipeline-tick.js');
-    const result = await runPipelineTick(fakeDb) as any;
+    const result = await runPipelineTick() as any;
 
     // Should have attempted to run the task (and maybe errored — that's fine)
     expect(vi.mocked(runTask)).toHaveBeenCalledTimes(1);

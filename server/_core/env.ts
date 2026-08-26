@@ -29,6 +29,12 @@ export const ENV = {
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
   samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+  // Overridable via GEMINI_MODEL so a retirement can be worked around without
+  // a deploy — gemini-2.0-flash was retired and the API returned a 404 naming
+  // its replacement, which is how this value was chosen.
+  geminiModel: process.env.GEMINI_MODEL ?? "gemini-3.6-flash",
   autonomousPipelineEnabled: process.env.AUTONOMOUS_PIPELINE_ENABLED === "true",
   requireOutreachApproval: process.env.REQUIRE_OUTREACH_APPROVAL !== "false",
   requireDevApproval: process.env.REQUIRE_DEV_APPROVAL !== "false",
@@ -42,4 +48,5 @@ export const ENV = {
   qronAuthichainKey: process.env.QRON_AUTHICHAIN_KEY ?? "",
   makeWebhookUrl: process.env.MAKE_WEBHOOK_URL ?? "",
   smsRecipient: process.env.SMS_RECIPIENT ?? "",
+  supabasePoolerCa: process.env.SUPABASE_POOLER_CA ?? "",
 };

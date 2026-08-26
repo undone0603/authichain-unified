@@ -43,16 +43,10 @@ export async function GET(request: Request) {
     results.businessCycle = err instanceof Error ? err.message : String(err);
   }
 
-  // Also fire a forced pipeline tick for the server-side autonomous jobs
-  // Documented bridge: this Next.js API route is a standalone cron entry
-  // point (src/app/api/**, not yet migrated off the db.ts singleton), so it
-  // obtains its own db and threads it into the already-migrated
-  // server/jobs/pipeline-tick.ts (Task 2b-2 scope).
+  // Run server-side autonomous jobs only when the runtime pipeline flag permits it.
   try {
     const { runPipelineTick } = await import('../../../../../server/jobs/pipeline-tick');
-    const { getDb } = await import('../../../../../server/db');
-    const db = await getDb();
-    const tick = await runPipelineTick(db, { force: true });
+    const tick = await runPipelineTick();
     results.pipelineTick = tick;
   } catch (err) {
     results.pipelineTick = { error: err instanceof Error ? err.message : String(err) };
@@ -61,8 +55,6 @@ export async function GET(request: Request) {
   // Autonomous programmatic-SEO generation (owned-property content; no ToS gate).
   try {
     const { runProgrammaticSeoBatch } = await import('../../../../../server/agents/seo-content');
-    const { getDb } = await import('../../../../../server/db');
-    const db = await getDb();
     const seoJobs = [
       { brandKey: 'authichain', keyword: 'blockchain product authentication' },
       { brandKey: 'authichain', keyword: 'anti-counterfeit qr verification' },
@@ -71,7 +63,7 @@ export async function GET(request: Request) {
       { brandKey: 'govchain', keyword: 'government document verification blockchain' },
       { brandKey: 'qron', keyword: 'ai qr code art generator' },
     ] as const;
-    const pages = await runProgrammaticSeoBatch([...seoJobs], db);
+    const pages = await runProgrammaticSeoBatch([...seoJobs]);
     results.seo = { generated: pages.length, slugs: pages.map((p) => p.slug) };
   } catch (err) {
     results.seo = { error: err instanceof Error ? err.message : String(err) };

@@ -346,15 +346,17 @@ export function QronHome() {
             />
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-extrabold mb-4 leading-tight tracking-tight">
+          <h1 className="text-5xl md:text-7xl font-extrabold mb-3 leading-[1.02] tracking-tight">
             <span className="gold-text">QRON</span>
-            <span className="sr-only"> — AI-Generated QR Art That Scans</span>
+            <span className="mt-3 block text-2xl md:text-4xl font-bold text-white leading-tight">
+              AI-generated QR art that actually scans
+            </span>
           </h1>
           <p
-            className="text-xl md:text-2xl font-light mb-3"
+            className="text-lg md:text-xl font-light mb-3"
             style={{ color: '#c8c8c8' }}
           >
-            Cryptographically verified QR art.
+            Turn any link into a branded work of art — cryptographically signed and scannable from any camera.
           </p>
           <p
             className="text-base max-w-xl mx-auto"
@@ -390,24 +392,27 @@ export function QronHome() {
                </button>
              ))}
           </div>
+          <p className="text-center text-[9px] uppercase tracking-widest text-zinc-700 mt-3">
+            Unaffiliated demo — brand names shown for illustration only, no endorsement implied
+          </p>
 
           {/* Stat strip */}
           <div className="flex flex-wrap justify-center gap-8 mt-12">
             {[
               {
                 icon: <Zap className="w-4 h-4" />,
-                stat: '~25%',
-                label: 'scan lift vs plain QR',
+                stat: 'Scannable',
+                label: 'AI art from any camera',
               },
               {
                 icon: <Lock className="w-4 h-4" />,
                 stat: 'Ed25519',
-                label: 'cryptographic signature',
+                label: 'signed & Polygon-anchored',
               },
               {
                 icon: <Shield className="w-4 h-4" />,
-                stat: '99.7%',
-                label: 'verification accuracy',
+                stat: 'Editable',
+                label: 'redirects — no reprint',
               },
             ].map(({ icon, stat, label }) => (
               <div
@@ -427,20 +432,20 @@ export function QronHome() {
           {/* New Trust Row */}
           <div className="mt-16 flex flex-col items-center">
              <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6">
-                <span>Polygon POS</span>
+                <span>Polygon PoS</span>
                 <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>NIST Compliant</span>
+                <span>Ed25519 Signed</span>
                 <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>ISO 27001 Ready</span>
+                <span>Editable Redirects</span>
              </div>
              <div className="px-8 py-4 rounded-2xl bg-gold/5 border border-gold/10 inline-flex items-center gap-6">
                 <div className="text-left border-r border-gold/10 pr-6">
-                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">Live Trust Feed</p>
-                    <p className="text-xl font-black text-white tracking-tighter">1,247 <span className="text-zinc-500 font-medium text-xs tracking-normal uppercase ml-1">Verifications this week</span></p>
+                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">On-chain provenance</p>
+                    <p className="text-xl font-black text-white tracking-tighter">Signed <span className="text-zinc-500 font-medium text-xs tracking-normal uppercase ml-1">&amp; verifiable by anyone</span></p>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                    <CheckCircle className="w-4 h-4 text-green-500" />
-                   Verified by 5 AI Agents
+                   Secured by the AuthiChain Protocol
                 </div>
              </div>
           </div>
@@ -464,7 +469,7 @@ export function QronHome() {
                  {isMagicGenerating ? 'Synchronizing Brand Assets...' : 'Creating Cinematic QRON...'}
                </h3>
                <p className="text-zinc-500 text-xs font-bold uppercase tracking-[0.2em] max-w-xs leading-loose">
-                 Anchoring to AuthiChain Truth Network â€¢ AI Inference in progress â€¢ ~15s
+                 Anchoring to AuthiChain Truth Network • AI Inference in progress • ~15s
                </p>
             </div>
           )}
@@ -1508,8 +1513,8 @@ export function QronHome() {
                 a: 'Each QR is Ed25519-signed and anchored on the AuthiChain blockchain. Anyone who scans it can verify its authenticity instantly.',
               },
               {
-                q: 'What if I need more than 2,000 generations?',
-                a: 'The Business plan gives you unlimited generations for $49/month, or contact us for a custom enterprise contract.',
+                q: 'What if I need more generations than my plan includes?',
+                a: 'QRON Studio Pro gives you unlimited generations for $99/month, or contact us for a custom enterprise contract.',
               },
               {
                 q: 'What AI model generates the QR art?',
@@ -1517,7 +1522,7 @@ export function QronHome() {
               },
               {
                 q: 'Is there a refund policy?',
-                a: 'If your generated QR is not scannable, we regenerate it free. For billing issues, contact authichain@gmail.com.',
+                a: 'If your generated QR is not scannable, we regenerate it free. For billing issues, contact support@qron.space.',
               },
             ].map(({ q, a }) => (
               <div key={q} className="protocol-card p-5">

@@ -12,7 +12,8 @@
 
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { invokeLLM, parseLLMContent, type Message, type Tool } from '../_core/llm.js';
-import { logActivity, enqueueTask, type Db } from './db-helpers.js';
+import { logActivity, getDb, enqueueTask } from '../db.js';
+import type { VerificationSource } from '../outreach/send-guard.js';
 import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
@@ -215,6 +216,8 @@ export interface VisionResearchLeadPayload {
   leadTitle?: string;
   startUrl?:  string;
   segment?:   string;
+  /** Provenance from lead discovery; forwarded unchanged to send-guard. */
+  verificationSource?: VerificationSource;
 }
 
 /**
@@ -223,7 +226,7 @@ export interface VisionResearchLeadPayload {
  * More thorough than the fetch-based BROWSE_RESEARCH_LEAD — handles SPAs,
  * JS-rendered pricing pages, and multi-step navigation.
  */
-export async function runVisionResearchLead(task: Task, db: Db): Promise<void> {
+export async function runVisionResearchLead(task: Task): Promise<void> {
   const p = task.payload as VisionResearchLeadPayload;
   const startUrl = p.startUrl ?? `https://${p.leadOrg.toLowerCase().replace(/\s+/g, '')}.com`;
 
@@ -258,11 +261,14 @@ Extract a concise CRM note AND a one-sentence personalised email opener.`);
     summaryResult.choices[0].message.content,
   );
 
-  await db.update(leads)
-    .set({ notes: `[vision_research]\n${crmNote}`, updatedAt: new Date() })
-    .where(eq(leads.email, p.leadEmail.toLowerCase()));
+  const db = await getDb();
+  if (db) {
+    await db.update(leads)
+      .set({ notes: `[vision_research]\n${crmNote}`, updatedAt: new Date() })
+      .where(eq(leads.email, p.leadEmail.toLowerCase()));
+  }
 
-  await enqueueTask(db, task.missionId, 'DRAFT_OUTBOUND_EMAIL', {
+  await enqueueTask(task.missionId, 'DRAFT_OUTBOUND_EMAIL', {
     segment:   p.segment ?? 'DEFAULT',
     sequence:  1,
     leadEmail: p.leadEmail,
@@ -270,9 +276,10 @@ Extract a concise CRM note AND a one-sentence personalised email opener.`);
     leadOrg:   p.leadOrg,
     leadTitle: p.leadTitle,
     researchHook: hookSentence,
+    verificationSource: p.verificationSource,
   });
 
-  await logActivity(db, {
+  await logActivity({
     userId: null, action: 'browse_vision_research_lead_completed',
     entityType: 'task', entityId: 0,
     details: { taskId: task.id, leadEmail: p.leadEmail, leadOrg: p.leadOrg, hookSentence },
@@ -291,7 +298,7 @@ export interface VisionFreeformPayload {
  * Used for ad-hoc automation: form fills, competitor research,
  * sign-up flows, data extraction from JS-heavy dashboards, etc.
  */
-export async function runVisionFreeform(task: Task, db: Db): Promise<void> {
+export async function runVisionFreeform(task: Task): Promise<void> {
   const p = task.payload as VisionFreeformPayload;
 
   const browser = await launchBrowser();
@@ -306,7 +313,7 @@ export async function runVisionFreeform(task: Task, db: Db): Promise<void> {
     await browser.close();
   }
 
-  await logActivity(db, {
+  await logActivity({
     userId: null, action: 'browse_vision_freeform_completed',
     entityType: 'task', entityId: 0,
     details: { taskId: task.id, startUrl: p.startUrl, objective: p.objective, findings },

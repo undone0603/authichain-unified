@@ -8,6 +8,8 @@ import { TRPCProvider } from '@/components/TRPCProvider';
 import React, { Suspense } from 'react';
 import { ThirdwebProvider } from 'thirdweb/react';
 import { SiteNav } from '@/components/SiteNav';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/next';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -21,21 +23,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-        default: 'AuthiChain | Protect Every Product. Verify Every Transaction.',
+    default: 'QRON | Cryptographically Verified AI QR Art',
     template: '%s | AuthiChain Protocol',
   },
   description: 'The global standard for cryptographically-verified product identity, industrial provenance, and AI-generated QR art.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://authichain.com'),
-  keywords: [
-    'QR code authentication', 'blockchain product verification', 'NFT certificates',
-    'supply chain traceability', 'AI QR art', 'government records', 'document sealing',
-    'Polygon NFT', 'AuthiChain', 'QRON', 'GovChain', 'StrainChain',
-  ],
-  authors: [{ name: 'AuthiChain Inc.', url: 'https://authichain.com' }],
-  manifest: '/manifest.json',
-  icons: {
-    icon: '/favicon.svg',
-    apple: '/media/hero-qron-art.png',
+  metadataBase: new URL('https://qron.space'),
+  alternates: {
+    canonical: '/',
   },
   openGraph: {
     title: 'QRON | Verified AI QR Art',
@@ -55,8 +49,6 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    site: '@qron_space',
-    creator: '@qron_space',
     title: 'QRON | Verified AI QR Art',
     description: 'Transform your brand with cryptographically-signed AI QR codes.',
   },
@@ -84,6 +76,8 @@ export default function RootLayout({
             </ThirdwebProvider>
           </TRPCProvider>
         </ThemeManager>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );

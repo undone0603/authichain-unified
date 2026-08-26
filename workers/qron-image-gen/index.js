@@ -1,26 +1,24 @@
 /**
  * qron-image-gen — Cloudflare Worker
- * AI image generation via Cloudflare Workers AI
- * Multi-model fallback: FLUX.1-schnell → SDXL-Lightning → SDXL-base
+ * AI image generation via HuggingFace FLUX.1 models
+ * Multi-model fallback: schnell → dev → Krea-dev
  * Style presets: gold_vault, luxury_dark, neon_cyber, marble_white
- *
+ * 
  * Routes:
  *   GET  /health       → status + model info
  *   POST /generate     → generate image from prompt
  *   POST /generate/qron → generate QRON-branded art
- *   POST /generate/image → generate and return raw image bytes
- *   POST /v1/generate  → qron-app compatible endpoint
  *
- * Requires the Workers AI binding ([ai] binding = "AI" in wrangler.toml).
+ * Secrets required: HF_TOKEN
  */
 
 const MODELS = [
-  // flux-1-schnell returns JSON { image: <base64 jpeg> }; fixed output size, no negative prompt
-  { id: '@cf/black-forest-labs/flux-1-schnell', name: 'FLUX.1-schnell', kind: 'flux' },
-  // SDXL models return raw PNG bytes and accept width/height/negative_prompt
-  { id: '@cf/bytedance/stable-diffusion-xl-lightning', name: 'SDXL-Lightning', kind: 'sdxl' },
-  { id: '@cf/stabilityai/stable-diffusion-xl-base-1.0', name: 'SDXL-base', kind: 'sdxl' },
+  { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1-schnell', timeout: 30000 },
+  { id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1-dev', timeout: 60000 },
+  { id: 'Kvikontent/midjourney-v6.1', name: 'Midjourney-v6.1', timeout: 60000 },
 ];
+
+const BASE_URL = 'https://router.huggingface.co/hf-inference/models/';
 
 const STYLE_PRESETS = {
   gold_vault: {
@@ -58,51 +56,50 @@ function json(data, status = 200) {
   });
 }
 
-function bytesToBase64(bytes) {
-  let binary = '';
-  const chunkSize = 8192;
-  for (let i = 0; i < bytes.byteLength; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
-  }
-  return btoa(binary);
-}
-
-async function generateImage(ai, prompt, width = 1024, height = 1024, negativePrompt = '') {
+async function generateImage(prompt, token, width = 1024, height = 1024) {
   const errors = [];
 
   for (const model of MODELS) {
+    const url = `${BASE_URL}${model.id}`;
     try {
-      let base64;
-      let contentType;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'x-wait-for-model': 'true',
+        },
+        body: JSON.stringify({
+          inputs: prompt,
+          parameters: {
+            width,
+            height,
+            num_inference_steps: model.id.includes('schnell') ? 4 : 25,
+          },
+        }),
+        signal: AbortSignal.timeout(model.timeout),
+      });
 
-      if (model.kind === 'flux') {
-        // flux-1-schnell caps prompts at 2048 chars and steps at 8
-        const result = await ai.run(model.id, {
-          prompt: prompt.slice(0, 2048),
-          steps: 4,
-        });
-        if (!result || typeof result.image !== 'string') {
-          errors.push({ model: model.name, error: 'No image in model response' });
-          continue;
-        }
-        base64 = result.image;
-        contentType = 'image/jpeg';
-      } else {
-        const stream = await ai.run(model.id, {
-          prompt,
-          negative_prompt: negativePrompt || undefined,
-          width,
-          height,
-          num_steps: 20,
-        });
-        const buffer = await new Response(stream).arrayBuffer();
-        if (buffer.byteLength === 0) {
-          errors.push({ model: model.name, error: 'Empty image response' });
-          continue;
-        }
-        base64 = bytesToBase64(new Uint8Array(buffer));
-        contentType = 'image/png';
+      if (!res.ok) {
+        const errText = await res.text().catch(() => 'Unknown error');
+        errors.push({ model: model.name, status: res.status, error: errText });
+        continue;
       }
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('image')) {
+        errors.push({ model: model.name, error: `Unexpected content-type: ${contentType}` });
+        continue;
+      }
+
+      const imageBuffer = await res.arrayBuffer();
+      const bytes = new Uint8Array(imageBuffer);
+      let binary = "";
+      const chunkSize = 8192;
+      for (let i = 0; i < bytes.byteLength; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+      }
+      const base64 = btoa(binary);
 
       return {
         success: true,
@@ -115,7 +112,7 @@ async function generateImage(ai, prompt, width = 1024, height = 1024, negativePr
         generated_at: new Date().toISOString(),
       };
     } catch (err) {
-      errors.push({ model: model.name, error: err.message || 'Inference error' });
+      errors.push({ model: model.name, error: err.message || 'Timeout or network error' });
       continue;
     }
   }
@@ -123,7 +120,11 @@ async function generateImage(ai, prompt, width = 1024, height = 1024, negativePr
   return { success: false, errors };
 }
 
-async function handleRequest(req, env) {
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request, event));
+});
+
+async function handleRequest(req, event) {
   const url = new URL(req.url);
   const path = url.pathname;
 
@@ -135,9 +136,8 @@ async function handleRequest(req, env) {
   if (path === '/' || path === '/health') {
     return json({
       service: 'qron-image-gen',
-      version: '2.0.0',
+      version: '1.0.0',
       status: 'ok',
-      provider: 'cloudflare-workers-ai',
       models: MODELS.map(m => m.name),
       styles: Object.keys(STYLE_PRESETS),
       timestamp: new Date().toISOString(),
@@ -148,22 +148,21 @@ async function handleRequest(req, env) {
   // Accepts: { url, prompt, style }
   // Returns: { id, downloadUrl, previewUrl, status }
   if (path === '/v1/generate' && req.method === 'POST') {
-    if (!env.AI) return json({ error: 'AI binding not configured' }, 500);
+    const token = typeof HF_TOKEN !== 'undefined' ? HF_TOKEN : null;
+    if (!token) return json({ error: 'HF_TOKEN not configured' }, 500);
 
     let body;
     try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
 
     let prompt = body.prompt || 'QRON AI art authentication seal';
     const style = body.style || 'gold_vault';
-    let negative = '';
 
     if (STYLE_PRESETS[style]) {
       const preset = STYLE_PRESETS[style];
       prompt = `${preset.prefix}${prompt}${preset.suffix}`;
-      negative = preset.negative;
     }
 
-    const result = await generateImage(env.AI, prompt, 1024, 1024, negative);
+    const result = await generateImage(prompt, token, 1024, 1024);
 
     if (!result.success) {
       return json({ error: 'Generation failed', details: result.errors }, 502);
@@ -182,7 +181,10 @@ async function handleRequest(req, env) {
 
   // Generate image
   if ((path === '/generate' || path === '/generate/qron') && req.method === 'POST') {
-    if (!env.AI) return json({ error: 'AI binding not configured' }, 500);
+    const token = typeof HF_TOKEN !== 'undefined' ? HF_TOKEN : null;
+    if (!token) {
+      return json({ error: 'HF_TOKEN not configured' }, 500);
+    }
 
     let body;
     try {
@@ -201,11 +203,9 @@ async function handleRequest(req, env) {
     height = Math.min(Math.max(height || 1024, 256), 1536);
 
     // Apply style preset
-    let negative = '';
     if (style && STYLE_PRESETS[style]) {
       const preset = STYLE_PRESETS[style];
       prompt = `${preset.prefix}${prompt || 'QRON authentication seal'}${preset.suffix}`;
-      negative = preset.negative;
     }
 
     // For /generate/qron, add QRON branding to prompt
@@ -216,7 +216,7 @@ async function handleRequest(req, env) {
       }
     }
 
-    const result = await generateImage(env.AI, prompt, width, height, negative);
+    const result = await generateImage(prompt, token, width, height);
 
     if (!result.success) {
       return json({
@@ -243,26 +243,24 @@ async function handleRequest(req, env) {
 
   // Serve image directly (for embedding)
   if (path === '/generate/image' && req.method === 'POST') {
-    if (!env.AI) return json({ error: 'AI binding not configured' }, 500);
+    const token = typeof HF_TOKEN !== 'undefined' ? HF_TOKEN : null;
+    if (!token) return json({ error: 'HF_TOKEN not configured' }, 500);
 
     let body;
     try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
 
     const { prompt, style, width, height } = body;
     let finalPrompt = prompt || 'QRON authentication seal';
-    let negative = '';
 
     if (style && STYLE_PRESETS[style]) {
       const preset = STYLE_PRESETS[style];
       finalPrompt = `${preset.prefix}${finalPrompt}${preset.suffix}`;
-      negative = preset.negative;
     }
 
     const result = await generateImage(
-      env.AI, finalPrompt,
+      finalPrompt, token,
       Math.min(Math.max(width || 1024, 256), 1536),
       Math.min(Math.max(height || 1024, 256), 1536),
-      negative,
     );
 
     if (!result.success) return json({ error: 'Generation failed', details: result.errors }, 502);
@@ -280,9 +278,3 @@ async function handleRequest(req, env) {
 
   return json({ error: 'Not found', routes: ['/health', '/generate', '/generate/qron', '/generate/image'] }, 404);
 }
-
-export default {
-  async fetch(req, env) {
-    return handleRequest(req, env);
-  },
-};

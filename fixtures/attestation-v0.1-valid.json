@@ -1,0 +1,24 @@
+{
+  "attestation_id": "urn:authichain:attestation:v01:fixture-001",
+  "decision": "verified",
+  "evidence": [
+    {
+      "digest": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      "id": "evidence-001",
+      "type": "product-registration"
+    }
+  ],
+  "expires_at": "2027-01-01T00:00:00Z",
+  "issued_at": "2026-08-20T16:00:00Z",
+  "issuer": {
+    "id": "https://authichain.com",
+    "name": "AuthiChain"
+  },
+  "status": "active",
+  "subject": {
+    "gtin": "00012345678905",
+    "object_id": "ac_fixture_001",
+    "serial": "SN-001"
+  },
+  "version": "0.1"
+}

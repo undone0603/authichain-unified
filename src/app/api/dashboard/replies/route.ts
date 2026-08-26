@@ -10,8 +10,6 @@ import { inboundReplies, leads } from '@/db/schema';
 // below), not standalone drizzle-orm exports — don't import them as symbols.
 import { eq, and, desc } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { requireAdmin } from '@/lib/require-admin';
 
 /**
  * GET /api/dashboard/replies
@@ -20,10 +18,6 @@ import { requireAdmin } from '@/lib/require-admin';
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const authResult = await requireAdmin(supabase);
-    if (authResult instanceof NextResponse) return authResult;
-
     const searchParams = request.nextUrl.searchParams;
     const sentiment = searchParams.get('sentiment');
     const status = searchParams.get('status');
@@ -91,10 +85,6 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const authResult = await requireAdmin(supabase);
-    if (authResult instanceof NextResponse) return authResult;
-
     const body = await request.json();
     const { id, status, manualSentiment } = body;
 

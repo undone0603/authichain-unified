@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { 
   Shield, 
@@ -19,16 +19,9 @@ import {
 export default function AuthichainEnterprise() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [simResult, setSimResult] = useState<string | null>(null);
-  const [verifications, setVerifications] = useState(1247);
-
-  // Live Trust Feed: tick the verification counter every few seconds so the
-  // hero stat reflects ongoing protocol activity instead of a frozen number.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setVerifications((v) => v + Math.floor(Math.random() * 3) + 1);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  // No "Live Trust Feed" here on purpose: this seeded a counter at 1,247 and
+  // incremented it randomly every four seconds, showing visitors fabricated
+  // activity. Do not reintroduce a usage counter unless it reads from the ledger.
 
   const runSimulation = () => {
     setIsSimulating(true);
@@ -73,21 +66,14 @@ export default function AuthichainEnterprise() {
 
           {/* New Trust Row */}
           <div className="mt-20 flex flex-col items-center">
-             <div className="flex items-center gap-6 text-[9px] font-black uppercase tracking-[0.4em] text-zinc-700 mb-8">
-                <span>ISO 27001 Ready</span>
-                <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>NIST SP 800-131A</span>
-                <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                <span>SOC2 Type II</span>
-             </div>
              <div className="px-10 py-5 rounded-3xl bg-zinc-950 border border-zinc-900 inline-flex items-center gap-10">
                 <div className="text-left border-r border-zinc-900 pr-10">
-                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">Live Trust Feed</p>
-                    <p className="text-2xl font-black text-white tracking-tighter">{verifications.toLocaleString()} <span className="text-zinc-600 font-medium text-xs tracking-normal uppercase ml-1">Verifications / Week</span></p>
+                    <p className="text-[10px] font-black text-gold uppercase tracking-widest mb-1">Signing</p>
+                    <p className="text-2xl font-black text-white tracking-tighter">Ed25519 <span className="text-zinc-600 font-medium text-xs tracking-normal uppercase ml-1">W3C Verifiable Credentials</span></p>
                 </div>
                 <div className="flex items-center gap-3 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                    <Activity className="w-4 h-4 text-green-500" />
-                   Network Uptime: 99.99%
+                   Anchored on Polygon
                 </div>
              </div>
           </div>
@@ -98,10 +84,10 @@ export default function AuthichainEnterprise() {
       <section className="max-w-6xl mx-auto px-6 py-12 border-y border-zinc-900 bg-zinc-950/50">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
           {[
-            { label: 'Total Verifications', val: '124M+' },
-            { label: 'Network Nodes', val: '8,420' },
-            { label: 'Settlement Time', val: '< 2.5s' },
-            { label: 'Uptime SLA', val: '99.99%' },
+            { label: 'Edge Locations', val: '300+' },
+            { label: 'Verification Target', val: '< 2s' },
+            { label: 'Credential Format', val: 'W3C VC' },
+            { label: 'Anchor Chain', val: 'Polygon' },
           ].map((s) => (
             <div key={s.label} className="text-center">
               <p className="text-3xl font-black gold-text mb-1">{s.val}</p>

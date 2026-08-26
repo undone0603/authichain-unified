@@ -1,25 +1,27 @@
 # Dependencies
 node_modules/
+/dist
+/build
+.pytest_cache/
 
 # Next.js
 /.next/
 /out/
 
-# Build outputs
-/dist/
-/build/
-/worker-dist/
-
-# Compiled server artifacts (source of truth is the .ts file)
-server/db.js
-
-# Secrets & Env — NEVER commit real .env files
+# Secrets & Env
 .env
 .env.*
 !.env.example
 !.env.template
-!.env.local.example
 *.pem
+# Exception: a public CA certificate, not a credential. It is the Supabase
+# pooler's self-signed root, which no public trust store contains, so scripts
+# that open a database connection need it in the repository to verify the
+# server instead of falling back to rejectUnauthorized:false. It contains no
+# private key — `openssl x509` on it prints a certificate, and the matching key
+# lives only at Supabase. server/db.ts carries the same bytes inline and
+# server/db.test.ts asserts the two match.
+!certs/supabase-root-2021.pem
 *.key
 supabase/key.txt
 
@@ -40,7 +42,6 @@ yarn-debug.log*
 pnpm-debug.log*
 agentz/logs/
 agentz/runs.jsonl
-dev.log
 
 # OS & Editors
 .DS_Store
@@ -54,15 +55,13 @@ Thumbs.db
 next-env.d.ts
 
 # Vercel & Wrangler
-.vercel/
+.vercel
 .wrangler/
-
-# Open-Next
-.open-next/
+/worker-dist/
 
 # Testing
-/coverage/
-/.nyc_output/
+/coverage
+/.nyc_output
 
 # Temporary
 tmp/
@@ -70,7 +69,7 @@ temp/
 .cache/
 .parcel-cache/
 
-# Lockfiles — only pnpm is canonical
+# Lockfiles
 package-lock.json
 yarn.lock
 
@@ -78,24 +77,22 @@ yarn.lock
 *.db
 *.sqlite
 *.sqlite3
+/drizzle/migrations
 
-# Sensitive data files
-gov_pursue_list.csv
-
-# Authichain operational artifacts
-CI_FIX_REPORT.md
-SAM_PREP.md
+# Authichain specifics
 AUTHENTICITY_INDEX.md
 SIGNATURE_MANIFEST.md
 SYSTEM_STATE.md
+.open-next/
+.next/
+dist/
 
-# Debug/scratch test files at root
-test-circular.ts
-test-export.ts
-test-export-2.ts
-test-import.ts
-test-import-3.ts
-test-mocking.ts
+# Externally cloned repos (exploration only)
+authichain_premium/
+qron-platform/
+qron/
+govchain.us/
+maison-elite-ai-dropship/
 
 # Debug/lint output artifacts
 eslint_errors.txt
@@ -105,16 +102,6 @@ test-output.txt
 # Patch artifacts
 PATCH_EOF
 
-# Externally cloned repos (exploration only) — anchored to root so
-# apps/* consolidated copies stay trackable
-/authichain_premium/
-/qron-platform/
-/qron/
-/govchain.us/
-/maison-elite-ai-dropship/
-
-# Local git worktrees
-.worktrees/
-
-# pnpm local store
-.pnpm-store/
+# Wrangler local cache
+.wrangler/
+.env*

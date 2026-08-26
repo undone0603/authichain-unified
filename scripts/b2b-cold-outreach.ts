@@ -11,26 +11,76 @@
 //   pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=qron
 
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
+import { guardrailCheck, guardrailRecord } from './lib/guardrail-client';
+import { checkSender, reportSenderFailure, CREDENTIAL_ENV_VARS } from './lib/resend-preflight';
+import { guardedSend, type VerificationSource } from '../server/outreach/send-guard';
+import {
+  mostRecentInForce,
+  nextDeadline,
+  formatMilestoneDate,
+  countdownLabel,
+} from '../src/lib/dpp-timeline';
+
+const GUARDRAIL_CHANNEL = 'email.b2b-cold';
 
 const isDryRun = process.env.DRY_RUN === 'true';
 const segment  = process.argv.find(a => a.startsWith('--segment='))?.split('=')[1] ?? 'all';
+
+// Send-failure tracking. A live run where every send fails (bad key, unverified
+// domain, provider outage) previously exited 0 and showed a green check — the
+// pipeline looked healthy while delivering nothing. These are aggregated and
+// surfaced as a non-zero exit + GitHub Actions annotations at the end.
+const sendFailures: string[] = [];
+let totalAttempted = 0;
+let totalSent = 0;
 
 const supabase = createClient(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
-const resend   = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM     = process.env.OUTREACH_FROM_EMAIL ?? 'hello@authichain.com';
+// Any configured Resend credential is enough to attempt sending; which one is
+// used for a given sender is resolved per-address by the preflight.
+const hasResendKey = CREDENTIAL_ENV_VARS.some(name => !!process.env[name]);
+
+/**
+ * Default provenance for a target that does not declare one.
+ *
+ * `unknown` means the send guard refuses it. Each target carries an explicit
+ * `source` where research established one — see the notes beside each address.
+ * Researched 2026-08-16: of the seven addresses originally hand-written here,
+ * none was published by its owner; two were replaced with the address the
+ * company actually publishes, three were blanked for Apollo to resolve, and one
+ * company no longer exists.
+ */
+const RESEARCHED_SOURCE: VerificationSource = 'unknown';
+
+// Sender addresses are per-segment because the three segments are separately
+// branded products — a GovChain pitch arriving from a cannabis-compliance
+// domain reads as spam to the recipient and to their filters. Defaults use the
+// parent brand, with StrainChain on its own verified domain. Both domains are
+// verified, just on different Resend accounts, which the preflight resolves.
+const FALLBACK_FROM = process.env.OUTREACH_FROM_EMAIL ?? 'hello@authichain.com';
+const SEGMENT_FROM: Record<string, string> = {
+  govchain:    process.env.OUTREACH_FROM_GOVCHAIN    ?? FALLBACK_FROM,
+  strainchain: process.env.OUTREACH_FROM_STRAINCHAIN ?? 'hello@strainchain.io',
+  qron:        process.env.OUTREACH_FROM_QRON        ?? FALLBACK_FROM,
+};
 // Falls back to the built-in /book page — Calendly is optional, not required
 const CALENDLY = process.env.CALENDLY_LINK ?? 'https://app.authichain.com/book';
 
 // ── Apollo.io people-search: find work email by name + company domain ─────────
 // Uses /v1/mixed_people/search (not /v1/people/match which requires an email).
 // Returns empty string when APOLLO_API_KEY is absent or API returns no result.
+// Set once Apollo reports the plan does not include API access. That is a
+// property of the account, not of the request, so every remaining lookup in the
+// run would fail identically — retrying them just prints the same warning once
+// per target and makes a billing problem look like flaky network.
+let apolloEntitlementBlocked = false;
+
 async function apolloFindEmail(name: string, company: string, website: string): Promise<string> {
   const key = process.env.APOLLO_API_KEY;
   if (!key) return '';
+  if (apolloEntitlementBlocked) return '';
 
   try {
     const domain = website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
@@ -39,7 +89,7 @@ async function apolloFindEmail(name: string, company: string, website: string): 
 
     // Apollo auth goes in the X-Api-Key header — body api_key is no longer
     // accepted for current keys (verified: header auth returns 200, body 401).
-    const res = await fetch('https://api.apollo.io/v1/mixed_people/search', {
+    const res = await fetch('https://api.apollo.io/api/v1/mixed_people/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'X-Api-Key': key },
       body: JSON.stringify({
@@ -52,6 +102,22 @@ async function apolloFindEmail(name: string, company: string, website: string): 
       }),
     });
     if (!res.ok) {
+      // Apollo answers 403 with error_code API_INACCESSIBLE when the endpoint
+      // is not on the account's plan. Confirmed 2026-08-21 against this
+      // account: both mixed_people/search and people/match return it, and the
+      // credit balance is untouched because the request never reaches metering.
+      // No key rotation or retry fixes that — only a paid plan does.
+      const body = await res.text().catch(() => '');
+      if (res.status === 403 || body.includes('API_INACCESSIBLE')) {
+        apolloEntitlementBlocked = true;
+        console.warn(
+          `  ⛔ Apollo API is not enabled on this account's plan (HTTP ${res.status}).\n` +
+          `     Every remaining lookup this run is skipped; targets with a blank\n` +
+          `     email stay 'pending_email' and are never sent to. Fix by upgrading\n` +
+          `     the Apollo plan, or by filling addresses in the leads table by hand.`,
+        );
+        return '';
+      }
       console.warn(`  ⚠️  Apollo search HTTP ${res.status} for ${company}`);
       return '';
     }
@@ -133,14 +199,24 @@ const GOVCHAIN_TARGETS = [
   },
 ];
 
+// Addresses researched 2026-08-16 against what each company actually publishes.
+// None of the original hand-written addresses survived: every one was a
+// plausible-shaped guess, which is precisely what the send guard exists to
+// refuse. They are blanked so Apollo resolves a real contact at run time —
+// shipping a guess is what produced a 37% bounce rate on the July batch.
 const STRAINCHAIN_TARGETS = [
   {
     company: 'Trulieve Cannabis',
     name: 'Head of Compliance',
     title: 'VP Compliance / Director of Operations',
-    email: 'compliance@trulieve.com',
+    // Was compliance@trulieve.com — not published anywhere. Trulieve publishes
+    // ir@ and media@ only, and staff mail is first.last@ (78% of addresses).
+    // ir@/media@ are the wrong desk for a compliance product, so resolve a
+    // named contact rather than pitch investor relations.
+    email: '',
+    source: 'unknown' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/trulieve/',
-    pain: 'Multi-state operator with 130+ dispensaries; METRC across FL, PA, AZ, GA — blockchain DPP required for EU market entry by July 2026',
+    pain: 'Multi-state operator with 130+ dispensaries; METRC across FL, PA, AZ, GA — COA integrity + custody reconciliation today, DPP-ready export for EU entry',
     states: 'FL, PA, AZ, GA, WV',
     website: 'https://trulieve.com',
   },
@@ -148,22 +224,19 @@ const STRAINCHAIN_TARGETS = [
     company: 'Curaleaf',
     name: 'Compliance Team',
     title: 'SVP Compliance',
-    email: 'compliance@curaleaf.com',
+    // Was compliance@curaleaf.com — not published. Curaleaf publishes IR@ and
+    // media@ only. Same reasoning as Trulieve.
+    email: '',
+    source: 'unknown' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/curaleaf/',
-    pain: 'Largest MSO by revenue (40+ states) — EU DPP mandate July 2026 creates export compliance gap; METRC + blockchain COA hashing needed',
+    pain: 'Largest MSO by revenue (40+ states) — METRC reconciliation across 40 state systems; blockchain COA hashing; DPP-ready before cannabis is scheduled',
     states: '40+ states',
     website: 'https://curaleaf.com',
   },
-  {
-    company: 'Harvest Health & Recreation',
-    name: 'Head of Compliance',
-    title: 'Director of Compliance',
-    email: 'compliance@harvestinc.com',
-    linkedin: 'https://www.linkedin.com/company/harvest-health-recreation/',
-    pain: 'Mid-market MSO in 5 states — METRC compliance gaps in AZ + PA; wants blockchain COA as competitive differentiator for premium products',
-    states: 'AZ, PA, FL, MD, AR',
-    website: 'https://harvestinc.com',
-  },
+  // Harvest Health & Recreation removed: Trulieve completed its acquisition on
+  // 2021-10-01, so it has not been an independent operator for nearly five
+  // years. The entry described it as a "mid-market MSO in 5 states" and would
+  // have duplicated the Trulieve pitch into a dead domain.
 ];
 
 const QRON_TARGETS = [
@@ -171,7 +244,11 @@ const QRON_TARGETS = [
     company: 'FASTSIGNS',
     name: 'Innovation Lead',
     title: 'VP Product / Innovation',
-    email: 'innovation@fastsigns.com',
+    // Was innovation@fastsigns.com — not published. FASTSIGNS publishes
+    // franchiseinfo@fastsigns.com for exactly this kind of approach, which is
+    // both a real address and the right desk for a franchise-network pitch.
+    email: 'franchiseinfo@fastsigns.com',
+    source: 'published_contact' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/fastsigns/',
     pain: 'Franchise network looking for premium "smart label" upsell — AI QR codes with brand aesthetics at commercial print margins',
     demo_prompt: 'bold industrial signage, glowing neon, sharp commercial aesthetic',
@@ -181,7 +258,10 @@ const QRON_TARGETS = [
     company: 'MOO',
     name: 'Product Manager',
     title: 'Head of Product',
-    email: 'product@moo.com',
+    // Was product@moo.com — not published. MOO publishes inquiries@moo.com for
+    // business and partnership enquiries.
+    email: 'inquiries@moo.com',
+    source: 'published_contact' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/moo/',
     pain: 'Premium print brand targeting luxury clients — QR codes on business cards / packaging need to match visual standards; current QR tools produce ugly codes',
     demo_prompt: 'premium textured business card, gold foil embossing, luxury paper texture, minimalist',
@@ -191,7 +271,11 @@ const QRON_TARGETS = [
     company: '4imprint',
     name: 'B2B Sales Head',
     title: 'VP B2B Sales',
-    email: 'b2b@4imprint.com',
+    // Was b2b@4imprint.com — no published b2b@ found, and 4imprint.com is
+    // unreachable from CI so it could not be confirmed either way. Blanked
+    // rather than shipped on an assumption.
+    email: '',
+    source: 'unknown' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/4imprint/',
     pain: 'Corporate promotional merchandise clients want branded QR codes on swag — current QR tools cannot match brand guidelines; white-label API needed',
     demo_prompt: 'corporate promotional merchandise, high quality product photography, clean studio',
@@ -201,7 +285,11 @@ const QRON_TARGETS = [
     company: 'Signarama',
     name: 'Franchise Director',
     title: 'VP Franchise Development',
-    email: 'franchise@signarama.com',
+    // Was franchise@signarama.com — not published. Signarama staff mail is
+    // first@signarama.com and franchise intake runs through a web form, so
+    // there is no role address to send to.
+    email: '',
+    source: 'unknown' as VerificationSource,
     linkedin: 'https://www.linkedin.com/company/signarama/',
     pain: 'Franchise chain with 900 locations — needs white-label QR API for branded retail signage; clients want scannable QRs that match storefront aesthetics',
     demo_prompt: 'vibrant commercial storefront sign, glowing neon colors, sharp vector art',
@@ -245,91 +333,146 @@ function govchainEmail(t: typeof GOVCHAIN_TARGETS[0]): { subject: string; html: 
   <a href="https://govchain.us">govchain.us</a></p>
 
   <p style="font-size:12px;color:#9ca3af;margin-top:24px">
-  You're receiving this because ${t.company} is registered on SAM.gov.
-  <a href="https://govchain.us/unsubscribe">Unsubscribe</a></p>
+  You're receiving this because ${t.company} is registered on SAM.gov.</p>
 </div>`;
   return { subject, html };
 }
 
+/**
+ * The previous version of this email led with "the DPP mandate takes effect for
+ * cannabis-adjacent products in July 2026". Two things were wrong with it, and
+ * both are the kind a compliance buyer checks first:
+ *
+ *   1. It was sent in August, about a July date — in the future tense.
+ *   2. `content/dpp/regulatory-timeline.json` has no cannabis milestone at all.
+ *      The dated waves are batteries, electronics, textiles and construction.
+ *      The claim was not supported by our own sourced timeline.
+ *
+ * The rewrite only asserts what that file can back: the registry is live, the
+ * next dated wave is whatever the timeline says it is, and cannabis is not yet
+ * scheduled — which is stated plainly rather than implied away. Every date is
+ * read from the timeline at send time, so this copy cannot go stale the way the
+ * last one did.
+ */
 function strainchaineEmail(t: typeof STRAINCHAIN_TARGETS[0]): { subject: string; html: string } {
-  const subject = `EU Digital Product Passport for ${t.company} — July 2026 deadline`;
+  const now = new Date();
+  const registry = mostRecentInForce(now);
+  const next = nextDeadline(now);
+
+  const registryLine = registry
+    ? `The EU's Digital Product Passport registry went live on ${formatMilestoneDate(registry)} — it is operating now, not pending.`
+    : `The EU's Digital Product Passport registry is being stood up now.`;
+  const nextLine = next
+    ? `The next mandated category is ${next.label} (${formatMilestoneDate(next)} — ${countdownLabel(next, now).toLowerCase()}), with further waves dated after it.`
+    : '';
+
+  const subject = registry
+    ? `EU DPP registry is live — what it means for ${t.company}`
+    : `EU Digital Product Passport — what it means for ${t.company}`;
+
   const html = `
 <div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
   <p>Hi,</p>
 
-  <p>The EU's Digital Product Passport (DPP) mandate takes effect for cannabis-adjacent
-  products in July 2026. For MSOs like ${t.company} with any EU distribution or
-  licensing deals, this means every package needs a blockchain-anchored provenance
-  record — lab certificate hash, METRC tag, custody timestamp, and a scannable QR
-  that verifies on-chain in under 2 seconds.</p>
+  <p>${registryLine} ${nextLine}</p>
 
-  <p>StrainChain (<a href="https://strainchain.io">strainchain.io</a>) does exactly this:
+  <p><strong>Cannabis is not in a dated wave yet</strong> — I'd rather tell you that than
+  invent a deadline. What the schedule does tell you is the direction of travel, and that
+  the operators who are ready when their category lands are the ones who started while it
+  was optional. For an MSO of ${t.company}'s footprint (${t.states}), the work is the same
+  either way, and it pays for itself before any EU rule applies:</p>
+
   <ul>
-    <li>METRC sync — custody events auto-anchored on Polygon at every handoff</li>
-    <li>COA hashing — lab certificates stored immutably; tampering is instantly detectable</li>
-    <li>EU DPP v2 compliant passport per package (ISO 18013-5 / EPCIS 2.0)</li>
-    <li>Consumer-facing QR scan: full chain-of-custody + test results in 1.2 seconds</li>
-  </ul></p>
+    <li>METRC sync — custody events anchored on Polygon at every handoff, so your state audit trail reconciles itself</li>
+    <li>COA hashing — lab certificates stored immutably; an altered result is detectable instead of arguable</li>
+    <li>Consumer-facing QR: full chain-of-custody plus test results on scan</li>
+    <li>Passport export in the EU DPP data model (ISO 18013-5 / EPCIS 2.0) — ready the day it is asked for</li>
+  </ul>
 
-  <p>Theater 1 plan is <strong>$499/month</strong> for 5,000 package scans.
-  7-day free trial, no integration required to start the demo.</p>
+  <p>The near-term value is the METRC reconciliation and COA integrity, today, under the
+  rules you already operate under. The DPP readiness is what you get for free by doing it.</p>
 
-  <p><a href="https://strainchain.io/demo">Watch the 90-second demo</a> or
-  <a href="${CALENDLY}">book a call</a> — I can have a sandbox live for
-  ${t.company} in under an hour.</p>
+  <p>Theater 1 is <strong>$499/month</strong> for 5,000 package scans, with a 7-day trial
+  and no integration needed to see it working.
+  <a href="${CALENDLY}">Book 20 minutes</a> and I'll walk through it against your own
+  ${t.states.split(',')[0].trim()} data.</p>
 
   <p>Best,<br>
   Zachary<br>
   StrainChain / AuthiChain<br>
   <a href="https://strainchain.io">strainchain.io</a></p>
-
-  <p style="font-size:12px;color:#9ca3af;margin-top:24px">
-  <a href="https://strainchain.io/unsubscribe">Unsubscribe</a></p>
 </div>`;
   return { subject, html };
 }
 
+/**
+ * Two claims were removed here because the code says they are not true.
+ *
+ *   "I ran ${company} through our AI QR engine and generated a custom demo"
+ *   "We've pre-provisioned a white-label sandbox for ${company}"
+ *
+ * Neither /demo page reads `searchParams` or a `company` param at all — the only
+ * place a company name is handled is the POST form where a visitor types their
+ * own. So `qron.space/demo?company=X` served a generic page, and the recipient's
+ * first click disproved the email's first sentence. Fabricated personalisation
+ * is worse than none: it is the one thing a prospect can check in one click.
+ *
+ * The rewrite keeps the specificity in the product and the pricing, which are
+ * real, and invites them to generate their own QR rather than claiming we
+ * already did.
+ */
 function qronEmail(t: typeof QRON_TARGETS[0]): { subject: string; html: string } {
-  const subject = `AI QR codes for ${t.company} — white-label API (custom demo inside)`;
+  const subject = `AI-designed QR codes for ${t.company} — white-label API from $0.002/QR`;
   const html = `
 <div style="font-family:sans-serif;max-width:600px;line-height:1.6;color:#1f2937">
   <p>Hi,</p>
 
-  <p>I ran <strong>${t.company}</strong> through our AI QR engine and generated
-  a custom demo — takes 3 seconds, matches your visual language:</p>
+  <p>You print and ship a lot of QR codes. The usual complaint about them is that
+  they are ugly, and the usual fix — sticking a logo in the middle — is what makes
+  them fail to scan. QRON generates codes that carry brand styling and stay
+  scannable, because the styling is generated with the error-correction budget
+  rather than pasted on top of it.</p>
 
   <p style="text-align:center">
-    <a href="https://qron.space/demo?company=${encodeURIComponent(t.company)}"
+    <a href="https://qron.space/demo"
        style="background:#6366f1;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">
-      View ${t.company} Demo QR →
+      Generate one on your own artwork →
     </a>
   </p>
 
-  <p>QRON (<a href="https://qron.space">qron.space</a>) generates AI-designed
-  QR codes that match brand aesthetics — cryptographically signed, guaranteed
-  scannable, available via white-label API:</p>
+  <p>QRON (<a href="https://qron.space">qron.space</a>) is available via
+  white-label API:</p>
   <ul>
     <li>5 visual modes: Static, Stereographic, Holographic, Memory, Custom Prompt</li>
     <li>Ed25519-signed on Polygon — tamper-proof authenticity certificate on every scan</li>
     <li>White-label API: your brand, your dashboard, fractions of a cent per generation</li>
-    <li>FTC EO 14392 compliant origin verification (MADE IN USA shield support)</li>
+    <!--
+      Was "FTC EO 14392 compliant origin verification". Both halves were off.
+      An Executive Order is issued by the President and directs agencies — the
+      FTC does not issue EOs, and a company does not "comply with" one. What
+      binds a seller is the FTC's Made in USA Labeling Rule (16 CFR Part 323),
+      which is what the April 2026 sweep was brought under. EO 14392 is real
+      ("Ensuring Truthful Advertising of Products Claiming To Be Made in
+      America") and prompted that sweep, so it belongs as context, not as the
+      obligation. A QR code also cannot confer compliance — it carries the
+      evidence a claim is substantiated with.
+    -->
+    <li>Origin evidence for "Made in USA" claims under the FTC's Made in USA Labeling Rule (16 CFR Part 323) — the rule behind the April 2026 enforcement sweep</li>
   </ul>
 
-  <p>We've pre-provisioned a white-label sandbox for ${t.company}.
-  Creator Pack: <strong>$99 for 500 generations</strong>.
-  White-label API: usage-based from $0.002/QR.</p>
+  <p>Creator Pack is <strong>$99 for 500 generations</strong> if you just want to
+  try it on live jobs; the white-label API is usage-based from $0.002/QR, so
+  reselling it at ${t.company}'s volume costs less than the ink.</p>
 
-  <p>10-minute call?
+  <p>Worth 10 minutes?
   <a href="${CALENDLY}?company=${encodeURIComponent(t.company)}">Book here</a>
-  or reply and I'll send the API docs.</p>
+  or reply and I'll send the API docs — happy to set up a sandbox on your account
+  before any call.</p>
 
   <p>Best,<br>
   Zachary<br>
   QRON / AuthiChain<br>
   <a href="https://qron.space">qron.space</a></p>
-
-  <p style="font-size:12px;color:#9ca3af;margin-top:24px">
-  <a href="https://qron.space/unsubscribe">Unsubscribe</a></p>
 </div>`;
   return { subject, html };
 }
@@ -342,17 +485,45 @@ async function processTargets<T extends { company: string; email: string; name?:
   segmentName: string,
 ) {
   let sent = 0; let saved = 0; let queued = 0;
+  totalAttempted += targets.length;
 
-  if (!resend && !isDryRun) {
-    console.warn(`  ⚠️  RESEND_API_KEY not set — emails will be queued in Supabase (status=queued) and sent on next run when key is present`);
+  const from = SEGMENT_FROM[segmentName] ?? FALLBACK_FROM;
+
+  if (!hasResendKey && !isDryRun) {
+    console.warn(`  ⚠️  No Resend credential set (${CREDENTIAL_ENV_VARS.join(' / ')}) — emails will be queued in Supabase (status=queued) and sent on next run when a key is present`);
+  }
+
+  // Preflight before touching the prospect list. A dead key or an unverified
+  // sender fails identically on every target, so discovering it after the loop
+  // means the whole segment is burned for nothing. Drafts still get written —
+  // they queue and drain via flushQueuedLeads() once the sender is fixed.
+  let senderOk = true;
+  let credential: string | undefined;
+  if (hasResendKey && !isDryRun) {
+    const check = await checkSender(from);
+    senderOk = check.ok;
+    if (!check.ok) {
+      reportSenderFailure(check, `b2b:${segmentName}`);
+      console.warn(`  ⚠️  Skipping sends for [${segmentName}] — drafts will be queued instead`);
+      sendFailures.push(`${segmentName} sender ${from}: ${check.reason}`);
+    } else {
+      credential = check.credential;
+      console.log(`  ✅ Sender verified: ${from} (via ${check.credential})`);
+    }
   }
 
   for (const t of targets) {
-    // Auto-populate email via Apollo if missing
+    // Auto-populate email via Apollo if missing. A hit upgrades the target's
+    // provenance: Apollo returns addresses it has verified, which is precisely
+    // the trusted source the send guard is looking for.
     let email = t.email;
+    let source: VerificationSource = (t as any).source ?? RESEARCHED_SOURCE;
     if (!email && (t as any).linkedin !== undefined) {
       email = await apolloFindEmail((t as any).name ?? t.company, t.company, t.website ?? '');
-      if (email) (t as any).email = email; // mutate for DB save
+      if (email) {
+        (t as any).email = email; // mutate for DB save
+        source = 'apollo_verified';
+      }
     }
 
     const { subject, html } = buildEmail(t);
@@ -360,7 +531,7 @@ async function processTargets<T extends { company: string; email: string; name?:
     // Determine initial status
     const dbStatus = isDryRun ? 'draft'
       : !email              ? 'pending_email'   // Apollo found nothing; manual lookup needed
-      : !resend             ? 'queued'           // Has email but no Resend key yet
+      : !senderOk           ? 'queued'           // No usable credential for this sender; drain later
       :                       'draft';           // Ready to send
 
     const { error: dbErr } = await supabase.from('leads').upsert({
@@ -369,7 +540,9 @@ async function processTargets<T extends { company: string; email: string; name?:
       company:  t.company,
       source:   `b2b_outreach_${segmentName}`,
       status:   dbStatus,
-      metadata: { subject, html_preview: html.slice(0, 500), target: t },
+      // `source` is persisted so a later flush re-applies the same provenance
+      // decision instead of silently downgrading an Apollo-verified address.
+      metadata: { subject, html_preview: html.slice(0, 500), target: t, source },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }, { onConflict: 'email' });
@@ -393,38 +566,81 @@ async function processTargets<T extends { company: string; email: string; name?:
       continue;
     }
 
-    if (!resend) {
-      console.log(`     📬 Queued: ${email} — will send when RESEND_API_KEY is set`);
+    if (!senderOk) {
+      console.log(`     📬 Queued: ${email} — will send once ${from} can send`);
       queued++;
       continue;
     }
 
+    // Guardrail gate: every send must be checked/reserved before it fires.
+    // Fails closed — unreachable API, missing secret, disabled channel, cap
+    // reached, or a suppressed recipient all deny the send. A policy denial
+    // (cap/disabled/suppressed) just queues for later; an errored check
+    // (can't reach the guardrail at all) is a broken pipeline, not a healthy
+    // no-op, so it counts as a send failure the same as a Resend error.
+    const gate = await guardrailCheck(GUARDRAIL_CHANNEL, { recipient: email });
+    if (!gate.allowed) {
+      console.log(`     🚧 Blocked by guardrail (${GUARDRAIL_CHANNEL}): ${gate.reason} — ${email}`);
+      queued++;
+      if (gate.errored) sendFailures.push(`${t.company}: guardrail check failed — ${gate.reason}`);
+      continue;
+    }
+
     try {
-      const res = await resend.emails.send({ from: FROM, to: email, subject, html });
-      if (res.data?.id) {
+      // Routed through the send guard rather than the Resend client directly,
+      // so every cold send carries a reply-to, one-click List-Unsubscribe
+      // headers and the CAN-SPAM postal address — and so unverified recipients
+      // are refused before any network call.
+      const res = await guardedSend({
+        to: email,
+        source,
+        subject,
+        html,
+        from,
+        company: 'AuthiChain',
+        apiKey: credential ? process.env[credential] : undefined,
+      });
+      if (res.sent) {
         sent++;
         console.log(`  ✉️  Sent: ${email} — "${subject}"`);
         await supabase.from('leads')
           .update({ status: 'contacted', updatedAt: new Date().toISOString() })
           .eq('email', email);
-      } else {
-        console.warn(`  ⚠️  Resend error for ${t.company}:`, res.error);
+        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: true, reason: 'sent', metadata: { email, resendId: res.id } });
+      } else if (res.assessment.status === 'reject' || res.reason === 'no_mx') {
+        // A refused recipient is the guard doing its job, not a broken
+        // pipeline: it must not turn the run red or it trains everyone to
+        // ignore the signal. It stays queued so verifying the address later
+        // is enough to send it.
+        console.log(`     🛑 Refused by send guard: ${email} — ${res.reason}`);
         queued++;
+        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: `guard:${res.reason}`, metadata: { email } });
+      } else {
+        console.warn(`  ⚠️  Send failed for ${t.company}: ${res.reason}`);
+        sendFailures.push(`${t.company}: ${res.reason ?? 'unknown send failure'}`);
+        queued++;
+        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: res.reason ?? 'unknown send failure', metadata: { email } });
       }
     } catch (err: any) {
       console.warn(`  ⚠️  Send failed for ${t.company}: ${err.message}`);
+      sendFailures.push(`${t.company}: ${err.message}`);
       queued++;
+      await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: err.message, metadata: { email } });
     }
   }
 
+  totalSent += sent;
   console.log(`\n[${segmentName}] Saved: ${saved} | Sent: ${sent} | Queued/Pending: ${queued}`);
 }
 
 // ── Flush queued leads: send emails that were saved with status=queued ─────────
-// Run this after setting RESEND_API_KEY to drain the queue without re-running
-// the full outreach script and risking duplicate outreach.
+// Run this after fixing the sender to drain the queue without re-running the
+// full outreach script and risking duplicate outreach.
 export async function flushQueuedLeads(): Promise<void> {
-  if (!resend) { console.warn('RESEND_API_KEY still not set — nothing to flush'); return; }
+  if (!hasResendKey) {
+    console.warn(`No Resend credential set (${CREDENTIAL_ENV_VARS.join(' / ')}) — nothing to flush`);
+    return;
+  }
 
   const { data: leads } = await supabase
     .from('leads')
@@ -437,14 +653,54 @@ export async function flushQueuedLeads(): Promise<void> {
   for (const lead of leads) {
     const meta = lead.metadata as any;
     if (!meta?.subject || !meta?.html_preview) continue;
+
+    // Recover the segment the draft was written for so the flush sends under
+    // the same brand the copy was written in. checkSender caches per address,
+    // so this costs one probe per distinct sender across the whole flush.
+    const leadSegment = String(lead.source ?? '').replace('b2b_outreach_', '');
+    const from = SEGMENT_FROM[leadSegment] ?? FALLBACK_FROM;
+
+    const senderCheck = await checkSender(from);
+    if (!senderCheck.ok) {
+      reportSenderFailure(senderCheck, `b2b-flush:${leadSegment}`);
+      console.warn(`  ⚠️  Leaving ${lead.email} queued — ${from} cannot send`);
+      continue;
+    }
+
+    const gate = await guardrailCheck(GUARDRAIL_CHANNEL, { recipient: lead.email });
+    if (!gate.allowed) {
+      // An errored check (guardrail unreachable) vs. a policy denial (cap/
+      // disabled/suppressed) look identical to the caller otherwise — flag
+      // the former more loudly since it means the pipeline is broken, not
+      // just correctly capped.
+      const log = gate.errored ? console.error : console.log;
+      log(`  🚧 Blocked by guardrail (${GUARDRAIL_CHANNEL}): ${gate.reason} — ${lead.email}`);
+      continue;
+    }
+
     try {
-      const res = await resend.emails.send({ from: FROM, to: lead.email, subject: meta.subject, html: meta.html_preview });
-      if (res.data?.id) {
+      // The stored draft is a truncated preview, so a flush re-sends whatever
+      // was captured — the guard still applies the footer and headers.
+      const res = await guardedSend({
+        to: lead.email,
+        source: (meta.source as VerificationSource) ?? RESEARCHED_SOURCE,
+        subject: meta.subject,
+        html: meta.html_preview,
+        from,
+        company: 'AuthiChain',
+        apiKey: process.env[senderCheck.credential!],
+      });
+      if (res.sent) {
         await supabase.from('leads').update({ status: 'contacted', updatedAt: new Date().toISOString() }).eq('email', lead.email);
         console.log(`  ✉️  Flushed: ${lead.email}`);
+        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: true, reason: 'sent', metadata: { email: lead.email, resendId: res.id } });
+      } else {
+        console.log(`  🛑 Left queued: ${lead.email} — ${res.reason}`);
+        await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: res.reason ?? 'unknown send failure', metadata: { email: lead.email } });
       }
     } catch (err: any) {
       console.warn(`  ⚠️  Flush failed for ${lead.email}: ${err.message?.slice(0, 80)}`);
+      await guardrailRecord({ channel: GUARDRAIL_CHANNEL, action: 'record', allowed: false, reason: err.message, metadata: { email: lead.email } });
     }
   }
 }
@@ -470,9 +726,10 @@ if (segment === 'all' || segment === 'qron') {
 }
 
 console.log('\n✅ OUTREACH COMPLETE');
+console.log(`Totals — attempted: ${totalAttempted} | sent: ${totalSent} | send failures: ${sendFailures.length}`);
 console.log('Next steps:');
-if (!resend) {
-  console.log('  ⚡ Set RESEND_API_KEY then flush queued leads:');
+if (!hasResendKey) {
+  console.log(`  ⚡ Set ${CREDENTIAL_ENV_VARS[0]} (and ${CREDENTIAL_ENV_VARS[1]} for its domains) then flush queued leads:`);
   console.log('     pnpm exec tsx -e "import { flushQueuedLeads } from \'./scripts/b2b-cold-outreach.ts\'; await flushQueuedLeads()"');
 }
 if (!process.env.APOLLO_API_KEY) {
@@ -480,3 +737,14 @@ if (!process.env.APOLLO_API_KEY) {
 }
 console.log('  📅 Demo booking page (no Calendly needed): ' + CALENDLY);
 console.log('  📋 View all leads in Supabase: select * from leads where source like \'b2b_outreach_%\' order by created_at desc');
+
+// ── Fail loudly on delivery problems ─────────────────────────────────────────
+// A live run that reaches the provider and gets rejected every time is a broken
+// pipeline, not a successful no-op. Emit Actions error annotations and exit
+// non-zero so the scheduled run turns red instead of silently sending nothing.
+if (!isDryRun && sendFailures.length > 0) {
+  const unique = [...new Set(sendFailures.map(f => f.split(': ').slice(1).join(': ')))];
+  console.error(`\n::error::Outreach delivered ${totalSent}/${totalAttempted} emails — ${sendFailures.length} send failure(s)`);
+  for (const reason of unique.slice(0, 5)) console.error(`::error::Send failure: ${reason}`);
+  process.exit(1);
+}

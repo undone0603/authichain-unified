@@ -43,7 +43,7 @@ Plus:
   ├─ funnel-email-example.md     ← Email integration examples
   └─ ...
 
-/docs/strategy/FUNNEL_TRACKING_SUMMARY.md
+/FUNNEL_TRACKING_SUMMARY.md
   └─ Complete overview of entire system
 ```
 
@@ -68,7 +68,7 @@ curl -X POST http://localhost:3000/api/funnel \
 ### Step 3: Read the Setup Guide
 ```bash
 # Open and read this file:
-../marketing/FUNNEL_QUICKSTART.md
+/docs/FUNNEL_QUICKSTART.md
 ```
 
 ### Step 4: Add to Your First Campaign
@@ -153,7 +153,7 @@ Action: Review messaging, creative, or targeting at this stage.
 **This Week:**
 1. Run `supabase db push`
 2. Test `/api/funnel` endpoint
-3. Read `../marketing/FUNNEL_QUICKSTART.md`
+3. Read `docs/FUNNEL_QUICKSTART.md`
 4. Add to first email campaign
 
 **Next Week:**
@@ -200,15 +200,15 @@ Use `addFunnelParams()` to build these automatically.
 ## Documentation Structure
 
 **For Quick Setup:**
-1. `../marketing/FUNNEL_QUICKSTART.md` (5-minute guide)
+1. `docs/FUNNEL_QUICKSTART.md` (5-minute guide)
 
 **For Implementation:**
-2. `../marketing/funnel-email-example.md` (email integration)
+2. `docs/funnel-email-example.md` (email integration)
 3. Read `/src/lib/funnel-tracking.ts` (code reference)
 
 **For Complete Understanding:**
-4. `../marketing/funnel-tracking.md` (complete reference)
-5. `../strategy/FUNNEL_TRACKING_SUMMARY.md` (architecture overview)
+4. `docs/funnel-tracking.md` (complete reference)
+5. `FUNNEL_TRACKING_SUMMARY.md` (architecture overview)
 
 ## Commands You'll Use
 
@@ -290,7 +290,7 @@ await trackFunnelEvent({
 
 ## Next Steps
 
-1. **Now:** Read `../marketing/FUNNEL_QUICKSTART.md`
+1. **Now:** Read `docs/FUNNEL_QUICKSTART.md`
 2. **Today:** Run `supabase db push`
 3. **Today:** Test `/api/funnel` endpoint
 4. **This week:** Add to first email campaign
@@ -301,17 +301,17 @@ await trackFunnelEvent({
 
 ## Support
 
-- Complete reference: `../marketing/funnel-tracking.md`
-- Email examples: `../marketing/funnel-email-example.md`
-- Quick setup: `../marketing/FUNNEL_QUICKSTART.md`
-- Architecture: `../strategy/FUNNEL_TRACKING_SUMMARY.md`
+- Complete reference: `docs/funnel-tracking.md`
+- Email examples: `docs/funnel-email-example.md`
+- Quick setup: `docs/FUNNEL_QUICKSTART.md`
+- Architecture: `FUNNEL_TRACKING_SUMMARY.md`
 - Code: `/src/lib/funnel-tracking.ts`
 
 ---
 
 **Start here:**
 ```bash
-cat ../marketing/FUNNEL_QUICKSTART.md
+cat /docs/FUNNEL_QUICKSTART.md
 ```
 
 Then:

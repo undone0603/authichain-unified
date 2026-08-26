@@ -16,7 +16,7 @@ from agentz.core.llm import lm_manager
 from supabase import create_client, Client
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("google/gemma-4-e4b")
+    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -52,7 +52,7 @@ def run(ctx: ExecutionContext) -> str:
         reward_res = ctx.step(
             "Run Growth Agent: Reward Issuance",
             action=lambda: asyncio.run(reward_repeat_scans(supabase, wallet_address, product_id))
-        )
+        ) or {}
         ctx.step(f"   -> Reward Issued: {reward_res.get('reward_amount')} QRON")
         ctx.step(f"   -> On-chain Tx: {reward_res.get('tx_hash')}")
         
@@ -65,4 +65,4 @@ def run(ctx: ExecutionContext) -> str:
         
         return f"Scan loop successfully completed for product {product_id}. Reward: {reward_res.get('reward_amount')} QRON."
     finally:
-        lm_manager.unload_model("google/gemma-4-e4b")
+        lm_manager.unload_model("local-model")

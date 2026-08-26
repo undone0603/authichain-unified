@@ -26,6 +26,58 @@ export default {
       return handleV2(request, path, url, env, cors);
     }
 
+    // ── Public endpoints — no API key required ────────────────────────────
+    if (path === '/api/v1/anchor' && request.method === 'POST') {
+      const body: any = await request.json().catch(() => ({}));
+      const { name, brand, description, sku, industry, hash } = body;
+      if (!name || !brand || !hash) {
+        return json({ error: 'name, brand, and hash are required' }, cors, 400);
+      }
+      if (!/^[0-9a-f]{64}$/i.test(hash)) {
+        return json({ error: 'hash must be a 64-character hex SHA-256 digest' }, cors, 400);
+      }
+      const id = 'AC-' + hash.slice(0, 8).toUpperCase();
+      const ts = new Date().toISOString();
+      const cert = {
+        id,
+        name: String(name).slice(0, 200),
+        brand: String(brand).slice(0, 100),
+        description: String(description || '').slice(0, 2000),
+        sku: String(sku || '').slice(0, 100),
+        industry: String(industry || 'general').slice(0, 50),
+        hash: hash.toLowerCase(),
+        ts,
+        anchored: true,
+        version: 1,
+      };
+      if (env.RATE_LIMITS) {
+        await env.RATE_LIMITS.put('cert:' + id, JSON.stringify(cert));
+      }
+      return json({
+        success: true,
+        id,
+        hash: hash.toLowerCase(),
+        ts,
+        certUrl: 'https://authichain.com/cert/' + id,
+        certificate: cert,
+      }, cors, 201);
+    }
+
+    if (path.startsWith('/api/v1/cert/') && request.method === 'GET') {
+      const certId = path.slice('/api/v1/cert/'.length).toUpperCase();
+      if (!certId || !/^AC-[0-9A-F]{8}$/.test(certId)) {
+        return json({ error: 'Invalid certificate ID — expected format: AC-XXXXXXXX' }, cors, 400);
+      }
+      if (!env.RATE_LIMITS) {
+        return json({ error: 'Storage unavailable' }, cors, 503);
+      }
+      const stored = await env.RATE_LIMITS.get('cert:' + certId);
+      if (!stored) {
+        return json({ error: 'Certificate not found', id: certId }, cors, 404);
+      }
+      return json({ success: true, certificate: JSON.parse(stored) }, cors);
+    }
+
     // API key validation
     const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
     if (!apiKey) return json({ error: 'Missing API key.' }, cors, 401);

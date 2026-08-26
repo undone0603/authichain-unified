@@ -7,11 +7,19 @@ const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SE
 const GOVCHAIN = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
 async function generateProposals(): Promise<{ generated: number; failed: number; total: number }> {
+  // Reachability-first: a proposal is only worth drafting if we can actually
+  // deliver it, so opportunities that carry a point-of-contact email are drafted
+  // ahead of unreachable ones at the same fit tier. (nullsFirst:false pushes the
+  // contactless opportunities to the back of the queue.) Without this the
+  // generator burned its 10-per-run budget on high-fit-but-unreachable notices
+  // while thousands of emailable ones waited — the email step then had nothing
+  // to send.
   const { data: opps, error } = await supabase
     .from('gov_opportunities')
     .select('*')
     .eq('status', 'scored')
     .gte('fit_score', 65)
+    .order('contact_email', { ascending: false, nullsFirst: false })
     .order('fit_score', { ascending: false })
     .limit(10);
 
@@ -56,6 +64,11 @@ AI Reasoning: ${opp.ai_reasoning}
           agency:         opp.agency,
           fit_score:      opp.fit_score,
           proposal_draft,
+          // Carry the point-of-contact email through from the opportunity so the
+          // email step has a recipient. Previously omitted, which left every
+          // generated proposal with a null contact_email and made the entire
+          // gov email channel a no-op.
+          contact_email:  opp.contact_email ?? null,
           govchain_url:   `${GOVCHAIN}/proposals/${opp.notice_id}`,
           sam_url:        opp.sam_url,
           deadline:       opp.deadline,

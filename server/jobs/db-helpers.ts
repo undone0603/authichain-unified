@@ -40,7 +40,7 @@ export type Db = ReturnType<typeof getHyperdriveDb>;
 
 export async function logActivity(
   db: Db,
-  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number; details?: any },
+  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any },
   details?: string,
 ): Promise<void> {
   if (typeof actionOrData === 'string') {
@@ -50,7 +50,7 @@ export async function logActivity(
       userId: actionOrData.userId ?? undefined,
       action: actionOrData.action,
       entityType: actionOrData.entityType,
-      entityId: actionOrData.entityId,
+      entityId: actionOrData.entityId == null ? undefined : String(actionOrData.entityId),
       details: actionOrData.details,
     });
   }
@@ -117,7 +117,7 @@ export async function listUsersForOnboardingStep(db: Db, _step: string | number)
 export async function createNotification(
   db: Db,
   data: Omit<InsertNotification, 'id' | 'createdAt'>,
-): Promise<{ id: number }> {
+): Promise<{ id: string }> {
   const [result] = await db.insert(notifications).values(data).returning();
   return { id: result.id };
 }
@@ -129,8 +129,8 @@ export async function createSystemNotification(
   message: string,
   type: InsertNotification['type'],
   actionUrl?: string,
-): Promise<{ id: number }> {
-  return createNotification(db, { userId, type: type as any, title, message, isRead: 0, actionUrl });
+): Promise<{ id: string }> {
+  return createNotification(db, { userId, type: type as any, title, message, isRead: false, actionUrl });
 }
 
 // ─── Budget & Task Queue ────────────────────────────────────────────────────
@@ -224,7 +224,7 @@ export async function createMission(db: Db, type: MissionType) {
 
 export async function getActiveMissionTypes(db: Db): Promise<string[]> {
   const rows = await db.select({ title: missions.title }).from(missions).where(eq(missions.status, 'active'));
-  return rows.map(r => r.title);
+  return rows.map((r: { title: string }) => r.title);
 }
 
 // ─── Subscriptions / Dunning ────────────────────────────────────────────────
@@ -246,7 +246,7 @@ export async function getRevenueAnalytics(db: Db, startDate?: Date, endDate?: Da
 export async function getWeeklyRevenueDigest(db: Db) {
   const weekAgo = new Date(Date.now() - 7 * 86400000);
   const rows = await db.select().from(revenueRecords).where(gte(revenueRecords.createdAt, weekAgo));
-  const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+  const total = rows.reduce((s: number, r: { amount: string }) => s + Number(r.amount), 0);
   return {
     leads: rows.length,
     mqlToSql: 0,
@@ -264,7 +264,7 @@ export async function getQuarterlyValueReport(db: Db) {
   const now = new Date();
   const q = `${now.getFullYear()}-Q${Math.ceil((now.getMonth() + 1) / 3)}`;
   const rows = await db.select().from(revenueRecords).where(gte(revenueRecords.createdAt, quarterAgo));
-  const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+  const total = rows.reduce((s: number, r: { amount: string }) => s + Number(r.amount), 0);
   return {
     period: q,
     roiSummary: `Q${Math.ceil((now.getMonth() + 1) / 3)} revenue: $${total.toFixed(2)} across ${rows.length} records.`,

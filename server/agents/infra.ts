@@ -1,4 +1,4 @@
-import { logActivity, type Db } from './db-helpers.js';
+import { logActivity } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
 interface InfraPayload {
@@ -6,7 +6,7 @@ interface InfraPayload {
   url?: string;
 }
 
-export async function runCheckDnsConfig(task: Task, db: Db): Promise<void> {
+export async function runCheckDnsConfig(task: Task): Promise<void> {
   const payload = task.payload as InfraPayload;
   const domain = payload.domain ?? 'authichain.com';
 
@@ -27,7 +27,7 @@ export async function runCheckDnsConfig(task: Task, db: Db): Promise<void> {
   }
 
   const failed = checks.filter(c => c.status !== 'ok');
-  await logActivity(db, { userId: null, action: 'dns_config_checked', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity({ userId: null, action: 'dns_config_checked', entityType: 'task', entityId: 0, details: { taskId: task.id,
     domain,
     checks,
     failedCount: failed.length,
@@ -39,7 +39,7 @@ export async function runCheckDnsConfig(task: Task, db: Db): Promise<void> {
   }
 }
 
-export async function runVerifySsl(task: Task, db: Db): Promise<void> {
+export async function runVerifySsl(task: Task): Promise<void> {
   const payload = task.payload as InfraPayload;
   const domain = payload.domain ?? 'authichain.com';
   const url = `https://${domain}`;
@@ -57,7 +57,7 @@ export async function runVerifySsl(task: Task, db: Db): Promise<void> {
     error = String(e);
   }
 
-  await logActivity(db, { userId: null, action: 'ssl_verified', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity({ userId: null, action: 'ssl_verified', entityType: 'task', entityId: 0, details: { taskId: task.id,
     domain,
     status,
     statusCode,
@@ -70,7 +70,7 @@ export async function runVerifySsl(task: Task, db: Db): Promise<void> {
   }
 }
 
-export async function runLighthouseAudit(task: Task, db: Db): Promise<void> {
+export async function runLighthouseAudit(task: Task): Promise<void> {
   const payload = task.payload as InfraPayload;
   const url = payload.url ?? 'https://authichain.com';
 
@@ -96,7 +96,7 @@ export async function runLighthouseAudit(task: Task, db: Db): Promise<void> {
     error = String(e);
   }
 
-  await logActivity(db, { userId: null, action: 'lighthouse_audit_completed', entityType: 'task', entityId: 0, details: { taskId: task.id,
+  await logActivity({ userId: null, action: 'lighthouse_audit_completed', entityType: 'task', entityId: 0, details: { taskId: task.id,
     url,
     scores,
     error,

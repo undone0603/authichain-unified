@@ -21,33 +21,32 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     if: always()
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
-        with: { version: '10.28.2' }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with: { version: "10.28.2" }
+      - uses: actions/setup-node@v7
+        with: { node-version: "22", cache: pnpm }
+      - run: pnpm install --no-frozen-lockfile
 
       - name: Send Slack digest
         continue-on-error: true
         run: pnpm exec tsx scripts/send-digest.ts
         env:
-          SLACK_BOT_TOKEN:      ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL_ID:     ${{ secrets.SLACK_GOV_CHANNEL_ID }}
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_GOV_CHANNEL_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GOVCHAIN_URL:         ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+          GOVCHAIN_URL: ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
 
       - name: Report pipeline failure to Slack
         if: failure()
         continue-on-error: true
         run: pnpm exec tsx scripts/report-failure.ts
         env:
-          SLACK_BOT_TOKEN:     ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL_ID:    ${{ secrets.SLACK_GOV_CHANNEL_ID }}
-          WORKFLOW_RUN_URL:    ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_GOV_CHANNEL_ID }}
+          WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

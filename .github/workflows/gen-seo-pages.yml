@@ -7,7 +7,7 @@ name: SEO Page Generation
 
 on:
   schedule:
-    - cron: '0 9 * * 5'   # Every Friday 09:00 UTC
+    - cron: "0 9 * * 5" # Every Friday 09:00 UTC
   workflow_dispatch: {}
 
 permissions:
@@ -19,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - uses: actions/setup-node@v7
+        with: { node-version: "22" }
 
       - name: Generate SEO pages
         run: node scripts/gen-seo-pages.cjs

@@ -24,7 +24,11 @@ const DEMOS = [
     name: 'FTC "Made in USA" Shield',
     style: 'Patriotic Heritage',
     image: '/media/usa/unnamed.jpg',
-    description: 'EO 14392 compliant origin proof for American manufacturing.',
+    // Not "EO 14392 compliant": an Executive Order directs agencies, it is not
+    // something a product complies with. The rule a seller is held to is the
+    // FTC Made in USA Labeling Rule (16 CFR Part 323), and evidence supports a
+    // claim rather than conferring compliance on it.
+    description: 'Origin evidence for "Made in USA" claims under FTC 16 CFR Part 323.',
     hash: '0x8f2a...1b9c'
   },
   {
@@ -148,7 +152,7 @@ export default function DemoGalleryPage() {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
             <h2 className="text-4xl font-black mb-6 uppercase tracking-tighter italic">Ready for Your <span className="gold-text">Pilot?</span></h2>
             <p className="text-zinc-500 mb-12 max-w-lg mx-auto leading-loose font-medium uppercase tracking-[0.2em] text-xs">
-              Join the 1,200+ brands using the AuthiChain protocol to eliminate counterfeiting and increase customer engagement by ~25%.
+              Be one of the first pilots on the AuthiChain protocol. The spec, the reference verifier and the conformance suite are open — audit the cryptography before you commit to anything.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6">
                 <Link href="/" className="btn-gold inline-flex items-center justify-center gap-3 px-12 py-5 font-black uppercase tracking-widest text-xs shadow-gold">

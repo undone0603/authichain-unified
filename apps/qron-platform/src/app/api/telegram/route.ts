@@ -7,7 +7,6 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const admin = createClient(supabaseUrl, serviceKey);
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
 
 /**
  * TELEGRAM BOT WEBHOOK (qron-telegram)
@@ -18,15 +17,6 @@ export async function POST(req: NextRequest) {
     if (!TELEGRAM_BOT_TOKEN) {
       console.warn('[Telegram] TELEGRAM_BOT_TOKEN missing. Bot is inactive.');
       return NextResponse.json({ error: 'Bot inactive' }, { status: 503 });
-    }
-
-    // Verify Telegram secret token to prevent unauthorized webhook calls
-    if (TELEGRAM_SECRET) {
-      const secretHeader = req.headers.get('X-Telegram-Bot-Api-Secret-Token');
-      if (secretHeader !== TELEGRAM_SECRET) {
-        console.warn('[Telegram] Webhook called with invalid or missing secret token');
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
     }
 
     const body = await req.json();
@@ -55,7 +45,7 @@ export async function POST(req: NextRequest) {
           prompt: 'futuristic tech aesthetic, neon lights, highly detailed',
         });
 
-        await sendTelegramPhoto(chatId, result.imageUrl, `✅ Your QRON is ready!\n\n🔐 Ed25519 Secured\n🔗 Target: ${text}`);
+        await sendTelegramPhoto(chatId, result.imageUrl, `✅ Your QRON is ready!\n\n🔒 Ed25519 Secured\n🔗 Target: ${text}`);
 
         await admin.from('automation_logs').insert({
           workflow_name: 'telegram_qron_generation',
@@ -72,7 +62,7 @@ export async function POST(req: NextRequest) {
           payload: JSON.stringify({ chat_id: chatId, url: text }),
           error_message: err instanceof Error ? err.message : String(err),
         });
-        await sendTelegramMessage(chatId, '❌ Generation failed. Please try again later.');
+        await sendTelegramMessage(chatId, 'â Œ Generation failed. Please try again later.');
       }
 
       return NextResponse.json({ status: 'ok' });

@@ -19,45 +19,36 @@ export const metadata: Metadata = {
     'The premier marketplace for cryptographically-verified industrial artifacts and AI QR masterpieces on Base.',
 };
 
-interface QronRow {
-  id: number;
-  image_url: string;
-  prompt: string | null;
-  mode: string | null;
-  shortCode: string | null;
-  scan_count: number | null;
-}
-
 /**
  * NFT Marketplace for StrainChain.io
  * Monetization Solution: High-Value SVG assets + Secondary Royalties
  */
 export default async function MarketplacePage() {
   const supabase = await createClient();
-
+  
   // 1. Fetch High-Value SVG Artifacts (Industrial & Premium)
   // These are assets stored in Supabase with .svg extensions or marked as premium
-  const { data: artifacts } = (await supabase
+  const { data: artifacts } = await supabase
     .from('qrons')
     .select('*')
     .or('mode.eq.industrial,mode.eq.living')
-    .order('createdAt', { ascending: false })) as { data: QronRow[] | null };
+    .order('createdAt', { ascending: false });
 
   // 2. Fetch Featured Community Collection
-  const { data: gallery } = (await supabase
+  const { data: gallery } = await supabase
     .from('qrons')
     .select('*')
     .eq('is_demo', true)
     .order('scan_count', { ascending: false })
-    .limit(24)) as { data: QronRow[] | null };
+    .limit(24);
 
   // 3. Fetch Artistic Samples specifically
-  const { data: artisticSamples } = (await supabase
+  const { data: artisticSamples } = await supabase
     .from('qrons')
     .select('*')
     .eq('is_demo', true)
     .like('image_url', '%/samples/%')
-    .limit(12)) as { data: QronRow[] | null };
+    .limit(12);
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden selection:bg-gold selection:text-black">
@@ -194,7 +185,7 @@ export default async function MarketplacePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-            {artifacts?.map((item) => (
+            {artifacts?.map((item: { id: string; image_url: string; prompt?: string | null; mode?: string | null; shortCode?: string | null }) => (
               <div
                 key={item.id}
                 className="protocol-card group relative bg-zinc-950/50 border-zinc-900 hover:border-gold/40 transition-all duration-500 hover:-translate-y-2"
@@ -228,7 +219,7 @@ export default async function MarketplacePage() {
                     </h3>
                     <div className="flex items-center gap-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
                         <span className="flex items-center gap-1 text-gold"><Leaf className="w-3 h-3" /> {item.mode}</span>
-                        <span>â€¢</span>
+                        <span>•</span>
                         <span>0.045 ETH</span>
                     </div>
                   </div>
@@ -258,7 +249,7 @@ export default async function MarketplacePage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-6 gap-6">
-                {gallery?.map((g) => (
+                {gallery?.map((g: { id: string; image_url: string }) => (
                     <div key={g.id} className="protocol-card aspect-square overflow-hidden group cursor-pointer border-zinc-900/50">
                         <Image 
                             src={g.image_url} 
@@ -283,13 +274,13 @@ export default async function MarketplacePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {artisticSamples.map((sample) => (
+              {artisticSamples.map((sample: { id: string; image_url: string; prompt: string; mode?: string | null; scan_count?: number | null }) => (
                 <div key={sample.id} className="protocol-card group bg-zinc-950/30 border-zinc-900 hover:border-gold/30 transition-all">
                   <div className="relative aspect-square overflow-hidden">
-                    <Image
-                      src={sample.image_url}
-                      alt={sample.prompt || 'Artistic AI Masterpiece'}
-                      fill
+                    <Image 
+                      src={sample.image_url} 
+                      alt={sample.prompt} 
+                      fill 
                       className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end">

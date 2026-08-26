@@ -2,7 +2,7 @@ name: Ghost Traffic Engine
 
 on:
   schedule:
-    - cron: '0 13 * * *'   # Fires every day at 9:00 AM EST
+    - cron: "0 13 * * *" # Fires every day at 9:00 AM EST
   workflow_dispatch:
     inputs:
       dry_run:
@@ -18,15 +18,13 @@ jobs:
   run-strike:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Guard: set vars.PIPELINE_ENABLED = 'true' in repo Settings → Variables to enable
-    if: ${{ vars.PIPELINE_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 

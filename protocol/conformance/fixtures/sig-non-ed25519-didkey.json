@@ -1,0 +1,33 @@
+{
+  "id": "sig-non-ed25519-didkey",
+  "description": "verificationMethod is a did:key with a non-Ed25519 multicodec (0xec = X25519).",
+  "record": {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://authichain.com/protocol/v1"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "ProvenanceRecord"
+    ],
+    "issuer": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+    "validFrom": "2020-01-01T00:00:00Z",
+    "credentialSubject": {
+      "id": "https://id.gs1.org/01/09506000134352/21/SERIAL123",
+      "gtin": "09506000134352",
+      "serial": "SERIAL123"
+    },
+    "proof": {
+      "type": "Ed25519Signature2020",
+      "created": "2020-01-01T00:00:00Z",
+      "verificationMethod": "did:key:z6LSbgBAXJos6Tik6PNmXeWxKbDUr9Y7hcB9syigVTeXiNmm",
+      "proofPurpose": "assertionMethod",
+      "proofValue": "zAeEyoVN4WHNQhQmyA13FZUkTcqfMawnRx4eGgptQUKfmpQ6LWqNuZnDndTZWoAXyJzMKsEbLhTJmjaKaLg6TpeB"
+    }
+  },
+  "anchor": null,
+  "options": {},
+  "expect": {
+    "verdict": "invalid"
+  }
+}

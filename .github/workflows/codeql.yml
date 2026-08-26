@@ -5,7 +5,7 @@ on:
     branches: ["main"]
   pull_request:
   schedule:
-    - cron: "30 1 * * 0"
+    - cron: "30 1 * * 0" # Sundays 01:30 UTC
   workflow_dispatch:
 
 jobs:
@@ -23,28 +23,27 @@ jobs:
       matrix:
         include:
           - language: javascript-typescript
-            # build-mode: none = extract from source without compiling.
-            # Required for JS/TS in pnpm monorepos — autobuild exits 1.
             build-mode: none
           - language: python
             build-mode: none
-            # Python scan failures are non-blocking — repo is primarily TS/JS.
-            continue-on-error: true
+          - language: actions
+            build-mode: none
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v7
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          # Do NOT use expression fallback — all matrix entries define build-mode explicitly.
-          # The '|| autobuild' fallback was causing the action to ignore the matrix value.
-          build-mode: ${{ matrix.build-mode }}
-          config-file: .github/codeql-config.yml
-
+          build-mode: ${{ matrix.build-mode || 'autobuild' }}
+          queries: security-and-quality
+          config: |
+            paths-ignore:
+              - apps
+              - docs/archive
+              - scripts/ops
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
 

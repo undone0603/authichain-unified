@@ -13,8 +13,11 @@ export const metadata: Metadata = {
 type ServiceStatus = {
   name: string;
   status: string;
-  uptime: string;
-  latency: string;
+  // Null until availability is actually recorded over a window. Nothing in this
+  // codebase measures uptime yet, so the page renders a dash rather than a
+  // number that would only ever be decoration.
+  uptime: string | null;
+  latency: string | null;
 };
 
 async function getStatus() {
@@ -31,22 +34,22 @@ async function getStatus() {
 function StatusIcon({ status }: { status: string }) {
   if (status === 'Operational') return <CheckCircle2 className="w-4 h-4 text-green-400" />;
   if (status === 'Degraded') return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+  // A service nobody probes is unknown, not down — and not green either.
+  if (status === 'Not monitored' || status === 'Not configured') return <Clock className="w-4 h-4 text-zinc-500" />;
   return <XCircle className="w-4 h-4 text-red-400" />;
 }
 
 export default async function StatusPage() {
   const data = await getStatus();
 
-  const services: ServiceStatus[] = data?.services ?? [
-    { name: 'Core Protocol API', status: 'Operational', uptime: '99.99%', latency: '42ms' },
-    { name: 'Edge Redirect Engine', status: 'Operational', uptime: '100%', latency: '12ms' },
-    { name: 'AI Generation Worker', status: 'Operational', uptime: '99.95%', latency: '2.4s' },
-    { name: 'Blockchain Anchoring (Polygon)', status: 'Operational', uptime: '99.99%', latency: '120ms' },
-    { name: 'Storage Cluster (S3/Supabase)', status: 'Operational', uptime: '100%', latency: '0ms' },
-    { name: 'AuthiChain Verification', status: 'Operational', uptime: '99.98%', latency: '88ms' },
-  ];
+  // When /api/status cannot be reached, that is itself the most likely moment
+  // for something to be wrong. This used to fall back to a hardcoded all-green
+  // board reporting 99.99% uptime — the page would look healthiest exactly when
+  // it had the least idea. An unreachable status API now reads as unknown.
+  const services: ServiceStatus[] = data?.services ?? [];
+  const reachable = services.length > 0;
 
-  const allOperational = services.every(s => s.status === 'Operational');
+  const allOperational = reachable && services.every(s => s.status === 'Operational' || s.status === 'Not monitored');
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
@@ -54,10 +57,12 @@ export default async function StatusPage() {
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-16">
           <div>
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 text-sm font-medium ${
-              allOperational ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'
+              !reachable ? 'bg-zinc-500/10 text-zinc-400'
+                : allOperational ? 'bg-green-500/10 text-green-400'
+                : 'bg-yellow-500/10 text-yellow-400'
             }`}>
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              {allOperational ? 'All Systems Operational' : 'Partial Outage'}
+              {!reachable ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+              {!reachable ? 'Status Unavailable' : allOperational ? 'All Systems Operational' : 'Partial Outage'}
             </div>
             <h1 className="text-4xl font-black uppercase tracking-tight leading-none mb-2">
               Network <span className="text-[#FFD700]">Status</span>
@@ -82,6 +87,12 @@ export default async function StatusPage() {
         </header>
 
         <div className="space-y-3">
+          {!reachable && (
+            <div className="p-6 rounded-xl border border-gray-800 bg-black/40 text-sm text-zinc-400">
+              The status API could not be reached, so live service health is unknown right now.
+              This page does not guess — retry in a moment.
+            </div>
+          )}
           {services.map((svc) => (
             <div
               key={svc.name}
@@ -92,11 +103,13 @@ export default async function StatusPage() {
                 <span className="font-medium text-sm">{svc.name}</span>
               </div>
               <div className="flex items-center gap-6 text-xs text-zinc-400">
-                <span>Uptime: <span className="text-white font-mono">{svc.uptime}</span></span>
-                <span>Latency: <span className="text-white font-mono">{svc.latency}</span></span>
+                <span>Uptime: <span className="text-zinc-600 font-mono">{svc.uptime ?? '—'}</span></span>
+                <span>Latency: <span className="text-white font-mono">{svc.latency ?? '—'}</span></span>
                 <span className={`font-semibold ${
                   svc.status === 'Operational' ? 'text-green-400' :
-                  svc.status === 'Degraded' ? 'text-yellow-400' : 'text-red-400'
+                  svc.status === 'Degraded' ? 'text-yellow-400' :
+                  svc.status === 'Not monitored' || svc.status === 'Not configured' ? 'text-zinc-500' :
+                  'text-red-400'
                 }`}>{svc.status}</span>
               </div>
             </div>
@@ -108,7 +121,12 @@ export default async function StatusPage() {
             <Activity className="w-4 h-4 text-purple-400" />
             <h3 className="font-semibold">Incident History</h3>
           </div>
-          <p className="text-zinc-500 text-sm">No incidents reported in the last 90 days.</p>
+          {/* "No incidents in the last 90 days" was asserted by a page with no
+              incident tracking of any kind, so it could never have said anything
+              else. */}
+          <p className="text-zinc-500 text-sm">
+            Incident history is not published yet. This page reports live probe results only.
+          </p>
         </div>
       </div>
     </div>

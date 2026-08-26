@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import type Stripe from 'stripe';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,7 +22,7 @@ export async function POST(req: NextRequest) {
     if (!stripeKey) return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
 
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
+    const stripe = new Stripe(stripeKey, { apiVersion: '2026-05-27.dahlia' as const });
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -62,7 +61,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build checkout session
-    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    const sessionParams: any = {
       customer: stripeCustomerId,
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -79,10 +78,7 @@ export async function POST(req: NextRequest) {
 
     // Add trial if requested
     if (trial_days && parseInt(trial_days) > 0) {
-      sessionParams.subscription_data = {
-        ...sessionParams.subscription_data,
-        trial_period_days: parseInt(trial_days),
-      };
+      sessionParams.subscription_data.trial_period_days = parseInt(trial_days);
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
@@ -102,13 +98,12 @@ export async function POST(req: NextRequest) {
       session_id: session.id,
       plan,
     });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   // Return available plans with prices for self-serve pricing page
   const plans = [
     { id: 'starter', name: 'Starter', price_monthly: 29, price_yearly: 290, qr_codes: 100, scans: 10000, features: ['Custom QR styles', 'Analytics', 'API access'] },

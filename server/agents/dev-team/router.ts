@@ -1,13 +1,5 @@
 import { router, protectedProcedure } from "../../_core/trpc";
-// NOTE: getDb() bridge, not yet ctx.db — this router's shared TrpcContext
-// (server/_core/context.ts) doesn't have a `db` field; only the separate,
-// not-yet-wired Workers context (server/_core/context.workers.ts, Task 2)
-// does. Adding `db` to the live Express TrpcContext is an app-wide change
-// outside this sub-task's scope (Task 2b-1 is server/agents/** call sites
-// only). Same documented-bridge pattern used for the automation cron route
-// in this same commit series.
-import { getDb } from "../../db";
-import { createTask, logActivity, getTasksByMission } from "../db-helpers.js";
+import * as db from "../../db";
 import { z } from "zod";
 
 export const devTeamRouter = router({
@@ -21,8 +13,7 @@ export const devTeamRouter = router({
       context: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      const taskId = await createTask(db, {
+      const taskId = await db.createTask({
         missionId: input.missionId,
         kind: "WRITE_CODE",
         title: input.prompt.slice(0, 80),
@@ -35,7 +26,7 @@ export const devTeamRouter = router({
           context: input.context,
         },
       });
-      await logActivity(db, {
+      await db.logActivity({
         userId: ctx.user.id,
         action: "write_code_enqueued",
         entityType: "mission_task",
@@ -51,15 +42,14 @@ export const devTeamRouter = router({
       prNumber: z.number().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      const taskId = await createTask(db, {
+      const taskId = await db.createTask({
         missionId: input.missionId,
         kind: "RUN_TESTS",
         title: `Run tests on ${input.branch}`,
         description: `CI test run for branch ${input.branch}`,
         payload: { branch: input.branch, prNumber: input.prNumber },
       });
-      await logActivity(db, {
+      await db.logActivity({
         userId: ctx.user.id,
         action: "run_tests_enqueued",
         entityType: "mission_task",
@@ -78,9 +68,8 @@ export const devTeamRouter = router({
       prNumber: z.number().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
       const kind = input.action === "merge" ? "MERGE_PR" : "OPEN_PR";
-      const taskId = await createTask(db, {
+      const taskId = await db.createTask({
         missionId: input.missionId,
         kind,
         title: input.title,
@@ -92,7 +81,7 @@ export const devTeamRouter = router({
           prNumber: input.prNumber,
         },
       });
-      await logActivity(db, {
+      await db.logActivity({
         userId: ctx.user.id,
         action: `${kind.toLowerCase()}_enqueued`,
         entityType: "mission_task",
@@ -104,7 +93,6 @@ export const devTeamRouter = router({
   tasks: protectedProcedure
     .input(z.object({ missionId: z.string() }))
     .query(async ({ input }) => {
-      const db = await getDb();
-      return getTasksByMission(db, input.missionId);
+      return db.getTasksByMission(input.missionId);
     }),
 });

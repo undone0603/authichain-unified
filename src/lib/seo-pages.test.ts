@@ -7,13 +7,18 @@ describe('seo-pages loader', () => {
     expect(pages.length).toBeGreaterThan(0);
     for (const p of pages) {
       expect(p.slug).toBeTruthy();
-      expect(p.title.length).toBeLessThanOrEqual(70);
+      expect(p.title.length).toBeLessThanOrEqual(60);
       expect(p.metaDescription.length).toBeLessThanOrEqual(160);
       expect(p.bodyHtml).not.toContain('<script');
       const jsonLd = p.jsonLd as any;
       const graph = jsonLd['@graph'];
       const entity = Array.isArray(graph) ? graph[0] : jsonLd;
-      expect(['Product', 'Service']).toContain(entity?.['@type']);
+      // Article belongs here: two committed pages are explainers rather than
+      // offerings ("What Is a Digital Product Passport?", "EU DPP Compliance
+      // Checklist"). Typing editorial content as Product would be inaccurate
+      // structured data, which search engines penalise — so the assertion
+      // widens rather than the content changing to match it.
+      expect(['Product', 'Service', 'Article']).toContain(entity?.['@type']);
     }
   });
 

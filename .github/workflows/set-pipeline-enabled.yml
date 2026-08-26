@@ -1,21 +1,83 @@
-name: Enable Autonomous Pipeline
+name: Configure Autonomous Pipeline (Vercel runtime only)
+
+# Sets AUTONOMOUS_PIPELINE_ENABLED in the Vercel production runtime and
+# redeploys so the value takes effect.
+#
+# ── What this does NOT switch on ─────────────────────────────────────────────
+# The variable this sets gates the /api/cron/pipeline HTTP endpoint. Nothing
+# calls that endpoint on a schedule: vercel.json declares no `crons`, and
+# autonomous-business-cycle.yml gates its only job on
+# `github.event_name == 'workflow_dispatch' && inputs.live`, so each of its
+# thirteen cron entries starts a run that skips the job. Running this workflow
+# therefore changes what happens when the endpoint is called, and does not by
+# itself cause the pipeline to run again.
+#
+# The daily scheduled pipeline is pipeline-tick.yml, which invokes
+# runPipelineTick() directly on the runner and is gated by a separate
+# repository variable, PIPELINE_TICK_ENABLED. That variable and this one are
+# stored in different places, hold independent values, and neither reports a
+# disagreement with the other — they used to share the name
+# AUTONOMOUS_PIPELINE_ENABLED, which made them easy to mistake for one switch.
+#
+# To turn the recurring pipeline on, set the repository variable
+# PIPELINE_TICK_ENABLED to "true". This workflow is for the HTTP path.
 
 on:
   workflow_dispatch:
+    inputs:
+      enabled:
+        description: "Enable live pipeline execution in the Vercel production runtime"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
-  set-secret:
+  configure-runtime:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set AUTONOMOUS_PIPELINE_ENABLED=true on Cloudflare Worker
+      - name: Install Vercel CLI
+        run: npm install --global vercel
+      - name: Set AUTONOMOUS_PIPELINE_ENABLED in Vercel production
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PIPELINE_ENABLED: ${{ inputs.enabled }}
         run: |
-          set -e
-          echo "true" | npx wrangler secret put AUTONOMOUS_PIPELINE_ENABLED
-          echo "✓ AUTONOMOUS_PIPELINE_ENABLED=true set"
+          set -euo pipefail
+          for required in VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_TOKEN; do
+            if [ -z "${!required}" ]; then
+              echo "::error::$required is required to configure the production runtime."
+              exit 1
+            fi
+          done
+
+          vercel env rm AUTONOMOUS_PIPELINE_ENABLED production --yes --token="$VERCEL_TOKEN" || true
+          printf '%s\n' "$PIPELINE_ENABLED" | vercel env add AUTONOMOUS_PIPELINE_ENABLED production --token="$VERCEL_TOKEN"
+
+          production_deployment_id="$(
+            curl --fail --silent --show-error \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&target=production&limit=1" |
+              jq --exit-status --raw-output '.deployments[0].uid // .deployments[0].id'
+          )"
+          if [ -z "$production_deployment_id" ] || [ "$production_deployment_id" = "null" ]; then
+            echo "::error::No existing Vercel production deployment is available to redeploy."
+            exit 1
+          fi
+
+          echo "Redeploying production deployment $production_deployment_id with the updated runtime configuration."
+          vercel redeploy "$production_deployment_id" --target production --token="$VERCEL_TOKEN"
+          echo "AUTONOMOUS_PIPELINE_ENABLED=$PIPELINE_ENABLED is active in the Vercel production runtime."
+
+      - name: State what is and is not now scheduled
+        # A green check here reads as "the autonomous pipeline is configured",
+        # which is true of the HTTP endpoint and not of anything recurring. Say
+        # so on the run itself rather than only in the workflow header, so the
+        # person who just dispatched it finds out now.
+        run: |
+          echo "::notice::This set the Vercel runtime variable only. It gates /api/cron/pipeline, which nothing calls on a schedule."
+          echo "::notice::The daily pipeline is pipeline-tick.yml, gated by the repository variable PIPELINE_TICK_ENABLED. This workflow does not change it."

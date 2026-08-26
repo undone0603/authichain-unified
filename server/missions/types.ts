@@ -20,6 +20,32 @@ export const MISSION_STATUSES = ['PLANNED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED
 
 export type MissionStatus = typeof MISSION_STATUSES[number];
 
+/**
+ * The value `missions.status` actually stores for each MissionStatus.
+ *
+ * These two vocabularies are not the same word in a different case, and
+ * assuming they were is a bug that shipped twice. Both updateMissionStatus()
+ * implementations wrote `status.toLowerCase() as any`, producing 'planned',
+ * 'in_progress' and 'blocked' — none of which missions_status_check permits:
+ *
+ *   CHECK (status = ANY (ARRAY['pending', 'active', 'completed', 'failed']))
+ *
+ * So three of the four possible arguments raised [23514] and only COMPLETED
+ * ever worked. The `as any` is what let it past the type checker; the enum is
+ * the odd one out, since all 522 existing rows and every insert path use the
+ * database's vocabulary.
+ *
+ * 'blocked' has no counterpart in the original four and is added to the
+ * constraint rather than folded into 'failed' — a mission waiting on something
+ * is not a mission that failed, and collapsing them would lose that.
+ */
+export const MISSION_STATUS_TO_DB: Record<MissionStatus, string> = {
+  PLANNED: 'pending',
+  IN_PROGRESS: 'active',
+  BLOCKED: 'blocked',
+  COMPLETED: 'completed',
+};
+
 export const TASK_STATUSES = ['PENDING', 'RUNNING', 'WAITING_HUMAN', 'DONE', 'FAILED'] as const;
 export type TaskStatus = typeof TASK_STATUSES[number];
 
