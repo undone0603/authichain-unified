@@ -6,6 +6,8 @@
 // needs a verified bank + payout config before any money moves.
 import { logActivity, getRevenueAnalytics } from "../db";
 import { notifyOwner } from "../_core/notification";
+import { createFounderPayout, type PayoutConfig } from "../stripe-service";
+import { ENV } from "../_core/env";
 
 export interface PayoutSplit {
   founderPct: number;
@@ -58,8 +60,8 @@ const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
  * Compute the pay-yourself-first split for a period's collected revenue, log it,
  * and notify the owner. Pass the gross collected (in cents) for the period.
  *
- * INTEGRATION POINT: trigger a Stripe payout of `plan.founderCents` to the
- * founder's connected account where indicated, once payout/bank is configured.
+ * If Stripe Connect is configured, triggers a payout of `plan.founderCents` to the
+ * founder's connected account. Non-fatal: failures are logged but don't block.
  */
 export async function runFounderPayout(grossCents: number): Promise<PayoutPlan> {
   const plan = computePayout(grossCents);
@@ -72,7 +74,41 @@ export async function runFounderPayout(grossCents: number): Promise<PayoutPlan> 
     details: plan,
   });
 
-  // TODO(integration): Stripe payout of plan.founderCents -> founder bank here.
+  // Attempt Stripe Connect payout if configured
+  let payoutStatus = "";
+  if (ENV.stripeConnectAccountId && plan.founderCents > 0) {
+    try {
+      const config: PayoutConfig = {
+        stripeConnectAccountId: ENV.stripeConnectAccountId,
+        minPayoutCents: parseInt(process.env.MIN_FOUNDER_PAYOUT_CENTS || "5000", 10), // Default $50
+      };
+      const result = await createFounderPayout(plan.founderCents, config);
+      payoutStatus = ` Payout ${result.payoutId} (${result.status}) scheduled for ${result.arrivalDate.toISOString().split('T')[0]}.`;
+
+      await logActivity({
+        userId: null,
+        action: "founder_payout_initiated",
+        entityType: "payout",
+        entityId: 0,
+        details: { payoutId: result.payoutId, status: result.status, amount: plan.founderCents },
+      });
+    } catch (error: any) {
+      const msg = error?.message || "Unknown error";
+      console.error(`[founder-payout] Payout failed: ${msg}`);
+      payoutStatus = ` ⚠️ Payout failed: ${msg}`;
+
+      // Log failure but don't stop the job
+      await logActivity({
+        userId: null,
+        action: "founder_payout_failed",
+        entityType: "payout",
+        entityId: 0,
+        details: { error: msg, amount: plan.founderCents },
+      });
+    }
+  } else if (!ENV.stripeConnectAccountId) {
+    console.warn("[founder-payout] STRIPE_CONNECT_ACCOUNT_ID not configured; payout skipped");
+  }
 
   try {
     await notifyOwner({
@@ -80,7 +116,7 @@ export async function runFounderPayout(grossCents: number): Promise<PayoutPlan> 
       content:
         `Gross ${dollars(plan.grossCents)} → Founder ${dollars(plan.founderCents)}, ` +
         `Tax reserve ${dollars(plan.taxReserveCents)}, Profit ${dollars(plan.profitReserveCents)}, ` +
-        `Operating ${dollars(plan.operatingCents)}.`,
+        `Operating ${dollars(plan.operatingCents)}.${payoutStatus}`,
     });
   } catch {
     // A failed notification must not block the computation/logging.

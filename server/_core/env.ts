@@ -18,6 +18,7 @@ export const ENV = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
   apolloApiKey: process.env.APOLLO_API_KEY ?? "",
+  stripeConnectAccountId: process.env.STRIPE_CONNECT_ACCOUNT_ID ?? "",
   gmailClientId: process.env.GMAIL_CLIENT_ID ?? "",
   gmailClientSecret: process.env.GMAIL_CLIENT_SECRET ?? "",
   gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN ?? "",
