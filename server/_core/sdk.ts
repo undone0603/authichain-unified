@@ -1,8 +1,9 @@
 import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
-import cookie from "cookie"; // FIXED
-const parseCookieHeader = cookie.parse;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { parseCookie } = require("cookie");
+const parseCookieHeader = parseCookie as (str: string) => Record<string, string>;
 import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
@@ -151,7 +152,7 @@ class SDKServer {
       return new Map<string, string>();
     }
 
-    const parsed = parseCookieHeader(cookieHeader);
+    const parsed = parseCookieHeader(cookieHeader) as Record<string, string>;
     return new Map(Object.entries(parsed));
   }
 
