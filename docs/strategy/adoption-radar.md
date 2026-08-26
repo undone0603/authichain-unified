@@ -142,3 +142,141 @@ Noted here per instructions, not edited into `SPEC.md`:
   names Ed25519 and JCS explicitly rather than leaving the choice open.
 
 ---
+
+## 2026-08-26
+
+General web search again this week, no paywalled standards-tracker access. Absence of a
+finding below means "not found by this search," not "did not happen."
+
+### What actually moved this week
+
+- **W3C VC Working Group published five First Public Working Drafts, two of them squarely
+  about signature longevity** —
+  [announcement](https://www.w3.org/news/2026/five-first-public-working-drafts-published-by-the-verifiable-credentials-working-group/).
+  Two are new information since last week's entry:
+  - **Quantum-Resistant Cryptosuites v1.0**, published 2026-06-16
+    ([FPWD notice](https://www.w3.org/news/2026/first-public-working-draft-quantum-resistant-cryptosuites-v1-0/),
+    [spec](https://www.w3.org/TR/vc-di-quantum-resistant-1.0/)). Defines Data Integrity
+    cryptosuites for signing VCs with post-quantum algorithms (Dilithium, Kyber), motivated by
+    research suggesting elliptic-curve keys could be broken "by the early 2030s."
+  - **Verifiable Credential Forgery Defense v1.0**, published 2026-06-30
+    ([FPWD notice](https://www.w3.org/news/2026/first-public-working-draft-verifiable-credential-forgery-defense-v1-0/)).
+    A mechanism for credentials already signed with a quantum-vulnerable algorithm (i.e.,
+    exactly what Ed25519 is) to retroactively gain quantum-resistant backing via a
+    separately-signed witness list, for cases where re-issuing isn't feasible.
+  - Also published this batch: **Recognized Entities v1.0** and a first-draft **Verifiable
+    Credentials Overview v1.1** Group Note. Not yet read in detail — noting existence only.
+  - **Confidence Method** and **Render Method**, covered last week as Working Drafts, have a
+    firmer target now: the [working group charter](https://w3c.github.io/vc-charter-2026/)
+    lists both for Recommendation status in **September 2026**, with the mandatory exclusion
+    period already closed (2026-03-29). Correction to last week's framing: reading the
+    [Confidence Method draft](https://w3c.github.io/vc-confidence-method/) itself, its worked
+    example is about conveying which cryptographic key was identity-bound during issuance
+    (e.g., an employer binding a key to a badge credential at vetting time) — closer to
+    "proof of possession assurance" than a general trust/authenticity score. That's a narrower
+    claim than last week's entry implied; see the differentiation note below.
+- **GS1 Digital Link URI syntax v1.7.0 is confirmed as an August 2026 release** (unconfirmed
+  last week). The GS1-Conformant Resolver Standard stays at v1.2.0
+  ([spec](https://ref.gs1.org/standards/resolver/1.2.0/GS1_Conformant_Resolver_standard_i1.2-r-2026-01-19)),
+  ratified January 2026, with no further update expected per search-result summaries — not
+  itself confirmed against a primary GS1 roadmap page.
+- **Sunrise 2027 has a concrete, named production deployment, not just vendor advisory
+  content.** Tesco moved its entire own-label core sausage range to GS1 QR/DataMatrix codes in
+  April 2026 — the first full-range (not pilot-scale) rollout by a UK supermarket
+  ([GS1 UK](https://www.gs1uk.org/insights/news/Tesco-in-early-trials-of-next-generation-barcodes),
+  [itbrief](https://itbrief.co.uk/story/tesco-trials-2d-qr-barcodes-as-eu-demand-for-data-grows)).
+  This matters to us because it's a real GS1 Digital Link URL now printed on real retail
+  packaging at scale — the exact substrate our record model is designed to sit on top of.
+- **The UK opened a live consultation on a domestic "digital product record" policy**, closing
+  **2026-09-21**
+  ([GOV.UK call for evidence](https://www.gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy),
+  [Digital Watch summary](https://dig.watch/updates/uk-digital-product-passport-consultation)).
+  It explicitly references the EU DPP as a comparator and asks what a UK-specific policy
+  should look like. This is a genuine open comment period in the exact "physical item
+  provenance" space, not adjacent — see awareness targets below.
+- **OriginTrail (adjacent, not a direct competitor in our narrow sense)** reports its
+  Decentralized Knowledge Graph passed 2 billion "Knowledge Assets" in February 2026 and that
+  SCAN's factory-audit system, built on the OriginTrail protocol, is used in auditing "approximately
+  40% of all imports entering the United States." Both figures are from OriginTrail's own
+  material and crypto-market aggregator sites
+  ([coinmarketcap.com/cmc-ai/origintrail](https://coinmarketcap.com/cmc-ai/origintrail/latest-updates/)),
+  not independently corroborated here — treat as claims, not facts. OriginTrail's actual
+  problem (a decentralized knowledge graph / RAG substrate) is broader than and different from
+  our narrow scope (signing and offline-verifying a single item's provenance record), so this
+  is adjacent-space noise more than a direct competitive signal.
+- **Transmute** continues DHS cross-border-trade verifiable-credential work per its own site,
+  with no dated news specific to this week found. **Spherity** and **EPCIS** were quiet this
+  week specifically — nothing dated beyond what was already reported 2026-08-19.
+- **Quiet or not found this search:** no GS1 EPCIS/CBV version update or open comment period.
+  No public forum thread specifically arguing verification-score-vs-verdict was found again
+  this week (the closest hit, the Confidence Method spec itself, turned out on closer reading
+  to be about identity-binding assurance, not a general score — see above).
+
+### Where we are genuinely differentiated
+
+- **Offline verification with no server dependency** — unchanged and, if anything,
+  strengthened by this week's finds: Confidence Method's worked example assumes an issuer-side
+  vetting record to check against; Forgery Defense requires fetching and checking a
+  separately-published witness-list credential. Neither is designed to be checkable with
+  nothing but the record and a public key.
+- **Three verdicts, no score** — narrow this claim slightly per the correction above: the
+  contrast isn't "we don't score, they do" so much as "we have one deliberately binary/ternary
+  verdict layer with no optional extension points that could later carry a score." Still true
+  and still worth stating, just more precisely.
+- **Adversarial conformance suite validated against deliberately broken implementations** — no
+  equivalent found this week either, across W3C's own FPWDs, GS1, or the adjacent vendors
+  searched.
+- **Apache-2.0 with a patent grant on the protocol, proprietary platform** — unchanged; still
+  the sharpest contrast against Spherity, Transmute, and OriginTrail, all of which are vendor
+  platforms rather than a published, independently implementable spec.
+
+### Where we are genuinely behind
+
+- **No revocation until v0.2** — unchanged from last week; the Bitstring Status List path
+  remains the plausible mechanism.
+- **Signatures prove authorship, not truth** — unchanged, structural.
+- **New this week: no crypto-agility or post-quantum story.** `SPEC.md` §2 names Ed25519
+  (RFC 8032) as *the* signature suite, singular, with no versioning or algorithm-negotiation
+  mechanism. W3C is now actively standardizing both a forward path (Quantum-Resistant
+  Cryptosuites) and a retrofit path (Forgery Defense) for exactly the class of signature our
+  spec mandates. This isn't an urgent problem — "early 2030s" is the risk window cited — but a
+  spec that names one non-agile signature algorithm as mandatory, with no stated migration
+  story, is a real gap next to two W3C efforts addressing precisely that.
+
+### Named awareness targets
+
+- **UK GOV.UK call for evidence: digital product record policy** —
+  [gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy](https://www.gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy),
+  closes **2026-09-21**. This is the single most actionable item found this week: a live,
+  open UK government consultation asking exactly what a domestic verification standard should
+  look like, months before any policy is fixed. A submission citing an open, independently
+  implementable, offline-verifiable spec with a public conformance suite is a concrete way to
+  be considered while the policy is still being written, not after.
+- **W3C `vc-di-quantum-resistant` repo** —
+  [github.com/w3c/vc-di-quantum-resistant](https://github.com/w3c/vc-di-quantum-resistant).
+  Early-stage (FPWD, June 2026) — filing an issue or comment on how a fixed-single-algorithm
+  spec like ours would eventually reference or migrate to a quantum-resistant cryptosuite is a
+  low-cost way to be visible in the group actually defining that transition.
+- **GS1 UK Sunrise 2027 case-study channel** —
+  [gs1uk.org/insights/news](https://www.gs1uk.org/insights/news/Tesco-in-early-trials-of-next-generation-barcodes).
+  With a named retailer (Tesco) now running GS1 Digital Link codes on live product at
+  full-range scale, GS1 UK's own case-study content is the place technical readers implementing
+  against Sunrise 2027 are already looking; a plain writeup of signed offline records on top of
+  a Digital Link URL fits directly into that reading path.
+- **EU DPP Registry / testing environment** — unchanged from last week, still open:
+  [single-market-economy.ec.europa.eu/single-market/digital-product-passport_en](https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en).
+
+### Spec gaps
+
+Noted here per instructions, not edited into `SPEC.md`:
+
+- Carried over from last week, unresolved: no explicit statement of how (or whether) a
+  `confidenceMethod`-style entry should interact with the §5.1 verdict, and no named mechanism
+  for the planned v0.2 `credentialStatus` revocation.
+- New this week: `SPEC.md` §2 pins Ed25519 as the signature suite with no algorithm-agility or
+  versioning mechanism, and no stated position on post-quantum migration. Worth a short note in
+  a future revision — even just "v0.1 mandates Ed25519 only; a future version may add
+  additional supported suites" — so the spec's silence on this isn't mistaken for "we haven't
+  thought about it" once W3C's quantum-resistant cryptosuite work matures past FPWD.
+
+---
