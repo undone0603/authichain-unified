@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Checkout
         # Fixed: Changed from @v7 to @v4
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install pnpm
         # Fixed: Simplified to the standard @v4 tag
