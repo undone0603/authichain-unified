@@ -5,19 +5,27 @@
  * updates lead scoring in real-time.
  */
 
-import { 
-  getLeadByEmail, 
-  updateLead, 
+import {
+  getLeadByEmail,
+  updateLead,
   logActivity,
-  createSystemNotification 
+  createSystemNotification,
+  hasWebhookEventProcessed
 } from "../db.js";
 import { calculateLeadScore } from "../sales/scoring-service.js";
 
 export async function handleInstantlyWebhook(payload: any) {
-  const { event: eventType, email, lead_id: instantlyLeadId } = payload;
-  
+  const { event: eventType, email, lead_id: instantlyLeadId, webhook_id: webhookId } = payload;
+
   if (!email) {
     return { success: false, error: "Email missing" };
+  }
+
+  // Prevent duplicate processing of the same webhook event
+  const eventKey = webhookId || `${email}:${eventType}`;
+  if (await hasWebhookEventProcessed(eventKey)) {
+    console.log(`[instantly-webhook] Duplicate event ignored: ${eventKey}`);
+    return { success: true, duplicate: true };
   }
 
   console.log(`[instantly-webhook] Received ${eventType} for ${email}`);
