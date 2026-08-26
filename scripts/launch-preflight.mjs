@@ -19,14 +19,22 @@ const requiredFiles = [
 ];
 const requiredEnv = [
   "DATABASE_URL",
-  "CLERK_SECRET_KEY",
-  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_PUBLISHABLE_KEY",
   "RESEND_API_KEY",
-  "NEXT_PUBLIC_SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
+];
+
+/** Satisfied if any of the listed names is set (next.config.js bridges unprefixed → NEXT_PUBLIC_*). */
+const requiredEnvAnyOf = [
+  ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL"],
+];
+
+/** ADR-001 primary auth — warn until Clerk is wired into runtime routes. */
+const recommendedEnv = [
+  "CLERK_SECRET_KEY",
+  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
 ];
 
 function exists(relativePath) {
@@ -47,6 +55,10 @@ function loadDotEnv() {
   }
 }
 
+function hasAny(names) {
+  return names.some((name) => Boolean(process.env[name]));
+}
+
 loadDotEnv();
 
 for (const file of requiredFiles) {
@@ -55,6 +67,20 @@ for (const file of requiredFiles) {
 
 for (const name of requiredEnv) {
   if (!process.env[name]) failures.push(`missing production environment variable: ${name}`);
+}
+
+for (const names of requiredEnvAnyOf) {
+  if (!hasAny(names)) {
+    failures.push(`missing production environment variable: ${names.join(" or ")}`);
+  }
+}
+
+for (const name of recommendedEnv) {
+  if (!process.env[name]) {
+    warnings.push(
+      `missing recommended auth variable: ${name} (ADR-001 Clerk; not yet required by runtime)`,
+    );
+  }
 }
 
 if (!exists(".next")) {
