@@ -1,0 +1,28 @@
+name = "authichain-openclaw"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+# Routes: mount on a subdomain so OpenClaw's webhook integrations and
+# the AgentZ bridge share one Worker.
+[[routes]]
+pattern = "claw.authichain.com/*"
+zone_name = "authichain.com"
+
+# OpenClaw Gateway connection details (set as secrets):
+#   OPENCLAW_GATEWAY_URL  — ws://localhost:18789 or https://your-gateway
+#   OPENCLAW_API_KEY     — gateway auth token
+#   AGENTZ_API_URL       — http://localhost:8000 (AgentZ FastAPI)
+#   AGENTZ_API_KEY       — shared secret for AgentZ
+#   SLACK_SIGNING_SECRET  — if using the Slack channel webhook
+#
+# Run: npx wrangler secret put OPENCLAW_GATEWAY_URL --name authichain-openclaw
+# (repeat for each secret)
+
+[vars]
+OPENCLAW_API_VERSION = "1"
+AGENTZ_TIMEOUT_MS = "30000"
+
+[observability]
+enabled = true
