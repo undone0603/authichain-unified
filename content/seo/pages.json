@@ -5071,5 +5071,260 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eudi-wallet-digital-product-passport-verifiable-credential",
+    "keyword": "eudi wallet digital product passport verifiable credential",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EUDI Wallet Digital Product Passport | AuthiChain",
+    "metaDescription": "eIDAS 2.0 requires every EU member state to issue a European Digital Identity Wallet by Q4 2026, and both it and AuthiChain call their records “verifiable.",
+    "h1": "EUDI Wallet Digital Product Passport Verifiable Credential",
+    "bodyHtml": "<p>eIDAS 2.0 requires every EU member state to issue a European Digital Identity Wallet by Q4 2026, and both it and AuthiChain call their records “verifiable credentials” — but a wallet credential identifies a person, while a product passport identifies an item, and the two specs share a name without sharing a subject.</p><h2>Why AuthiChain</h2><ul><li>The EUDI Wallet issues personal credentials — national ID, driving licence — in SD-JWT VC and ISO 18013-5 mdoc formats under the eIDAS 2.0 Architecture Reference Framework; AuthiChain issues item-provenance records as W3C VC 2.0 with an Ed25519 Data Integrity proof</li><li>A product passport does not need a holder to carry it in a wallet — it resolves from a GS1 Digital Link URL that any verifier can query directly, with no presentation protocol or holder binding required</li><li>The two are complementary, not competing: a future EUDI Wallet credential could reference an item’s AuthiChain record for a receipt or warranty claim, but neither spec depends on the other existing</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain verification require a consumer to have a EUDI Wallet?</h3><p>No — verification runs offline against the signed record itself. The EUDI Wallet stores personal identity credentials; nothing about checking a product’s authenticity depends on the buyer having one.</p><h3>When must the EUDI Wallet be available?</h3><p>eIDAS 2.0 requires every member state to offer at least one wallet by Q4 2026, with large platforms and regulated sectors required to accept it for authentication by late 2027 — a personal-identity deadline, not a product-passport one.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EUDI Wallet Digital Product Passport Verifiable Credential",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "eIDAS 2.0 requires every EU member state to issue a European Digital Identity Wallet by Q4 2026, and both it and AuthiChain call their records “verifiable credentials” — but a wallet credential identifies a person, while a product passport identifies an item, and the two specs share a name without sharing a subject.",
+          "url": "https://authichain.com/p/eudi-wallet-digital-product-passport-verifiable-credential"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EUDI Wallet Digital Product Passport Verifiable Credential",
+              "item": "https://authichain.com/p/eudi-wallet-digital-product-passport-verifiable-credential"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain verification require a consumer to have a EUDI Wallet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — verification runs offline against the signed record itself. The EUDI Wallet stores personal identity credentials; nothing about checking a product’s authenticity depends on the buyer having one."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "When must the EUDI Wallet be available?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "eIDAS 2.0 requires every member state to offer at least one wallet by Q4 2026, with large platforms and regulated sectors required to accept it for authentication by late 2027 — a personal-identity deadline, not a product-passport one."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-detergents",
+    "keyword": "eu digital product passport detergents",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Detergents | AuthiChain",
+    "metaDescription": "Regulation (EU) 2026/405 makes a Digital Product Passport mandatory for every detergent and end-user surfactant sold in the EU from 23 September 2029.",
+    "h1": "EU Digital Product Passport Detergents",
+    "bodyHtml": "<p>Regulation (EU) 2026/405 makes a Digital Product Passport mandatory for every detergent and end-user surfactant sold in the EU from 23 September 2029, replacing the 22-year-old Detergents Regulation with a record AuthiChain issues the same way it does for batteries and steel.</p><h2>Why AuthiChain</h2><ul><li>The passport has to be registered — under Regulation (EU) 2024/1781 — before the product goes on the market, and stay available for 10 years, a longer retention window than most DPP categories decided so far</li><li>A data carrier, typically a QR code, links the physical bottle to the registered passport — the same identifier-to-record pattern this protocol already uses for GS1 Digital Link resolution</li><li>Stock placed on the market before 23 September 2029 under the old Regulation (EC) 648/2004 keeps selling with no time limit if unchanged after that date; a one-year sell-through window applies to stock made in the following year</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When is the detergent passport mandatory?</h3><p>23 September 2029, under Regulation (EU) 2026/405, which entered into force 22 March 2026.</p><h3>Does the passport replace the ingredient label on the bottle?</h3><p>No — the regulation keeps existing labelling obligations and adds the passport as a separate, resolvable digital record; nothing currently printed on the bottle goes away.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Detergents",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Regulation (EU) 2026/405 makes a Digital Product Passport mandatory for every detergent and end-user surfactant sold in the EU from 23 September 2029, replacing the 22-year-old Detergents Regulation with a record AuthiChain issues the same way it does for batteries and steel.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-detergents"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Detergents",
+              "item": "https://authichain.com/p/eu-digital-product-passport-detergents"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When is the detergent passport mandatory?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "23 September 2029, under Regulation (EU) 2026/405, which entered into force 22 March 2026."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the passport replace the ingredient label on the bottle?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the regulation keeps existing labelling obligations and adds the passport as a separate, resolvable digital record; nothing currently printed on the bottle goes away."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "cbam-embedded-carbon-emissions-verification",
+    "keyword": "cbam embedded carbon emissions verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "CBAM Embedded Carbon Emissions Verification | AuthiChain",
+    "metaDescription": "CBAM entered its definitive phase in 2026 — importers of steel, aluminium, cement, fertilizers, and hydrogen now need authorization and must surrender.",
+    "h1": "CBAM Embedded Carbon Emissions Verification",
+    "bodyHtml": "<p>CBAM entered its definitive phase in 2026 — importers of steel, aluminium, cement, fertilizers, and hydrogen now need authorization and must surrender certificates for embedded emissions — a customs and carbon-pricing regime that gets conflated with a Digital Product Passport but checks a different thing.</p><h2>Why AuthiChain</h2><ul><li>CBAM is enforced through an importer’s declaration and EU ETS-linked certificate prices; a DPP is a product record anyone can resolve — passing one does not satisfy the other, and a customs authority checks CBAM compliance independently of whether a passport exists</li><li>A steel or aluminium passport issued through this protocol can carry the batch-level embodied-carbon figure a CBAM declaration needs, but the signed record is supporting evidence, not the declaration itself</li><li>From 2027, declarants must hold certificates covering at least 50% of quarterly embedded emissions — reduced from an earlier 80% proposal — a certificate-surrender mechanic that has nothing to do with whether the underlying batch record is signed or anchored</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a signed AuthiChain record satisfy CBAM reporting on its own?</h3><p>No — CBAM requires the importer to file a customs declaration and surrender certificates. A signed batch record can support the embedded-carbon figure in that declaration; it does not replace filing it.</p><h3>Which products does CBAM currently cover?</h3><p>Cement, iron and steel, aluminium, fertilizers, electricity, and hydrogen, with a combined 50-tonne annual exemption for smaller importers.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — CBAM Embedded Carbon Emissions Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "CBAM entered its definitive phase in 2026 — importers of steel, aluminium, cement, fertilizers, and hydrogen now need authorization and must surrender certificates for embedded emissions — a customs and carbon-pricing regime that gets conflated with a Digital Product Passport but checks a different thing.",
+          "url": "https://authichain.com/p/cbam-embedded-carbon-emissions-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "CBAM Embedded Carbon Emissions Verification",
+              "item": "https://authichain.com/p/cbam-embedded-carbon-emissions-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a signed AuthiChain record satisfy CBAM reporting on its own?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — CBAM requires the importer to file a customs declaration and surrender certificates. A signed batch record can support the embedded-carbon figure in that declaration; it does not replace filing it."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Which products does CBAM currently cover?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Cement, iron and steel, aluminium, fertilizers, electricity, and hydrogen, with a combined 50-tonne annual exemption for smaller importers."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "counterfeit-small-parcel-ecommerce-verification",
+    "keyword": "counterfeit small parcel ecommerce verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Counterfeit Small Parcel Ecommerce Verification | AuthiChain",
+    "metaDescription": "OECD and EUIPO’s 2025 joint study put global trade in fakes at $467 billion, with roughly 65% of counterfeit seizures now moving through small parcels and.",
+    "h1": "Counterfeit Small Parcel Ecommerce Verification",
+    "bodyHtml": "<p>OECD and EUIPO’s 2025 joint study put global trade in fakes at $467 billion, with roughly 65% of counterfeit seizures now moving through small parcels and mail — a direct-to-consumer channel where the buyer opening the box is the only inspector the shipment will ever see.</p><h2>Why AuthiChain</h2><ul><li>Scan-to-verify works the same at a doorstep as at a wholesale dock — checking a signature against a signed record does not depend on a customs officer ever having seen the parcel</li><li>The shift toward small parcels is documented as growing, not shrinking: this is the fourth joint OECD-EUIPO study tracking the trend, not a one-off finding</li><li>Offline verification with no account matters most exactly in this channel — a buyer checking one item at home has no account manager or wholesale relationship with the brand to fall back on</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Where does the $467 billion figure come from?</h3><p>OECD and EUIPO’s “Mapping Global Trade in Fakes 2025,” their fourth joint study on counterfeit and pirated trade, published May 2025.</p><h3>Does item-level verification stop counterfeits at customs?</h3><p>No — it gives the end recipient a way to check the specific item that arrived. Customs interdiction upstream is a separate problem this does not replace.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Counterfeit Small Parcel Ecommerce Verification",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "OECD and EUIPO’s 2025 joint study put global trade in fakes at $467 billion, with roughly 65% of counterfeit seizures now moving through small parcels and mail — a direct-to-consumer channel where the buyer opening the box is the only inspector the shipment will ever see.",
+          "url": "https://authichain.com/p/counterfeit-small-parcel-ecommerce-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Counterfeit Small Parcel Ecommerce Verification",
+              "item": "https://authichain.com/p/counterfeit-small-parcel-ecommerce-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Where does the $467 billion figure come from?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "OECD and EUIPO’s “Mapping Global Trade in Fakes 2025,” their fourth joint study on counterfeit and pirated trade, published May 2025."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does item-level verification stop counterfeits at customs?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it gives the end recipient a way to check the specific item that arrived. Customs interdiction upstream is a separate problem this does not replace."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
