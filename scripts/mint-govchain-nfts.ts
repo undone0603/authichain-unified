@@ -6,20 +6,16 @@ const isDryRun  = process.env.DRY_RUN === 'true';
 const supabase  = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const GOVCHAIN  = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
 
-// Use free public RPC (no API key required). Priority:
-// 1. RPC_URL env var (if provided by caller)
-// 2. Free public Base mainnet RPC (https://mainnet.base.org)
-const rpcUrl = process.env.RPC_URL || 'https://mainnet.base.org';
-
-// Skip gracefully when blockchain config is missing. We'd rather skip
-// cleanly than throw unhelpfully from ethers. Dry runs can proceed
-// without them (we only log the payload).
+// Skip gracefully when blockchain config is missing. All three are
+// required to mint; we'd rather skip cleanly than throw unhelpfully from
+// ethers. Dry runs can proceed without them (we only log the payload).
 const hasChainConfig = !!(
+  process.env.ALCHEMY_API_KEY &&
   process.env.WALLET_PRIVATE_KEY &&
   process.env.CONTRACT_ADDRESS
 );
 if (!hasChainConfig) {
-  console.warn('⚠️  Blockchain config missing (WALLET_PRIVATE_KEY / CONTRACT_ADDRESS) — skipping NFT minting.');
+  console.warn('⚠️  Blockchain config missing (ALCHEMY_API_KEY / WALLET_PRIVATE_KEY / CONTRACT_ADDRESS) — skipping NFT minting.');
   process.exit(0);
 }
 
@@ -39,8 +35,9 @@ async function mintGovChainNFTs() {
   if (error) throw error;
   if (!proposals?.length) { console.log('No proposals ready for NFT minting.'); return 0; }
 
-  console.log(`Using RPC: ${rpcUrl}`);
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const provider = new ethers.JsonRpcProvider(
+    `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+  );
   const wallet   = new ethers.Wallet(process.env.WALLET_PRIVATE_KEY!, provider);
   const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS!, MINT_ABI, wallet);
 
@@ -75,7 +72,7 @@ async function mintGovChainNFTs() {
         continue;
       }
     } else {
-      console.log(`  [DRY RUN] Would mint NFT for ${proposal.notice_id} via ${rpcUrl}`);
+      console.log(`  [DRY RUN] Would mint NFT for ${proposal.notice_id}`);
     }
 
     minted++;

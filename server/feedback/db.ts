@@ -1,13 +1,14 @@
 import { eq, desc, and, sql } from "drizzle-orm";
+import { getDb } from "../db";
 import { feedback, feedbackVotes, users, InsertFeedback, InsertFeedbackVote } from "../../drizzle/schema";
-import type { getHyperdriveDb } from "../db";
-
-export type Db = ReturnType<typeof getHyperdriveDb>;
 
 /**
  * Create new feedback
  */
-export async function createFeedback(db: Db, data: InsertFeedback) {
+export async function createFeedback(data: InsertFeedback) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   const [result] = await db.insert(feedback).values(data).returning();
   return result.id;
 }
@@ -15,7 +16,10 @@ export async function createFeedback(db: Db, data: InsertFeedback) {
 /**
  * Get all feedback with user info and vote counts
  */
-export async function getAllFeedback(db: Db) {
+export async function getAllFeedback() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   const results = await db
     .select({
       id: feedback.id,
@@ -42,7 +46,10 @@ export async function getAllFeedback(db: Db) {
 /**
  * Get feedback by ID
  */
-export async function getFeedbackById(db: Db, id: number) {
+export async function getFeedbackById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   const results = await db
     .select({
       id: feedback.id,
@@ -69,7 +76,10 @@ export async function getFeedbackById(db: Db, id: number) {
 /**
  * Get feedback by user ID
  */
-export async function getFeedbackByUserId(db: Db, userId: number) {
+export async function getFeedbackByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   const results = await db
     .select()
     .from(feedback)
@@ -83,11 +93,13 @@ export async function getFeedbackByUserId(db: Db, userId: number) {
  * Update feedback status
  */
 export async function updateFeedbackStatus(
-  db: Db,
   id: number,
   status: "new" | "in_progress" | "completed" | "rejected",
   adminResponse?: string
 ) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   await db
     .update(feedback)
     .set({
@@ -102,10 +114,12 @@ export async function updateFeedbackStatus(
  * Update feedback priority
  */
 export async function updateFeedbackPriority(
-  db: Db,
   id: number,
   priority: "low" | "medium" | "high" | "critical"
 ) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   await db
     .update(feedback)
     .set({
@@ -118,7 +132,10 @@ export async function updateFeedbackPriority(
 /**
  * Vote on feedback
  */
-export async function voteFeedback(db: Db, feedbackId: number, userId: number, voteType: "up" | "down") {
+export async function voteFeedback(feedbackId: number, userId: number, voteType: "up" | "down") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   // Check if user already voted
   const existingVote = await db
     .select()
@@ -142,25 +159,31 @@ export async function voteFeedback(db: Db, feedbackId: number, userId: number, v
   }
 
   // Update vote count on feedback
-  await recalculateVotes(db, feedbackId);
+  await recalculateVotes(feedbackId);
 }
 
 /**
  * Remove vote from feedback
  */
-export async function removeVote(db: Db, feedbackId: number, userId: number) {
+export async function removeVote(feedbackId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   await db
     .delete(feedbackVotes)
     .where(and(eq(feedbackVotes.feedbackId, feedbackId), eq(feedbackVotes.userId, userId)));
 
   // Update vote count
-  await recalculateVotes(db, feedbackId);
+  await recalculateVotes(feedbackId);
 }
 
 /**
  * Recalculate vote count for feedback
  */
-async function recalculateVotes(db: Db, feedbackId: number) {
+async function recalculateVotes(feedbackId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   const votes = await db
     .select({
       voteType: feedbackVotes.voteType,
@@ -178,7 +201,10 @@ async function recalculateVotes(db: Db, feedbackId: number) {
 /**
  * Get user's vote on feedback
  */
-export async function getUserVote(db: Db, feedbackId: number, userId: number) {
+export async function getUserVote(feedbackId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   const results = await db
     .select()
     .from(feedbackVotes)
@@ -191,7 +217,10 @@ export async function getUserVote(db: Db, feedbackId: number, userId: number) {
 /**
  * Get feedback statistics
  */
-export async function getFeedbackStats(db: Db) {
+export async function getFeedbackStats() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
   const stats = await db
     .select({
       total: sql<number>`COUNT(*)`,

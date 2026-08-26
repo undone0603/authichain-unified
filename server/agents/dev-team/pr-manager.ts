@@ -17,7 +17,7 @@
  */
 
 import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
-import { logActivity, markTaskWaitingHuman, type Db } from '../db-helpers.js';
+import { logActivity, markTaskWaitingHuman, getDb } from '../../db.js';
 import { ENV } from '../../_core/env.js';
 import { missionTasks } from '../../../drizzle/schema.js';
 import type { MissionTask as Task } from '../../../drizzle/schema.js';
@@ -32,7 +32,7 @@ import {
 
 // ─── OPEN_PR ─────────────────────────────────────────────────────────────
 
-export async function runOpenPR(task: Task, db: Db): Promise<void> {
+export async function runOpenPR(task: Task): Promise<void> {
   const p = task.payload as {
     branch: string;
     title: string;
@@ -47,7 +47,7 @@ export async function runOpenPR(task: Task, db: Db): Promise<void> {
     base:  p.base,
   });
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'pr_opened',
     entityType: 'task',
@@ -62,6 +62,7 @@ export async function runOpenPR(task: Task, db: Db): Promise<void> {
   });
 
   // Enqueue CODE_REVIEW task immediately after PR is open
+  const db = await getDb();
   await db.insert(missionTasks).values({
     id: crypto.randomUUID(),
     missionId: task.missionId,
@@ -99,7 +100,7 @@ Return JSON:
 If there are no blocking issues, verdict should be APPROVE.
 Only REQUEST_CHANGES for actual bugs, security issues, or broken TypeScript.`;
 
-export async function runCodeReview(task: Task, db: Db): Promise<void> {
+export async function runCodeReview(task: Task): Promise<void> {
   const p = task.payload as { branch: string; prNumber: number };
 
   const pr = await getPR(p.prNumber);
@@ -118,15 +119,13 @@ export async function runCodeReview(task: Task, db: Db): Promise<void> {
     responseFormat: { type: 'json_object' },
   });
 
-  type Review = {
+  const review: {
     verdict: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
     summary: string;
     inlineComments: Array<{ path: string; line: number; body: string }>;
     requiredFixes: string[];
     suggestions: string[];
-  };
-
-  const review = parseLLMContent<Review>(result.choices[0].message.content);
+  } = parseLLMContent(result.choices[0].message.content);
 
   // Post review to GitHub
   const ghEvent = review.verdict === 'APPROVE'
@@ -150,7 +149,7 @@ export async function runCodeReview(task: Task, db: Db): Promise<void> {
       .map(c => ({ path: c.path, line: c.line, body: c.body })),
   });
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'code_review_posted',
     entityType: 'task',
@@ -164,6 +163,8 @@ export async function runCodeReview(task: Task, db: Db): Promise<void> {
       fixes:     review.requiredFixes,
     },
   });
+
+  const db = await getDb();
 
   if (review.verdict === 'APPROVE') {
     // Enqueue MERGE_PR
@@ -197,17 +198,17 @@ export async function runCodeReview(task: Task, db: Db): Promise<void> {
 
 // ─── MERGE_PR ─────────────────────────────────────────────────────────────
 
-export async function runMergePR(task: Task, db: Db): Promise<void> {
+export async function runMergePR(task: Task): Promise<void> {
   const p = task.payload as { prNumber: number; branch: string };
 
   // If approval required — gate here
   if (ENV.requireDevApproval) {
-    await markTaskWaitingHuman(db, task.id);
+    await markTaskWaitingHuman(task.id);
     await addPRComment(
       p.prNumber,
       `**AgentZ:** PR is ready to merge ✅\n\nTests passed · Code reviewed · Awaiting human approval.\n\nTo proceed: re-queue this task or merge manually on GitHub.`
     );
-    await logActivity(db, {
+    await logActivity({
       userId: null,
       action: 'merge_awaiting_approval',
       entityType: 'task',
@@ -229,6 +230,7 @@ export async function runMergePR(task: Task, db: Db): Promise<void> {
   await mergePR(p.prNumber, 'squash');
 
   // Enqueue MONITOR_DEPLOY
+  const db = await getDb();
   await db.insert(missionTasks).values({
     id: crypto.randomUUID(),
     missionId: task.missionId,
@@ -239,7 +241,7 @@ export async function runMergePR(task: Task, db: Db): Promise<void> {
     scheduledAt: new Date(Date.now() + 3 * 60 * 1000),
   });
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'pr_merged',
     entityType: 'task',

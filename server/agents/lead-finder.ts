@@ -1,5 +1,5 @@
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity, enqueueTask, getAdaptivePriors, type Db } from './db-helpers.js';
+import { logActivity, enqueueTask, getAdaptivePriors, getDb } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 import { leads } from '../../drizzle/schema.js';
 import { SEGMENT_REVENUE, betaMean, betaCI } from '../_core/bayesian.js';
@@ -74,7 +74,7 @@ Return JSON array (same order, same indices):
   }
 }
 
-export async function runLeadFinder(task: Task, db: Db): Promise<void> {
+export async function runLeadFinder(task: Task): Promise<void> {
   const payload = task.payload as LeadFinderPayload;
   const segment = payload.segment ?? 
     (task.kind === 'FIND_GOV_LEADS' ? 'GOV' : 
@@ -92,7 +92,7 @@ export async function runLeadFinder(task: Task, db: Db): Promise<void> {
   );
 
   // ── Bayesian context ───────────────────────────────────────────────────────
-  const adaptivePriors = await getAdaptivePriors(db);
+  const adaptivePriors = await getAdaptivePriors();
   const prior = adaptivePriors[segment] ?? adaptivePriors.DEFAULT;
   const conversionMean = betaMean(prior);
   const [ciLo, ciHi] = betaCI(prior);
@@ -108,37 +108,45 @@ export async function runLeadFinder(task: Task, db: Db): Promise<void> {
   const selected = scored.slice(0, count);
 
   // ── Insert + enqueue ───────────────────────────────────────────────────────
+  const db = await getDb();
   let inserted = 0;
 
   for (const lead of selected) {
     if (!lead.email || !lead.org) continue;
 
-    await db.insert(leads).values({
-      email:   lead.email.toLowerCase(),
-      name:    lead.name,
-      company: lead.org,
-      title:   lead.title,
-      notes:   `[apollo][fit:${lead.fitProbability.toFixed(2)}] ${lead.fitNotes}`,
-      source:  `agentz_apollo_${segment.toLowerCase()}`,
-      status:  'new',
-      segment,
-    }).onConflictDoNothing();
+    if (db) {
+      await db.insert(leads).values({
+        email:   lead.email.toLowerCase(),
+        name:    lead.name,
+        company: lead.org,
+        title:   lead.title,
+        notes:   `[apollo][fit:${lead.fitProbability.toFixed(2)}] ${lead.fitNotes}`,
+        source:  `agentz_apollo_${segment.toLowerCase()}`,
+        status:  'new',
+        segment,
+      }).onConflictDoNothing();
+    }
 
     // Research the lead's website before drafting the email so the browser
     // agent can inject a personalised hook into the outbound copy.
-    await enqueueTask(db, task.missionId, 'BROWSE_RESEARCH_LEAD', {
+    await enqueueTask(task.missionId, 'BROWSE_RESEARCH_LEAD', {
       segment,
       leadEmail: lead.email,
       leadName:  lead.name,
       leadOrg:   lead.org,
       leadTitle: lead.title,
+      // Provenance travels with the lead all the way to send-guard. Dropping it
+      // here is why every outbound task defaulted to 'unknown' and parked in
+      // waiting_human: the guard had no way to tell an Apollo-verified mailbox
+      // from a pattern guess, so it correctly refused to send either.
+      verificationSource: lead.verificationSource,
       domain:    lead.linkedinUrl ? undefined : undefined, // browser agent infers from org name
     });
 
     inserted++;
   }
 
-  await logActivity(db, {
+  await logActivity({
     userId: null, action: 'lead_finder_completed', entityType: 'task', entityId: 0,
     details: {
       taskId:   task.id,

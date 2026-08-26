@@ -275,7 +275,7 @@ LEAD PIPELINE: ${leadCount} leads captured (last 90 days)
 ACTIVE ASSETS:
   • Portfolio: https://qron-portfolio.undone-k.workers.dev/
   • API Docs: https://authichain-api.undone-k.workers.dev/
-  • Dashboard: https://authichain-dashboard.undone-k.workers.dev/?key=***REMOVED***
+  • Dashboard: https://authichain-dashboard.undone-k.workers.dev/?key=authichain2026
   • SEO Engine: https://qron-seo-engine.undone-k.workers.dev/
 
 TODAY'S PRIORITIES:

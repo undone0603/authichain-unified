@@ -1,3 +1,30 @@
+// The DPP regulatory timeline is shared with the Next.js page rather than
+// duplicated here: content/dpp/regulatory-timeline.json is the single source of
+// truth, updated weekly by the 'EU DPP regulatory watch' Routine. esbuild
+// inlines it at build time, so the worker stays self-contained at runtime.
+import {
+  listMilestones,
+  milestoneStatus,
+  formatMilestoneDate,
+  countdownLabel,
+  nextDeadline,
+  mostRecentInForce,
+  timelineUpdatedAt,
+} from '../../../src/lib/dpp-timeline';
+
+/**
+ * Escapes text interpolated into the worker's HTML. The timeline data is
+ * written by an autonomous Routine, so it is treated as untrusted input even
+ * though it lives in our own repository.
+ */
+function escHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 // Inlined Authichain Theme Module for Cloudflare Worker compatibility
 
 const HTML_SECURITY_HEADERS: Record<string, string> = {
@@ -2112,7 +2139,7 @@ function seoMeta(): string {
   })}`;
 }
 
-function svgLogo(brand, size = 36) {
+function svgLogo(brand: keyof typeof BRANDS, size = 36) {
   const b = BRANDS[brand];
   return `<svg width="${size}" height="${size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
       <polygon points="18,1 33,9.5 33,26.5 18,35 3,26.5 3,9.5" fill="${b.primary}" opacity="0.15" stroke="${b.primary}" stroke-width="1.5"/>
@@ -2122,7 +2149,7 @@ function svgLogo(brand, size = 36) {
     </svg>`;
 }
 
-function cssVars(brand) {
+function cssVars(brand: keyof typeof BRANDS) {
   const b = BRANDS[brand];
   return `:root {
   --bg: ${b.bg};
@@ -2339,7 +2366,7 @@ h2 {
 }
 `;
 
-function communityHub(brand) {
+function communityHub(brand: keyof typeof BRANDS) {
   return `
 <section class="web3-section" id="community" style="padding: 80px 24px; border-top: 1px solid var(--border-dim)">
   <div class="hero-content" style="max-width:1000px">
@@ -2407,6 +2434,63 @@ function techStack() {
 </section>`;
 }
 
+function marketReality() {
+  return `
+<section style="padding:80px 24px;background:var(--bg2);border-top:1px solid var(--border-dim)">
+  <div class="hero-content" style="max-width:1100px">
+    <div class="section-tag">Market Reality</div>
+    <h2>THE <span class="accent">COUNTERFEITING CRISIS</span></h2>
+    <p style="color:var(--text-dim);max-width:680px;margin:0 auto 48px;font-size:1rem;line-height:1.7">
+      Blockchain-anchored authentication is no longer experimental. The world's largest brands have already committed — the question is which platform you use.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;margin-bottom:56px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:.75rem;padding:1.5rem;text-align:center">
+        <div style="font-size:2.4rem;font-weight:800;color:var(--primary);font-family:var(--display)">$467B</div>
+        <div style="font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:.4rem">Counterfeit goods seized annually</div>
+        <div style="font-size:.72rem;color:#555;margin-top:.5rem">OECD 2025</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:.75rem;padding:1.5rem;text-align:center">
+        <div style="font-size:2.4rem;font-weight:800;color:var(--primary);font-family:var(--display)">$4.5T</div>
+        <div style="font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:.4rem">Total economic impact of IP theft</div>
+        <div style="font-size:.72rem;color:#555;margin-top:.5rem">ICC / BASCAP</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:.75rem;padding:1.5rem;text-align:center">
+        <div style="font-size:2.4rem;font-weight:800;color:var(--primary);font-family:var(--display)">50M+</div>
+        <div style="font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:.4rem">Luxury items on blockchain (AURA)</div>
+        <div style="font-size:.72rem;color:#555;margin-top:.5rem">LVMH + Prada + Richemont</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:.75rem;padding:1.5rem;text-align:center">
+        <div style="font-size:2.4rem;font-weight:800;color:var(--primary);font-family:var(--display)">1.6B</div>
+        <div style="font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:.4rem">Pharma transactions/yr (MediLedger)</div>
+        <div style="font-size:.72rem;color:#555;margin-top:.5rem">80% of US Rx volume</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem">
+      <div style="border-left:3px solid var(--primary);padding:1rem 1.25rem;background:var(--bg3);border-radius:0 .5rem .5rem 0">
+        <div style="font-weight:700;margin-bottom:.35rem">Walmart — Food Trace</div>
+        <div style="color:var(--text-dim);font-size:.9rem">IBM Food Trust reduced mango-trace time from <strong style="color:var(--text)">7 days → 2.2 seconds</strong>. Now deployed across 100+ suppliers.</div>
+      </div>
+      <div style="border-left:3px solid var(--primary);padding:1rem 1.25rem;background:var(--bg3);border-radius:0 .5rem .5rem 0">
+        <div style="font-weight:700;margin-bottom:.35rem">Breitling — Every Watch</div>
+        <div style="color:var(--text-dim);font-size:.9rem">Every Breitling watch issued an <strong style="color:var(--text)">ERC-721 digital passport</strong> since 2020. No paper certificate needed.</div>
+      </div>
+      <div style="border-left:3px solid var(--primary);padding:1rem 1.25rem;background:var(--bg3);border-radius:0 .5rem .5rem 0">
+        <div style="font-weight:700;margin-bottom:.35rem">EU DPP — Mandatory July 2026</div>
+        <div style="color:var(--text-dim);font-size:.9rem">EU ESPR regulation requires a <strong style="color:var(--text)">blockchain-readable product passport</strong> for products sold in Europe, phased in by category. The central DPP registry is live; battery passports are first.</div>
+      </div>
+      <div style="border-left:3px solid var(--primary);padding:1rem 1.25rem;background:var(--bg3);border-radius:0 .5rem .5rem 0">
+        <div style="font-weight:700;margin-bottom:.35rem">De Beers — Tracr Platform</div>
+        <div style="color:var(--text-dim);font-size:.9rem">De Beers has tracked <strong style="color:var(--text)">~3 million diamonds</strong> on Tracr, eliminating conflict-diamond fraud end-to-end.</div>
+      </div>
+    </div>
+    <div style="margin-top:48px;text-align:center">
+      <p style="color:var(--text-dim);margin-bottom:24px;font-size:.95rem">AuthiChain makes blockchain authentication available to every brand — not just the Fortune 500.</p>
+      <a class="btn btn-primary" href="/anchor" style="display:inline-block;min-width:220px">Anchor a Product Free →</a>
+    </div>
+  </div>
+</section>`;
+}
+
 function ecosystemFooter() {
   return `
 <footer>
@@ -2421,17 +2505,17 @@ function ecosystemFooter() {
     <div>
       <div class="footer-heading">Platform</div>
       <ul class="footer-links">
-        <li><a href="https://app.authichain.com/login">Get Started</a></li>
-        <li><a href="https://app.authichain.com/pricing">Pricing</a></li>
-        <li><a href="https://app.authichain.com/dashboard">Dashboard</a></li>
-        <li><a href="https://app.authichain.com/enterprise">Brand Onboarding</a></li>
+        <li><a href="https://authichain-unified.vercel.app/auth">Get Started</a></li>
+        <li><a href="https://authichain-unified.vercel.app/subscriptions">Pricing</a></li>
+        <li><a href="https://authichain-unified.vercel.app/dashboard">Dashboard</a></li>
+        <li><a href="https://authichain-unified.vercel.app/onboard">Brand Onboarding</a></li>
       </ul>
     </div>
     <div>
       <div class="footer-heading">Ecosystem</div>
       <ul class="footer-links">
         <li><a href="#community">$QRON Token</a></li>
-        <li><a href="https://qron.space">QRON Platform</a></li>
+        <li><a href="https://qron.app">QRON Platform</a></li>
         <li><a href="https://govchain.us">GovChain US</a></li>
         <li><a href="https://strainchain.io">StrainChain</a></li>
       </ul>
@@ -2440,7 +2524,7 @@ function ecosystemFooter() {
       <div class="footer-heading">Company</div>
       <ul class="footer-links">
         <li><a href="mailto:hello@authichain.com">Contact</a></li>
-        <li><a href="https://app.authichain.com/login">Sign In</a></li>
+        <li><a href="https://authichain-unified.vercel.app/auth">Sign In</a></li>
       </ul>
     </div>
   </div>
@@ -2469,7 +2553,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
   <div style="background:linear-gradient(90deg,#c9a227 0%,#00ffd1 100%);text-align:center;padding:.6rem 1rem;font-size:.82rem;font-weight:700;color:#000;letter-spacing:.03em">
-    ⚡ EU Digital Product Passport Registry opens <strong>July 19, 2026</strong> — <a href="/digital-product-passport" style="color:#000;text-decoration:underline;font-weight:800">Get Compliant Now →</a>
+    ⚡ EU Digital Product Passport Registry is <strong>live</strong> — <a href="/digital-product-passport" style="color:#000;text-decoration:underline;font-weight:800">Enroll Now →</a>
   </div>
   <nav>
     <a class="nav-logo" href="/">
@@ -2480,6 +2564,9 @@ const HTML = `<!DOCTYPE html>
       <a class="nav-link" href="#community">$QRON</a>
       <a class="nav-link" href="#technology">Technology</a>
       <a class="nav-link" href="/digital-product-passport" style="color:var(--accent)">EU DPP</a>
+      <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
+      <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/auth">Get Started</a>
+      <a class="nav-link" href="/anchor" style="color:var(--primary)">Anchor</a>
       <a class="nav-link" href="https://app.authichain.com/pricing">Pricing</a>
       <a class="btn btn-primary btn-sm" href="https://app.authichain.com/login">Get Started</a>
     </div>
@@ -2490,7 +2577,7 @@ const HTML = `<!DOCTYPE html>
       <h1 class="hero-title"><span>VERIFY </span><span class="accent">EVERYTHING.</span></h1>
       <p class="hero-sub">The decentralized protocol that serves as the source of truth for products and assets. ERC-721 NFTs · AI QR · 2.1-second verification.</p>
       <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:40px">
-        <a class="btn btn-primary" style="width:auto; min-width:200px" href="https://app.authichain.com/login">Start Free Trial</a>
+        <a class="btn btn-primary" style="width:auto; min-width:200px" href="https://authichain-unified.vercel.app/auth">Start Free Trial</a>
         <a class="btn" style="width:auto; min-width:200px; background:transparent; border:1px solid var(--border); color:var(--text)" href="#community">Learn More</a>
       </div>
     </div>
@@ -2562,6 +2649,7 @@ const HTML = `<!DOCTYPE html>
   }
   </script>
 
+  ${marketReality()}
   ${foundersVision()}
   ${techStack()}
   ${communityHub(BRAND)}
@@ -2569,13 +2657,422 @@ const HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-const DPP_HTML = `<!DOCTYPE html>
+const ANCHOR_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anchor a Product — AuthiChain</title>
+<meta name="description" content="Anchor any physical product to the blockchain in 30 seconds. Free, no account required. SHA-256 fingerprint + permanent certificate.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#c9a227">
+<meta property="og:title" content="Anchor a Product — AuthiChain">
+<meta property="og:description" content="Blockchain certificate in 30 seconds. Free. No account.">
+<meta property="og:image" content="https://authichain.com/og-image.png">
+<meta property="og:url" content="https://authichain.com/anchor">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050507;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+a{color:#c9a227;text-decoration:none}
+a:hover{text-decoration:underline}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid rgba(201,162,39,.15)}
+.nav-logo{font-size:1.1rem;font-weight:700;letter-spacing:.05em;color:#f8fafc}
+.nav-logo span{color:#c9a227}
+.wrap{max-width:680px;margin:0 auto;padding:3rem 1.5rem 6rem}
+h1{font-size:clamp(1.8rem,5vw,2.8rem);font-weight:800;margin-bottom:.5rem;line-height:1.15}
+h1 span{color:#c9a227}
+.sub{color:#94a3b8;margin-bottom:2.5rem;font-size:1rem;line-height:1.6}
+.card{background:#0a0a0f;border:1px solid rgba(201,162,39,.2);border-radius:1rem;padding:2rem}
+label{display:block;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:.5rem}
+input,textarea,select{width:100%;padding:.75rem 1rem;background:#12121a;border:1px solid rgba(255,255,255,.1);border-radius:.5rem;color:#f8fafc;font-size:.95rem;outline:none;transition:border-color .2s;margin-bottom:1.25rem;font-family:inherit}
+input:focus,textarea:focus,select:focus{border-color:rgba(201,162,39,.5)}
+textarea{resize:vertical;min-height:80px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:500px){.row{grid-template-columns:1fr}}
+.btn{display:block;width:100%;padding:.9rem;background:linear-gradient(135deg,#c9a227,#a8891f);color:#000;font-weight:700;font-size:1rem;border:none;border-radius:.5rem;cursor:pointer;letter-spacing:.03em;transition:opacity .2s}
+.btn:hover{opacity:.9}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.steps{display:flex;gap:.75rem;margin-bottom:2rem;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:.5rem;font-size:.8rem;color:#94a3b8;background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:2rem;padding:.35rem .85rem}
+.step-num{width:20px;height:20px;border-radius:50%;background:rgba(201,162,39,.15);border:1px solid rgba(201,162,39,.4);color:#c9a227;font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.step.active .step-num{background:#c9a227;color:#000}
+.step.done .step-num{background:#22c55e;color:#000}
+.hash-preview{font-family:monospace;font-size:.75rem;color:#94a3b8;word-break:break-all;background:#12121a;border-radius:.4rem;padding:.5rem .75rem;margin-top:-.75rem;margin-bottom:1.25rem}
+.result{display:none;margin-top:2rem;background:#0a0a0f;border:1px solid #22c55e;border-radius:1rem;padding:2rem;text-align:center}
+.cert-id{font-family:monospace;font-size:1.6rem;font-weight:700;color:#c9a227;letter-spacing:.1em;margin:1rem 0}
+.cert-link{display:inline-block;padding:.6rem 1.5rem;background:rgba(34,197,94,.1);border:1px solid #22c55e;border-radius:.5rem;color:#22c55e;font-weight:600;margin:.5rem .25rem}
+.cert-link:hover{background:rgba(34,197,94,.2);text-decoration:none}
+.qr-wrap{margin:1.5rem auto;display:flex;justify-content:center}
+.qr-wrap img{border-radius:.5rem;border:4px solid #fff}
+.note{color:#94a3b8;font-size:.8rem;margin-top:1.5rem;line-height:1.6}
+.privacy{background:rgba(201,162,39,.05);border:1px solid rgba(201,162,39,.15);border-radius:.5rem;padding:.75rem 1rem;margin-top:1.5rem;font-size:.82rem;color:#94a3b8;line-height:1.5}
+.err{color:#ef4444;font-size:.9rem;margin-top:.5rem;display:none}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">AUTHI<span>CHAIN</span></a>
+  <a href="https://app.authichain.com/login" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Sign In</a>
+</nav>
+<div class="wrap">
+  <h1>Anchor a Product to the <span>Blockchain</span></h1>
+  <p class="sub">Generate a cryptographic certificate of authenticity in 30 seconds. Free, permanent, no account required. Your data is hashed in-browser before being sent.</p>
+
+  <div class="steps">
+    <div class="step active" id="s1"><span class="step-num">1</span> Enter details</div>
+    <div class="step" id="s2"><span class="step-num">2</span> Hash &amp; sign</div>
+    <div class="step" id="s3"><span class="step-num">3</span> Certificate issued</div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label>Product Name *</label>
+        <input id="f-name" type="text" placeholder="e.g. Air Jordan 1 Retro" maxlength="200">
+      </div>
+      <div>
+        <label>Brand *</label>
+        <input id="f-brand" type="text" placeholder="e.g. Nike" maxlength="100">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>SKU / Serial</label>
+        <input id="f-sku" type="text" placeholder="Optional" maxlength="100">
+      </div>
+      <div>
+        <label>Industry</label>
+        <select id="f-industry">
+          <option value="general">General</option>
+          <option value="luxury">Luxury Goods</option>
+          <option value="fashion">Fashion &amp; Apparel</option>
+          <option value="electronics">Electronics</option>
+          <option value="pharma">Pharmaceuticals</option>
+          <option value="food">Food &amp; Beverage</option>
+          <option value="art">Art &amp; Collectibles</option>
+          <option value="sports">Sports Memorabilia</option>
+          <option value="cosmetics">Cosmetics &amp; Beauty</option>
+          <option value="auto">Automotive Parts</option>
+          <option value="cannabis">Cannabis &amp; Hemp</option>
+        </select>
+      </div>
+    </div>
+    <label>Description</label>
+    <textarea id="f-desc" placeholder="Optional — color, size, edition, condition…" maxlength="2000"></textarea>
+    <div id="hash-row" style="display:none">
+      <label>SHA-256 Fingerprint (generated in-browser)</label>
+      <div class="hash-preview" id="hash-display"></div>
+    </div>
+    <div class="err" id="f-err"></div>
+    <div class="privacy">
+      Your product details are hashed in your browser using SHA-256 before being sent. Only the fingerprint + your chosen metadata is stored. We do not collect personal data.
+    </div>
+    <button class="btn" id="anchor-btn" onclick="doAnchor()" style="margin-top:1.5rem">Generate Certificate &rarr;</button>
+  </div>
+
+  <div class="result" id="result">
+    <div style="font-size:2rem;margin-bottom:.5rem">&#x2705;</div>
+    <div style="font-weight:700;font-size:1.15rem;margin-bottom:.25rem">Certificate Anchored</div>
+    <div class="cert-id" id="cert-id-display"></div>
+    <div class="qr-wrap"><img id="qr-img" src="" alt="QR code" width="160" height="160"></div>
+    <div>
+      <a class="cert-link" id="cert-link" href="#">View Certificate &rarr;</a>
+    </div>
+    <div class="note">
+      This certificate ID is permanent and publicly verifiable at<br>
+      <strong style="color:#f8fafc">authichain.com/cert/&lt;ID&gt;</strong><br><br>
+      Share the QR code with buyers, customs agents, or insurers. Anyone who scans it can instantly verify your product.
+    </div>
+  </div>
+
+  <div style="margin-top:3rem;border-top:1px solid rgba(255,255,255,.06);padding-top:2rem">
+    <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem">AuthiChain vs. alternatives</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;font-size:.85rem">
+      <div style="background:#0a0a0f;border:1px solid rgba(201,162,39,.2);border-radius:.5rem;padding:1rem">
+        <div style="color:#c9a227;font-weight:700;margin-bottom:.35rem">AuthiChain</div>
+        <div style="color:#94a3b8;line-height:1.6">Free tier. 30-second setup. Public certificate URL. No enterprise contract.</div>
+      </div>
+      <div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:.5rem;padding:1rem">
+        <div style="font-weight:700;margin-bottom:.35rem;color:#555">AURA (LVMH)</div>
+        <div style="color:#555;line-height:1.6">Consortium-only. LVMH/Prada/Richemont brands. No public access.</div>
+      </div>
+      <div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:.5rem;padding:1rem">
+        <div style="font-weight:700;margin-bottom:.35rem;color:#555">MediLedger</div>
+        <div style="color:#555;line-height:1.6">Pharma only. EDI integration required. Six-figure setup.</div>
+      </div>
+      <div style="background:#0a0a0f;border:1px solid rgba(255,255,255,.06);border-radius:.5rem;padding:1rem">
+        <div style="font-weight:700;margin-bottom:.35rem;color:#555">IBM Food Trust</div>
+        <div style="color:#555;line-height:1.6">Enterprise SaaS. Supply chain integration required.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function doAnchor() {
+  var btn = document.getElementById('anchor-btn');
+  var err = document.getElementById('f-err');
+  var name = document.getElementById('f-name').value.trim();
+  var brand = document.getElementById('f-brand').value.trim();
+  var desc = document.getElementById('f-desc').value.trim();
+  var sku = document.getElementById('f-sku').value.trim();
+  var industry = document.getElementById('f-industry').value;
+
+  err.style.display = 'none';
+  if (!name) { err.textContent = 'Product name is required.'; err.style.display = 'block'; return; }
+  if (!brand) { err.textContent = 'Brand is required.'; err.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Generating fingerprint…';
+  document.getElementById('s1').classList.remove('active');
+  document.getElementById('s2').classList.add('active');
+
+  try {
+    var payload = name + '|' + brand + '|' + (sku || '') + '|' + (desc || '');
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+    var hash = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+    document.getElementById('hash-display').textContent = hash;
+    document.getElementById('hash-row').style.display = 'block';
+
+    btn.textContent = 'Anchoring to blockchain…';
+    document.getElementById('s2').classList.remove('active');
+    document.getElementById('s2').classList.add('done');
+    document.getElementById('s3').classList.add('active');
+
+    var res = await fetch('https://api.authichain.com/api/v1/anchor', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name:name,brand:brand,description:desc,sku:sku,industry:industry,hash:hash})
+    });
+    var data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Anchor failed');
+
+    document.getElementById('s3').classList.remove('active');
+    document.getElementById('s3').classList.add('done');
+
+    var certId = data.id;
+    var certUrl = data.certUrl || ('https://authichain.com/cert/' + certId);
+    document.getElementById('cert-id-display').textContent = certId;
+    document.getElementById('cert-link').href = certUrl;
+    var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(certUrl);
+    document.getElementById('qr-img').src = qrUrl;
+    document.getElementById('result').style.display = 'block';
+    document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
+    btn.textContent = 'Anchored! Generate Another →';
+    btn.disabled = false;
+    btn.onclick = function(){ location.reload(); };
+  } catch(e) {
+    err.textContent = e.message || 'Something went wrong. Please try again.';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Generate Certificate →';
+    document.getElementById('s2').classList.remove('active','done');
+    document.getElementById('s1').classList.add('active');
+    document.getElementById('s3').classList.remove('active','done');
+  }
+}
+</script>
+</body>
+</html>`;
+
+function certPage(certId: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Certificate \${certId} — AuthiChain</title>
+<meta name="description" content="Verify blockchain certificate \${certId} on AuthiChain. Cryptographic proof of product authenticity.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#c9a227">
+<meta property="og:title" content="AuthiChain Certificate \${certId}">
+<meta property="og:description" content="Blockchain-anchored product certificate. Verify authenticity instantly.">
+<meta property="og:image" content="https://authichain.com/og-image.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050507;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+a{color:#c9a227;text-decoration:none}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid rgba(201,162,39,.15)}
+.nav-logo{font-size:1.1rem;font-weight:700;letter-spacing:.05em;color:#f8fafc}
+.nav-logo span{color:#c9a227}
+.wrap{max-width:600px;margin:0 auto;padding:3rem 1.5rem 6rem;text-align:center}
+.cert-card{background:#0a0a0f;border:2px solid rgba(201,162,39,.35);border-radius:1.25rem;padding:2.5rem;text-align:left;position:relative;overflow:hidden}
+.cert-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#c9a227,#00ffd1)}
+.cert-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(34,197,94,.1);border:1px solid #22c55e;border-radius:2rem;padding:.3rem .9rem;font-size:.8rem;font-weight:600;color:#22c55e;margin-bottom:1.5rem}
+.cert-id{font-family:monospace;font-size:1.5rem;font-weight:700;color:#c9a227;letter-spacing:.08em;margin-bottom:1.5rem}
+.field{margin-bottom:1.1rem}
+.field-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:.25rem}
+.field-value{font-size:.95rem;color:#f8fafc;word-break:break-word}
+.hash{font-family:monospace;font-size:.72rem;color:#94a3b8;word-break:break-all}
+.divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:1.5rem 0}
+.qr-section{text-align:center;margin-top:1.5rem}
+.qr-section img{border-radius:.5rem;border:3px solid #fff}
+.actions{display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;margin-top:2rem}
+.btn-outline{padding:.6rem 1.4rem;border:1px solid rgba(201,162,39,.4);border-radius:.5rem;color:#c9a227;font-weight:600;font-size:.9rem}
+.btn-outline:hover{background:rgba(201,162,39,.1)}
+.status-loading{padding:4rem;text-align:center;color:#94a3b8}
+.status-err{padding:4rem;text-align:center}
+.ts{font-size:.75rem;color:#555}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">AUTHI<span>CHAIN</span></a>
+  <a href="/anchor" style="font-size:.85rem;padding:.45rem 1rem;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:.4rem;color:#c9a227;font-weight:600">Anchor a Product</a>
+</nav>
+<div class="wrap">
+  <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:.5rem">Product Certificate</h1>
+  <p style="color:#94a3b8;margin-bottom:2rem;font-size:.9rem">Blockchain-anchored proof of authenticity</p>
+  <div id="main"><div class="status-loading">Fetching certificate…</div></div>
+</div>
+<script>
+(function(){
+  var id = \${JSON.stringify(certId)};
+  var el = document.getElementById('main');
+  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+  fetch('https://api.authichain.com/api/v1/cert/'+encodeURIComponent(id))
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(!data.success||!data.certificate){
+        el.innerHTML='<div class="status-err"><div style="font-size:3rem;margin-bottom:1rem">&#x26A0;</div><div style="font-size:1.1rem;font-weight:700;margin-bottom:.5rem">Certificate Not Found</div><div style="color:#94a3b8;margin-bottom:1.5rem">'+esc(id)+'</div><a href="/anchor" style="color:#c9a227;border:1px solid rgba(201,162,39,.4);border-radius:.5rem;padding:.6rem 1.4rem;font-weight:600">Anchor a Product</a></div>';
+        return;
+      }
+      var c=data.certificate;
+      var certUrl='https://authichain.com/cert/'+esc(id);
+      var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=140x140&data='+encodeURIComponent('https://authichain.com/cert/'+id);
+      var ts=c.ts?new Date(c.ts).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}):'';
+      el.innerHTML='<div class="cert-card">'
+        +'<div class="cert-badge">&#x2714; Anchored &amp; Verified</div>'
+        +'<div class="cert-id">'+esc(c.id)+'</div>'
+        +(c.name?'<div class="field"><div class="field-label">Product</div><div class="field-value">'+esc(c.name)+'</div></div>':'')
+        +(c.brand?'<div class="field"><div class="field-label">Brand</div><div class="field-value">'+esc(c.brand)+'</div></div>':'')
+        +(c.sku?'<div class="field"><div class="field-label">SKU / Serial</div><div class="field-value">'+esc(c.sku)+'</div></div>':'')
+        +(c.industry&&c.industry!=='general'?'<div class="field"><div class="field-label">Industry</div><div class="field-value" style="text-transform:capitalize">'+esc(c.industry)+'</div></div>':'')
+        +(c.description?'<div class="field"><div class="field-label">Description</div><div class="field-value">'+esc(c.description)+'</div></div>':'')
+        +'<hr class="divider">'
+        +'<div class="field"><div class="field-label">SHA-256 Fingerprint</div><div class="hash">'+esc(c.hash||'')+'</div></div>'
+        +(ts?'<div class="field" style="margin-top:.75rem"><div class="field-label">Anchored</div><div class="ts">'+esc(ts)+'</div></div>':'')
+        +'<div class="qr-section"><img src="'+qrUrl+'" alt="QR code" width="140" height="140"><div style="font-size:.75rem;color:#94a3b8;margin-top:.6rem">Scan to verify</div></div>'
+        +'</div>'
+        +'<div class="actions">'
+        +'<a class="btn-outline" href="/anchor">Anchor Another</a>'
+        +'<a class="btn-outline" href="https://app.authichain.com/login" style="border-color:rgba(0,255,209,.3);color:#00ffd1">Get Full Certificate</a>'
+        +'</div>';
+    })
+    .catch(function(e){
+      el.innerHTML='<div class="status-err"><div style="font-size:3rem;margin-bottom:1rem">&#x26A0;</div><div style="font-size:1.1rem;font-weight:700;color:#ef4444">Failed to load</div><div style="color:#94a3b8;margin-top:.5rem">'+esc(e.message)+'</div></div>';
+    });
+})();
+<\/script>
+</body>
+</html>`;
+}
+
+// Public landing page for the open verification protocol (Apache-2.0, in
+// protocol/ on the public repo). The CTA of the Product Hunt launch points
+// here. Every claim on this page is checkable by a reader in under a minute —
+// no user counts, no certifications, nothing unsubstantiated.
+const PROTOCOL_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open Verification Protocol — AuthiChain</title>
+<meta name="description" content="An open specification and a zero-dependency reference verifier for product provenance. Check a signed record and its on-chain anchor offline, in one command, with no account. Apache-2.0.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#c9a227">
+<meta property="og:title" content="Open Verification Protocol — AuthiChain">
+<meta property="og:description" content="Verify product provenance yourself. Offline, one command, no account. Apache-2.0.">
+<meta property="og:image" content="https://authichain.com/og-image.png">
+<meta property="og:url" content="https://authichain.com/protocol">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"AuthiChain Verification Specification","description":"An open specification and reference verifier for product provenance, licensed Apache-2.0.","license":"https://www.apache.org/licenses/LICENSE-2.0","url":"https://authichain.com/protocol"}</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050507;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;line-height:1.65}
+a{color:#c9a227;text-decoration:none}
+a:hover{text-decoration:underline}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid rgba(201,162,39,.15)}
+.nav-logo{font-size:1.1rem;font-weight:700;letter-spacing:.05em;color:#f8fafc}
+.nav-logo span{color:#c9a227}
+.wrap{max-width:720px;margin:0 auto;padding:3rem 1.5rem 6rem}
+h1{font-size:2.1rem;line-height:1.2;letter-spacing:-.02em;margin-bottom:1rem}
+h2{font-size:1.15rem;margin:2.5rem 0 .75rem;letter-spacing:.02em}
+p{color:#cbd5e1;margin-bottom:1rem}
+.lede{font-size:1.1rem;color:#e2e8f0}
+.badge{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#c9a227;border:1px solid rgba(201,162,39,.35);border-radius:999px;padding:.3rem .7rem;margin-bottom:1.25rem}
+pre{background:#0c0c11;border:1px solid rgba(201,162,39,.18);border-radius:10px;padding:1rem;overflow-x:auto;margin:1rem 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86rem;color:#e2e8f0}
+ul{margin:0 0 1rem 1.1rem;color:#cbd5e1}
+li{margin-bottom:.5rem}
+.cta{display:flex;flex-wrap:wrap;gap:.75rem;margin:2rem 0 1rem}
+.btn{display:inline-block;padding:.7rem 1.15rem;border-radius:8px;font-weight:600;font-size:.92rem;border:1px solid rgba(201,162,39,.4);color:#c9a227}
+.btn.primary{background:#c9a227;color:#050507;border-color:#c9a227}
+.btn:hover{text-decoration:none;opacity:.9}
+.note{border-left:2px solid rgba(201,162,39,.4);padding:.25rem 0 .25rem 1rem;color:#94a3b8;font-size:.92rem;margin:1.5rem 0}
+footer{border-top:1px solid rgba(201,162,39,.15);padding:2rem 1.5rem;text-align:center;color:#64748b;font-size:.85rem}
+</style>
+</head>
+<body>
+<nav class="nav"><a class="nav-logo" href="/">AUTHI<span>CHAIN</span></a><a href="/anchor">Anchor a product</a></nav>
+<div class="wrap">
+  <div class="badge">Apache-2.0 &middot; v0.1.0 draft</div>
+  <h1>Verify it yourself.</h1>
+  <p class="lede">Most &ldquo;verified authentic&rdquo; badges resolve to a vendor&rsquo;s server saying <em>trust me</em>. That doesn&rsquo;t solve the trust problem, it relocates it.</p>
+  <p>The AuthiChain verification protocol is an open specification with a reference verifier you run on your own machine. No account, no API key, no network calls to us.</p>
+
+  <pre><code>node verifier.mjs record.json anchor.json
+
+{ "verdict": "verified", "reasons": [], "checks": { "signature": true, "anchorHash": true } }</code></pre>
+
+  <p>Zero dependencies &mdash; Node builtins only. It checks an Ed25519 signature over a JCS-canonicalised W3C Verifiable Credential, then checks that the record&rsquo;s hash matches what was committed on-chain.</p>
+
+  <div class="cta">
+    <a class="btn primary" href="https://github.com/undone0603/authichain-unified/tree/main/protocol">Read the spec</a>
+    <a class="btn" href="https://github.com/undone0603/authichain-unified/blob/main/protocol/verifier.mjs">Run the verifier</a>
+    <a class="btn" href="https://github.com/undone0603/authichain-unified/blob/main/protocol/LICENSE">View the license</a>
+  </div>
+
+  <h2>Three verdicts. No partial credit.</h2>
+  <ul>
+    <li><code>verified</code> &mdash; signature valid; anchor present, well formed, mainnet, hash matches</li>
+    <li><code>valid-unanchored</code> &mdash; signature valid; no anchor supplied</li>
+    <li><code>invalid</code> &mdash; any required check failed</li>
+  </ul>
+  <p>There is deliberately no score in this layer. A score is a product feature; a verdict is what a verifier owes you.</p>
+
+  <h2>Two rules we learned the hard way</h2>
+  <p>Both exist because this codebase shipped violations of them, and both are enforced by tests you can read:</p>
+  <ul>
+    <li><strong>A testnet anchor is not proof.</strong> Rejected unless the caller explicitly opts in.</li>
+    <li><strong>A malformed transaction hash is rejected, not displayed.</strong> Render a truncated hash and you have published something that looks like proof and links nowhere.</li>
+  </ul>
+
+  <h2>Built on existing standards</h2>
+  <p>W3C Verifiable Credentials 2.0, GS1 Digital Link for item identity, CAIP-2 for chain identifiers, RFC 8785 for canonicalisation. Not a private format &mdash; adoption follows compatibility.</p>
+
+  <h2>Claim conformance</h2>
+  <pre><code>node conformance/run.mjs --strict -- &lt;your command&gt;</code></pre>
+  <p>28 fixtures, any language. All must pass. The suite is itself validated against deliberately broken implementations, so it demonstrably can fail.</p>
+
+  <div class="note">
+    v0.1.0 is a draft and not yet stable. There is no revocation mechanism &mdash; a record signed by a compromised key stays cryptographically valid. And a signature proves who asserted something, never that it is true: an issuer can sign a false statement and this layer will correctly report <code>verified</code>. Defending against that lives above the specification, not in it.
+  </div>
+
+  <p>Independent implementations are the point. If a fixture looks wrong, that is more valuable to find than a bug in a verifier &mdash; open an issue.</p>
+</div>
+<footer>&copy; 2026 AuthiChain Inc. &middot; The protocol is Apache-2.0; the platform is not. <a href="/">Home</a></footer>
+</body>
+</html>`;
+
+const dppHtml = (now: Date) => `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EU Digital Product Passport Compliance | AuthiChain</title>
-  <meta name="description" content="AuthiChain delivers EU Digital Product Passport (DPP) compliance via blockchain. Batteries Feb 2027, textiles 2028-29. One integration covers ESPR, EUDR, CSRD. Registry opens July 19, 2026.">
+  <meta name="description" content="AuthiChain delivers EU Digital Product Passport (DPP) tooling via blockchain. One integration covers ESPR, EUDR and CSRD. ${nextDeadline(now) ? `Next deadline: ${escHtml(nextDeadline(now)!.label)}, ${escHtml(formatMilestoneDate(nextDeadline(now)!))}.` : ''}">
   <meta name="keywords" content="EU Digital Product Passport, DPP compliance, digital product passport 2026, DPP blockchain, ESPR regulation, EU battery regulation, supply chain compliance, product passport">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <link rel="canonical" href="https://authichain.com/digital-product-passport">
@@ -2583,12 +3080,12 @@ const DPP_HTML = `<!DOCTYPE html>
   <meta name="theme-color" content="#c9a227">
   <meta property="og:type" content="website">
   <meta property="og:title" content="EU Digital Product Passport Compliance | AuthiChain">
-  <meta property="og:description" content="Blockchain-native DPP platform. Registry opens July 19, 2026. Batteries due Feb 2027. AuthiChain is live now.">
+  <meta property="og:description" content="Blockchain-native DPP platform. ${nextDeadline(now) ? `Next deadline: ${escHtml(nextDeadline(now)!.label)}, ${escHtml(formatMilestoneDate(nextDeadline(now)!))}.` : ''} Offline verification, no account required.">
   <meta property="og:url" content="https://authichain.com/digital-product-passport">
   <meta property="og:image" content="https://authichain.com/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EU Digital Product Passport | AuthiChain">
-  <meta name="twitter:description" content="ESPR DPP compliance via blockchain. Batteries Feb 2027. Live now.">
+  <meta name="twitter:description" content="ESPR DPP tooling via blockchain. ${nextDeadline(now) ? `Next: ${escHtml(nextDeadline(now)!.label)}, ${escHtml(formatMilestoneDate(nextDeadline(now)!))}.` : ''}">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"EU Digital Product Passport Compliance","url":"https://authichain.com/digital-product-passport","description":"AuthiChain provides EU Digital Product Passport compliance for brands via blockchain certificates.","provider":{"@type":"Organization","name":"AuthiChain","url":"https://authichain.com"}}</script>
   ${FONTS_LINK}
   <style>
@@ -2625,14 +3122,14 @@ const DPP_HTML = `<!DOCTYPE html>
     </a>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
-      <a class="nav-link" href="https://app.authichain.com/pricing">Pricing</a>
-      <a class="btn btn-primary btn-sm" href="https://app.authichain.com/eu-dpp">Start DPP Onboarding</a>
+      <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
+      <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/onboard">Start DPP Onboarding</a>
     </div>
   </nav>
 
   <section class="hero" id="hero" style="min-height:70vh">
     <div class="hero-content">
-      <div class="badge-live">● REGISTRY OPENS JULY 19, 2026</div>
+      <div class="badge-live">● ${escHtml((mostRecentInForce(now) ?? listMilestones()[0]).label.toUpperCase())} — ${escHtml(countdownLabel(mostRecentInForce(now) ?? listMilestones()[0], now).toUpperCase())}</div>
       <h1 class="hero-title" style="font-size: clamp(2.4rem, 6vw, 4.5rem)">
         EU DIGITAL<br><span class="accent">PRODUCT PASSPORT</span>
       </h1>
@@ -2640,7 +3137,7 @@ const DPP_HTML = `<!DOCTYPE html>
         The EU's Ecodesign for Sustainable Products Regulation (ESPR) requires a blockchain-readable product passport for every item sold in Europe. AuthiChain is live — ERC-721 certificates, audit-ready exports, one integration.
       </p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" href="https://app.authichain.com/eu-dpp">Get DPP Compliant</a>
+        <a class="btn btn-primary" href="https://authichain-unified.vercel.app/onboard">Get DPP Compliant</a>
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20Compliance%20Demo">Book a Demo</a>
       </div>
     </div>
@@ -2650,49 +3147,23 @@ const DPP_HTML = `<!DOCTYPE html>
     <div class="container">
       <div class="section-label">REGULATION TIMELINE</div>
       <h2 class="section-title">When Does Your Industry Need DPP?</h2>
-      <p class="section-sub">ESPR rolls out in phases. The EU registry opens July 2026 — deadlines by product category follow through 2030.</p>
+      <p class="section-sub">ESPR rolls out in phases. ${nextDeadline(now) ? `Next: ${escHtml(nextDeadline(now)!.label)} — ${escHtml(countdownLabel(nextDeadline(now)!, now))}.` : 'All published deadlines are now in force.'} Reviewed ${escHtml(timelineUpdatedAt())}.</p>
 
       <div class="dpp-timeline" style="margin-top:48px">
-        <div class="dpp-phase live">
-          <div class="dpp-date">JULY 19<br>2026</div>
+        ${listMilestones().map((m) => {
+          const status = milestoneStatus(m, now);
+          const cls = status === 'in-force' ? 'live' : (status === 'imminent' && m.urgent ? 'urgent' : '');
+          const [head, tail] = formatMilestoneDate(m).split(/,\s|–/);
+          return `
+        <div class="dpp-phase ${cls}">
+          <div class="dpp-date">${escHtml(head.toUpperCase())}${tail ? `<br>${escHtml(tail)}` : ''}</div>
           <div class="dpp-content">
             <span class="dpp-dot"></span>
-            <span class="dpp-phase-title">EU DPP Registry Launch</span>
-            <div class="dpp-phase-sub">Official EU registry goes live. Brands can begin voluntary DPP issuance. AuthiChain onboarding open now.</div>
+            <span class="dpp-phase-title">${escHtml(m.label)}</span>
+            <div class="dpp-phase-sub">${escHtml(m.detail)} <a href="${escHtml(m.source)}" rel="noopener noreferrer" target="_blank" style="color:inherit;text-decoration:underline">${escHtml(countdownLabel(m, now))}</a></div>
           </div>
-        </div>
-        <div class="dpp-phase urgent">
-          <div class="dpp-date">FEB 18<br>2027</div>
-          <div class="dpp-content">
-            <span class="dpp-dot"></span>
-            <span class="dpp-phase-title">Industrial Batteries (≥2 kWh)</span>
-            <div class="dpp-phase-sub">Mandatory DPP for EV batteries, industrial storage, LMT batteries. Carbon footprint, material declaration, recycled content required.</div>
-          </div>
-        </div>
-        <div class="dpp-phase">
-          <div class="dpp-date">Q3–Q4<br>2027</div>
-          <div class="dpp-content">
-            <span class="dpp-dot"></span>
-            <span class="dpp-phase-title">Electronics & ICT Products</span>
-            <div class="dpp-phase-sub">Smartphones, tablets, laptops. Repairability scores, spare parts availability, recycled material content.</div>
-          </div>
-        </div>
-        <div class="dpp-phase">
-          <div class="dpp-date">2028–<br>2029</div>
-          <div class="dpp-content">
-            <span class="dpp-dot"></span>
-            <span class="dpp-phase-title">Textiles, Apparel & Footwear</span>
-            <div class="dpp-phase-sub">Fashion brands must declare fiber composition, recycled content, country of origin, and care instructions via DPP QR codes.</div>
-          </div>
-        </div>
-        <div class="dpp-phase">
-          <div class="dpp-date">2029–<br>2030</div>
-          <div class="dpp-content">
-            <span class="dpp-dot"></span>
-            <span class="dpp-phase-title">Furniture, Steel, Chemicals & More</span>
-            <div class="dpp-phase-sub">ESPR expands to construction products, furniture, agricultural products, and bulk chemicals. Full economic coverage by 2030.</div>
-          </div>
-        </div>
+        </div>`;
+        }).join('')}
       </div>
     </div>
   </section>
@@ -2743,7 +3214,7 @@ const DPP_HTML = `<!DOCTYPE html>
       <div class="section-label">INDUSTRIES SERVED</div>
       <h2 class="section-title">Already Working With</h2>
       <div class="industries">
-        <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory Feb 2027</div></div>
+        <div class="industry-card"><div class="industry-name">⚡ EV Batteries</div><div class="industry-deadline">Mandatory ${escHtml(formatMilestoneDate(listMilestones().find((m) => m.id === 'batteries') ?? listMilestones()[0]))}</div></div>
         <div class="industry-card"><div class="industry-name">👗 Fashion &amp; Textiles</div><div class="industry-deadline">Mandatory 2028–29</div></div>
         <div class="industry-card"><div class="industry-name">💊 Pharmaceuticals</div><div class="industry-deadline">FDA DSCSA + DPP</div></div>
         <div class="industry-card"><div class="industry-name">💻 Electronics</div><div class="industry-deadline">Mandatory 2027</div></div>
@@ -2759,7 +3230,7 @@ const DPP_HTML = `<!DOCTYPE html>
       <h2 class="section-title">Start DPP Compliance Today</h2>
       <p class="section-sub">Brands that register before July 19 get early-mover advantage in the EU market. Setup takes under 30 minutes.</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="https://app.authichain.com/eu-dpp">Start Free — Get DPP Compliant</a>
+        <a class="btn btn-primary" style="font-size:18px;padding:14px 36px" href="https://authichain-unified.vercel.app/onboard">Start Free — Get DPP Compliant</a>
       </div>
       <p style="margin-top:16px; font-size:13px; color:var(--text-dim)">No credit card required. First DPP certificate included.</p>
     </div>
@@ -2790,34 +3261,45 @@ export default {
       return assetResponse(FAVICON_SVG);
     }
     if (p === '/sitemap.xml') {
-      const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://authichain.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url><url><loc>https://authichain.com/digital-product-passport</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain/technology</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/authichain/pilots</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/book</loc><changefreq>monthly</changefreq><priority>0.8</priority></url></urlset>`;
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://authichain.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url><url><loc>https://authichain.com/anchor</loc><changefreq>weekly</changefreq><priority>0.95</priority></url><url><loc>https://authichain.com/protocol</loc><changefreq>weekly</changefreq><priority>0.95</priority></url><url><loc>https://authichain.com/digital-product-passport</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain</loc><changefreq>weekly</changefreq><priority>0.9</priority></url><url><loc>https://authichain.com/authichain/technology</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/authichain/pilots</loc><changefreq>monthly</changefreq><priority>0.8</priority></url><url><loc>https://authichain.com/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url><url><loc>https://authichain.com/book</loc><changefreq>monthly</changefreq><priority>0.8</priority></url></urlset>`;
       return new Response(sitemap, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
     }
     if (p === '/robots.txt') {
       return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n', { headers: { 'Content-Type': 'text/plain' } });
     }
     if (p === '/dapp' || p.startsWith('/dapp/')) {
-      return Response.redirect('https://app.authichain.com/dashboard', 302);
+      return Response.redirect('https://authichain-unified.vercel.app/dashboard', 302);
     }
     if (p === '/demo' || p.startsWith('/demo/')) {
-      return Response.redirect('https://app.authichain.com/pricing', 302);
+      return Response.redirect('https://authichain-unified.vercel.app/subscriptions', 302);
     }
     if (p === '/digital-product-passport' || p === '/dpp') {
-      return new Response(DPP_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+      return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    if (p === '/protocol' || p === '/spec') {
+      return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    if (p === '/anchor') {
+      return new Response(ANCHOR_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    if (p.startsWith('/cert/')) {
+      const certId = p.slice('/cert/'.length).trim().toUpperCase();
+      if (certId && /^AC-[0-9A-F]{8}$/i.test(certId)) {
+        return new Response(certPage(certId), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+      }
     }
     // Proxy app routes to the Vercel deployment instead of serving marketing HTML.
     // Prefixes must NOT have a trailing slash so the startsWith check works correctly
     // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).
     const APP_PREFIXES = ['/dashboard', '/api', '/verify', '/auth', '/login', '/logout',
-      '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin',
-      '/pricing', '/enterprise', '/eu-dpp', '/book'];
+      '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin'];
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
       const target = new URL(request.url);
-      target.hostname = 'app.authichain.com';
+      target.hostname = 'authichain-unified.vercel.app';
       target.protocol = 'https:';
       // Replace the Host header so Vercel routes to the correct project
       const headers = new Headers(request.headers);
-      headers.set('Host', 'app.authichain.com');
+      headers.set('Host', 'authichain-unified.vercel.app');
       return fetch(new Request(target.toString(), {
         method: request.method,
         headers,

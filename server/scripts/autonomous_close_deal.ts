@@ -1,11 +1,5 @@
 import "dotenv/config";
-// Standalone Node CLI script (run via tsx) — not a request handler, so
-// there is no per-request db to thread in from a caller. Calling getDb()
-// once here at the entrypoint is a documented bridge to the legacy
-// server/db.ts singleton; everything below receives `db` as an explicit
-// parameter instead of reaching for the singleton itself.
-import { getDb } from "../db.js";
-import { createLead, updateLead } from "./db-helpers";
+import { getDb, createLead, updateLead } from "../db.js";
 import { calculateLeadScore } from "../sales/scoring-service.js";
 import { sendDocuSignContract } from "../sales/docusign-service.js";
 import { revenueRecords } from "../../drizzle/schema.js";
@@ -15,14 +9,11 @@ async function autonomousClose() {
   console.log("------------------------------------------------------------------");
 
   try {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
-
     // 1. Identify Primed Lead
     console.log("📡 Identifying target decision maker...");
     const leadEmail = "michael.chen@medtronic.com";
     
-    const lead = await createLead(db, {
+    const lead = await createLead({
       email: leadEmail,
       name: "Michael Chen",
       company: "Medtronic",
@@ -39,12 +30,12 @@ async function autonomousClose() {
     console.log("\n📈 Simulating engagement signals...");
     
     // Signal: Email Opened
-    await updateLead(db, lead.id, { emailOpened: true });
+    await updateLead(lead.id, { emailOpened: true });
     console.log("  [SIGNAL] Email Opened.");
 
     // Signal: ROI Calculator Used
     const savings = 442000;
-    await updateLead(db, lead.id, { 
+    await updateLead(lead.id, { 
       roiCalculated: true, 
       numProducts: 50000, 
       roiSavings: savings 
@@ -75,13 +66,15 @@ async function autonomousClose() {
         console.log("\n🔄 Monitoring for signature...");
         console.log(" [LOG] DocuSign Webhook: 'envelope-completed' received.");
         
-        await updateLead(db, lead.id, { 
+        await updateLead(lead.id, { 
           contractSigned: true, 
           status: "won", 
           dealStage: "CLOSED_WON" 
         });
 
         // 6. Record Revenue
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
         await db.insert(revenueRecords).values({
           source: "medtech_enterprise",
           amount: "150000.00",

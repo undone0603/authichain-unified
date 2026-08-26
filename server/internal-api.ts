@@ -7,8 +7,7 @@ function timingSafeStringEqual(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 import { Router, type Request, type Response } from "express";
-import { getDb } from "./db";
-import { getCertificateByNumber, getWhiteLabelByApiKey, createProduct } from "./content-db-helpers";
+import { getCertificateByNumber, getWhiteLabelByApiKey, createProduct, getDb } from "./db";
 import { computeTrustScore, generateProductQRON } from "./qron-service";
 import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
 import { invokeLLM, parseLLMContent } from "./_core/llm";
@@ -18,10 +17,6 @@ import { reportUsageToStripe } from "./tenant-billing";
 /**
  * Internal API routes for the authichain-gateway Cloudflare Worker.
  * Protected by X-Internal-Secret header.
- *
- * This is a plain Express router (not a tRPC procedure, so there's no
- * ctx.db to thread) -- each handler resolves its own db via a documented
- * getDb() bridge below.
  */
 export function createInternalRouter(): Router {
   const router = Router();
@@ -43,8 +38,7 @@ export function createInternalRouter(): Router {
       if (!lookupId) return res.status(400).json({ error: "identifier, productId, or barcode required" });
 
       // Check if it's a certificate number
-      const db = await getDb();
-      const cert = await getCertificateByNumber(db, lookupId);
+      const cert = await getCertificateByNumber(lookupId);
       if (cert) {
         return res.json({
           verified: cert.status === "active",
@@ -95,7 +89,7 @@ export function createInternalRouter(): Router {
     }
   });
 
-  // ─── POST /api/internal/qr/generate ──────────────────────────────────────────
+  // ─── POST /api/internal/qr/generate ──────────────────────────��─────────────
   router.post("/qr/generate", async (req: Request, res: Response) => {
     try {
       const { url, data, style, productName, brand, productId, prompt } = req.body;
@@ -125,8 +119,7 @@ export function createInternalRouter(): Router {
       if (!number) return res.status(400).json({ error: "certNumber body field required" });
       if (number.length > 64) return res.status(400).json({ error: "certNumber too long" });
 
-      const db = await getDb();
-      const cert = await getCertificateByNumber(db, number);
+      const cert = await getCertificateByNumber(number);
       if (!cert) return res.status(404).json({ error: "Certificate not found", valid: false });
 
       res.json({
@@ -204,10 +197,8 @@ export function createInternalRouter(): Router {
   router.get("/analytics", async (req: Request, res: Response) => {
     try {
       const period = (req.query.period as string) || "30d";
-      // Not used for querying below (this endpoint returns static stub
-      // metrics), but kept so a misconfigured DATABASE_URL still surfaces
-      // here as a 500 rather than silently returning stub data.
-      await getDb();
+      const db = await getDb();
+      if (!db) return res.status(503).json({ error: "Database unavailable" });
 
       // Return aggregated metrics
       res.json({
@@ -234,8 +225,7 @@ export function createInternalRouter(): Router {
         return res.status(400).json({ error: "valid userId required" });
       }
 
-      const db = await getDb();
-      const product = await createProduct(db, {
+      const product = await createProduct({
         name,
         brand,
         category,
@@ -260,14 +250,10 @@ export function createInternalRouter(): Router {
         return res.status(400).json({ error: "records array required" });
       }
 
-      // server/tenant-billing.ts was migrated to take a threaded `db` in
-      // Task 2b-4. This handler resolves its own db via a documented
-      // getDb() bridge -- this is a plain Express route with no ctx.db.
-      const usageDb = await getDb();
       // Process each usage record
       await Promise.all(
-        records.map((r: { tenantId: number; endpoint: string; count: number }) =>
-          reportUsageToStripe(usageDb, r.tenantId, r.endpoint, r.count),
+        records.map((r: { tenantId: string; endpoint: string; count: number }) =>
+          reportUsageToStripe(r.tenantId, r.endpoint, r.count),
         ),
       );
 
@@ -285,8 +271,7 @@ export function createInternalRouter(): Router {
       const apiKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
       if (!apiKey) return res.status(400).json({ error: "Authorization: Bearer <apiKey> required" });
 
-      const db = await getDb();
-      const tenant = await getWhiteLabelByApiKey(db, apiKey);
+      const tenant = await getWhiteLabelByApiKey(apiKey);
       if (!tenant) return res.status(404).json({ error: "Tenant not found" });
 
       res.json({

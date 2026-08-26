@@ -1,5 +1,5 @@
 import { getStripe } from "./stripe-service";
-import type { Db } from "./db-helpers";
+import { getDb } from "./db";
 import { whiteLabelClients, apiUsageDaily } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -24,7 +24,7 @@ const RATE_LIMITS: Record<string, { rpm: number; rpd: number }> = {
 };
 
 // ─── Provision a New Tenant ──────────────────────────────────────────────────
-export async function provisionTenant(db: Db, data: {
+export async function provisionTenant(data: {
   userId: number;
   companyName: string;
   domain?: string;
@@ -32,6 +32,7 @@ export async function provisionTenant(db: Db, data: {
   verticals?: string[];
 }) {
   const stripe = getStripe();
+  const db = await getDb();
   if (!db) throw new Error("Database unavailable");
 
   // Generate API key
@@ -81,7 +82,8 @@ export async function provisionTenant(db: Db, data: {
 }
 
 // ─── Report Usage to Stripe ──────────────────────────────────────────────────
-export async function reportUsageToStripe(db: Db, tenantId: number, endpoint: string, quantity: number) {
+export async function reportUsageToStripe(tenantId: string, endpoint: string, quantity: number) {
+  const db = await getDb();
   if (!db) return;
 
   const [tenant] = await db.select().from(whiteLabelClients).where(eq(whiteLabelClients.id, tenantId)).limit(1);
@@ -99,7 +101,6 @@ export async function reportUsageToStripe(db: Db, tenantId: number, endpoint: st
     endpoint,
     callCount: quantity,
     cost: (pricePerCall * quantity).toFixed(4),
-    clientId: tenantId,
   }).onConflictDoUpdate({
     target: apiUsageDaily.id,
     set: {
@@ -110,7 +111,8 @@ export async function reportUsageToStripe(db: Db, tenantId: number, endpoint: st
 }
 
 // ─── Get Tenant Billing Status ───────────────────────────────────────────────
-export async function getTenantBillingStatus(db: Db, tenantId: number) {
+export async function getTenantBillingStatus(tenantId: string) {
+  const db = await getDb();
   if (!db) return null;
 
   const [tenant] = await db.select().from(whiteLabelClients).where(eq(whiteLabelClients.id, tenantId)).limit(1);

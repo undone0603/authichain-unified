@@ -4,22 +4,27 @@
 // sends personalized HTML emails via Resend, updates delivery status.
 
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
+import { checkSender, reportSenderFailure, CREDENTIAL_ENV_VARS } from './lib/resend-preflight';
+import { guardedSend } from '../server/outreach/send-guard';
 
 const isDryRun = process.env.DRY_RUN === 'true';
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const GOVCHAIN = process.env.GOVCHAIN_URL ?? 'https://govchain.us';
+// authichain.com is verified on the second Resend account (RESEND_API_KEY2);
+// the preflight resolves which credential owns this sender at run time.
 const FROM_EMAIL = process.env.EMAIL_FROM ?? 'proposals@authichain.com';
 const CALENDAR_LINK = process.env.CALENDLY_LINK ?? 'https://calendly.com/authichain/discovery';
 const SALES_EMAIL = process.env.SALES_EMAIL ?? 'sales@authichain.com';
 
-// Gracefully skip if Resend isn't configured.
-if (!process.env.RESEND_API_KEY) {
-  console.warn('⚠️  RESEND_API_KEY not configured — skipping email delivery.');
+// Gracefully skip if no Resend credential is configured. The two accounts hold
+// different verified domains, so either may be the one that owns FROM_EMAIL.
+if (!CREDENTIAL_ENV_VARS.some(name => process.env[name])) {
+  console.warn(`⚠️  No Resend credential configured (${CREDENTIAL_ENV_VARS.join(' / ')}) — skipping email delivery.`);
   process.exit(0);
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Resolved by the preflight to whichever account owns FROM_EMAIL.
+let resendApiKey: string | undefined;
 
 interface Proposal {
   notice_id: string;
@@ -277,6 +282,20 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
     return { sent: 0, failed: 0, total: 0 };
   }
 
+  // Preflight once, before the send loop. A bad key or unverified sender
+  // rejects every proposal identically, and each rejection would otherwise be
+  // recorded as a per-proposal failure — burying one infrastructure problem
+  // under 50 identical-looking data problems.
+  if (!isDryRun) {
+    const check = await checkSender(FROM_EMAIL);
+    if (!check.ok) {
+      reportSenderFailure(check, 'gov-proposals');
+      throw new Error(`Sender preflight failed for ${FROM_EMAIL}: ${check.reason}`);
+    }
+    resendApiKey = process.env[check.credential!];
+    console.log(`✅ Sender verified: ${FROM_EMAIL} (via ${check.credential})`);
+  }
+
   let sent = 0;
   let failed = 0;
 
@@ -292,15 +311,23 @@ async function emailProposals(): Promise<{ sent: number; failed: number; total: 
       const subject = `GovChain Proposal: ${proposal.agency} — ${proposal.fit_score}/100 Match`;
 
       if (!isDryRun) {
-        const response = await resend.emails.send({
-          from: FROM_EMAIL,
+        // Routed through the send guard so every proposal carries a reply-to,
+        // one-click List-Unsubscribe headers and the CAN-SPAM postal address.
+        // `published_contact`: these addresses are the points-of-contact the
+        // agency itself printed on the SAM.gov solicitation, so they are
+        // published-by-the-owner rather than guessed.
+        const response = await guardedSend({
           to: proposal.contact_email,
+          source: 'published_contact',
           subject,
           html,
+          from: FROM_EMAIL,
+          company: 'GovChain / AuthiChain',
+          apiKey: resendApiKey,
         });
 
-        if (!response.data?.id) {
-          throw new Error(`Resend returned no message ID: ${JSON.stringify(response.error)}`);
+        if (!response.sent) {
+          throw new Error(`Send refused or failed: ${response.reason}`);
         }
 
         // Update proposal status to 'sent' and record timestamp

@@ -1,3 +1,4 @@
+import React from "react";
 import { BRAND_IDS, BRANDS, type BrandId } from "@shared/brands";
 import { useBrand } from "@/contexts/BrandContext";
 

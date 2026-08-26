@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         { status: 503 }
       );
 
-    // --- Scan validation gate (if provenance registration exists) ---
+            // --- Scan validation gate (if provenance registration exists) ---
     const authichainUrl = process.env.AUTHICHAIN_API_URL;
     if (registration_id && authichainUrl) {
       try {
@@ -76,12 +76,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // --- Business tier credit check (non-business users may need credits) ---
+    // ── Business tier credit check (non-business users may need credits) ──────
     const isUnlimited = await hasUnlimitedPlan(session.user.id);
     // For now, minting is free for all users with a valid QRON
     // Future: charge mint credits for non-business users
 
-    // --- thirdweb v5 server-side mint ---
+    // ── thirdweb v5 server-side mint ──────────────────────────────────────────
     const { createThirdwebClient, getContract, sendTransaction } = await import(
       'thirdweb'
     );
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       receipt.transactionHash
     );
 
-    // --- Persist to Supabase ---
+    // ── Persist to Supabase ───────────────────────────────────────────────────
     try {
       const { createClient: createSbClient } = await import(
         '@supabase/supabase-js'
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
       await logAutomation('mint_nft.persist', 'event', 'failure', { recipient, txHash: receipt.transactionHash, qronId }, msg);
     }
 
-    // --- Update AuthiChain provenance to 'minted' ---
+    // ── Update AuthiChain provenance to 'minted' ─────────────────────────────
     if (registration_id && authichainUrl) {
       try {
         await fetch(`${authichainUrl}/api/qron-register/mint`, {

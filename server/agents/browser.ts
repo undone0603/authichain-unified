@@ -1,8 +1,9 @@
 import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity, enqueueTask, type Db } from './db-helpers.js';
+import { logActivity, getDb, enqueueTask } from '../db.js';
 import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
+import type { VerificationSource } from '../outreach/send-guard.js';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 const MAX_PAGE_CHARS = 8_000;
@@ -35,6 +36,22 @@ async function fetchPage(url: string): Promise<{ text: string; finalUrl: string 
   } catch {
     return null;
   }
+}
+
+/**
+ * Returned by browseLoop when the fetch-based scraper came away with nothing.
+ *
+ * A named constant rather than a literal at each site: runBrowseResearchLead
+ * escalates to the Playwright vision agent on exactly this value, and a typo
+ * in either half would silently disable that escalation — the failure mode
+ * would be a lead quietly researched as "No findings extracted." and pitched
+ * on the strength of it.
+ */
+export const NO_FINDINGS = 'No findings extracted.';
+
+/** True when the scraper produced no usable text for `org`. */
+export function isEmptyExtraction(research: string): boolean {
+  return !research?.trim() || research.trim() === NO_FINDINGS;
 }
 
 // ── ReAct navigation loop ───────────────────────────────────────────────────
@@ -101,13 +118,15 @@ Return JSON:
     }
   }
 
-  return findings.join('\n\n') || 'No findings extracted.';
+  return findings.join('\n\n') || NO_FINDINGS;
 }
 
 // ── Task: BROWSE_RESEARCH_LEAD ───────────────────────────────────────────────
 // Visits a lead's company website and enriches the lead record before outreach.
 export interface BrowseResearchLeadPayload {
   leadEmail: string;
+  /** Provenance from lead discovery; forwarded unchanged to send-guard. */
+  verificationSource?: VerificationSource;
   leadOrg: string;
   leadName?: string;
   leadTitle?: string;
@@ -115,7 +134,7 @@ export interface BrowseResearchLeadPayload {
   segment?: string;
 }
 
-export async function runBrowseResearchLead(task: Task, db: Db): Promise<void> {
+export async function runBrowseResearchLead(task: Task): Promise<void> {
   const payload = task.payload as BrowseResearchLeadPayload;
   const domain = payload.domain ?? payload.leadOrg.toLowerCase().replace(/\s+/g, '') + '.com';
   const startUrl = domain.startsWith('http') ? domain : `https://${domain}`;
@@ -127,6 +146,58 @@ recent news, team size, and technology stack hints.
 Focus on angles relevant to blockchain product authentication and anti-counterfeiting.`;
 
   const research = await browseLoop(startUrl, objective, 4);
+
+  // Escalate to the Playwright vision agent when the fetch-based scraper came
+  // away empty. That is the case browser-vision.ts was written for — its own
+  // docs describe BROWSE_VISION_RESEARCH_LEAD as "more thorough than the
+  // fetch-based BROWSE_RESEARCH_LEAD -- handles SPAs, JS-rendered pricing
+  // pages, and multi-step navigation" — and until now nothing ever created
+  // one, so the vision agent had no producer and never ran.
+  //
+  // The decision has to live here rather than in lead-finder, which is where
+  // the research task is enqueued: whether extraction comes back empty is only
+  // knowable after the scrape. Deciding at enqueue time would mean fetching
+  // every lead's site twice.
+  //
+  // We return *before* enqueuing DRAFT_OUTBOUND_EMAIL. runVisionResearchLead
+  // enqueues that itself with the same payload shape once it has a real hook,
+  // so doing it here as well would put two emails in front of one lead. The
+  // handoff is one-way — the vision agent never enqueues a text research task
+  // — so this cannot ping-pong.
+  //
+  // Cost of the handoff: vision tasks are left pending by the app runtime and
+  // only run on the Playwright workflow's 30-minute schedule, so an escalated
+  // lead waits up to half an hour, and if that run fails the lead stalls in
+  // `pending` rather than being emailed with a hollow hook. Stalling is the
+  // better failure: the previous behaviour pitched the lead on the strength of
+  // "No findings extracted."
+  if (isEmptyExtraction(research)) {
+    await enqueueTask(task.missionId, 'BROWSE_VISION_RESEARCH_LEAD', {
+      segment,
+      leadEmail: payload.leadEmail,
+      leadName:  payload.leadName,
+      leadOrg:   payload.leadOrg,
+      leadTitle: payload.leadTitle,
+      startUrl,
+      verificationSource: payload.verificationSource,
+    });
+
+    await logActivity({
+      userId: null,
+      action: 'browse_research_lead_escalated_to_vision',
+      entityType: 'task',
+      entityId: 0,
+      details: {
+        taskId: task.id,
+        leadEmail: payload.leadEmail,
+        leadOrg: payload.leadOrg,
+        domain: startUrl,
+        reason: 'fetch-based extraction returned no usable text',
+      },
+    });
+
+    return;
+  }
 
   // Summarise findings into a CRM note via LLM
   const summaryPrompt = `Based on this research about ${payload.leadOrg}:
@@ -149,15 +220,18 @@ Return JSON: { "summary": "...", "hookSentence": "one-sentence opener for a cold
   );
 
   // Write research back to lead record
-  await db.update(leads)
-    .set({
-      notes: `[browser_research]\n${summary}`,
-      updatedAt: new Date(),
-    })
-    .where(eq(leads.email, payload.leadEmail.toLowerCase()));
+  const db = await getDb();
+  if (db) {
+    await db.update(leads)
+      .set({
+        notes: `[browser_research]\n${summary}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(leads.email, payload.leadEmail.toLowerCase()));
+  }
 
   // Enqueue outbound email with enriched hook
-  await enqueueTask(db, task.missionId, 'DRAFT_OUTBOUND_EMAIL', {
+  await enqueueTask(task.missionId, 'DRAFT_OUTBOUND_EMAIL', {
     segment,
     sequence: 1,
     leadEmail: payload.leadEmail,
@@ -165,9 +239,10 @@ Return JSON: { "summary": "...", "hookSentence": "one-sentence opener for a cold
     leadOrg: payload.leadOrg,
     leadTitle: payload.leadTitle,
     researchHook: hookSentence,
+    verificationSource: payload.verificationSource,
   });
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'browse_research_lead_completed',
     entityType: 'task',
@@ -191,7 +266,7 @@ export interface BrowseCompetitorPayload {
   focusAreas?: string[];
 }
 
-export async function runBrowseCompetitorMonitor(task: Task, db: Db): Promise<void> {
+export async function runBrowseCompetitorMonitor(task: Task): Promise<void> {
   const payload = task.payload as BrowseCompetitorPayload;
   const focus = (payload.focusAreas ?? ['pricing', 'features', 'customers', 'partnerships']).join(', ');
 
@@ -221,7 +296,7 @@ Return JSON: { "pricingModel": "...", "theirStrengths": [...], "authichainEdges"
 
   const brief = parseLLMContent<Record<string, unknown>>(analysis.choices[0].message.content);
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'browse_competitor_monitor_completed',
     entityType: 'automation',
@@ -243,7 +318,7 @@ export interface BrowseNewsPayload {
   enqueueNewsTask?: boolean;
 }
 
-export async function runBrowseScrapeIndustryNews(task: Task, db: Db): Promise<void> {
+export async function runBrowseScrapeIndustryNews(task: Task): Promise<void> {
   const payload = task.payload as BrowseNewsPayload;
   const startUrl = payload.sourceUrl ?? `https://news.google.com/search?q=${encodeURIComponent(payload.keyword + ' counterfeiting supply chain')}&hl=en`;
 
@@ -267,14 +342,14 @@ Return JSON: { "stories": [{ "headline": "...", "source": "...", "summary": "...
   const { stories } = parseLLMContent<{ stories: unknown[] }>(result.choices[0].message.content);
 
   if (payload.enqueueNewsTask && Array.isArray(stories) && stories.length > 0) {
-    await enqueueTask(db, task.missionId, 'MONITOR_NEWS_FOR_PR', {
+    await enqueueTask(task.missionId, 'MONITOR_NEWS_FOR_PR', {
       stories,
       keyword: payload.keyword,
       source: 'browser_agent',
     });
   }
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'browse_scrape_news_completed',
     entityType: 'automation',
@@ -297,7 +372,7 @@ export interface BrowseVerifyProductPayload {
   expectedBrand?: string;
 }
 
-export async function runBrowseVerifyProductUrl(task: Task, db: Db): Promise<void> {
+export async function runBrowseVerifyProductUrl(task: Task): Promise<void> {
   const payload = task.payload as BrowseVerifyProductPayload;
 
   const objective = `Visit this product listing page and check whether it is a genuine AuthiChain-authenticated product.
@@ -328,7 +403,7 @@ JSON: { "verdict": "authentic|suspicious|counterfeit|inconclusive", "confidence"
     authichainMarkerFound: boolean;
   }>(verdictResult.choices[0].message.content);
 
-  await logActivity(db, {
+  await logActivity({
     userId: null,
     action: 'browse_verify_product_completed',
     entityType: 'automation',

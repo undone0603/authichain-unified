@@ -3,15 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import { createHash, randomUUID } from 'crypto';
 import { onDispensaryScan } from '../../../../server/revenue-engine/loop';
 import { onDispensaryBatchCreated } from '../../../../server/crm/events';
-import { verifyApiKey } from '@/lib/auth-api';
+import { isBrandFeatureEnabled } from '../../../../shared/brands/config';
 
 export async function POST(req: NextRequest) {
   try {
-    const apiKey = req.headers.get('X-API-Key');
-    if (!apiKey || !(await verifyApiKey(apiKey))) {
-      return NextResponse.json({ error: 'Invalid or missing API key' }, { status: 401 });
-    }
-
     const { dispensary_id, batch_id, events, brand } = await req.json();
         const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -20,6 +15,10 @@ export async function POST(req: NextRequest) {
     }
 
     const resolved_brand = brand ?? 'strainchain.io';
+
+    if (!isBrandFeatureEnabled(resolved_brand, 'enable_disp_pilot')) {
+      return NextResponse.json({ error: 'Dispensary pilot is not enabled for this brand' }, { status: 403 });
+    }
 
     // 1. Generate QR for batch
     const payload_raw = JSON.stringify({ dispensary_id, batch_id, resolved_brand, ts: Date.now() });

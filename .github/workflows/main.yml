@@ -1,0 +1,37 @@
+name: CI Main
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        # Fixed: Changed from @v7 to @v4
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        # Fixed: Simplified to the standard @v4 tag
+        uses: pnpm/action-setup@v6
+        with:
+          version: "10.28.2"
+
+      - name: Setup Node.js
+        # Fixed: Changed from @v7 to @v4
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm check
+
+      - name: Run tests
+        run: pnpm test

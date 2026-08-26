@@ -4,13 +4,13 @@ name: B2B Cold Outreach
 on:
   schedule:
     # Every Monday at 9 AM EST (14:00 UTC) — weekly cadence
-    - cron: '0 14 * * 1'
+    - cron: "0 14 * * 1"
   workflow_dispatch:
     inputs:
       segment:
-        description: 'Which segment to target (govchain | strainchain | qron | all)'
+        description: "Which segment to target (govchain | strainchain | qron | all)"
         required: false
-        default: 'all'
+        default: "all"
         type: choice
         options:
           - all
@@ -18,14 +18,14 @@ on:
           - strainchain
           - qron
       dry_run:
-        description: 'Dry run (save to Supabase, skip email send)'
+        description: "Dry run (save to Supabase, skip email send)"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
       flush_queued:
-        description: 'Only flush already-queued leads (no new prospecting)'
+        description: "Only flush already-queued leads (no new prospecting)"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
 
 concurrency:
@@ -36,8 +36,8 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: '22'
-  PNPM_VERSION: '10.28.2'
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.28.2"
 
 jobs:
   outreach:
@@ -47,18 +47,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -66,24 +66,40 @@ jobs:
       - name: Run B2B cold outreach
         run: pnpm exec tsx scripts/b2b-cold-outreach.ts --segment=${{ inputs.segment || 'all' }}
         env:
-          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          RESEND_API_KEY:        ${{ secrets.RESEND_API_KEY }}
-          APOLLO_API_KEY:        ${{ secrets.APOLLO_API_KEY }}
-          HUBSPOT_TOKEN:         ${{ secrets.HUBSPOT_TOKEN }}
-          OUTREACH_FROM_EMAIL:   ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
-          SALES_NOTIFY_EMAIL:    ${{ secrets.SALES_NOTIFY_EMAIL || 'hello@authichain.com' }}
-          CALENDLY_LINK:         ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
-          AUTHICHAIN_BOOK_URL:   ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
-          DRY_RUN:               ${{ inputs.dry_run || 'false' }}
-          FLUSH_QUEUED_ONLY:     ${{ inputs.flush_queued || 'false' }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2: ${{ secrets.RESEND_API_KEY2 }}
+          APOLLO_API_KEY: ${{ secrets.APOLLO_API_KEY }}
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+          OUTREACH_FROM_EMAIL: ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
+          OUTREACH_FROM_GOVCHAIN: ${{ secrets.OUTREACH_FROM_GOVCHAIN }}
+          OUTREACH_FROM_STRAINCHAIN: ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
+          OUTREACH_FROM_QRON: ${{ secrets.OUTREACH_FROM_QRON }}
+          SALES_NOTIFY_EMAIL: ${{ secrets.SALES_NOTIFY_EMAIL || 'hello@authichain.com' }}
+          CALENDLY_LINK: ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
+          AUTHICHAIN_BOOK_URL: ${{ secrets.AUTHICHAIN_BOOK_URL || 'https://app.authichain.com/book' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          FLUSH_QUEUED_ONLY: ${{ inputs.flush_queued || 'false' }}
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MAILING_ADDRESS: ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
+          UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}
 
       - name: Flush queued leads (if RESEND_API_KEY available)
         if: ${{ inputs.flush_queued == 'true' }}
         run: pnpm exec tsx -e "import { flushQueuedLeads } from './scripts/b2b-cold-outreach.ts'; flushQueuedLeads().then(n => console.log('Flushed', n, 'leads'));"
         env:
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
-          OUTREACH_FROM_EMAIL:  ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
-          CALENDLY_LINK:        ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2: ${{ secrets.RESEND_API_KEY2 }}
+          OUTREACH_FROM_EMAIL: ${{ secrets.OUTREACH_FROM_EMAIL || 'hello@authichain.com' }}
+          OUTREACH_FROM_GOVCHAIN: ${{ secrets.OUTREACH_FROM_GOVCHAIN }}
+          OUTREACH_FROM_STRAINCHAIN: ${{ secrets.OUTREACH_FROM_STRAINCHAIN }}
+          OUTREACH_FROM_QRON: ${{ secrets.OUTREACH_FROM_QRON }}
+          CALENDLY_LINK: ${{ secrets.CALENDLY_LINK || 'https://app.authichain.com/book' }}
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+          MAILING_ADDRESS: ${{ secrets.MAILING_ADDRESS || '109 N 4th St, Roscommon, MI 48653-9090 USA' }}
+          UNSUBSCRIBE_URL: ${{ secrets.UNSUBSCRIBE_URL || 'https://authichain.com/unsubscribe' }}
+          RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO || 'hello@authichain.com' }}

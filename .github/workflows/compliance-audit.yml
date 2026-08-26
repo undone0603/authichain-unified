@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request: {}
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -18,38 +18,20 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check required secrets
-        id: secrets_check
-        shell: bash
-        run: |
-          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
-            echo "::notice::Required Supabase secrets not set — skipping compliance audit. Configure repo secrets to enable."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        if: steps.secrets_check.outputs.skip != 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
       - name: Install dependencies
-        if: steps.secrets_check.outputs.skip != 'true'
         run: |
           pip install --upgrade pip
           pip install -r requirements-agentz.txt
 
       - name: Run Compliance Audit
-        if: steps.secrets_check.outputs.skip != 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python -m agentz.workflows.runner --handler authichain_compliance_audit
-
-      - name: Audit skipped
-        if: steps.secrets_check.outputs.skip == 'true'
-        run: echo "Compliance audit skipped — configure SUPABASE_URL in GitHub repo secrets."

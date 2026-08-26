@@ -9,8 +9,7 @@ NEXT_PUBLIC_SITE_URL = "https://authichain.com"
 [[d1_databases]]
 binding = "DB"
 database_name = "authichain-provenance"
-database_id = "5a6672a7-b3cb-43d4-85d4-d675451e58cb"
-
+database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 [env.production]
 name = "authichain-scan-validate"
 

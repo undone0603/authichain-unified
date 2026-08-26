@@ -2,6 +2,8 @@
 // Rate: 1 email per GH Actions trigger (every 4h). Cron removed — CF free plan limit hit.
 // Bounce history: April 2026 batch used guessed hello@ addresses → 73% bounce.
 // Current queue uses verified named contacts only.
+
+import { guardrailCheck, guardrailRecord, guardrailSuppress } from './guardrail-client';
 // KV stores: outreach_sent (sent list), outreach_bounced (bounce suppression list)
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -13,7 +15,7 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-interface Email {
+export interface Email {
   to: string;
   name: string;
   subject: string;
@@ -34,7 +36,7 @@ const OUTREACH_QUEUE: Email[] = [
 
 I came across Mission Restaurant Group and I'm impressed by your portfolio of Michigan restaurants. I'd love to help elevate your menu QR codes.
 
-I create AI-generated artistic QR codes using QRON — each one is a unique piece of art that's 100% scannable. Clients see 25-40% more scans because customers actually want to scan something beautiful.
+I create AI-generated artistic QR codes using QRON — each one is a unique piece of art that is scan-tested before delivery. The bet is simple: a code that looks like it belongs on your menu gets scanned more often than a black square. I would rather you test that on one restaurant than take my word for it.
 
 What I can deliver for your restaurant group:
 - Custom QR art matched to each restaurant's brand
@@ -89,7 +91,7 @@ To unsubscribe from future emails, reply with "unsubscribe".`
 
 As Michigan's largest cannabis company, Lume's packaging is seen by thousands daily. Your QR codes don't have to be boring black squares.
 
-I create AI-generated artistic QR codes — scannable art that matches your brand. 25-40% more engagement than standard codes.
+I create AI-generated artistic QR codes — scannable art matched to your brand, tested on iPhone, Android and tablet before delivery.
 
 $49/design or $199 for 5. 100% scan guarantee. 24-hour delivery.
 
@@ -139,7 +141,7 @@ To unsubscribe from future emails, reply with "unsubscribe".`
 
 I saw your partnership with Local Logic for QR-enabled signage. I'd like to propose a visual upgrade that makes your QR signs even more compelling.
 
-I run QRON — artistic QR codes see 25-40% more scans than standard codes. For agents, that means more virtual tour views and more leads.
+I run QRON — artistic QR codes that are scan-tested before delivery, designed so a sign earns a look instead of being ignored. Worth trialling on a single listing before committing to a rollout.
 
 Partnership options:
 - White-label: "Premium QR Art" add-on to existing sign orders
@@ -414,16 +416,26 @@ async function addBounced(env: any, email: string) {
 
 // ── Bounce webhook ────────────────────────────────────────────────────────────
 
-async function handleBounceWebhook(request: Request, env: any): Promise<Response> {
+export async function handleBounceWebhook(request: Request, env: any): Promise<Response> {
   try {
+    const url = new URL(request.url);
+    const authToken = env.AUTH_TOKEN;
+    const isAuthenticated = !!authToken && (
+      timingSafeEqual(url.searchParams.get('key') ?? '', authToken)
+      || timingSafeEqual(request.headers.get('Authorization') ?? '', `Bearer ${authToken}`)
+    );
     const payload: any = await request.json();
     const eventType: string = payload?.type ?? '';
 
     if (eventType === 'email.bounced' || eventType === 'email.complained') {
       const recipients: string[] = payload?.data?.to ?? [];
+      const reason = eventType === 'email.bounced' ? 'bounced' : 'complained';
       for (const addr of recipients) {
         await addBounced(env, addr);
-        console.log(`Suppressed ${addr} (${eventType})`);
+        if (isAuthenticated) {
+          await guardrailSuppress(env, addr, reason, 'qron-outreach-webhook');
+          console.log(`Suppressed ${addr} (${eventType})`);
+        }
       }
     }
 
@@ -544,12 +556,17 @@ async function sendAllDpp(env: any) {
   return { sent: results.filter(r => r.sent).length, failed: results.filter(r => !r.sent).length, results };
 }
 
-async function sendViaResend(email: Email, env: any): Promise<boolean> {
+export async function sendViaResend(email: Email, env: any): Promise<boolean> {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) {
     console.error('RESEND_API_KEY not set on qron-outreach worker');
     return false;
   }
+  const guardrail = await guardrailCheck(env, 'email.qron-outreach', {
+    recipient: email.to,
+  });
+  if (!guardrail.allowed) return false;
+
   try {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -571,9 +588,23 @@ async function sendViaResend(email: Email, env: any): Promise<boolean> {
     });
     const result: any = await resp.json();
     const ok = resp.ok && !!result.id;
+    await guardrailRecord(env, {
+      channel: 'email.qron-outreach',
+      action: 'record',
+      allowed: ok,
+      reason: ok ? undefined : result.message ?? 'Resend rejected the email',
+      metadata: { recipient: email.to, resendId: result.id },
+    });
     console.log(`Email to ${email.to}: ${ok ? 'sent' : 'failed'} ${result.id ?? result.message ?? ''}`);
     return ok;
   } catch (e: any) {
+    await guardrailRecord(env, {
+      channel: 'email.qron-outreach',
+      action: 'record',
+      allowed: false,
+      reason: e.message,
+      metadata: { recipient: email.to },
+    });
     console.error(`Email error for ${email.to}:`, e.message);
     return false;
   }

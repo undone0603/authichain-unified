@@ -1,20 +1,15 @@
 import "dotenv/config";
 import { runLiveSystemsCheck } from "./live-systems-check.js";
-import { getDb } from "../db.js";
-import { getWhiteLabelClients } from "./db-helpers.js";
+import * as db from "../db.js";
 
 async function runSmokeTest() {
   console.log("🔥 Starting AuthiChain Production Smoke Test...");
   console.log("----------------------------------------------");
 
-  // Documented bridge: standalone CLI entry point has no caller to thread a
-  // db instance from, so it obtains one from the legacy Node singleton itself.
-  const db = await getDb();
-
   // 1. Database Connectivity
   console.log("📡 Testing Database Connectivity...");
   try {
-    const clients = await getWhiteLabelClients(db);
+    const clients = await db.getWhiteLabelClients();
     console.log(`✅ Database Connected. Found ${clients.length} white-label clients.`);
   } catch (err: any) {
     console.error("❌ Database Connection Failed:", err.message);
@@ -24,13 +19,13 @@ async function runSmokeTest() {
   console.log("\n🔗 Testing Third-Party Integrations...");
   let health: any = { integrations: {}, blockers: [] };
   try {
-    health = await runLiveSystemsCheck(db);
+    health = await runLiveSystemsCheck();
   } catch (err: any) {
     console.warn("⚠️  Live Systems Check encountered an error:", err.message);
   }
-
+  
   const statusIcon = (res: any) => (res?.connected ? "✅" : res?.configured ? "⚠️ (Configured but not connected)" : "❌ (Not Configured)");
-
+  
   console.log(`${statusIcon(health.integrations.stripe)} Stripe (Production)`);
   console.log(`${statusIcon(health.integrations.hubspot)} HubSpot`);
   console.log(`${statusIcon(health.integrations.gmail)} Gmail Outreach`);
@@ -80,3 +75,4 @@ async function runSmokeTest() {
 }
 
 runSmokeTest().catch(console.error);
+

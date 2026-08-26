@@ -1,0 +1,147 @@
+name: Publish Social Bundle
+
+# Posts autonomously generated content to LinkedIn, Reddit and X.
+#
+# The content Routines cannot do this themselves — they fire without MCP
+# connector tools and secrets are not available to them. They write a bundle to
+# content/social/ and push; this runs where the credentials live.
+#
+# Nothing publishes unless scripts/validate-social-bundle.mjs passes. A post
+# cannot be unsent, so the guardrail is a hard precondition rather than advice,
+# and it is enforced here as well as in CI in case a bundle reaches main by
+# another route.
+
+on:
+  push:
+    branches: [main]
+    paths: ["content/social/**"]
+  schedule:
+    # Safety net: catches anything that landed on main without triggering the
+    # push event (squash merges from the auto-merge workflow, manual commits).
+    - cron: "0 15 * * 1,4"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Validate and report without posting"
+        required: false
+        default: "true"
+        type: boolean
+      bundle:
+        description: "Specific bundle path (default: oldest unpublished)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  # Serialised so two triggers cannot race and double-post the same bundle.
+  group: social-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with: { node-version: "22" }
+
+      - uses: actions/setup-python@v7
+        with: { python-version: "3.12" }
+
+      - name: Install publisher dependencies
+        run: pip install --quiet requests requests-oauthlib praw
+
+      - name: Validate every bundle
+        run: |
+          shopt -s nullglob
+          BUNDLES=(content/social/*.json)
+          if [ ${#BUNDLES[@]} -eq 0 ]; then
+            echo "No bundles present."
+            exit 0
+          fi
+          node scripts/validate-social-bundle.mjs "${BUNDLES[@]}"
+
+      # Always record channel readiness in the log. If a post later fails to
+      # appear, this is the line that says whether the token was alive at the
+      # time. Non-blocking: a broken channel must not stop the others.
+      - name: Credential preflight
+        continue-on-error: true
+        env:
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          SOCIAL_WEBHOOK_URL: ${{ secrets.SOCIAL_WEBHOOK_URL }}
+          SOCIAL_WEBHOOK_TOKEN: ${{ secrets.SOCIAL_WEBHOOK_TOKEN }}
+        run: python3 scripts/publish-social-bundle.py --check-credentials
+
+      - name: Publish
+        env:
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+          # Credential-light alternatives to the raw OAuth apps above. Set either
+          # instead of (or alongside) the platform tokens — each channel skips
+          # cleanly when its secrets are absent.
+          # Telegram: BotFather token + a channel id the bot administers.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          # Webhook fan-out: one URL (Zapier/Make/n8n/Buffer) that posts to every
+          # platform using connections authorised once in that tool's UI.
+          SOCIAL_WEBHOOK_URL: ${{ secrets.SOCIAL_WEBHOOK_URL }}
+          SOCIAL_WEBHOOK_TOKEN: ${{ secrets.SOCIAL_WEBHOOK_TOKEN }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ -n "${{ inputs.bundle }}" ]; then ARGS="$ARGS --bundle ${{ inputs.bundle }}"; fi
+          python3 scripts/publish-social-bundle.py $ARGS
+
+      - name: Record what was published
+        if: inputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          # `git diff` cannot see untracked files, and on the very first live
+          # publish the ledger is brand new — so checking it that way exits 0,
+          # skips the commit, and the ledger dies with the runner. The next run
+          # would then repost the same bundle to every configured channel.
+          # Stage first, then ask the index whether anything actually changed.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p content/social
+                    [ -f content/social/.published.json ] || echo '{}' > content/social/.published.json
+          git add -A content/social/.published.json
+          if git diff --cached --quiet -- content/social/.published.json; then
+            echo "Ledger unchanged."
+            exit 0
+          fi
+          git commit -m "chore(social): record published bundle [skip ci]"
+          # The publish step already posted. If main moved on while we were
+          # posting, rebase and retry rather than failing — an unrecorded
+          # ledger is a double-post next run.
+          for attempt in 1 2 3; do
+            if git push; then exit 0; fi
+            echo "Push failed (attempt $attempt), rebasing on main..."
+            git pull --rebase origin main
+          done
+          echo "::error::Published successfully but could not record the ledger. Re-run will repost — reconcile content/social/.published.json by hand."
+          exit 1

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME } from "./cookies";
 import { sdk } from "./sdk";
 import * as db from "../db";
 

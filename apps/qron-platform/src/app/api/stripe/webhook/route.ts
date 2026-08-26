@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import type Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 
@@ -18,18 +17,17 @@ export async function POST(req: NextRequest) {
   }
 
   const Stripe = (await import('stripe')).default;
-  const stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
+  const stripe = new Stripe(stripeKey, { apiVersion: '2026-05-27.dahlia' as const });
 
   const body = await req.text();
   const sig = req.headers.get('stripe-signature')!;
 
-  let event: Stripe.Event;
+  let event: any;
   try {
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('Stripe webhook signature verification failed:', msg);
-    return NextResponse.json({ error: `Webhook Error: ${msg}` }, { status: 400 });
+  } catch (err: any) {
+    console.error('Stripe webhook signature verification failed:', err.message);
+    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
 
   try {
@@ -100,7 +98,7 @@ export async function POST(req: NextRequest) {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('id')
+          .select('id, email:auth.users!id(email)')
           .eq('stripe_customer_id', customerId)
           .single();
 
@@ -174,9 +172,8 @@ export async function POST(req: NextRequest) {
     }).select();
 
     return NextResponse.json({ received: true, type: event.type });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+  } catch (err: any) {
     console.error('Webhook processing error:', err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

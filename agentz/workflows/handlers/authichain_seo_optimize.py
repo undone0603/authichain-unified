@@ -12,7 +12,7 @@ from agentz.core.llm import lm_manager
 from supabase import create_client, Client
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("google/gemma-4-e4b")
+    lm_manager.load_model("local-model")
     try:
         # 1. Setup
         supabase_url = get_or_placeholder("supabase_url", ctx)
@@ -26,7 +26,7 @@ def run(ctx: ExecutionContext) -> str:
         sitemaps = ctx.step(
             "Fetch and generate sitemap XMLs",
             action=lambda: asyncio.run(update_platform_sitemaps(supabase))
-        )
+        ) or {}
         
         # 3. Simulate File Deployment
         # In production, these XMLs would be written to the /public folder of each project
@@ -36,7 +36,7 @@ def run(ctx: ExecutionContext) -> str:
             
         # 4. IndexNow Pings
         ctx.step("Pinging IndexNow for rapid discovery of new products/projects...")
-        key = "***REMOVED***indexnow" # Placeholder or from file
+        key = "authichain2026indexnow" # Placeholder or from file
         
         for domain in sitemaps.keys():
             ctx.step(
@@ -46,4 +46,4 @@ def run(ctx: ExecutionContext) -> str:
             
         return "SEO Optimization complete. All platforms verified, sitemaps generated, and IndexNow pinged."
     finally:
-        lm_manager.unload_model("google/gemma-4-e4b")
+        lm_manager.unload_model("local-model")

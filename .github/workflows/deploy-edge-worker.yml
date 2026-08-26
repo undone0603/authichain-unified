@@ -1,93 +1,142 @@
 name: Deploy Cloudflare Edge Worker
 
-# Push trigger re-enabled after fixing:
-#   1. pnpm minimumReleaseAge policy: pnpm-workspace.yaml now scope-globs the
-#      frequently-updating trusted vendors (@smithy/*, @aws-sdk/*, miniflare,
-#      wrangler) out of the age check, so routine transitive-dep updates no
-#      longer break the install while protection stays on for everything else.
-#   2. GITHUB_OUTPUT trailing-quote bug in secrets_check step
-#   3. pnpm/action-setup must run before setup-node (for cache to work)
-#   4. pnpm version pinned to 10.28.2 (matching deploy-workers.yml / deploy-cloudflare.yml)
-#      instead of 'latest', which could pick up a version with different
-#      minimumReleaseAge default/config-reading behavior
 on:
   push:
-    branches: [main]
-    paths:
-      - 'workers/**'
-      - '.github/workflows/deploy-edge-worker.yml'
-  workflow_dispatch: {}
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: deploy-edge-worker-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_CONFIG: .gitleaks.toml
+
   deploy:
     name: Deploy Revenue Worker
+    needs: secret-scan
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    env:
+      WORKER_NAME: authichain-revenue-worker
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check required secrets
         id: secrets_check
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
-            echo "::notice::CLOUDFLARE_API_TOKEN not set — skipping edge worker deploy. Set in repo secrets to enable."
+          missing=0
+
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN not set — skipping edge worker deploy."
+            missing=1
+          fi
+
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::CLOUDFLARE_ACCOUNT_ID not set — skipping edge worker deploy."
+            missing=1
+          fi
+
+          if [ "$missing" -eq 1 ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Setup pnpm
+      - name: Install pnpm
         if: steps.secrets_check.outputs.skip != 'true'
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        uses: pnpm/action-setup@v6
         with:
-          version: '10.28.2'
+          version: 10.28.2
+          run_install: false
 
-      - name: Setup Node 22
+      - name: Setup Node
         if: steps.secrets_check.outputs.skip != 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '22'
-          cache: 'pnpm'
-
-      - name: Install wrangler
-        if: steps.secrets_check.outputs.skip != 'true'
-        run: npm install -g wrangler@latest
+          node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
         if: steps.secrets_check.outputs.skip != 'true'
-        # Plain install. Supply-chain minimumReleaseAge protection is handled
-        # coherently in pnpm-workspace.yaml (minimumReleaseAge: 1440 with
-        # @smithy/*, @aws-sdk/*, miniflare, wrangler scope-globbed out) — no
-        # per-workflow bypass flag needed. Do NOT re-add
-        # --config.minimumReleaseAge=0 here: that disables the supply-chain
-        # freshness check wholesale for this install.
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
-      - name: Upload secrets
+      - name: Verify Cloudflare auth
         if: steps.secrets_check.outputs.skip != 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler whoami
+
+      - name: Upload worker secrets
+        if: steps.secrets_check.outputs.skip != 'true'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRICE_BASIC: ${{ secrets.STRIPE_PRICE_BASIC }}
+          STRIPE_PRICE_PRO: ${{ secrets.STRIPE_PRICE_PRO }}
+          STRIPE_PRICE_ENTERPRISE: ${{ secrets.STRIPE_PRICE_ENTERPRISE }}
+          WORKER_API_KEY: ${{ secrets.WORKER_API_KEY }}
+          CRM_API_KEY: ${{ secrets.CRM_API_KEY }}
         run: |
-          echo "${{ secrets.SUPABASE_URL }}" | wrangler secret put SUPABASE_URL --name authichain-revenue-worker
-          echo "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" | wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name authichain-revenue-worker
-          echo "${{ secrets.STRIPE_SECRET_KEY }}" | wrangler secret put STRIPE_SECRET_KEY --name authichain-revenue-worker
-          echo "${{ secrets.STRIPE_WEBHOOK_SECRET }}" | wrangler secret put STRIPE_WEBHOOK_SECRET --name authichain-revenue-worker
-          echo "${{ secrets.STRIPE_PRICE_BASIC }}" | wrangler secret put STRIPE_PRICE_BASIC --name authichain-revenue-worker
-          echo "${{ secrets.STRIPE_PRICE_PRO }}" | wrangler secret put STRIPE_PRICE_PRO --name authichain-revenue-worker
-          echo "${{ secrets.STRIPE_PRICE_ENTERPRISE }}" | wrangler secret put STRIPE_PRICE_ENTERPRISE --name authichain-revenue-worker
+          put_secret() {
+            local key="$1"
+            local value="$2"
 
-      - name: Deploy worker
+            if [ -n "$value" ]; then
+              printf '%s' "$value" | pnpm exec wrangler secret put "$key" --name "$WORKER_NAME"
+            else
+              echo "::notice::$key not set — skipping"
+            fi
+          }
+
+          put_secret SUPABASE_URL "$SUPABASE_URL"
+          put_secret SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+          put_secret STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY"
+          put_secret STRIPE_WEBHOOK_SECRET "$STRIPE_WEBHOOK_SECRET"
+          put_secret STRIPE_PRICE_BASIC "$STRIPE_PRICE_BASIC"
+          put_secret STRIPE_PRICE_PRO "$STRIPE_PRICE_PRO"
+          put_secret STRIPE_PRICE_ENTERPRISE "$STRIPE_PRICE_ENTERPRISE"
+          put_secret WORKER_API_KEY "$WORKER_API_KEY"
+          put_secret CRM_API_KEY "$CRM_API_KEY"
+
+      - name: Deploy revenue worker
         if: steps.secrets_check.outputs.skip != 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: wrangler deploy --config api/wrangler.toml
-
-      - name: Deploy skipped
-        if: steps.secrets_check.outputs.skip == 'true'
-        run: echo "Edge worker deploy skipped — configure CLOUDFLARE_API_TOKEN in GitHub repo secrets."
+          APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
+          CRM_BASE_URL: ${{ vars.CRM_BASE_URL }}
+        run: |
+          pnpm exec wrangler deploy --minify --config api/wrangler.toml \
+            --var "NEXT_PUBLIC_APP_URL:$APP_URL" \
+            --var "CRM_BASE_URL:$CRM_BASE_URL"

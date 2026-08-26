@@ -1,0 +1,13 @@
+name = "chipchain-io"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+account_id = "4c1869b90f13f86940aa3747839bf420"
+workers_dev = false
+
+[[routes]]
+pattern = "chipchain.io/*"
+zone_name = "chipchain.io"
+
+[[routes]]
+pattern = "www.chipchain.io/*"
+zone_name = "chipchain.io"

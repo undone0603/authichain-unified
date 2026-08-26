@@ -9,27 +9,27 @@ on:
       - main
   pull_request:
   schedule:
-    - cron: '0 12 * * 1' # Mondays 12:00 UTC
+    - cron: "0 12 * * 1" # Mondays 12:00 UTC
   workflow_dispatch:
 
 jobs:
   gitleaks:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    # Skip Dependabot PRs - its GITHUB_TOKEN is read-only on PR events
     if: github.actor != 'dependabot[bot]'
     permissions:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
+          # gitleaks diffs <sha>^..<sha>, which needs the parent commit present —
+          # fetch-depth: 1 leaves it unresolvable ("ambiguous argument ... unknown
+          # revision"), so fetch full history on every trigger.
           fetch-depth: 0
-
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # GITLEAKS_LICENSE is required for org repos on gitleaks-action v2.
-          # On public/personal repos it is optional — pass it through if set
-          # so the action doesn't print a noisy warning.
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
           GITLEAKS_ENABLE_COMMENTS: ${{ github.event_name == 'pull_request' }}
+          GITLEAKS_CONFIG: .gitleaks.toml

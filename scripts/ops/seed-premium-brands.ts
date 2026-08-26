@@ -1,4 +1,4 @@
-import { generateLivingQR } from './src/lib/hf-generation';
+import { generateLivingQR } from '../../src/lib/hf-generation';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -89,7 +89,7 @@ async function seedPremiumGallery() {
     console.log('\n✨ PREMIUM SEEDING COMPLETE. The Marketplace is now live with real-world demos.');
 
   } catch (err: unknown) {
-    console.error('ðŸ’¥ SEEDING CRASHED:', err instanceof Error ? err.message : String(err));
+    console.error('💥 SEEDING CRASHED:', err instanceof Error ? err.message : String(err));
   }
 }
 

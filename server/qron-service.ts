@@ -34,7 +34,7 @@ const MODE_BY_TIER: Record<string, string> = {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface QRONGenerateParams {
-  productId: number;
+  productId: string;
   productName: string;
   brand?: string;
   serialNumber?: string;
@@ -83,7 +83,7 @@ export interface TrustScore {
  * A counterfeit with a different token ID gets a different pattern → fails fingerprint check.
  */
 export function generateProductSeed(params: {
-  productId: number;
+  productId: string;
   nftTokenId?: string;
   serialNumber?: string;
 }): string {
@@ -261,7 +261,7 @@ export function computeTrustScore(params: {
 async function registerToOpenART(params: {
   qronId: string;
   imageUrl: string;
-  productId: number;
+  productId: string;
   productName: string;
   brand?: string;
   seed: string;

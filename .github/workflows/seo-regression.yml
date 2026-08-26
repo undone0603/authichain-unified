@@ -1,0 +1,201 @@
+name: SEO Regression Check
+
+# Weekly watchdog: live HTTP checks for all brand-domain Cloudflare Workers.
+# Source of truth: workers/<brand>/src/index.ts
+# Report-only: fails loudly in Actions so the daily ops health-check routine
+# can surface it; no auto-commits or deploys.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  seo-check:
+    name: Brand-domain SEO regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Run SEO checks
+        id: check
+        shell: bash
+        run: |
+          DOMAINS="authichain.com qron.space govchain.us strainchain.io"
+          OVERALL=0
+
+          run_check() {
+            local domain="$1"
+            local failed=""
+
+            # ── 1. Homepage: 200, text/html, title, meta description, og:image, >=2 ld+json ──
+            local home_out
+            home_out=$(mktemp)
+            local home_headers
+            home_headers=$(mktemp)
+            local home_code
+            home_code=$(curl -sS -L --max-time 15 \
+              -o "$home_out" -D "$home_headers" \
+              -w '%{http_code}' \
+              "https://${domain}/")
+
+            if [ "$home_code" != "200" ]; then
+              failed="${failed:+$failed, }/ HTTP $home_code (not 200)"
+            else
+              local home_ct
+              home_ct=$(grep -i '^content-type:' "$home_headers" | tail -1 | tr -d '\r')
+              if ! echo "$home_ct" | grep -qi 'text/html'; then
+                failed="${failed:+$failed, }/ content-type not text/html ($home_ct)"
+              fi
+
+              local home_body
+              home_body=$(cat "$home_out")
+
+              if ! echo "$home_body" | grep -qi '<title'; then
+                failed="${failed:+$failed, }/ missing <title>"
+              fi
+              if ! echo "$home_body" | grep -qi 'meta name.*description\|meta name=.description'; then
+                failed="${failed:+$failed, }/ missing <meta name=description>"
+              fi
+              if ! echo "$home_body" | grep -qi 'og:image.*content=\|property=.og:image'; then
+                failed="${failed:+$failed, }/ missing <meta property=og:image content=...>"
+              fi
+              local ldjson_count
+              ldjson_count=$(echo "$home_body" | grep -c 'application/ld+json' || echo 0)
+              if [ "$ldjson_count" -lt 2 ]; then
+                failed="${failed:+$failed, }/ only ${ldjson_count} ld+json block(s) (need >=2)"
+              fi
+            fi
+            rm -f "$home_out" "$home_headers"
+
+            # ── 2. /og-image.png: 200, image/png, 80-300 KB ──
+            local png_headers
+            png_headers=$(mktemp)
+            local png_body
+            png_body=$(mktemp)
+            local png_code
+            png_code=$(curl -sS -L --max-time 15 \
+              -o "$png_body" -D "$png_headers" \
+              -w '%{http_code}' \
+              "https://${domain}/og-image.png")
+
+            if [ "$png_code" != "200" ]; then
+              failed="${failed:+$failed, }/og-image.png HTTP $png_code (not 200)"
+            else
+              local png_ct
+              png_ct=$(grep -i '^content-type:' "$png_headers" | tail -1 | tr -d '\r')
+              if ! echo "$png_ct" | grep -qi 'image/png'; then
+                failed="${failed:+$failed, }/og-image.png content-type not image/png ($png_ct)"
+              fi
+              local png_size
+              png_size=$(wc -c < "$png_body")
+              if [ "$png_size" -lt 81920 ] || [ "$png_size" -gt 307200 ]; then
+                failed="${failed:+$failed, }/og-image.png size ${png_size}B outside 80-300 KB"
+              fi
+            fi
+            rm -f "$png_body" "$png_headers"
+
+            # ── 3. /og-image.svg: 200, image/svg+xml ──
+            local svg_og_headers
+            svg_og_headers=$(mktemp)
+            local svg_og_code
+            svg_og_code=$(curl -sS -L --max-time 15 \
+              -o /dev/null -D "$svg_og_headers" \
+              -w '%{http_code}' \
+              "https://${domain}/og-image.svg")
+
+            if [ "$svg_og_code" != "200" ]; then
+              failed="${failed:+$failed, }/og-image.svg HTTP $svg_og_code (not 200)"
+            else
+              local svg_og_ct
+              svg_og_ct=$(grep -i '^content-type:' "$svg_og_headers" | tail -1 | tr -d '\r')
+              if ! echo "$svg_og_ct" | grep -qi 'image/svg'; then
+                failed="${failed:+$failed, }/og-image.svg content-type not image/svg+xml ($svg_og_ct)"
+              fi
+            fi
+            rm -f "$svg_og_headers"
+
+            # ── 4. /favicon.svg: 200, image/svg+xml ──
+            local fav_headers
+            fav_headers=$(mktemp)
+            local fav_code
+            fav_code=$(curl -sS -L --max-time 15 \
+              -o /dev/null -D "$fav_headers" \
+              -w '%{http_code}' \
+              "https://${domain}/favicon.svg")
+
+            if [ "$fav_code" != "200" ]; then
+              failed="${failed:+$failed, }/favicon.svg HTTP $fav_code (not 200)"
+            else
+              local fav_ct
+              fav_ct=$(grep -i '^content-type:' "$fav_headers" | tail -1 | tr -d '\r')
+              if ! echo "$fav_ct" | grep -qi 'image/svg'; then
+                failed="${failed:+$failed, }/favicon.svg content-type not image/svg+xml ($fav_ct)"
+              fi
+            fi
+            rm -f "$fav_headers"
+
+            # ── 5. /sitemap.xml: 200, <urlset, at least one <url> ──
+            local sitemap_out
+            sitemap_out=$(mktemp)
+            local sitemap_code
+            sitemap_code=$(curl -sS -L --max-time 15 \
+              -o "$sitemap_out" \
+              -w '%{http_code}' \
+              "https://${domain}/sitemap.xml")
+
+            if [ "$sitemap_code" != "200" ]; then
+              failed="${failed:+$failed, }/sitemap.xml HTTP $sitemap_code (not 200)"
+            else
+              if ! grep -q '<urlset' "$sitemap_out"; then
+                failed="${failed:+$failed, }/sitemap.xml missing <urlset"
+              fi
+              if ! grep -q '<url>' "$sitemap_out" && ! grep -q '<url ' "$sitemap_out"; then
+                failed="${failed:+$failed, }/sitemap.xml has no <url> entries"
+              fi
+            fi
+            rm -f "$sitemap_out"
+
+            # ── 6. /robots.txt: 200, contains "Sitemap:" ──
+            local robots_out
+            robots_out=$(mktemp)
+            local robots_code
+            robots_code=$(curl -sS -L --max-time 15 \
+              -o "$robots_out" \
+              -w '%{http_code}' \
+              "https://${domain}/robots.txt")
+
+            if [ "$robots_code" != "200" ]; then
+              failed="${failed:+$failed, }/robots.txt HTTP $robots_code (not 200)"
+            else
+              if ! grep -qi 'Sitemap:' "$robots_out"; then
+                failed="${failed:+$failed, }/robots.txt missing Sitemap: directive"
+              fi
+            fi
+            rm -f "$robots_out"
+
+            # ── Result line ──
+            if [ -z "$failed" ]; then
+              echo "${domain}: PASS"
+            else
+              echo "${domain}: FAIL -- ${failed}"
+              OVERALL=1
+            fi
+          }
+
+          for domain in $DOMAINS; do
+            run_check "$domain"
+          done
+
+          echo ""
+          echo "--- rollup ---"
+          if [ "$OVERALL" -eq 0 ]; then
+            echo "All 4 brand domains passed all 6 SEO checks (homepage meta, og-image.png size, og-image.svg, favicon.svg, sitemap.xml, robots.txt). No regressions detected."
+          else
+            echo "One or more brand domains failed SEO checks. Investigate the FAIL lines above and look at the corresponding workers/<brand>/src/index.ts fetch handler for the failing route. Common causes: a route handler was removed or returned the wrong content-type; the PNG asset grew beyond 300 KB or shrank below 80 KB; an ld+json block was dropped from the homepage template."
+          fi
+
+          exit $OVERALL

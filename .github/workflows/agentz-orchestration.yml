@@ -2,13 +2,13 @@ name: AgentZ — Autonomous Sales & Lead Orchestration
 
 on:
   schedule:
-    - cron: '0 8 * * *'   # Daily 8 AM UTC (after gov-engine at 6 AM)
+    - cron: "0 8 * * *" # Daily 8 AM UTC (after gov-engine at 6 AM)
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run — no DB writes or outreach'
+        description: "Dry run — no DB writes or outreach"
         required: false
-        default: 'true'
+        default: "true"
         type: boolean
 
 concurrency:
@@ -19,106 +19,150 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: '22'
-  PNPM_VERSION: '10.28.2'
-  APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.28.2"
 
 jobs:
+  preflight:
+    name: Verify live-operation prerequisites
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
+      AGENTZ_WEBHOOK_SECRET: ${{ secrets.AGENTZ_WEBHOOK_SECRET }}
+      VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
+    steps:
+      - id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          for required in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY HUBSPOT_TOKEN AGENTZ_WEBHOOK_SECRET VERCEL_APP_URL; do
+            if [ -z "${!required}" ]; then
+              missing+=("$required")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::AgentZ skipped because required secrets are missing: ${missing[*]}"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
   # ── Phase 1: Qualify inbound leads ──────────────────────────────────────────
   qualify-leads:
     name: Qualify Leads
     runs-on: ubuntu-latest
+    needs: preflight
+    if: needs.preflight.outputs.ready == 'true'
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with: { version: '${{ env.PNPM_VERSION }}' }
-      - uses: actions/setup-node@v4
-        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with: { version: "${{ env.PNPM_VERSION }}" }
+      - uses: actions/setup-node@v7
+        with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
       - run: pnpm install --no-frozen-lockfile
       - name: Qualify leads with AI scoring
-        continue-on-error: true
         run: pnpm exec tsx scripts/qualify-leads.ts
         env:
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
-          GROQ_API_KEY:         ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
-          HUGGINGFACE_API_KEY:  ${{ secrets.HUGGINGFACE_API_KEY }}
-          LOCAL_MODEL_URL:      ${{ secrets.LOCAL_MODEL_URL }}
-          HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
-          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+          # Reaches the founder's local model only when the tunnel URL secret
+          # points somewhere routable from CI; otherwise disabled in one fast
+          # connection error by the cascade's circuit breaker.
+          LOCAL_MODEL_URL: ${{ secrets.LOCAL_MODEL_URL }}
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
 
   # ── Phase 2: Sync MI cannabis leads to HubSpot ──────────────────────────────
   sync-mi-leads:
     name: Sync Michigan Leads → HubSpot
     runs-on: ubuntu-latest
     needs: qualify-leads
-    # Non-critical: qualify-leads uses continue-on-error so this always runs
-    if: always()
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with: { version: '${{ env.PNPM_VERSION }}' }
-      - uses: actions/setup-node@v4
-        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with: { version: "${{ env.PNPM_VERSION }}" }
+      - uses: actions/setup-node@v7
+        with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
       - run: pnpm install --no-frozen-lockfile
       - name: Sync MI leads to HubSpot CRM
-        continue-on-error: true
         run: pnpm exec tsx scripts/sync-mi-leads-hubspot.ts
         env:
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
-          HUBSPOT_SERVICE_KEY:  ${{ secrets.HUBSPOT_SERVICE_KEY || secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
-          AIRTABLE_API_KEY:     ${{ secrets.AIRTABLE_API_KEY }}
-          AIRTABLE_BASE_ID:     ${{ secrets.AIRTABLE_BASE_ID }}
-          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
+          # sync-mi-leads-hubspot.ts reads HUBSPOT_SERVICE_KEY; without it the
+          # sync "succeeds" as a silent no-op. HUBSPOT_ACCESS_TOKEN is the only
+          # HubSpot secret that actually exists in this repo.
+          HUBSPOT_SERVICE_KEY: ${{ secrets.HUBSPOT_SERVICE_KEY || secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
 
   # ── Phase 3: Funnel health report ───────────────────────────────────────────
   funnel-report:
     name: Funnel Report
     runs-on: ubuntu-latest
     needs: sync-mi-leads
-    if: always()
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with: { version: '${{ env.PNPM_VERSION }}' }
-      - uses: actions/setup-node@v4
-        with: { node-version: '${{ env.NODE_VERSION }}', cache: pnpm }
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with: { version: "${{ env.PNPM_VERSION }}" }
+      - uses: actions/setup-node@v7
+        with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
       - run: pnpm install --no-frozen-lockfile
       - name: Generate funnel performance report
-        continue-on-error: true
         run: pnpm exec tsx scripts/funnel-report.ts
         env:
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          HUBSPOT_TOKEN:        ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
-          RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
-          DRY_RUN:              ${{ inputs.dry_run || 'false' }}
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_API_KEY2: ${{ secrets.RESEND_API_KEY2 }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
 
   # ── Phase 4: Notify AgentZ webhook ──────────────────────────────────────────
   notify-webhook:
     name: Notify AgentZ Webhook
     runs-on: ubuntu-latest
-    needs: [qualify-leads, sync-mi-leads, funnel-report]
+    needs: [preflight, qualify-leads, sync-mi-leads, funnel-report]
     if: always()
     steps:
       - name: Post orchestration summary to webhook
         env:
+          PREFLIGHT_STATUS: ${{ needs.preflight.result }}
+          QUALIFY_LEADS_STATUS: ${{ needs.qualify-leads.result }}
+          SYNC_MI_LEADS_STATUS: ${{ needs.sync-mi-leads.result }}
+          FUNNEL_REPORT_STATUS: ${{ needs.funnel-report.result }}
           AGENTZ_WEBHOOK_SECRET: ${{ secrets.AGENTZ_WEBHOOK_SECRET }}
-          APP_URL: ${{ vars.APP_URL || secrets.VERCEL_APP_URL || 'https://authichain.com' }}
+          VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
         run: |
-          curl -sf -X POST \
+          set -euo pipefail
+          status="success"
+          for stage in "$PREFLIGHT_STATUS" "$QUALIFY_LEADS_STATUS" "$SYNC_MI_LEADS_STATUS" "$FUNNEL_REPORT_STATUS"; do
+            if [ "$stage" != "success" ]; then
+              status="failure"
+              break
+            fi
+          done
+
+          curl --fail-with-body --silent --show-error -X POST \
             -H "Content-Type: application/json" \
-            -H "x-agentz-secret: ${AGENTZ_WEBHOOK_SECRET}" \
-            "${APP_URL}/api/agentz/webhook" \
-            -d "{
-              \"event\": \"automation.complete\",
-              \"payload\": {
-                \"workflow\": \"agentz-orchestration\",
-                \"run_id\": \"${{ github.run_id }}\",
-                \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
-              }
-            }" || echo "::warning::Webhook notify failed (non-blocking)"
+            -H "x-agentz-secret: $AGENTZ_WEBHOOK_SECRET" \
+            "$VERCEL_APP_URL/api/agentz/webhook" \
+            -d "{\"event\":\"automation.complete\",\"payload\":{\"workflow\":\"agentz-orchestration\",\"run_id\":\"${{ github.run_id }}\",\"status\":\"$status\",\"stages\":{\"preflight\":\"$PREFLIGHT_STATUS\",\"qualify_leads\":\"$QUALIFY_LEADS_STATUS\",\"sync_mi_leads\":\"$SYNC_MI_LEADS_STATUS\",\"funnel_report\":\"$FUNNEL_REPORT_STATUS\"}}}"
+
+          if [ "$status" != "success" ]; then
+            echo "::error::AgentZ reported a failed or skipped stage. See the orchestration summary above."
+            exit 1
+          fi

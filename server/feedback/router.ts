@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { getDb } from "../db";
 import {
   createFeedback,
   getAllFeedback,
@@ -26,10 +25,7 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
-      // context does. Bridge via getDb() until this router has a ctx.db to use.
-      const db = await getDb();
-      const feedbackId = await createFeedback(db, {
+      const feedbackId = await createFeedback({
         userId: ctx.user.id,
         type: input.type,
         title: input.title,
@@ -44,15 +40,13 @@ export const feedbackRouter = router({
 
   // Get all feedback (public - anyone can view)
   list: publicProcedure.query(async () => {
-    const db = await getDb();
-    const feedbackList = await getAllFeedback(db);
+    const feedbackList = await getAllFeedback();
     return feedbackList;
   }),
 
   // Get feedback by ID
   getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-    const db = await getDb();
-    const feedbackItem = await getFeedbackById(db, input.id);
+    const feedbackItem = await getFeedbackById(input.id);
     if (!feedbackItem) {
       throw new TRPCError({
         code: "NOT_FOUND",
@@ -64,8 +58,7 @@ export const feedbackRouter = router({
 
   // Get user's feedback
   myFeedback: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    const userFeedback = await getFeedbackByUserId(db, ctx.user.id);
+    const userFeedback = await getFeedbackByUserId(ctx.user.id);
     return userFeedback;
   }),
 
@@ -78,8 +71,7 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      await voteFeedback(db, input.feedbackId, ctx.user.id, input.voteType);
+      await voteFeedback(input.feedbackId, ctx.user.id, input.voteType);
       return { success: true };
     }),
 
@@ -87,8 +79,7 @@ export const feedbackRouter = router({
   removeVote: protectedProcedure
     .input(z.object({ feedbackId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      await removeVote(db, input.feedbackId, ctx.user.id);
+      await removeVote(input.feedbackId, ctx.user.id);
       return { success: true };
     }),
 
@@ -96,8 +87,7 @@ export const feedbackRouter = router({
   getUserVote: protectedProcedure
     .input(z.object({ feedbackId: z.number() }))
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
-      const vote = await getUserVote(db, input.feedbackId, ctx.user.id);
+      const vote = await getUserVote(input.feedbackId, ctx.user.id);
       return vote;
     }),
 
@@ -111,8 +101,7 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      await updateFeedbackStatus(db, input.id, input.status, input.adminResponse);
+      await updateFeedbackStatus(input.id, input.status, input.adminResponse);
       return { success: true };
     }),
 
@@ -125,15 +114,13 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      await updateFeedbackPriority(db, input.id, input.priority);
+      await updateFeedbackPriority(input.id, input.priority);
       return { success: true };
     }),
 
   // Get feedback statistics
   stats: publicProcedure.query(async () => {
-    const db = await getDb();
-    const stats = await getFeedbackStats(db);
+    const stats = await getFeedbackStats();
     return stats;
   }),
 });

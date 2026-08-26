@@ -70,7 +70,7 @@ Hi ${shop.contact},
 
 I saw ${shop.name} is leading the way in commercial print solutions, and I wanted to share something that could open a massive new revenue stream for your franchise network.
 
-The regulatory landscape is shifting (specifically FTC's EO 14392 regarding origin claims), and brands are desperately looking for ways to cryptographically verify their packaging. 
+The regulatory landscape is shifting: the FTC ran a Made in USA enforcement sweep in April 2026 under its Made in USA Labeling Rule (16 CFR Part 323), following Executive Order 14392 on truthful "Made in America" advertising. The largest order was $625,000. Brands making origin claims increasingly need to substantiate them.
 
 We built AuthiChain—a white-label verification protocol. It allows print shops like yours to embed high-res, AI-generated "Living QRs" directly onto client labels. 
 

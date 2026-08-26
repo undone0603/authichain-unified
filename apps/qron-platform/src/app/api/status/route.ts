@@ -36,10 +36,35 @@ async function checkCloudflare() {
   }
 }
 
+// Previously returned a hardcoded `operational: true, latency: '12ms'` without
+// contacting anything, so the status page reported Polygon as healthy during an
+// RPC outage. Now actually asks the chain for its head block.
 async function checkBlockchain() {
-  // Blockchain integration active - Polygon Mainnet via QRON smart contracts
-  return { operational: true, latency: '12ms', chain: 'Polygon', blockNumber: 'latest' };
+  const rpc = process.env.POLYGON_RPC_URL || process.env.POLYGON_RPC;
+  if (!rpc) return { operational: false, latency: 'N/A', chain: 'Polygon', blockNumber: null, configured: false };
+
+  const start = Date.now();
+  try {
+    const res = await fetch(rpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
+      signal: AbortSignal.timeout(4000),
+    });
+    const latency = Date.now() - start;
+    const json = res.ok ? ((await res.json()) as { result?: string }) : null;
+    const blockNumber = json?.result ? parseInt(json.result, 16) : null;
+    return {
+      operational: Boolean(blockNumber),
+      latency: `${latency}ms`,
+      chain: 'Polygon',
+      blockNumber,
+      configured: true,
+    };
+  } catch {
+    return { operational: false, latency: 'timeout', chain: 'Polygon', blockNumber: null, configured: true };
   }
+}
 
 async function checkAIWorker() {
   const start = Date.now();
@@ -56,6 +81,7 @@ async function checkAIWorker() {
 }
 
 export async function GET() {
+  const handlerStart = Date.now();
   const [supabaseResult, cloudflareResult, blockchainResult, aiResult] = await Promise.allSettled([
     checkSupabase(),
     checkCloudflare(),
@@ -65,45 +91,58 @@ export async function GET() {
 
   const supabase = supabaseResult.status === 'fulfilled' ? supabaseResult.value : { operational: false, latency: 'error' };
   const cloudflare = cloudflareResult.status === 'fulfilled' ? cloudflareResult.value : { operational: false, latency: 'error', configured: false };
-  const blockchain = blockchainResult.status === 'fulfilled' ? blockchainResult.value : { operational: false, latency: 'error' };
+  const blockchain = blockchainResult.status === 'fulfilled'
+    ? blockchainResult.value
+    : { operational: false, latency: 'error', chain: 'Polygon', blockNumber: null, configured: true };
   const ai = aiResult.status === 'fulfilled' ? aiResult.value : { operational: false, latency: 'error' };
 
+  // Every `uptime` figure here used to be a literal — 99.99%, 99.98%, 100% —
+  // and nothing in this codebase records availability over a window, so they
+  // were decoration on the one page whose entire job is to be trusted during an
+  // incident. A status page that cannot be wrong is worth nothing. Uptime is
+  // reported as null until it is actually measured; the live probe result is
+  // real and is what this endpoint now returns.
   const services = [
     {
+      // This handler is served by the Core API, so a response at all is
+      // evidence it is up — the latency is the real time spent in this request.
       name: 'Core Protocol API',
       status: 'Operational',
-      uptime: '99.99%',
-      latency: '42ms',
+      uptime: null,
+      latency: `${Date.now() - handlerStart}ms`,
     },
     {
       name: 'Edge Redirect Engine',
-      status: cloudflare.configured ? (cloudflare.operational ? 'Operational' : 'Degraded') : 'Maintenance',
-      uptime: cloudflare.configured ? (cloudflare.operational ? '99.98%' : '-') : '-',
+      status: cloudflare.configured ? (cloudflare.operational ? 'Operational' : 'Degraded') : 'Not configured',
+      uptime: null,
       latency: cloudflare.latency,
     },
     {
       name: 'AI Generation Worker',
       status: ai.operational ? 'Operational' : 'Degraded',
-      uptime: ai.operational ? '99.95%' : '-',
+      uptime: null,
       latency: ai.latency,
     },
     {
       name: 'Blockchain Anchoring (Polygon)',
-      status: blockchain.operational ? 'Operational' : 'Maintenance',
-      uptime: blockchain.operational ? '99.99%' : 'N/A',
-      latency: blockchain.operational ? blockchain.latency : 'N/A',
+      status: blockchain.configured ? (blockchain.operational ? 'Operational' : 'Degraded') : 'Not configured',
+      uptime: null,
+      latency: blockchain.latency,
+      blockNumber: blockchain.blockNumber,
     },
     {
       name: 'Storage Cluster (S3/Supabase)',
       status: supabase.operational ? 'Operational' : 'Degraded',
-      uptime: supabase.operational ? '100%' : '-',
+      uptime: null,
       latency: supabase.latency,
     },
     {
+      // Verification runs in the Core API process; it has no separate probe, so
+      // it is reported as unmonitored rather than as a green light nobody checked.
       name: 'AuthiChain Verification',
-      status: 'Operational',
-      uptime: '99.98%',
-      latency: '88ms',
+      status: 'Not monitored',
+      uptime: null,
+      latency: null,
     },
   ];
 

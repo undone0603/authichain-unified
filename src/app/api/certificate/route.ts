@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { onCertificateMint } from '../../../../server/revenue-engine/loop';
-import { verifyApiKey } from '@/lib/auth-api';
+import { isBrandFeatureEnabled } from '../../../../shared/brands/config';
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,15 +18,13 @@ function computeRarity(rarity_input: unknown): number {
 
 export async function POST(req: NextRequest) {
   try {
-    const apiKey = req.headers.get('X-API-Key');
-    if (!apiKey || !(await verifyApiKey(apiKey))) {
-      return NextResponse.json({ error: 'Invalid or missing API key' }, { status: 401 });
-    }
-
     const { product_id, seal_id, rarity_input, brand } = await req.json();
 
     if (!product_id || !seal_id || !brand) {
       return NextResponse.json({ error: 'product_id, seal_id, and brand are required' }, { status: 400 });
+    }
+    if (!isBrandFeatureEnabled(brand, 'enable_certificates')) {
+      return NextResponse.json({ error: 'Certificates are not enabled for this brand' }, { status: 403 });
     }
 
     const rarity_score = computeRarity(rarity_input);

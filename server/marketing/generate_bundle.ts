@@ -2,7 +2,11 @@ import "dotenv/config";
 import { runSocialMultiplier } from "./multiplier.js";
 
 async function generateTrafficBundle() {
-  const announcement = "AuthiChain launches the high-ticket MedTech Compliance vertical. Manufacturers can now automate ISO 13485 audit trails on-chain and quantify their Trust Advantage via our interactive ROI Calculator.";
+  // Points at authichain.com/protocol, which exists. The previous announcement
+  // sold an "interactive ROI Calculator" at authichain.com/roi-calculator —
+  // a route the worker serving authichain.com does not handle, so it silently
+  // rendered the marketing homepage instead.
+  const announcement = "AuthiChain has opened its verification protocol under Apache-2.0: the specification, a zero-dependency reference verifier and a 28-fixture conformance suite are public at authichain.com/protocol. Any implementation can run the suite and claim conformance.";
   
   const content = await runSocialMultiplier(announcement);
   
@@ -14,7 +18,7 @@ async function generateTrafficBundle() {
     console.log("\n[TWITTER THREAD]");
     content.twitter.forEach((t: string, i: number) => console.log(`${i+1}/ ${t}`));
     console.log("------------------------------------");
-    console.log("\n🚀 Action: Post these manually or via AgentZ browser-use to drive organic leads to /roi-calculator.");
+    console.log("\n🚀 Action: Post these manually or via AgentZ browser-use to drive organic leads to /protocol.");
   }
 }
 

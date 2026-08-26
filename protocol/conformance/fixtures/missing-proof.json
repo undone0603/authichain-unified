@@ -1,0 +1,29 @@
+{
+  "id": "missing-proof",
+  "description": "Required field \"proof\" absent.",
+  "record": {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://authichain.com/protocol/v1"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "ProvenanceRecord"
+    ],
+    "issuer": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+    "validFrom": "2020-01-01T00:00:00Z",
+    "credentialSubject": {
+      "id": "https://id.gs1.org/01/09506000134352/21/SERIAL123",
+      "gtin": "09506000134352",
+      "serial": "SERIAL123"
+    }
+  },
+  "anchor": null,
+  "options": {},
+  "expect": {
+    "verdict": "invalid",
+    "reasonsInclude": [
+      "missing_field:proof"
+    ]
+  }
+}

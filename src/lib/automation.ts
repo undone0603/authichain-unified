@@ -11,27 +11,12 @@ export function formatErr(err: unknown): string {
     const obj = err as Record<string, unknown>;
     if (typeof obj.message === 'string') {
       const code = typeof obj.code === 'string' ? ` [${obj.code}]` : '';
-      const details = typeof obj.details === 'string' && obj.details ? ` — ${obj.details}` : '';
+      const details = typeof obj.details === 'string' && obj.details ? ` â ${obj.details}` : '';
       return `${obj.message}${code}${details}`;
     }
     try { return JSON.stringify(err); } catch { return String(err); }
   }
   return String(err);
-}
-
-// The ledger is for status + context, not blobs: base64 data URLs logged here
-// once bloated automation_logs to ~300KB/row (34MB for <3k rows).
-const MAX_PAYLOAD_CHARS = 16_000;
-const MAX_ERROR_CHARS = 4_000;
-
-function sanitizeForLedger(serialized: string): string {
-  const withoutDataUrls = serialized.replace(
-    /data:[a-z/+.-]+;base64,[A-Za-z0-9+/=]{256,}/g,
-    '[data-url omitted]'
-  );
-  return withoutDataUrls.length > MAX_PAYLOAD_CHARS
-    ? `${withoutDataUrls.slice(0, MAX_PAYLOAD_CHARS)}…[truncated]`
-    : withoutDataUrls;
 }
 
 /**
@@ -49,8 +34,8 @@ export async function logAutomation(
       workflow_name: workflowName,
       trigger_type: triggerType,
       status,
-      payload: payload ? sanitizeForLedger(JSON.stringify(payload)) : null,
-      error_message: errorMessage ? sanitizeForLedger(errorMessage).slice(0, MAX_ERROR_CHARS) : null,
+      payload: payload ? JSON.stringify(payload) : null,
+      error_message: errorMessage || null,
     });
   } catch (err) {
     console.error('[automation] Logging failed:', err);
@@ -63,8 +48,8 @@ export async function logAutomation(
 export async function handleLeadAutomation(lead: {
   email: string;
   name?: string;
-  source?: string;
   product_interest?: string;
+  source?: string;
 }) {
   const workflowName = 'lead_captured';
   try {
@@ -139,7 +124,7 @@ export async function queueSocialShowcase(qron: {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: `Check out this AI-generated QRON! 🎨\n\nPrompt: ${qron.prompt}\n\n#AIArt #QRCode #QRON`,
+          text: `Check out this AI-generated QRON! ð¨\n\nPrompt: ${qron.prompt}\n\n#AIArt #QRCode #QRON`,
           media: { picture: qron.imageUrl },
         }),
       });

@@ -12,11 +12,9 @@ vi.mock('../_core/llm.js', () => ({
 }));
 
 const logActivity = vi.fn(async (..._args: unknown[]) => {});
-vi.mock('./db-helpers.js', () => ({ logActivity: (...a: unknown[]) => logActivity(...a) }));
+vi.mock('../db.js', () => ({ logActivity: (...a: unknown[]) => logActivity(...a) }));
 
 import { generateSeoPage, runProgrammaticSeoBatch, BRAND_SEO } from './seo-content';
-
-const fakeDb = {} as any;
 
 beforeEach(() => {
   logActivity.mockClear();
@@ -63,10 +61,9 @@ describe('runProgrammaticSeoBatch', () => {
     const pages = await runProgrammaticSeoBatch([
       { brandKey: 'strainchain', keyword: 'metrc blockchain' },
       { brandKey: 'govchain', keyword: 'document verification' },
-    ], fakeDb);
+    ]);
     expect(pages).toHaveLength(2);
     expect(logActivity).toHaveBeenCalledWith(
-      fakeDb,
       expect.objectContaining({ action: 'programmatic_seo_generated' }),
     );
   });
@@ -76,7 +73,7 @@ describe('runProgrammaticSeoBatch', () => {
     const pages = await runProgrammaticSeoBatch([
       { brandKey: 'strainchain', keyword: 'fails' },
       { brandKey: 'qron', keyword: 'living qr art' },
-    ], fakeDb);
+    ]);
     expect(pages).toHaveLength(1);
     expect(pages[0].brand).toBe('QRON');
   });
@@ -84,7 +81,7 @@ describe('runProgrammaticSeoBatch', () => {
   it('skips unknown brand keys', async () => {
     const pages = await runProgrammaticSeoBatch([
       { brandKey: 'nope' as any, keyword: 'x' },
-    ], fakeDb);
+    ]);
     expect(pages).toHaveLength(0);
   });
 });

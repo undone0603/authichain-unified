@@ -54,7 +54,7 @@ export async function fetchProfessionalData(email: string): Promise<Partial<Enri
   }
 
   try {
-    const res = await fetch('https://api.apollo.io/v1/people/match', {
+    const res = await fetch('https://api.apollo.io/api/v1/people/match', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
       body: JSON.stringify({ api_key: apolloKey, email }),

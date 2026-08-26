@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runDunningEscalation } from '@/lib/dunning';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-internal-secret');
-  if (
-    secret !== process.env.INTERNAL_API_SECRET &&
-    secret !== process.env.CRON_SECRET
-  ) {
+  if (!isCronAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -1,6 +1,5 @@
 import { protectedProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
-import { getUserEmailCampaigns, createEmailCampaign, updateEmailCampaign } from "../content-db-helpers";
+import * as db from "../db";
 import { z } from "zod";
 import { invokeLLM, parseLLMContent } from "../_core/llm";
 import { sendEmail } from "../email-service";
@@ -8,10 +7,7 @@ import { TRPCError } from "@trpc/server";
 
 export const emailCampaignsRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
-    // TrpcContext (server/_core/context.ts) has no `db` -- only the Workers
-    // context does. Bridge via getDb() until this router has a ctx.db to use.
-    const db = await getDb();
-    return await getUserEmailCampaigns(db, ctx.user.id);
+    return await db.getUserEmailCampaigns(ctx.user.id);
   }),
   create: protectedProcedure.input(z.object({
     name: z.string().min(1),
@@ -21,18 +17,16 @@ export const emailCampaignsRouter = router({
     scheduledAt: z.string().optional(),
     targetEmail: z.string().email().optional(),
   })).mutation(async ({ ctx, input }) => {
-    const db = await getDb();
-    return await createEmailCampaign(db, {
+    return await db.createEmailCampaign({
       ...input, userId: ctx.user.id, status: input.scheduledAt ? "scheduled" : "draft",
       scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
     });
   }),
   send: protectedProcedure.input(z.object({
-    campaignId: z.number(),
+    campaignId: z.string().uuid(),
     targetEmail: z.string().email(),
   })).mutation(async ({ ctx, input }) => {
-    const db = await getDb();
-    const campaigns = await getUserEmailCampaigns(db, ctx.user.id);
+    const campaigns = await db.getUserEmailCampaigns(ctx.user.id);
     const campaign = campaigns.find(c => c.id === input.campaignId);
     if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
 
@@ -43,7 +37,7 @@ export const emailCampaignsRouter = router({
     });
 
     if (result.status === "sent") {
-      await updateEmailCampaign(db, input.campaignId, {
+      await db.updateEmailCampaign(input.campaignId, {
         status: "sent",
         sentAt: new Date(),
         targetEmail: input.targetEmail,
@@ -84,3 +78,4 @@ export const emailCampaignsRouter = router({
     return parseLLMContent<any>(response.choices[0].message.content);
   }),
 });
+

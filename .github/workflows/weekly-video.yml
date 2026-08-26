@@ -1,0 +1,96 @@
+# .github/workflows/weekly-video.yml
+# Produces one informational video per week and publishes it to the QRON
+# YouTube channel. qron.space picks it up automatically — the site reads the
+# channel's public RSS feed, so nothing needs redeploying after an upload.
+name: Weekly Informational Video
+
+on:
+  schedule:
+    # Mondays 13:00 UTC (09:00 EST) — lands before the outreach cadence so a
+    # fresh video is live when prospects follow a link from an email.
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Video topic (blank = next unused topic from the rotation)"
+        required: false
+        type: string
+      dry_run:
+        description: "Generate the script only — no render, no upload"
+        required: false
+        default: "true"
+        type: boolean
+
+concurrency:
+  group: weekly-video
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.28.2"
+
+jobs:
+  produce:
+    name: Produce weekly video
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # Fail fast and legibly rather than burning render credits on a job that
+      # cannot possibly upload. Mirrors the outreach preflight pattern.
+      - name: Check required secrets
+        id: preflight
+        env:
+          HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_QRON_REFRESH_TOKEN: ${{ secrets.YOUTUBE_QRON_REFRESH_TOKEN }}
+        run: |
+          missing=""
+          [ -z "$HEYGEN_API_KEY" ]              && missing="$missing HEYGEN_API_KEY"
+          [ -z "$YOUTUBE_CLIENT_ID" ]          && missing="$missing YOUTUBE_CLIENT_ID"
+          [ -z "$YOUTUBE_CLIENT_SECRET" ]      && missing="$missing YOUTUBE_CLIENT_SECRET"
+          [ -z "$YOUTUBE_QRON_REFRESH_TOKEN" ] && missing="$missing YOUTUBE_QRON_REFRESH_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "::warning::Missing secrets —$missing. Running script-only; no render or upload."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Generate script, render and publish
+        run: pnpm exec tsx scripts/weekly-video.ts
+        env:
+          TOPIC: ${{ inputs.topic }}
+          # A scheduled run publishes; a manual run defaults to dry-run so the
+          # script can be reviewed before spending render credits.
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || (inputs.dry_run || 'true') }}
+          PUBLISH_OK: ${{ steps.preflight.outputs.publish }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_QRON_REFRESH_TOKEN: ${{ secrets.YOUTUBE_QRON_REFRESH_TOKEN }}
+          YOUTUBE_QRON_CHANNEL_ID: ${{ secrets.YOUTUBE_QRON_CHANNEL_ID || 'UCCm-myVgS90meDtrAtAuLqw' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

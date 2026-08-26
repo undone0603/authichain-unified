@@ -1,7 +1,6 @@
 import { adminProcedure, router } from "../_core/trpc";
 import { DbAdminRepository } from "./db-repository";
-import { getDb } from "../db";
-import { logActivity } from "../db-helpers";
+import { logActivity } from "../db";
 import { z } from "zod";
 
 export const adminRouter = router({
@@ -99,6 +98,16 @@ export const adminRouter = router({
     const repo = ctx.adminRepo ?? new DbAdminRepository();
     return await repo.getSubscriptionAnalytics();
   }),
+  pastDueSubscriptions: adminProcedure.query(async ({ ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getPastDueSubscriptions();
+  }),
+  inactiveUsers: adminProcedure.input(z.object({
+    daysSinceLastScan: z.number().min(1).optional(),
+  }).optional()).query(async ({ input, ctx }) => {
+    const repo = ctx.adminRepo ?? new DbAdminRepository();
+    return await repo.getInactiveUsers(input?.daysSinceLastScan);
+  }),
   platformStaking: adminProcedure.query(async () => {
     // stakingPositions schema table is scaffolded but not yet migrated;
     // return safe zeros until the staking feature is fully deployed.
@@ -110,11 +119,7 @@ export const adminRouter = router({
     value: z.number().min(0),
     description: z.string().optional(),
   })).mutation(async ({ ctx, input }) => {
-    // ctx.db does not exist on the live TrpcContext (server/_core/context.ts) —
-    // only the separate Workers context has it. Documented bridge until this
-    // router is wired up to a real per-request db.
-    const db = await getDb();
-    await logActivity(db, {
+    await logActivity({
       userId: ctx.user.id,
       action: 'sovereign_deal_created',
       entityType: 'deal',

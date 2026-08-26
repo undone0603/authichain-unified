@@ -8,23 +8,12 @@ import {
   Box
 } from 'lucide-react';
 
-interface ProductRow {
-  id: string;
-  name: string;
-  model_number: string | null;
-  manufacturer: string | null;
-  category: string | null;
-}
-
 export default async function AdminProductsPage() {
   const supabase = await createClient();
-  const { data: products, error } = (await supabase
+  const { data: products, error } = await supabase
     .from('products')
     .select('*')
-    .order('created_at', { ascending: false })) as {
-    data: ProductRow[] | null;
-    error: { message: string } | null;
-  };
+    .order('created_at', { ascending: false });
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-gold selection:text-black">
@@ -78,7 +67,7 @@ export default async function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-900">
-                {products.map((product) => (
+                {products.map((product: { id: string; name: string; model_number?: string | null; manufacturer?: string | null; category?: string | null }) => (
                   <tr key={product.id} className="group hover:bg-gold/[0.02] transition-colors">
                     <td className="px-8 py-6">
                       <div className="font-black text-white uppercase tracking-tight mb-1">{product.name}</div>

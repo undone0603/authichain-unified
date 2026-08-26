@@ -14,7 +14,7 @@ from agentz.core.llm import lm_manager
 
 
 def run(ctx: ExecutionContext) -> str:
-    lm_manager.load_model("google/gemma-4-e4b")
+    lm_manager.load_model("local-model")
     try:
         ctx.step("🎖️ --- INITIALIZING AUTONOMOUS RFP SUBMISSION LOOP --- 🎖️")
 
@@ -72,4 +72,4 @@ def run(ctx: ExecutionContext) -> str:
 
         return f"RFP Submission Loop complete. {submitted} submitted, {failed} failed."
     finally:
-        lm_manager.unload_model("google/gemma-4-e4b")
+        lm_manager.unload_model("local-model")

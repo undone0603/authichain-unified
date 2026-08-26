@@ -1,12 +1,11 @@
 {
   "version": 2,
-  "buildCommand": "next build",
+  "buildCommand": "npx next build --webpack",
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "redirects": [
+  "rewrites": [
     {
       "source": "/gov",
-      "destination": "https://govchain.us",
-      "permanent": false
+      "destination": "https://govchain.us"
     }
   ]
 }
