@@ -31,7 +31,7 @@ export async function runSmokeTests(): Promise<void> {
   // 2. Verify Stripe connectivity (non-destructive)
   if (process.env.STRIPE_SECRET_KEY) {
     try {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-06-24.dahlia" as any });
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-07-29.dahlia" as any });
       await stripe.accounts.retrieve("self");
       logger.info("Stripe connection: OK");
     } catch (error) {

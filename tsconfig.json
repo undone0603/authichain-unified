@@ -59,6 +59,7 @@
     "services/worker/**/*",
     "services/worker-app/**/*",
     "services/workers/**/*",
+    "docs/technical-reference/**/*",
     "mobile/**/*",
     "packages/**/*",
     "scripts/**/*",

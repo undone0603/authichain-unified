@@ -4,16 +4,21 @@ import { cookies } from 'next/headers';
 export const createClient = async () => {
   const cookieStore = await cookies();
 
-    // Graceful degradation: return a no-op proxy if env vars are missing (e.g. during build)
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-          return new Proxy({} as ReturnType<typeof createServerClient>, {
-                  get: () => undefined,
-                }) as unknown as ReturnType<typeof createServerClient>;
-        }
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const supabaseAnonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
+
+  // Graceful degradation: return a no-op proxy if env vars are missing (e.g. during build)
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return new Proxy({} as ReturnType<typeof createServerClient>, {
+      get: () => undefined,
+    }) as unknown as ReturnType<typeof createServerClient>;
+  }
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         get(name: string) {
