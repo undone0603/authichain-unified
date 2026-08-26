@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   await admin.from('automation_logs').insert({
     workflow_name: `agentz_${event.replace('.', '_')}`,
     trigger_type: 'webhook',
-    status: 'success',
+    status: payload.status === 'failure' ? 'failure' : 'success',
     payload: JSON.stringify({ event, ...payload }),
   });
 

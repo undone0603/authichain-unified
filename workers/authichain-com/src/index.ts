@@ -2139,7 +2139,7 @@ function seoMeta(): string {
   })}`;
 }
 
-function svgLogo(brand, size = 36) {
+function svgLogo(brand: keyof typeof BRANDS, size = 36) {
   const b = BRANDS[brand];
   return `<svg width="${size}" height="${size}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
       <polygon points="18,1 33,9.5 33,26.5 18,35 3,26.5 3,9.5" fill="${b.primary}" opacity="0.15" stroke="${b.primary}" stroke-width="1.5"/>
@@ -2149,7 +2149,7 @@ function svgLogo(brand, size = 36) {
     </svg>`;
 }
 
-function cssVars(brand) {
+function cssVars(brand: keyof typeof BRANDS) {
   const b = BRANDS[brand];
   return `:root {
   --bg: ${b.bg};
@@ -2366,7 +2366,7 @@ h2 {
 }
 `;
 
-function communityHub(brand) {
+function communityHub(brand: keyof typeof BRANDS) {
   return `
 <section class="web3-section" id="community" style="padding: 80px 24px; border-top: 1px solid var(--border-dim)">
   <div class="hero-content" style="max-width:1000px">

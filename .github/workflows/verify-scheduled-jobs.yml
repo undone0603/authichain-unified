@@ -1,0 +1,107 @@
+name: Verify Scheduled Jobs
+
+# Runs named scheduled jobs against the real database and fails if any of them
+# fails. Manual only — this is a verification tool, not a scheduler.
+#
+# Why it is needed: six job types (vertical-cloner, newsjacking-monitor,
+# strainchain-metrc-sync, fraud-detection-sweep, certificate-expiry-check,
+# staking-rewards) have a 100% failure rate and no successful run on record.
+# Their last failures all predate the schema-drift fixes, so their handlers are
+# believed fixed — but "believed fixed" and "observed passing" are different
+# claims, and only the second one is worth making.
+#
+# The script reads each run's outcome back out of scheduled_job_runs rather
+# than trusting that nothing threw: executeJob() catches every error, records
+# status='failed', and returns normally. A green check that only means "no
+# exception escaped" is precisely the failure mode this repository already paid
+# for once.
+
+on:
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: "Space-separated job names (blank = the six that have never succeeded)"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: verify-scheduled-jobs
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Run and verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Require DATABASE_URL
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL repo secret is not set — there is nothing to verify against."
+            exit 1
+          fi
+
+      # The runner has no IPv6 route and the Supabase pooler resolves to both.
+      # Same pin as pipeline-tick.yml and browser-vision-tasks.yml.
+      - name: Force IPv4 for Supabase pooler
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          host=$(printf '%s' "$DATABASE_URL" | sed -E 's#^[a-zA-Z]+://[^@]*@##; s#[:/].*$##')
+          if [ -z "$host" ]; then
+            echo "Could not parse a host out of DATABASE_URL; skipping IPv4 pin."
+            exit 0
+          fi
+          ipv4=$(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1; exit}' || true)
+          if [ -z "$ipv4" ]; then
+            ipv4=$(dig +short A "$host" 2>/dev/null | tail -1 || true)
+          fi
+          if [ -n "$ipv4" ]; then
+            echo "Pinning $host -> $ipv4 in /etc/hosts (forces IPv4)."
+            echo "$ipv4 $host" | sudo tee -a /etc/hosts >/dev/null
+          else
+            echo "::error::No IPv4 (A) record found for host '$host'."
+            echo "::error::Use a dual-stack Supabase Session Pooler connection string (port 6543)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      # pnpm from corepack rather than pnpm/action-setup, which CodeQL flags as
+      # an unpinned third-party dependency. Same reasoning as pipeline-tick.yml.
+      - name: Enable pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.2 --activate
+          pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run and verify jobs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          METRC_API_KEY: ${{ secrets.METRC_API_KEY }}
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+          NODE_OPTIONS: --dns-result-order=ipv4first
+          # Via env, not interpolated into the run script: `${{ inputs.… }}`
+          # spliced into a shell line is a command-injection sink, and the
+          # dispatch input is attacker-controlled by anyone who can run the
+          # workflow. Quoted expansion keeps it as arguments.
+          JOB_NAMES: ${{ inputs.jobs }}
+        run: pnpm tsx scripts/verify-scheduled-jobs.ts $JOB_NAMES

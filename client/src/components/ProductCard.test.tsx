@@ -1,8 +1,12 @@
+// @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ProductCard from './ProductCard';
 
 describe('ProductCard', () => {
+  afterEach(cleanup);
+
   it('renders title and description', () => {
     render(<ProductCard title="My Product" description="A test product" />);
     expect(screen.getByText('My Product')).toBeTruthy();

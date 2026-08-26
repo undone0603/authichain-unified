@@ -12,7 +12,7 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 
 const rateLimitMiddleware = t.middleware(({ ctx, next }) => {
-  checkTrpcPublicLimit(ctx.req);
+  checkTrpcPublicLimit(ctx.req!);
   return next();
 });
 

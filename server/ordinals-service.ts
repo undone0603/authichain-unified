@@ -12,7 +12,7 @@ export interface OrdinalMetadata {
   satNumber?: number;
   contentUrl: string;
   contentType: string;
-  productId: number;
+  productId: string;
   truemarkId: string;
   artist: string;
   timestamp: string;
@@ -50,7 +50,7 @@ export async function getInscriptionStatus(inscriptionId: string) {
 /**
  * Links a QronCode to its BTC Ordinal counterpart and existing Polygon NFT.
  */
-export async function linkOrdinalToProduct(productId: number, inscriptionId: string) {
+export async function linkOrdinalToProduct(productId: string, inscriptionId: string) {
   const d = await getDb();
   if (!d) throw new Error("Database not available");
 

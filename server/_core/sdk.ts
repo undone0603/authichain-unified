@@ -1,7 +1,8 @@
 import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
-import { parse as parseCookieHeader } from "cookie";
+import cookie from "cookie"; // FIXED
+const parseCookieHeader = cookie.parse;
 import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
@@ -256,9 +257,14 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  async authenticateRequest(req: Request): Promise<User> {
+  async authenticateRequest(req: Request | { headers: { cookie?: string } }): Promise<User> {
     // Regular authentication flow
-    const cookies = this.parseCookies(req.headers.cookie);
+    // Support both Fetch API Request (headers.get()) and Express-like objects (headers.cookie).
+    const cookieHeader =
+      typeof (req.headers as { get?: (name: string) => string | null }).get === "function"
+        ? (req.headers as { get: (name: string) => string | null }).get("cookie") ?? undefined
+        : (req.headers as { cookie?: string }).cookie;
+    const cookies = this.parseCookies(cookieHeader);
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
 

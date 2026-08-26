@@ -1,0 +1,48 @@
+-- mission_tasks could not accept a task from enqueueTask() at all.
+--
+-- server/agents/db-helpers.ts:47 is the one helper every task producer goes
+-- through — 23 call sites: DRAFT_OUTBOUND_EMAIL, BROWSE_RESEARCH_LEAD,
+-- CHECK_REPLIES, FOLLOWUP_SEQUENCE, SEND_DEMO_PACKET and the rest. It omits
+-- `description`, and leaves `task_order` and `priority` to their defaults.
+-- Against this table that produced:
+--
+--   [23502] null value in column "description" of relation "mission_tasks"
+--           violates not-null constraint
+--
+-- with a second violation queued behind it: `task_order` was also arriving
+-- NULL. The table has 5 rows, which is what a queue looks like when nothing
+-- can be enqueued into it.
+--
+-- The cause is a disagreement between the declared schema and the database, in
+-- a dimension scripts/check-schema-drift.mjs does not measure. It compares
+-- column *names*; these columns all exist. What differs is nullability and
+-- defaults:
+--
+--   description  src/db/schema.ts:963  text("description")            nullable
+--                database              NOT NULL, no default
+--
+--   status       src/db/schema.ts:964  .default("pending").notNull()
+--                database              NOT NULL, NO DEFAULT
+--
+--   task_order   src/db/schema.ts:966  .default(0).notNull()
+--                database              NOT NULL, NO DEFAULT
+--
+-- Drizzle's `.default()` means "the database supplies this, omit it from the
+-- INSERT" — it emits the DEFAULT keyword rather than a value. When the database
+-- has no such default, DEFAULT resolves to NULL and the NOT NULL fires. So the
+-- schema promised defaults the database never had.
+--
+-- This moves the database to match the schema that is checked in, which
+-- CLAUDE.md names as the single source of truth, rather than editing 23 call
+-- sites to work around it. Every change only relaxes a constraint or adds a
+-- default, so no existing row can be invalidated.
+--
+-- Rollback:
+--   ALTER TABLE mission_tasks ALTER COLUMN status DROP DEFAULT;
+--   ALTER TABLE mission_tasks ALTER COLUMN task_order DROP DEFAULT;
+--   ALTER TABLE mission_tasks ALTER COLUMN description SET NOT NULL;
+--   -- the last one requires no NULL descriptions to exist at that point.
+
+ALTER TABLE mission_tasks ALTER COLUMN description DROP NOT NULL;
+ALTER TABLE mission_tasks ALTER COLUMN status SET DEFAULT 'pending';
+ALTER TABLE mission_tasks ALTER COLUMN task_order SET DEFAULT 0;

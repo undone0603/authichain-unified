@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createHash, randomUUID } from 'crypto';
 import { onDispensaryScan } from '../../../../server/revenue-engine/loop';
 import { onDispensaryBatchCreated } from '../../../../server/crm/events';
+import { isBrandFeatureEnabled } from '../../../../shared/brands/config';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,6 +15,10 @@ export async function POST(req: NextRequest) {
     }
 
     const resolved_brand = brand ?? 'strainchain.io';
+
+    if (!isBrandFeatureEnabled(resolved_brand, 'enable_disp_pilot')) {
+      return NextResponse.json({ error: 'Dispensary pilot is not enabled for this brand' }, { status: 403 });
+    }
 
     // 1. Generate QR for batch
     const payload_raw = JSON.stringify({ dispensary_id, batch_id, resolved_brand, ts: Date.now() });

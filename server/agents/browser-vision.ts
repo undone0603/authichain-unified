@@ -13,6 +13,7 @@
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { invokeLLM, parseLLMContent, type Message, type Tool } from '../_core/llm.js';
 import { logActivity, getDb, enqueueTask } from '../db.js';
+import type { VerificationSource } from '../outreach/send-guard.js';
 import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
@@ -215,6 +216,8 @@ export interface VisionResearchLeadPayload {
   leadTitle?: string;
   startUrl?:  string;
   segment?:   string;
+  /** Provenance from lead discovery; forwarded unchanged to send-guard. */
+  verificationSource?: VerificationSource;
 }
 
 /**
@@ -273,6 +276,7 @@ Extract a concise CRM note AND a one-sentence personalised email opener.`);
     leadOrg:   p.leadOrg,
     leadTitle: p.leadTitle,
     researchHook: hookSentence,
+    verificationSource: p.verificationSource,
   });
 
   await logActivity({

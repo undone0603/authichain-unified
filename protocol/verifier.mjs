@@ -16,6 +16,7 @@
 
 import { createHash, createPublicKey, verify as edVerify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 /** Chains considered production. A testnet anchor is not proof (SPEC §4.1). */
 const MAINNET_CHAINS = new Set(['polygon:137', 'eip155:1', 'eip155:137']);
@@ -176,7 +177,7 @@ export function verifyRecord(record, anchor = null, opts = {}) {
 }
 
 // CLI
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const [recordPath, anchorPath] = process.argv.slice(2);
   if (!recordPath) {
     console.error('usage: node verifier.mjs <record.json> [anchor.json]');

@@ -141,7 +141,7 @@ export const personalizationRouter = router({
           await db
             .update(personalizationRules)
             .set({
-              conversionRate: newRate,
+              conversionRate: String(newRate),
             })
             .where(eq(personalizationRules.id, matchedRule.id));
         }
@@ -202,7 +202,7 @@ export const personalizationRouter = router({
           await db
             .update(personalizationRules)
             .set({
-              conversionRate: newRate,
+              conversionRate: String(newRate),
             })
             .where(eq(personalizationRules.id, input.ruleId));
         }
@@ -406,7 +406,7 @@ export const personalizationRouter = router({
           conditions: JSON.stringify(r.conditions ?? {}),
           views: r.views,
           conversions: r.conversions,
-          conversionRate: r.conversionRate,
+          conversionRate: Number(r.conversionRate),
         }))
       );
 
@@ -414,7 +414,7 @@ export const personalizationRouter = router({
         totalRules: rules.length,
         totalViews: rules.reduce((sum, r) => sum + r.views, 0),
         totalConversions: rules.reduce((sum, r) => sum + r.conversions, 0),
-        avgConversionRate: rules.reduce((sum, r) => sum + r.conversionRate, 0) / rules.length,
+        avgConversionRate: rules.reduce((sum, r) => sum + Number(r.conversionRate), 0) / rules.length,
         topPerformers: analysis.topPerformers,
         insights: analysis.insights,
         recommendations: analysis.recommendations,

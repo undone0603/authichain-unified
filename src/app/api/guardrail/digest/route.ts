@@ -23,7 +23,8 @@ export async function GET(req: NextRequest) {
   ]);
 
   const lines = channels.map((ch) => {
-    const used = counters.find((c) => c.channelId === ch.id && String(c.day) === today)?.count ?? 0;
+    const dayStr = (d: Date | string) => (typeof d === 'string' ? d : d.toISOString().slice(0, 10));
+    const used = counters.find((c) => c.channelId === ch.id && dayStr(c.day) === today)?.count ?? 0;
     return `- ${ch.name}: ${used}/${ch.dailyCap} today${ch.enabled ? '' : ' (disabled)'}`;
   });
 

@@ -45,13 +45,15 @@ export async function evaluateAnomalies(now: Date = new Date()): Promise<Anomaly
       .where(eq(guardrailCounters.channelId, channel.id));
 
     const todayStr = now.toISOString().slice(0, 10);
+    const dateToStr = (d: Date | string) => (typeof d === 'string' ? d : d.toISOString().slice(0, 10));
+    const dateToTime = (d: Date | string) => (typeof d === 'string' ? new Date(d).getTime() : d.getTime());
     const last7 = counters.filter((c) => {
-      const dayStr = new Date(c.day).toISOString().slice(0, 10);
-      const dayTime = new Date(c.day).getTime();
+      const dayStr = dateToStr(c.day);
+      const dayTime = dateToTime(c.day);
       return dayStr !== todayStr && dayTime >= now.getTime() - 7 * 24 * 60 * 60 * 1000;
     });
     const trailingAvg = last7.length ? last7.reduce((sum, c) => sum + c.count, 0) / last7.length : 0;
-    const todayCount = counters.find((c) => new Date(c.day).toISOString().slice(0, 10) === todayStr)?.count ?? 0;
+    const todayCount = counters.find((c) => dateToStr(c.day) === todayStr)?.count ?? 0;
 
     if (trailingAvg > 0 && todayCount > trailingAvg * VOLUME_SPIKE_MULTIPLIER) {
       const reason = `volume spike: ${todayCount} today vs ${trailingAvg.toFixed(1)} trailing 7-day average`;

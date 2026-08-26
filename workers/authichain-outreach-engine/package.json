@@ -1,0 +1,9 @@
+{
+  "name": "authichain-outreach-engine",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "schema": "wrangler d1 execute authichain-db --remote --file schema.sql"
+  }
+}

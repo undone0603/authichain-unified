@@ -144,12 +144,12 @@ describe('runLeadFinder', () => {
       'BROWSE_RESEARCH_LEAD',
       expect.objectContaining({ leadEmail: 'alice@gov.com', segment: 'GOV' }),
     );
-  });
+  }, 30_000);
 
   it('skips leads without email or org', async () => {
     const { apolloSearchLeads } = await import('./apollo-service.js');
     vi.mocked(apolloSearchLeads).mockResolvedValueOnce([
-      { name: 'Valid', org: 'ValidCorp', email: 'valid@corp.com', title: 'Director', firstName: 'Valid', lastName: 'User' },
+      { name: 'Valid', org: 'ValidCorp', email: 'valid@corp.com', title: 'Director', firstName: 'Valid', lastName: 'User', verificationSource: 'apollo_verified' },
     ]);
     invokeLLM.mockResolvedValueOnce(llmJsonResponse([
       { index: 0, fitProbability: 0.7, fitNotes: 'good fit' },

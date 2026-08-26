@@ -140,15 +140,13 @@ Rules:
     responseFormat: { type: 'json_object' },
   });
 
-  let plan: {
+  const plan: {
     branch: string;
     prTitle: string;
     prBody: string;
     tasks: Array<{ kind: string; payload: Record<string, unknown> }>;
     followupTasks: Array<{ kind: string; payload: Record<string, unknown> }>;
-  };
-
-  plan = parseLLMContent<typeof plan>(result.choices[0].message.content);
+  } = parseLLMContent(result.choices[0].message.content);
 
   // Create the feature branch
   await createBranch(plan.branch);
@@ -248,7 +246,7 @@ Write the code changes. Return the full JSON response as specified in your syste
     responseFormat: { type: 'json_object' },
   });
 
-  let codeResult: {
+  const codeResult: {
     files: Array<{
       path: string;
       content: string;
@@ -257,9 +255,7 @@ Write the code changes. Return the full JSON response as specified in your syste
     }>;
     summary: string;
     nextSteps: string[];
-  };
-
-  codeResult = parseLLMContent<typeof codeResult>(result.choices[0].message.content);
+  } = parseLLMContent(result.choices[0].message.content);
 
   if (!codeResult.files?.length) {
     throw new Error('WRITE_CODE: LLM returned no files');

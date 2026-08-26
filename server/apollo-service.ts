@@ -3,6 +3,7 @@
  * Replaces LLM web-search with verified contact + company data.
  */
 import { ENV } from "./_core/env.js";
+import type { VerificationSource } from "./outreach/send-guard.js";
 
 export interface ApolloLead {
   name: string;
@@ -17,6 +18,34 @@ export interface ApolloLead {
   state?: string;
   country?: string;
   seniority?: string;
+  /** Apollo's own verdict on the address, mapped onto the send-guard vocabulary. */
+  verificationSource: VerificationSource;
+}
+
+/**
+ * Apollo returns `email_status` per person. Only "verified" means Apollo
+ * actually confirmed the mailbox; "guessed" is a pattern inferred from the
+ * company's format, which is precisely what send-guard.ts exists to stop
+ * ("bernard.arnault@lvmh.com" passes an MX check because the domain is real).
+ *
+ * Anything that is not an explicit "verified" maps to a source the guard
+ * rejects. Erring toward 'pattern_guess' on an unrecognised status is
+ * deliberate: a new or renamed Apollo status must not silently become
+ * sendable.
+ */
+export function mapApolloEmailStatus(status: unknown): VerificationSource {
+  if (status === 'verified') return 'apollo_verified';
+  if (status === 'guessed') return 'pattern_guess';
+  return 'unknown';
+}
+
+/**
+ * Apollo's search endpoint returns this placeholder instead of an address when
+ * the contact has not been unlocked with a credit. It is a real-looking string
+ * that would otherwise be inserted into `leads` and treated as a mailbox.
+ */
+function isLockedPlaceholder(email: string): boolean {
+  return /^email_not_unlocked@/i.test(email.trim());
 }
 
 interface ApolloSearchParams {
@@ -115,6 +144,7 @@ export async function apolloSearchLeads(segment: string, count: number): Promise
 
   return people
     .filter(p => p.email && p.name && p.organization?.name)
+    .filter(p => !isLockedPlaceholder(p.email))
     .map(p => ({
       name: p.name ?? `${p.first_name} ${p.last_name}`.trim(),
       firstName: p.first_name ?? "",
@@ -128,5 +158,6 @@ export async function apolloSearchLeads(segment: string, count: number): Promise
       state: p.state ?? undefined,
       country: p.country ?? undefined,
       seniority: p.seniority ?? undefined,
+      verificationSource: mapApolloEmailStatus(p.email_status),
     }));
 }

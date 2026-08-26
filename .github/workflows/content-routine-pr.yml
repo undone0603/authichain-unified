@@ -15,9 +15,9 @@ name: Content Routine PR
 on:
   push:
     branches:
-      - 'claude/content-research-*'
-      - 'claude/adoption-radar-*'
-      - 'claude/social-bundle-*'
+      - "claude/content-research-*"
+      - "claude/adoption-radar-*"
+      - "claude/social-bundle-*"
 
 permissions:
   contents: write

@@ -33,7 +33,7 @@ function getStripeClient(): Stripe {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error("[stripe-webhook] STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(key, { apiVersion: "2026-05-27.dahlia" as const });
+    _stripe = new Stripe(key, { apiVersion: "2026-07-29.dahlia" as const });
   }
   return _stripe;
 }

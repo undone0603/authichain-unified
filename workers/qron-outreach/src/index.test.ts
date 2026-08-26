@@ -13,7 +13,11 @@ function makeEmail(overrides: Partial<Email> = {}): Email {
   return { to: 'prospect@example.com', name: 'Prospect', subject: 'Hi', body: 'body', ...overrides };
 }
 
-const env = { RESEND_API_KEY: 'resend-test-key', INTERNAL_API_SECRET: 'test-secret' };
+const env = {
+  RESEND_API_KEY: 'resend-test-key',
+  INTERNAL_API_SECRET: 'test-secret',
+  AUTH_TOKEN: 'webhook-token',
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -62,7 +66,7 @@ describe('sendViaResend', () => {
 
 describe('handleBounceWebhook', () => {
   it('calls guardrailSuppress with reason "bounced" for an email.bounced event', async () => {
-    const request = new Request('https://example.com/webhook', {
+    const request = new Request('https://example.com/webhook?key=webhook-token', {
       method: 'POST',
       body: JSON.stringify({ type: 'email.bounced', data: { to: ['bad@example.com'] } }),
     });
@@ -73,7 +77,7 @@ describe('handleBounceWebhook', () => {
   });
 
   it('calls guardrailSuppress with reason "complained" for an email.complained event', async () => {
-    const request = new Request('https://example.com/webhook', {
+    const request = new Request('https://example.com/webhook?key=webhook-token', {
       method: 'POST',
       body: JSON.stringify({ type: 'email.complained', data: { to: ['angry@example.com'] } }),
     });
@@ -87,6 +91,17 @@ describe('handleBounceWebhook', () => {
     const request = new Request('https://example.com/webhook', {
       method: 'POST',
       body: JSON.stringify({ type: 'email.delivered', data: { to: ['ok@example.com'] } }),
+    });
+
+    await handleBounceWebhook(request, env);
+
+    expect(guardrailSuppress).not.toHaveBeenCalled();
+  });
+
+  it('does not globally suppress recipients from an unauthenticated webhook', async () => {
+    const request = new Request('https://example.com/webhook', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'email.bounced', data: { to: ['bad@example.com'] } }),
     });
 
     await handleBounceWebhook(request, env);

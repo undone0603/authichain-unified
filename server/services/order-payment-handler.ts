@@ -46,7 +46,7 @@ export async function handleServiceOrderPayment(session: SessionWithId): Promise
   if (order.amount) {
     await db.recordRevenue({
       source: "stripe",
-      amount: (order.amount / 100).toFixed(2),
+      amount: (Number(order.amount) / 100).toFixed(2),
       currency: "USD",
       type: "service_order",
       userId: order.userId ?? null,

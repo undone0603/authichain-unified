@@ -43,10 +43,10 @@ export async function GET(request: Request) {
     results.businessCycle = err instanceof Error ? err.message : String(err);
   }
 
-  // Also fire a forced pipeline tick for the server-side autonomous jobs
+  // Run server-side autonomous jobs only when the runtime pipeline flag permits it.
   try {
     const { runPipelineTick } = await import('../../../../../server/jobs/pipeline-tick');
-    const tick = await runPipelineTick({ force: true });
+    const tick = await runPipelineTick();
     results.pipelineTick = tick;
   } catch (err) {
     results.pipelineTick = { error: err instanceof Error ? err.message : String(err) };

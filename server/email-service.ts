@@ -59,12 +59,81 @@ export type SendEmailInput = {
 };
 
 export type SendEmailResult = {
-  status: "sent" | "suppressed" | "skipped";
+  status: "sent" | "suppressed" | "skipped" | "dry_run";
   providerMessageId?: string;
   threadId?: string;
   provider?: string;
   reason?: string;
 };
+
+// ─── Dry run ─────────────────────────────────────────────────────────────────
+//
+// Arming this makes sendEmail() record what it was asked to send and return
+// without contacting a provider.
+//
+// It lives here, at the single point every outbound email passes through,
+// rather than as a flag threaded from runPipelineTick() down through each job.
+// Threading it would mean every current send site *and every one added later*
+// has to remember to honour it, and the failure mode of forgetting is sending
+// real mail during something a person was told is a dry run. At this boundary
+// the guarantee holds by construction: a new caller cannot opt out of it,
+// because it does not know it exists.
+//
+// Deliberately module-scope rather than an argument, for the same reason.
+// Deliberately not driven by an environment variable either — a dry run is a
+// decision made by one caller for the length of one call, not deployment
+// configuration that could linger and silently suppress real mail.
+
+type RecordedSend = SendEmailInput & { at: string };
+
+let dryRunLog: RecordedSend[] | null = null;
+
+/** True while sends are being recorded instead of dispatched. */
+export function isDryRun() {
+  return dryRunLog !== null;
+}
+
+/**
+ * Records an outbound message and reports whether a dry run is active.
+ *
+ * For send paths that do not go through sendEmail(). There is one that
+ * matters: guardedSend() in server/outreach/send-guard.ts posts to the Resend
+ * API directly, because it layers on CAN-SPAM footers, one-click unsubscribe
+ * headers and a per-domain API key. It is also the cold-email path — the exact
+ * thing a dry run is run to inspect — so leaving it uncovered made the dry run
+ * wrong in the case it exists for.
+ *
+ * Any future transport must call this before it dispatches. That is a weaker
+ * guarantee than sendEmail() gets, where the interception is unavoidable, so
+ * prefer routing new senders through sendEmail() rather than adding a third
+ * caller here.
+ */
+export function recordDryRunSend(input: SendEmailInput): boolean {
+  if (dryRunLog === null) return false;
+  dryRunLog.push({ ...input, to: input.to.trim().toLowerCase(), at: new Date().toISOString() });
+  return true;
+}
+
+/**
+ * Runs `fn` with every sendEmail() call recorded instead of dispatched, and
+ * returns both the function's result and what it tried to send.
+ *
+ * Restores the previous state in a finally block, so a throw inside `fn`
+ * cannot leave sends suppressed for the rest of the process.
+ */
+export async function withDryRunEmail<T>(
+  fn: () => Promise<T>,
+): Promise<{ result: T; sends: RecordedSend[] }> {
+  const previous = dryRunLog;
+  const log: RecordedSend[] = [];
+  dryRunLog = log;
+  try {
+    const result = await fn();
+    return { result, sends: log };
+  } finally {
+    dryRunLog = previous;
+  }
+}
 
 function suppressionSet() {
   return new Set(
@@ -91,6 +160,14 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const to = input.to.trim().toLowerCase();
   if (isSuppressed(to)) {
     return { status: "suppressed", reason: "suppression_list" };
+  }
+
+  // After the suppression check, deliberately: a dry run should report what
+  // would really happen, and a suppressed address really would be suppressed.
+  // Intercepting first would hide that and overstate what a live run sends.
+  if (dryRunLog !== null) {
+    dryRunLog.push({ ...input, to, at: new Date().toISOString() });
+    return { status: "dry_run", reason: "recorded, not sent" };
   }
 
   const fromEmail = ENV.gmailFromEmail || process.env.GMAIL_FROM_EMAIL || "";

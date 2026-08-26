@@ -24,7 +24,7 @@ export const blockchainRouter = router({
     return { ipfsUri: uri };
   }),
   mintCertificateNFT: protectedProcedure.input(z.object({
-    productId: z.number(),
+    productId: z.string().uuid(),
     certificateNumber: z.string(),
     walletAddress: z.string(),
     contractAddress: z.string(),
