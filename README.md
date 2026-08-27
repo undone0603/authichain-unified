@@ -15,7 +15,7 @@ This repository is the central hub for the QRON ecosystem, integrating a high-pe
 
 ## 🌐 1. QRON Platform (Frontend & Edge)
 
-A Next.js application with a Cloudflare Edge Worker and Drizzle ORM. The platform has migrated off Vercel onto an OpenNext-on-Cloudflare deployment scaffold for its edge/runtime infrastructure.
+A Next.js application with Cloudflare Edge services. **Vercel is the primary deployment target for the unified Next.js network app and its brand microsites; Cloudflare Workers provide the edge/fronting layer and repo-managed worker services.** See `docs/NETWORK.md` for the deployment map and current domains.
 
 ### Ecosystem & Multi-Domain Architecture
 
@@ -34,7 +34,8 @@ Traffic is routed based on the `Host` header. Shared application routes (like `/
 
 - **Framework**: [Next.js](https://nextjs.org/) 16 (App Router)
 - **Database**: [Drizzle ORM](https://orm.drizzle.team/) with PostgreSQL (Supabase)
-- **Edge Runtime**: Cloudflare Workers
+- **Primary app deployment**: Vercel
+- **Edge/fronting services**: Cloudflare Workers
 - **Styling**: Tailwind CSS
 - **Package Manager**: pnpm (workspaces)
 
@@ -72,8 +73,17 @@ python -m agentz.cli run --all --revenue-only --mode auto
 
 - **ORM**: Drizzle is used for schema management.
 - **Migrations**: `npm run db:generate` and `npm run db:push`.
-- **Edge**: Managed via `wrangler.toml` in the root.
+- **Edge**: Managed via `wrangler.toml` and repo-managed `workers/*` services.
+- **Deploy map**: `docs/NETWORK.md` is the canonical inventory of Vercel, Cloudflare, database, and worker responsibilities.
 - **Agents**: Python environment requires `pip install -r requirements-agentz.txt`.
+
+## 🧪 Pilot-readiness
+
+The repository uses a deployment-independent CI quality gate and a versioned AuthiChain attestation contract. The pilot baseline is:
+
+`install → typecheck → lint → tests → production build → deploy smoke test → real product scan`
+
+See `docs/operations/PILOT-READY-BASELINE.md` and `docs/attestation/v0.1.md` for the technical acceptance criteria.
 
 ## ⚖️ Legal & Intellectual Property
 
