@@ -1,6 +1,5 @@
 /**
  * Vercel serverless function entry point.
- * All /api/* requests are routed here by vercel.json rewrites.
  * The Express app handles tRPC, OAuth, and Stripe webhooks.
  *
  * Scheduled jobs (server/scheduled-jobs.ts, e.g. founder-payout) do NOT run
