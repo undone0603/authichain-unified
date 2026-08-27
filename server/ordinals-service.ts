@@ -18,19 +18,71 @@ export interface OrdinalMetadata {
   timestamp: string;
 }
 
+const ORDINALSBOT_API_BASE = "https://api.ordinalsbot.com";
+
 /**
  * Prepares the witness data for a new QRON Ordinal Inscription.
- * This wraps the Artistic QR SVG/PNG into the proper Bitcoin envelope format.
+ * Fetches the source image and base64-encodes it into an ord-protocol envelope
+ * body ready to hand to an inscription provider.
  */
 export async function prepareOrdinalEnvelope(imageUrl: string, metadata: any) {
-  // Logic to convert image buffer to Ordinal-ready hex envelope
-  // Using a bridge like Ordinals.com or direct node RPC
+  const res = await fetch(imageUrl);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch Ordinal content from ${imageUrl}: ${res.status}`);
+  }
+  const contentType = res.headers.get("content-type") || "image/png";
+  const buffer = await res.arrayBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+
   return {
     protocol: "ord",
     version: "1.0",
     body: metadata,
-    image_ref: imageUrl
+    image_ref: imageUrl,
+    content_type: contentType,
+    content_base64: base64
   };
+}
+
+/**
+ * Submits a prepared Ordinal envelope to an inscription-as-a-service provider
+ * (OrdinalsBot) that funds, builds, and broadcasts the commit/reveal transactions
+ * on Bitcoin. AuthiChain does not run its own Bitcoin node or hold BTC UTXOs, so
+ * inscription creation is delegated to this bridge rather than done in-process.
+ * Requires ORDINALSBOT_API_KEY and a receiveAddress to hold the inscribed sat.
+ */
+export async function createInscriptionOrder(
+  envelope: { content_base64: string; content_type: string },
+  receiveAddress: string,
+  apiKey: string
+) {
+  if (!apiKey) throw new Error("ORDINALSBOT_API_KEY is not configured");
+  if (!receiveAddress) throw new Error("receiveAddress is required to create an inscription order");
+
+  const res = await fetch(`${ORDINALSBOT_API_BASE}/order-inscription`, {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      files: [
+        {
+          name: "authichain-inscription",
+          dataURL: `data:${envelope.content_type};base64,${envelope.content_base64}`
+        }
+      ],
+      receiveAddress,
+      fee: 10
+    })
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`OrdinalsBot order creation failed: ${errorText}`);
+  }
+
+  return await res.json();
 }
 
 /**
