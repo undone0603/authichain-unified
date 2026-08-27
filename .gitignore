@@ -102,6 +102,9 @@ test-output.txt
 # Patch artifacts
 PATCH_EOF
 
+# Sensitive data files
+gov_pursue_list.csv
+
 # Wrangler local cache
 .wrangler/
 .env*

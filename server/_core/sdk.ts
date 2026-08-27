@@ -1,10 +1,12 @@
 import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { parseCookie } = require("cookie");
-const parseCookieHeader = parseCookie as (str: string) => Record<string, string>;
+import * as cookie from "cookie";
 import type { Request } from "express";
+// cookie@2 renamed parse → parseCookie; keep a local alias for either shape.
+const parseCookieHeader: (str: string) => Record<string, string | undefined> =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (cookie as any).parseCookie ?? (cookie as any).parse;
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
@@ -152,8 +154,11 @@ class SDKServer {
       return new Map<string, string>();
     }
 
-    const parsed = parseCookieHeader(cookieHeader) as Record<string, string | undefined>;
-    return new Map(Object.entries(parsed).filter(([, v]) => v !== undefined) as Array<[string, string]>);
+    const parsed = parseCookieHeader(cookieHeader);
+    const entries = Object.entries(parsed).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    );
+    return new Map(entries);
   }
 
   private getSessionSecret() {
@@ -261,10 +266,22 @@ class SDKServer {
   async authenticateRequest(req: Request | { headers: { cookie?: string } }): Promise<User> {
     // Regular authentication flow
     // Support both Fetch API Request (headers.get()) and Express-like objects (headers.cookie).
-    const cookieHeader =
-      typeof (req.headers as { get?: (name: string) => string | null }).get === "function"
-        ? (req.headers as { get: (name: string) => string | null }).get("cookie") ?? undefined
-        : (req.headers as { cookie?: string }).cookie;
+    let cookieHeader: string | undefined;
+
+    // Try Fetch API headers.get() first
+    const headersObj = req.headers as any;
+    if (typeof headersObj.get === "function") {
+      const result = headersObj.get("cookie");
+      if (result) {
+        cookieHeader = result;
+      }
+    }
+
+    // Fall back to Express-like headers.cookie
+    if (!cookieHeader && headersObj.cookie) {
+      cookieHeader = headersObj.cookie;
+    }
+
     const cookies = this.parseCookies(cookieHeader);
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);

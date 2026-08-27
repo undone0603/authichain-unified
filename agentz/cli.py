@@ -39,11 +39,11 @@ def cmd_run(args: argparse.Namespace) -> int:
     # Use workflow runner to execute the selected handler
     from .workflows.runner import main as runner_main
     
-    # Map CLI args to runner args
+    # Map CLI args to runner args. Note: agentz.workflows.runner only accepts
+    # --handler/--mode/--verbose, so --quiet (agentz.cli's own flag) is not
+    # forwarded — there's nothing on the runner side to forward it to.
     runner_args = ["--handler", args.command_name, "--mode", args.mode]
-    if args.quiet:
-        runner_args.append("--quiet")
-        
+
     return runner_main(runner_args)
 
 def cmd_health(args: argparse.Namespace) -> int:

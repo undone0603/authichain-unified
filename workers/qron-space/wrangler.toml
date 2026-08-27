@@ -1,7 +1,7 @@
 name = "qron-space"
 main = "src/index.ts"
-compatibility_date = "2026-05-08"
-account_id = "4c1869b90f13f86940aa3747839bf420"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 
 [[routes]]
@@ -11,3 +11,6 @@ zone_name = "qron.space"
 [[routes]]
 pattern = "www.qron.space/*"
 zone_name = "qron.space"
+
+[observability]
+enabled = true

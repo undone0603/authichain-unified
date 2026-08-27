@@ -57,8 +57,8 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
 
 ### Documentation (6 Files)
 
-**4. `/docs/gov-engine-lead-pipeline.md` (NEW - 380 lines)**
-- Path: `/home/user/authichain-unified/docs/gov-engine-lead-pipeline.md`
+**4. `/docs/marketing/gov-engine-lead-pipeline.md` (NEW - 380 lines)**
+- Path: `/home/user/authichain-unified/docs/marketing/gov-engine-lead-pipeline.md`
 - Status: Complete architecture guide
 - Contents:
   - Full pipeline diagram
@@ -72,8 +72,8 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
   - FAQ section
   - Audience: Developers, DevOps, Product Managers
 
-**5. `/docs/INTEGRATION_CHECKLIST.md` (NEW - 240 lines)**
-- Path: `/home/user/authichain-unified/docs/INTEGRATION_CHECKLIST.md`
+**5. `/docs/operations/INTEGRATION_CHECKLIST.md` (NEW - 240 lines)**
+- Path: `/home/user/authichain-unified/docs/operations/INTEGRATION_CHECKLIST.md`
 - Status: Step-by-step deployment guide
 - Contents:
   - Files created/updated summary
@@ -86,8 +86,8 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
   - Next steps for optional enhancements
   - Audience: DevOps, Release managers
 
-**6. `/docs/email-proposals-integration.md` (NEW - 280 lines)**
-- Path: `/home/user/authichain-unified/docs/email-proposals-integration.md`
+**6. `/docs/marketing/email-proposals-integration.md` (NEW - 280 lines)**
+- Path: `/home/user/authichain-unified/docs/marketing/email-proposals-integration.md`
 - Status: Email integration guide
 - Contents:
   - Overview of existing email-proposals.ts
@@ -100,8 +100,8 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
   - Troubleshooting guide
   - Audience: Backend developers
 
-**7. `/docs/QUICK_START.md` (NEW - 180 lines)**
-- Path: `/home/user/authichain-unified/docs/QUICK_START.md`
+**7. `/docs/marketing/QUICK_START.md` (NEW - 180 lines)**
+- Path: `/home/user/authichain-unified/docs/marketing/QUICK_START.md`
 - Status: Quick reference guide
 - Contents:
   - One-minute problem/solution overview
@@ -157,11 +157,11 @@ Implemented a complete lead scoring and filtering system to prevent wasting emai
 
 | Role | Start Here | Then Read | Purpose |
 |------|-----------|----------|---------|
-| **Developer** | `/docs/QUICK_START.md` | `/docs/INTEGRATION_CHECKLIST.md` | Understand & deploy |
-| **DevOps** | `/IMPLEMENTATION_MANIFEST.md` | `/docs/INTEGRATION_CHECKLIST.md` | Deploy & monitor |
+| **Developer** | `/docs/marketing/QUICK_START.md` | `/docs/operations/INTEGRATION_CHECKLIST.md` | Understand & deploy |
+| **DevOps** | `/IMPLEMENTATION_MANIFEST.md` | `/docs/operations/INTEGRATION_CHECKLIST.md` | Deploy & monitor |
 | **Code Reviewer** | `/IMPLEMENTATION_MANIFEST.md` | `/scripts/score-opportunities.ts`, `/scripts/qualify-leads.ts` | Review changes |
-| **Project Manager** | `/LEAD_SCORING_SUMMARY.md` | `/docs/gov-engine-lead-pipeline.md` | Track progress |
-| **Data Analyst** | `/docs/gov-engine-lead-pipeline.md` | SQL queries section | Monitor metrics |
+| **Project Manager** | `/LEAD_SCORING_SUMMARY.md` | `/docs/marketing/gov-engine-lead-pipeline.md` | Track progress |
+| **Data Analyst** | `/docs/marketing/gov-engine-lead-pipeline.md` | SQL queries section | Monitor metrics |
 
 ---
 
@@ -377,16 +377,16 @@ All files are in the repository at:
 ## Support & Questions
 
 **For technical questions:**
-1. Check `/docs/QUICK_START.md` (quick answers)
-2. Check `/docs/gov-engine-lead-pipeline.md` (detailed architecture)
+1. Check `/docs/marketing/QUICK_START.md` (quick answers)
+2. Check `/docs/marketing/gov-engine-lead-pipeline.md` (detailed architecture)
 3. Check script docstrings (inline documentation)
 
 **For deployment questions:**
-1. Check `/docs/INTEGRATION_CHECKLIST.md` (step-by-step)
+1. Check `/docs/operations/INTEGRATION_CHECKLIST.md` (step-by-step)
 2. Check `/IMPLEMENTATION_MANIFEST.md` (complete inventory)
 
 **For email integration:**
-1. Check `/docs/email-proposals-integration.md` (two options with code)
+1. Check `/docs/marketing/email-proposals-integration.md` (two options with code)
 
 ---
 

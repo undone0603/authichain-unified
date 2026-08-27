@@ -66,6 +66,8 @@
     "mobile/**/*",
     "packages/**/*",
     "apps/**/*",
+    "docs/technical-reference/**/*",
+    "content/**/*",
     "libs/**/*",
     "scripts/verify-integrations.ts",
     "api/**/*",

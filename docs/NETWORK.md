@@ -10,7 +10,7 @@ _Verified against the Vercel API 2026-07-15. All six team projects are linked to
 | What | Folder | Deploys via | Domain(s) |
 |---|---|---|---|
 | **The network app** (one Next.js app serves every brand) | repo root (`src/` + `client/` + `server/`, `next build`) | Vercel **`qron-platform`** (prj_GD9ypyGrjibx4Ab88M52xufUf1ph, repo root, linked 2026-06-19) | qron.space, app.qron.space, authichain.com, app.authichain.com, govchain.us, strainchain.io (+ www variants). Hosts the registered Stripe webhooks and the `/api/cron/nurture-replies` cron. |
-| Brand-pitch microsites | repo root (same build, multi-tenant) | Vercel `authichain-unified-v2` | ~50 `<pitch>.authichain.com` subdomains (diageo, lvmh, pfizer, …) |
+| Brand-pitch microsites | repo root (same build, multi-tenant) | Vercel `authichain-unified` | ~50 `<pitch>.authichain.com` subdomains (diageo, lvmh, pfizer, …) |
 | Edge worker | `worker/` | Vercel `authichain-unified` (rootDirectory `worker`) | none attached |
 | Spares (linked, no domains) | — | Vercel `govchain-us`, `strainchain-io`, `authichain-portfolio` | none — candidates for deletion |
 | Apex landing / SEO layer | `workers/authichain-com/`, `workers/{govchain-us,strainchain-io,qron-space}/` | CF workers (route globs, where DNS is proxied through Cloudflare) | fronting authichain.com/* et al. |
@@ -39,7 +39,7 @@ _Verified against the Vercel API 2026-07-15. All six team projects are linked to
 
 - Build/typecheck INSIDE WSL Ubuntu (node 22 via nvm; strip `/mnt/c` from PATH). See `docs/superpowers/specs/` and memory notes; helper pattern archived at `scripts/ops/home/`.
 - `apps/*` trees are deliberately inert: excluded from root `tsconfig.json` and not in any pnpm workspace. Wire them into the root build only when something real needs it.
-- Vercel deploys: git integration on `main` (authichain-unified-v2) — plus manual `vercel deploy` from Windows CLI when needed.
+- Vercel deploys: git integration on `main` (authichain-unified) — plus manual `vercel deploy` from Windows CLI when needed.
 
 ## Follow-ups owed
 

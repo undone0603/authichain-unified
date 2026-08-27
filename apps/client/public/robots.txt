@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /certificate/
+Allow: /admin
+Allow: /admin/
+Allow: /scheduled-tasks
+Allow: /api/
+
+Sitemap: https://authichain.com/sitemap.xml

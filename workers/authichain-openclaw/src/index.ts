@@ -186,7 +186,7 @@ async function dispatchWorkflow(c: any, workflowId: string, _args: string[]) {
       });
     }
 
-    const data = (await res.json()) as any;
+    const data = (await res.json()) as { status?: string; notes?: string };
     return c.json({
       response: `Workflow "${workflowId}" completed: ${data.status || "ok"}\n${data.notes || ""}`,
       result: data,
@@ -209,13 +209,22 @@ async function dispatchArchitectCycle(c: any, _args: string[]) {
       return c.json({ response: `Architect cycle failed: ${err}`, error: true });
     }
 
-    const data = (await res.json()) as any;
+    const data = (await res.json()) as {
+      report?: Record<string, any>;
+      cycle_id?: string;
+      goal?: string;
+      before_healthy?: number;
+      after_healthy?: number;
+      before_failing?: number;
+      after_failing?: number;
+      net_improvement?: number;
+    };
     const r = data.report || data;
     const summary = [
       `Architect Cycle Complete (${r.cycle_id || "unknown"})`,
       `Goal: ${r.goal || "N/A"}`,
-      `Healthy: ${r.before_healthy} -> ${r.after_healthy}`,
-      `Failing: ${r.before_failing} -> ${r.after_failing}`,
+      `Healthy: ${r.before_healthy} → ${r.after_healthy}`,
+      `Failing: ${r.before_failing} → ${r.after_failing}`,
       `Net improvement: ${r.net_improvement || 0}`,
     ].join("\n");
 
@@ -228,8 +237,10 @@ async function dispatchArchitectCycle(c: any, _args: string[]) {
 async function listAgents(c: any) {
   try {
     const res = await agentzFetch(c.env, "/api/agents");
-    const data = (await res.json()) as any;
-    const lines = data.agents?.map((a: any) => `  - ${a.name}: ${a.system_prompt?.slice(0, 60) || ""}`) || [];
+    const data = (await res.json()) as {
+      agents?: Array<{ name: string; system_prompt?: string }>;
+    };
+    const lines = data.agents?.map((a) => `  • ${a.name}: ${a.system_prompt?.slice(0, 60) || ""}`) || [];
     return c.json({ response: `Registered agents (${data.agents?.length || 0}):\n${lines.join("\n")}` });
   } catch (e: any) {
     return c.json({ response: `AgentZ unreachable: ${e.message}`, error: true });
@@ -239,8 +250,10 @@ async function listAgents(c: any) {
 async function listWorkflows(c: any) {
   try {
     const res = await agentzFetch(c.env, "/api/workflows");
-    const data = (await res.json()) as any;
-    const lines = data.workflows?.map((w: any) => `  - ${w.id}: ${w.title}`) || [];
+    const data = (await res.json()) as {
+      workflows?: Array<{ id: string; title: string }>;
+    };
+    const lines = data.workflows?.map((w) => `  • ${w.id}: ${w.title}`) || [];
     return c.json({ response: `Workflows (${data.workflows?.length || 0}):\n${lines.join("\n")}` });
   } catch (e: any) {
     return c.json({ response: `AgentZ unreachable: ${e.message}`, error: true });
@@ -294,7 +307,7 @@ app.post("/architect/cycle", async (c) => {
 
 function formatHelp(): string {
   return [
-    "AuthiChain OpenClaw Bridge — Available commands:",
+    "🦞 AuthiChain OpenClaw Bridge — Available commands:",
     "",
     "  help              — Show this help",
     "  agents            — List registered AgentZ agents",

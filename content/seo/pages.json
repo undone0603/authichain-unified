@@ -3720,6 +3720,326 @@
     }
   },
   {
+    "slug": "un-transparency-protocol-vs-w3c-verifiable-credentials",
+    "keyword": "un transparency protocol vs w3c verifiable credentials",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Un Transparency Protocol Vs W3c Verifiable | AuthiChain",
+    "metaDescription": "UN/CEFACT’s UN Transparency Protocol targets version 1.0 by 1 September 2026, defining a Digital Product Passport issued by the shipper — built on the same.",
+    "h1": "Un Transparency Protocol Vs W3c Verifiable Credentials",
+    "bodyHtml": "<p>UN/CEFACT’s UN Transparency Protocol targets version 1.0 by 1 September 2026, defining a Digital Product Passport issued by the shipper — built on the same W3C Verifiable Credentials Data Model 2.0 that protocol/SPEC.md §2 already targets, not a competing wire format.</p><h2>Why AuthiChain</h2><ul><li>UNTP’s passport is a profile — a defined set of required fields and linked credential types — layered on VC Data Model 2.0, the same base specification this protocol already implements</li><li>A UNTP passport links out to separate conformity and traceability-event credentials rather than embedding everything in one document; a signed AuthiChain record can serve as one of those linked credentials without a format conversion</li><li>UNTP is a UN specification, not EU law — adopting it does not by itself satisfy ESPR, where each category’s delegated act remains the binding requirement</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does UNTP replace the EU Digital Product Passport requirement?</h3><p>No — UNTP is a UN/CEFACT technical specification. It aims for alignment with ESPR, but a product still has to satisfy the delegated act for its own category regardless of which passport format sits underneath.</p><h3>Is AuthiChain compatible with UNTP?</h3><p>The building blocks match — both use W3C Verifiable Credentials Data Model 2.0 and cryptographic signing. A formal conformance claim waits on UNTP 1.0 finalizing, targeted for 1 September 2026, and on its specific field and credential-linking requirements.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Un Transparency Protocol Vs W3c Verifiable Credentials",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "UN/CEFACT’s UN Transparency Protocol targets version 1.0 by 1 September 2026, defining a Digital Product Passport issued by the shipper — built on the same W3C Verifiable Credentials Data Model 2.0 that protocol/SPEC.md §2 already targets, not a competing wire format.",
+          "url": "https://authichain.com/p/un-transparency-protocol-vs-w3c-verifiable-credentials"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Un Transparency Protocol Vs W3c Verifiable Credentials",
+              "item": "https://authichain.com/p/un-transparency-protocol-vs-w3c-verifiable-credentials"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does UNTP replace the EU Digital Product Passport requirement?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — UNTP is a UN/CEFACT technical specification. It aims for alignment with ESPR, but a product still has to satisfy the delegated act for its own category regardless of which passport format sits underneath."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is AuthiChain compatible with UNTP?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The building blocks match — both use W3C Verifiable Credentials Data Model 2.0 and cryptographic signing. A formal conformance claim waits on UNTP 1.0 finalizing, targeted for 1 September 2026, and on its specific field and credential-linking requirements."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "iso-18975-gs1-digital-link-resolver-standard",
+    "keyword": "iso 18975 gs1 digital link resolver standard",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ISO 18975 GS1 Digital Link Resolver Standard | AuthiChain",
+    "metaDescription": "ISO/IEC 18975:2024 formalizes GS1 Digital Link as an international standard for encoding identifiers into resolvable URLs — the same URL structure.",
+    "h1": "ISO 18975 GS1 Digital Link Resolver Standard",
+    "bodyHtml": "<p>ISO/IEC 18975:2024 formalizes GS1 Digital Link as an international standard for encoding identifiers into resolvable URLs — the same URL structure protocol/SPEC.md §2 specifies for item identity, now carrying an ISO number and not only a GS1 one.</p><h2>Why AuthiChain</h2><ul><li>A GS1 Digital Link URI conforms to ISO/IEC 18975 by construction, so an identifier already built to the GS1 standard needs no separate ISO encoding to maintain</li><li>The resolver layer is what turns one URL into several destinations selected by linkType — a signed record is one linkType a GS1-conformant resolver can point to, alongside a product page or a certificate</li><li>A record’s credentialSubject.id is the same GS1 Digital Link URL a warehouse scanner and a consumer’s phone both resolve — one identity, not a second identifier layered on top</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Do we need to change our QR codes because of ISO/IEC 18975?</h3><p>No — a QR code already encoding a GS1 Digital Link URL is already conformant. The standard formalizes the URI structure GS1 Digital Link already used; it does not introduce a new encoding requirement.</p><h3>What does a resolver add beyond the URL itself?</h3><p>It lets one identifier point to multiple linked resources — a product page, a certificate, a traceability record — selected by linkType, instead of hard-coding a single destination into the printed code.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ISO 18975 GS1 Digital Link Resolver Standard",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "ISO/IEC 18975:2024 formalizes GS1 Digital Link as an international standard for encoding identifiers into resolvable URLs — the same URL structure protocol/SPEC.md §2 specifies for item identity, now carrying an ISO number and not only a GS1 one.",
+          "url": "https://authichain.com/p/iso-18975-gs1-digital-link-resolver-standard"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ISO 18975 GS1 Digital Link Resolver Standard",
+              "item": "https://authichain.com/p/iso-18975-gs1-digital-link-resolver-standard"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do we need to change our QR codes because of ISO/IEC 18975?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — a QR code already encoding a GS1 Digital Link URL is already conformant. The standard formalizes the URI structure GS1 Digital Link already used; it does not introduce a new encoding requirement."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does a resolver add beyond the URL itself?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It lets one identifier point to multiple linked resources — a product page, a certificate, a traceability record — selected by linkType, instead of hard-coding a single destination into the printed code."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-dpp-registry-customs-verification-at-import",
+    "keyword": "eu dpp registry customs verification at import",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU DPP Registry Customs Verification At Import | AuthiChain",
+    "metaDescription": "The EU’s central Digital Product Passport Registry went live on 19 July 2026, and once a category’s delegated act applies, customs can check at the border.",
+    "h1": "EU DPP Registry Customs Verification At Import",
+    "bodyHtml": "<p>The EU’s central Digital Product Passport Registry went live on 19 July 2026, and once a category’s delegated act applies, customs can check at the border whether a shipment’s passport is registered, matches the goods, and carries a consistent commodity code before those goods clear.</p><h2>Why AuthiChain</h2><ul><li>A record that resolves at a permanent, unauthenticated GS1 Digital Link URL is the shape a customs check queries — no portal login or vendor call sits in the path of a border inspection</li><li>The registry check is a match check: identifier registered, data present, commodity code consistent — it does not re-issue or re-assess the passport at the border</li><li>The registry opening on 19 July 2026 creates no obligation by itself; customs checks bite only once a product’s category has a delegated act in force, starting with batteries on 18 February 2027</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can customs reject a shipment for a missing DPP today?</h3><p>Only for categories with an applicable delegated act in force. The registry opened 19 July 2026, but the first mandatory category — batteries — does not require a passport at the border until 18 February 2027.</p><h3>What does a customs DPP check actually verify?</h3><p>That the declared identifier is registered, that it resolves to passport data matching the shipment, and that the commodity code supplied is consistent with what the passport declares — not the underlying sustainability claims themselves.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU DPP Registry Customs Verification At Import",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU’s central Digital Product Passport Registry went live on 19 July 2026, and once a category’s delegated act applies, customs can check at the border whether a shipment’s passport is registered, matches the goods, and carries a consistent commodity code before those goods clear.",
+          "url": "https://authichain.com/p/eu-dpp-registry-customs-verification-at-import"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU DPP Registry Customs Verification At Import",
+              "item": "https://authichain.com/p/eu-dpp-registry-customs-verification-at-import"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can customs reject a shipment for a missing DPP today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Only for categories with an applicable delegated act in force. The registry opened 19 July 2026, but the first mandatory category — batteries — does not require a passport at the border until 18 February 2027."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does a customs DPP check actually verify?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "That the declared identifier is registered, that it resolves to passport data matching the shipment, and that the commodity code supplied is consistent with what the passport declares — not the underlying sustainability claims themselves."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "cirpass-2-reference-architecture-json-ld-dpp",
+    "keyword": "cirpass 2 reference architecture json-ld dpp",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Cirpass 2 Reference Architecture Json-Ld DPP | AuthiChain",
+    "metaDescription": "CIRPASS-2, the EU-funded project piloting Digital Product Passports across textiles, electronics, tyres, and construction, published its updated reference.",
+    "h1": "Cirpass 2 Reference Architecture Json-Ld DPP",
+    "bodyHtml": "<p>CIRPASS-2, the EU-funded project piloting Digital Product Passports across textiles, electronics, tyres, and construction, published its updated reference architecture on 10 June 2026 recommending JSON-LD as the default exchange format — which is what a W3C Verifiable Credential already is.</p><h2>Why AuthiChain</h2><ul><li>A Verifiable Credential is JSON-LD by construction: the @context field the recommendation asks for is already required in every record protocol/SPEC.md §3 defines</li><li>Modular, extensible passport templates across product groups match how credentialSubject already varies by category without changing the record’s outer structure or its signature mechanics</li><li>CIRPASS-2 is a pilot project’s technical recommendation, not a binding standard — the legal requirement stays whatever a category’s ESPR delegated act specifies once adopted</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the CIRPASS-2 reference architecture legally binding?</h3><p>No — it is a recommendation from an EU-funded pilot running through April 2027, intended to inform the Commission’s eventual technical implementing acts. Binding requirements are set separately by each category’s delegated act.</p><h3>Does the JSON-LD recommendation mean our records need reformatting?</h3><p>Not if they are already W3C Verifiable Credentials — JSON-LD is the format VC Data Model 2.0 uses. The recommendation aligns with that base format rather than replacing it.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Cirpass 2 Reference Architecture Json-Ld DPP",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "CIRPASS-2, the EU-funded project piloting Digital Product Passports across textiles, electronics, tyres, and construction, published its updated reference architecture on 10 June 2026 recommending JSON-LD as the default exchange format — which is what a W3C Verifiable Credential already is.",
+          "url": "https://authichain.com/p/cirpass-2-reference-architecture-json-ld-dpp"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Cirpass 2 Reference Architecture Json-Ld DPP",
+              "item": "https://authichain.com/p/cirpass-2-reference-architecture-json-ld-dpp"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the CIRPASS-2 reference architecture legally binding?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it is a recommendation from an EU-funded pilot running through April 2027, intended to inform the Commission’s eventual technical implementing acts. Binding requirements are set separately by each category’s delegated act."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the JSON-LD recommendation mean our records need reformatting?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not if they are already W3C Verifiable Credentials — JSON-LD is the format VC Data Model 2.0 uses. The recommendation aligns with that base format rather than replacing it."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "c2pa-content-credentials-vs-product-provenance",
+    "keyword": "c2pa content credentials vs product provenance",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "C2pa Content Credentials Vs Product Provenance | AuthiChain",
+    "metaDescription": "C2PA Content Credentials reached version 2.3 in January 2026 and answer a question about a file — who captured this image, what edited it, was AI involved —.",
+    "h1": "C2pa Content Credentials Vs Product Provenance",
+    "bodyHtml": "<p>C2PA Content Credentials reached version 2.3 in January 2026 and answer a question about a file — who captured this image, what edited it, was AI involved — while a product provenance record answers a question about a physical object, which is why the two are complements rather than alternatives.</p><h2>Why AuthiChain</h2><ul><li>C2PA binds a manifest to the bytes of a media file; a provenance record binds a signature to an item identifier that has no bytes to hash, so the binding to the physical object comes from the printed carrier, not from cryptography</li><li>Both are tamper-evident in the same way: alter the signed content and the signature stops matching — the difference is what the signature is over, not how strong it is</li><li>Neither proves the claim inside is true. C2PA proves a camera or tool signed a file; an Ed25519 provenance signature proves an issuer signed a statement — protocol/SPEC.md §8 states plainly that signatures prove authorship, not truth</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can C2PA authenticate a physical product?</h3><p>Not on its own. C2PA is a media-provenance specification: its manifest is bound to a file’s bytes. A photograph of a product can carry Content Credentials proving how the photo was made, but that says nothing about whether the object in it is genuine.</p><h3>Would C2PA and a product provenance record be used together?</h3><p>They can be. Product images and certificates attached to a passport are files, and C2PA can establish how those files were produced, while the signed provenance record establishes who issued the claim about the item itself.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — C2pa Content Credentials Vs Product Provenance",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "C2PA Content Credentials reached version 2.3 in January 2026 and answer a question about a file — who captured this image, what edited it, was AI involved — while a product provenance record answers a question about a physical object, which is why the two are complements rather than alternatives.",
+          "url": "https://authichain.com/p/c2pa-content-credentials-vs-product-provenance"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "C2pa Content Credentials Vs Product Provenance",
+              "item": "https://authichain.com/p/c2pa-content-credentials-vs-product-provenance"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can C2PA authenticate a physical product?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not on its own. C2PA is a media-provenance specification: its manifest is bound to a file’s bytes. A photograph of a product can carry Content Credentials proving how the photo was made, but that says nothing about whether the object in it is genuine."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Would C2PA and a product provenance record be used together?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "They can be. Product images and certificates attached to a passport are files, and C2PA can establish how those files were produced, while the signed provenance record establishes who issued the claim about the item itself."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     "slug": "cen-cenelec-digital-product-passport-standards",
     "keyword": "cen cenelec digital product passport standards",
     "brand": "AuthiChain",

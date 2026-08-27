@@ -1,7 +1,7 @@
 import httpx
 
 def check_asset():
-    url = 'https://authichain-unified-v2.vercel.app/assets/index-DYLU6hnH.js'
+    url = 'https://authichain-unified.vercel.app/assets/index-DYLU6hnH.js'
     try:
         r = httpx.get(url)
         print(f"Status: {r.status_code}")
