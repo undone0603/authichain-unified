@@ -4,15 +4,18 @@
 # checkout can't reintroduce it.
 * text=auto eol=lf
 
-# Lockfiles and configs: never touch, never convert.
-pnpm-lock.yaml   -text linguist-generated=true
-package-lock.json -text linguist-generated=true
-*.lock           -text
-
 # Shell scripts and workflow YAML break at runtime with CR (`\r: command not found`).
 *.sh             text eol=lf
 *.yml            text eol=lf
 *.yaml           text eol=lf
+
+# Lockfiles and configs: never touch, never convert. Must come after the *.yaml/
+# *.yml rules above: gitattributes is last-match-wins per pattern, pnpm-lock.yaml
+# matches *.yaml too, and this block previously came first, so the *.yaml rule
+# silently won and forced EOL conversion on pnpm-lock.yaml anyway.
+pnpm-lock.yaml   -text linguist-generated=true
+package-lock.json -text linguist-generated=true
+*.lock           -text
 
 # Binaries: leave alone.
 *.png binary
