@@ -296,7 +296,7 @@ app.post("/architect/cycle", async (c) => {
       method: "POST",
       body: JSON.stringify({ mode, goal }),
     });
-    const data = await res.json();
+    const data = (await res.json()) as any;
     return c.json(data);
   } catch (e: any) {
     return c.json({ error: `AgentZ unreachable: ${e.message}` }, 502);
