@@ -23,6 +23,7 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 
 ## Operations
 - [operations/LAUNCH-READINESS-2026-06-23.md](operations/LAUNCH-READINESS-2026-06-23.md) — launch readiness checklist
+- [operations/PILOT-READY-BASELINE.md](operations/PILOT-READY-BASELINE.md) — engineering acceptance gate for the first real-product pilot
 - [operations/launch-staging.md](operations/launch-staging.md)
 - [operations/INTEGRATION_CHECKLIST.md](operations/INTEGRATION_CHECKLIST.md) — lead-scoring deploy checklist
 - [operations/stripe-webhook-setup.md](operations/stripe-webhook-setup.md)
