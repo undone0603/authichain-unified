@@ -1,8 +1,0 @@
-{
-  "name": "stripe-provisioner",
-  "version": "1.0.0",
-  "dependencies": {
-    "@supabase/supabase-js": "^2.110.3",
-    "stripe": "^22.3.2"
-  }
-}
