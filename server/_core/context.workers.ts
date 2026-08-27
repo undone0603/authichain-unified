@@ -5,7 +5,7 @@ import type { IMissionsRepository } from "../missions/types";
 import type { IAdminRepository } from "../admin/types";
 import { DbMissionsRepository } from "../missions/db-repository";
 import { DbAdminRepository } from "../admin/db-repository";
-import { getHyperdriveDb } from "../db-hyperdrive.js";
+import { getHyperdriveDb } from "../db";
 import type { TrpcContext } from "./context";
 
 type WorkersEnv = { HYPERDRIVE: { connectionString: string } };

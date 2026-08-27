@@ -103,7 +103,7 @@ npx wrangler deploy --config wrangler.toml
 ### 6. Start the AgentZ API
 
 ```bash
-cd services/agentz
+cd agentz
 python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
 

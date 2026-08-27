@@ -129,7 +129,7 @@ class CycleReport:
     after_healthy: int = 0
     before_failing: int = 0
     after_failing: int = 0
-    net_improvement: int = 0  # (after_healthy - before_healthy) - (after_failing - before_failing)
+    net_improvement: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -188,8 +188,10 @@ class ArchitectAgent:
 
         for wf_id, wf in registry.items():
             m = supervisor_metrics.get(wf_id)
+            classification = "unknown"
             if not m or m.runs == 0:
-                wh = WorkflowHealth(workflow_id=wf_id, classification="idle")
+                classification = "idle"
+                wh = WorkflowHealth(workflow_id=wf_id, classification=classification)
             else:
                 failure_rate = m.failures / m.runs if m.runs > 0 else 0
                 avg_dur = m.total_duration / m.runs if m.runs > 0 else 0
@@ -250,11 +252,6 @@ class ArchitectAgent:
         system_prompt = self._build_system_prompt()
         user_prompt = self._build_user_prompt(fleet_state, goal)
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-
         try:
             from langchain_core.messages import SystemMessage, HumanMessage
             response = self.llm.invoke([
@@ -306,12 +303,11 @@ class ArchitectAgent:
 
         # Extract JSON from the response (may be wrapped in markdown)
         text = content if isinstance(content, str) else str(content)
-        # Find the first { and last } to extract JSON
         start = text.find("{")
         end = text.rfind("}")
         if start == -1 or end == -1:
             logger.warning("Architect LLM returned no JSON; using deterministic fallback")
-            return self._deterministic_plan(ArchitectPlan.__new__(ArchitectPlan), goal)
+            return self._deterministic_plan(FleetState(), goal)
 
         try:
             data = json.loads(text[start : end + 1])
@@ -324,9 +320,9 @@ class ArchitectAgent:
             )
         except json.JSONDecodeError as e:
             logger.warning(f"Architect LLM JSON parse failed: {e}")
-            return self._deterministic_plan(ArchitectPlan.__new__(ArchitectPlan), goal)
+            return self._deterministic_plan(FleetState(), goal)
 
-    def _deterministic_plan(self, fleet_state: Any, goal: str) -> ArchitectPlan:
+    def _deterministic_plan(self, fleet_state: FleetState, goal: str) -> ArchitectPlan:
         """
         Fallback plan when the LLM is unavailable: prioritize by
         registry order, skip failing workflows, run everything else.
@@ -336,9 +332,8 @@ class ArchitectAgent:
         skip = []
         escalate = []
 
+        metrics = self.supervisor.analyze()
         for wf_id, wf in registry.items():
-            # Check if it has a recent failure
-            metrics = self.supervisor.analyze()
             m = metrics.get(wf_id)
             if m and m.runs > 0 and m.failures / m.runs > self.FAILURE_RATE_FAILING:
                 escalate.append(wf_id)
@@ -391,7 +386,6 @@ class ArchitectAgent:
                 print(f"\n  [architect] Executing {wf.id}...")
 
             if mode == Mode.DRY_RUN:
-                # Dry-run: just describe what would happen
                 if verbose:
                     print(f"    WOULD: run {wf.id} ({wf.title})")
                 results.append(RunResult(
@@ -467,50 +461,72 @@ class ArchitectAgent:
         verbose: bool = True,
     ) -> CycleReport:
         """
-        Run a complete architect cycle: assess → plan → execute → review.
+        Execute one architect cycle.
+
+        The Governor is now the single execution authority. This method:
+          1. Runs the Governor cycle (which absorbs fleet assessment + LLM plan)
+          2. Maps the GovernorCycle results into a CycleReport for backward
+             compatibility with existing callers and audit log format.
         """
-        cycle_id = f"architect-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}"
-        started_at = datetime.now(timezone.utc).isoformat()
+        from agentz.core.governor import LaunchGovernor
+
+        governor = LaunchGovernor(
+            mode=mode,
+            audit_log_path=self.audit_log_path,
+        )
 
         if verbose:
             print(f"\n{'='*60}")
-            print(f"  ARCHITECT CYCLE: {cycle_id}")
+            print(f"  ARCHITECT CYCLE (delegated to Governor)")
             print(f"  Goal: {goal}")
             print(f"  Mode: {mode.value}")
             print(f"{'='*60}")
 
-        # Phase 1: Assess
-        if verbose:
-            print("\n  [Phase 1] Fleet Assessment...")
-        before_state = self.assess_fleet()
-        if verbose:
-            print(f"  {before_state.summary()}")
+        # Run the Governor cycle — it handles observe, fleet assessment,
+        # LLM plan, specialist measurement, risk firewall, and execution.
+        gov_cycle = governor.run_cycle(verbose=verbose)
 
-        # Phase 2: Plan
-        if verbose:
-            print("\n  [Phase 2] Generating action plan...")
-        plan = self.generate_plan(before_state, goal)
-        if verbose:
-            print(f"  {plan.to_prompt()}")
+        # Map GovernorCycle → CycleReport for backward compatibility
+        after_state = self.assess_fleet()
+        before_healthy = len([a for a in gov_cycle.actions_executed if a.get("status") == "ok"])
+        after_healthy = len(after_state.healthy)
 
-        # Phase 3: Execute
-        if verbose:
-            print(f"\n  [Phase 3] Executing plan ({mode.value})...")
-        results = self.execute_plan(plan, mode=mode, verbose=verbose)
-
-        # Phase 4: Review
-        if verbose:
-            print("\n  [Phase 4] Post-cycle review...")
-        report = self.review_cycle(
-            cycle_id, started_at, goal, plan, results, before_state
+        report = CycleReport(
+            cycle_id=gov_cycle.cycle_id,
+            started_at=gov_cycle.started_at,
+            finished_at=gov_cycle.finished_at,
+            goal=goal,
+            plan_summary=f"Governor cycle: {len(gov_cycle.actions_planned)} planned, {len(gov_cycle.actions_executed)} executed",
+            results=[{
+                "workflow_id": a.get("workflow_id", ""),
+                "status": a.get("status", "unknown"),
+                "reason": a.get("reason", ""),
+            } for a in gov_cycle.actions_executed],
+            before_healthy=before_healthy,
+            after_healthy=after_healthy,
+            before_failing=len([a for a in gov_cycle.actions_blocked if a.get("vetoed")]),
+            after_failing=len(after_state.failing),
+        )
+        report.net_improvement = (
+            (report.after_healthy - report.before_healthy)
+            - (report.after_failing - report.before_failing)
         )
 
+        # Persist to the architect cycle log for backward compatibility
+        report_path = self.audit_log_path.parent / "architect_cycles.jsonl"
+        try:
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            with report_path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(report.to_dict()) + "\n")
+        except Exception as e:
+            logger.error(f"Failed to persist architect cycle report: {e}")
+
         if verbose:
-            print(f"\n  Cycle Complete: {cycle_id}")
-            print(f"  Healthy: {report.before_healthy} → {report.after_healthy}")
-            print(f"  Failing: {report.before_failing} → {report.after_failing}")
+            print(f"\n  Cycle Complete: {report.cycle_id}")
+            print(f"  Healthy: {report.before_healthy} -> {report.after_healthy}")
+            print(f"  Failing: {report.before_failing} -> {report.after_failing}")
             print(f"  Net improvement: {report.net_improvement:+d}")
-            print(f"  Report: {self.audit_log_path.parent / 'architect_cycles.jsonl'}")
+            print(f"  Report: {report_path}")
 
         return report
 
@@ -519,27 +535,13 @@ class ArchitectAgent:
 
 
 def main():
-    """Run an architect cycle from the command line."""
-    import argparse
+    """Run an architect cycle from the command line.
 
-    parser = argparse.ArgumentParser(description="Unified Architect Agent")
-    parser.add_argument(
-        "--goal",
-        default="Assess fleet health, fix failing workflows, and run priority jobs.",
-        help="Goal for this cycle",
-    )
-    parser.add_argument(
-        "--mode",
-        choices=["auto", "confirm", "dry-run"],
-        default="dry-run",
-        help="Execution mode (default: dry-run for safety)",
-    )
-    args = parser.parse_args()
-
-    mode = Mode(args.mode)
-    architect = ArchitectAgent()
-    report = architect.run_cycle(goal=args.goal, mode=mode)
-    print(json.dumps(report.to_dict(), indent=2))
+    Delegates to the Governor's CLI, which has the full feature set
+    including daemon mode, budget tracking, and escalation notifications.
+    """
+    from agentz.core.governor import main as governor_main
+    governor_main()
 
 
 if __name__ == "__main__":
