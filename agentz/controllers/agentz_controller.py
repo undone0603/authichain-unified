@@ -1,4 +1,9 @@
+from typing import Any
+from ..models import AgentOutput
+
+class AgentzController:
     def run_llm(self, *args, **kwargs) -> AgentOutput | Any:
+
         """
         Executes the LLM with the provided arguments and attempts to parse the result
         into an AgentOutput object.

@@ -12,6 +12,23 @@ from typing import List, Dict, Any
 logger = logging.getLogger("agentz.outreach")
 
 OUTREACH_DB_PATH = Path("agentz/logs/outreach/pending_dms.json")
+PROMPT_TEMPLATE_PATH = Path("agentz/logs/outreach/prompt_template.txt")
+
+def get_current_prompt() -> str:
+    if not PROMPT_TEMPLATE_PATH.exists():
+        return "Default outreach prompt..."
+    return PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+def persist_new_prompt(new_prompt: str):
+    PROMPT_TEMPLATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    PROMPT_TEMPLATE_PATH.write_text(new_prompt, encoding="utf-8")
+
+def tune_outreach_prompt(feedback: Dict[str, Any]):
+    """Dynamically updates the outreach system prompt."""
+    current_prompt = get_current_prompt()
+    # Logic to inject feedback into prompt
+    new_prompt = f"{current_prompt}\n\nOptimization Tip: {feedback['suggestion']}"
+    persist_new_prompt(new_prompt)
 
 def get_pending_dms() -> List[Dict[str, Any]]:
     """Loads the list of pending DMs from the local JSON store."""

@@ -43,6 +43,12 @@ class Workflow:
     notifications: dict[str, Any] = field(default_factory=dict)
     context_fetcher: Optional[str] = None
     max_retries: int = 0
+    # ── Launch Governor: Capital & Reputation Firewall ──
+    risk_class: str = "low"                          # low | medium | high | critical
+    financial_limit_usd: float = 0.0                 # 0 = no budget cap
+    reputational_impact: str = "low"                 # low | medium | high
+    requires_human_approval: bool = False            # forces CONFIRM even in AUTO
+    rollback_strategy: str = ""                      # documented rollback plan
 
 
 @dataclass
@@ -141,8 +147,17 @@ def execute(
     if missing and mode == Mode.DRY_RUN and verbose:
         print(f"   (dry-run note: missing creds {missing} - would block in live mode)")
 
-    # Promote confirm if workflow self-flags it
-    effective_mode = Mode.CONFIRM if wf.confirm_before_run and mode == Mode.AUTO else mode
+    # Promote confirm if workflow self-flags it OR risk firewall requires it
+    from agentz.core.risk_firewall import should_force_confirm as _should_force
+    force_confirm = _should_force(
+        getattr(wf, "risk_class", "low"),
+        getattr(wf, "requires_human_approval", False),
+        mode.value,
+    )
+    if force_confirm or (wf.confirm_before_run and mode == Mode.AUTO):
+        effective_mode = Mode.CONFIRM
+    else:
+        effective_mode = mode
 
     print(f"\n[{wf.priority.upper()}] {wf.id} : {wf.title}")
     print(f"   mode={effective_mode.value}  type={wf.type}  est={wf.estimated_minutes}min")

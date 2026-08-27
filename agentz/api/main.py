@@ -125,9 +125,156 @@ async def get_operational_results():
         "potential_arr": "$1,460,000"
     }
 
+# --- AgentZ Fleet Endpoints (for OpenClaw bridge and CLI) ---
+
+@app.get("/agents", dependencies=[Depends(verify_token)])
+async def api_list_agents():
+    """List all registered agents."""
+    from agentz.agents.pipeline import ALL_AGENTS
+    return {
+        "agents": [
+            {"name": cls.name, "system_prompt": cls.system_prompt}
+            for cls in ALL_AGENTS
+        ]
+    }
+
+
+@app.get("/workflows", dependencies=[Depends(verify_token)])
+async def api_list_workflows():
+    """List all registered workflows from the registry."""
+    from agentz.core.runner import load_registry
+    registry = load_registry()
+    return {
+        "workflows": [
+            {
+                "id": wf.id,
+                "title": wf.title,
+                "priority": wf.priority,
+                "handler": wf.handler,
+                "type": wf.type,
+                "estimated_minutes": wf.estimated_minutes,
+            }
+            for wf in registry.values()
+        ]
+    }
+
+
+@app.post("/workflows/{workflow_id}/run", dependencies=[Depends(verify_token)])
+async def api_run_workflow(workflow_id: str, mode: str = "dry-run"):
+    """Run a single workflow by ID."""
+    from agentz.core.runner import load_registry, execute
+    from agentz.core.modes import parse_mode
+
+    registry = load_registry()
+    wf = registry.get(workflow_id)
+    if not wf:
+        raise HTTPException(status_code=404, detail=f"Workflow '{workflow_id}' not found")
+
+    m = parse_mode(mode)
+    result = execute(wf, m, verbose=False)
+    return {
+        "workflow_id": result.workflow_id,
+        "status": result.status,
+        "notes": result.notes,
+        "error": result.error,
+        "duration_s": result.duration_s,
+    }
+
+
+@app.post("/architect/cycle", dependencies=[Depends(verify_token)])
+async def api_architect_cycle(mode: str = "dry-run", goal: str = ""):
+    """
+    Run a Unified Architect cycle. Returns the full cycle report.
+
+    The Architect is the meta-agent that assesses fleet health, generates
+    an LLM-powered action plan, delegates execution, and reviews results.
+    """
+    from agentz.core.architect import ArchitectAgent
+    from agentz.core.modes import parse_mode
+
+    architect = ArchitectAgent()
+    m = parse_mode(mode)
+    effective_goal = goal or "Assess fleet health, fix failing workflows, and run priority jobs."
+    report = architect.run_cycle(goal=effective_goal, mode=m, verbose=False)
+    return {"report": report.to_dict()}
+
+
+# --- Launch Governor Endpoints ---
+
+@app.get("/launch/state", dependencies=[Depends(verify_token)])
+async def api_launch_state():
+    """Get the current launch stage and gate assessment."""
+    from agentz.core.launch_state import LaunchStateMachine
+    sm = LaunchStateMachine()
+    assessment = sm.assess_stage()
+    return {
+        "current_stage": sm.current_stage.value,
+        "entered_at": sm._state.get("entered_at", ""),
+        "assessment": {
+            "total_gates": assessment.total_gates,
+            "passed": assessment.passed,
+            "failed": assessment.failed,
+            "ready_to_advance": assessment.ready_to_advance,
+            "blocking_gates": assessment.blocking_gates,
+            "gates": [
+                {"id": g.id, "description": g.description, "passed": g.passed}
+                for g in assessment.gates
+            ],
+        },
+    }
+
+
+@app.get("/launch/score", dependencies=[Depends(verify_token)])
+async def api_launch_score():
+    """Get the current Launch Score with breakdown."""
+    from agentz.core.launch_state import LaunchStateMachine
+    from agentz.core.launch_score import calculate_launch_score
+    sm = LaunchStateMachine()
+    stage = sm.current_stage.value
+    score = calculate_launch_score({"stage": stage}, stage)
+    return score.to_dict()
+
+
+@app.post("/launch/governor/cycle", dependencies=[Depends(verify_token)])
+async def api_governor_cycle(mode: str = "dry-run", budget: float = 50.0):
+    """
+    Run one Launch Governor cycle (observe→measure→plan→execute→verify).
+    Returns the full cycle report.
+    """
+    from agentz.core.governor import LaunchGovernor
+    from agentz.core.modes import parse_mode
+    governor = LaunchGovernor(mode=parse_mode(mode), daily_budget=budget)
+    cycle = governor.run_cycle(verbose=False)
+    return {"cycle": cycle.to_dict()}
+
+
+@app.get("/launch/specialists", dependencies=[Depends(verify_token)])
+async def api_launch_specialists():
+    """Get status of all six specialist agents."""
+    from agentz.core.specialists import ALL_SPECIALISTS
+    statuses = {}
+    for name, cls in ALL_SPECIALISTS.items():
+        specialist = cls()
+        result = specialist.assess({"stage": "BETA_READY"})
+        statuses[name] = {
+            "healthy": result.healthy,
+            "findings": result.findings,
+            "metrics": result.metrics,
+            "recommended_actions": result.recommended_actions,
+            "veto": result.veto,
+        }
+    return {"specialists": statuses}
+
+
+# --- GPT Schema Export ---
 @app.get("/openapi.json", include_in_schema=False)
 async def get_openapi_json():
     return app.openapi()
+
+# --- SSE (Server-Sent Events) for real-time monitoring ---
+from agentz.api.sse import router as sse_router
+app.include_router(sse_router)
+
 
 if __name__ == "__main__":
     import uvicorn

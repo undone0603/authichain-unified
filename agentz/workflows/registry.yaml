@@ -787,3 +787,309 @@ workflows:
     estimated_minutes: 15
     requires: [reddit_session] # twitter for simulation
     prerequisites: [gsc_setup_govchain, pinecone_trial_decision]
+
+  # =================================================================
+  # META-AGENT — UNIFIED ARCHITECT
+  # =================================================================
+
+  - id: architect_cycle
+    title: "Unified Architect: fleet assessment, planning, and execution cycle"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.architect_cycle
+    type: composite
+    estimated_minutes: 15
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    max_runs_per_day: 4
+    description: |
+      Runs the Unified Architect meta-agent, which:
+        1) Assesses the health of every workflow in the registry.
+        2) Asks the LLM to generate a prioritized action plan.
+        3) Delegates execution through the existing Runner.
+        4) Produces a post-cycle review report (architect_cycles.jsonl).
+      Safe in dry-run mode (assesses and plans without executing).
+      Rate-limited to 4 runs/day to avoid runaway cycles.
+
+  # =================================================================
+  # LAUNCH GOVERNOR — AUTONOMOUS LAUNCH STATE MACHINE
+  # =================================================================
+  # The Launch Governor owns the state machine and budget. It runs the
+  # six specialist agents (ProtocolGuardian, LaunchBuilder, GrowthScout,
+  # PilotCloser, RevenueOperator, TrustHealer) through this registry.
+  # Every workflow below passes through the Capital & Reputation Firewall.
+
+  - id: launch_governor
+    title: "Launch Governor: full autonomous cycle (observe→measure→plan→execute→verify)"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.launch.governor
+    type: composite
+    estimated_minutes: 10
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    max_runs_per_day: 4
+    risk_class: medium
+    financial_limit_usd: 50
+    reputational_impact: medium
+    requires_human_approval: false
+    rollback_strategy: "No side-effects in dry-run. In auto, actions are individually firewall-filtered."
+    description: |
+      The top-level Governor cycle. Runs all six specialists, calculates
+      the Launch Score, identifies the bottleneck, generates actions, and
+      executes only safe actions through the existing runner.
+
+  - id: launch_observe
+    title: "Observe: gather operational context"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.launch.observe
+    type: composite
+    estimated_minutes: 2
+    requires: []
+    prerequisites: []
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+
+  - id: launch_score
+    title: "Calculate Launch Score"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.launch.score
+    type: composite
+    estimated_minutes: 1
+    requires: []
+    prerequisites: [launch_observe]
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+
+  - id: launch_bottleneck
+    title: "Identify bottleneck and generate recommended actions"
+    priority: high
+    blocks_revenue: false
+    handler: handlers.launch.bottleneck
+    type: composite
+    estimated_minutes: 2
+    requires: []
+    prerequisites: [launch_score]
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+
+  - id: launch_protocol_gate
+    title: "ProtocolGuardian gate: protocol integrity verification"
+    priority: critical
+    blocks_revenue: true
+    handler: handlers.launch.protocol_gate
+    type: composite
+    estimated_minutes: 5
+    requires: []
+    prerequisites: []
+    risk_class: critical
+    financial_limit_usd: 0
+    reputational_impact: high
+    requires_human_approval: false
+    description: |
+      ProtocolGuardian gate checks. Has VETO POWER over protocol-touching
+      workflows. If any check fails, all protocol changes are blocked.
+
+  - id: launch_production_gate
+    title: "LaunchBuilder gate: production readiness verification"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.launch.production_gate
+    type: composite
+    estimated_minutes: 5
+    requires: []
+    prerequisites: [launch_protocol_gate]
+    risk_class: high
+    financial_limit_usd: 0
+    reputational_impact: medium
+    requires_human_approval: false
+
+  - id: launch_beta_gate
+    title: "Beta readiness gate: end-to-end customer flow verification"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.launch.beta_gate
+    type: composite
+    estimated_minutes: 5
+    requires: []
+    prerequisites: [launch_production_gate]
+    risk_class: high
+    financial_limit_usd: 0
+    reputational_impact: medium
+    requires_human_approval: false
+
+  - id: launch_find_prospects
+    title: "GrowthScout: discover new prospects"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.launch.find_prospects
+    type: browser
+    estimated_minutes: 15
+    requires: []
+    prerequisites: []
+    risk_class: low
+    financial_limit_usd: 5
+    reputational_impact: low
+    requires_human_approval: false
+    max_runs_per_day: 3
+
+  - id: launch_score_prospects
+    title: "GrowthScout: score prospects on 100-point rubric"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.launch.score_prospects
+    type: composite
+    estimated_minutes: 3
+    requires: []
+    prerequisites: [launch_find_prospects]
+    risk_class: low
+    financial_limit_usd: 1
+    reputational_impact: low
+    requires_human_approval: false
+
+  - id: launch_prepare_outreach
+    title: "PilotCloser: prepare personalized outreach materials"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.launch.prepare_outreach
+    type: composite
+    estimated_minutes: 10
+    requires: []
+    prerequisites: [launch_score_prospects]
+    risk_class: medium
+    financial_limit_usd: 5
+    reputational_impact: high
+    requires_human_approval: false
+    description: |
+      Generates outreach drafts but does NOT send. Outbound is
+      approval-gated until messaging quality threshold is established.
+
+  - id: launch_followup
+    title: "PilotCloser: send follow-ups (approval-gated)"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.launch.followup
+    type: composite
+    estimated_minutes: 5
+    requires: []
+    prerequisites: [launch_prepare_outreach]
+    risk_class: medium
+    financial_limit_usd: 25
+    reputational_impact: high
+    requires_human_approval: false
+    max_runs_per_day: 100
+
+  - id: launch_onboard_pilot
+    title: "PilotCloser: onboard new pilot customer end-to-end"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.launch.onboard_pilot
+    type: composite
+    estimated_minutes: 30
+    requires: [stripe_secret]
+    prerequisites: [launch_beta_gate]
+    risk_class: high
+    financial_limit_usd: 0
+    reputational_impact: high
+    requires_human_approval: false
+    confirm_before_run: false
+
+  - id: launch_measure_pilot
+    title: "Measure pilot health: scans, verifications, usage"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.launch.measure_pilot
+    type: composite
+    estimated_minutes: 3
+    requires: []
+    prerequisites: [launch_onboard_pilot]
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+
+  - id: launch_convert_paid
+    title: "PilotCloser: convert pilot to paying customer"
+    priority: high
+    blocks_revenue: true
+    handler: handlers.launch.convert_paid
+    type: composite
+    estimated_minutes: 10
+    requires: [stripe_secret]
+    prerequisites: [launch_measure_pilot]
+    risk_class: high
+    financial_limit_usd: 0
+    reputational_impact: high
+    requires_human_approval: false
+    confirm_before_run: false
+
+  - id: launch_revenue_review
+    title: "RevenueOperator: review economics and allocate budget"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.launch.revenue_review
+    type: composite
+    estimated_minutes: 5
+    requires: []
+    prerequisites: []
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+
+  - id: launch_incident_response
+    title: "TrustHealer: respond to operational incidents"
+    priority: critical
+    blocks_revenue: false
+    handler: handlers.launch.incident_response
+    type: composite
+    estimated_minutes: 5
+    requires: []
+    prerequisites: []
+    risk_class: high
+    financial_limit_usd: 0
+    reputational_impact: high
+    requires_human_approval: false
+    description: |
+      TrustHealer can auto-retry, restart, roll back, disable bad workflows,
+      quarantine records, and open incidents. Only requires human approval
+      for irreversible actions.
+
+  - id: launch_daily_report
+    title: "Daily Launch Control report"
+    priority: low
+    blocks_revenue: false
+    handler: handlers.launch.daily_report
+    type: composite
+    estimated_minutes: 2
+    requires: []
+    prerequisites: [launch_score]
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+
+  - id: launch_weekly_strategy
+    title: "Weekly strategy review: economic allocation"
+    priority: low
+    blocks_revenue: false
+    handler: handlers.launch.weekly_strategy
+    type: composite
+    estimated_minutes: 10
+    requires: []
+    prerequisites: [launch_daily_report]
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    max_runs_per_day: 1

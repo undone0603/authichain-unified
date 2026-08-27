@@ -16,7 +16,7 @@ import sys
 from agentz.core.modes import ExecutionContext, Mode, parse_mode
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m agentz.workflows.runner",
         description="AgentZ Workflow Runner: executes a named handler module.",
@@ -37,7 +37,7 @@ def main() -> int:
         action="store_true",
         default=True,
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     mode = parse_mode(args.mode)
     ctx = ExecutionContext(mode=mode, workflow_id=args.handler, verbose=args.verbose)

@@ -68,6 +68,7 @@ jobs:
           - authichain-telegram
           - authichain-verify-worker
           - stripe-webhook
+          - authichain-openclaw
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
