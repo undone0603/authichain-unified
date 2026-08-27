@@ -24,7 +24,7 @@ export async function handleInstantlyWebhook(payload: any) {
   // Prevent duplicate processing of the same webhook event
   const eventKey = webhookId || `${email}:${eventType}`;
   if (await hasWebhookEventProcessed(eventKey)) {
-    console.log(`[instantly-webhook] Duplicate event ignored: ${eventKey.replace(/[\r\n]/g, " ")}`);
+    console.log("[instantly-webhook] Duplicate event ignored:", JSON.stringify(eventKey));
     return { success: true, duplicate: true };
   }
 

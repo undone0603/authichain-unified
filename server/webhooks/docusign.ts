@@ -24,7 +24,7 @@ export async function handleDocuSignWebhook(payload: any) {
   // Prevent duplicate processing of the same webhook event
   const eventKey = webhookId || envelopeId || `${recipientEmail}:${eventType}`;
   if (await hasWebhookEventProcessed(eventKey)) {
-    console.log(`[docusign-webhook] Duplicate event ignored: ${eventKey.replace(/[\r\n]/g, " ")}`);
+    console.log("[docusign-webhook] Duplicate event ignored:", JSON.stringify(eventKey));
     return { success: true, duplicate: true };
   }
 
