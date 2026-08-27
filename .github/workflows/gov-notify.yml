@@ -32,7 +32,6 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
 
       - name: Send Slack digest
-        continue-on-error: true
         run: pnpm exec tsx scripts/send-digest.ts
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

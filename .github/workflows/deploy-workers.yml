@@ -36,7 +36,6 @@ jobs:
     name: Deploy ${{ matrix.worker }}
     needs: secret-scan
     runs-on: ubuntu-latest
-    continue-on-error: true
     timeout-minutes: 15
     strategy:
       fail-fast: false
