@@ -3724,16 +3724,16 @@
     "keyword": "un transparency protocol vs w3c verifiable credentials",
     "brand": "AuthiChain",
     "domain": "authichain.com",
-    "title": "Un Transparency Protocol Vs W3c Verifiable | AuthiChain",
+    "title": "Un Transparency Protocol Vs W3C Verifiable | AuthiChain",
     "metaDescription": "UN/CEFACT’s UN Transparency Protocol targets version 1.0 by 1 September 2026, defining a Digital Product Passport issued by the shipper — built on the same.",
-    "h1": "Un Transparency Protocol Vs W3c Verifiable Credentials",
+    "h1": "Un Transparency Protocol Vs W3C Verifiable Credentials",
     "bodyHtml": "<p>UN/CEFACT’s UN Transparency Protocol targets version 1.0 by 1 September 2026, defining a Digital Product Passport issued by the shipper — built on the same W3C Verifiable Credentials Data Model 2.0 that protocol/SPEC.md §2 already targets, not a competing wire format.</p><h2>Why AuthiChain</h2><ul><li>UNTP’s passport is a profile — a defined set of required fields and linked credential types — layered on VC Data Model 2.0, the same base specification this protocol already implements</li><li>A UNTP passport links out to separate conformity and traceability-event credentials rather than embedding everything in one document; a signed AuthiChain record can serve as one of those linked credentials without a format conversion</li><li>UNTP is a UN specification, not EU law — adopting it does not by itself satisfy ESPR, where each category’s delegated act remains the binding requirement</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does UNTP replace the EU Digital Product Passport requirement?</h3><p>No — UNTP is a UN/CEFACT technical specification. It aims for alignment with ESPR, but a product still has to satisfy the delegated act for its own category regardless of which passport format sits underneath.</p><h3>Is AuthiChain compatible with UNTP?</h3><p>The building blocks match — both use W3C Verifiable Credentials Data Model 2.0 and cryptographic signing. A formal conformance claim waits on UNTP 1.0 finalizing, targeted for 1 September 2026, and on its specific field and credential-linking requirements.</p>",
     "jsonLd": {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Service",
-          "name": "AuthiChain — Un Transparency Protocol Vs W3c Verifiable Credentials",
+          "name": "AuthiChain — Un Transparency Protocol Vs W3C Verifiable Credentials",
           "provider": {
             "@type": "Organization",
             "name": "AuthiChain",
@@ -3754,7 +3754,7 @@
             {
               "@type": "ListItem",
               "position": 2,
-              "name": "Un Transparency Protocol Vs W3c Verifiable Credentials",
+              "name": "Un Transparency Protocol Vs W3C Verifiable Credentials",
               "item": "https://authichain.com/p/un-transparency-protocol-vs-w3c-verifiable-credentials"
             }
           ]
@@ -5503,6 +5503,325 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "No — it gives the end recipient a way to check the specific item that arrived. Customs interdiction upstream is a separate problem this does not replace."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "critical-raw-materials-act-traceability-requirement",
+    "keyword": "critical raw materials act traceability requirement",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Critical Raw Materials Act Traceability | AuthiChain",
+    "metaDescription": "The Critical Raw Materials Act’s Article 24(2) requires mapping the supply chain of components containing strategic raw materials back toward extraction — a.",
+    "h1": "Critical Raw Materials Act Traceability Requirement",
+    "bodyHtml": "<p>The Critical Raw Materials Act’s Article 24(2) requires mapping the supply chain of components containing strategic raw materials back toward extraction — a signed, per-batch record chain is one way to make that map checkable by a downstream buyer or auditor without re-tracing it themselves.</p><h2>Why AuthiChain</h2><ul><li>Article 24(2) targets components critical to manufacturing, not an unlimited assessment of every material in a product — industry proposals would add a mass-based threshold to keep small trace amounts out of scope</li><li>Each supply-chain hop can be issued as a signed W3C Verifiable Credential and hashed to a public ledger, so an auditor checks the mapping evidence directly instead of trusting a supplier’s self-reported spreadsheet</li><li>Member States must set their own CRMA penalty rules by 24 November 2026 — a mapping record built on open, portable formats does not need rebuilding once enforcement mechanics are finalized</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does CRMA require blockchain-based traceability?</h3><p>No — Article 24(2) requires supply-chain mapping for components containing strategic raw materials and names no specific technology. Anchoring the mapping evidence is one way to make it tamper-evident, not a requirement of the Act.</p><h3>What triggers the mapping requirement?</h3><p>Components containing raw materials the Act designates as strategic. Final scoping details, including a proposed mass-based threshold to exclude trace amounts, were not settled as of this writing.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Critical Raw Materials Act Traceability Requirement",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The Critical Raw Materials Act’s Article 24(2) requires mapping the supply chain of components containing strategic raw materials back toward extraction — a signed, per-batch record chain is one way to make that map checkable by a downstream buyer or auditor without re-tracing it themselves.",
+          "url": "https://authichain.com/p/critical-raw-materials-act-traceability-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Critical Raw Materials Act Traceability Requirement",
+              "item": "https://authichain.com/p/critical-raw-materials-act-traceability-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does CRMA require blockchain-based traceability?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — Article 24(2) requires supply-chain mapping for components containing strategic raw materials and names no specific technology. Anchoring the mapping evidence is one way to make it tamper-evident, not a requirement of the Act."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What triggers the mapping requirement?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Components containing raw materials the Act designates as strategic. Final scoping details, including a proposed mass-based threshold to exclude trace amounts, were not settled as of this writing."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "w3c-digital-credentials-api-verifiable-credentials",
+    "keyword": "w3c digital credentials api verifiable credentials",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "W3C Digital Credentials API Verifiable | AuthiChain",
+    "metaDescription": "The W3C Digital Credentials API, shipped in Chrome 141 and supported in Safari 26, lets a website request a credential — a mobile driver’s license, a.",
+    "h1": "W3C Digital Credentials API Verifiable Credentials",
+    "bodyHtml": "<p>The W3C Digital Credentials API, shipped in Chrome 141 and supported in Safari 26, lets a website request a credential — a mobile driver’s license, a national ID — from a wallet already on the visitor’s device. It solves a different problem than verifying a physical item’s provenance record, and the two get conflated because both use the phrase “verifiable credential.”</p><h2>Why AuthiChain</h2><ul><li>The Digital Credentials API mediates a live presentation from a person’s wallet to a website — it exists to move identity documents into the browser, not to check a signed record about a physical item</li><li>protocol/SPEC.md §5 verifies a record with no wallet, no browser API, and no user present at all: the record and the reference verifier are sufficient, which is the entire point of offline verification</li><li>The EUDI Architecture Reference Framework now conditionally requires wallet units and relying parties to support the DC API for remote presentation — a person-to-website flow, distinct from resolving a GS1 Digital Link record</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does verifying an AuthiChain record require the Digital Credentials API?</h3><p>No — verification runs against the record and its Ed25519 signature directly, per protocol/SPEC.md §5. No wallet, browser support, or user interaction step is involved.</p><h3>Could AuthiChain use the Digital Credentials API in the future?</h3><p>It would apply to a person presenting an identity-linked credential through a wallet, which is a different flow from verifying a product’s provenance record — not something the protocol specifies today.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — W3C Digital Credentials API Verifiable Credentials",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The W3C Digital Credentials API, shipped in Chrome 141 and supported in Safari 26, lets a website request a credential — a mobile driver’s license, a national ID — from a wallet already on the visitor’s device. It solves a different problem than verifying a physical item’s provenance record, and the two get conflated because both use the phrase “verifiable credential.”",
+          "url": "https://authichain.com/p/w3c-digital-credentials-api-verifiable-credentials"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "W3C Digital Credentials API Verifiable Credentials",
+              "item": "https://authichain.com/p/w3c-digital-credentials-api-verifiable-credentials"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does verifying an AuthiChain record require the Digital Credentials API?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — verification runs against the record and its Ed25519 signature directly, per protocol/SPEC.md §5. No wallet, browser support, or user interaction step is involved."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Could AuthiChain use the Digital Credentials API in the future?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It would apply to a person presenting an identity-linked credential through a wallet, which is a different flow from verifying a product’s provenance record — not something the protocol specifies today."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "ecodesign-smartphones-tablets-reparability-information-requirements",
+    "keyword": "ecodesign smartphones tablets reparability information requirements",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Ecodesign Smartphones Tablets Reparability | AuthiChain",
+    "metaDescription": "Regulation (EU) 2023/1670 has applied since 20 June 2025 and already requires manufacturers to give professional repairers the information and spare-parts.",
+    "h1": "Ecodesign Smartphones Tablets Reparability Information Requirements",
+    "bodyHtml": "<p>Regulation (EU) 2023/1670 has applied since 20 June 2025 and already requires manufacturers to give professional repairers the information and spare-parts access to fix a smartphone or tablet — a standalone Ecodesign duty in force now, not the full EU electronics Digital Product Passport, which the ESPR Working Plan targets for 2029.</p><h2>Why AuthiChain</h2><ul><li>Repair and spare-parts information owed to professional repairers under 2023/1670 fits directly into a signed W3C Verifiable Credential — no separate record type needed when the later electronics DPP delegated act lands</li><li>A repair-information record resolves offline for a technician at the bench, matching protocol/SPEC.md’s no-network-access verification path for steps 1 through 4</li><li>2023/1670 and the ESPR electronics DPP are different legal instruments with different deadlines — conflating them is the most common mistake in coverage of this space</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the smartphone and tablet repair-information rule the same as the Digital Product Passport?</h3><p>No — Regulation (EU) 2023/1670 is a standalone Ecodesign implementing regulation in force since 20 June 2025. The ESPR electronics DPP is a separate, later delegated act the ESPR Working Plan targets for 2029.</p><h3>What must manufacturers supply under 2023/1670?</h3><p>Repair and maintenance information for professional repairers, and spare parts priced and made available on reasonable, non-discriminatory terms, alongside durability and disassembly requirements.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Ecodesign Smartphones Tablets Reparability Information Requirements",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Regulation (EU) 2023/1670 has applied since 20 June 2025 and already requires manufacturers to give professional repairers the information and spare-parts access to fix a smartphone or tablet — a standalone Ecodesign duty in force now, not the full EU electronics Digital Product Passport, which the ESPR Working Plan targets for 2029.",
+          "url": "https://authichain.com/p/ecodesign-smartphones-tablets-reparability-information-requirements"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Ecodesign Smartphones Tablets Reparability Information Requirements",
+              "item": "https://authichain.com/p/ecodesign-smartphones-tablets-reparability-information-requirements"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the smartphone and tablet repair-information rule the same as the Digital Product Passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — Regulation (EU) 2023/1670 is a standalone Ecodesign implementing regulation in force since 20 June 2025. The ESPR electronics DPP is a separate, later delegated act the ESPR Working Plan targets for 2029."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What must manufacturers supply under 2023/1670?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Repair and maintenance information for professional repairers, and spare parts priced and made available on reasonable, non-discriminatory terms, alongside durability and disassembly requirements."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-textile-labelling-regulation-digital-label-revision",
+    "keyword": "eu textile labelling regulation digital label revision",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Textile Labelling Regulation Digital Label | AuthiChain",
+    "metaDescription": "The Commission’s revision of the Textile Labelling Regulation, expected around Q2 2026, adds a digital label alongside the physical one — a separate legal.",
+    "h1": "EU Textile Labelling Regulation Digital Label Revision",
+    "bodyHtml": "<p>The Commission’s revision of the Textile Labelling Regulation, expected around Q2 2026, adds a digital label alongside the physical one — a separate legal track from the ESPR’s textile Digital Product Passport delegated act, still indicatively targeted for 2027, and the two are frequently merged in casual coverage despite running on different instruments and timelines.</p><h2>Why AuthiChain</h2><ul><li>The Textile Labelling Regulation revision governs fiber composition, sizing, and care labelling specifically — its digital-label track runs alongside, not inside, the ESPR’s separate textile DPP delegated act</li><li>A record built for one instrument’s data does not need re-architecting for the other: both resolve as a W3C Verifiable Credential from an item’s GS1 Digital Link identifier, per protocol/SPEC.md §2</li><li>Passing Parliament and Council typically takes roughly 18 months from proposal — a Q2 2026 proposal puts binding text realistically into 2027 or later, well before which a digital-label pilot can run on the record format this protocol already issues</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the digital textile label replace the sewn-in physical label?</h3><p>Not based on current drafts — the revision adds a digital label alongside the physical one; it does not remove the physical care-label requirement.</p><h3>Is this the same requirement as the EU Digital Product Passport for textiles?</h3><p>No — they are separate legal instruments. The Textile Labelling Regulation revision governs composition and care labelling; the ESPR textile DPP delegated act, indicatively adopted in 2027, brings the full Digital Product Passport requirement.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Textile Labelling Regulation Digital Label Revision",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The Commission’s revision of the Textile Labelling Regulation, expected around Q2 2026, adds a digital label alongside the physical one — a separate legal track from the ESPR’s textile Digital Product Passport delegated act, still indicatively targeted for 2027, and the two are frequently merged in casual coverage despite running on different instruments and timelines.",
+          "url": "https://authichain.com/p/eu-textile-labelling-regulation-digital-label-revision"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Textile Labelling Regulation Digital Label Revision",
+              "item": "https://authichain.com/p/eu-textile-labelling-regulation-digital-label-revision"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the digital textile label replace the sewn-in physical label?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not based on current drafts — the revision adds a digital label alongside the physical one; it does not remove the physical care-label requirement."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is this the same requirement as the EU Digital Product Passport for textiles?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — they are separate legal instruments. The Textile Labelling Regulation revision governs composition and care labelling; the ESPR textile DPP delegated act, indicatively adopted in 2027, brings the full Digital Product Passport requirement."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-conflict-minerals-regulation-3tg-due-diligence",
+    "keyword": "eu conflict minerals regulation 3tg due diligence",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Conflict Minerals Regulation 3tg Due | AuthiChain",
+    "metaDescription": "The EU Conflict Minerals Regulation, binding on importers of tin, tungsten, tantalum, and gold since 2021, is under a formal Commission review as of 2026.",
+    "h1": "EU Conflict Minerals Regulation 3tg Due Diligence",
+    "bodyHtml": "<p>The EU Conflict Minerals Regulation, binding on importers of tin, tungsten, tantalum, and gold since 2021, is under a formal Commission review as of 2026: the first supply-chain due-diligence scheme has been formally recognized, and a voluntary disclosure platform is live for companies to register their sourcing policies.</p><h2>Why AuthiChain</h2><ul><li>Commission recognition of the Responsible Minerals Assurance Process lets importers point to a named, externally audited scheme rather than build a bespoke due-diligence file for each shipment</li><li>A signed, per-batch smelter or refiner provenance record is the kind of evidence the Responsible Minerals Information System is built to receive — checkable by an auditor without a call to the importer</li><li>The regulation is under formal review as of a June 2026 call for tender; what changes procedurally is not yet settled, which is exactly why due-diligence evidence built on open, portable record formats outlasts the review</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does using signed provenance records satisfy Conflict Minerals Regulation due diligence on its own?</h3><p>No — the regulation requires a management system, risk assessment, and independent third-party audit under Articles 4 through 7. A signed record is evidence an auditor or downstream buyer can check; it does not replace the due-diligence process itself.</p><h3>What is the Responsible Minerals Information System?</h3><p>A voluntary Commission platform, ReMIS, where companies register due-diligence policies and sourcing information. It signals where reporting is heading — it is not a mandatory filing today.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Conflict Minerals Regulation 3tg Due Diligence",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU Conflict Minerals Regulation, binding on importers of tin, tungsten, tantalum, and gold since 2021, is under a formal Commission review as of 2026: the first supply-chain due-diligence scheme has been formally recognized, and a voluntary disclosure platform is live for companies to register their sourcing policies.",
+          "url": "https://authichain.com/p/eu-conflict-minerals-regulation-3tg-due-diligence"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Conflict Minerals Regulation 3tg Due Diligence",
+              "item": "https://authichain.com/p/eu-conflict-minerals-regulation-3tg-due-diligence"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does using signed provenance records satisfy Conflict Minerals Regulation due diligence on its own?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the regulation requires a management system, risk assessment, and independent third-party audit under Articles 4 through 7. A signed record is evidence an auditor or downstream buyer can check; it does not replace the due-diligence process itself."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is the Responsible Minerals Information System?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A voluntary Commission platform, ReMIS, where companies register due-diligence policies and sourcing information. It signals where reporting is heading — it is not a mandatory filing today."
               }
             }
           ]
