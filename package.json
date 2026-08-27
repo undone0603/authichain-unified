@@ -96,7 +96,7 @@
     "jose": "^6.2.3",
     "jsqr": "^1.4.0",
     "lucia": "^3.2.0",
-    "lucide-react": "^1.31.0",
+    "lucide-react": "^1.34.0",
     "nanoid": "^6.0.1",
     "next": "16.3.2",
     "nodemailer": "^9.0.5",
