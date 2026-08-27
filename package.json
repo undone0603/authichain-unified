@@ -83,7 +83,7 @@
     "cookie": "^2.0.1",
     "crisp-api": "^10.11.0",
     "date-fns": "^4.4.0",
-    "dotenv": "^16.4.5",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "embla-carousel-react": "^8.6.0",
     "ethers": "^6.16.0",
