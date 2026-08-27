@@ -19,6 +19,7 @@ import { abTestingRouter } from "./ab-testing/router";
 import { whiteLabelRouter } from "./white-label/router";
 import { dashboardRouter } from "./dashboard/router";
 import { blockchainRouter } from "./blockchain/router";
+import { ordinalsRouter } from "./ordinals/router";
 import { hubspotRouter } from "./hubspot/router";
 import { aiRouter } from "./ai/router";
 import { referralRouter } from "./referral/router";
@@ -64,6 +65,7 @@ export const appRouter = router({
   whiteLabel: whiteLabelRouter,
   dashboard: dashboardRouter,
   blockchain: blockchainRouter,
+  ordinals: ordinalsRouter,
   hubspot: hubspotRouter,
   ai: aiRouter,
   referral: referralRouter,
