@@ -450,14 +450,71 @@ function buildEntry(d) {
   };
 }
 
+// Hand-authored seed pages: bespoke copy that doesn't fit this generator's
+// fixed template (custom section headings, several with no FAQ, two typed
+// Article rather than Product/Service). They live in content/seo/pages.json
+// but not in DATA, and are preserved below by slug on every run. Listed
+// explicitly here (rather than left as "whatever doesn't match DATA") so a
+// future DATA keyword that happens to slugify to the same value fails loudly
+// instead of silently overwriting real copy with the generic template.
+const PROTECTED_SEED_SLUGS = new Set([
+  'ai-qr-code-art-generator',
+  'anti-counterfeit-qr-verification',
+  'battery-passport-due-diligence-requirement',
+  'biotrack-integration-blockchain-provenance',
+  'blockchain-product-authentication',
+  'cannabis-blockchain-provenance',
+  'cannabis-coa-verification-blockchain',
+  'counterfeit-detection-with-ai',
+  'digital-product-passport-access-rights',
+  'dispensary-qr-provenance-scanning',
+  'dscsa-compliance-blockchain-serialization',
+  'editable-qr-code-no-reprint',
+  'eu-dpp-compliance-checklist',
+  'government-document-verification-blockchain',
+  'government-rfp-award-verification-blockchain',
+  'living-qr-code-art-generator',
+  'metrc-compliance-blockchain',
+  'offline-permit-certificate-qr-verification',
+  'partner-program',
+  'ppwr-digital-labelling-qr-code',
+  'sbir-svip-blockchain-document-verification',
+  'untp-digital-product-passport',
+  'w3c-verifiable-credentials-product-authentication',
+  'what-is-a-digital-product-passport',
+]);
+
 // Preserve hand-authored seed pages, replace/append generated ones by slug.
 const existing = JSON.parse(fs.readFileSync(OUT, 'utf8'));
 const generated = DATA.map(buildEntry);
 const genSlugs = new Set(generated.map((g) => g.slug));
+
+const clobberedSeeds = generated.filter((g) => PROTECTED_SEED_SLUGS.has(g.slug));
+if (clobberedSeeds.length > 0) {
+  throw new Error(
+    `A DATA keyword slugifies to a protected hand-authored seed slug, which would ` +
+      `silently overwrite bespoke copy with the generic template: ` +
+      `${clobberedSeeds.map((g) => g.slug).join(', ')}. ` +
+      `Rename the DATA keyword, or if replacing the seed is intentional, remove its ` +
+      `slug from PROTECTED_SEED_SLUGS in this file first.`
+  );
+}
+
 const seeds = existing.filter((e) => !genSlugs.has(e.slug));
+const unprotectedSeeds = seeds.filter((e) => !PROTECTED_SEED_SLUGS.has(e.slug));
+if (unprotectedSeeds.length > 0) {
+  console.warn(
+    `WARNING: ${unprotectedSeeds.length} page(s) in ${OUT} are neither DATA-generated ` +
+      `nor in PROTECTED_SEED_SLUGS — add them to PROTECTED_SEED_SLUGS if they're ` +
+      `intentional hand-authored pages, or they may be stale/orphaned:\n` +
+      unprotectedSeeds.map((e) => `  - ${e.slug}`).join('\n')
+  );
+}
+
 const merged = [...seeds, ...generated];
 
 fs.writeFileSync(OUT, JSON.stringify(merged, null, 2) + '\n');
 console.log(`seeds preserved: ${seeds.length}`);
+seeds.forEach((s) => console.log(`  - ${s.slug}`));
 console.log(`generated pages: ${generated.length}`);
 console.log(`total pages:     ${merged.length}`);
