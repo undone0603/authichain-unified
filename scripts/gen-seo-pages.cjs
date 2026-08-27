@@ -513,6 +513,20 @@ if (unprotectedSeeds.length > 0) {
 
 const merged = [...seeds, ...generated];
 
+// Guard against duplicate slugs landing in pages.json: standard JSON.parse
+// silently keeps only the last object for a repeated key when this array is
+// ever consumed by slug (e.g. built into a Map), so a collision here fails
+// loudly at build time rather than silently unpublishing one of the two pages.
+const slugCounts = new Map();
+for (const p of merged) slugCounts.set(p.slug, (slugCounts.get(p.slug) || 0) + 1);
+const duplicateSlugs = [...slugCounts.entries()].filter(([, n]) => n > 1).map(([s]) => s);
+if (duplicateSlugs.length > 0) {
+  throw new Error(
+    `Duplicate slug(s) in ${OUT}, one page would silently shadow another: ` +
+      `${duplicateSlugs.join(', ')}. Give each page a distinct slug before writing.`
+  );
+}
+
 fs.writeFileSync(OUT, JSON.stringify(merged, null, 2) + '\n');
 console.log(`seeds preserved: ${seeds.length}`);
 seeds.forEach((s) => console.log(`  - ${s.slug}`));
