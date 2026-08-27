@@ -14,8 +14,8 @@ const where = vi.fn(() => ({ orderBy }));
 const from = vi.fn(() => ({ where }));
 const select = vi.fn(() => ({ from }));
 
-vi.mock("drizzle-orm/postgres-js", () => ({ drizzle: () => ({ select }) }));
-vi.mock("postgres", () => ({ default: () => ({}) }));
+vi.mock("drizzle-orm/node-postgres", () => ({ drizzle: () => ({ select }) }));
+vi.mock("pg", () => ({ Pool: class {} }));
 
 process.env.DATABASE_URL = "postgres://test:test@localhost:5432/test";
 

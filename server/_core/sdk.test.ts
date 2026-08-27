@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { COOKIE_NAME } from "./cookies";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { COOKIE_NAME } from "@shared/const";
 import { sdk } from "./sdk";
 import * as db from "../db";
 
@@ -10,6 +10,19 @@ vi.mock("../db", () => ({
 }));
 
 describe("sdk.authenticateRequest", () => {
+  let verifySpy: ReturnType<typeof vi.spyOn> | null = null;
+
+  beforeEach(() => {
+    verifySpy = vi.spyOn(sdk, "verifySession");
+  });
+
+  afterEach(() => {
+    if (verifySpy) {
+      verifySpy.mockRestore();
+      verifySpy = null;
+    }
+  });
+
   describe("cookie extraction from Fetch Request", () => {
     it("extracts cookie header from a real Fetch Request using headers.get()", async () => {
       const testCookieValue = "test-token-fetch-123";
@@ -19,9 +32,6 @@ describe("sdk.authenticateRequest", () => {
         },
       });
 
-      // Spy on verifySession to confirm the cookie was extracted correctly
-      const verifySpy = vi.spyOn(sdk, "verifySession");
-      
       try {
         await sdk.authenticateRequest(req as any);
       } catch (error) {
@@ -32,8 +42,6 @@ describe("sdk.authenticateRequest", () => {
       // Verify that verifySession was called with the correct cookie value
       // This proves getCookieHeader extracted it from headers.get()
       expect(verifySpy).toHaveBeenCalledWith(testCookieValue);
-      
-      verifySpy.mockRestore();
     });
   });
 
@@ -46,9 +54,6 @@ describe("sdk.authenticateRequest", () => {
         },
       };
 
-      // Spy on verifySession to confirm the cookie was extracted correctly
-      const verifySpy = vi.spyOn(sdk, "verifySession");
-      
       try {
         await sdk.authenticateRequest(req as any);
       } catch (error) {
@@ -59,8 +64,6 @@ describe("sdk.authenticateRequest", () => {
       // Verify that verifySession was called with the correct cookie value
       // This proves getCookieHeader extracted it from headers.cookie
       expect(verifySpy).toHaveBeenCalledWith(testCookieValue);
-      
-      verifySpy.mockRestore();
     });
   });
 
@@ -72,8 +75,6 @@ describe("sdk.authenticateRequest", () => {
         },
       });
 
-      const verifySpy = vi.spyOn(sdk, "verifySession");
-
       try {
         await sdk.authenticateRequest(req as any);
       } catch (error) {
@@ -82,8 +83,6 @@ describe("sdk.authenticateRequest", () => {
 
       // verifySession should be called with undefined (no matching cookie found)
       expect(verifySpy).toHaveBeenCalledWith(undefined);
-      
-      verifySpy.mockRestore();
     });
 
     it("handles Express-like object with no matching cookie", async () => {
@@ -93,8 +92,6 @@ describe("sdk.authenticateRequest", () => {
         },
       };
 
-      const verifySpy = vi.spyOn(sdk, "verifySession");
-
       try {
         await sdk.authenticateRequest(req as any);
       } catch (error) {
@@ -103,8 +100,6 @@ describe("sdk.authenticateRequest", () => {
 
       // verifySession should be called with undefined (no matching cookie found)
       expect(verifySpy).toHaveBeenCalledWith(undefined);
-      
-      verifySpy.mockRestore();
     });
   });
 });
