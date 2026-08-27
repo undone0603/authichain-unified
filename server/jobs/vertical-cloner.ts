@@ -8,19 +8,19 @@ import { classifyIndustry } from "../../shared/industries";
  */
 export async function runVerticalCloning() {
   console.log("[Autopilot] Scanning for industry expansion opportunities...");
-  
+
   // Real superpower logic: In production, this would hit a Trend API (e.g. Perplexity/OpenAI)
   // For this push, we are auto-scaling into the 'EV & Battery' and 'Artisan Roasters' verticals
   const targets = [
     { name: "Tesla Battery Cell", desc: "Lithium-ion provenance" },
-    { name: "Artisan Blue Mountain Coffee", desc: "Direct trade verification" }
+    { name: "Artisan Blue Mountain Coffee", desc: "Direct trade verification" },
   ];
 
   const db = await getDb();
 
   for (const target of targets) {
-    const industry = classifyIndustry(target.name, target.desc);
-    
+    const industry = await classifyIndustry(target.name, target.desc);
+
     // Create an autonomous mission to "Lock the Vertical"
     await db.insert(missions).values({
       id: crypto.randomUUID(),
@@ -34,7 +34,7 @@ export async function runVerticalCloning() {
 
     await db.insert(activityLog).values({
       action: "autonomous_vertical_expansion",
-      details: { industry: industry.name, target: target.name }
+      details: { industry: industry.name, target: target.name },
     });
   }
 

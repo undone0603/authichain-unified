@@ -21,7 +21,7 @@ export const stripeConnectRouter = router({
         ctx.user.id,
         ctx.user.name ?? "Vendor",
         ctx.user.email ?? "",
-        input.country,
+        input.country
       );
       return { accountId };
     }),
@@ -34,12 +34,19 @@ export const stripeConnectRouter = router({
     }),
 
   createCheckout: protectedProcedure
-    .input(z.object({
-      accountId: z.string(),
-      currency: z.string().default("usd"),
-    }))
+    .input(
+      z.object({
+        accountId: z.string(),
+        currency: z.string().default("usd"),
+        amountCents: z.number().int().positive().default(100000),
+      })
+    )
     .mutation(async ({ input }) => {
-      const url = await createVendorCheckoutSession(input.accountId, input.currency);
+      const url = await createVendorCheckoutSession(
+        input.accountId,
+        input.currency,
+        input.amountCents
+      );
       return { url };
     }),
 
@@ -47,7 +54,10 @@ export const stripeConnectRouter = router({
     .input(z.object({ currency: z.string().default("usd") }))
     .mutation(async ({ input }) => {
       const product = await createPlatformSubscriptionPlan(input.currency);
-      return { productId: product.id, defaultPriceId: product.default_price as string };
+      return {
+        productId: product.id,
+        defaultPriceId: product.default_price as string,
+      };
     }),
 
   attachPaymentMethod: protectedProcedure
@@ -58,16 +68,18 @@ export const stripeConnectRouter = router({
     }),
 
   subscribe: protectedProcedure
-    .input(z.object({
-      accountId: z.string(),
-      paymentMethodId: z.string(),
-      priceId: z.string(),
-    }))
+    .input(
+      z.object({
+        accountId: z.string(),
+        paymentMethodId: z.string(),
+        priceId: z.string(),
+      })
+    )
     .mutation(async ({ input }) => {
       const subscription = await subscribeVendorToPlatform(
         input.accountId,
         input.paymentMethodId,
-        input.priceId,
+        input.priceId
       );
       return { subscriptionId: subscription.id, status: subscription.status };
     }),
