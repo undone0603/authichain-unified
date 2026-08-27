@@ -27,3 +27,6 @@ jobs:
 
       - name: Run lint and prettier
         run: pnpm run lint:ci
+
+      - name: Check for job-level continue-on-error in workflows
+        run: node scripts/check-workflow-continue-on-error.mjs

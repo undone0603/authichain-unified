@@ -87,14 +87,17 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          DEPLOY_OUTPUT=$(vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }} 2>&1) || true
+          set +e
+          DEPLOY_OUTPUT=$(vercel deploy --prebuilt --prod --archive=tgz --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
+          rc=$?
+          set -e
           echo "$DEPLOY_OUTPUT"
-          if echo "$DEPLOY_OUTPUT" | grep -q "api-deployments-free-per-day"; then
+          if [ $rc -ne 0 ] && echo "$DEPLOY_OUTPUT" | grep -q "api-deployments-free-per-day"; then
             echo "::warning::Vercel free-tier daily deployment limit reached (100/day). Deployment skipped - will retry on next push."
             exit 0
           fi
-          if echo "$DEPLOY_OUTPUT" | grep -q "Error:"; then
-            echo "::error::Deployment failed: $DEPLOY_OUTPUT"
-            exit 1
+          if [ $rc -ne 0 ]; then
+            echo "::error::Deployment failed (exit $rc): $DEPLOY_OUTPUT"
+            exit $rc
           fi
           echo "Deployment successful"
