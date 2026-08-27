@@ -1,6 +1,6 @@
 name = "authichain-telegram"
 main = "src/index.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
@@ -20,3 +20,6 @@ id = "ef040f1eb8ca4d6f9f7fe4e908cdfd69"
 
 [vars]
 ENVIRONMENT = "production"
+
+[observability]
+enabled = true

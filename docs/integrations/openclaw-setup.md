@@ -13,22 +13,22 @@ so you can control all 30+ agents and the Unified Architect from any chat app.
 
 ```
 WhatsApp / Telegram / Slack / Discord / ...
-                    |
-            +-------v--------+
-            |  OpenClaw       |
-            |  Gateway        |  (local, Node.js)
-            |  :18789         |
-            +-------+--------+
-                    | webhook (POST /webhook/openclaw)
-            +-------v--------+
-            |  authichain-   |  (Cloudflare Worker)
-            |  openclaw      |  claw.authichain.com
-            +-------+--------+
-                    | HTTP (Bearer auth)
-            +-------v--------+
-            |  AgentZ API    |  (FastAPI, localhost:8000)
-            |  + Architect   |
-            +----------------+
+                    │
+            ┌───────▼────────┐
+            │  OpenClaw       │
+            │  Gateway        │  (local, Node.js)
+            │  :18789         │
+            └───────┬────────┘
+                    │ webhook (POST /webhook/openclaw)
+            ┌───────▼────────┐
+            │  authichain-   │  (Cloudflare Worker)
+            │  openclaw      │  claw.authichain.com
+            └───────┬────────┘
+                    │ HTTP (Bearer auth)
+            ┌───────▼────────┐
+            │  AgentZ API    │  (FastAPI, localhost:8000)
+            │  + Architect   │
+            └────────────────┘
 ```
 
 ## Setup
@@ -123,14 +123,14 @@ Once connected, send messages from any messaging channel that OpenClaw routes:
 
 ```
 You: help
-Bot: AuthiChain OpenClaw Bridge — Available commands:
+Bot: 🦞 AuthiChain OpenClaw Bridge — Available commands:
      help, agents, workflows, run <id>, architect
 
 You: architect
 Bot: Architect Cycle Complete (architect-20260825T120000)
      Goal: Assess fleet health, fix failing workflows, and run priority jobs.
-     Healthy: 18 -> 20
-     Failing: 3 -> 1
+     Healthy: 18 → 20
+     Failing: 3 → 1
      Net improvement: +2
 ```
 

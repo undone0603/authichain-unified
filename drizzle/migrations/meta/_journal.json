@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1781642828504,
+      "tag": "0000_tranquil_jackpot",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781667827622,
+      "tag": "0001_consolidate_qron_loyalty",
+      "breakpoints": true
+    }
+  ]
+}

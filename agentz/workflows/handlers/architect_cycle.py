@@ -13,7 +13,7 @@ from agentz.core.architect import ArchitectAgent
 
 def run(ctx: ExecutionContext) -> str:
     """
-    Execute one full architect cycle (assess -> plan -> execute -> review).
+    Execute one full architect cycle (assess → plan → execute → review).
     The mode (dry-run / confirm / auto) is propagated from the runner
     so the operator controls side-effects.
     """
@@ -30,7 +30,7 @@ def run(ctx: ExecutionContext) -> str:
     # Return a concise summary for the audit log's notes field
     return (
         f"Cycle {report.cycle_id}: "
-        f"healthy {report.before_healthy}->{report.after_healthy}, "
-        f"failing {report.before_failing}->{report.after_failing}, "
+        f"healthy {report.before_healthy}→{report.after_healthy}, "
+        f"failing {report.before_failing}→{report.after_failing}, "
         f"net {report.net_improvement:+d}"
     )

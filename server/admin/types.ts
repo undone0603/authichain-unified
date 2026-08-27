@@ -9,4 +9,6 @@ export interface IAdminRepository {
   getOpenFraudAlerts(): Promise<any[]>;
   getAllHealthScores(): Promise<any[]>;
   getRecentActivity(limit: number): Promise<any[]>;
+  getPastDueSubscriptions(): Promise<any[]>;
+  getInactiveUsers(daysSinceLastScan?: number): Promise<any[]>;
 }

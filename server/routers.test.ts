@@ -476,6 +476,8 @@ describe("AuthiChain Unified Platform Routers", () => {
         getOpenFraudAlerts: vi.fn(),
         getAllHealthScores: vi.fn(),
         getRecentActivity: vi.fn(),
+        getPastDueSubscriptions: vi.fn().mockResolvedValue([]),
+        getInactiveUsers: vi.fn().mockResolvedValue([]),
       };
       const ctx = createAuthContext("admin");
       ctx.adminRepo = mockRepo;

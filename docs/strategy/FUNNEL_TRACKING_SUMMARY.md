@@ -191,7 +191,7 @@ Enhanced to support funnel tracking:
 
 ### 7. Documentation
 
-#### `/docs/funnel-tracking.md`
+#### `/docs/marketing/funnel-tracking.md`
 Complete reference guide covering:
 - Database schema explanation
 - API endpoint documentation
@@ -201,7 +201,7 @@ Complete reference guide covering:
 - Client-side utilities
 - Implementation checklist
 
-#### `/docs/funnel-email-example.md`
+#### `/docs/marketing/funnel-email-example.md`
 Detailed examples for email campaign integration:
 - Generate prospect ID and track links
 - Email open tracking with pixel
@@ -209,7 +209,7 @@ Detailed examples for email campaign integration:
 - Integration with Resend and SendGrid
 - Double-click filtering for open tracking
 
-#### `/docs/FUNNEL_QUICKSTART.md`
+#### `/docs/marketing/FUNNEL_QUICKSTART.md`
 5-minute setup guide with:
 - Step-by-step integration instructions
 - Essential code snippets
@@ -386,9 +386,9 @@ pnpm tsx scripts/funnel-report.ts --source gov_engine
 ## Support
 
 For questions, see:
-1. `/docs/FUNNEL_QUICKSTART.md` - Quick setup
-2. `/docs/funnel-tracking.md` - Complete reference
-3. `/docs/funnel-email-example.md` - Email examples
+1. `/docs/marketing/FUNNEL_QUICKSTART.md` - Quick setup
+2. `/docs/marketing/funnel-tracking.md` - Complete reference
+3. `/docs/marketing/funnel-email-example.md` - Email examples
 4. `/src/lib/funnel-tracking.ts` - Code documentation
 5. `/src/app/api/funnel/route.ts` - API specification
 

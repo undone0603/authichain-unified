@@ -33,9 +33,9 @@ A complete lead scoring and filtering system for the government contracting engi
    - Creates performance indexes for lead queries
 
 5. **Documentation**
-   - `docs/gov-engine-lead-pipeline.md` — Complete architecture guide
-   - `docs/INTEGRATION_CHECKLIST.md` — Step-by-step deployment checklist
-   - `docs/email-proposals-integration.md` — Email script integration options
+   - `docs/marketing/gov-engine-lead-pipeline.md` — Complete architecture guide
+   - `docs/operations/INTEGRATION_CHECKLIST.md` — Step-by-step deployment checklist
+   - `docs/marketing/email-proposals-integration.md` — Email script integration options
 
 ---
 
@@ -249,7 +249,7 @@ WHERE source = 'gov_engine'
   ```
 
 **Email not sending despite qualified leads**
-- See: `docs/email-proposals-integration.md` → Troubleshooting section
+- See: `docs/marketing/email-proposals-integration.md` → Troubleshooting section
 - Verify: RESEND_API_KEY is set and valid
 - Check: Email template renders without errors (DRY_RUN=true)
 
@@ -299,9 +299,9 @@ WHERE source = 'gov_engine'
 
 For questions or issues:
 1. Check relevant documentation:
-   - `docs/gov-engine-lead-pipeline.md` (architecture)
-   - `docs/email-proposals-integration.md` (email setup)
-   - `docs/INTEGRATION_CHECKLIST.md` (deployment steps)
+   - `docs/marketing/gov-engine-lead-pipeline.md` (architecture)
+   - `docs/marketing/email-proposals-integration.md` (email setup)
+   - `docs/operations/INTEGRATION_CHECKLIST.md` (deployment steps)
 
 2. Review script examples in documentation
 

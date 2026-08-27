@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { enrichLead } from './industrial/enrichment';
+import { sendEmail } from './email';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -85,9 +86,24 @@ export async function handleLeadAutomation(lead: {
       }
     }
 
-    // 4. Trigger Welcome Email via SendGrid (simulated or direct)
-    // For now, we'll log it. In a real scenario, call SendGrid.
-    
+    // 4. Trigger Welcome Email via configured transactional provider
+    try {
+      await sendEmail({
+        from: 'QRON <hello@qron.space>',
+        to: lead.email,
+        subject: `Welcome to QRON${lead.name ? `, ${lead.name.split(' ')[0]}` : ''}`,
+        text: `Welcome to QRON!\n\nYour account is ready. Start creating AI-powered QR codes at https://qron.space/dashboard\n\n— The QRON Team`,
+        html: `<div style="font-family:sans-serif;max-width:580px;margin:0 auto;background:#0a0a0a;color:#fff;padding:32px;border-radius:12px;border:1px solid #c9a227">
+          <h1 style="color:#c9a227">Welcome to QRON</h1>
+          <p>Hi ${lead.name?.split(' ')[0] || 'there'}, your account is ready.</p>
+          <p>Start creating AI-powered, cryptographically-anchored QR codes right away.</p>
+          <a href="https://qron.space/dashboard" style="display:inline-block;background:#c9a227;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0">Go to Dashboard</a>
+        </div>`,
+      });
+    } catch (emailErr) {
+      console.warn('[automation] Welcome email failed (non-fatal):', emailErr);
+    }
+
     await logAutomation(workflowName, 'event', 'success', finalLead);
   } catch (err: unknown) {
     await logAutomation(workflowName, 'event', 'failure', lead, formatErr(err));
@@ -131,7 +147,7 @@ export async function runDailyMaintenance() {
     // 2. Clean up old temporary files
     // 3. Send daily revenue report to owner
     const _reportEmail = process.env.ADMIN_EMAIL || 'undone.k@gmail.com';
-    
+
     // Fetch stats for the last 24h
     const { count: generations } = await admin
       .from('qron_generations')

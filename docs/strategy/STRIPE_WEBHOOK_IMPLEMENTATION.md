@@ -19,8 +19,8 @@ This implementation adds complete Stripe webhook handling to track customer paym
    - Views for revenue reporting and alert dashboards
 
 3. **Documentation**
-   - `docs/stripe-webhook-setup.md` — comprehensive 700+ line guide with FAQs
-   - `docs/stripe-webhook-checklist.md` — quick reference checklist
+   - `docs/operations/stripe-webhook-setup.md` — comprehensive 700+ line guide with FAQs
+   - `docs/operations/stripe-webhook-checklist.md` — quick reference checklist
    - Inline code comments explaining each handler
 
 ## Files Created/Modified
@@ -43,7 +43,7 @@ supabase/migrations/00003_stripe_payment_tracking.sql  (213 lines)
   └─ 3 SQL views for dashboards
   └─ RLS policies (service role only)
 
-docs/stripe-webhook-setup.md                      (700+ lines)
+docs/operations/stripe-webhook-setup.md            (700+ lines)
   └─ Complete setup guide
   └─ Database schema reference
   └─ Environment variable instructions
@@ -53,7 +53,7 @@ docs/stripe-webhook-setup.md                      (700+ lines)
   └─ Integration with existing flows
   └─ FAQ
 
-docs/stripe-webhook-checklist.md                  (250+ lines)
+docs/operations/stripe-webhook-checklist.md       (250+ lines)
   └─ Quick 5-step setup
   └─ 5 verification tests
   └─ Troubleshooting checklist
@@ -173,7 +173,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...                             # (already set)
 5. Redeploy: `vercel deploy --prod`
 6. Register webhook in Stripe Dashboard → Webhooks → Add endpoint
 
-Full instructions: See `docs/stripe-webhook-setup.md`
+Full instructions: See `docs/operations/stripe-webhook-setup.md`
 
 ## Verification Tests
 
@@ -318,12 +318,12 @@ GROUP BY event_type;
 **Problem:** Leads not tagged as customers  
 **Solution:** Verify `lead_captures` table has `status` column, check `audit_log` for errors
 
-Full troubleshooting guide: See `docs/stripe-webhook-setup.md` section "Troubleshooting"
+Full troubleshooting guide: See `docs/operations/stripe-webhook-setup.md` section "Troubleshooting"
 
 ## Next Steps
 
 1. Review this summary
-2. Read `docs/stripe-webhook-setup.md` for comprehensive guide
+2. Read `docs/operations/stripe-webhook-setup.md` for comprehensive guide
 3. Apply migration: `supabase db push`
 4. Deploy code: `git push origin main`
 5. Add env var: `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` in Vercel
@@ -332,4 +332,4 @@ Full troubleshooting guide: See `docs/stripe-webhook-setup.md` section "Troubles
 8. Test with Stripe CLI and real payments
 9. Set up monitoring and alerts
 
-Questions? Check the FAQ in `docs/stripe-webhook-setup.md` or inline code comments.
+Questions? Check the FAQ in `docs/operations/stripe-webhook-setup.md` or inline code comments.
