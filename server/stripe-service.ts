@@ -284,3 +284,58 @@ export async function processWebhookEvent(event: Stripe.Event): Promise<WebhookR
 
   return result;
 }
+
+// ─── Founder Payout via Stripe Connect ──────────────────────────────────────
+
+export interface PayoutConfig {
+  stripeConnectAccountId: string;
+  minPayoutCents: number;
+}
+
+/**
+ * Create a payout to a Stripe Connect account (founder's connected bank).
+ * Requires:
+ * - Founder has connected a Stripe Connect account
+ * - Bank account is verified
+ * - Payout amount >= minimum threshold
+ *
+ * @param amountCents Amount to payout in cents
+ * @param config Payout configuration (Connect account ID, minimum threshold)
+ * @returns Payout object with ID, status, and arrival date
+ * @throws Error if payout fails (invalid account, insufficient balance, etc.)
+ */
+export async function createFounderPayout(amountCents: number, config: PayoutConfig): Promise<{
+  payoutId: string;
+  status: string;
+  arrivalDate: Date;
+}> {
+  if (!config.stripeConnectAccountId) {
+    throw new Error("[founder-payout] No Stripe Connect account configured for founder");
+  }
+  if (amountCents < config.minPayoutCents) {
+    return {
+      payoutId: "skipped",
+      status: "below_minimum",
+      arrivalDate: new Date(),
+    };
+  }
+
+  const stripe = getStripe();
+  const payout = await stripe.payouts.create(
+    {
+      amount: Math.round(amountCents),
+      currency: "usd",
+      method: "instant", // Instant payout if account supports it
+      statement_descriptor: "AuthiChain Founder Revenue",
+    },
+    {
+      stripeAccount: config.stripeConnectAccountId,
+    },
+  );
+
+  return {
+    payoutId: payout.id,
+    status: payout.status,
+    arrivalDate: payout.arrival_date ? new Date(payout.arrival_date * 1000) : new Date(),
+  };
+}

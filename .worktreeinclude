@@ -1,0 +1,10 @@
+# .worktreeinclude
+# Add files that should be included in worktrees here
+.gitignore
+pnpm-workspace.yaml
+server/agents.test.ts
+server/db.ts
+server/jobs/task-runner.ts
+server/webhooks/stripe.test.ts
+tsconfig.json
+vitest.config.ts

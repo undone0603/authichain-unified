@@ -1,6 +1,6 @@
 name = "authichain-bridge"
 main = "src/index.ts"
-compatibility_date = "2026-03-11"
+compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Status: SCAFFOLDED — not currently deployed.
@@ -9,3 +9,6 @@ compatibility_flags = ["nodejs_compat"]
 #   wrangler secret put SUPABASE_URL --name authichain-bridge
 #   wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name authichain-bridge
 #   wrangler secret put RAPIDAPI_KEY --name authichain-bridge
+
+[observability]
+enabled = true

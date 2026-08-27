@@ -1,0 +1,12 @@
+{
+  "name": "authichain-openclaw",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "hono": "^4.12.31"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260723.1",
+    "wrangler": "^4.107.0"
+  }
+}

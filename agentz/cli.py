@@ -2,11 +2,11 @@
 AgentZ CLI
 
 Usage:
-    python -m agentz.cli run power_launch_all [OPTIONS]
+    python -m agentz.cli run <workflow_id> [OPTIONS]
     python -m agentz.cli health
     python -m agentz.cli list-agents
 
-Options for 'run power_launch_all':
+Options for 'run <workflow_id>':
     --mode {auto|confirm|dry-run}   Execution mode (default: confirm)
     --serial                        Disable parallel execution
     --lm-url URL                    LM Studio base URL (default: http://localhost:1234/v1)
@@ -19,36 +19,32 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import os
+import importlib
 
+# Helper to discover handlers
+def get_available_handlers() -> list[str]:
+    handlers = []
+    base_path = os.path.join(os.path.dirname(__file__), "workflows", "handlers")
+    for root, _, files in os.walk(base_path):
+        for file in files:
+            if file.endswith(".py") and file != "__init__.py" and not file.startswith("_"):
+                # Construct module path
+                rel_path = os.path.relpath(os.path.join(root, file), base_path)
+                module_path = rel_path.replace(os.path.sep, ".").replace(".py", "")
+                handlers.append(module_path)
+    return sorted(handlers)
 
 def cmd_run(args: argparse.Namespace) -> int:
-    from .power_launch import power_launch_all
+    # Use workflow runner to execute the selected handler
+    from .workflows.runner import main as runner_main
+    
+    # Map CLI args to runner args. Note: agentz.workflows.runner only accepts
+    # --handler/--mode/--verbose, so --quiet (agentz.cli's own flag) is not
+    # forwarded — there's nothing on the runner side to forward it to.
+    runner_args = ["--handler", args.command_name, "--mode", args.mode]
 
-    results = power_launch_all(
-        mode=args.mode,
-        parallel=not args.serial,
-        lm_base_url=args.lm_url,
-        verbose=not args.quiet,
-    )
-
-    if args.json_out:
-        payload = [
-            {
-                "name": r.name,
-                "ok": r.ok,
-                "output": r.output,
-                "error": r.error,
-                "duration_ms": r.duration_ms,
-            }
-            for r in results
-        ]
-        with open(args.json_out, "w") as fh:
-            json.dump(payload, fh, indent=2)
-        if not args.quiet:
-            print(f"\nResults written to {args.json_out}")
-
-    return 0 if all(r.ok for r in results) else 1
-
+    return runner_main(runner_args)
 
 def cmd_health(args: argparse.Namespace) -> int:
     from .lm_studio import LMStudioClient
@@ -64,7 +60,6 @@ def cmd_health(args: argparse.Namespace) -> int:
         print(f"LM Studio is NOT reachable at {args.lm_url}", file=sys.stderr)
         return 1
 
-
 def cmd_list_agents(_args: argparse.Namespace) -> int:
     from .agents.pipeline import ALL_AGENTS
 
@@ -72,7 +67,6 @@ def cmd_list_agents(_args: argparse.Namespace) -> int:
     for cls in ALL_AGENTS:
         print(f"  • {cls.name:40s}  {cls.system_prompt[:60]}")
     return 0
-
 
 def build_parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
@@ -95,17 +89,18 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("list-agents", help="List all registered agents")
 
     # ── run ──────────────────────────────────────────────────────────────────
-    run_p = sub.add_parser("run", help="Run a named command")
+    available = get_available_handlers()
+    run_p = sub.add_parser("run", help="Run a named workflow")
     run_p.add_argument(
         "command_name",
-        choices=["power_launch_all"],
-        help="Command to run",
+        choices=available,
+        help="Workflow handler to run",
     )
     run_p.add_argument(
         "--mode",
         choices=["auto", "confirm", "dry-run"],
         default="confirm",
-        help="Execution mode (default: auto)",
+        help="Execution mode (default: confirm)",
     )
     run_p.add_argument(
         "--serial",
@@ -126,14 +121,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     return root
 
-
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-
-    # Propagate --lm-url to sub-commands that need it
-    if not hasattr(args, "lm_url"):
-        args.lm_url = "http://localhost:1234/v1"
 
     if args.command == "health":
         return cmd_health(args)
@@ -144,7 +134,6 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.print_help()
     return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

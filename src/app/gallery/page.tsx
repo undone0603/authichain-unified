@@ -185,7 +185,7 @@ export default async function MarketplacePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-            {artifacts?.map((item) => (
+            {artifacts?.map((item: { id: string; image_url: string; prompt?: string | null; mode?: string | null; shortCode?: string | null }) => (
               <div
                 key={item.id}
                 className="protocol-card group relative bg-zinc-950/50 border-zinc-900 hover:border-gold/40 transition-all duration-500 hover:-translate-y-2"
@@ -249,7 +249,7 @@ export default async function MarketplacePage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-6 gap-6">
-                {gallery?.map((g) => (
+                {gallery?.map((g: { id: string; image_url: string }) => (
                     <div key={g.id} className="protocol-card aspect-square overflow-hidden group cursor-pointer border-zinc-900/50">
                         <Image 
                             src={g.image_url} 
@@ -274,7 +274,7 @@ export default async function MarketplacePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {artisticSamples.map((sample) => (
+              {artisticSamples.map((sample: { id: string; image_url: string; prompt: string; mode?: string | null; scan_count?: number | null }) => (
                 <div key={sample.id} className="protocol-card group bg-zinc-950/30 border-zinc-900 hover:border-gold/30 transition-all">
                   <div className="relative aspect-square overflow-hidden">
                     <Image 

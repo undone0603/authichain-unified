@@ -3288,6 +3288,20 @@ export default {
         return new Response(certPage(certId), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
       }
     }
+    // Landing pages: /landing/:brandId routes to Vercel for dynamic brand landing pages
+    if (p === '/landing' || p.startsWith('/landing/')) {
+      const target = new URL(request.url);
+      target.hostname = 'authichain-unified.vercel.app';
+      target.protocol = 'https:';
+      const headers = new Headers(request.headers);
+      headers.set('Host', 'authichain-unified.vercel.app');
+      return fetch(new Request(target.toString(), {
+        method: request.method,
+        headers,
+        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+        redirect: 'follow',
+      }));
+    }
     // Proxy app routes to the Vercel deployment instead of serving marketing HTML.
     // Prefixes must NOT have a trailing slash so the startsWith check works correctly
     // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).

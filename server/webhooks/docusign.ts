@@ -5,19 +5,27 @@
  * updates deal status in the sales pipeline.
  */
 
-import { 
-  getLeadByEmail, 
-  updateLead, 
+import {
+  getLeadByEmail,
+  updateLead,
   logActivity,
-  createSystemNotification 
+  createSystemNotification,
+  hasWebhookEventProcessed
 } from "../db.js";
 import { calculateLeadScore } from "../sales/scoring-service.js";
 
 export async function handleDocuSignWebhook(payload: any) {
-  const { event: eventType, recipientEmail, envelopeId } = payload;
-  
+  const { event: eventType, recipientEmail, envelopeId, webhook_id: webhookId } = payload;
+
   if (!recipientEmail) {
     return { success: false, error: "Recipient email missing" };
+  }
+
+  // Prevent duplicate processing of the same webhook event
+  const eventKey = webhookId || envelopeId || `${recipientEmail}:${eventType}`;
+  if (await hasWebhookEventProcessed(eventKey)) {
+    console.log("[docusign-webhook] Duplicate event ignored:", JSON.stringify(eventKey));
+    return { success: true, duplicate: true };
   }
 
   console.log(`[docusign-webhook] Received ${eventType} for ${recipientEmail}`);

@@ -1,4 +1,6 @@
-export const COOKIE_NAME = "authichain_session";
+// Single source of truth lives in shared/const.ts — re-exported here so
+// existing imports from this module keep working.
+export { COOKIE_NAME } from "@shared/const";
 
 import type { CookieOptions, Request } from "express";
 

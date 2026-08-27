@@ -1,0 +1,218 @@
+/**
+ * AuthiChain Stripe Service
+ * Handles checkout sessions, subscription management, and webhook processing
+ */
+import Stripe from "stripe";
+import { STRIPE_PRODUCTS } from "./stripe-products";
+import { ENV } from "./_core/env";
+import { safeOrigin } from "./_core/allowed-origins";
+let _stripe = null;
+export function getStripe() {
+    if (!_stripe) {
+        const secretKey = ENV.stripeSecretKey;
+        if (!secretKey)
+            throw new Error("STRIPE_SECRET_KEY not configured");
+        _stripe = new Stripe(secretKey, { apiVersion: "2026-06-24.dahlia" });
+    }
+    return _stripe;
+}
+export async function createSubscriptionCheckout(params) {
+    const stripe = getStripe();
+    const product = STRIPE_PRODUCTS[params.plan];
+    const priceAmount = params.billing === "annual"
+        ? product.priceAnnual
+        : product.priceMonthly;
+    const sessionConfig = {
+        mode: "subscription",
+        payment_method_types: ["card"],
+        allow_promotion_codes: true,
+        client_reference_id: params.userId.toString(),
+        customer_email: params.stripeCustomerId ? undefined : params.userEmail,
+        customer: params.stripeCustomerId || undefined,
+        metadata: {
+            user_id: params.userId.toString(),
+            customer_email: params.userEmail,
+            customer_name: params.userName,
+            plan: params.plan,
+            billing: params.billing,
+        },
+        subscription_data: {
+            metadata: {
+                user_id: params.userId.toString(),
+                plan: params.plan,
+                billing: params.billing,
+            },
+            ...(params.trialDays ? { trial_period_days: params.trialDays } : {}),
+        },
+        line_items: [
+            {
+                price_data: {
+                    currency: "usd",
+                    product_data: {
+                        name: product.name,
+                        description: product.description,
+                    },
+                    unit_amount: priceAmount,
+                    recurring: {
+                        interval: params.billing === "annual" ? "year" : "month",
+                    },
+                },
+                quantity: 1,
+            },
+        ],
+        success_url: `${safeOrigin(params.origin)}/subscriptions?session_id={CHECKOUT_SESSION_ID}&success=true`,
+        cancel_url: `${safeOrigin(params.origin)}/subscriptions?cancelled=true`,
+    };
+    const session = await stripe.checkout.sessions.create(sessionConfig);
+    return session.url;
+}
+export async function createPaymentCheckout(params) {
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        payment_method_types: ["card"],
+        allow_promotion_codes: true,
+        client_reference_id: params.userId.toString(),
+        customer_email: params.stripeCustomerId ? undefined : params.userEmail,
+        customer: params.stripeCustomerId || undefined,
+        metadata: {
+            user_id: params.userId.toString(),
+            customer_email: params.userEmail,
+            customer_name: params.userName,
+            ...params.metadata,
+        },
+        line_items: [
+            {
+                price_data: {
+                    currency: "usd",
+                    product_data: {
+                        name: params.description,
+                    },
+                    unit_amount: params.amount,
+                },
+                quantity: 1,
+            },
+        ],
+        success_url: `${safeOrigin(params.origin)}/payments?session_id={CHECKOUT_SESSION_ID}&success=true`,
+        cancel_url: `${safeOrigin(params.origin)}/payments?cancelled=true`,
+    });
+    return { url: session.url, sessionId: session.id };
+}
+// ─── Customer Management ────────────────────────────────────────────────────
+export async function getOrCreateStripeCustomer(userId, email, name, existingCustomerId) {
+    const stripe = getStripe();
+    if (existingCustomerId) {
+        try {
+            const customer = await stripe.customers.retrieve(existingCustomerId);
+            if (!customer.deleted)
+                return existingCustomerId;
+        }
+        catch {
+            // Customer doesn't exist, create new
+        }
+    }
+    const customer = await stripe.customers.create({
+        email,
+        name,
+        metadata: { user_id: userId.toString() },
+    });
+    return customer.id;
+}
+// ─── Subscription Management ────────────────────────────────────────────────
+export async function getSubscriptionDetails(subscriptionId) {
+    const stripe = getStripe();
+    return await stripe.subscriptions.retrieve(subscriptionId);
+}
+export async function cancelSubscription(subscriptionId, immediately = false) {
+    const stripe = getStripe();
+    if (immediately) {
+        return await stripe.subscriptions.cancel(subscriptionId);
+    }
+    return await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: true,
+    });
+}
+// ─── Payment History ────────────────────────────────────────────────────────
+export async function getCustomerPayments(customerId, limit = 20) {
+    const stripe = getStripe();
+    const charges = await stripe.charges.list({
+        customer: customerId,
+        limit,
+    });
+    return charges.data.map((charge) => ({
+        id: charge.id,
+        amount: charge.amount,
+        currency: charge.currency,
+        status: charge.status,
+        description: charge.description,
+        created: charge.created,
+        receiptUrl: charge.receipt_url,
+    }));
+}
+export async function getCustomerInvoices(customerId, limit = 20) {
+    const stripe = getStripe();
+    const invoices = await stripe.invoices.list({
+        customer: customerId,
+        limit,
+    });
+    return invoices.data.map((inv) => ({
+        id: inv.id,
+        number: inv.number,
+        amount: inv.amount_due,
+        currency: inv.currency,
+        status: inv.status,
+        created: inv.created,
+        hostedInvoiceUrl: inv.hosted_invoice_url,
+        pdfUrl: inv.invoice_pdf,
+    }));
+}
+export async function processWebhookEvent(event) {
+    const result = {
+        eventType: event.type,
+        handled: false,
+    };
+    switch (event.type) {
+        case "checkout.session.completed": {
+            const session = event.data.object;
+            result.userId = session.metadata?.user_id ? parseInt(session.metadata.user_id) : undefined;
+            result.plan = session.metadata?.plan;
+            result.subscriptionId = session.subscription;
+            result.customerId = session.customer;
+            result.email = session.customer_email || session.metadata?.customer_email || undefined;
+            result.customerName = session.metadata?.customer_name || undefined;
+            result.handled = true;
+            break;
+        }
+        case "customer.subscription.updated": {
+            const subscription = event.data.object;
+            result.subscriptionId = subscription.id;
+            result.customerId = subscription.customer;
+            result.handled = true;
+            break;
+        }
+        case "customer.subscription.deleted": {
+            const subscription = event.data.object;
+            result.subscriptionId = subscription.id;
+            result.customerId = subscription.customer;
+            result.handled = true;
+            break;
+        }
+        case "invoice.paid": {
+            const invoice = event.data.object;
+            result.customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+            result.subscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+            result.handled = true;
+            break;
+        }
+        case "invoice.payment_failed": {
+            const invoice = event.data.object;
+            result.customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+            result.subscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+            result.handled = true;
+            break;
+        }
+        default:
+            result.handled = false;
+    }
+    return result;
+}

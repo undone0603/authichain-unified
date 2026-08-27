@@ -1,6 +1,6 @@
 // server/scheduled-jobs.ts
-import { getDb } from "./db";
-import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, revenueRecords, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger } from "../drizzle/schema";
+import { getDb, logActivity } from "./db";
+import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger, serviceOrders } from "../drizzle/schema";
 import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
@@ -846,6 +846,71 @@ registerJob({
       }
     }
     return { itemsProcessed: result.domainsTotal, details: result };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOB 18: Service Order Timeout (runs hourly) — expire pending service orders
+// that haven't been paid within 24 hours. Prevents stale "pending" orders
+// from accumulating and blocking users from retrying checkout.
+// ═══════════════════════════════════════════════════════════════════════════
+registerJob({
+  name: "service-order-timeout",
+  description: "Expire unpaid service orders older than 24 hours",
+  schedule: "0 * * * *", // Every hour
+  enabled: true,
+  handler: async (): Promise<JobResult> => {
+    const db = await getDb();
+    if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
+
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    // Find pending orders created more than 24 hours ago
+    const timedOutOrders = await db.select()
+      .from(serviceOrders)
+      .where(and(
+        eq(serviceOrders.status, "pending"),
+        lt(serviceOrders.createdAt, oneDayAgo),
+      ))
+      .limit(100);
+
+    let expired = 0;
+    for (const order of timedOutOrders) {
+      await db.update(serviceOrders)
+        .set({ status: "expired" })
+        .where(eq(serviceOrders.id, order.id));
+
+      // Notify user that their pending order expired
+      try {
+        const user = await db.select().from(users).where(eq(users.id, order.userId)).limit(1);
+        if (user.length > 0) {
+          await db.insert(notifications).values({
+            userId: order.userId,
+            type: "service_order",
+            title: "Order Expired",
+            message: `Your pending service order for ${order.serviceType} has expired after 24 hours without payment. Please place a new order if still needed.`,
+            actionUrl: "/services",
+          });
+        }
+      } catch (e) {
+        console.warn(`[service-order-timeout] Failed to notify user ${order.userId}`);
+      }
+
+      expired++;
+    }
+
+    if (expired > 0) {
+      await logActivity({
+        userId: null,
+        action: "service_orders_expired",
+        entityType: "service_order",
+        entityId: 0,
+        details: { expiredCount: expired },
+      });
+    }
+
+    return { itemsProcessed: expired, details: { expiredOrders: expired } };
   },
 });
 

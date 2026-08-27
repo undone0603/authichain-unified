@@ -95,7 +95,7 @@ export async function GET(
     .from('qrons')
     .update({ scan_count: (qron.scan_count || 0) + 1 })
     .eq('id', qron.id)
-    .then(undefined, (err) => {
+    .then(undefined, (err: unknown) => {
       console.error('[shortcode] Failed to increment scan_count:', err);
     });
 
@@ -110,7 +110,7 @@ export async function GET(
       city,
       user_agent: userAgent
     })
-    .then(undefined, (err) => {
+    .then(undefined, (err: unknown) => {
       console.error('[shortcode] Failed to insert scan_log:', err);
     });
 

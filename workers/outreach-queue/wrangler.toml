@@ -1,12 +1,16 @@
 name = "outreach-queue"
 main = "src/index.ts"
-compatibility_date = "2026-04-01"
-account_id = "4c1869b90f13f86940aa3747839bf420"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 
 [[queues.consumers]]
 queue = "outreach-jobs"
 max_batch_size = 25
 max_batch_timeout = 10
+
 [vars]
 OUTREACH_FROM_EMAIL = "noreply@qron.space"
+
+[observability]
+enabled = true

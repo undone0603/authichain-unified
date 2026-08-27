@@ -25,7 +25,7 @@ export async function GET(_request: Request) {
 
     // 1. Ecosystem Adoption (Scans & QRONs)
     const { data: qrons } = await supabase.from('qrons').select('scan_count');
-    const totalScans = (qrons || []).reduce((acc, q) => acc + (q.scan_count || 0), 0);
+    const totalScans = (qrons || []).reduce((acc: number, q: { scan_count?: number | null }) => acc + (q.scan_count || 0), 0);
     const totalQrons = qrons?.length || 0;
 
     // 2. Industrial Activity (StrainChain)
@@ -39,10 +39,10 @@ export async function GET(_request: Request) {
 
     // 3. Governance & Economy (GovChain / AuthiChain)
     const { data: brands } = await supabase.from('brands').select('qron_staked, staking_tier');
-    const totalStaked = (brands || []).reduce((acc, b) => acc + parseFloat(b.qron_staked || '0'), 0);
+    const totalStaked = (brands || []).reduce((acc: number, b: { qron_staked?: string | null }) => acc + parseFloat(b.qron_staked || '0'), 0);
 
     const { data: fees } = await supabase.from('fee_flows').select('burn_amount, net_amount');
-    const totalBurned = (fees || []).reduce((acc, f) => acc + parseFloat(f.burn_amount || '0'), 0);
+    const totalBurned = (fees || []).reduce((acc: number, f: { burn_amount?: string | null }) => acc + parseFloat(f.burn_amount || '0'), 0);
 
     // 4. Lead Pipeline
     const { count: leadCount } = await supabase

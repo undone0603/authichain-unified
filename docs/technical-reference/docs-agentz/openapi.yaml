@@ -1,0 +1,150 @@
+openapi: 3.1.0
+info:
+  title: AuthiChain Protocol API
+  description: The official B2B API Gateway for the AuthiChain Truth Layer ecosystem. Verify products, classify items via AI AutoFlow, and generate cryptographic TrueMark seals.
+  version: 1.0.0
+servers:
+  - url: https://authichain-api-gateway.undone-k.workers.dev
+    description: Production API Gateway (Cloudflare Edge)
+
+paths:
+  /api/v1/classify:
+    post:
+      summary: AI AutoFlow Product Classification
+      description: Use GPT-4 Vision-powered logic to automatically classify any product or document into one of 10 industry verticals and generate a verification workflow.
+      operationId: classifyProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: The name or title of the item.
+                brand:
+                  type: string
+                  description: The brand or manufacturer name.
+                category:
+                  type: string
+                  description: A general category description.
+              required: [name]
+      responses:
+        '200':
+          description: Successful classification result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/verify:
+    post:
+      summary: Product & Certificate Verification
+      description: Verify the authenticity and provenance of an item using its Product ID, TrueMark ID, or QRON code data.
+      operationId: verifyProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                productId:
+                  type: string
+                  description: Unique internal product identifier.
+                truemarkId:
+                  type: string
+                  description: Cryptographic TrueMark seal ID.
+                qrCode:
+                  type: string
+                  description: Raw data from a scanned QronCode.
+      responses:
+        '200':
+          description: Verification status and provenance trail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/industries:
+    get:
+      summary: List Supported Industry Verticals
+      description: Retrieve the current list of 10 supported industries and their market sizes.
+      operationId: listIndustries
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  industries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        icon: { type: string }
+                        marketSize: { type: string }
+
+components:
+  schemas:
+    ClassificationResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        mode: { type: string }
+        classification:
+          type: object
+          properties:
+            name: { type: string }
+            category: { type: string }
+            brand: { type: string }
+            industry: { type: string }
+            confidence: { type: integer }
+            workflow:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                  icon: { type: string }
+                  duration: { type: string }
+            story: { type: string }
+    
+    VerificationResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        mode: { type: string }
+        result: { type: string, enum: [authentic, counterfeit, uncertain] }
+        product:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            brand: { type: string }
+            registeredAt: { type: string }
+            blockchainTxHash: { type: string }
+        confidence: { type: number }
+        trustScore: { type: number }
+        qronId: { type: string }
+
+  responses:
+    Unauthorized:
+      description: API Key is missing or invalid.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
