@@ -15,7 +15,7 @@ import {
 import { calculateLeadScore } from "../sales/scoring-service.js";
 
 export async function handleInstantlyWebhook(payload: any) {
-  const { event: eventType, email, lead_id: instantlyLeadId, webhook_id: webhookId } = payload;
+  const { event: eventType, email, webhook_id: webhookId } = payload;
 
   if (!email) {
     return { success: false, error: "Email missing" };
@@ -24,7 +24,7 @@ export async function handleInstantlyWebhook(payload: any) {
   // Prevent duplicate processing of the same webhook event
   const eventKey = webhookId || `${email}:${eventType}`;
   if (await hasWebhookEventProcessed(eventKey)) {
-    console.log(`[instantly-webhook] Duplicate event ignored: ${eventKey}`);
+    console.log(`[instantly-webhook] Duplicate event ignored: ${eventKey.replace(/[\r\n]/g, " ")}`);
     return { success: true, duplicate: true };
   }
 
