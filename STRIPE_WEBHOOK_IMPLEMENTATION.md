@@ -1,335 +1,198 @@
 # Stripe Webhook Implementation Summary
 
+> **2026-08-27 update:** This document previously described
+> `src/app/api/webhooks/stripe/route.ts` as the live handler. That endpoint has
+> since been **retired** (it now returns `410 Gone` unless
+> `STRIPE_WEBHOOK_LEGACY_ENABLED=true`) and consolidated into the handler
+> described below. If your Stripe Dashboard webhook is still pointed at
+> `/api/webhooks/stripe` with `STRIPE_WEBHOOK_AUTHICHAIN_SECRET`, **update it**
+> — see "Setup Steps" below. This rewrite reflects the current, live
+> implementation only.
+
 ## Overview
 
-This implementation adds complete Stripe webhook handling to track customer payments and reconcile subscriptions. The solution includes:
+The canonical Stripe webhook handler tracks customer payments, reconciles
+subscriptions, and drives revenue/dunning/lead-status side effects for every
+AuthiChain-family brand (authichain.com, qron.space, strainchain.io,
+govchain.us) through a single endpoint.
 
-1. **Webhook Handler** (`src/app/api/webhooks/stripe/route.ts`)
-   - Validates Stripe signatures using `STRIPE_WEBHOOK_AUTHICHAIN_SECRET`
-   - Handles 4 key events: `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`
-   - Deduplicates Stripe retries via `stripe_events` table
-   - Logs all events to `audit_log` for compliance
+1. **Webhook Handler** (`server/webhooks/stripe.ts`, registered at
+   `POST /api/stripe/webhook` in `server/_core/app.ts`)
+   - Verifies the Stripe signature against every brand's configured secret
+     (see "Per-brand signing secrets" below) — not just one
+   - Handles: `customer.subscription.created`, `customer.subscription.updated`,
+     `customer.subscription.deleted`, `invoice.payment_succeeded`,
+     `invoice.paid`, `invoice.payment_failed`, `checkout.session.completed`,
+     `checkout.session.expired`
+   - Deduplicates Stripe retries via the `activity_log` table
+   - Logs every event to `activity_log` (via `logAutomationAudit`) for
+     compliance/debugging
 
-2. **Database Schema** (`supabase/migrations/00003_stripe_payment_tracking.sql`)
-   - `payments` table — record individual checkout payments
-   - `subscriptions` table — track subscription lifecycle
-   - `alerts` table — alert sales team on payment failures
-   - `audit_log` table — comprehensive event logging
-   - `stripe_events` table — idempotency guard for deduplication
-   - Views for revenue reporting and alert dashboards
+2. **Database writes** (Drizzle ORM, `server/db.ts`)
+   - `subscriptions` — subscription lifecycle (`active` / `trialing` /
+     `past_due` / `cancelled` / `paused`), quota, billing cycle
+   - `revenue_records` — one row per paid invoice (`recordRevenue`)
+   - `activity_log` — idempotency guard + full audit trail
+     (`logActivity`, `logAutomationAudit`)
+   - `notifications` — in-app alerts on payment failure
+     (`createSystemNotification`)
 
-3. **Documentation**
-   - `docs/stripe-webhook-setup.md` — comprehensive 700+ line guide with FAQs
-   - `docs/stripe-webhook-checklist.md` — quick reference checklist
-   - Inline code comments explaining each handler
+3. **Retired endpoint** (`src/app/api/webhooks/stripe/route.ts`)
+   - Returns `410 Gone` by default. Its logic (payments/subscriptions/alerts
+     tables via Supabase) is no longer wired to a live Stripe endpoint. Do
+     not point new Stripe webhook configuration at this route.
 
-## Files Created/Modified
-
-### New Files
+## Route Registration
 
 ```
-src/app/api/webhooks/stripe/route.ts              (386 lines)
-  └─ POST handler with 4 event handlers
-  └─ Signature validation
-  └─ Idempotency deduplication
-  └─ Audit logging
-
-supabase/migrations/00003_stripe_payment_tracking.sql  (213 lines)
-  └─ payments table with indexes
-  └─ subscriptions table with lifecycle tracking
-  └─ alerts table for sales team notifications
-  └─ audit_log table for compliance
-  └─ stripe_events table for idempotency
-  └─ 3 SQL views for dashboards
-  └─ RLS policies (service role only)
-
-docs/stripe-webhook-setup.md                      (700+ lines)
-  └─ Complete setup guide
-  └─ Database schema reference
-  └─ Environment variable instructions
-  └─ Testing with Stripe CLI
-  └─ Troubleshooting guide with SQL queries
-  └─ Monitoring and reporting
-  └─ Integration with existing flows
-  └─ FAQ
-
-docs/stripe-webhook-checklist.md                  (250+ lines)
-  └─ Quick 5-step setup
-  └─ 5 verification tests
-  └─ Troubleshooting checklist
-  └─ Monitoring queries
-  └─ Integration points
+server/_core/app.ts
+  app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), ...)
+    → dynamically imports handleStripeWebhook from server/webhooks/stripe.ts
+    → passes (req.body as Buffer, req.headers["stripe-signature"])
 ```
 
-### No Modifications to Existing Files
+`express.raw()` is mounted **before** `express.json()` for this route
+specifically, so `handleStripeWebhook` receives the untouched raw body
+required for signature verification.
 
-This implementation is **fully backward compatible**. No existing files were modified. The solution:
-- Creates a new API endpoint (doesn't conflict with `src/app/api/stripe/webhook/route.ts`)
-- Uses new database tables (doesn't modify existing schema except adding `status` column to `lead_captures`)
-- Works alongside existing Stripe integration
+## Per-brand signing secrets
+
+`shared/brands.ts` declares one env var name per brand under
+`billing.webhookSecretEnv`:
+
+| Brand | `webhookSecretEnv` |
+|---|---|
+| authichain | `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` |
+| qron | `STRIPE_WEBHOOK_SECRET` |
+| strainchain | `STRIPE_WEBHOOK_SECRET` |
+| govchain | `STRIPE_WEBHOOK_SECRET` |
+
+Because Stripe signs each webhook endpoint with its own secret, and
+`authichain.com`'s endpoint is configured with a different secret than the
+other three brands, `handleStripeWebhook` collects every distinct env var
+named above (plus `STRIPE_WEBHOOK_SECRET` as a fallback) and tries
+`stripe.webhooks.constructEvent()` against each configured value in turn,
+using whichever one verifies. If none verify, the original signature error is
+thrown and the route returns `400`.
+
+**Practical effect:** as long as `STRIPE_WEBHOOK_SECRET` and
+`STRIPE_WEBHOOK_AUTHICHAIN_SECRET` are both set in the deployment
+environment, a single `/api/stripe/webhook` endpoint correctly verifies
+events from Stripe Dashboard webhooks configured with either secret — you do
+not need separate routes per brand.
 
 ## Event Flow
 
 ```
-Stripe Dashboard
+Stripe Dashboard (any brand's webhook endpoint)
     ↓
-POST https://app.authichain.com/api/webhooks/stripe
+POST /api/stripe/webhook
     ↓
-stripe.webhooks.constructEvent() — validates signature with STRIPE_WEBHOOK_AUTHICHAIN_SECRET
+handleStripeWebhook(rawBody, sig)
     ↓
-Check stripe_events table for deduplication
+Try stripe.webhooks.constructEvent() against each candidate secret
+  (STRIPE_WEBHOOK_SECRET, STRIPE_WEBHOOK_AUTHICHAIN_SECRET, ...)
+    ↓
+hasWebhookEventProcessed(event.id) — dedup against activity_log
+    ↓
+logActivity({ action: "webhook_received", ... }) — mark in-flight
     ↓
 Switch on event.type:
-    ├─ checkout.session.completed
-    │   ├─ INSERT payments (session_id, customer_email, amount, status='paid')
-    │   └─ UPDATE lead_captures SET status='customer' WHERE email=customer_email
+    ├─ customer.subscription.created / .updated
+    │   ├─ upsertStripeSubscription(...) → subscriptions table
+    │   └─ (on created + active/trialing) send welcome email
     │
-    ├─ invoice.payment_succeeded
-    │   ├─ UPDATE subscriptions SET status='active', next_billing_date=...
-    │   └─ (or INSERT if first payment)
+    ├─ customer.subscription.deleted
+    │   └─ setSubscriptionStatusByStripeId(id, "cancelled")
+    │
+    ├─ invoice.payment_succeeded / invoice.paid
+    │   ├─ recordRevenue(...) → revenue_records table
+    │   └─ setSubscriptionStatusByStripeId(id, "active")
     │
     ├─ invoice.payment_failed
-    │   ├─ UPDATE subscriptions SET status='payment_failed'
-    │   └─ INSERT alerts (type='payment_failed', customer_email=..., metadata={...})
+    │   ├─ setSubscriptionStatusByStripeId(id, "past_due")
+    │   └─ createSystemNotification(userId, "Payment Failed", ...)
     │
-    └─ customer.subscription.deleted
-        └─ UPDATE subscriptions SET status='canceled', canceled_at=NOW()
+    ├─ checkout.session.completed
+    │   └─ (one-time service orders) handleServiceOrderPayment(...)
+    │
+    └─ checkout.session.expired
+        └─ send checkout-recovery email
     ↓
-INSERT stripe_events (event_id, event_type, processed_at) — idempotency guard
+logAutomationAudit(...) — writes to activity_log for every branch
     ↓
-INSERT audit_log (event_type, event_id, status='success', payload=...) — compliance
-    ↓
-Return 200 { received: true, type: event.type }
+Return 200 { received: true, type: event.type, handled: true }
 ```
-
-## Database Schema Summary
-
-### payments Table
-- **Purpose:** Record individual payments from Stripe checkouts
-- **Primary Key:** `session_id` (Stripe checkout session ID)
-- **Key Columns:** `customer_email`, `amount_cents`, `currency`, `status`, `created_at`
-- **Indexes:** email (fast lead matching), created_at (reporting)
-
-### subscriptions Table
-- **Purpose:** Track subscription lifecycle (active → payment_failed → canceled)
-- **Primary Key:** `subscription_id` (Stripe subscription ID)
-- **Key Columns:** `customer_email`, `status`, `next_billing_date`, `canceled_at`
-- **Indexes:** email (customer lookups), status (state filtering)
-
-### alerts Table
-- **Purpose:** Alert sales team to payment failures
-- **Primary Key:** `id` (UUID)
-- **Key Columns:** `type`, `message`, `customer_email`, `metadata`, `resolved_at`
-- **Indexes:** type, email, created_at, resolved_at (find unresolved)
-- **Types:** `payment_failed`, `subscription_issue`, `refund`, `chargeback`
-
-### audit_log Table
-- **Purpose:** Log all Stripe webhook events for compliance
-- **Primary Key:** `id` (UUID)
-- **Key Columns:** `event_type`, `event_id`, `status`, `payload`, `created_at`
-- **Indexes:** event_type, event_id, created_at
-- **Statuses:** `success`, `error`, `duplicate`
-
-### stripe_events Table
-- **Purpose:** Idempotency guard — prevent duplicate processing of retries
-- **Primary Key:** `event_id` (Stripe event ID)
-- **Constraint:** Unique on `event_id` (prevents duplicate INSERTs)
-- **Query:** `SELECT * FROM stripe_events WHERE event_id = $1` on every webhook
-
-### lead_captures Modification
-- **Change:** Add `status TEXT DEFAULT 'prospect' CHECK (status IN (...))`
-- **Purpose:** Track lead progression from prospect → engaged → customer → inactive
-- **Updated By:** `checkout.session.completed` handler when payment is recorded
-
-### Views
-1. **payment_summary_daily** — Revenue by day (count, total, avg, currency)
-2. **subscription_status_summary** — Subscription health (status, count, unique customers)
-3. **critical_alerts** — Unresolved alerts for sales dashboard (id, type, message, email, age)
 
 ## Environment Variables Required
 
-### Development
 ```bash
-STRIPE_SECRET_KEY=sk_test_...                                    # (already set)
-STRIPE_WEBHOOK_AUTHICHAIN_SECRET=whsec_test_...                  # NEW: from Stripe dashboard
-NEXT_PUBLIC_SUPABASE_URL=https://...supabase.co                  # (already set)
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...                             # (already set)
+STRIPE_SECRET_KEY=sk_live_...                    # Stripe API key
+STRIPE_WEBHOOK_SECRET=whsec_...                   # qron / strainchain / govchain endpoints
+STRIPE_WEBHOOK_AUTHICHAIN_SECRET=whsec_...        # authichain.com endpoint (separate secret)
+DATABASE_URL=postgres://...                       # required for all DB writes
 ```
 
-### Production
-```bash
-STRIPE_SECRET_KEY=sk_live_...                                    # (already set)
-STRIPE_WEBHOOK_AUTHICHAIN_SECRET=whsec_live_...                  # NEW: from Stripe dashboard
-NEXT_PUBLIC_SUPABASE_URL=https://...supabase.co                  # (already set)
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...                             # (already set)
-```
+`STRIPE_WEBHOOK_LEGACY_ENABLED=true` re-enables the retired
+`src/app/api/webhooks/stripe/route.ts` handler for cutover/rollback only —
+leave unset in normal operation.
 
-## Setup Steps (TL;DR)
+## Setup Steps
 
-1. Apply migration: `supabase db push`
-2. Deploy code: `git push origin main` (Vercel auto-deploys)
-3. Get webhook secret from Stripe Dashboard
-4. Add `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` to Vercel env vars
-5. Redeploy: `vercel deploy --prod`
-6. Register webhook in Stripe Dashboard → Webhooks → Add endpoint
-
-Full instructions: See `docs/stripe-webhook-setup.md`
+1. In the Stripe Dashboard, for **each** brand domain that takes payments,
+   go to Developers → Webhooks → Add endpoint:
+   - Endpoint URL: `https://<brand-domain>/api/stripe/webhook`
+     (all brands point at the **same** path — brand routing happens by
+     signing secret, not URL)
+   - Events to send: `customer.subscription.created`,
+     `customer.subscription.updated`, `customer.subscription.deleted`,
+     `invoice.payment_succeeded`, `invoice.paid`, `invoice.payment_failed`,
+     `checkout.session.completed`, `checkout.session.expired`
+   - Reveal the signing secret (`whsec_...`)
+2. Set the secret in your deployment env:
+   - authichain.com's endpoint secret → `STRIPE_WEBHOOK_AUTHICHAIN_SECRET`
+   - every other brand's endpoint secret → `STRIPE_WEBHOOK_SECRET`
+     (if a brand ever needs its own secret, add a `webhookSecretEnv` entry
+     for it in `shared/brands.ts` and set that env var — no other code
+     changes needed, `handleStripeWebhook` picks it up automatically)
+3. Deploy. Redeploy after adding/changing env vars so the new value is read.
+4. Confirm in Stripe Dashboard → Webhooks → your endpoint → "Recent events"
+   shows successful (`200`) deliveries.
 
 ## Verification Tests
 
 ```bash
-# Test 1: Stripe CLI local testing
-stripe listen --forward-to localhost:3000/api/webhooks/stripe
+# Local, with Stripe CLI:
+stripe listen --forward-to localhost:3000/api/stripe/webhook
 stripe trigger checkout.session.completed
+stripe trigger customer.subscription.created
+stripe trigger invoice.payment_failed
 
-# Test 2: Check database inserts
-SELECT * FROM payments ORDER BY created_at DESC LIMIT 1;
-SELECT * FROM stripe_events ORDER BY processed_at DESC LIMIT 1;
-
-# Test 3: Verify idempotency (run trigger twice, check stripe_events for dedup)
+# Idempotency: fire the same event twice, second should be marked duplicate
 stripe trigger invoice.payment_succeeded
-stripe trigger invoice.payment_succeeded  # Should be logged as duplicate
-
-# Test 4: Check audit log
-SELECT * FROM audit_log WHERE event_type LIKE 'stripe_webhook.%' ORDER BY created_at DESC;
-
-# Test 5: Real payment flow (after deployment)
-# Complete a payment on the site, verify in Stripe Dashboard → Webhooks → Event deliveries
+stripe trigger invoice.payment_succeeded
 ```
 
-## Key Features
-
-### ✓ Signature Validation
-Every webhook is verified with Stripe's secret. Spoofed requests return 400.
-
-### ✓ Idempotency
-Stripe retries are deduplicated via `stripe_events` table. Side effects run **at most once** per event.
-
-### ✓ Lead Tagging
-When a payment is recorded, the matching lead in `lead_captures` is tagged `status='customer'` for follow-up nurturing.
-
-### ✓ Payment Failure Alerts
-When `invoice.payment_failed` is received, an alert is created for the sales team with customer email and metadata.
-
-### ✓ Subscription Reconciliation
-Subscription lifecycle is tracked: `active` → `payment_failed` (on failed invoice) → `canceled` (on deletion).
-
-### ✓ Comprehensive Logging
-Every webhook event is logged to `audit_log` with status, payload, and timestamp. Provides a complete audit trail.
-
-### ✓ Row-Level Security
-All tables have RLS enabled. Only the service role (webhook handler) can write. No authenticated users can insert/modify payment records directly.
-
-### ✓ Backward Compatible
-No existing files were modified. Works alongside the existing `src/app/api/stripe/webhook/route.ts`.
-
-## Integration with Existing Flows
-
-### Lead Nurturing (HubSpot, Make.com, Email)
-When `status='customer'` is set on a lead, your automation can now:
-- Trigger a win/congratulations email
-- Move lead to "customer" segment in HubSpot
-- Log to CRM for sales follow-up
-
-### Dunning & Revenue Retention
-When `subscriptions.status='payment_failed'`:
-- Retry logic in `src/lib/dunning.ts` can queue the subscription for retry
-- Alert sales team via `alerts` table
-- Send dunning email to customer
-
-### Analytics & Reporting
-New views and tables enable:
-- Daily revenue dashboard (`payment_summary_daily` view)
-- Customer lifetime value (sum payments by email)
-- Subscription health (active vs. failed vs. canceled)
-- Alert resolution tracking (sales metrics)
-
-## Error Handling
-
-The handler gracefully handles:
-
-1. **Missing environment variables** → Returns 500
-2. **Invalid Stripe signature** → Returns 400
-3. **Database errors** → Logs to console, returns 500
-4. **Duplicate events** → Logs as duplicate, returns 200 (idempotent)
-5. **Missing customer data** → Logs warning, continues processing (partial success)
-
-All errors are logged to `audit_log` with payload for debugging.
-
-## Performance Considerations
-
-### Query Complexity
-- Dedup check: O(1) hash lookup on `event_id` primary key
-- Lead update: O(1) indexed lookup on `email`
-- Subscription update: O(1) indexed lookup on `subscription_id`
-- Stripe API call: Only on `invoice.payment_failed` to fetch customer email
-
-### Database Load
-- ~6 DB writes per webhook (payment, lead update, subscription, alert, event, audit log)
-- ~2 DB reads per webhook (dedup check, subscription lookup)
-- Negligible for typical checkout volume (< 100/min)
-
-### Network Latency
-- 1 outbound API call to Stripe (on failed invoices only) — ~200ms
-- All other operations are local DB writes
-
-## Monitoring & Alerts
-
-### SQL Queries for Dashboards
-
-**Revenue Today**
-```sql
-SELECT SUM(amount_cents) / 100.0 FROM payments WHERE DATE(created_at) = CURRENT_DATE AND status = 'paid';
-```
-
-**Failed Payments Needing Action**
-```sql
-SELECT * FROM critical_alerts WHERE type = 'payment_failed' ORDER BY created_at DESC;
-```
-
-**Subscription Health**
-```sql
-SELECT status, COUNT(*) FROM subscriptions GROUP BY status;
-```
-
-**Webhook Error Rate (Last 24h)**
-```sql
-SELECT
-  event_type,
-  COUNT(*) as total,
-  SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as errors,
-  ROUND(100.0 * SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) / COUNT(*), 2) as error_rate_pct
-FROM audit_log
-WHERE created_at > NOW() - INTERVAL '24 hours'
-GROUP BY event_type;
-```
+Check `server/webhooks/stripe.test.ts` for the full behavioral test suite
+(signature failure, idempotency, each event type) that exercises this
+handler with a mocked Stripe SDK.
 
 ## Troubleshooting
 
-**Problem:** Webhook returns 400  
-**Solution:** Check Stripe Dashboard → Webhooks → Event details for error
+**Problem:** Webhook returns 400 ("Webhook Error")
+**Solution:** Signature didn't verify against *any* configured secret. Check
+that the secret set in your deployment env matches the one shown for that
+specific endpoint in Stripe Dashboard → Webhooks → (endpoint) → Signing
+secret. Remember authichain.com uses a different env var
+(`STRIPE_WEBHOOK_AUTHICHAIN_SECRET`) than the others.
 
-**Problem:** Webhook returns 500  
-**Solution:** Check Vercel Logs, verify all env vars are set, verify DB tables exist
+**Problem:** Webhook returns 404 / connection refused at `/api/webhooks/stripe`
+**Solution:** That path is intentionally retired (410). Point Stripe at
+`/api/stripe/webhook` instead.
 
-**Problem:** Payments not appearing  
-**Solution:** Check Stripe Dashboard → Webhooks for failed deliveries
-
-**Problem:** Leads not tagged as customers  
-**Solution:** Verify `lead_captures` table has `status` column, check `audit_log` for errors
-
-Full troubleshooting guide: See `docs/stripe-webhook-setup.md` section "Troubleshooting"
-
-## Next Steps
-
-1. Review this summary
-2. Read `docs/stripe-webhook-setup.md` for comprehensive guide
-3. Apply migration: `supabase db push`
-4. Deploy code: `git push origin main`
-5. Add env var: `STRIPE_WEBHOOK_AUTHICHAIN_SECRET` in Vercel
-6. Redeploy: `vercel deploy --prod`
-7. Register endpoint in Stripe Dashboard
-8. Test with Stripe CLI and real payments
-9. Set up monitoring and alerts
-
-Questions? Check the FAQ in `docs/stripe-webhook-setup.md` or inline code comments.
+**Problem:** Events accepted (200) but nothing shows up in the app
+**Solution:** Check `activity_log` for the `webhook_received` /
+`billing_*` rows for that `event.id` — if present, the handler ran; check
+`DATABASE_URL` and the specific table (`subscriptions`, `revenue_records`)
+for the expected row. If absent, check server logs for
+`[stripe-webhook]`-prefixed errors.

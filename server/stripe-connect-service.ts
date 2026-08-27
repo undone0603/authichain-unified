@@ -25,10 +25,31 @@ export async function provisionVendorAccount(userId: number, displayName: string
   const stripe = getStripe();
 
   // Use rawRequest for V2 Core Account as per tests
+  //
+  // A bare v2 Account has no `applied_configurations` — it can't accept
+  // payments or be charged until you explicitly request configurations on
+  // it (see https://docs.stripe.com/connect/accounts-v2). This account is
+  // used two ways downstream:
+  //   - as a merchant, via `stripeAccount: vendorAccountId` in
+  //     createVendorCheckoutSession — needs `merchant.capabilities.card_payments`
+  //   - as a customer of the platform, via `customer_account: vendorAccountId`
+  //     in attachBalancePaymentMethod / subscribeVendorToPlatform — needs the
+  //     `customer` configuration applied
+  // Without both requested here, those calls fail against a real Stripe
+  // account with a capability/configuration error.
   const response = await (stripe as any).rawRequest("POST", "/v2/core/accounts", {
     display_name: displayName,
     contact_email: email,
     identity: { country: countryCode },
+    include: ["configuration.merchant", "configuration.customer"],
+    configuration: {
+      merchant: {
+        capabilities: {
+          card_payments: { requested: true },
+        },
+      },
+      customer: {},
+    },
   }, {
     idempotencyKey: generateIdempotencyKey("provision-vendor", userId)
   });

@@ -2,15 +2,18 @@
  * Stripe Webhook Handler — server/webhooks/stripe.ts
  *
  * Provides handleStripeWebhook(rawBody, sig) which:
- *  1. Verifies the Stripe signature using STRIPE_WEBHOOK_SECRET
+ *  1. Verifies the Stripe signature against every brand's configured secret
+ *     (see getWebhookSecretCandidates — different brands' Stripe webhook
+ *     endpoints in shared/brands.ts can be signed with different secrets)
  *  2. Handles key lifecycle events and writes to activity_log and revenue_records
  *  3. Updates subscription status in the subscriptions table
  *
  * This module is intentionally side-effect-free at import time so it can be
  * loaded by the main server and imported by tests without starting Stripe.
  *
- * Route registration (POST /webhooks/stripe) lives in server/_core/index.ts.
- * The existing /api/stripe/webhook route remains unchanged for backwards compat.
+ * Route registration (POST /api/stripe/webhook) lives in server/_core/app.ts.
+ * This is the canonical, live Stripe webhook endpoint — the older
+ * src/app/api/webhooks/stripe/route.ts has been retired (returns 410).
  */
 
 import Stripe from "stripe";
@@ -18,6 +21,7 @@ import * as db from "../db";
 import { getPlanQuota, STRIPE_PRODUCTS } from "../stripe-products";
 import { handleServiceOrderPayment } from "../services/order-payment-handler";
 import { sendEmail } from "../email-service";
+import { BRANDS } from "../../shared/brands";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
@@ -36,6 +40,30 @@ function getStripeClient(): Stripe {
     _stripe = new Stripe(key, { apiVersion: "2026-07-29.dahlia" as const });
   }
   return _stripe;
+}
+
+// ─── Webhook signing secrets (per-brand) ──────────────────────────────────────
+
+/**
+ * Every distinct env var name that any brand's Stripe webhook endpoint may be
+ * signed with, per shared/brands.ts `billing.webhookSecretEnv`, plus the
+ * generic STRIPE_WEBHOOK_SECRET fallback. authichain uses its own secret
+ * (STRIPE_WEBHOOK_AUTHICHAIN_SECRET); qron/strainchain/govchain share
+ * STRIPE_WEBHOOK_SECRET today. Stripe's SDK verifies against exactly one
+ * secret per call, so handleStripeWebhook tries each configured candidate in
+ * order until one verifies the signature.
+ */
+function getWebhookSecretCandidates(): string[] {
+  const envNames = new Set<string>(["STRIPE_WEBHOOK_SECRET"]);
+  for (const brand of Object.values(BRANDS)) {
+    envNames.add(brand.billing.webhookSecretEnv);
+  }
+  const secrets: string[] = [];
+  for (const name of envNames) {
+    const value = process.env[name];
+    if (value) secrets.push(value);
+  }
+  return secrets;
 }
 
 // ─── Plan detection from price ID or amount ───────────────────────────────────
@@ -135,13 +163,32 @@ export async function handleStripeWebhook(
   rawBody: Buffer,
   sig: string,
 ): Promise<StripeWebhookResult> {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) {
+  const candidateSecrets = getWebhookSecretCandidates();
+  if (candidateSecrets.length === 0) {
     throw new Error("[stripe-webhook] STRIPE_WEBHOOK_SECRET not configured");
   }
 
   const stripe = getStripeClient();
-  const event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+
+  // Try each configured brand secret until one verifies. Rejecting on the
+  // first mismatch (as this used to) meant any brand whose endpoint isn't
+  // signed with plain STRIPE_WEBHOOK_SECRET (authichain uses
+  // STRIPE_WEBHOOK_AUTHICHAIN_SECRET) would fail verification on every event.
+  let event: Stripe.Event | undefined;
+  let lastError: unknown;
+  for (const secret of candidateSecrets) {
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, sig, secret);
+      break;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  if (!event) {
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("[stripe-webhook] Signature verification failed");
+  }
 
   console.log(`[stripe-webhook] Received: ${event.type} (${event.id})`);
 
