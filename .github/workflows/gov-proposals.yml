@@ -6,6 +6,7 @@ on:
       dry_run:
         required: false
         type: string
+        default: "true"
     secrets:
       OPENAI_API_KEY:
         required: false
@@ -58,4 +59,4 @@ jobs:
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
           GOVCHAIN_URL: ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          DRY_RUN: ${{ inputs.dry_run || 'true' }}
