@@ -3,13 +3,13 @@ name: Government Lead-Gen Engine
 
 on:
   schedule:
-    - cron: "0 6 * * *" # Daily 6 AM UTC
+    - cron: "0 6 * * *" # Daily 6 AM UTC — dry-run unless dispatched live
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Dry run (no email sends or DB writes)"
+        description: "Dry run (no email sends, no chain writes). Uncheck only for a live run."
         required: false
-        default: "false"
+        default: true
         type: boolean
 
 concurrency:
@@ -20,21 +20,26 @@ permissions:
   contents: read
 
 jobs:
-  # ── Phase 0: Pre-flight checks ─────────────────────────────────────────────
   preflight:
     runs-on: ubuntu-latest
     steps:
       - name: Validate SAM.gov API key
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://api.sam.gov/opportunities/v2/search?api_key=${SAM_API_KEY}&limit=1&postedFrom=01/01/2026&postedTo=01/02/2026")
-          if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
-            echo "❌ SAM_API_KEY is invalid (HTTP $STATUS) — rotate it at https://sam.gov/profile/details"
+          KEY="${SAM_API_KEY:-$SAM_GOV_API_KEY}"
+          if [ -z "$KEY" ]; then
+            echo "Neither SAM_API_KEY nor SAM_GOV_API_KEY is set"
             exit 1
           fi
-          echo "✅ SAM_API_KEY valid (HTTP $STATUS)"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://api.sam.gov/opportunities/v2/search?api_key=${KEY}&limit=1&postedFrom=01/01/2026&postedTo=01/02/2026")
+          if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
+            echo "SAM key is invalid (HTTP $STATUS) — rotate it at https://sam.gov/profile/details"
+            exit 1
+          fi
+          echo "SAM key valid (HTTP $STATUS)"
         env:
           SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
+          SAM_GOV_API_KEY: ${{ secrets.SAM_GOV_API_KEY }}
 
       - name: Validate Supabase connectivity
         run: |
@@ -43,51 +48,47 @@ jobs:
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             "${SUPABASE_URL}/rest/v1/")
           if [ "$STATUS" != "200" ]; then
-            echo "❌ Supabase unreachable (HTTP $STATUS)"
+            echo "Supabase unreachable (HTTP $STATUS)"
             exit 1
           fi
-          echo "✅ Supabase reachable (HTTP $STATUS)"
+          echo "Supabase reachable (HTTP $STATUS)"
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
-  # ── Phase 1: Ingest SAM.gov ────────────────────────────────────────────────
   ingest:
     needs: preflight
     uses: ./.github/workflows/gov-ingest.yml
     with:
-      dry_run: ${{ inputs.dry_run }}
+      dry_run: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
     secrets: inherit
 
-  # ── Phase 2: AI Scoring ────────────────────────────────────────────────────
   score:
     needs: ingest
     uses: ./.github/workflows/gov-score.yml
     with:
-      dry_run: ${{ inputs.dry_run }}
+      dry_run: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
     secrets: inherit
 
-  # ── Phase 3: Proposal Drafts ───────────────────────────────────────────────
   proposals:
     needs: score
     uses: ./.github/workflows/gov-proposals.yml
     with:
-      dry_run: ${{ inputs.dry_run }}
+      dry_run: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
     secrets: inherit
 
-  # ── Phase 4: NFT Minting (non-critical) ────────────────────────────────────
   mint:
     needs: proposals
+    continue-on-error: true
     uses: ./.github/workflows/gov-mint.yml
     with:
-      dry_run: ${{ inputs.dry_run }}
+      dry_run: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
     secrets: inherit
 
-  # ── Phase 5: Notify & Daily Digest — always runs even if upstream fails ────
   notify:
     needs: [ingest, score, proposals]
     if: always()
     uses: ./.github/workflows/gov-notify.yml
     with:
-      dry_run: ${{ inputs.dry_run }}
+      dry_run: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
     secrets: inherit

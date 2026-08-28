@@ -6,8 +6,11 @@ on:
       dry_run:
         required: false
         type: string
+        default: "true"
     secrets:
       SAM_API_KEY:
+        required: false
+      SAM_GOV_API_KEY:
         required: false
       SUPABASE_URL:
         required: false
@@ -29,7 +32,8 @@ jobs:
       - name: Ingest SAM.gov opportunities into vector store
         run: pnpm exec tsx scripts/ingest-sam.ts
         env:
-          SAM_GOV_API_KEY: ${{ secrets.SAM_API_KEY }}
+          SAM_GOV_API_KEY: ${{ secrets.SAM_GOV_API_KEY || secrets.SAM_API_KEY }}
+          SAM_API_KEY: ${{ secrets.SAM_API_KEY || secrets.SAM_GOV_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          DRY_RUN: ${{ inputs.dry_run || 'true' }}

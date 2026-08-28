@@ -6,23 +6,25 @@ on:
       dry_run:
         required: false
         type: string
+        default: "true"
     secrets:
       ALCHEMY_API_KEY:
-        required: true
+        required: false
       POLYGON_PRIVATE_KEY:
-        required: true
+        required: false
       GOVCHAIN_NFT_CONTRACT:
-        required: true
+        required: false
       SUPABASE_URL:
-        required: true
+        required: false
       SUPABASE_SERVICE_ROLE_KEY:
-        required: true
+        required: false
       GOVCHAIN_URL:
         required: false
 
 jobs:
   mint:
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v7
@@ -41,4 +43,4 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GOVCHAIN_URL: ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          DRY_RUN: ${{ inputs.dry_run || 'true' }}
