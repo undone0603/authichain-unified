@@ -6,6 +6,7 @@ on:
       dry_run:
         required: false
         type: string
+        default: "true"
     secrets:
       OPENAI_API_KEY:
         required: false
@@ -53,4 +54,4 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GOVCHAIN_URL: ${{ secrets.GOVCHAIN_URL || 'https://govchain.us' }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          DRY_RUN: ${{ inputs.dry_run || 'true' }}
