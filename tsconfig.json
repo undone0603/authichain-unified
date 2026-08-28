@@ -70,6 +70,7 @@
     "content/**/*",
     "libs/**/*",
     "scripts/verify-integrations.ts",
+    "scripts/ledger/deploy.ts",
     "api/**/*",
     "server/src/**/*",
     "server/scripts/**/*",

@@ -1,10 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { provisionPurchase } from '@/lib/provisioning';
 import { renderBillingEmail } from '@/lib/billing-emails';
 import { getBrandIdFromMetadata } from '@/lib/brand-billing';
 import { sendEmail } from '@/lib/email';
+import {
+  anchorStripeReversal,
+  anchorStripeSale,
+  resolveBuyerWallet,
+  resolveSku,
+} from '@/lib/ledger-service';
+
+// Never anchor test-mode objects from a production deployment.
+function isAnchorable(event: Stripe.Event): boolean {
+  return event.livemode || process.env.NODE_ENV !== 'production';
+}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -232,6 +243,29 @@ export async function POST(req: NextRequest) {
             console.error('[webhook] affiliate accrual failed:', e);
           }
         }
+
+        // --- AuthiChainLedger: anchor the sale (non-blocking, never throws) --
+        if (
+          isAnchorable(event) &&
+          session.payment_status === 'paid' &&
+          (session.amount_total ?? 0) > 0
+        ) {
+          after(() =>
+            anchorStripeSale({
+              eventId: event.id,
+              objectId: session.id,
+              sku: resolveSku(md, null),
+              amountCents: session.amount_total!,
+              currency: session.currency ?? 'usd',
+              buyerWallet: resolveBuyerWallet(md),
+              stripeCreated: session.created,
+              source: 'live',
+              paymentIntentId:
+                typeof session.payment_intent === 'string' ? session.payment_intent : null,
+              checkoutSessionId: session.id,
+            })
+          );
+        }
         break;
       }
 
@@ -296,6 +330,30 @@ export async function POST(req: NextRequest) {
           } catch (e) {
             console.error('[webhook] recurring affiliate accrual failed:', e);
           }
+        }
+
+        // --- AuthiChainLedger: anchor renewal payments only. The first
+        // subscription invoice is already anchored under the checkout
+        // session id — anchoring it again here would double-count revenue
+        // under a second ref.
+        const isRenewal = invoice.billing_reason !== 'subscription_create';
+        if (isAnchorable(event) && isRenewal && invoice.status === 'paid' && (invoice.amount_paid ?? 0) > 0) {
+          const line = invoice.lines?.data?.[0];
+          after(() =>
+            anchorStripeSale({
+              eventId: event.id,
+              objectId: invoice.id!,
+              sku: resolveSku(invoice.metadata, line?.price?.id ?? null),
+              amountCents: invoice.amount_paid!,
+              currency: invoice.currency ?? 'usd',
+              buyerWallet: resolveBuyerWallet(invoice.metadata, line?.metadata),
+              stripeCreated: invoice.created,
+              source: 'live',
+              invoiceId: invoice.id,
+              paymentIntentId:
+                typeof invoice.payment_intent === 'string' ? invoice.payment_intent : null,
+            })
+          );
         }
         break;
       }
@@ -369,6 +427,41 @@ export async function POST(req: NextRequest) {
             days: 3,
           });
           await sendEmail({ to: profile.email, from: mail.from, subject: mail.subject, html: mail.html, text: mail.text }).catch(() => {});
+        }
+        break;
+      }
+
+      case 'charge.refunded': {
+        const charge = event.data.object;
+
+        // The refund arrives as ch_/pi_, but the sale was anchored under cs_
+        // or in_. Resolve the checkout session so the reversal lands right.
+        let sessionId: string | undefined;
+        const piId =
+          typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
+        if (piId) {
+          const sessions = await stripe.checkout.sessions.list({ payment_intent: piId, limit: 1 });
+          sessionId = sessions.data[0]?.id;
+        }
+        const invoiceId = typeof charge.invoice === 'string' ? charge.invoice : charge.invoice?.id;
+
+        if (isAnchorable(event)) {
+          after(() =>
+            anchorStripeReversal({
+              eventId: event.id,
+              candidateObjectIds: [sessionId, invoiceId, charge.id],
+            })
+          );
+        }
+        break;
+      }
+
+      case 'invoice.voided': {
+        const invoice = event.data.object;
+        if (isAnchorable(event)) {
+          after(() =>
+            anchorStripeReversal({ eventId: event.id, candidateObjectIds: [invoice.id] })
+          );
         }
         break;
       }
