@@ -8,7 +8,16 @@ import type { HardhatUserConfig } from "hardhat/config";
  *
  *   npx hardhat test
  *   npx hardhat run scripts/ledger/deploy.ts --network amoy
+ *
+ * sources stay scoped to contracts/ledger. AuthiChainNFT is deployed with
+ * thirdweb or scripts/deploy-authichain-nft-base.ts, not this compile path.
  */
+const accounts = process.env.MINTER_PRIVATE_KEY
+  ? [process.env.MINTER_PRIVATE_KEY]
+  : process.env.WALLET_PRIVATE_KEY
+    ? [process.env.WALLET_PRIVATE_KEY]
+    : [];
+
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.19",
@@ -17,9 +26,6 @@ const config: HardhatUserConfig = {
     },
   },
   paths: {
-    // Scoped to the ledger contract only. The rest of contracts/ (AuthiChainNFT
-    // and friends) predates any build tooling and some of it has imports that
-    // don't resolve as a Hardhat project — out of scope here.
     sources: "./contracts/ledger",
     tests: "./test",
     cache: "./cache",
@@ -29,13 +35,23 @@ const config: HardhatUserConfig = {
     hardhat: {},
     amoy: {
       url: process.env.POLYGON_AMOY_RPC_URL || "https://rpc-amoy.polygon.technology",
-      accounts: process.env.MINTER_PRIVATE_KEY ? [process.env.MINTER_PRIVATE_KEY] : [],
+      accounts,
       chainId: 80002,
     },
     polygon: {
       url: process.env.NFT_RPC_URL || process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
-      accounts: process.env.MINTER_PRIVATE_KEY ? [process.env.MINTER_PRIVATE_KEY] : [],
+      accounts,
       chainId: 137,
+    },
+    base: {
+      url: process.env.BASE_RPC_URL || "https://mainnet.base.org",
+      accounts,
+      chainId: 8453,
+    },
+    "base-sepolia": {
+      url: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
+      accounts,
+      chainId: 84532,
     },
   },
 };
