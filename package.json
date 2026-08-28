@@ -20,6 +20,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "sync-secrets": "bash scripts/sync-secrets.sh",
+    "start:gov-engine": "tsx server/scripts/run_gov_engine.ts",
+    "gov:engine": "bash scripts/ops/run-gov-engine.sh",
+    "gov:monitor": "bash scripts/ops/monitor-gov-engine.sh",
     "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .github package.json next.config.js postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts",
     "lint-staged": "lint-staged",
     "prepare": "husky install"
