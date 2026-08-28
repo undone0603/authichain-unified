@@ -28,6 +28,7 @@ export const ENV = {
   paddleApiKey: process.env.PADDLE_API_KEY ?? "",
   paddleWebhookSecret: process.env.PADDLE_WEBHOOK_SECRET ?? "",
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY ?? "",
+  ordinalsBotApiKey: process.env.ORDINALSBOT_API_KEY ?? "",
   samGovApiKey: process.env.SAM_GOV_API_KEY ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",

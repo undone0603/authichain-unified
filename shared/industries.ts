@@ -14,9 +14,22 @@ export interface IndustryClassification {
   workflow: WorkflowStep[];
 }
 
-const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[]; brand?: string }> = {
+const INDUSTRIES: Record<
+  string,
+  { keywords: string[]; workflow: WorkflowStep[]; brand?: string }
+> = {
   cannabis: {
-    keywords: ["cannabis", "marijuana", "thc", "cbd", "hemp", "strain", "dispensary", "metrc", "weed"],
+    keywords: [
+      "cannabis",
+      "marijuana",
+      "thc",
+      "cbd",
+      "hemp",
+      "strain",
+      "dispensary",
+      "metrc",
+      "weed",
+    ],
     workflow: [
       { name: "METRC Sync", action: "sync_metrc_manifest" },
       { name: "COA Verification", action: "verify_coa" },
@@ -25,7 +38,23 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
     brand: "strainchain.io",
   },
   luxury: {
-    keywords: ["luxury", "louis vuitton", "gucci", "prada", "rolex", "watch", "handbag", "designer", "jewellery", "jewelry", "wine", "champagne", "cognac", "nfc", "certificate of authenticity"],
+    keywords: [
+      "luxury",
+      "louis vuitton",
+      "gucci",
+      "prada",
+      "rolex",
+      "watch",
+      "handbag",
+      "designer",
+      "jewellery",
+      "jewelry",
+      "wine",
+      "champagne",
+      "cognac",
+      "nfc",
+      "certificate of authenticity",
+    ],
     workflow: [
       { name: "Brand Registry Check", action: "check_brand_registry" },
       { name: "Serial Verification", action: "verify_serial" },
@@ -35,7 +64,15 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
     brand: "authichain.com",
   },
   pharma: {
-    keywords: ["pharma", "pharmaceutical", "drug", "medicine", "fda", "dscsa", "prescription"],
+    keywords: [
+      "pharma",
+      "pharmaceutical",
+      "drug",
+      "medicine",
+      "fda",
+      "dscsa",
+      "prescription",
+    ],
     workflow: [
       { name: "DSCSA Compliance", action: "verify_dscsa" },
       { name: "Lot Tracking", action: "track_lot" },
@@ -44,7 +81,17 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
     brand: "authichain.com",
   },
   electronics: {
-    keywords: ["electronics", "chip", "semiconductor", "component", "circuit", "battery", "lithium", "ev", "tesla"],
+    keywords: [
+      "electronics",
+      "chip",
+      "semiconductor",
+      "component",
+      "circuit",
+      "battery",
+      "lithium",
+      "ev",
+      "tesla",
+    ],
     workflow: [
       { name: "Component Scan", action: "scan_component" },
       { name: "Origin Trace", action: "trace_origin" },
@@ -53,7 +100,16 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
     brand: "authichain.com",
   },
   fashion: {
-    keywords: ["fashion", "clothing", "apparel", "sneaker", "shoe", "nike", "adidas", "textile"],
+    keywords: [
+      "fashion",
+      "clothing",
+      "apparel",
+      "sneaker",
+      "shoe",
+      "nike",
+      "adidas",
+      "textile",
+    ],
     workflow: [
       { name: "SKU Verification", action: "verify_sku" },
       { name: "Material Trace", action: "trace_material" },
@@ -62,7 +118,16 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
     brand: "authichain.com",
   },
   auto: {
-    keywords: ["auto", "automotive", "car", "vehicle", "part", "engine", "brake", "oem"],
+    keywords: [
+      "auto",
+      "automotive",
+      "car",
+      "vehicle",
+      "part",
+      "engine",
+      "brake",
+      "oem",
+    ],
     workflow: [
       { name: "OEM Part Validation", action: "validate_oem" },
       { name: "VIN Cross-Ref", action: "crossref_vin" },
@@ -71,7 +136,17 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
     brand: "authichain.com",
   },
   food: {
-    keywords: ["food", "organic", "coffee", "wine", "olive", "artisan", "farm", "produce", "roaster"],
+    keywords: [
+      "food",
+      "organic",
+      "coffee",
+      "wine",
+      "olive",
+      "artisan",
+      "farm",
+      "produce",
+      "roaster",
+    ],
     workflow: [
       { name: "Provenance Scan", action: "scan_provenance" },
       { name: "Certification Check", action: "check_certification" },
@@ -80,7 +155,16 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
     brand: "authichain.com",
   },
   art: {
-    keywords: ["art", "painting", "sculpture", "gallery", "nft", "collectible", "print", "edition"],
+    keywords: [
+      "art",
+      "painting",
+      "sculpture",
+      "gallery",
+      "nft",
+      "collectible",
+      "print",
+      "edition",
+    ],
     workflow: [
       { name: "Provenance Chain", action: "build_provenance_chain" },
       { name: "NFT Bind", action: "bind_nft_to_physical" },
@@ -89,7 +173,15 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
     brand: "authichain.com",
   },
   cosmetics: {
-    keywords: ["cosmetics", "beauty", "skincare", "makeup", "fragrance", "perfume", "serum"],
+    keywords: [
+      "cosmetics",
+      "beauty",
+      "skincare",
+      "makeup",
+      "fragrance",
+      "perfume",
+      "serum",
+    ],
     workflow: [
       { name: "Ingredient Verify", action: "verify_ingredients" },
       { name: "Batch Tracking", action: "track_batch" },
@@ -98,7 +190,15 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
     brand: "authichain.com",
   },
   sports: {
-    keywords: ["sports", "memorabilia", "jersey", "signed", "autograph", "trading card", "collectible"],
+    keywords: [
+      "sports",
+      "memorabilia",
+      "jersey",
+      "signed",
+      "autograph",
+      "trading card",
+      "collectible",
+    ],
     workflow: [
       { name: "Signature Verify", action: "verify_signature" },
       { name: "Event Cross-Ref", action: "crossref_event" },
@@ -108,7 +208,34 @@ const INDUSTRIES: Record<string, { keywords: string[]; workflow: WorkflowStep[];
   },
 };
 
-export function classifyIndustry(name: string, description: string): IndustryClassification {
+const GENERAL_CLASSIFICATION: IndustryClassification = {
+  name: "General Authentication",
+  key: "general",
+  workflow: [
+    { name: "Product Scan", action: "scan_product" },
+    { name: "Identity Verification", action: "verify_identity" },
+    { name: "TrueMark Seal", action: "apply_truemark" },
+  ],
+};
+
+function toClassification(key: string): IndustryClassification {
+  const matched = INDUSTRIES[key];
+  if (!matched) return GENERAL_CLASSIFICATION;
+  return {
+    name: key.charAt(0).toUpperCase() + key.slice(1),
+    key,
+    workflow: matched.workflow,
+  };
+}
+
+/**
+ * Deterministic keyword-matching fallback. Used when no LLM is configured,
+ * or when the LLM call fails, so classification never hard-fails.
+ */
+export function classifyIndustryHeuristic(
+  name: string,
+  description: string
+): IndustryClassification {
   const text = `${name} ${description}`.toLowerCase();
 
   let bestMatch = "general";
@@ -125,22 +252,63 @@ export function classifyIndustry(name: string, description: string): IndustryCla
     }
   }
 
-  if (bestScore === 0) {
-    return {
-      name: "General Authentication",
-      key: "general",
-      workflow: [
-        { name: "Product Scan", action: "scan_product" },
-        { name: "Identity Verification", action: "verify_identity" },
-        { name: "TrueMark Seal", action: "apply_truemark" },
-      ],
-    };
-  }
+  if (bestScore === 0) return GENERAL_CLASSIFICATION;
+  return toClassification(bestMatch);
+}
 
-  const matched = INDUSTRIES[bestMatch];
-  return {
-    name: bestMatch.charAt(0).toUpperCase() + bestMatch.slice(1),
-    key: bestMatch,
-    workflow: matched.workflow,
-  };
+const VALID_KEYS = [...Object.keys(INDUSTRIES), "general"];
+
+/**
+ * Classifies a product into one of the 10 target verticals using an LLM,
+ * falling back to keyword matching when no OpenAI key is configured or the
+ * LLM call fails for any reason (network error, bad response, etc.).
+ */
+export async function classifyIndustry(
+  name: string,
+  description: string,
+  apiKey?: string
+): Promise<IndustryClassification> {
+  const key = apiKey ?? process.env.OPENAI_API_KEY ?? "";
+  if (!key) return classifyIndustryHeuristic(name, description);
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You classify physical products into exactly one of these industry verticals: ${VALID_KEYS.join(", ")}. Respond ONLY with a strict JSON object: {"key": "<one of the listed verticals>"}. Use "general" if none clearly apply.`,
+          },
+          {
+            role: "user",
+            content: `Product name: ${name}\nDescription: ${description}`,
+          },
+        ],
+        max_tokens: 20,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!res.ok) return classifyIndustryHeuristic(name, description);
+
+    const data = (await res.json()) as {
+      choices: { message: { content: string } }[];
+    };
+    const parsed = JSON.parse(data.choices[0].message.content) as {
+      key?: string;
+    };
+    const classifiedKey = parsed.key?.toLowerCase().trim() ?? "";
+
+    if (!VALID_KEYS.includes(classifiedKey))
+      return classifyIndustryHeuristic(name, description);
+    return toClassification(classifiedKey);
+  } catch {
+    return classifyIndustryHeuristic(name, description);
+  }
 }

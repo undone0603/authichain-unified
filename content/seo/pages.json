@@ -5828,5 +5828,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eu-digital-product-passport-mattresses",
+    "keyword": "eu digital product passport mattresses",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport Mattresses | AuthiChain",
+    "metaDescription": "ESPR’s Working Plan lists mattresses among its priority Digital Product Passport categories, with an indicative delegated-act adoption year of 2029 — a full.",
+    "h1": "EU Digital Product Passport Mattresses",
+    "bodyHtml": "<p>ESPR’s Working Plan lists mattresses among its priority Digital Product Passport categories, with an indicative delegated-act adoption year of 2029 — a full year behind furniture and years behind batteries, giving AuthiChain time to structure the record now rather than scrambling once the required fields are set.</p><h2>Why AuthiChain</h2><ul><li>Mattresses sit one indicative year behind furniture on the ESPR Working Plan 2025–2030, both later-phase categories against the first-wave batteries and steel delegated acts already underway</li><li>The record is the same W3C Verifiable Credential model already issued for furniture and textiles passports — durability, material sourcing, and end-of-life data slot into credentialSubject without a new schema</li><li>An indicative adoption year is not a compliance deadline: the delegated act itself sets the actual date once adopted, typically with a runway of roughly 18 months after that</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the mattress DPP mandatory yet?</h3><p>No — the ESPR Working Plan 2025–2030 gives mattresses an indicative delegated-act adoption year of 2029. Until that act adopts, no mattress DPP requirement is in force.</p><h3>What data would a mattress passport carry?</h3><p>Based on other ESPR categories: material composition, durability, disassembly and recyclability, and any hazardous-substance declarations — the same fields already structured for the furniture and textiles passports.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport Mattresses",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "ESPR’s Working Plan lists mattresses among its priority Digital Product Passport categories, with an indicative delegated-act adoption year of 2029 — a full year behind furniture and years behind batteries, giving AuthiChain time to structure the record now rather than scrambling once the required fields are set.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-mattresses"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport Mattresses",
+              "item": "https://authichain.com/p/eu-digital-product-passport-mattresses"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the mattress DPP mandatory yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the ESPR Working Plan 2025–2030 gives mattresses an indicative delegated-act adoption year of 2029. Until that act adopts, no mattress DPP requirement is in force."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What data would a mattress passport carry?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Based on other ESPR categories: material composition, durability, disassembly and recyclability, and any hazardous-substance declarations — the same fields already structured for the furniture and textiles passports."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "forced-labor-supply-chain-traceability-verification",
+    "keyword": "forced labor supply chain traceability verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Forced Labor Supply Chain Traceability | AuthiChain",
+    "metaDescription": "US Customs and Border Protection published a consolidated Forced Labor Enforcement Operational Guidance for importers on June 9, 2026, after detaining more.",
+    "h1": "Forced Labor Supply Chain Traceability Verification",
+    "bodyHtml": "<p>US Customs and Border Protection published a consolidated Forced Labor Enforcement Operational Guidance for importers on June 9, 2026, after detaining more than 8,000 shipments under forced-labor enforcement in 2025 — the standard it expects to overcome a detention is a full supply-chain trace back to the raw input, not a supplier attestation.</p><h2>Why AuthiChain</h2><ul><li>CBP’s 2026 guidance separates cases into potential-input and direct-input pathways, but both still require sourcing documentation an importer can produce fast — a 30-day detention response window leaves no time to build a trace from scratch</li><li>A signed, per-batch record chain gives an importer a checkable trail to hand an auditor instead of a spreadsheet assembled after the fact — the same problem this protocol already addresses for EUDR geolocation and DSCSA lot tracking</li><li>A signature proves who issued each link in the chain, not that the underlying sourcing claim is true — the same limit protocol/SPEC.md §8 states about any signed record</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a signed supply-chain record clear the UFLPA rebuttable presumption on its own?</h3><p>No — CBP requires documented due diligence, supply-chain tracing, and independent verification across the full chain to the raw input. A tamper-evident record chain is evidence an importer can submit; it does not replace the underlying due-diligence program.</p><h3>What changed in the 2026 CBP guidance?</h3><p>CBP replaced its 2022 UFLPA-only guidance with a consolidated Forced Labor Enforcement Operational Guidance on June 9, 2026, covering UFLPA and broader Section 307 forced-labor enforcement together.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Forced Labor Supply Chain Traceability Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "US Customs and Border Protection published a consolidated Forced Labor Enforcement Operational Guidance for importers on June 9, 2026, after detaining more than 8,000 shipments under forced-labor enforcement in 2025 — the standard it expects to overcome a detention is a full supply-chain trace back to the raw input, not a supplier attestation.",
+          "url": "https://authichain.com/p/forced-labor-supply-chain-traceability-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Forced Labor Supply Chain Traceability Verification",
+              "item": "https://authichain.com/p/forced-labor-supply-chain-traceability-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a signed supply-chain record clear the UFLPA rebuttable presumption on its own?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — CBP requires documented due diligence, supply-chain tracing, and independent verification across the full chain to the raw input. A tamper-evident record chain is evidence an importer can submit; it does not replace the underlying due-diligence program."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What changed in the 2026 CBP guidance?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "CBP replaced its 2022 UFLPA-only guidance with a consolidated Forced Labor Enforcement Operational Guidance on June 9, 2026, covering UFLPA and broader Section 307 forced-labor enforcement together."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-green-claims-directive-product-data",
+    "keyword": "eu green claims directive product data",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Green Claims Directive Product Data | AuthiChain",
+    "metaDescription": "The EU’s Empowering Consumers for the Green Transition Directive takes effect September 27, 2026 and bans unsubstantiated environmental claims like.",
+    "h1": "EU Green Claims Directive Product Data",
+    "bodyHtml": "<p>The EU’s Empowering Consumers for the Green Transition Directive takes effect September 27, 2026 and bans unsubstantiated environmental claims like “eco-friendly” outright — a claim has to point to specific, verifiable data, which is exactly the shape a Digital Product Passport record is built to hold.</p><h2>Why AuthiChain</h2><ul><li>The directive bans vague claims and requires specific ones to be backed by evidence a regulator or competitor can check — a different compliance shape than a certification badge, and not one AuthiChain issues on your behalf</li><li>A W3C Verifiable Credential’s credentialSubject is structured, checkable data — recycled content, carbon figures, material sourcing — the substance a substantiated claim needs, not marketing copy about it</li><li>The separate, broader Green Claims Directive remains stalled in negotiation as of mid-2026; the Empowering Consumers Directive is the one with a confirmed September 2026 date and the one to plan against now</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain certify our claims as compliant?</h3><p>No — AuthiChain issues signed, structured product data. Whether a specific claim built on that data satisfies the directive’s substantiation standard is a legal determination, not something a verifier attests to.</p><h3>What’s the difference between this and the Green Claims Directive?</h3><p>The Empowering Consumers for the Green Transition Directive is adopted and takes effect September 27, 2026. The separate Green Claims Directive, which would add third-party verification of claims, remains stalled in negotiation with no confirmed timeline as of mid-2026.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Green Claims Directive Product Data",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU’s Empowering Consumers for the Green Transition Directive takes effect September 27, 2026 and bans unsubstantiated environmental claims like “eco-friendly” outright — a claim has to point to specific, verifiable data, which is exactly the shape a Digital Product Passport record is built to hold.",
+          "url": "https://authichain.com/p/eu-green-claims-directive-product-data"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Green Claims Directive Product Data",
+              "item": "https://authichain.com/p/eu-green-claims-directive-product-data"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain certify our claims as compliant?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — AuthiChain issues signed, structured product data. Whether a specific claim built on that data satisfies the directive’s substantiation standard is a legal determination, not something a verifier attests to."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What’s the difference between this and the Green Claims Directive?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The Empowering Consumers for the Green Transition Directive is adopted and takes effect September 27, 2026. The separate Green Claims Directive, which would add third-party verification of claims, remains stalled in negotiation with no confirmed timeline as of mid-2026."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "new-york-fashion-act-supply-chain-traceability",
+    "keyword": "new york fashion act supply chain traceability",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "New York Fashion Act Supply Chain Traceability | AuthiChain",
+    "metaDescription": "New York’s Fashion Sustainability and Social Accountability Act would require large apparel and footwear sellers to map at least 75% of Tier 1 suppliers by.",
+    "h1": "New York Fashion Act Supply Chain Traceability",
+    "bodyHtml": "<p>New York’s Fashion Sustainability and Social Accountability Act would require large apparel and footwear sellers to map at least 75% of Tier 1 suppliers by volume within a year of taking effect and disclose the results publicly — the bill remained under committee review through 2026, not yet law, but the mapping standard it sets is already the one large retailers are being asked about.</p><h2>Why AuthiChain</h2><ul><li>The Act’s own compliance clock — one year to map, eighteen months to disclose — only starts once it is signed into law; nothing in it is enforceable yet, and that status can change on any legislative session</li><li>Tier 1 supplier mapping is a chain-of-custody problem: a signed record per shipment gives a company evidence for what fraction of its supply chain is actually mapped, instead of a spreadsheet reconciled by hand before a filing deadline</li><li>Penalties for non-remediated non-compliance run up to 2% of annual revenue under the current bill text — specific enough that “roughly mapped” will not be a defense if the Act passes as drafted</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the New York Fashion Act in effect now?</h3><p>No — as of 2026 it remains under committee review in the New York State Legislature. It is not enacted, and none of its disclosure deadlines have started running.</p><h3>What would companies need to disclose if it passes?</h3><p>Tier 1 and Tier 2 supplier maps covering a set percentage of the supply chain by volume, plus disclosed environmental and social impact data — greenhouse gas emissions, water and chemical management, wages — published online.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — New York Fashion Act Supply Chain Traceability",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "New York’s Fashion Sustainability and Social Accountability Act would require large apparel and footwear sellers to map at least 75% of Tier 1 suppliers by volume within a year of taking effect and disclose the results publicly — the bill remained under committee review through 2026, not yet law, but the mapping standard it sets is already the one large retailers are being asked about.",
+          "url": "https://authichain.com/p/new-york-fashion-act-supply-chain-traceability"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "New York Fashion Act Supply Chain Traceability",
+              "item": "https://authichain.com/p/new-york-fashion-act-supply-chain-traceability"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the New York Fashion Act in effect now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — as of 2026 it remains under committee review in the New York State Legislature. It is not enacted, and none of its disclosure deadlines have started running."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What would companies need to disclose if it passes?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Tier 1 and Tier 2 supplier maps covering a set percentage of the supply chain by volume, plus disclosed environmental and social impact data — greenhouse gas emissions, water and chemical management, wages — published online."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "federal-contractor-semiconductor-supply-chain-disclosure",
+    "keyword": "federal contractor semiconductor supply chain disclosure",
+    "brand": "GovChain",
+    "domain": "govchain.us",
+    "title": "Federal Contractor Semiconductor Supply Chain | GovChain",
+    "metaDescription": "A February 2026 proposed FAR rule implementing NDAA Section 5949’s covered-semiconductor ban gives contractors a 72-hour window to report a prohibited part.",
+    "h1": "Federal Contractor Semiconductor Supply Chain Disclosure",
+    "bodyHtml": "<p>A February 2026 proposed FAR rule implementing NDAA Section 5949’s covered-semiconductor ban gives contractors a 72-hour window to report a prohibited part after contract award and requires a documented “reasonable inquiry” into supplier semiconductor sourcing before then — the prohibition itself takes effect December 23, 2027.</p><h2>Why GovChain</h2><ul><li>A 72-hour reporting window only works if a contractor already knows which semiconductor supplier fed which component — a chain-of-custody record traced to the part level answers that query in the time the rule allows, not after it</li><li>A “reasonable inquiry” is a documented due-diligence process, not a one-time attestation — the same distinction protocol/SPEC.md draws about any signed record: a signature shows who asserted sourcing, not that the inquiry behind it was thorough</li><li>The rule remained a proposal, not final text, as of this writing — GovChain builds the part-level traceability layer now, so a deadline three years out does not become a scramble in month thirty-five</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>When does the covered-semiconductor prohibition take effect?</h3><p>December 23, 2027, under NDAA Section 5949. The FAR Council released its proposed implementing rule on February 17, 2026; it had not been finalized as of this writing.</p><h3>Which suppliers are covered?</h3><p>Semiconductor parts, products, or services from SMIC, ChangXin Memory Technologies (CXMT), Yangtze Memory Technologies Corp (YMTC), or their subsidiaries and affiliates — plus, under a broader provision, any electronic part incorporating those semiconductors for use in “critical systems.”</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "GovChain — Federal Contractor Semiconductor Supply Chain Disclosure",
+          "provider": {
+            "@type": "Organization",
+            "name": "GovChain",
+            "url": "https://govchain.us"
+          },
+          "description": "A February 2026 proposed FAR rule implementing NDAA Section 5949’s covered-semiconductor ban gives contractors a 72-hour window to report a prohibited part after contract award and requires a documented “reasonable inquiry” into supplier semiconductor sourcing before then — the prohibition itself takes effect December 23, 2027.",
+          "url": "https://govchain.us/p/federal-contractor-semiconductor-supply-chain-disclosure"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "GovChain",
+              "item": "https://govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Federal Contractor Semiconductor Supply Chain Disclosure",
+              "item": "https://govchain.us/p/federal-contractor-semiconductor-supply-chain-disclosure"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When does the covered-semiconductor prohibition take effect?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "December 23, 2027, under NDAA Section 5949. The FAR Council released its proposed implementing rule on February 17, 2026; it had not been finalized as of this writing."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Which suppliers are covered?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Semiconductor parts, products, or services from SMIC, ChangXin Memory Technologies (CXMT), Yangtze Memory Technologies Corp (YMTC), or their subsidiaries and affiliates — plus, under a broader provision, any electronic part incorporating those semiconductors for use in “critical systems.”"
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
