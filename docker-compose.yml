@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Database: Local replacement for Supabase during development
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # QRON Platform (Next.js)
+  qron-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile.qron
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/postgres
+      - SUPABASE_URL=http://qron-platform:3000
+      - NODE_ENV=development
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Client (React SPA)
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000/api
+    depends_on:
+      - qron-platform
+
+  # Agentz (AI Framework)
+  agentz:
+    build:
+      context: .
+      dockerfile: Dockerfile.agentz
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/postgres
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
