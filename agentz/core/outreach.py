@@ -44,19 +44,54 @@ def save_pending_dms(dms: List[Dict[str, Any]]):
     OUTREACH_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTREACH_DB_PATH.write_text(json.dumps(dms, indent=2), encoding="utf-8")
 
-def add_pending_dm(lead_name: str, message: str, microsite_url: str):
-    """Adds a new DM to the pending queue."""
+import random
+
+def add_pending_dm(lead_name: str, personalized_hook: str, generic_hook: str, message: str, microsite_url: str):
+    """Adds a new DM to the pending queue, randomly assigning either a personalized or generic hook for A/B testing."""
     dms = get_pending_dms()
     # Avoid duplicates
     if any(d['lead_name'] == lead_name for d in dms):
         return
+        
+    # Randomly assign A or B
+    variant = random.choice(['personalized', 'generic'])
+    chosen_hook = personalized_hook if variant == 'personalized' else generic_hook
+    
     dms.append({
         "lead_name": lead_name,
+        "variant": variant,
+        "chosen_hook": chosen_hook,
+        "personalized_hook": personalized_hook,
+        "generic_hook": generic_hook,
         "message": message,
         "microsite_url": microsite_url,
         "status": "pending"
     })
     save_pending_dms(dms)
+
+from agentz.core.llm import get_llm
+
+async def analyze_reply_sentiment(reply_text: str) -> str:
+    """
+    Analyzes the sentiment of a prospect's reply.
+    """
+    llm = get_llm(model="gpt-4o", temperature=0.0)
+    prompt = f"""
+    Analyze the sentiment of the following reply to a business DM:
+    "{reply_text}"
+    
+    Return ONLY 'positive', 'neutral', or 'negative'.
+    """
+    response = await llm.ainvoke(prompt)
+    return response.content.strip().lower()
+
+async def trigger_nurture_sequence(lead_name: str):
+    """
+    Triggers a polite nurture sequence for negative/objection responses.
+    """
+    logger.info(f"Triggering nurture sequence for {lead_name}...")
+    # Placeholder for the actual nurture DM dispatch logic
+    pass
 
 async def post_dm(lead_name: str, message: str) -> bool:
     """

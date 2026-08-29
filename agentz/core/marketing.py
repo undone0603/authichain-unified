@@ -10,8 +10,54 @@ import json
 from typing import Dict, Any, List, Optional
 from agentz.core.llm import get_llm
 from agentz.core.modes import ExecutionContext
+from agentz.core.feedback_cache import get_high_performance_hooks
 
 logger = logging.getLogger("agentz.marketing")
+
+async def generate_opening_hook(business: Dict[str, Any], deep_context: str, vertical: str = "general") -> str:
+    """
+    Generates a highly personalized opening hook for a DM based on business data, deep context, and vertical persona.
+    """
+    llm = get_llm(model="gpt-4o", temperature=0.7)
+    
+    # Define vertical-specific personas
+    personas = {
+        "brewery": "a passionate craft beverage expert who values authenticity and artisan stories.",
+        "dispensary": "a progressive industry insider who values compliance, transparency, and product quality.",
+        "government": "a professional policy advocate who values efficiency, public trust, and blockchain-enabled auditability.",
+        "luxury": "a refined brand consultant who values exclusivity, heritage, and high-end aesthetics.",
+        "general": "a helpful and professional business partner."
+    }
+    
+    persona = personas.get(vertical.lower(), personas["general"])
+    
+    # Incorporate high-performance hooks for learning
+    high_perf_hooks = get_high_performance_hooks(vertical)
+    examples_str = "\n".join([f"- '{h}'" for h in high_perf_hooks[:3]]) if high_perf_hooks else "None yet."
+    
+    prompt = f"""
+    You are the AgentZ Outreach Specialist. Act as {persona}
+    Write a compelling, 1-sentence opening hook for a direct message (DM) to a business owner. 
+    The goal is to establish instant rapport and credibility.
+    
+    Business: {business.get('name')}
+    Category: {business.get('category')}
+    Deep Context: {deep_context}
+    
+    The hook should be:
+    - Highly personalized based on the 'Deep Context'.
+    - Professional, yet conversational.
+    - Not spammy.
+    - Tailored to the tone of {vertical}.
+    
+    Use these high-performance hooks as inspiration for tone and structure:
+    {examples_str}
+    
+    Return ONLY the 1-sentence hook.
+    """
+    
+    response = await llm.ainvoke(prompt)
+    return response.content.strip()
 
 async def detect_viral_trends(vertical: str, ctx: Optional[ExecutionContext] = None) -> List[str]:
     """
