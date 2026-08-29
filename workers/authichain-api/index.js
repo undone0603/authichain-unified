@@ -67,29 +67,31 @@ function j(data, status, extraHeaders) {
   });
 }
 
-// ── Supabase helpers ──────────────────────────────────────────────────────────
-function supaHeaders() {
-  return {
+// ── Refactored Supabase helpers for tenant scoping ────────────────────────────
+function supaHeaders(tenantId) {
+  const headers = {
     'apikey': SUPABASE_ANON_KEY,
     'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
     'Content-Type': 'application/json',
     'Prefer': 'return=representation',
   };
+  if (tenantId) headers['app-current-tenant-id'] = String(tenantId);
+  return headers;
 }
 
-async function supaGet(table, params) {
-  const res = await fetch(SUPA_URL + '/rest/v1/' + table + (params || ''), { headers: supaHeaders() });
+async function supaGet(table, params, tenantId) {
+  const res = await fetch(SUPA_URL + '/rest/v1/' + table + (params || ''), { headers: supaHeaders(tenantId) });
   return res.json();
 }
 
-async function supaPost(table, body) {
+async function supaPost(table, body, tenantId) {
   const res = await fetch(SUPA_URL + '/rest/v1/' + table, {
-    method: 'POST', headers: supaHeaders(), body: JSON.stringify(body),
+    method: 'POST', headers: supaHeaders(tenantId), body: JSON.stringify(body),
   });
   return { data: await res.json(), status: res.status };
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── Auth & Tenant Resolution ──────────────────────────────────────────────────
 async function resolveKey(req) {
   const key = req.headers.get('X-RapidAPI-Key')
     || req.headers.get('X-API-Key')
@@ -99,11 +101,11 @@ async function resolveKey(req) {
 
   // Check Supabase subscriptions table for real API keys
   try {
-    const subs = await supaGet('subscriptions', '?api_key=eq.' + encodeURIComponent(key) + '&select=api_key,plan,email');
+    const subs = await supaGet('subscriptions', '?api_key=eq.' + encodeURIComponent(key) + '&select=id,tenant_id,plan,email');
     if (Array.isArray(subs) && subs.length > 0) {
       const sub = subs[0];
       const plan = sub.plan || 'free';
-      return { valid: true, plan, limit: (PLANS[plan] || PLANS.free).dailyLimit, name: sub.email || 'API User', isDemo: false };
+      return { valid: true, id: sub.id, tenant_id: sub.tenant_id, plan, limit: (PLANS[plan] || PLANS.free).dailyLimit, name: sub.email || 'API User', isDemo: false };
     }
   } catch (e) { /* fall through */ }
 
@@ -221,15 +223,16 @@ async function handleRequest(req) {
 
       // Query real Supabase products table
       var products = await supaGet('products',
-        '?truemark_id=eq.' + encodeURIComponent(identifier) + '&is_registered=eq.true&select=id,name,description,brand,category,image_url,truemark_id,blockchain_tx_hash,industry_id,confidence,created_at,story');
+        '?truemark_id=eq.' + encodeURIComponent(identifier) + '&tenant_id=eq.' + kd.tenant_id + '&is_registered=eq.true&select=id,name,description,brand,category,image_url,truemark_id,blockchain_tx_hash,industry_id,confidence,created_at,story', kd.tenant_id);
       var product = Array.isArray(products) ? products[0] : null;
 
       if (!product) {
         // Try partial match
         products = await supaGet('products',
-          '?truemark_id=ilike.*' + encodeURIComponent(identifier.slice(-8)) + '*&is_registered=eq.true&limit=1&select=id,name,description,brand,category,image_url,truemark_id,blockchain_tx_hash,industry_id,confidence,created_at,story');
+          '?truemark_id=ilike.*' + encodeURIComponent(identifier.slice(-8)) + '*&tenant_id=eq.' + kd.tenant_id + '&is_registered=eq.true&limit=1&select=id,name,description,brand,category,image_url,truemark_id,blockchain_tx_hash,industry_id,confidence,created_at,story', kd.tenant_id);
         product = Array.isArray(products) ? products[0] : null;
       }
+
 
       // Log verification attempt
       supaPost('verifications', {
@@ -251,17 +254,17 @@ async function handleRequest(req) {
       }
 
       return j({
-        success: true, verified: true, status: 'authentic',
-        message: 'Product verified as authentic on AuthiChain blockchain.',
-        trust_score: Math.min(100, Math.max(80, product.confidence || 95)),
+        success: true, verified: false, status: 'unverified',
+        message: 'Product registered, but awaiting evidence-based trust verification.',
+        trust_score: 0,
         product: {
           id: product.id, name: product.name, description: product.description,
           brand: product.brand, category: product.category, image_url: product.image_url,
-          truemark_id: product.truemark_id, blockchain_tx_hash: product.blockchain_tx_hash,
+          truemark_id: product.truemark_id, 
           industry: product.industry_id, story: product.story,
           registered_at: product.created_at,
         },
-        blockchain: { network: 'Polygon', contract: '0x4da4D2675e52374639C9c954f4f653887A9972BE', tx_hash: product.blockchain_tx_hash, verified_at: new Date().toISOString() },
+        blockchain: { network: 'Polygon', contract: '0x4da4D2675e52374639C9c954f4f653887A9972BE', tx_hash: product.blockchain_tx_hash, verified_at: null },
         plan: kd.plan,
       }, 200, rateHeaders);
     }
@@ -297,17 +300,17 @@ async function handleRequest(req) {
       var prefix = 'AUTHI-' + (b3.brand || 'PROD').substring(0, 4).toUpperCase() + '-' + cls2.id.substring(0, 3).toUpperCase();
       var truemarkId = prefix + '-' + tmSuffix;
 
-      var txBytes = new Uint8Array(32); crypto.getRandomValues(txBytes);
-      var txHash = '0x' + Array.from(txBytes).map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
+      var txHash = 'pending_anchoring';
 
       // Insert into real Supabase products table
       var insertResult = await supaPost('products', {
         name: b3.name, brand: b3.brand || 'Unknown', category: b3.category,
         description: b3.description || null, image_url: b3.image_url || null,
         industry_id: cls2.id, truemark_id: truemarkId, blockchain_tx_hash: txHash,
-        is_registered: true, confidence: cls2.score > 0 ? 85 : 65,
-        story: b3.name + ' has been registered on the AuthiChain blockchain for provenance tracking.',
-      });
+        is_registered: true, confidence: 0,
+        story: b3.name + ' has been registered. Awaiting blockchain anchoring.',
+        tenant_id: kd.tenant_id,
+      }, kd.tenant_id);
 
       var newProduct = Array.isArray(insertResult.data) ? insertResult.data[0] : insertResult.data;
 
@@ -336,8 +339,8 @@ async function handleRequest(req) {
       var filter = cat ? '&category=eq.' + encodeURIComponent(cat) : '';
 
       var prods = await supaGet('products',
-        '?is_registered=eq.true' + filter + '&order=created_at.desc&limit=' + limit + '&offset=' + offset +
-        '&select=id,name,brand,category,truemark_id,blockchain_tx_hash,industry_id,confidence,created_at');
+        '?tenant_id=eq.' + kd.tenant_id + '&is_registered=eq.true' + filter + '&order=created_at.desc&limit=' + limit + '&offset=' + offset +
+        '&select=id,name,brand,category,truemark_id,blockchain_tx_hash,industry_id,confidence,created_at', kd.tenant_id);
 
       return j({
         success: true,

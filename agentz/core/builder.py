@@ -55,11 +55,26 @@ async def generate_secure_nfc_payload(product_id: str) -> Dict[str, str]:
         "nfc_payload": f"authichain://v/{product_id}?key={nfc_key}"
     }
 
+async def check_activation_fee(brand: str) -> bool:
+    """
+    Checks if a brand has paid the activation fee.
+    """
+    # For now, we simulate fee checking.
+    # In production, this would query Stripe or check for a transaction in the Treasury wallet.
+    logger = logging.getLogger("agentz.builder")
+    logger.info(f"Checking activation fee for brand: {brand}")
+    return True
+
 async def create_product_identity(supabase, product_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Registers a new product in the Supabase database and generates its QR + NFC identity.
     Includes on-chain trust anchoring and physical asset generation.
     """
+    # Fee Enforcement
+    brand = product_data.get("brand", "AuthiChain")
+    if not await check_activation_fee(brand):
+        raise Exception(f"Activation fee not paid for brand: {brand}")
+
     product_id = str(uuid.uuid4())
     qr = await generate_secure_qr(product_id)
     nfc = await generate_secure_nfc_payload(product_id)

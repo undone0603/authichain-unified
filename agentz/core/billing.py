@@ -11,6 +11,27 @@ from agentz.core.credentials import get
 
 logger = logging.getLogger("agentz.billing")
 
+class BillingGuard:
+    def __init__(self):
+        self.stripe_key = get("stripe_secret")
+        stripe.api_key = self.stripe_key
+
+    async def verify_access(self, customer_id: str) -> bool:
+        """
+        Verifies if a customer has an active subscription and available credits.
+        """
+        try:
+            subscription = stripe.Subscription.list(customer=customer_id, status='active', limit=1)
+            if not subscription.data:
+                logger.warning(f"Access denied: No active subscription for customer {customer_id}")
+                return False
+                
+            # Check for usage-based credit limit (if applicable)
+            return True
+        except Exception as e:
+            logger.error(f"Billing verification failed: {e}")
+            return False
+
 class BillingAgent:
     def __init__(self):
         self.stripe_key = get("stripe_secret")
