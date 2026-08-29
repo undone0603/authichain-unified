@@ -59,6 +59,36 @@ async def generate_opening_hook(business: Dict[str, Any], deep_context: str, ver
     response = await llm.ainvoke(prompt)
     return response.content.strip()
 
+from agentz.core.outreach import tune_outreach_prompt, get_current_prompt
+
+async def pivot_template(winner_hook: str, vertical: str):
+    """
+    Autonomously refines the primary outreach template based on the structural/tonal characteristics of a winning hook.
+    """
+    llm = get_llm(model="gpt-4o", temperature=0.7)
+    current_template = get_current_prompt()
+    
+    prompt = f"""
+    You are the AgentZ Outreach Specialist.
+    We have A/B tested our outreach hooks, and the following hook for the '{vertical}' vertical outperformed our current template:
+    "{winner_hook}"
+    
+    Current Template:
+    {current_template}
+    
+    Tasks:
+    Refine our current outreach template to incorporate the style, structure, and tone of the winning hook while maintaining the core value proposition of our outreach.
+    
+    Return ONLY the new, improved outreach template.
+    """
+    
+    response = await llm.ainvoke(prompt)
+    new_template = response.content.strip()
+    
+    # Commit the new template
+    tune_outreach_prompt({"suggestion": f"Autonomously pivoted template based on winning hook for {vertical}. New template: {new_template}"})
+    return new_template
+
 async def detect_viral_trends(vertical: str, ctx: Optional[ExecutionContext] = None) -> List[str]:
     """
     Uses browser-use to detect actual viral trends on X/TikTok.
