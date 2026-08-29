@@ -192,6 +192,42 @@ export const dppData = pgTable(
   }
 );
 
+export const productLifecycleEvents = pgTable(
+  'product_lifecycle_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    productId: uuid('product_id').notNull().references(() => products.id),
+    eventType: text('event_type').notNull(), // 'manufactured', 'shipped', 'serviced', 'recycled'
+    eventTimestamp: timestamp('event_timestamp').defaultNow().notNull(),
+    location: text('location'),
+    actorId: uuid('actor_id'), // User/Company who performed action
+    evidenceHash: text('evidence_hash'), // Hash of the event proof
+    metadata: jsonb('metadata').default({}),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => [
+    index('idx_lifecycle_product').on(table.productId),
+  ]
+);
+
+export const componentProvenance = pgTable(
+  'component_provenance',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    productId: uuid('product_id').notNull().references(() => products.id),
+    componentName: text('component_name').notNull(),
+    originCountry: text('origin_country'),
+    supplierId: uuid('supplier_id'),
+    materialCert: text('material_cert'), // Link to certificate
+    anchoredTx: text('anchored_tx'), // Blockchain transaction hash
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => [
+    index('idx_provenance_product').on(table.productId),
+  ]
+);
+
+
 export const scanLogs = pgTable(
   'scan_logs',
   {

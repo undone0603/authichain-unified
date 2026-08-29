@@ -17,19 +17,14 @@ export function ExitIntentGuide({
   accent?: string;
   productInterest?: string;
 }) {
-  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
-
   const dismiss = useCallback(() => setVisible(false), []);
 
   useEffect(() => {
-    if (!mounted) return;
-
     try {
       if (sessionStorage.getItem(SHOWN_KEY)) return;
     } catch {}
@@ -57,7 +52,7 @@ export function ExitIntentGuide({
       clearTimeout(arm);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [mounted]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

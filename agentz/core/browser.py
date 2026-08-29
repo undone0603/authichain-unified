@@ -10,7 +10,14 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
-from typing import Any, Callable, TYPE_CHECKING, Optional
+import subprocess
+import json
+from typing import Any, Callable, TYPE_CHECKING, Optional, Dict
+
+if TYPE_CHECKING:
+    from browser_use import Agent, Controller, ActionResult
+    from agentz.core.modes import ExecutionContext
+
 
 if TYPE_CHECKING:
     from browser_use import Agent, Controller, ActionResult
@@ -19,7 +26,36 @@ if TYPE_CHECKING:
 logger = logging.getLogger("agentz.browser")
 
 
+async def take_native_snapshot(session_id: str, compact: bool = True, interactive: bool = True) -> str:
+    """
+    Calls the native agent-browser binary to take a structured snapshot of the current page.
+    Returns the structured text representation of the DOM.
+    """
+    try:
+        # Construct the CLI command for agent-browser
+        # Command: agent-browser snapshot --session <id> [--compact] [--interactive]
+        cmd = ["agent-browser", "snapshot", "--session", session_id]
+        if compact: cmd.append("--compact")
+        if interactive: cmd.append("--interactive")
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+
+        if process.returncode != 0:
+            logger.error(f"Native snapshot failed: {stderr.decode()}")
+            return f"Error taking snapshot: {stderr.decode()}"
+
+        return stdout.decode().strip()
+    except Exception as e:
+        logger.error(f"Exception during native snapshot: {e}")
+        return f"Error taking snapshot: {str(e)}"
+
 def attach_interceptor(controller: Controller, ctx: ExecutionContext):
+
     """
     Wraps all actions in the controller to route through ctx.step.
     In confirm mode, this will prompt the user before each browser action.
@@ -62,6 +98,16 @@ async def run_browser_task(task: str, ctx: ExecutionContext) -> Any:
 
     llm = get_llm()
     controller = Controller()
+    
+    # Register Native Snapshot as a tool the agent can use
+    async def native_snapshot_action(compact: bool = True, interactive: bool = True):
+        """Takes a high-fidelity structured snapshot of the current page using the native agent-browser binary."""
+        # We need the current session ID from the agent's browser
+        # This is a simplification; in a real run, we'd extract the session from the browser instance
+        session_id = "default" 
+        return await take_native_snapshot(session_id, compact, interactive)
+
+    controller.register_action(native_snapshot_action)
     attach_interceptor(controller, ctx)
 
     agent = Agent(

@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import Stripe from 'stripe';
+import { computePayout, executeStripeTransfer } from './services/payout';
 
 async function verifyGithubSignature(secret: string, body: string, signature: string): Promise<boolean> {
   const enc = new TextEncoder();
@@ -28,6 +30,7 @@ type Bindings = {
 
   // Stripe
   STRIPE_SECRET_KEY: string;
+  STRIPE_CONNECT_ACCOUNT_ID?: string;
 
   // Supabase (used for Stripe webhook persistence)
   SUPABASE_URL: string;
@@ -244,6 +247,53 @@ app.post("/webhook/github", async (c) => {
 
   return c.json({ ok: true });
 });
+
+// ---------------------------------------------------------------------------
+// Stripe webhook
+// ---------------------------------------------------------------------------
+app.post("/webhook/stripe", async (c) => {
+  const body = await c.text();
+  const signature = c.req.header("stripe-signature");
+
+  if (!signature) {
+    return c.json({ error: "missing signature" }, 400);
+  }
+
+  const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2026-07-29',
+  });
+
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      c.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err: any) {
+    return c.json({ error: `webhook signature verification failed: ${err.message}` }, 400);
+  }
+
+  if (event.type === 'charge.succeeded') {
+    const charge = event.data.object as Stripe.Charge;
+    const amountCents = charge.amount;
+    const connectedAccountId = c.env.STRIPE_CONNECT_ACCOUNT_ID; // Assuming this binding is added
+
+    if (connectedAccountId && amountCents > 0) {
+      try {
+        const plan = computePayout(amountCents);
+        await executeStripeTransfer(c.env.STRIPE_SECRET_KEY, plan.founderCents, connectedAccountId);
+        console.log(`[webhook] Individual payout triggered for charge ${charge.id}`);
+      } catch (error) {
+        console.error(`[webhook] Individual payout failed for charge ${charge.id}:`, error);
+        // Non-fatal: webhook still needs to return 200 to Stripe
+      }
+    }
+  }
+
+  return c.json({ ok: true });
+});
+
 
 // ---------------------------------------------------------------------------
 // Microsite KV router — serves subdomain brand sites from KV

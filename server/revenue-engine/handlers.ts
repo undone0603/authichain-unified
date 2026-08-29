@@ -53,6 +53,7 @@ async function supabaseUpsert(table: string, row: any, conflictKey = "stripe_sub
 
 export async function handleVerificationEvent(ev: VerificationEvent) {
   try {
+    console.log('[DEBUG] handleVerificationEvent started with ev:', JSON.stringify(ev));
     const verificationRow = {
       seal_id: ev.seal_id,
       brand: ev.brand,
@@ -61,6 +62,7 @@ export async function handleVerificationEvent(ev: VerificationEvent) {
     };
     const inserted = await supabaseInsert("verification_events", verificationRow);
     const verificationId = inserted[0]?.id;
+    console.log('[DEBUG] handleVerificationEvent inserted verification_events:', verificationId);
 
     await supabaseInsert("usage_events", {
       subscription_id: null,
@@ -68,6 +70,8 @@ export async function handleVerificationEvent(ev: VerificationEvent) {
       event_ref: verificationId,
       brand: ev.brand,
     });
+    console.log('[DEBUG] handleVerificationEvent inserted usage_events');
+
 
     try {
       await emitCrmVerificationMetric({

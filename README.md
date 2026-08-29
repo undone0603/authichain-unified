@@ -6,7 +6,7 @@ Welcome to the unified repository for the **QRON Platform** and the **AuthiChain
 
 This repository is the central hub for the QRON ecosystem, integrating a high-performance frontend with a sophisticated autonomous agent orchestration layer.
 
-- **QRON Platform**: A Next.js 16 multi-domain architecture serving specialized brands (qron.space, authichain.com, govchain.us, strainchain.io) with Cloudflare Edge integration and Drizzle ORM.
+- **QRON Platform**: A multi-domain web app serving specialized brands (qron.space, authichain.com, govchain.us, strainchain.io) with Cloudflare Edge integration and Drizzle ORM. **The primary dev/build scripts in this repo use Vite** (see `package.json`), with some Next.js-compatible modules/config also present.
 - **AuthiChain Unified Core (AgentZ)**: A Python-based workflow orchestrator that manages autonomous agents for infrastructure fixing, revenue operations, and high-entropy supply chain audits.
 
 > **Status:** This platform is in an active pre-traffic / early-revenue phase. Autonomous revenue and agentic workflows are built and operational in the codebase, but production usage metrics are still ramping — see commit history for ongoing hardening work.
@@ -15,11 +15,16 @@ This repository is the central hub for the QRON ecosystem, integrating a high-pe
 
 ## 🌐 1. QRON Platform (Frontend & Edge)
 
-A Next.js application with Cloudflare Edge services. **Vercel is the primary deployment target for the unified Next.js network app and its brand microsites; Cloudflare Workers provide the edge/fronting layer and repo-managed worker services.** See `docs/NETWORK.md` for the deployment map and current domains.
+This repo is a monorepo.
+
+- **Vercel deploy target (Next.js app)**: `apps/qron-platform/`
+- **Cloudflare edge/fronting**: `worker/` (see `wrangler.toml`)
+
+See `docs/NETWORK.md` for the deployment map and current domains.
 
 ### Ecosystem & Multi-Domain Architecture
 
-The QRON platform operates as a unified codebase serving four distinct branded experiences via Next.js Middleware.
+The QRON platform operates as a unified codebase serving four distinct branded experiences via host-based routing at the edge (Cloudflare Worker) and/or the web app layer.
 
 - **qron.space**: Creative Studio & AI QR Art Generator.
 - **authichain.com**: Enterprise Authentication Protocol & API Key Management.
@@ -32,12 +37,12 @@ Traffic is routed based on the `Host` header. Shared application routes (like `/
 
 ### Tech Stack
 
-- **Framework**: [Next.js](https://nextjs.org/) 16 (App Router)
-- **Database**: [Drizzle ORM](https://orm.drizzle.team/) with PostgreSQL (Supabase)
-- **Primary app deployment**: Vercel
-- **Edge/fronting services**: Cloudflare Workers
+- **Web app (primary dev/build scripts)**: Vite + React (`pnpm dev`, `pnpm build`)
+- **Next.js**: Present in the repo for compatibility/config in some areas, but **do not assume** a standard Next.js App Router project layout for the primary web build.
+- **Database**: Drizzle ORM + PostgreSQL (Supabase) and a Cloudflare D1 binding for Worker-side persistence (see `wrangler.toml`).
+- **Edge/fronting services**: Cloudflare Worker (`worker/index.ts`) + additional worker services
 - **Styling**: Tailwind CSS
-- **Package Manager**: pnpm (workspaces)
+- **Package Manager**: pnpm
 
 ### Getting Started (Frontend)
 
@@ -72,7 +77,7 @@ python -m agentz.cli run --all --revenue-only --mode auto
 ## 🛠️ Unified Database & Infrastructure
 
 - **ORM**: Drizzle is used for schema management.
-- **Migrations**: `npm run db:generate` and `npm run db:push`.
+- **Migrations**: `pnpm db:generate` and `pnpm db:migrate` (see `package.json` scripts).
 - **Edge**: Managed via `wrangler.toml` and repo-managed `workers/*` services.
 - **Deploy map**: `docs/NETWORK.md` is the canonical inventory of Vercel, Cloudflare, database, and worker responsibilities.
 - **Agents**: Python environment requires `pip install -r requirements-agentz.txt`.

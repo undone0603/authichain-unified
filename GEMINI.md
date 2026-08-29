@@ -53,3 +53,22 @@ Every scan MUST resolve to a configuration that includes:
 3. AI Concierge Personification (Voice of Product).
 4. Token-Gated Chapters (Hidden Content).
 5. QRON Reward & Burn Utility (Merchant Discounts).
+
+## Infrastructure & Revenue Setup (Required)
+All deployments MUST be configured according to the master operational setup to ensure proper revenue routing and secure control plane access:
+
+### 1. Blockchain Treasury
+- **Config**: Set `PRIVATE_KEY_ISSUER` (Treasury Wallet PK) and `TREASURY_ADDRESS` in environment secrets.
+- **Goal**: NFT/Minting fees must route to the Founder's Polygon EVM wallet.
+
+### 2. Agent API Billing
+- **Config**: Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Cloudflare Worker bindings.
+- **Goal**: Capture revenue from pay-per-call API keys via Stripe.
+
+### 3. Control Plane Security (Supabase RLS)
+- **Config**: Ensure `SUPABASE_SERVICE_ROLE_KEY` is stored securely; assign Super-Admin role to Founder's UUID.
+- **Goal**: Full visibility into tenant logs, registered products, and system-wide analytics, bypassing standard RLS.
+
+### 4. Vision Engine & Infrastructure Accounts
+- **Config**: Set `OPENAI_API_KEY` to the dedicated developer account with spend caps.
+- **Goal**: Limit operating costs; all infrastructure must be deployed under the primary control plane account (API token/Cloudflare account).

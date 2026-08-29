@@ -33,6 +33,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Execution mode: dry-run (no side-effects), confirm, or auto.",
     )
     parser.add_argument(
+        "--params",
+        type=str,
+        help="JSON string of parameters to pass to the handler.",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         default=True,
@@ -40,7 +45,40 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     mode = parse_mode(args.mode)
-    ctx = ExecutionContext(mode=mode, workflow_id=args.handler, verbose=args.verbose)
+    
+    params = {}
+    if args.params:
+        try:
+            import json
+            params = json.loads(args.params)
+        except json.JSONDecodeError as e:
+            print(f"ERROR: Invalid JSON in --params: {e}", file=sys.stderr)
+            return 1
+
+    # --- Risk Firewall Integration ---
+    from agentz.core.risk_firewall import assess_workflow, RiskAssessment
+    from pathlib import Path
+    
+    # Defaults for the firewall; in a production system, these would come from the registry.yaml
+    risk_assessment = assess_workflow(
+        wf_id=args.handler,
+        risk_class="medium", # Default for now
+        financial_limit_usd=100.0,
+        requires_human_approval=False,
+        current_mode=mode.value,
+        audit_log_path=Path("agentz/logs/runs.jsonl"),
+        protocol_veto_active=False
+    )
+    
+    if not risk_assessment.approved:
+        print(f"[firewall] ❌ BLOCKED: {risk_assessment.reason}", file=sys.stderr)
+        return 1
+        
+    if risk_assessment.escalated_mode == "confirm" and mode == Mode.AUTO:
+        print(f"[firewall] ⚠️ Escalating mode to CONFIRM: {risk_assessment.reason}")
+        mode = Mode.CONFIRM
+
+    ctx = ExecutionContext(mode=mode, workflow_id=args.handler, verbose=args.verbose, parameters=params)
 
     # Dynamically import the requested handler module.
     module_path = f"agentz.workflows.handlers.{args.handler}"

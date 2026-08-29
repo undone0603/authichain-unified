@@ -16,6 +16,13 @@ export async function licenseVerify(request: Request, env: Env): Promise<Respons
   const keyHash = await hashKey(key)
   const record = await DB.getByHash(env, keyHash)
 
+  // Telemetry: Log the verification attempt
+  console.log(JSON.stringify({
+    event: 'license_verify_attempt',
+    keyHash,
+    status: record ? (record.status === 'revoked' ? 'revoked' : (record.expires_at && new Date(record.expires_at) < new Date() ? 'expired' : 'valid')) : 'not_found'
+  }))
+
   if (!record) {
     return Response.json({ valid: false, reason: 'Key not found' }, { status: 404 })
   }
@@ -27,6 +34,13 @@ export async function licenseVerify(request: Request, env: Env): Promise<Respons
   if (record.expires_at && new Date(record.expires_at) < new Date()) {
     return Response.json({ valid: false, reason: 'License expired' }, { status: 200 })
   }
+
+  // Telemetry: Log successful verification
+  console.log(JSON.stringify({
+    event: 'license_verify_success',
+    keyHash,
+    tier: record.tier
+  }))
 
   return Response.json({
     valid: true,

@@ -1,7 +1,12 @@
-<!-- BEGIN:nextjs-agent-rules -->
+<!-- BEGIN:repo-reality-rules -->
 
-# This is NOT the Next.js you know
+# Repo reality check (required)
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This repo contains Next.js-related packages/config **and** a Vite-based frontend build. Do not assume a standard Next.js App Router project layout.
 
-<!-- END:nextjs-agent-rules -->
+Before making changes:
+- Check `package.json` scripts to confirm the actual dev/build entrypoints (`pnpm dev`, `pnpm build`).
+- Inspect where routing/brand selection is implemented (Host / x-forwarded-host / Cloudflare headers).
+- Treat autonomous/"auto" agent workflows as high-blast-radius: require explicit env kill-switches for any side effects (email, billing, chain ops, deploys).
+
+<!-- END:repo-reality-rules -->

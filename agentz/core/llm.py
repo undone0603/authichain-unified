@@ -238,7 +238,7 @@ class LimitProofLLM:
                              base_url=f"{host.rstrip('/')}/v1", max_retries=1)
         else:
             from langchain_ollama import ChatOllama
-            llm = ChatOllama(model=model, temperature=self.temperature)
+            llm = ChatOllama(model=model, temperature=self.temperature, base_url=host)
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def bind_tools(self, tools: List[Any], **kwargs) -> LimitProofLLM:
@@ -294,7 +294,9 @@ class LimitProofLLM:
         if config is not None and not isinstance(config, dict): config = None
         kwargs.pop("session_id", None)
         for name, factory in self.providers:
-            if self._should_skip(name): continue
+            if self._should_skip(name):
+                logger.debug(f"Skipping provider {name} due to health state.")
+                continue
             max_ctx = 7500 if "cerebras" in name else None
             messages = self._convert_messages(input, max_len=max_ctx)
             try:
@@ -303,8 +305,10 @@ class LimitProofLLM:
                 if not hasattr(res, "usage"):
                     res.usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
                                  "prompt_cached_tokens": 0, "prompt_cache_creation_tokens": 0, "prompt_image_tokens": 0}
+                logger.info(f"Provider {name} succeeded.")
                 return res
             except Exception as e:
+                logger.warning(f"Provider {name} failed: {e}")
                 self._mark_failed(name, e)
                 continue
         raise RuntimeError("All LLM providers failed or are out of quota.")
@@ -313,7 +317,9 @@ class LimitProofLLM:
         if config is not None and not isinstance(config, dict): config = None
         kwargs.pop("session_id", None)
         for name, factory in self.providers:
-            if self._should_skip(name): continue
+            if self._should_skip(name):
+                logger.debug(f"Skipping provider {name} due to health state.")
+                continue
             max_ctx = 7500 if "cerebras" in name else None
             messages = self._convert_messages(input, max_len=max_ctx)
             try:
@@ -322,8 +328,10 @@ class LimitProofLLM:
                 if not hasattr(res, "usage") or not isinstance(res.usage, dict):
                     res.usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
                                  "prompt_cached_tokens": 0, "prompt_cache_creation_tokens": 0, "prompt_image_tokens": 0}
+                logger.info(f"Provider {name} succeeded.")
                 return res
             except Exception as e:
+                logger.warning(f"Provider {name} failed: {e}")
                 self._mark_failed(name, e)
                 continue
         raise RuntimeError("All LLM providers failed or are out of quota (async).")

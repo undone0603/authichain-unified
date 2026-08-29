@@ -23,15 +23,16 @@ export function StickyConversionBar({
   subtext?: string;
 }) {
   const [visible, setVisible] = useState(false);
-  const [dismissed, setDismissed] = useState(true); // assume dismissed until mounted
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem(STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
-    let alreadyDismissed = false;
-    try {
-      alreadyDismissed = sessionStorage.getItem(STORAGE_KEY) === '1';
-    } catch {}
-    setDismissed(alreadyDismissed);
-    if (alreadyDismissed) return;
+    if (dismissed) return;
 
     const reveal = () => setVisible(true);
 

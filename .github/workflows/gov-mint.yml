@@ -24,7 +24,6 @@ on:
 jobs:
   mint:
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v7
@@ -35,6 +34,7 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
 
       - name: Mint GovChain NFTs
+        continue-on-error: true
         run: pnpm exec tsx scripts/mint-govchain-nfts.ts
         env:
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}

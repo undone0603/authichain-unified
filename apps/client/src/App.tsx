@@ -13,6 +13,7 @@ import { ThirdwebProvider } from "./components/ThirdwebProvider";
 import DashboardLayout from "./components/DashboardLayout";
 
 const Home = lazy(() => import("./pages/brand/BrandHome"));
+const DppPublicPortal = lazy(() => import("./pages/DppPublicPortal"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Authenticate = lazy(() => import("./pages/Authenticate"));
 const QrCodes = lazy(() => import("./pages/QrCodes"));
@@ -25,6 +26,7 @@ const EmailCampaigns = lazy(() => import("./pages/EmailCampaigns"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions"));
 const Referrals = lazy(() => import("./pages/Referrals"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AgentControl = lazy(() => import("./pages/AgentControl"));
 const OpsDashboard = lazy(() => import("./pages/OpsDashboard"));
 const Services = lazy(() => import("./pages/Services"));
 const Storymode = lazy(() => import("./pages/Storymode"));
@@ -75,6 +77,7 @@ function DashboardRoutes() {
           <WRoute path="/subscriptions" component={Subscriptions} />
           <WRoute path="/referrals" component={Referrals} />
           <WRoute path="/admin" component={AdminDashboard} />
+          <WRoute path="/admin/agents" component={AgentControl} />
           <WRoute path="/admin/users" component={AdminDashboard} />
           <WRoute path="/admin/ops" component={OpsDashboard} />
           <WRoute path="/white-label" component={WhiteLabel} />
@@ -114,6 +117,7 @@ function AppRouter() {
       <WRoute path="/demo">
         <Redirect to="/subscriptions" />
       </WRoute>
+      <WRoute path="/verify" component={DppPublicPortal} />
       <WRoute path="/roi-calculator" component={ROICalculator} />
       <WRoute path="/pricing" component={Pricing} />
       <WRoute path="/investor-portal" component={InvestorPortal} />

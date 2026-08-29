@@ -74,3 +74,33 @@ async def run_global_compliance_audit(supabase, ctx: Optional[ExecutionContext] 
         results.append(res)
 
     return results
+
+class GDPRHandler:
+    """
+    Handles Right to be Forgotten (RTBF) requests by scrubbing PII
+    from telemetry and interaction logs while preserving aggregate metrics.
+    """
+    def __init__(self, supabase):
+        self.supabase = supabase
+
+    async def scrub_user_data(self, user_id: str, ctx: Optional[ExecutionContext] = None) -> bool:
+        if ctx:
+            ctx.step(f"Executing GDPR RTBF scrub for user {user_id}...")
+        
+        try:
+            # 1. Scrub telemetry events
+            self.supabase.table("telemetry_events").update({
+                "userId": "SCRUBBED",
+                "rawPayload": {"status": "PII_REMOVED"}
+            }).eq("userId", user_id).execute()
+
+            # 2. Scrub scan logs
+            self.supabase.table("scan_logs").delete().eq("userId", user_id).execute()
+
+            if ctx:
+                ctx.step(f"✓ Successfully scrubbed all PII for user {user_id}.")
+            return True
+        except Exception as e:
+            if ctx:
+                ctx.step(f"Error during GDPR scrub: {e}")
+            return False

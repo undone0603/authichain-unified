@@ -233,7 +233,7 @@ class LimitProofLLM:
                              base_url=f"{host.rstrip('/')}/v1", max_retries=1)
         else:
             from langchain_ollama import ChatOllama
-            llm = ChatOllama(model=model, temperature=self.temperature)
+            llm = ChatOllama(model=model, temperature=self.temperature, base_url=host)
         return llm.bind_tools(self._tools, **self._bind_kwargs) if self._tools else llm
 
     def bind_tools(self, tools: List[Any], **kwargs) -> LimitProofLLM:

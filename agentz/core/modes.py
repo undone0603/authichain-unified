@@ -27,6 +27,7 @@ class ExecutionContext:
     mode: Mode
     workflow_id: str
     verbose: bool = True
+    parameters: dict[str, Any] = field(default_factory=dict)
 
     def save_state(self, data: dict[str, Any]) -> None:
         """Persist workflow state to a checkpoint file."""
