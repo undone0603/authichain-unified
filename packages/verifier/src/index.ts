@@ -5,19 +5,18 @@ import {
   decodeProtectedHeader,
   exportJWK,
   importJWK,
-  importPKCS8,
 } from "jose";
+
+export type KeyLike = any;
 
 export const AUTHICHAIN_ATTESTATION_V01 = "0.1" as const;
 export const AUTHICHAIN_ATTESTATION_TYP = "AC-ATTESTATION+JWS";
 
-type Json =
-  | null
-  | boolean
-  | number
-  | string
-  | Json[]
-  | { [key: string]: Json };
+export async function getKeyId(key: KeyLike): Promise<string> {
+  return calculateJwkThumbprint(await publicJwkFromPrivateKey(key));
+}
+
+type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
 export type AttestationDecision = "verified" | "warning" | "blocked";
 export type AttestationStatus = "active" | "revoked" | "unknown";
@@ -55,21 +54,30 @@ export function canonicalize(value: Json): string {
   if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
   return `{${Object.keys(value)
     .sort()
-    .map(
-      key =>
-        `${JSON.stringify(key)}:${canonicalize(value[key])}`
-    )
+    .map(key => `${JSON.stringify(key)}:${canonicalize(value[key])}`)
     .join(",")}}`;
 }
 
+// Utility functions for base64url encoding/decoding using standard APIs
 function b64url(value: Uint8Array | string): string {
   const bytes =
     typeof value === "string" ? new TextEncoder().encode(value) : value;
-  return Buffer.from(bytes).toString("base64url");
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
 }
 
 function fromB64url(value: string): Uint8Array {
-  return new Uint8Array(Buffer.from(value, "base64url"));
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = base64.length % 4;
+  const padded = pad ? base64 + "=".repeat(4 - pad) : base64;
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
 }
 
 export function validateAttestation(input: unknown): AuthiChainAttestationV01 {
@@ -124,9 +132,7 @@ export function validateAttestation(input: unknown): AuthiChainAttestationV01 {
     }
   }
 
-  if (
-    !["verified", "warning", "blocked"].includes(String(value.decision))
-  ) {
+  if (!["verified", "warning", "blocked"].includes(String(value.decision))) {
     throw new Error("invalid decision");
   }
   if (!["active", "revoked", "unknown"].includes(String(value.status))) {
@@ -140,7 +146,8 @@ export function validateAttestation(input: unknown): AuthiChainAttestationV01 {
   }
   if (
     value.expires_at !== undefined &&
-    Date.parse(value.expires_at as string) <= Date.parse(value.issued_at as string)
+    Date.parse(value.expires_at as string) <=
+      Date.parse(value.issued_at as string)
   ) {
     throw new Error("expires_at must be after issued_at");
   }
@@ -175,37 +182,21 @@ export function validateAttestation(input: unknown): AuthiChainAttestationV01 {
   return input as AuthiChainAttestationV01;
 }
 
-async function loadPrivateKey() {
-  const raw = process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
-  if (!raw) {
-    throw new Error("AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 is not configured");
-  }
-  const pem = Buffer.from(raw, "base64").toString("utf8");
-  return importPKCS8(pem, "EdDSA");
-}
-
-export async function publicJwkFromPrivateKey() {
-  const key = await loadPrivateKey();
+export async function publicJwkFromPrivateKey(key: KeyLike) {
   const jwk = await exportJWK(key);
   const { d: _d, ...publicJwk } = jwk;
   return publicJwk;
 }
 
-export async function getKeyId(): Promise<string> {
-  if (process.env.AUTHICHAIN_ATTESTATION_KEY_ID) {
-    return process.env.AUTHICHAIN_ATTESTATION_KEY_ID;
-  }
-  return calculateJwkThumbprint(await publicJwkFromPrivateKey());
-}
-
 export async function signAttestation(
-  input: AuthiChainAttestationV01
+  input: AuthiChainAttestationV01,
+  privateKey: KeyLike,
+  keyId: string
 ): Promise<string> {
   const attestation = validateAttestation(input);
-  const key = await loadPrivateKey();
   const protectedHeader = {
     alg: "EdDSA",
-    kid: await getKeyId(),
+    kid: keyId,
     typ: AUTHICHAIN_ATTESTATION_TYP,
   };
   const payload = new TextEncoder().encode(
@@ -213,7 +204,7 @@ export async function signAttestation(
   );
   return new CompactSign(payload)
     .setProtectedHeader(protectedHeader)
-    .sign(key);
+    .sign(privateKey);
 }
 
 export async function verifyAttestationJws(
@@ -253,5 +244,3 @@ export function parseJws(jws: string) {
     signature: encodedSignature,
   };
 }
-
-export { b64url };

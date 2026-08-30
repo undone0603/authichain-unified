@@ -1,3 +1,7 @@
+allowBuilds:
+  edgedriver: set this to true or false
+  esbuild: set this to true or false
+  geckodriver: set this to true or false
 # Scoped security overrides — Dependabot alerts across vendored agent-browser
 # copies (CLI, docs site, examples/environments). Superset applied to every
 # vendored pnpm project; a selector that matches nothing in a given project

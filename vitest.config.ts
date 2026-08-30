@@ -43,11 +43,32 @@ export default defineConfig({
         find: "@assets",
         replacement: path.resolve(templateRoot, "attached_assets"),
       },
+      {
+        find: "@authichain/verifier",
+        replacement: path.resolve(
+          templateRoot,
+          "packages",
+          "verifier",
+          "src",
+          "index.ts"
+        ),
+      },
+      {
+        find: "@authichain/evidence",
+        replacement: path.resolve(
+          templateRoot,
+          "packages",
+          "evidence",
+          "src",
+          "index.ts"
+        ),
+      },
     ],
   },
   test: {
     globals: true,
-    environment: "node",
+    environment: "jsdom",
+    setupFiles: ["./apps/verifier-web/src/setupTests.ts"],
     include: [
       "api/**/*.test.ts",
       "server/**/*.test.ts",
@@ -61,6 +82,9 @@ export default defineConfig({
       "client/**/*.test.tsx",
       "workers/**/*.test.ts",
       "protocol/**/*.test.mjs",
+      "packages/**/*.test.ts",
+      "apps/**/*.test.ts",
+      "apps/**/*.test.tsx",
     ],
   },
 });

@@ -1,0 +1,6 @@
+{
+  "name": "verifier-web",
+  "framework": "vite",
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist"
+}
