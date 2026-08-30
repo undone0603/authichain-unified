@@ -1,34 +1,17 @@
 import { z } from "zod";
+import { EvidenceSchema as BaseEvidenceSchema } from "./base";
 
-export const EvidenceSchema = z.object({
-  id: z.string().uuid(),
-  subject_id: z.string(), // Links to object_id in Identity Plane
-  type: z.enum([
-    "manufacturing",
-    "inspection",
-    "shipment",
-    "commission",
-    "pack",
-    "receive",
-    "dispense",
-  ]),
-  issuer: z.object({
-    id: z.string(),
-    name: z.string(),
+export * from "./base";
+export { mapEpcisToDsCsa } from "./mapping";
+
+export const DsCsaEvidenceSchema = BaseEvidenceSchema.extend({
+  metadata: z.object({
+    lotNumber: z.string(),
+    expirationDate: z.string().datetime(),
+    tradingPartnerId: z.string(),
+    transactionId: z.string(),
   }),
-  timestamp: z.string().datetime(),
-  digest: z.string().startsWith("sha256:"),
-  signature: z.string(), // Ed25519 signature of (payload + digest)
-  metadata: z.record(z.any()).optional(),
 });
 
-export type Evidence = z.infer<typeof EvidenceSchema>;
-
-export function canonicalize(value: any): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
-  return `{${Object.keys(value)
-    .sort()
-    .map(key => `${JSON.stringify(key)}:${canonicalize(value[key])}`)
-    .join(",")}}`;
-}
+export type DsCsaEvidence = z.infer<typeof DsCsaEvidenceSchema>;
+export { DsCsaEvidenceSchema as DsCsaMetadataSchema };

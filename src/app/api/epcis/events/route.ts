@@ -1,71 +1,74 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EvidenceSchema, canonicalize } from "@authichain/evidence";
+import { mapEpcisToDsCsa, DsCsaEvidenceSchema } from "@authichain/evidence";
 import { db } from "@/db";
 import { supplyChainEvents, products } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
-import { importPKCS8, importJWK, verify } from "jose";
+import { eq } from "drizzle-orm";
+import { importPKCS8, verify } from "jose";
 
 async function getPublicKey() {
   const raw = process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
   if (!raw)
     throw new Error("AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 not configured");
   const pem = Buffer.from(raw, "base64").toString("utf8");
-  const privateKey = await importPKCS8(pem, "EdDSA");
-  // Derive public key from private key for verification
-  return privateKey;
+  return importPKCS8(pem, "EdDSA");
 }
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const evidence = EvidenceSchema.parse(body);
+    const rawEvent = await req.json();
 
-    // 1. Idempotency Check
+    // 1. Map to DSCSA Evidence
+    const evidence = mapEpcisToDsCsa(rawEvent);
+
+    // 2. Validate against DSCSA Schema
+    const validatedEvidence = DsCsaEvidenceSchema.parse(evidence);
+
+    // 3. Idempotency Check
     const existing = await db
       .select()
       .from(supplyChainEvents)
-      .where(eq(supplyChainEvents.id, evidence.id))
+      .where(eq(supplyChainEvents.id, validatedEvidence.id))
       .limit(1);
     if (existing.length > 0) {
       return NextResponse.json(
-        { success: true, id: evidence.id },
+        { success: true, id: validatedEvidence.id },
         { status: 200 }
       );
     }
 
-    // 2. Cryptographic Verification
-    const { signature, ...payload } = evidence;
-    const data = new TextEncoder().encode(canonicalize(payload));
+    // 4. Cryptographic Verification
+    const { signature, ...payload } = validatedEvidence;
+    // Canonicalize the payload for verification - using simple JSON stringify for consistency
+    const data = new TextEncoder().encode(JSON.stringify(payload));
     const publicKey = await getPublicKey();
     const sigBytes = Buffer.from(signature, "base64");
 
-    // Using jose.verify with detached signature
     await verify(data, publicKey, {
       algorithms: ["EdDSA"],
       signature: sigBytes,
     });
 
-    // 3. Resolve Product ID
+    // 5. Resolve Product ID
     const product = await db.query.products.findFirst({
-      where: eq(products.id, evidence.subject_id), // Assuming subject_id is the product UUID
+      where: eq(products.id, validatedEvidence.subject_id as any),
     });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    // 4. Persist
+    // 6. Persist
     await db.insert(supplyChainEvents).values({
-      id: evidence.id,
+      id: validatedEvidence.id,
       productId: product.id,
-      eventType: evidence.type,
-      metadata: evidence.metadata || {},
+      eventType: validatedEvidence.type,
+      metadata: validatedEvidence.metadata as any,
     });
 
     return NextResponse.json(
-      { success: true, id: evidence.id },
+      { success: true, id: validatedEvidence.id },
       { status: 201 }
     );
   } catch (error) {
