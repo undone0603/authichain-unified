@@ -18,236 +18,242 @@ import {
   real,
   date,
   uniqueIndex,
-} from 'drizzle-orm/pg-core';
+} from "drizzle-orm/pg-core";
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
-export const tierEnum = pgEnum('tier', ['free', 'pro', 'enterprise']);
+export const tierEnum = pgEnum("tier", ["free", "pro", "enterprise"]);
 
 // ─── Users & Profiles ────────────────────────────────────────────────────────
 // Merged from both schemas
-export const users = pgTable('users', {
-  authUid: uuid('auth_uid').unique(),
-  id: serial('id').primaryKey(),
-  openId: varchar('openId', { length: 64 }).notNull().unique(),
-  name: text('name'),
-  email: varchar('email', { length: 320 }),
-  loginMethod: varchar('loginMethod', { length: 64 }),
-  role: varchar('role', { length: 50 }).default('user').notNull(),
-  walletAddress: varchar('walletAddress', { length: 128 }),
-  avatarUrl: text('avatarUrl'),
-  company: varchar('company', { length: 256 }),
-  title: varchar('title', { length: 256 }),
-  phone: varchar('phone', { length: 32 }),
-  onboardingCompleted: integer('onboardingCompleted').default(0),
-  stripeCustomerId: varchar('stripeCustomerId', { length: 128 }).unique(),
-  paddleCustomerId: varchar('paddleCustomerId', { length: 128 }),
-  points: integer('points').default(0),
+export const users = pgTable("users", {
+  authUid: uuid("auth_uid").unique(),
+  id: serial("id").primaryKey(),
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  name: text("name"),
+  email: varchar("email", { length: 320 }),
+  loginMethod: varchar("loginMethod", { length: 64 }),
+  role: varchar("role", { length: 50 }).default("user").notNull(),
+  walletAddress: varchar("walletAddress", { length: 128 }),
+  avatarUrl: text("avatarUrl"),
+  company: varchar("company", { length: 256 }),
+  title: varchar("title", { length: 256 }),
+  phone: varchar("phone", { length: 32 }),
+  onboardingCompleted: integer("onboardingCompleted").default(0),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }).unique(),
+  paddleCustomerId: varchar("paddleCustomerId", { length: 128 }),
+  points: integer("points").default(0),
   // QRON specific fields
-  generationsUsed: integer('generations_used').default(0).notNull(),
+  generationsUsed: integer("generations_used").default(0).notNull(),
   // Free-gen grant removed — access comes from a free trial or paid plan.
-  generationsLimit: integer('generations_limit').default(0).notNull(),
-  affiliateId: text('affiliate_id').unique(),
-  referredBy: text('referred_by'),
-  storyModeEnabled: boolean('story_mode_enabled').default(false),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
-  lastSignedIn: timestamp('lastSignedIn').defaultNow().notNull(),
+  generationsLimit: integer("generations_limit").default(0).notNull(),
+  affiliateId: text("affiliate_id").unique(),
+  referredBy: text("referred_by"),
+  storyModeEnabled: boolean("story_mode_enabled").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 // ─── Products ────────────────────────────────────────────────────────────────
-export const products = pgTable('products', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: integer('user_id').notNull(),
-  name: varchar('name', { length: 512 }).notNull(),
-  brand: varchar('brand', { length: 256 }),
-  category: varchar('category', { length: 128 }),
-  description: text('description'),
-  imageUrl: text('image_url'),
-  serialNumber: varchar('serial_number', { length: 256 }),
-  manufacturingDate: timestamp('manufacturing_date'),
-  blockchainTxHash: varchar('blockchain_tx_hash', { length: 128 }),
-  nftTokenId: varchar('nft_token_id', { length: 128 }),
-  status: varchar('status', { length: 50 }).default('active'),
+export const products = pgTable("products", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: integer("user_id").notNull(),
+  name: varchar("name", { length: 512 }).notNull(),
+  brand: varchar("brand", { length: 256 }),
+  category: varchar("category", { length: 128 }),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  serialNumber: varchar("serial_number", { length: 256 }),
+  manufacturingDate: timestamp("manufacturing_date"),
+  blockchainTxHash: varchar("blockchain_tx_hash", { length: 128 }),
+  nftTokenId: varchar("nft_token_id", { length: 128 }),
+  status: varchar("status", { length: 50 }).default("active"),
   // QRON specific fields
-  manufacturer: text('manufacturer'),
-  modelNumber: text('model_number'),
-  metadata: jsonb('metadata').default({}),
-  audioUrl: text('audioUrl'),
-  visionMarkers: json('visionMarkers'),
-  rarityScore: integer('rarityScore'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  manufacturer: text("manufacturer"),
+  modelNumber: text("model_number"),
+  metadata: jsonb("metadata").default({}),
+  audioUrl: text("audioUrl"),
+  visionMarkers: json("visionMarkers"),
+  rarityScore: integer("rarityScore"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
 
 // ─── Authentications ─────────────────────────────────────────────────────────
-export const authentications = pgTable('authentications', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  productId: uuid('product_id').notNull(),
-  userId: integer('user_id').notNull(),
-  result: varchar('result', { length: 50 }).notNull(),
-  isPublic: integer('is_public').default(0),
-  shareToken: varchar('share_token', { length: 128 }),
-  shareCount: integer('share_count').default(0),
-  verificationMethod: varchar('method', { length: 64 }).default('ai_image'),
-  blockchainVerified: integer('blockchain_verified').default(0),
-  metadata: json('metadata'),
-  name: text('name'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+export const authentications = pgTable("authentications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  productId: uuid("product_id").notNull(),
+  userId: integer("user_id").notNull(),
+  result: varchar("result", { length: 50 }).notNull(),
+  isPublic: integer("is_public").default(0),
+  shareToken: varchar("share_token", { length: 128 }),
+  shareCount: integer("share_count").default(0),
+  verificationMethod: varchar("method", { length: 64 }).default("ai_image"),
+  blockchainVerified: integer("blockchain_verified").default(0),
+  metadata: json("metadata"),
+  name: text("name"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type Authentication = typeof authentications.$inferSelect;
 
 // ─── Certificates ────────────────────────────────────────────────────────────
-export const certificates = pgTable('certificates', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  productId: uuid('product_id').notNull(),
-  userId: integer('user_id').notNull(),
-  certificateNumber: varchar('certificate_number', { length: 64 }).notNull().unique(),
-  status: varchar('status', { length: 50 }).default('active'),
-  issuedAt: timestamp('issued_at').defaultNow().notNull(),
-  expiresAt: timestamp('expires_at'),
-  blockchainTxHash: varchar('blockchain_tx', { length: 128 }),
-  nftTokenId: varchar('nft_token_id', { length: 256 }),
-  nftContractAddress: varchar('nft_contract_address', { length: 64 }),
-  certificateUrl: text('certificate_url'),
-  metadata: json('metadata'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const certificates = pgTable("certificates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  productId: uuid("product_id").notNull(),
+  userId: integer("user_id").notNull(),
+  certificateNumber: varchar("certificate_number", { length: 64 })
+    .notNull()
+    .unique(),
+  status: varchar("status", { length: 50 }).default("active"),
+  issuedAt: timestamp("issued_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
+  blockchainTxHash: varchar("blockchain_tx", { length: 128 }),
+  nftTokenId: varchar("nft_token_id", { length: 256 }),
+  nftContractAddress: varchar("nft_contract_address", { length: 64 }),
+  certificateUrl: text("certificate_url"),
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export type Certificate = typeof certificates.$inferSelect;
 
 // ─── QR Codes & QRONs ────────────────────────────────────────────────────────
-export const qrCodes = pgTable('qr_codes', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  productId: uuid('product_id'),
-  userId: integer('user_id').notNull(),
-  name: text('name'),
-  shortCode: text('short_code'),
-  qrData: text('data').notNull(),
-  qrImageUrl: text('qr_image_url'),
-  scanCount: integer('scan_count').default(0),
-  lastScannedAt: timestamp('last_scanned_at'),
-  mode: text('mode').default('standard').notNull(),
-  imageUrl: text('image_url'),
-  style: jsonb('style'),
-  metadata: jsonb('metadata').default({}),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-  qrcodesUserIdx: index('idx_qrcodes_user_id').on(table.userId),
-  qrcodesShortCodeIdx: index('idx_qrcodes_short_code').on(table.shortCode),
-}));
+export const qrCodes = pgTable(
+  "qr_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id"),
+    userId: integer("user_id").notNull(),
+    name: text("name"),
+    shortCode: text("short_code"),
+    qrData: text("data").notNull(),
+    qrImageUrl: text("qr_image_url"),
+    scanCount: integer("scan_count").default(0),
+    lastScannedAt: timestamp("last_scanned_at"),
+    mode: text("mode").default("standard").notNull(),
+    imageUrl: text("image_url"),
+    style: jsonb("style"),
+    metadata: jsonb("metadata").default({}),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  table => ({
+    qrcodesUserIdx: index("idx_qrcodes_user_id").on(table.userId),
+    qrcodesShortCodeIdx: index("idx_qrcodes_short_code").on(table.shortCode),
+  })
+);
 
 export type QrCode = typeof qrCodes.$inferSelect;
 
 // ─── QR Scan Events ──────────────────────────────────────────────────────────
-export const qrScanEvents = pgTable('qr_scan_events', {
-  id: serial('id').primaryKey(),
-  qrCodeId: uuid('qrCodeId').notNull(),
-  productId: uuid('productId').notNull(),
-  isAuthentic: boolean('isAuthentic'),
-  userAgent: text('userAgent'),
-  scannedAt: timestamp('scannedAt').defaultNow().notNull(),
+export const qrScanEvents = pgTable("qr_scan_events", {
+  id: serial("id").primaryKey(),
+  qrCodeId: uuid("qrCodeId").notNull(),
+  productId: uuid("productId").notNull(),
+  isAuthentic: boolean("isAuthentic"),
+  userAgent: text("userAgent"),
+  scannedAt: timestamp("scannedAt").defaultNow().notNull(),
 });
 export type QrScanEvent = typeof qrScanEvents.$inferSelect;
 
 // ─── Redirect Rules ──────────────────────────────────────────────────────────
 export const redirectRules = pgTable(
-  'redirect_rules',
+  "redirect_rules",
   {
-    id: serial('id').primaryKey(),
-    qronId: integer('qron_id').notNull(),
-    name: text('name').notNull(),
-    url: text('url').notNull(),
-    priority: integer('priority').default(100).notNull(),
-    ruleType: text('rule_type').notNull(),
-    conditions: jsonb('conditions'),
-    weight: integer('weight'),
-    isActive: boolean('is_active').default(true).notNull(),
-    clickCount: integer('click_count').default(0),
-    geoTargets: text('geo_targets').array().array(),
-    deviceTargets: text('device_targets').array().array(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    id: serial("id").primaryKey(),
+    qronId: integer("qron_id").notNull(),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    priority: integer("priority").default(100).notNull(),
+    ruleType: text("rule_type").notNull(),
+    conditions: jsonb("conditions"),
+    weight: integer("weight"),
+    isActive: boolean("is_active").default(true).notNull(),
+    clickCount: integer("click_count").default(0),
+    geoTargets: text("geo_targets").array().array(),
+    deviceTargets: text("device_targets").array().array(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => ({
-    redirectQronIdx: index('idx_redirect_qron').on(table.qronId),
+  table => ({
+    redirectQronIdx: index("idx_redirect_qron").on(table.qronId),
   })
 );
 
 // ─── Brands ──────────────────────────────────────────────────────────────────
 export const brands = pgTable(
-  'brands',
+  "brands",
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: integer('user_id').notNull(), // Linked to users.id
-    name: text('name').notNull(),
-    domain: text('domain'),
-    logoUrl: text('logo_url'),
-    industry: text('industry'),
-    stakingTier: text('staking_tier').default('none').notNull(),
-    qronStaked: numeric('qron_staked').default('0').notNull(),
-    walletAddress: text('wallet_address'),
-    unitCostDiscount: numeric('unit_cost_discount').default('0').notNull(),
-    baseUnitCost: numeric('base_unit_cost').default('0.05').notNull(),
-    isVerified: boolean('is_verified').default(false).notNull(),
-    isActive: boolean('is_active').default(true).notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: integer("user_id").notNull(), // Linked to users.id
+    name: text("name").notNull(),
+    domain: text("domain"),
+    logoUrl: text("logo_url"),
+    industry: text("industry"),
+    stakingTier: text("staking_tier").default("none").notNull(),
+    qronStaked: numeric("qron_staked").default("0").notNull(),
+    walletAddress: text("wallet_address"),
+    unitCostDiscount: numeric("unit_cost_discount").default("0").notNull(),
+    baseUnitCost: numeric("base_unit_cost").default("0.05").notNull(),
+    isVerified: boolean("is_verified").default(false).notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => ({
-    brandsDomainIdx: index('idx_brands_domain').on(table.domain),
+  table => ({
+    brandsDomainIdx: index("idx_brands_domain").on(table.domain),
   })
 );
 
 // ─── Telemetry Events (Phase 2 & Theater 1) ──────────────────────────────────
 export const telemetryEvents = pgTable(
-  'telemetry_events',
+  "telemetry_events",
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: integer('user_id'),
-    brandId: uuid('brand_id'),
-    productId: integer('product_id'),
-    theater: text('theater').notNull(), // 'theater_1', 'theater_3', etc.
-    source: text('source'),
-    metrcTag: text('metrc_tag'),
-    rawPayload: jsonb('raw_payload').notNull(),
-    parsedState: jsonb('parsed_state').notNull(),
-    ledgerHash: text('ledger_hash'),
-    stateHash: text('state_hash'),
-    anchoredTxHash: text('anchored_tx_hash'),
-    isCompliant: boolean('is_compliant'),
-    gpsLocation: jsonb('gps_location'),
-    timestamp: timestamp('timestamp').defaultNow().notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: integer("user_id"),
+    brandId: uuid("brand_id"),
+    productId: integer("product_id"),
+    theater: text("theater").notNull(), // 'theater_1', 'theater_3', etc.
+    source: text("source"),
+    metrcTag: text("metrc_tag"),
+    rawPayload: jsonb("raw_payload").notNull(),
+    parsedState: jsonb("parsed_state").notNull(),
+    ledgerHash: text("ledger_hash"),
+    stateHash: text("state_hash"),
+    anchoredTxHash: text("anchored_tx_hash"),
+    isCompliant: boolean("is_compliant"),
+    gpsLocation: jsonb("gps_location"),
+    timestamp: timestamp("timestamp").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => ({
-    telemetryTheaterIdx: index('idx_telemetry_theater').on(table.theater),
-    telemetryHashIdx: index('idx_telemetry_hash').on(table.stateHash),
+  table => ({
+    telemetryTheaterIdx: index("idx_telemetry_theater").on(table.theater),
+    telemetryHashIdx: index("idx_telemetry_hash").on(table.stateHash),
   })
 );
 
 // ─── Supply Chain Events ─────────────────────────────────────────────────────
-export const supplyChainEvents = pgTable('supply_chain_events', {
-  userId: integer('user_id'),
-  id: uuid('id').primaryKey().defaultRandom(),
-  productId: uuid('product_id').notNull(),
-  eventType: varchar('event_type', { length: 50 }).notNull(),
-  location: varchar('location', { length: 512 }),
-  latitude: numeric('location_lat', { precision: 10, scale: 7 }),
-  longitude: numeric('location_lng', { precision: 10, scale: 7 }),
-  handler: varchar('actor', { length: 256 }),
-  notes: text('notes'),
-  blockchainTxHash: varchar('blockchain_tx', { length: 128 }),
-  metadata: json('metadata'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+export const supplyChainEvents = pgTable("supply_chain_events", {
+  userId: integer("user_id"),
+  id: uuid("id").primaryKey().defaultRandom(),
+  productId: uuid("product_id").notNull(),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  location: varchar("location", { length: 512 }),
+  latitude: numeric("location_lat", { precision: 10, scale: 7 }),
+  longitude: numeric("location_lng", { precision: 10, scale: 7 }),
+  handler: varchar("actor", { length: 256 }),
+  notes: text("notes"),
+  blockchainTxHash: varchar("blockchain_tx", { length: 128 }),
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type SupplyChainEvent = typeof supplyChainEvents.$inferSelect;
@@ -257,36 +263,45 @@ export type SupplyChainEvent = typeof supplyChainEvents.$inferSelect;
 // The deployed system uses Supabase profiles.generations_limit for entitlements.
 // See docs/CREDIT_MODEL_ARCHITECTURE.md for reconciliation details.
 // This table is currently used only for admin analytics and dunning status tracking.
-export const subscriptions = pgTable('subscriptions', {
-  id: serial('id').primaryKey(),
-  userId: integer('userId').notNull(),
-  plan: varchar('plan', { length: 50 }).notNull(),
-  status: varchar('status', { length: 50 }).default('active'),
-  monthlyQuota: integer('monthlyQuota').notNull(),
-  usedQuota: integer('usedQuota').default(0),
-  stripeCustomerId: varchar('stripeCustomerId', { length: 128 }),
-  stripeSubscriptionId: varchar('stripeSubscriptionId', { length: 128 }),
-  paddleSubscriptionId: varchar('paddleSubscriptionId', { length: 128 }),
-  paddleCustomerId: varchar('paddleCustomerId', { length: 128 }),
-  billingCycle: varchar('billingCycle', { length: 50 }).default('monthly'),
-  currentPeriodStart: timestamp('currentPeriodStart'),
-  currentPeriodEnd: timestamp('currentPeriodEnd'),
-  trialEndsAt: timestamp('trialEndsAt'),
-  cancelledAt: timestamp('cancelledAt'),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+export const subscriptions = pgTable("subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  plan: varchar("plan", { length: 50 }).notNull(),
+  status: varchar("status", { length: 50 }).default("active"),
+  monthlyQuota: integer("monthlyQuota").notNull(),
+  usedQuota: integer("usedQuota").default(0),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
+  paddleSubscriptionId: varchar("paddleSubscriptionId", { length: 128 }),
+  paddleCustomerId: varchar("paddleCustomerId", { length: 128 }),
+  billingCycle: varchar("billingCycle", { length: 50 }).default("monthly"),
+  currentPeriodStart: timestamp("currentPeriodStart"),
+  currentPeriodEnd: timestamp("currentPeriodEnd"),
+  trialEndsAt: timestamp("trialEndsAt"),
+  cancelledAt: timestamp("cancelledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
-
-// ─── Usage Records ───────────────────────────────────────────────────────────
-export const usageRecords = pgTable("usage_records", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: integer("user_id").notNull(),
-  type: varchar("resource_type", { length: 64 }).notNull(),
-  quantity: integer("quantity").default(1),
-  metadata: json("metadata"),
-  createdAt: timestamp("recorded_at").defaultNow().notNull(),
-});
+// ─── API Usage ──────────────────────────────────────────────────────────────
+export const apiUsage = pgTable(
+  "api_usage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: integer("user_id").notNull(),
+    usageCount: integer("usage_count").default(0).notNull(),
+    billingPeriodStart: timestamp("billing_period_start").notNull(),
+    billingPeriodEnd: timestamp("billing_period_end").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  table => ({
+    userIdPeriodIdx: uniqueIndex("api_usage_user_id_period_idx").on(
+      table.userId,
+      table.billingPeriodStart
+    ),
+  })
+);
 
 // ─── Invoices ────────────────────────────────────────────────────────────────
 export const invoices = pgTable("invoices", {
@@ -419,11 +434,16 @@ export const referrals = pgTable("referrals", {
   referredId: integer("referred_id"),
   referralCode: varchar("referral_code", { length: 32 }).notNull().unique(),
   status: varchar("status", { length: 50 }).default("pending"),
-  rewardAmount: numeric("reward_amount", { precision: 10, scale: 2 }).default("0"),
+  rewardAmount: numeric("reward_amount", { precision: 10, scale: 2 }).default(
+    "0"
+  ),
   rewardPaid: boolean("reward_paid").default(false),
   referredEmail: varchar("referred_email", { length: 320 }),
   tier: varchar("tier", { length: 50 }),
-  commissionPaid: numeric("commission_paid", { precision: 10, scale: 2 }).default("0"),
+  commissionPaid: numeric("commission_paid", {
+    precision: 10,
+    scale: 2,
+  }).default("0"),
   convertedAt: timestamp("converted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -436,9 +456,16 @@ export const affiliates = pgTable("affiliates", {
   userId: integer("user_id"),
   legacyAuthUid: uuid("legacy_auth_uid"),
   affiliateCode: varchar("affiliatecode", { length: 32 }).notNull().unique(),
-  commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }).default("10.00"),
-  totalEarnings: numeric("total_earnings", { precision: 18, scale: 2 }).default("0"),
-  pendingPayout: numeric("pending_payout", { precision: 18, scale: 2 }).default("0"),
+  commissionRate: numeric("commission_rate", {
+    precision: 5,
+    scale: 2,
+  }).default("10.00"),
+  totalEarnings: numeric("total_earnings", { precision: 18, scale: 2 }).default(
+    "0"
+  ),
+  pendingPayout: numeric("pending_payout", { precision: 18, scale: 2 }).default(
+    "0"
+  ),
   totalReferrals: integer("total_referrals").default(0),
   totalConversions: integer("total_conversions").default(0),
   status: varchar("status", { length: 50 }).default("pending"),
@@ -467,7 +494,10 @@ export const affiliateCommissions = pgTable("affiliate_commissions", {
 // ─── Autopilot Config ────────────────────────────────────────────────────────
 export const autopilotConfig = pgTable("autopilot_config", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: varchar("tenant_id", { length: 64 }).notNull().unique().default("default"),
+  tenantId: varchar("tenant_id", { length: 64 })
+    .notNull()
+    .unique()
+    .default("default"),
   enabled: integer("enabled").default(0),
   mode: varchar("mode", { length: 50 }).default("balanced"),
   guardrails: json("guardrails"),
@@ -509,73 +539,99 @@ export const abTests = pgTable("ab_tests", {
 export type AbTest = typeof abTests.$inferSelect;
 
 // ─── A/B Test Results (Detailed Tracking) ────────────────────────────────────
-export const abTestResults = pgTable("ab_test_results", {
-  id: serial("id").primaryKey(),
-  abTestId: integer("ab_test_id").notNull(),
-  leadId: integer("lead_id").notNull(),
-  variantAssigned: varchar("variant_assigned", { length: 1 }).notNull(),
-  emailSent: boolean("email_sent").default(false),
-  emailOpened: boolean("email_opened").default(false),
-  emailClicked: boolean("email_clicked").default(false),
-  emailReplied: boolean("email_replied").default(false),
-  linkedinImpression: integer("linkedin_impression").default(0),
-  linkedinLike: integer("linkedin_like").default(0),
-  linkedinComment: integer("linkedin_comment").default(0),
-  linkedinShare: integer("linkedin_share").default(0),
-  pricingViewed: boolean("pricing_viewed").default(false),
-  pricingSelected: varchar("pricing_selected", { length: 64 }),
-  pricingPurchased: boolean("pricing_purchased").default(false),
-  dealConverted: boolean("deal_converted").default(false),
-  dealSize: numeric("deal_size", { precision: 12, scale: 2 }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  abTestResultsTestIdx: index("idx_ab_test_results_test_id").on(table.abTestId),
-  abTestResultsLeadIdx: index("idx_ab_test_results_lead_id").on(table.leadId),
-  abTestResultsVariantIdx: index("idx_ab_test_results_variant").on(table.variantAssigned),
-}));
+export const abTestResults = pgTable(
+  "ab_test_results",
+  {
+    id: serial("id").primaryKey(),
+    abTestId: integer("ab_test_id").notNull(),
+    leadId: integer("lead_id").notNull(),
+    variantAssigned: varchar("variant_assigned", { length: 1 }).notNull(),
+    emailSent: boolean("email_sent").default(false),
+    emailOpened: boolean("email_opened").default(false),
+    emailClicked: boolean("email_clicked").default(false),
+    emailReplied: boolean("email_replied").default(false),
+    linkedinImpression: integer("linkedin_impression").default(0),
+    linkedinLike: integer("linkedin_like").default(0),
+    linkedinComment: integer("linkedin_comment").default(0),
+    linkedinShare: integer("linkedin_share").default(0),
+    pricingViewed: boolean("pricing_viewed").default(false),
+    pricingSelected: varchar("pricing_selected", { length: 64 }),
+    pricingPurchased: boolean("pricing_purchased").default(false),
+    dealConverted: boolean("deal_converted").default(false),
+    dealSize: numeric("deal_size", { precision: 12, scale: 2 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  table => ({
+    abTestResultsTestIdx: index("idx_ab_test_results_test_id").on(
+      table.abTestId
+    ),
+    abTestResultsLeadIdx: index("idx_ab_test_results_lead_id").on(table.leadId),
+    abTestResultsVariantIdx: index("idx_ab_test_results_variant").on(
+      table.variantAssigned
+    ),
+  })
+);
 
 export type AbTestResult = typeof abTestResults.$inferSelect;
 
 // ─── A/B Test Variants (Template Versions) ────────────────────────────────────
-export const abTestVariants = pgTable("ab_test_variants", {
-  id: serial("id").primaryKey(),
-  abTestId: integer("ab_test_id").notNull(),
-  variantName: varchar("variant_name", { length: 1 }).notNull(),
-  variantType: varchar("variant_type", { length: 64 }).notNull(),
-  templateName: varchar("template_name", { length: 256 }),
-  subject: varchar("subject", { length: 512 }),
-  htmlContent: text("html_content"),
-  textContent: text("text_content"),
-  linkedinText: text("linkedin_text"),
-  linkedinImageUrl: text("linkedin_image_url"),
-  pricingJson: jsonb("pricing_json"),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  abTestVariantsTestIdx: index("idx_ab_test_variants_test_id").on(table.abTestId),
-  abTestVariantsVariantIdx: index("idx_ab_test_variants_variant").on(table.variantName),
-}));
+export const abTestVariants = pgTable(
+  "ab_test_variants",
+  {
+    id: serial("id").primaryKey(),
+    abTestId: integer("ab_test_id").notNull(),
+    variantName: varchar("variant_name", { length: 1 }).notNull(),
+    variantType: varchar("variant_type", { length: 64 }).notNull(),
+    templateName: varchar("template_name", { length: 256 }),
+    subject: varchar("subject", { length: 512 }),
+    htmlContent: text("html_content"),
+    textContent: text("text_content"),
+    linkedinText: text("linkedin_text"),
+    linkedinImageUrl: text("linkedin_image_url"),
+    pricingJson: jsonb("pricing_json"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  table => ({
+    abTestVariantsTestIdx: index("idx_ab_test_variants_test_id").on(
+      table.abTestId
+    ),
+    abTestVariantsVariantIdx: index("idx_ab_test_variants_variant").on(
+      table.variantName
+    ),
+  })
+);
 
 export type AbTestVariant = typeof abTestVariants.$inferSelect;
 
 // ─── Daily A/B Test Metrics ──────────────────────────────────────────────────
-export const dailyAbTestMetrics = pgTable("daily_ab_test_metrics", {
-  id: serial("id").primaryKey(),
-  abTestId: integer("ab_test_id").notNull(),
-  metricDate: text("metric_date").notNull(),
-  variantAParticipants: integer("variant_a_participants").default(0),
-  variantBParticipants: integer("variant_b_participants").default(0),
-  variantAConversions: integer("variant_a_conversions").default(0),
-  variantBConversions: integer("variant_b_conversions").default(0),
-  variantARevenue: numeric("variant_a_revenue", { precision: 12, scale: 2 }).default("0"),
-  variantBRevenue: numeric("variant_b_revenue", { precision: 12, scale: 2 }).default("0"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  dailyMetricsTestIdx: index("idx_daily_metrics_test_id").on(table.abTestId),
-  dailyMetricsDateIdx: index("idx_daily_metrics_date").on(table.metricDate),
-}));
+export const dailyAbTestMetrics = pgTable(
+  "daily_ab_test_metrics",
+  {
+    id: serial("id").primaryKey(),
+    abTestId: integer("ab_test_id").notNull(),
+    metricDate: text("metric_date").notNull(),
+    variantAParticipants: integer("variant_a_participants").default(0),
+    variantBParticipants: integer("variant_b_participants").default(0),
+    variantAConversions: integer("variant_a_conversions").default(0),
+    variantBConversions: integer("variant_b_conversions").default(0),
+    variantARevenue: numeric("variant_a_revenue", {
+      precision: 12,
+      scale: 2,
+    }).default("0"),
+    variantBRevenue: numeric("variant_b_revenue", {
+      precision: 12,
+      scale: 2,
+    }).default("0"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  table => ({
+    dailyMetricsTestIdx: index("idx_daily_metrics_test_id").on(table.abTestId),
+    dailyMetricsDateIdx: index("idx_daily_metrics_date").on(table.metricDate),
+  })
+);
 
 export type DailyAbTestMetric = typeof dailyAbTestMetrics.$inferSelect;
 
@@ -765,7 +821,7 @@ export const promptCache = pgTable("prompt_cache", {
 
 // ─── Scheduled Job Runs ──────────────────────────────────────────────────────
 export const scheduledJobRuns = pgTable("scheduled_job_runs", {
-  id: bigserial("id", { mode: 'number' }).primaryKey(),
+  id: bigserial("id", { mode: "number" }).primaryKey(),
   jobName: varchar("job_name", { length: 128 }).notNull(),
   status: varchar("status", { length: 50 }).notNull(),
   startedAt: timestamp("startedAt").defaultNow().notNull(),
@@ -868,7 +924,9 @@ export const protocolAgents = pgTable("protocol_agents", {
   level: integer("level").default(1),
   xp: integer("xp").default(0),
   reputationScore: integer("reputation_score").default(0),
-  qronPending: numeric("qron_pending", { precision: 20, scale: 9 }).default("0.000000000"),
+  qronPending: numeric("qron_pending", { precision: 20, scale: 9 }).default(
+    "0.000000000"
+  ),
   totalVerifications: integer("total_verifications").default(0),
   successfulVerifications: integer("successful_verifications").default(0),
   totalClaims: integer("total_claims").default(0),
@@ -926,7 +984,9 @@ export const stakingPositions = pgTable("staking_positions", {
   status: varchar("status", { length: 50 }).default("active"),
   multiplier: numeric("multiplier", { precision: 5, scale: 2 }).default("1.00"),
   apy: numeric("apy", { precision: 5, scale: 2 }).default("5.00"),
-  rewardsEarned: numeric("rewards_earned", { precision: 20, scale: 9 }).default("0"),
+  rewardsEarned: numeric("rewards_earned", { precision: 20, scale: 9 }).default(
+    "0"
+  ),
   lastRewardCalculation: timestamp("last_reward_calculation"),
   stakedAt: timestamp("staked_at").defaultNow().notNull(),
   releaseAt: timestamp("release_at"),
@@ -1002,9 +1062,15 @@ export const transactions = pgTable("transactions", {
 export const bayesianPriors = pgTable("bayesian_priors", {
   id: serial("id").primaryKey(),
   segment: varchar("segment", { length: 64 }).notNull().unique(),
-  priorAlpha: numeric("prior_alpha", { precision: 10, scale: 4 }).default("2.0000"), // Successes
-  priorBeta: numeric("prior_beta", { precision: 10, scale: 4 }).default("18.0000"), // Failures (Base 10% rate)
-  currentMean: numeric("current_mean", { precision: 5, scale: 4 }).default("0.1000"),
+  priorAlpha: numeric("prior_alpha", { precision: 10, scale: 4 }).default(
+    "2.0000"
+  ), // Successes
+  priorBeta: numeric("prior_beta", { precision: 10, scale: 4 }).default(
+    "18.0000"
+  ), // Failures (Base 10% rate)
+  currentMean: numeric("current_mean", { precision: 5, scale: 4 }).default(
+    "0.1000"
+  ),
   observationsCount: integer("observations_count").default(0),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -1112,7 +1178,8 @@ export type InsertFeedbackVote = typeof feedbackVotes.$inferInsert;
 export type Mission = typeof missions.$inferSelect;
 export type MissionTask = typeof missionTasks.$inferSelect;
 export type CharacterGeneration = typeof characterGenerations.$inferSelect;
-export type InsertCharacterGeneration = typeof characterGenerations.$inferInsert;
+export type InsertCharacterGeneration =
+  typeof characterGenerations.$inferInsert;
 export type CharacterAsset = typeof characterAssets.$inferSelect;
 export type InsertCharacterAsset = typeof characterAssets.$inferInsert;
 export type ProtocolAgent = typeof protocolAgents.$inferSelect;
@@ -1159,7 +1226,9 @@ export const personalizationRules = pgTable("personalization_rules", {
   conditions: json("conditions"),
   views: integer("views").default(0).notNull(),
   conversions: integer("conversions").default(0).notNull(),
-  conversionRate: numeric("conversionRate", { precision: 18, scale: 4 }).default("0").notNull(),
+  conversionRate: numeric("conversionRate", { precision: 18, scale: 4 })
+    .default("0")
+    .notNull(),
   priority: integer("priority").default(0),
   status: varchar("status", { length: 32 }).default("active"),
   aiGenerated: integer("ai_generated").default(0),
@@ -1189,61 +1258,81 @@ export type Proposal = typeof proposals.$inferSelect;
 export type InsertProposal = typeof proposals.$inferInsert;
 
 // ─── Inbound Email Replies ───────────────────────────────────────────────────────
-export const inboundReplies = pgTable("inbound_replies", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  leadId: integer("lead_id"), // FK to leads.id, null if unmatched
-  leadEmail: varchar("lead_email", { length: 320 }).notNull(),
-  senderName: varchar("sender_name", { length: 256 }),
-  subject: varchar("subject", { length: 512 }),
-  bodyPlaintext: text("body_plaintext"),
-  bodyHtml: text("body_html"),
-  messageId: varchar("message_id", { length: 256 }).notNull().unique(), // Resend ID for deduplication
-  sentiment: varchar("sentiment", { length: 32 }), // positive|neutral|negative|objection
-  objectionType: varchar("objection_type", { length: 64 }), // budget|timeline|competitor|decision_maker|other
-  objectionDetails: text("objection_details"),
-  confidence: real("confidence"), // 0.0-1.0 from Claude
-  proposalMatchId: varchar("proposal_match_id", { length: 64 }), // FK to proposals.id
-  matchConfidence: real("match_confidence"), // how sure we are about the match
-  status: varchar("status", { length: 32 }).default("new"), // new|contacted|deal_won|disqualified|nurture_paused
-  manualOverride: boolean("manual_override").default(false),
-  manualSentiment: varchar("manual_sentiment", { length: 32 }),
-  overriddenBy: integer("overridden_by"), // userId who overrode
-  overriddenAt: timestamp("overridden_at"),
-  metadata: jsonb("metadata").default({}), // raw headers, thread info
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  inboundRepliesLeadIdx: index("idx_inbound_replies_lead").on(table.leadId),
-  inboundRepliesEmailIdx: index("idx_inbound_replies_email").on(table.leadEmail),
-  inboundRepliesStatusIdx: index("idx_inbound_replies_status").on(table.status),
-  inboundRepliesSentimentIdx: index("idx_inbound_replies_sentiment").on(table.sentiment),
-}));
+export const inboundReplies = pgTable(
+  "inbound_replies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: integer("lead_id"), // FK to leads.id, null if unmatched
+    leadEmail: varchar("lead_email", { length: 320 }).notNull(),
+    senderName: varchar("sender_name", { length: 256 }),
+    subject: varchar("subject", { length: 512 }),
+    bodyPlaintext: text("body_plaintext"),
+    bodyHtml: text("body_html"),
+    messageId: varchar("message_id", { length: 256 }).notNull().unique(), // Resend ID for deduplication
+    sentiment: varchar("sentiment", { length: 32 }), // positive|neutral|negative|objection
+    objectionType: varchar("objection_type", { length: 64 }), // budget|timeline|competitor|decision_maker|other
+    objectionDetails: text("objection_details"),
+    confidence: real("confidence"), // 0.0-1.0 from Claude
+    proposalMatchId: varchar("proposal_match_id", { length: 64 }), // FK to proposals.id
+    matchConfidence: real("match_confidence"), // how sure we are about the match
+    status: varchar("status", { length: 32 }).default("new"), // new|contacted|deal_won|disqualified|nurture_paused
+    manualOverride: boolean("manual_override").default(false),
+    manualSentiment: varchar("manual_sentiment", { length: 32 }),
+    overriddenBy: integer("overridden_by"), // userId who overrode
+    overriddenAt: timestamp("overridden_at"),
+    metadata: jsonb("metadata").default({}), // raw headers, thread info
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  table => ({
+    inboundRepliesLeadIdx: index("idx_inbound_replies_lead").on(table.leadId),
+    inboundRepliesEmailIdx: index("idx_inbound_replies_email").on(
+      table.leadEmail
+    ),
+    inboundRepliesStatusIdx: index("idx_inbound_replies_status").on(
+      table.status
+    ),
+    inboundRepliesSentimentIdx: index("idx_inbound_replies_sentiment").on(
+      table.sentiment
+    ),
+  })
+);
 
 export type InboundReply = typeof inboundReplies.$inferSelect;
 export type InsertInboundReply = typeof inboundReplies.$inferInsert;
 
 // ─── Reply Nurture Sequences ────────────────────────────────────────────────────
-export const replySequences = pgTable("reply_sequences", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  leadId: integer("lead_id").notNull(), // FK to leads.id
-  replyId: uuid("reply_id").notNull(), // FK to inbound_replies.id
-  templateType: varchar("template_type", { length: 64 }).notNull(), // objection_budget|objection_timeline|positive_followup|reminder|objection_competitor
-  sequenceNumber: integer("sequence_number").default(1), // 1,2,3... in sequence
-  status: varchar("status", { length: 32 }).default("pending"), // pending|sent|clicked|bounced|paused
-  sentAt: timestamp("sent_at"),
-  clickedAt: timestamp("clicked_at"),
-  nextScheduledAt: timestamp("next_scheduled_at"),
-  emailSubject: varchar("email_subject", { length: 512 }),
-  emailBody: text("email_body"),
-  metadata: jsonb("metadata").default({}), // tracking info, link info
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  replySequencesLeadIdx: index("idx_reply_sequences_lead").on(table.leadId),
-  replySequencesReplyIdx: index("idx_reply_sequences_reply").on(table.replyId),
-  replySequencesStatusIdx: index("idx_reply_sequences_status").on(table.status),
-  replySequencesScheduledIdx: index("idx_reply_sequences_scheduled").on(table.nextScheduledAt),
-}));
+export const replySequences = pgTable(
+  "reply_sequences",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: integer("lead_id").notNull(), // FK to leads.id
+    replyId: uuid("reply_id").notNull(), // FK to inbound_replies.id
+    templateType: varchar("template_type", { length: 64 }).notNull(), // objection_budget|objection_timeline|positive_followup|reminder|objection_competitor
+    sequenceNumber: integer("sequence_number").default(1), // 1,2,3... in sequence
+    status: varchar("status", { length: 32 }).default("pending"), // pending|sent|clicked|bounced|paused
+    sentAt: timestamp("sent_at"),
+    clickedAt: timestamp("clicked_at"),
+    nextScheduledAt: timestamp("next_scheduled_at"),
+    emailSubject: varchar("email_subject", { length: 512 }),
+    emailBody: text("email_body"),
+    metadata: jsonb("metadata").default({}), // tracking info, link info
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  table => ({
+    replySequencesLeadIdx: index("idx_reply_sequences_lead").on(table.leadId),
+    replySequencesReplyIdx: index("idx_reply_sequences_reply").on(
+      table.replyId
+    ),
+    replySequencesStatusIdx: index("idx_reply_sequences_status").on(
+      table.status
+    ),
+    replySequencesScheduledIdx: index("idx_reply_sequences_scheduled").on(
+      table.nextScheduledAt
+    ),
+  })
+);
 
 export type ReplySequence = typeof replySequences.$inferSelect;
 export type InsertReplySequence = typeof replySequences.$inferInsert;
@@ -1285,7 +1374,7 @@ export const webhookEvents = pgTable(
     receivedAt: timestamp("receivedAt").defaultNow().notNull(),
     processedAt: timestamp("processedAt"),
   },
-  (t) => ({
+  t => ({
     uniqProviderEvent: uniqueIndex("webhook_events_provider_eventId_uniq").on(
       t.provider,
       t.eventId
@@ -1293,62 +1382,94 @@ export const webhookEvents = pgTable(
   })
 );
 
-export const guardrailChannels = pgTable("guardrail_channels", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 128 }).notNull(),
-  category: varchar("category", { length: 32 }).notNull(), // email|content|contract|spend
-  dailyCap: integer("daily_cap").notNull(),
-  enabled: boolean("enabled").default(false).notNull(),
-  spendCeilingCents: integer("spend_ceiling_cents").default(0).notNull(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  guardrailChannelsNameUniq: uniqueIndex("guardrail_channels_name_uniq").on(table.name),
-}));
+export const guardrailChannels = pgTable(
+  "guardrail_channels",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 128 }).notNull(),
+    category: varchar("category", { length: 32 }).notNull(), // email|content|contract|spend
+    dailyCap: integer("daily_cap").notNull(),
+    enabled: boolean("enabled").default(false).notNull(),
+    spendCeilingCents: integer("spend_ceiling_cents").default(0).notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  table => ({
+    guardrailChannelsNameUniq: uniqueIndex("guardrail_channels_name_uniq").on(
+      table.name
+    ),
+  })
+);
 
-export const guardrailCounters = pgTable("guardrail_counters", {
-  id: serial("id").primaryKey(),
-  channelId: integer("channel_id").notNull(),
-  day: date("day").notNull(),
-  count: integer("count").default(0).notNull(),
-}, (table) => ({
-  guardrailCountersChannelDayUniq: uniqueIndex("guardrail_counters_channel_day_uniq").on(table.channelId, table.day),
-}));
+export const guardrailCounters = pgTable(
+  "guardrail_counters",
+  {
+    id: serial("id").primaryKey(),
+    channelId: integer("channel_id").notNull(),
+    day: date("day").notNull(),
+    count: integer("count").default(0).notNull(),
+  },
+  table => ({
+    guardrailCountersChannelDayUniq: uniqueIndex(
+      "guardrail_counters_channel_day_uniq"
+    ).on(table.channelId, table.day),
+  })
+);
 
-export const suppressionList = pgTable("guardrail_suppression_list", {
-  id: serial("id").primaryKey(),
-  email: varchar("email", { length: 320 }).notNull(),
-  reason: varchar("reason", { length: 32 }).notNull(), // bounced|complained|manual|unsubscribed
-  source: varchar("source", { length: 64 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  suppressionListEmailUniq: uniqueIndex("guardrail_suppression_list_email_uniq").on(table.email),
-}));
+export const suppressionList = pgTable(
+  "guardrail_suppression_list",
+  {
+    id: serial("id").primaryKey(),
+    email: varchar("email", { length: 320 }).notNull(),
+    reason: varchar("reason", { length: 32 }).notNull(), // bounced|complained|manual|unsubscribed
+    source: varchar("source", { length: 64 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  table => ({
+    suppressionListEmailUniq: uniqueIndex(
+      "guardrail_suppression_list_email_uniq"
+    ).on(table.email),
+  })
+);
 
-export const killSwitches = pgTable("kill_switches", {
-  id: serial("id").primaryKey(),
-  scope: varchar("scope", { length: 128 }).notNull(), // "global" or a channel name
-  enabled: boolean("enabled").default(false).notNull(), // true = tripped/blocked
-  reason: text("reason"),
-  updatedBy: varchar("updated_by", { length: 64 }).notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  killSwitchesScopeUniq: uniqueIndex("kill_switches_scope_uniq").on(table.scope),
-}));
+export const killSwitches = pgTable(
+  "kill_switches",
+  {
+    id: serial("id").primaryKey(),
+    scope: varchar("scope", { length: 128 }).notNull(), // "global" or a channel name
+    enabled: boolean("enabled").default(false).notNull(), // true = tripped/blocked
+    reason: text("reason"),
+    updatedBy: varchar("updated_by", { length: 64 }).notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  table => ({
+    killSwitchesScopeUniq: uniqueIndex("kill_switches_scope_uniq").on(
+      table.scope
+    ),
+  })
+);
 
-export const guardrailEvents = pgTable("guardrail_events", {
-  id: serial("id").primaryKey(),
-  channelId: integer("channel_id"),
-  action: varchar("action", { length: 32 }).notNull(), // check|record|suppress|kill_toggle
-  allowed: boolean("allowed"),
-  reason: text("reason"),
-  metadata: jsonb("metadata").default({}),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  guardrailEventsChannelIdx: index("idx_guardrail_events_channel").on(table.channelId),
-  guardrailEventsCreatedIdx: index("idx_guardrail_events_created").on(table.createdAt),
-}));
+export const guardrailEvents = pgTable(
+  "guardrail_events",
+  {
+    id: serial("id").primaryKey(),
+    channelId: integer("channel_id"),
+    action: varchar("action", { length: 32 }).notNull(), // check|record|suppress|kill_toggle
+    allowed: boolean("allowed"),
+    reason: text("reason"),
+    metadata: jsonb("metadata").default({}),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  table => ({
+    guardrailEventsChannelIdx: index("idx_guardrail_events_channel").on(
+      table.channelId
+    ),
+    guardrailEventsCreatedIdx: index("idx_guardrail_events_created").on(
+      table.createdAt
+    ),
+  })
+);
 
 export type SeoPageRow = typeof seoPages.$inferSelect;
 export type InsertSeoPageRow = typeof seoPages.$inferInsert;

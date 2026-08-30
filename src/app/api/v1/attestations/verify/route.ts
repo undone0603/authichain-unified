@@ -4,6 +4,7 @@ import {
   verifyAttestationJws,
 } from "@authichain/verifier";
 import { importPKCS8 } from "jose";
+import { checkAndIncrementUsage, ApiUsageLimitError } from "@/lib/api-usage";
 
 async function loadPrivateKey() {
   const raw = process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
@@ -17,6 +18,11 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    // TEMPORARY: Mocked userId until Phase 1 auth is fully operational
+    const userId = 1;
+
+    await checkAndIncrementUsage(userId);
+
     const body = await req.json();
     if (!body || typeof body.jws !== "string" || !body.jws.trim()) {
       return NextResponse.json(
@@ -57,6 +63,12 @@ export async function POST(req: NextRequest) {
       { status: valid ? 200 : 409 }
     );
   } catch (error) {
+    if (error instanceof ApiUsageLimitError) {
+      return NextResponse.json(
+        { valid: false, error: error.message },
+        { status: 402 }
+      );
+    }
     return NextResponse.json(
       {
         valid: false,
