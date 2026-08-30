@@ -63,6 +63,16 @@ export default defineConfig({
           "index.ts"
         ),
       },
+      {
+        find: "@authichain/policy",
+        replacement: path.resolve(
+          templateRoot,
+          "packages",
+          "policy",
+          "src",
+          "index.ts"
+        ),
+      },
     ],
   },
   test: {

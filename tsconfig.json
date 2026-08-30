@@ -26,7 +26,8 @@
       "@shared/*": ["./shared/*"],
       "@server/*": ["./server/*"],
       "@authichain/verifier": ["./packages/verifier/src/index.ts"],
-      "@authichain/evidence": ["./packages/evidence/src/index.ts"]
+      "@authichain/evidence": ["./packages/evidence/src/index.ts"],
+      "@authichain/policy": ["./packages/policy/src/index.ts"]
     }
   },
   "include": [
