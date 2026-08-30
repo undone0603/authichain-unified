@@ -14,6 +14,8 @@ node_modules/
 !.env.example
 !.env.template
 *.pem
+credentials.json
+**/credentials.json
 # Exception: a public CA certificate, not a credential. It is the Supabase
 # pooler's self-signed root, which no public trust store contains, so scripts
 # that open a database connection need it in the repository to verify the
