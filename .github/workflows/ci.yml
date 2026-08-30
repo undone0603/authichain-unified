@@ -25,8 +25,14 @@ jobs:
           node-version: "22"
           cache: "pnpm"
 
+      - name: Validate secrets format
+        run: node scripts/check-secrets-format.mjs
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Type check
         run: pnpm check

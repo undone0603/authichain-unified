@@ -1,13 +1,25 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import Stripe from 'stripe';
-import { computePayout, executeStripeTransfer } from './services/payout';
+import Stripe from "stripe";
+import { computePayout, executeStripeTransfer } from "./services/payout";
 
-async function verifyGithubSignature(secret: string, body: string, signature: string): Promise<boolean> {
+async function verifyGithubSignature(
+  secret: string,
+  body: string,
+  signature: string
+): Promise<boolean> {
   const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
   const rawSig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
-  const expected = `sha256=${Array.from(new Uint8Array(rawSig)).map(b => b.toString(16).padStart(2, "0")).join("")}`;
+  const expected = `sha256=${Array.from(new Uint8Array(rawSig))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("")}`;
   if (expected.length !== signature.length) return false;
   const a = enc.encode(expected);
   const b = enc.encode(signature);
@@ -90,16 +102,16 @@ function cssVars(brand: keyof typeof BRANDS) {
 const app = new Hono<{ Bindings: Bindings }>();
 app.use("*", cors());
 
-app.get("/", (c) => {
+app.get("/", c => {
   return c.html("<h1>AuthiChain</h1>");
 });
 
-app.get("/health", (c) => c.json({ status: "ok" }));
+app.get("/health", c => c.json({ status: "ok" }));
 
 // ---------------------------------------------------------------------------
 // Product verification (physical QR scan entry point)
 // ---------------------------------------------------------------------------
-app.get("/verify/:id", async (c) => {
+app.get("/verify/:id", async c => {
   const productId = c.req.param("id");
 
   const product = await c.env.DB.prepare(
@@ -132,7 +144,7 @@ type RegisterPayload = {
   metadata?: Record<string, unknown>;
 };
 
-app.post("/api/register", async (c) => {
+app.post("/api/register", async c => {
   const body: RegisterPayload = await c.req
     .json<RegisterPayload>()
     .catch((): RegisterPayload => ({}));
@@ -147,13 +159,22 @@ app.post("/api/register", async (c) => {
   }
 
   const registrationId = "AC-" + Date.now();
-  const blockchainHash = "0x" + crypto.getRandomValues(new Uint8Array(32)).reduce((s, b) => s + b.toString(16).padStart(2, "0"), "");
-  const polygonTxHash = "0x" + crypto.getRandomValues(new Uint8Array(32)).reduce((s, b) => s + b.toString(16).padStart(2, "0"), "");
+  const blockchainHash =
+    "0x" +
+    crypto
+      .getRandomValues(new Uint8Array(32))
+      .reduce((s, b) => s + b.toString(16).padStart(2, "0"), "");
+  const polygonTxHash =
+    "0x" +
+    crypto
+      .getRandomValues(new Uint8Array(32))
+      .reduce((s, b) => s + b.toString(16).padStart(2, "0"), "");
 
   return c.json(
     {
       success: true,
-      message: "Product registered on AuthiChain and anchored to Polygon blockchain",
+      message:
+        "Product registered on AuthiChain and anchored to Polygon blockchain",
       registrationId,
       serialNumber,
       productName,
@@ -174,7 +195,7 @@ app.post("/api/register", async (c) => {
 // ---------------------------------------------------------------------------
 // Analytics
 // ---------------------------------------------------------------------------
-app.get("/api/analytics", (c) => {
+app.get("/api/analytics", c => {
   const { id, period } = c.req.query();
   return c.json({
     success: true,
@@ -193,21 +214,30 @@ app.get("/api/analytics", (c) => {
 });
 
 // API products endpoint — tenant-scoped
-app.get("/api/products", async (c) => {
+app.get("/api/products", async c => {
   const tenantId = c.req.header("x-tenant-id") ?? c.req.query("tenant_id");
   if (!tenantId) {
-    return c.json({ error: "Missing tenant_id (header x-tenant-id or query param)" }, 400);
+    return c.json(
+      { error: "Missing tenant_id (header x-tenant-id or query param)" },
+      400
+    );
   }
   const { results } = await c.env.DB.prepare(
     "SELECT * FROM products WHERE tenant_id = ?"
-  ).bind(tenantId).all();
-  return c.json({ products: results, total: results.length, protocol: "AuthiChain" });
+  )
+    .bind(tenantId)
+    .all();
+  return c.json({
+    products: results,
+    total: results.length,
+    protocol: "AuthiChain",
+  });
 });
 
 // ---------------------------------------------------------------------------
 // User lookup (D1)
 // ---------------------------------------------------------------------------
-app.get("/api/user/:id", async (c) => {
+app.get("/api/user/:id", async c => {
   const id = c.req.param("id");
   const row = await c.env.DB.prepare("SELECT * FROM users WHERE id = ?")
     .bind(id)
@@ -218,7 +248,7 @@ app.get("/api/user/:id", async (c) => {
 // ---------------------------------------------------------------------------
 // Cron endpoint (called by Cloudflare scheduled workers or cron triggers)
 // ---------------------------------------------------------------------------
-app.get("/cron/hourly", async (c) => {
+app.get("/cron/hourly", async c => {
   await c.env.DB.prepare(
     "INSERT INTO cron_logs (ts, note) VALUES (datetime('now'), 'cron ran')"
   ).run();
@@ -228,11 +258,14 @@ app.get("/cron/hourly", async (c) => {
 // ---------------------------------------------------------------------------
 // GitHub Marketplace webhook — HMAC-SHA256 verified
 // ---------------------------------------------------------------------------
-app.post("/webhook/github", async (c) => {
+app.post("/webhook/github", async c => {
   const signature = c.req.header("X-Hub-Signature-256");
   const body = await c.req.text();
 
-  if (!signature || !(await verifyGithubSignature(c.env.GITHUB_WEBHOOK_SECRET, body, signature))) {
+  if (
+    !signature ||
+    !(await verifyGithubSignature(c.env.GITHUB_WEBHOOK_SECRET, body, signature))
+  ) {
     return c.json({ error: "invalid signature" }, 401);
   }
 
@@ -251,8 +284,8 @@ app.post("/webhook/github", async (c) => {
 // ---------------------------------------------------------------------------
 // Stripe webhook
 // ---------------------------------------------------------------------------
-app.post("/webhook/stripe", async (c) => {
-  const body = await c.text();
+app.post("/webhook/stripe", async c => {
+  const body = await c.req.text();
   const signature = c.req.header("stripe-signature");
 
   if (!signature) {
@@ -260,7 +293,7 @@ app.post("/webhook/stripe", async (c) => {
   }
 
   const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2026-07-29',
+    apiVersion: "2026-07-29.dahlia",
   });
 
   let event: Stripe.Event;
@@ -271,10 +304,13 @@ app.post("/webhook/stripe", async (c) => {
       c.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err: any) {
-    return c.json({ error: `webhook signature verification failed: ${err.message}` }, 400);
+    return c.json(
+      { error: `webhook signature verification failed: ${err.message}` },
+      400
+    );
   }
 
-  if (event.type === 'charge.succeeded') {
+  if (event.type === "charge.succeeded") {
     const charge = event.data.object as Stripe.Charge;
     const amountCents = charge.amount;
     const connectedAccountId = c.env.STRIPE_CONNECT_ACCOUNT_ID; // Assuming this binding is added
@@ -282,10 +318,19 @@ app.post("/webhook/stripe", async (c) => {
     if (connectedAccountId && amountCents > 0) {
       try {
         const plan = computePayout(amountCents);
-        await executeStripeTransfer(c.env.STRIPE_SECRET_KEY, plan.founderCents, connectedAccountId);
-        console.log(`[webhook] Individual payout triggered for charge ${charge.id}`);
+        await executeStripeTransfer(
+          c.env.STRIPE_SECRET_KEY,
+          plan.founderCents,
+          connectedAccountId
+        );
+        console.log(
+          `[webhook] Individual payout triggered for charge ${charge.id}`
+        );
       } catch (error) {
-        console.error(`[webhook] Individual payout failed for charge ${charge.id}:`, error);
+        console.error(
+          `[webhook] Individual payout failed for charge ${charge.id}:`,
+          error
+        );
         // Non-fatal: webhook still needs to return 200 to Stripe
       }
     }
@@ -293,7 +338,6 @@ app.post("/webhook/stripe", async (c) => {
 
   return c.json({ ok: true });
 });
-
 
 // ---------------------------------------------------------------------------
 // Microsite KV router — serves subdomain brand sites from KV
@@ -310,7 +354,11 @@ app.use("*", async (c, next) => {
     hostname === "www.authichain.com" ||
     hostname.endsWith(".workers.dev");
 
-  if (!isApexOrWild && hostname.endsWith(".authichain.com") && c.env.MICROSITES_KV) {
+  if (
+    !isApexOrWild &&
+    hostname.endsWith(".authichain.com") &&
+    c.env.MICROSITES_KV
+  ) {
     const subdomain = hostname.split(".")[0];
     let path = url.pathname;
     if (path === "/") path = "/index.html";
@@ -319,11 +367,15 @@ app.use("*", async (c, next) => {
     const body = await c.env.MICROSITES_KV.get(kvKey, "stream");
     if (body) {
       const headers = new Headers();
-      if (kvKey.endsWith(".html")) headers.set("Content-Type", "text/html; charset=UTF-8");
+      if (kvKey.endsWith(".html"))
+        headers.set("Content-Type", "text/html; charset=UTF-8");
       else if (kvKey.endsWith(".css")) headers.set("Content-Type", "text/css");
-      else if (kvKey.endsWith(".js")) headers.set("Content-Type", "application/javascript");
-      else if (kvKey.endsWith(".svg")) headers.set("Content-Type", "image/svg+xml");
-      else if (kvKey.endsWith(".json")) headers.set("Content-Type", "application/json");
+      else if (kvKey.endsWith(".js"))
+        headers.set("Content-Type", "application/javascript");
+      else if (kvKey.endsWith(".svg"))
+        headers.set("Content-Type", "image/svg+xml");
+      else if (kvKey.endsWith(".json"))
+        headers.set("Content-Type", "application/json");
       headers.set("Cache-Control", "public, max-age=300");
       headers.set("x-served-by", "authichain-microsite-router");
       return new Response(body, { headers });
@@ -337,7 +389,7 @@ app.use("*", async (c, next) => {
 // Fallback proxy to primary app (apex included — authichain.com is served by
 // the primary app, so "/" proxies like every other path)
 // ---------------------------------------------------------------------------
-app.all("*", async (c) => {
+app.all("*", async c => {
   const url = new URL(c.req.url);
   const { pathname, search } = url;
 

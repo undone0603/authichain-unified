@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 interface StatDef {
   value: number;
@@ -11,20 +11,34 @@ interface StatDef {
 }
 
 const DEFAULT_STATS: StatDef[] = [
-  { value: 10000, suffix: '+', label: 'QRONs Generated' },
-  { value: 2.4, prefix: '$', suffix: 'B', decimals: 1, label: 'EU DPP Market Opportunity' },
-  { value: 19, label: 'Deployed Edge Workers' },
-  { value: 2.1, suffix: 's', decimals: 1, label: 'Avg Verification Time' },
+  { value: 10000, suffix: "+", label: "QRONs Generated" },
+  {
+    value: 2.4,
+    prefix: "$",
+    suffix: "B",
+    decimals: 1,
+    label: "EU DPP Market Opportunity",
+  },
+  { value: 19, label: "Deployed Edge Workers" },
+  { value: 2.1, suffix: "s", decimals: 1, label: "Avg Verification Time" },
 ];
 
 function formatNumber(n: number, decimals: number) {
-  return n.toLocaleString('en-US', {
+  return n.toLocaleString("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
 }
 
-function Counter({ stat, active, accent }: { stat: StatDef; active: boolean; accent: string }) {
+function Counter({
+  stat,
+  active,
+  accent,
+}: {
+  stat: StatDef;
+  active: boolean;
+  accent: string;
+}) {
   // Default to the real value so SSR output, no-JS clients, bots, and social
   // link-preview scrapers see the true number instead of a literal 0. The
   // count-up animation (0 -> value) only kicks in client-side once the
@@ -35,18 +49,25 @@ function Counter({ stat, active, accent }: { stat: StatDef; active: boolean; acc
   useEffect(() => {
     if (!active) return;
     const duration = 1800;
-    setDisplay(0);
-    const start = performance.now();
+    let start: number | null = null;
     let raf = 0;
 
     const tick = (now: number) => {
+      if (start === null) start = now;
       const progress = Math.min((now - start) / duration, 1);
       // easeOutExpo for a punchy count-up
       const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       setDisplay(stat.value * eased);
       if (progress < 1) raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
+
+    // Defer the start to avoid synchronous setState in effect body (React warning)
+    raf = requestAnimationFrame(now => {
+      setDisplay(0);
+      start = now;
+      raf = requestAnimationFrame(tick);
+    });
+
     return () => cancelAnimationFrame(raf);
   }, [active, stat.value]);
 
@@ -72,7 +93,7 @@ function Counter({ stat, active, accent }: { stat: StatDef; active: boolean; acc
  * a requestAnimationFrame count-up the first time it scrolls into view.
  */
 export function LiveStatsCounter({
-  accent = '#f59e0b',
+  accent = "#f59e0b",
   stats = DEFAULT_STATS,
 }: {
   accent?: string;
@@ -85,7 +106,7 @@ export function LiveStatsCounter({
     const el = ref.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      (entries) => {
+      entries => {
         if (entries[0]?.isIntersecting) {
           setActive(true);
           observer.disconnect();
@@ -98,9 +119,12 @@ export function LiveStatsCounter({
   }, []);
 
   return (
-    <section ref={ref} className="border-y border-zinc-900 bg-zinc-950/50 px-6 py-16">
+    <section
+      ref={ref}
+      className="border-y border-zinc-900 bg-zinc-950/50 px-6 py-16"
+    >
       <div className="mx-auto grid max-w-5xl grid-cols-2 gap-10 md:grid-cols-4">
-        {stats.map((s) => (
+        {stats.map(s => (
           <Counter key={s.label} stat={s} active={active} accent={accent} />
         ))}
       </div>

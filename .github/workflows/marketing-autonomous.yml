@@ -45,7 +45,7 @@ jobs:
       github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'seo_only') ||
       github.event_name == 'schedule'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Ping IndexNow for all domains
         run: |
@@ -120,7 +120,7 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' && (inputs.strategy == 'all' || inputs.strategy == 'content_drafts')
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Validate content files exist
         run: |

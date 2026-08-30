@@ -1,4 +1,4 @@
-import Stripe from 'stripe';
+import Stripe from "stripe";
 
 export interface PayoutSplit {
   founderPct: number;
@@ -6,11 +6,14 @@ export interface PayoutSplit {
 }
 
 const defaultSplit: PayoutSplit = {
-  founderPct: 0.20, // Example: 20% to founder
-  platformPct: 0.80,
+  founderPct: 0.2, // Example: 20% to founder
+  platformPct: 0.8,
 };
 
-export function computePayout(grossCents: number, split: PayoutSplit = defaultSplit): { founderCents: number, platformCents: number } {
+export function computePayout(
+  grossCents: number,
+  split: PayoutSplit = defaultSplit
+): { founderCents: number; platformCents: number } {
   const founderCents = Math.floor(grossCents * split.founderPct);
   return {
     founderCents,
@@ -27,20 +30,25 @@ export async function executeStripeTransfer(
   connectedAccountId: string
 ) {
   if (amountCents <= 0) return;
-  
+
   const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: '2026-07-29', // Updated to latest stable version compatible with worker
+    apiVersion: "2026-07-29.dahlia", // Updated to latest stable version compatible with worker
   });
 
   try {
     await stripe.transfers.create({
       amount: amountCents,
-      currency: 'usd',
+      currency: "usd",
       destination: connectedAccountId,
     });
-    console.log(`[payout] Successfully transferred ${amountCents} cents to ${connectedAccountId}`);
+    console.log(
+      `[payout] Successfully transferred ${amountCents} cents to ${connectedAccountId}`
+    );
   } catch (error) {
-    console.error(`[payout] Failed to transfer ${amountCents} cents to ${connectedAccountId}:`, error);
+    console.error(
+      `[payout] Failed to transfer ${amountCents} cents to ${connectedAccountId}:`,
+      error
+    );
     throw error;
   }
 }

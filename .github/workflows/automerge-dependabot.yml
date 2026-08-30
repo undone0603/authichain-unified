@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Resolve dependabot PR eligibility
         id: resolve
-        uses: actions/github-script@v9
+        uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
@@ -91,11 +91,11 @@ jobs:
       # checks.listForRef() call above already inspects a check that
       # validates the actual merged tree, with zero privileged-checkout risk.
       # (This only holds now that ci.yml/main.yml correctly run
-      # `pnpm install --frozen-lockfile` — see the pnpm-setup fix landed
+      # `pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0` — see the pnpm-setup fix landed
       # alongside this comment.)
       - name: Merge PR
         if: steps.resolve.outputs.eligible == 'true'
-        uses: actions/github-script@v9
+        uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;

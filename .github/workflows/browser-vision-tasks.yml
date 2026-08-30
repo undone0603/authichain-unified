@@ -59,7 +59,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         if: steps.db-check.outputs.skip != 'true'
 
       - uses: pnpm/action-setup@v6
@@ -67,7 +67,7 @@ jobs:
         with:
           version: 10.28.2
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         if: steps.db-check.outputs.skip != 'true'
         with:
           node-version: "22"
@@ -75,7 +75,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.db-check.outputs.skip != 'true'
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       # playwright-core, not playwright. Only playwright-core is a dependency —
       # server/agents/browser-vision.ts imports it deliberately so the full

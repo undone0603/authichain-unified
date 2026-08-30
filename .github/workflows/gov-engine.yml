@@ -79,7 +79,6 @@ jobs:
 
   mint:
     needs: proposals
-    continue-on-error: true
     uses: ./.github/workflows/gov-mint.yml
     with:
       dry_run: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}

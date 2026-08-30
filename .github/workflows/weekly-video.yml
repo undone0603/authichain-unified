@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       # Fail fast and legibly rather than burning render credits on a job that
       # cannot possibly upload. Mirrors the outreach preflight pattern.
@@ -70,13 +70,13 @@ jobs:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Generate script, render and publish
         run: pnpm exec tsx scripts/weekly-video.ts

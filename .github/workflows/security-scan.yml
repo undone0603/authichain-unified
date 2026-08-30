@@ -22,7 +22,7 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           # gitleaks diffs <sha>^..<sha>, which needs the parent commit present —
           # fetch-depth: 1 leaves it unresolvable ("ambiguous argument ... unknown

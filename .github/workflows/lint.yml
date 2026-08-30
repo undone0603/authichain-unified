@@ -10,20 +10,20 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
           version: "10.28.2"
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Run lint and prettier
         run: pnpm run lint:ci

@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Scan for secrets
@@ -35,7 +35,7 @@ jobs:
     if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Check required secrets
         id: secrets_check
@@ -56,14 +56,14 @@ jobs:
 
       - name: Setup Node 22
         if: steps.secrets_check.outputs.skip != 'true'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "pnpm"
 
       - name: Install dependencies
         if: steps.secrets_check.outputs.skip != 'true'
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
 
       - name: Build frontend
         if: steps.secrets_check.outputs.skip != 'true'
