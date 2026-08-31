@@ -59,7 +59,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.db-check.outputs.skip != 'true'
 
       - uses: pnpm/action-setup@v6
