@@ -1,0 +1,29 @@
+name = "gs1-resolver"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# Reuse the existing provenance D1 from authichain-scan-validate.
+[[d1_databases]]
+binding = "DB"
+database_name = "authichain-provenance"
+database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
+
+[vars]
+PASSPORT_ORIGIN = "https://authichain.com"
+RESOLVER_ORIGIN = "https://id.authichain.com"
+
+# After first deploy, attach custom domain id.authichain.com in the dashboard.
+# Secrets:
+#   npx wrangler secret put ISSUE_SECRET
+
+[env.staging]
+name = "gs1-resolver-staging"
+
+[env.staging.vars]
+PASSPORT_ORIGIN = "https://authichain.com"
+RESOLVER_ORIGIN = "https://gs1-resolver-staging.undone-k.workers.dev"
+
+[observability]
+enabled = true
