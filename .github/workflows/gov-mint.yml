@@ -1,16 +1,32 @@
 name: GovChain – Mint Opportunity NFTs
 
 on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (no tx)
+        required: false
+        default: "true"
+      chain:
+        description: Chain key (base-sepolia | base | polygon)
+        required: false
+        default: "base-sepolia"
   workflow_call:
     inputs:
       dry_run:
         required: false
         type: string
         default: "true"
+      chain:
+        required: false
+        type: string
+        default: "base-sepolia"
     secrets:
       ALCHEMY_API_KEY:
         required: false
       POLYGON_PRIVATE_KEY:
+        required: false
+      WALLET_PRIVATE_KEY:
         required: false
       GOVCHAIN_NFT_CONTRACT:
         required: false
@@ -37,8 +53,10 @@ jobs:
         continue-on-error: true
         run: pnpm exec tsx scripts/mint-govchain-nfts.ts
         env:
+          CHAIN: ${{ inputs.chain || 'base-sepolia' }}
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
-          WALLET_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
+          WALLET_PRIVATE_KEY: ${{ secrets.WALLET_PRIVATE_KEY || secrets.POLYGON_PRIVATE_KEY }}
+          GOVCHAIN_NFT_CONTRACT: ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
           CONTRACT_ADDRESS: ${{ secrets.GOVCHAIN_NFT_CONTRACT }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
