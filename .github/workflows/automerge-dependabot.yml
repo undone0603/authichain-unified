@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Resolve dependabot PR eligibility
         id: resolve
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const owner = context.repo.owner;
@@ -95,7 +95,7 @@ jobs:
       # alongside this comment.)
       - name: Merge PR
         if: steps.resolve.outputs.eligible == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const owner = context.repo.owner;
