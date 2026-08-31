@@ -1,3 +1,4 @@
+import { EnvSchema, type Env as SharedEnv } from "../../shared/env-schema";
 import { Hono } from "hono";
 import { trpcServer } from "@hono/trpc-server";
 import { appRouter } from "../server/routers";
@@ -14,7 +15,7 @@ import { checkRateLimit } from "./rate-limiter";
 import { resolveOwner } from "./route-manifest";
 import { renderDynamicPage } from "./dynamic-pages";
 
-type Env = {
+type Bindings = SharedEnv & {
   HYPERDRIVE: Hyperdrive;
   ASSETS: Fetcher;
   SESSIONS: KVNamespace;
@@ -47,7 +48,7 @@ export const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 // Brand resolution — same logic as src/middleware.ts and the old
 // server/_core/brand-middleware.ts, ported to Hono context instead of
 // Express res.locals.
-app.use("*", async (c, next) => {
+app.use("*", async (c, next) => { EnvSchema.parse(c.env);
   const host = c.req.header("x-forwarded-host") ?? c.req.header("host") ?? "";
   const brand = resolveBrand(host);
   c.set("brand", brand);
@@ -970,7 +971,7 @@ export { RateLimiter } from "./rate-limiter";
 // [triggers] crons in wrangler.toml are left commented out (see wrangler.toml)
 // — this handler is wired and ready, but nothing currently fires it in a
 // deployed Worker. Enabling specific crons is a deliberate cutover decision.
-async function scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+async function scheduled(event: ScheduledController, env: Bindings, ctx: ExecutionContext): Promise<void> { EnvSchema.parse(env);
   const db = getHyperdriveDb(env);
   const due = getScheduledJobs().filter((j) => j.schedule === event.cron);
   for (const job of due) {

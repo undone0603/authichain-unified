@@ -80,6 +80,13 @@ function fromB64url(value: string): Uint8Array {
   return bytes;
 }
 
+export function canonicalizeGtin(gtin: string): string {
+  if (!/^\d{8,14}$/.test(gtin)) {
+    throw new Error("GTIN must be 8-14 digits");
+  }
+  return gtin.padStart(14, '0');
+}
+
 export function validateAttestation(input: unknown): AuthiChainAttestationV01 {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new Error("attestation must be an object");
@@ -193,6 +200,10 @@ export async function signAttestation(
   privateKey: KeyLike,
   keyId: string
 ): Promise<string> {
+  // Enforce canonical GTIN-14
+  if (input.subject.gtin) {
+      input.subject.gtin = canonicalizeGtin(input.subject.gtin);
+  }
   const attestation = validateAttestation(input);
   const protectedHeader = {
     alg: "EdDSA",
@@ -242,5 +253,36 @@ export function parseJws(jws: string) {
     protected: JSON.parse(new TextDecoder().decode(fromB64url(encodedHeader))),
     payload: JSON.parse(new TextDecoder().decode(fromB64url(encodedPayload))),
     signature: encodedSignature,
+  };
+}
+
+export function toW3cVerifiableCredential(attestation: AuthiChainAttestationV01): Record<string, unknown> {
+  return {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://w3id.org/security/suites/jws-2020/v1"
+    ],
+    id: `urn:uuid:${attestation.attestation_id}`,
+    type: ["VerifiableCredential", "AuthiChainAttestation"],
+    issuer: {
+      id: attestation.issuer.id,
+      name: attestation.issuer.name,
+    },
+    issuanceDate: attestation.issued_at,
+    expirationDate: attestation.expires_at,
+    credentialSubject: {
+      id: attestation.subject.object_id,
+      ...attestation.subject,
+    },
+    // The AuthiChain evidence and decision status are included as specific claims
+    credentialStatus: {
+      type: "StatusList2021Entry",
+      statusPurpose: attestation.status,
+    },
+    metadata: {
+        decision: attestation.decision,
+        evidence: attestation.evidence,
+        version: attestation.version
+    }
   };
 }

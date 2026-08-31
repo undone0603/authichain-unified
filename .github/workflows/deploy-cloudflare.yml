@@ -27,68 +27,15 @@ jobs:
           GITLEAKS_CONFIG: .gitleaks.toml
 
   deploy:
-    name: Deploy Worker + Static Assets
     needs: secret-scan
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # Skip entire job if Cloudflare token not configured
+    uses: ./.github/workflows/reusable-deploy.yml
     if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check required secrets
-        id: secrets_check
-        run: |
-          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
-            echo "CLOUDFLARE_API_TOKEN not set — skipping Cloudflare deploy"
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Setup PNPM
-        if: steps.secrets_check.outputs.skip != 'true'
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-        with:
-          version: 10.28.2
-          run_install: false
-
-      - name: Setup Node 22
-        if: steps.secrets_check.outputs.skip != 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "pnpm"
-
-      - name: Install dependencies
-        if: steps.secrets_check.outputs.skip != 'true'
-        run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
-
-      - name: Build frontend
-        if: steps.secrets_check.outputs.skip != 'true'
-        run: pnpm run build
-        env:
-          VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
-          VITE_ANALYTICS_ENDPOINT: ${{ secrets.VITE_ANALYTICS_ENDPOINT }}
-          VITE_ANALYTICS_WEBSITE_ID: ${{ secrets.VITE_ANALYTICS_WEBSITE_ID }}
-
-      - name: Publish Worker + Assets (authichain-dashboard)
-        if: steps.secrets_check.outputs.skip != 'true'
-        run: npx wrangler deploy --minify --config wrangler.toml
-        working-directory: workers/authichain-dashboard
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Deploy authichain-scan-validate
-        if: steps.secrets_check.outputs.skip != 'true'
-        run: npx wrangler deploy --minify --config wrangler.toml
-        working-directory: workers/authichain-scan-validate
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Deploy skipped notice
-        if: steps.secrets_check.outputs.skip == 'true'
-        run: echo "::notice::Cloudflare deploy skipped — set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in repo secrets to enable."
+    with:
+      environment: production
+      deploy-command: |
+        pnpm run build
+        npx wrangler deploy --minify --config wrangler.toml --working-directory workers/authichain-dashboard
+        npx wrangler deploy --minify --config wrangler.toml --working-directory workers/authichain-scan-validate
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

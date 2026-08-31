@@ -88,6 +88,12 @@ export default {
       };
       const classificationResult = JSON.parse(aiData.choices[0].message.content);
 
+      const modelUsed = "gpt-4o";
+      const systemPromptHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(systemPrompt));
+      const systemPromptHashHex = Array.from(new Uint8Array(systemPromptHash)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+      // ... (after classification)
+
       ctx.waitUntil(
         fetch(`${env.SUPABASE_URL}/rest/v1/verifications`, {
           method: "POST",
@@ -102,7 +108,14 @@ export default {
             verifier: "ai-classification-engine",
             result: classificationResult.decision,
             confidence: classificationResult.confidenceScore,
-            metadata: { anomalies: classificationResult.flaggedAnomalies }
+            metadata: { 
+                anomalies: classificationResult.flaggedAnomalies,
+                provenance: {
+                    model: modelUsed,
+                    system_prompt_hash: systemPromptHashHex,
+                    inference_at: new Date().toISOString()
+                }
+            }
           })
         })
       );
