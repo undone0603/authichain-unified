@@ -40,7 +40,9 @@ export async function POST(req: NextRequest) {
       });
       portalUrl = session.url;
     }
-  } catch {}
+  } catch (err) {
+    console.error('payment-recovery: failed to create Stripe billing portal session', err);
+  }
 
   const isFirstFailure = !attempt_count || attempt_count <= 1;
   const subject = isFirstFailure

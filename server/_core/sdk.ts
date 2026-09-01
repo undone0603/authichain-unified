@@ -163,6 +163,11 @@ class SDKServer {
 
   private getSessionSecret() {
     const secret = ENV.cookieSecret;
+    if (!secret && process.env.NODE_ENV !== "test") {
+      throw new Error(
+        "JWT_SECRET is not set. Session tokens cannot be signed/verified with an empty secret.",
+      );
+    }
     return new TextEncoder().encode(secret);
   }
 

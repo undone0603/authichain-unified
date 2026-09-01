@@ -156,7 +156,9 @@ async function addLead(request: Request, env: Env): Promise<Response> {
   let body: any = {};
   try {
     body = await request.json();
-  } catch {}
+  } catch (err) {
+    console.error("addLead: failed to parse request body", err);
+  }
   const { company, contact_email } = body;
   if (!company || !contact_email || !String(contact_email).includes("@")) {
     return Response.json(

@@ -41,7 +41,9 @@ async function emitCrm(env: Env, action: string, payload: Record<string, unknown
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.CRM_API_KEY}` },
       body: JSON.stringify({ action, ...payload }),
     });
-  } catch {}
+  } catch (err) {
+    console.error('emitCrm: failed to emit CRM event', err);
+  }
 }
 
 // ---------------------------------------------------------------------------

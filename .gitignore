@@ -103,6 +103,13 @@ test-output.txt
 
 # Patch artifacts
 PATCH_EOF
+*.patch
+
+# Windows NTFS alternate-data-stream markers (accidental downloads)
+*:Zone.Identifier
+
+# Scratch notebooks
+*.ipynb
 
 # Sensitive data files
 gov_pursue_list.csv

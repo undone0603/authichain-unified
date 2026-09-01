@@ -340,7 +340,9 @@ async function serveDashboard(env: any) {
       if (s) seoData = JSON.parse(s);
       const leads = await env.LEADS.list({ prefix: 'lead_' });
       leadCount = leads.keys.length;
-    } catch (e) {}
+    } catch (e: any) {
+      console.log(`Dashboard KV read error: ${e.message}`);
+    }
   }
 
   const html = `<!DOCTYPE html>

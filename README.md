@@ -46,9 +46,18 @@ Traffic is routed based on the `Host` header. Shared application routes (like `/
 
 ### Getting Started (Frontend)
 
-1. **Setup Environment**: `cp .env.example .env`
+1. **Setup Environment**: `cp .env.example .env` (see [Environment files](#environment-files) below for `.env.local.example` and `.env.template`)
 2. **Install Dependencies**: `pnpm install`
 3. **Run Development Server**: `pnpm dev`
+
+### Environment files
+
+This repo ships three env templates for different purposes — copy the one that matches what you're setting up:
+
+- **`.env.example` → `.env`** — canonical template for the app's runtime env vars (database, Supabase, Stripe, auth, etc.). Start here for local dev.
+- **`.env.local.example` → `.env.local`** — ops/CI-facing secrets (GitHub, Cloudflare account/zone IDs, deployment tooling) used by `scripts/sync-secrets.sh` and related automation, not by the app itself at runtime.
+- **`.env.template` → `.env`** — a broader, blank-value reference covering additional optional integrations. Prefer `.env.example` unless you need one of the extra variables it documents.
+
 
 ## 🤖 2. AuthiChain Unified Core (AgentZ)
 

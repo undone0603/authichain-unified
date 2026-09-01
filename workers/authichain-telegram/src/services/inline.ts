@@ -30,7 +30,9 @@ export async function handleInline(
           },
         ])
       }
-    } catch {}
+    } catch (err) {
+      console.error('inline query product lookup failed', err);
+    }
 
     return telegram.answerInlineQuery(inlineQueryId, [
       {
