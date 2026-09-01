@@ -138,7 +138,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260825.1",
     "@nomicfoundation/hardhat-ethers": "^4.0.15",
-    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^14.0.0",
     "@types/node": "^26.3.0",
     "@types/nodemailer": "^8.0.0",
