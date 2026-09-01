@@ -7,6 +7,15 @@ updates:
     open-pull-requests-limit: 10
     allow:
       - dependency-type: "all"
+    ignore:
+      # decode-uri-component is a transitive dependency of query-string@7.1.3,
+      # which pins it to ^0.2.0. The lockfile already resolves to 0.2.2, which
+      # contains the fix for GHSA-w573-4hg7-7wgq, so there is no outstanding
+      # vulnerability. Dependabot's proposed bump to 0.5.0 cannot be applied
+      # because it violates query-string's version range and pnpm fails to
+      # produce a valid lockfile. Revisit once query-string (or the packages
+      # that depend on it) supports decode-uri-component >=0.5.0.
+      - dependency-name: "decode-uri-component"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
