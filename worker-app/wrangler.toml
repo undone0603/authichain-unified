@@ -3,6 +3,9 @@ main = "index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
+[alias]
+playwright-core = "./playwright-unavailable.ts"
+
 [assets]
 directory = "../dist/public"
 binding = "ASSETS"

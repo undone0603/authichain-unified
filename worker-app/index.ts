@@ -4,7 +4,6 @@ import { appRouter } from "../server/routers";
 import { createWorkersContext } from "../server/_core/context.workers";
 import { resolveBrand, BRANDS, type BrandId } from "../shared/brands";
 import { getHyperdriveDb } from "../server/db";
-import { getScheduledJobs, executeJobWithDb } from "../server/scheduled-jobs";
 import { timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "../server/_core/cookies";
@@ -24,7 +23,6 @@ type Env = {
 type Variables = {
   brand: BrandId;
 };
-
 
 // Shared timing-safe string comparison for webhook secret headers (mirrors
 // the local helper in server/_core/app.ts and server/internal-api.ts).
@@ -68,7 +66,11 @@ app.use("*", async (c, next) => {
 // still fall under the global /api/* 300/min limit below (a coarser bound
 // than their specific 30/min Express limit); threading the Durable Object
 // into the tRPC context is a larger change left as a follow-up.
-function rateLimitMiddleware(namePrefix: string, limit: number, windowMs: number) {
+function rateLimitMiddleware(
+  namePrefix: string,
+  limit: number,
+  windowMs: number
+) {
   return async (c: any, next: () => Promise<void>) => {
     // Fail open if the RATE_LIMITER Durable Object binding isn't present
     // (e.g. the Node-based vitest suite in routes.test.ts, which runs
@@ -80,7 +82,12 @@ function rateLimitMiddleware(namePrefix: string, limit: number, windowMs: number
     const namespace = c.env?.RATE_LIMITER;
     if (namespace) {
       const ip = c.req.header("cf-connecting-ip") ?? "unknown";
-      const allowed = await checkRateLimit(namespace, `${namePrefix}:${ip}`, limit, windowMs);
+      const allowed = await checkRateLimit(
+        namespace,
+        `${namePrefix}:${ip}`,
+        limit,
+        windowMs
+      );
       if (!allowed) {
         return c.json({ error: "Too many requests. Please slow down." }, 429);
       }
@@ -109,13 +116,12 @@ app.use(
   })
 );
 
-app.get("/api/health", (c) => c.json({ status: "ok" }));
-
+app.get("/api/health", c => c.json({ status: "ok" }));
 
 // ─── Stripe Webhook ─────────────────────────────────────────────────────────
 // handleStripeWebhook(db, rawBody, sig) is a framework-agnostic plain
 // function (server/webhooks/stripe.ts) — just a new call site here.
-app.post("/api/stripe/webhook", async (c) => {
+app.post("/api/stripe/webhook", async c => {
   const sig = c.req.header("stripe-signature");
   if (!sig) {
     return c.json({ error: "Missing stripe-signature header" }, 400);
@@ -138,7 +144,7 @@ app.post("/api/stripe/webhook", async (c) => {
 // handlers) — this is a minimal req/res shim rather than a rewrite of
 // server/paddle/webhook.ts, which only touches req.headers, req.body, and
 // res.status()/res.json().
-app.post("/api/paddle/webhook", async (c) => {
+app.post("/api/paddle/webhook", async c => {
   const sig = c.req.header("paddle-signature");
   if (!sig) {
     return c.json({ error: "Missing paddle-signature header" }, 400);
@@ -154,8 +160,14 @@ app.post("/api/paddle/webhook", async (c) => {
       body: { toString: () => bodyText },
     } as any;
     const fakeRes = {
-      status(code: number) { statusCode = code; return fakeRes; },
-      json(body: unknown) { responseBody = body; return fakeRes; },
+      status(code: number) {
+        statusCode = code;
+        return fakeRes;
+      },
+      json(body: unknown) {
+        responseBody = body;
+        return fakeRes;
+      },
     } as any;
     await handlePaddleWebhook(db, fakeReq, fakeRes);
     return c.json(responseBody as any, statusCode as any);
@@ -165,9 +177,8 @@ app.post("/api/paddle/webhook", async (c) => {
   }
 });
 
-
 // ─── Instantly.ai Webhook ───────────────────────────────────────────────────
-app.post("/api/webhooks/instantly", async (c) => {
+app.post("/api/webhooks/instantly", async c => {
   const secret = process.env.INSTANTLY_WEBHOOK_SECRET;
   if (secret) {
     const provided = c.req.header("x-webhook-secret");
@@ -176,7 +187,8 @@ app.post("/api/webhooks/instantly", async (c) => {
     }
   }
   try {
-    const { handleInstantlyWebhook } = await import("../server/webhooks/instantly");
+    const { handleInstantlyWebhook } =
+      await import("../server/webhooks/instantly");
     const payload = await c.req.json();
     const db = getHyperdriveDb(c.env);
     const result = await handleInstantlyWebhook(db, payload);
@@ -188,7 +200,7 @@ app.post("/api/webhooks/instantly", async (c) => {
 });
 
 // ─── DocuSign Webhook ───────────────────────────────────────────────────────
-app.post("/api/webhooks/docusign", async (c) => {
+app.post("/api/webhooks/docusign", async c => {
   const secret = process.env.DOCUSIGN_WEBHOOK_SECRET;
   if (secret) {
     const provided = c.req.header("x-docusign-secret");
@@ -197,7 +209,8 @@ app.post("/api/webhooks/docusign", async (c) => {
     }
   }
   try {
-    const { handleDocuSignWebhook } = await import("../server/webhooks/docusign");
+    const { handleDocuSignWebhook } =
+      await import("../server/webhooks/docusign");
     const payload = await c.req.json();
     const db = getHyperdriveDb(c.env);
     const result = await handleDocuSignWebhook(db, payload);
@@ -208,9 +221,8 @@ app.post("/api/webhooks/docusign", async (c) => {
   }
 });
 
-
 // ─── Admin ops console (client/src/pages/OpsDashboard.tsx) ─────────────────
-app.get("/api/admin/ops", async (c) => {
+app.get("/api/admin/ops", async c => {
   const { sdk } = await import("../server/_core/sdk");
   const user = await sdk.authenticateRequest(c.req.raw).catch(() => null);
   if (!user) {
@@ -225,13 +237,15 @@ app.get("/api/admin/ops", async (c) => {
     const summary = await getOpsSummary(db);
     return c.json(summary);
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : "ops query failed" }, 500);
+    return c.json(
+      { error: err instanceof Error ? err.message : "ops query failed" },
+      500
+    );
   }
 });
 
-
 // ─── OAuth callback ─────────────────────────────────────────────────────────
-app.get("/api/oauth/callback", async (c) => {
+app.get("/api/oauth/callback", async c => {
   const code = c.req.query("code");
   const state = c.req.query("state");
 
@@ -270,7 +284,10 @@ app.get("/api/oauth/callback", async (c) => {
     const forwardedProto = c.req.header("x-forwarded-proto");
     const secure =
       url.protocol === "https:" ||
-      (forwardedProto?.split(",").some((p) => p.trim().toLowerCase() === "https") ?? false);
+      (forwardedProto
+        ?.split(",")
+        .some(p => p.trim().toLowerCase() === "https") ??
+        false);
 
     const cookieOptions = getSessionCookieOptions(secure);
     const cookieParts = [
@@ -290,7 +307,6 @@ app.get("/api/oauth/callback", async (c) => {
   }
 });
 
-
 function escapeContactHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -302,13 +318,16 @@ function escapeContactHtml(str: string): string {
 // ─── Contact form (server/contact/index.ts's router body, ported directly —
 // it's a single POST / handler with no Express-specific internals beyond
 // req.body/res.json) ─────────────────────────────────────────────────────
-app.post("/api/contact", async (c) => {
+app.post("/api/contact", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
     const { name, email, company, message, subject } = body ?? {};
 
     if (!name || !email || !message) {
-      return c.json({ success: false, error: "Name, email, and message are required" }, 400);
+      return c.json(
+        { success: false, error: "Name, email, and message are required" },
+        400
+      );
     }
 
     const emailRegex = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
@@ -320,7 +339,9 @@ app.post("/api/contact", async (c) => {
     const safeEmail = escapeContactHtml(email);
     const safeCompany = escapeContactHtml(company || "N/A");
     const safeMessage = escapeContactHtml(message);
-    const safeSubject = subject ? escapeContactHtml(subject) : `Contact form: ${safeName}`;
+    const safeSubject = subject
+      ? escapeContactHtml(subject)
+      : `Contact form: ${safeName}`;
 
     const smtpHost = process.env.SMTP_HOST;
     const smtpUser = process.env.SMTP_USER;
@@ -355,10 +376,15 @@ app.post("/api/contact", async (c) => {
     });
   } catch (error) {
     console.error("Contact form error:", error);
-    return c.json({ success: false, error: "Failed to process your request. Please try again." }, 500);
+    return c.json(
+      {
+        success: false,
+        error: "Failed to process your request. Please try again.",
+      },
+      500
+    );
   }
 });
-
 
 // ─── GPT plugin REST endpoints (server/gpt/router.ts's Express Router,
 // ported route-by-route — each handler only touched req.body/req.query and
@@ -366,13 +392,17 @@ app.post("/api/contact", async (c) => {
 // getHyperdriveDb(c.env)) ────────────────────────────────────────────────
 
 // POST /api/gpt/verify - Verify product authenticity
-app.post("/api/gpt/verify", async (c) => {
+app.post("/api/gpt/verify", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
     const productId = body?.productId;
     if (!productId) return c.json({ error: "productId required" }, 400);
     const db = getHyperdriveDb(c.env);
-    const [product] = await db.select().from(products).where(eq(products.id, Number(productId))).limit(1);
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(eq(products.id, Number(productId)))
+      .limit(1);
     if (!product) {
       return c.json({
         verified: false,
@@ -381,7 +411,11 @@ app.post("/api/gpt/verify", async (c) => {
         blockchain: null,
       });
     }
-    const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
+    const [cert] = await db
+      .select()
+      .from(certificates)
+      .where(eq(certificates.productId, product.id))
+      .limit(1);
     return c.json({
       verified: !!cert,
       trustScore: cert ? 95 : 20,
@@ -400,7 +434,7 @@ app.post("/api/gpt/verify", async (c) => {
 });
 
 // POST /api/gpt/qr/generate - Generate a QR code
-app.post("/api/gpt/qr/generate", async (c) => {
+app.post("/api/gpt/qr/generate", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
     const { productId, style, size } = body ?? {};
@@ -418,14 +452,20 @@ app.post("/api/gpt/qr/generate", async (c) => {
 });
 
 // GET /api/gpt/certificates/verify - Check certificate by number
-app.get("/api/gpt/certificates/verify", async (c) => {
+app.get("/api/gpt/certificates/verify", async c => {
   try {
     const certNumber = c.req.query("certNumber");
     if (!certNumber) return c.json({ error: "certNumber required" }, 400);
-    if (certNumber.length > 64) return c.json({ error: "certNumber too long" }, 400);
+    if (certNumber.length > 64)
+      return c.json({ error: "certNumber too long" }, 400);
     const db = getHyperdriveDb(c.env);
-    const [cert] = await db.select().from(certificates).where(eq(certificates.certificateNumber, certNumber)).limit(1);
-    if (!cert) return c.json({ valid: false, message: "Certificate not found" });
+    const [cert] = await db
+      .select()
+      .from(certificates)
+      .where(eq(certificates.certificateNumber, certNumber))
+      .limit(1);
+    if (!cert)
+      return c.json({ valid: false, message: "Certificate not found" });
     return c.json({
       valid: true,
       certificateId: cert.id,
@@ -440,7 +480,7 @@ app.get("/api/gpt/certificates/verify", async (c) => {
 });
 
 // POST /api/gpt/cannabis/verify - Verify cannabis strain (by product name)
-app.post("/api/gpt/cannabis/verify", async (c) => {
+app.post("/api/gpt/cannabis/verify", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
     const { strainName, batchId } = body ?? {};
@@ -449,7 +489,11 @@ app.post("/api/gpt/cannabis/verify", async (c) => {
     }
     const db = getHyperdriveDb(c.env);
     const [product] = strainName
-      ? await db.select().from(products).where(eq(products.name, strainName)).limit(1)
+      ? await db
+          .select()
+          .from(products)
+          .where(eq(products.name, strainName))
+          .limit(1)
       : [];
     return c.json({
       verified: !!product,
@@ -468,18 +512,36 @@ app.post("/api/gpt/cannabis/verify", async (c) => {
 });
 
 // POST /api/gpt/trust-score - Compute trust score
-app.post("/api/gpt/trust-score", async (c) => {
+app.post("/api/gpt/trust-score", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
     const productId = body?.productId;
     if (!productId) return c.json({ error: "productId required" }, 400);
     const db = getHyperdriveDb(c.env);
-    const [product] = await db.select().from(products).where(eq(products.id, Number(productId))).limit(1);
-    if (!product) return c.json({ trustScore: 0, verdict: "UNKNOWN", message: "Product not found" });
-    const [cert] = await db.select().from(certificates).where(eq(certificates.productId, product.id)).limit(1);
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(eq(products.id, Number(productId)))
+      .limit(1);
+    if (!product)
+      return c.json({
+        trustScore: 0,
+        verdict: "UNKNOWN",
+        message: "Product not found",
+      });
+    const [cert] = await db
+      .select()
+      .from(certificates)
+      .where(eq(certificates.productId, product.id))
+      .limit(1);
     const baseScore = cert ? 85 : 15;
     const trustScore = Math.min(100, baseScore);
-    const verdict = trustScore >= 80 ? "TRUSTED" : trustScore >= 50 ? "MODERATE" : "SUSPICIOUS";
+    const verdict =
+      trustScore >= 80
+        ? "TRUSTED"
+        : trustScore >= 50
+          ? "MODERATE"
+          : "SUSPICIOUS";
     return c.json({
       trustScore,
       verdict,
@@ -505,15 +567,20 @@ app.use("/api/internal/*", async (c, next) => {
 });
 
 // POST /api/internal/verify
-app.post("/api/internal/verify", async (c) => {
+app.post("/api/internal/verify", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
     const { identifier, productId, barcode, imageUrl } = body ?? {};
     const lookupId = identifier || productId || barcode;
-    if (!lookupId) return c.json({ error: "identifier, productId, or barcode required" }, 400);
+    if (!lookupId)
+      return c.json(
+        { error: "identifier, productId, or barcode required" },
+        400
+      );
 
     const db = getHyperdriveDb(c.env);
-    const { getCertificateByNumber } = await import("../server/content-db-helpers");
+    const { getCertificateByNumber } =
+      await import("../server/content-db-helpers");
     const cert = await getCertificateByNumber(db, lookupId);
     if (cert) {
       return c.json({
@@ -527,7 +594,9 @@ app.post("/api/internal/verify", async (c) => {
     }
 
     // Prevent prompt injection — only the sanitized identifier reaches the LLM
-    const safeLookupId = String(lookupId).replace(/[^a-zA-Z0-9\-_.]/g, "").slice(0, 128);
+    const safeLookupId = String(lookupId)
+      .replace(/[^a-zA-Z0-9\-_.]/g, "")
+      .slice(0, 128);
 
     const { invokeLLM, parseLLMContent } = await import("../server/_core/llm");
     const analysis = await invokeLLM({
@@ -538,13 +607,21 @@ app.post("/api/internal/verify", async (c) => {
         },
         {
           role: "user",
-          content: JSON.stringify({ identifier: safeLookupId, hasImage: !!imageUrl }),
+          content: JSON.stringify({
+            identifier: safeLookupId,
+            hasImage: !!imageUrl,
+          }),
         },
       ],
       responseFormat: { type: "json_object" },
     });
 
-    let result: { verified: boolean; confidence: number; reasoning: string; riskFlags: string[] };
+    let result: {
+      verified: boolean;
+      confidence: number;
+      reasoning: string;
+      riskFlags: string[];
+    };
     try {
       result = parseLLMContent(analysis.choices[0].message.content);
     } catch {
@@ -566,7 +643,7 @@ app.post("/api/internal/verify", async (c) => {
 });
 
 // POST /api/internal/qr/generate
-app.post("/api/internal/qr/generate", async (c) => {
+app.post("/api/internal/qr/generate", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
     const { url, data, style, productName, brand, productId } = body ?? {};
@@ -590,18 +667,22 @@ app.post("/api/internal/qr/generate", async (c) => {
 });
 
 // POST /api/internal/certificates/verify
-app.post("/api/internal/certificates/verify", async (c) => {
+app.post("/api/internal/certificates/verify", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
     const raw = body?.certNumber ?? body?.number;
     const number = typeof raw === "string" ? raw : undefined;
-    if (!number) return c.json({ error: "certNumber body field required" }, 400);
-    if (number.length > 64) return c.json({ error: "certNumber too long" }, 400);
+    if (!number)
+      return c.json({ error: "certNumber body field required" }, 400);
+    if (number.length > 64)
+      return c.json({ error: "certNumber too long" }, 400);
 
     const db = getHyperdriveDb(c.env);
-    const { getCertificateByNumber } = await import("../server/content-db-helpers");
+    const { getCertificateByNumber } =
+      await import("../server/content-db-helpers");
     const cert = await getCertificateByNumber(db, number);
-    if (!cert) return c.json({ error: "Certificate not found", valid: false }, 404);
+    if (!cert)
+      return c.json({ error: "Certificate not found", valid: false }, 404);
 
     return c.json({
       valid: cert.status === "active",
@@ -617,12 +698,20 @@ app.post("/api/internal/certificates/verify", async (c) => {
 });
 
 // POST /api/internal/cannabis/verify
-app.post("/api/internal/cannabis/verify", async (c) => {
+app.post("/api/internal/cannabis/verify", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
-    const { strainId, strainName, dispensaryId, batchId, thcPercent, cbdPercent } = body ?? {};
+    const {
+      strainId,
+      strainName,
+      dispensaryId,
+      batchId,
+      thcPercent,
+      cbdPercent,
+    } = body ?? {};
     const strain = strainName || strainId;
-    if (!strain) return c.json({ error: "strainName or strainId required" }, 400);
+    if (!strain)
+      return c.json({ error: "strainName or strainId required" }, 400);
 
     const metadata = {
       name: strain,
@@ -640,7 +729,8 @@ app.post("/api/internal/cannabis/verify", async (c) => {
       total: (thcPercent || 25) + (cbdPercent || 1) + 5,
     };
 
-    const { calculateStrainRarity, formatTruthLayerMetadata } = await import("../server/cannabis-service");
+    const { calculateStrainRarity, formatTruthLayerMetadata } =
+      await import("../server/cannabis-service");
     const rarity = calculateStrainRarity(metadata, profile);
     const truthLayer = formatTruthLayerMetadata(metadata, profile);
 
@@ -660,10 +750,16 @@ app.post("/api/internal/cannabis/verify", async (c) => {
 });
 
 // POST /api/internal/trust-score
-app.post("/api/internal/trust-score", async (c) => {
+app.post("/api/internal/trust-score", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
-    const { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk } = body ?? {};
+    const {
+      qrDecodePass,
+      blockchainCertExists,
+      nfcMatch,
+      visualMatch,
+      geoFenceOk,
+    } = body ?? {};
 
     const { computeTrustScore } = await import("../server/qron-service");
     const score = computeTrustScore({
@@ -676,7 +772,13 @@ app.post("/api/internal/trust-score", async (c) => {
 
     return c.json({
       ...score,
-      inputs: { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk },
+      inputs: {
+        qrDecodePass,
+        blockchainCertExists,
+        nfcMatch,
+        visualMatch,
+        geoFenceOk,
+      },
     });
   } catch (err: any) {
     console.error("[Internal API] trust-score error:", err.message);
@@ -685,7 +787,7 @@ app.post("/api/internal/trust-score", async (c) => {
 });
 
 // GET /api/internal/analytics
-app.get("/api/internal/analytics", async (c) => {
+app.get("/api/internal/analytics", async c => {
   try {
     const period = c.req.query("period") || "30d";
     // Not used for querying below (this endpoint returns static stub
@@ -708,10 +810,11 @@ app.get("/api/internal/analytics", async (c) => {
 });
 
 // POST /api/internal/products/register
-app.post("/api/internal/products/register", async (c) => {
+app.post("/api/internal/products/register", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
-    const { name, brand, category, serialNumber, description, userId } = body ?? {};
+    const { name, brand, category, serialNumber, description, userId } =
+      body ?? {};
     if (!name) return c.json({ error: "name required" }, 400);
     const parsedUserId = parseInt(userId, 10);
     if (!userId || !Number.isFinite(parsedUserId) || parsedUserId <= 0) {
@@ -738,7 +841,7 @@ app.post("/api/internal/products/register", async (c) => {
 });
 
 // POST /api/internal/usage/report
-app.post("/api/internal/usage/report", async (c) => {
+app.post("/api/internal/usage/report", async c => {
   try {
     const body = await c.req.json().catch(() => ({}) as any);
     const { records } = body ?? {};
@@ -750,8 +853,8 @@ app.post("/api/internal/usage/report", async (c) => {
     const { reportUsageToStripe } = await import("../server/tenant-billing");
     await Promise.all(
       records.map((r: { tenantId: number; endpoint: string; count: number }) =>
-        reportUsageToStripe(usageDb, r.tenantId, r.endpoint, r.count),
-      ),
+        reportUsageToStripe(usageDb, r.tenantId, r.endpoint, r.count)
+      )
     );
 
     return c.json({ success: true, processed: records.length });
@@ -762,14 +865,18 @@ app.post("/api/internal/usage/report", async (c) => {
 });
 
 // GET /api/internal/tenant
-app.get("/api/internal/tenant", async (c) => {
+app.get("/api/internal/tenant", async c => {
   try {
     const authHeader = c.req.header("authorization");
-    const apiKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!apiKey) return c.json({ error: "Authorization: Bearer <apiKey> required" }, 400);
+    const apiKey = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
+    if (!apiKey)
+      return c.json({ error: "Authorization: Bearer <apiKey> required" }, 400);
 
     const db = getHyperdriveDb(c.env);
-    const { getWhiteLabelByApiKey } = await import("../server/content-db-helpers");
+    const { getWhiteLabelByApiKey } =
+      await import("../server/content-db-helpers");
     const tenant = await getWhiteLabelByApiKey(db, apiKey);
     if (!tenant) return c.json({ error: "Tenant not found" }, 404);
 
@@ -808,7 +915,7 @@ async function getMarketingRoutes(env: Env): Promise<Set<string>> {
   _marketingRoutesCache = (async () => {
     try {
       const res = await env.ASSETS.fetch(
-        new Request("https://internal/marketing-manifest.json"),
+        new Request("https://internal/marketing-manifest.json")
       );
       if (!res || res.status !== 200) return new Set<string>();
       const data = (await res.json()) as { routes?: string[] };
@@ -830,7 +937,7 @@ export function __resetMarketingRoutesCache(): void {
 // client-side (or renders its own 404).
 async function serveSpaShell(c: any): Promise<Response> {
   const res = await c.env.ASSETS.fetch(
-    new Request(new URL("/index.html", c.req.url), c.req.raw),
+    new Request(new URL("/index.html", c.req.url), c.req.raw)
   );
   // Inject per-brand SEO/meta into the otherwise brand-agnostic SPA shell so
   // crawlers and social unfurlers see the correct title/description/OG image
@@ -855,8 +962,14 @@ async function serveSpaShell(c: any): Promise<Response> {
     `<link rel="canonical" href="${canonical}" />` +
     `<script>window.__BRAND__=${JSON.stringify(brand.id)}</script>`;
   const out = html
-    .replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeContactHtml(title)}</title>`)
-    .replace(/<meta\s+name="description"[^>]*>/, `<meta name="description" content="${escapeContactHtml(desc)}" />`)
+    .replace(
+      /<title>[\s\S]*?<\/title>/,
+      `<title>${escapeContactHtml(title)}</title>`
+    )
+    .replace(
+      /<meta\s+name="description"[^>]*>/,
+      `<meta name="description" content="${escapeContactHtml(desc)}" />`
+    )
     .replace("</head>", `${meta}</head>`);
   return c.html(out, res.status);
 }
@@ -871,35 +984,59 @@ async function serveSpaShell(c: any): Promise<Response> {
 // always be the SPA shell. Extensions are matched case-insensitively
 // against the final path segment.
 const STATIC_ASSET_EXTENSIONS = new Set([
-  "svg", "png", "jpg", "jpeg", "gif", "webp", "ico",
-  "txt", "xml", "json", "webmanifest",
-  "woff", "woff2", "ttf", "otf", "eot",
-  "css", "js", "map",
-  "mp4", "webm", "avif",
+  "svg",
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+  "ico",
+  "txt",
+  "xml",
+  "json",
+  "webmanifest",
+  "woff",
+  "woff2",
+  "ttf",
+  "otf",
+  "eot",
+  "css",
+  "js",
+  "map",
+  "mp4",
+  "webm",
+  "avif",
 ]);
 
 // Per-brand robots.txt / sitemap.xml. These override the single brand-agnostic
 // files the SPA ships (otherwise served raw via the extension allowlist), so
 // each domain advertises its OWN sitemap and canonical origin.
-app.get("/robots.txt", (c) => {
+app.get("/robots.txt", c => {
   const brand = BRANDS[c.get("brand") as BrandId];
   const body = `User-agent: *\nAllow: /\nSitemap: https://${brand.domain}/sitemap.xml\n`;
   return c.body(body, 200, { "Content-Type": "text/plain; charset=utf-8" });
 });
 
-app.get("/sitemap.xml", async (c) => {
+app.get("/sitemap.xml", async c => {
   const brand = BRANDS[c.get("brand") as BrandId];
   const origin = `https://${brand.domain}`;
   const routes = await getMarketingRoutes(c.env);
-  const paths = ["/", ...[...routes].filter((r) => r !== "/" && !r.startsWith("/_"))].sort();
-  const urls = paths.map((p) => `  <url><loc>${origin}${p}</loc></url>`).join("\n");
+  const paths = [
+    "/",
+    ...[...routes].filter(r => r !== "/" && !r.startsWith("/_")),
+  ].sort();
+  const urls = paths
+    .map(p => `  <url><loc>${origin}${p}</loc></url>`)
+    .join("\n");
   const body =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
-  return c.body(body, 200, { "Content-Type": "application/xml; charset=utf-8" });
+  return c.body(body, 200, {
+    "Content-Type": "application/xml; charset=utf-8",
+  });
 });
 
-app.get("*", async (c) => {
+app.get("*", async c => {
   const { pathname: rawPathname } = new URL(c.req.url);
   // Normalize a trailing slash (except root "/") so /about/ resolves the same
   // as /about; otherwise the exact-match marketing lookup misses and the page
@@ -964,20 +1101,4 @@ app.get("*", async (c) => {
 
 export { RateLimiter } from "./rate-limiter";
 
-// ─── Cron Trigger dispatcher ────────────────────────────────────────────────
-// Dispatches a firing Cron Trigger to any registered scheduled-jobs.ts job(s)
-// whose `schedule` matches the cron expression that fired. NOTE: the actual
-// [triggers] crons in wrangler.toml are left commented out (see wrangler.toml)
-// — this handler is wired and ready, but nothing currently fires it in a
-// deployed Worker. Enabling specific crons is a deliberate cutover decision.
-async function scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-  const db = getHyperdriveDb(env);
-  const due = getScheduledJobs().filter((j) => j.schedule === event.cron);
-  for (const job of due) {
-    // force:true — the Cron Trigger firing IS the schedule; skip the
-    // node-cron-era minIntervalMs dedup (Workers cron already controls cadence).
-    ctx.waitUntil(executeJobWithDb(job, db, { force: true }));
-  }
-}
-
-export default { fetch: app.fetch, scheduled };
+export default { fetch: app.fetch };
