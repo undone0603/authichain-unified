@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "packageManager": "pnpm@10.28.2",
   "engines": {
     "node": ">=22.9.0",
     "npm": ">=11.3.0"
