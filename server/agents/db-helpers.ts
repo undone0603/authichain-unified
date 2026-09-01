@@ -28,7 +28,6 @@ type InsertSeoPage = typeof seoPages.$inferInsert;
 
 export async function logActivity(
   db: Db,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   actionOrData:
     | string
     | {
@@ -36,17 +35,15 @@ export async function logActivity(
         action: string;
         entityType?: string;
         entityId?: number | string;
-        details?: any;
+        details?: Record<string, unknown>;
       },
   details?: string
 ): Promise<void> {
   if (typeof actionOrData === "string") {
-    await db
-      .insert(activityLog)
-      .values({
-        action: actionOrData,
-        details: details ? { text: details } : undefined,
-      });
+    await db.insert(activityLog).values({
+      action: actionOrData,
+      details: details ? { text: details } : undefined,
+    });
   } else {
     await db.insert(activityLog).values({
       userId: actionOrData.userId ?? undefined,
@@ -187,10 +184,9 @@ export async function createSystemNotification(
   type: InsertNotification["type"],
   actionUrl?: string
 ): Promise<{ id: string }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return createNotification(db, {
     userId,
-    type: type as any,
+    type: type as InsertNotification["type"],
     title,
     message,
     isRead: false,
