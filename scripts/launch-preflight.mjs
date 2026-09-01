@@ -15,7 +15,7 @@ const requiredFiles = [
   "src/app/page.tsx",
   "server/routers.ts",
   "drizzle/schema.ts",
-  "vercel.json",
+  "wrangler.toml",
 ];
 const requiredEnv = [
   "DATABASE_URL",
@@ -89,7 +89,7 @@ if (!exists(".next")) {
   warnings.push(".next is missing; run pnpm next:build before deployment.");
 }
 if (!exists("dist")) {
-  warnings.push("dist is missing; this is expected for Vercel, but required for the standalone SPA path.");
+  warnings.push("dist is missing; run pnpm build before deploying to Cloudflare.");
 }
 if (process.env.REQUIRE_OUTREACH_APPROVAL === "false") {
   failures.push("REQUIRE_OUTREACH_APPROVAL=false is unsafe for first production launch.");

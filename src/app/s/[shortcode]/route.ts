@@ -40,7 +40,7 @@ export async function GET(
   // 3. Evaluate Rules
   if (rules && rules.length > 0) {
     const userAgent = request.headers.get('user-agent') || '';
-    const country = request.headers.get('x-vercel-ip-country') || request.headers.get('cf-ipcountry') || 'US'; // Default to US for local testing
+    const country = request.headers.get('cf-ipcountry') || 'US'; // Default to US for local testing
     const now = new Date();
 
     for (const rule of rules) {
@@ -85,10 +85,10 @@ export async function GET(
   const userAgent = request.headers.get('user-agent') || 'unknown';
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
   
-  // Use Vercel/Cloudflare Geo headers if available
-  const country = request.headers.get('x-vercel-ip-country') || request.headers.get('cf-ipcountry') || 'unknown';
-  const region = request.headers.get('x-vercel-ip-country-region') || 'unknown';
-  const city = request.headers.get('x-vercel-ip-city') || 'unknown';
+  // Use Cloudflare geo headers when available.
+  const country = request.headers.get('cf-ipcountry') || 'unknown';
+  const region = request.headers.get('cf-region-code') || 'unknown';
+  const city = request.headers.get('cf-ipcity') || 'unknown';
 
   // 4a. Update QRON scan count
   supabase

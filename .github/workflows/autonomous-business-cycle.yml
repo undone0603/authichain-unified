@@ -1,9 +1,9 @@
-name: Autonomous Business Cycle (Vercel Cron backup)
+name: Autonomous Business Cycle
 
-# Redundant trigger for the same paths vercel.json declares as Vercel Cron
-# jobs, authenticated with CRON_SECRET. It is intentionally disabled until
-# every endpoint supports a dry-run contract and a reviewed live activation
-# explicitly enables it.
+# GitHub Actions is the only scheduler for this workflow. It calls the
+# Cloudflare-hosted app's internal cron endpoints with CRON_SECRET and stays
+# disabled on scheduled runs until the repository variable
+# AUTONOMOUS_BUSINESS_CYCLE_ENABLED is set to "true".
 
 on:
   schedule:
@@ -60,7 +60,7 @@ env:
 jobs:
   run-due-cron-paths:
     name: Call due cron path
-    if: github.event_name == 'workflow_dispatch' && inputs.live
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.live) || (github.event_name == 'schedule' && vars.AUTONOMOUS_BUSINESS_CYCLE_ENABLED == 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Skip if CRON_SECRET not configured yet

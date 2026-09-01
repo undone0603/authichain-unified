@@ -12,7 +12,7 @@ jobs:
   establish-verified-commit:
     # GitHub's Actions App can produce a verified bot commit when the API
     # request uses GITHUB_TOKEN without custom author/committer/signature data.
-    # The resulting commit gives Vercel a verified GitHub commit to deploy.
+    # The resulting commit gives Cloudflare-backed automation a verified GitHub commit to react to.
     runs-on: ubuntu-latest
     steps:
       - name: Create verified bot commit

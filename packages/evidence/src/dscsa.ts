@@ -7,6 +7,28 @@ export const DsCsaMetadataSchema = z.object({
   transactionId: z.string(),
 });
 
+export const DsCsaEvidenceSchema = z.object({
+  id: z.string().uuid(),
+  subject_id: z.string(),
+  type: z.enum([
+    "manufacturing",
+    "inspection",
+    "shipment",
+    "commission",
+    "pack",
+    "receive",
+    "dispense",
+  ]),
+  issuer: z.object({
+    id: z.string(),
+    name: z.string(),
+  }),
+  timestamp: z.string().datetime(),
+  digest: z.string().startsWith("sha256:"),
+  signature: z.string(),
+  metadata: DsCsaMetadataSchema,
+});
+
 export type DsCsaEvidence = {
   // Need to define the full type here if I don't extend
   id: string;

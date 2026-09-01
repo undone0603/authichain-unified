@@ -24,7 +24,9 @@ rate-gated, human-approvable).
 | | `email-proposals.yml` | weekdays 15:00 | **yes** | email |
 | **Safety** | `guardrail-digest.yml`, `verify-integrations.yml`, `compliance-audit.yml`, `security-scan.yml` | daily/weekly | — | — |
 
-Everything outbound is inert until `AUTONOMOUS_PIPELINE_ENABLED=true`.
+Everything outbound is inert until the relevant GitHub Actions activation
+variable is turned on (`PIPELINE_TICK_ENABLED` for `pipeline-tick.yml`,
+`AUTONOMOUS_BUSINESS_CYCLE_ENABLED` for `autonomous-business-cycle.yml`).
 
 ## 2. Guardrails (already enforced in code)
 
@@ -40,7 +42,7 @@ Everything outbound is inert until `AUTONOMOUS_PIPELINE_ENABLED=true`.
 
 ## 3. Pre-flight config (set before enabling outbound)
 
-Required secrets/env (Vercel + GitHub Actions):
+Required secrets/env (Cloudflare + GitHub Actions):
 
 - [ ] `MAILING_ADDRESS` — real physical postal address (else outbound fails closed)
 - [ ] `UNSUBSCRIBE_URL` — working unsubscribe endpoint
@@ -56,8 +58,9 @@ Required secrets/env (Vercel + GitHub Actions):
 2. **Gov drafts.** Let `gov-engine.yml` produce scored opportunities + proposal
    drafts. Review output; nothing is sent.
 3. **Outbound in review mode.** Set config in §3 with
-   `REQUIRE_OUTREACH_APPROVAL=true`, then `AUTONOMOUS_PIPELINE_ENABLED=true`
-   (run `set-pipeline-enabled.yml`). Agents will queue drafts, not send.
+   `REQUIRE_OUTREACH_APPROVAL=true`, then enable the scheduled workflow you want
+   to exercise by setting its repository variable to `true`. Agents will queue
+   drafts, not send.
 4. **Approve a first batch by hand.** Confirm deliverability, copy, and that the
    provenance gate is rejecting junk. Watch `guardrail-digest.yml`.
 5. **Flip to autosend.** Set `REQUIRE_OUTREACH_APPROVAL=false` once the drafts
@@ -65,8 +68,8 @@ Required secrets/env (Vercel + GitHub Actions):
 
 ## 5. Kill switch
 
-- `AUTONOMOUS_PIPELINE_ENABLED=false` (or re-run `set-pipeline-enabled.yml`
-  with the flag off) halts all outbound immediately.
+- Set the relevant repository activation variable back to anything other than
+  `true` to halt the corresponding scheduled workflow immediately.
 - Revoke `RESEND_API_KEY` for a hard stop.
 
 ## 6. Watch these KPIs

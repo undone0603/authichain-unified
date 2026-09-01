@@ -17,8 +17,8 @@ This repository is the central hub for the QRON ecosystem, integrating a high-pe
 
 This repo is a monorepo.
 
-- **Vercel deploy target (Next.js app)**: `apps/qron-platform/`
-- **Cloudflare edge/fronting**: `worker/` (see `wrangler.toml`)
+- **Cloudflare deploy target**: root worker + `workers/*` services (see `wrangler.toml` and `.github/workflows/deploy-cloudflare.yml`)
+- **Legacy Next.js-compatible code**: retained in-repo where needed, but not deployed via Vercel
 
 See `docs/NETWORK.md` for the deployment map and current domains.
 
@@ -68,7 +68,7 @@ The `agentz/` directory contains the control-plane layer for autonomous operatio
 python -m agentz.cli list
 
 # Run a specific workflow in dry-run mode
-python -m agentz.cli run vercel_fix_authichain_unified --mode dry-run
+python -m agentz.cli run authichain_pilot_deploy --mode dry-run
 
 # Run all revenue-blocking workflows in auto mode
 python -m agentz.cli run --all --revenue-only --mode auto
@@ -79,7 +79,7 @@ python -m agentz.cli run --all --revenue-only --mode auto
 - **ORM**: Drizzle is used for schema management.
 - **Migrations**: `pnpm db:generate` and `pnpm db:migrate` (see `package.json` scripts).
 - **Edge**: Managed via `wrangler.toml` and repo-managed `workers/*` services.
-- **Deploy map**: `docs/NETWORK.md` is the canonical inventory of Vercel, Cloudflare, database, and worker responsibilities.
+- **Deploy map**: `docs/NETWORK.md` is the canonical inventory of Cloudflare, database, and worker responsibilities.
 - **Agents**: Python environment requires `pip install -r requirements-agentz.txt`.
 
 ## 🧪 Pilot-readiness

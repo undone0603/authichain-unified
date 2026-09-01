@@ -25,7 +25,7 @@
     "gov:monitor": "bash scripts/ops/monitor-gov-engine.sh",
     "gov:deploy-base": "tsx scripts/deploy-authichain-nft-base.ts",
     "gov:mint": "tsx scripts/mint-govchain-nfts.ts",
-    "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .github package.json next.config.js postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts",
+    "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .github package.json next.config.js postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts && node scripts/check-cloudflare-only.mjs",
     "lint-staged": "lint-staged",
     "preinstall": "node scripts/check-npm-version.cjs",
     "prepare": "husky install"
@@ -80,8 +80,6 @@
     "@trpc/server": "^11.0.0-rc.446",
     "@types/express": "^5.0.6",
     "@types/google.maps": "^3.65.5",
-    "@vercel/analytics": "^2.0.1",
-    "@vercel/speed-insights": "^2.0.0",
     "ai": "^7.0.22",
     "axios": "^1.19.0",
     "class-variance-authority": "^0.7.1",
@@ -130,7 +128,6 @@
     "thirdweb": "^5.121.1",
     "ts-command-line-args": "^2.5.1",
     "vaul": "^1.1.2",
-    "vercel": "^59.7.0",
     "wouter": "^3.10.0",
     "zod": "^3.23.8"
   },

@@ -67,7 +67,11 @@ const worker = {
 
         // 2a. Dynamic Brand Domain Resolution
         let _brandId: string | null = null;
-        const isStandardDomain = hostname.includes('qron.space') || hostname.includes('localhost') || hostname.includes('vercel.app');
+        const isStandardDomain =
+          hostname.includes('qron.space') ||
+          hostname.includes('localhost') ||
+          hostname.includes('pages.dev') ||
+          hostname.includes('workers.dev');
         
         if (!isStandardDomain) {
           const brandRes = await fetch(`${supabaseUrl}/rest/v1/brands?domain=eq.${hostname}&select=id`, {
