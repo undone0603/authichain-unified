@@ -1,16 +1,16 @@
-import { NextResponse } from 'next/server';
-import type Stripe from 'stripe';
-import { PLAN_CREDITS, PLAN_TIER, type PlanId } from '@/lib/plans';
-import { generateLivingQR } from '@/lib/hf-generation';
-import { logAutomation } from '@/lib/automation';
-import { sendEmail } from '@/lib/email';
+import { NextResponse } from "next/server";
+import type Stripe from "stripe";
+import { PLAN_CREDITS, PLAN_TIER, type PlanId } from "@/lib/plans";
+import { generateLivingQR } from "@/lib/hf-generation";
+import { logAutomation } from "@/lib/automation";
+import { sendEmail } from "@/lib/email";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 // --- Supabase helper ---
 
 async function getServiceClient() {
-  const { createClient } = await import('@supabase/supabase-js');
+  const { createClient } = await import("@supabase/supabase-js");
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -32,26 +32,26 @@ async function fulfillPlan(
   try {
     const supabase = await getServiceClient();
     await supabase
-      .from('profiles')
+      .from("profiles")
       .update({
         tier,
         // Incremental credits are added via rpc below; only set limit for unlimited tier
         ...(credits >= 999999 ? { generations_limit: 999999 } : {}),
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId);
+      .eq("id", userId);
 
     // Add credits incrementally (so existing balance isn't wiped)
     if (credits > 0 && credits < 999999) {
-      await supabase.rpc('add_generation_credits', {
+      await supabase.rpc("add_generation_credits", {
         user_uuid: userId,
         amount: credits,
       });
     } else if (credits >= 999999) {
       await supabase
-        .from('profiles')
+        .from("profiles")
         .update({ generations_limit: 999999, tier })
-        .eq('user_id', userId);
+        .eq("user_id", userId);
     }
 
     console.log(
@@ -59,38 +59,53 @@ async function fulfillPlan(
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[webhook] fulfillPlan error (non-fatal):', err);
-    await logAutomation('stripe_webhook.fulfillPlan', 'event', 'failure', { userId, planId }, msg);
+    console.error("[webhook] fulfillPlan error (non-fatal):", err);
+    await logAutomation(
+      "stripe_webhook.fulfillPlan",
+      "event",
+      "failure",
+      { userId, planId },
+      msg
+    );
   }
 }
 
 // ─── Trigger Tokenomics Cycle ──────────────────────────────────────────
 
-async function triggerTokenomics(userId: string | null | undefined, amount: number) {
+async function triggerTokenomics(
+  userId: string | null | undefined,
+  amount: number
+) {
   if (!userId || amount <= 0) return;
   try {
-    const { processFeeFlow } = await import('@/lib/authentic-economy');
+    const { processFeeFlow } = await import("@/lib/authentic-economy");
     const supabase = await getServiceClient();
-    
+
     // Find brand associated with user
     const { data: brand } = await supabase
-      .from('brands')
-      .select('id')
-      .eq('user_id', userId)
+      .from("brands")
+      .select("id")
+      .eq("user_id", userId)
       .single();
 
     if (brand) {
       await processFeeFlow({
         brandId: brand.id,
         userId: userId,
-        flowType: 'authentication_fee',
-        metadata: { source: 'stripe_payment', fiat_amount: amount }
+        flowType: "authentication_fee",
+        metadata: { source: "stripe_payment", fiat_amount: amount },
       });
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[webhook] tokenomics trigger error:', err);
-    await logAutomation('stripe_webhook.triggerTokenomics', 'event', 'failure', { userId, amount }, msg);
+    console.error("[webhook] tokenomics trigger error:", err);
+    await logAutomation(
+      "stripe_webhook.triggerTokenomics",
+      "event",
+      "failure",
+      { userId, amount },
+      msg
+    );
   }
 }
 
@@ -100,20 +115,26 @@ async function downgradeUser(stripeCustomerId: string) {
   try {
     const supabase = await getServiceClient();
     await supabase
-      .from('profiles')
+      .from("profiles")
       .update({
-        tier: 'free',
+        tier: "free",
         // Free-gen grant removed — cancelled users revert to 0 and must start a
         // new free trial or subscribe to regain generation access.
         generations_limit: 0,
         updated_at: new Date().toISOString(),
       })
-      .eq('stripe_customer_id', stripeCustomerId);
-    console.log('[webhook] Downgraded customer', stripeCustomerId);
+      .eq("stripe_customer_id", stripeCustomerId);
+    console.log("[webhook] Downgraded customer", stripeCustomerId);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[webhook] downgradeUser error (non-fatal):', err);
-    await logAutomation('stripe_webhook.downgradeUser', 'event', 'failure', { stripeCustomerId }, msg);
+    console.error("[webhook] downgradeUser error (non-fatal):", err);
+    await logAutomation(
+      "stripe_webhook.downgradeUser",
+      "event",
+      "failure",
+      { stripeCustomerId },
+      msg
+    );
   }
 }
 
@@ -127,16 +148,22 @@ async function saveCustomerId(
   try {
     const supabase = await getServiceClient();
     await supabase
-      .from('profiles')
+      .from("profiles")
       .update({
         stripe_customer_id: customerId,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId);
+      .eq("id", userId);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[webhook] saveCustomerId error (non-fatal):', err);
-    await logAutomation('stripe_webhook.saveCustomerId', 'event', 'failure', { userId, customerId }, msg);
+    console.error("[webhook] saveCustomerId error (non-fatal):", err);
+    await logAutomation(
+      "stripe_webhook.saveCustomerId",
+      "event",
+      "failure",
+      { userId, customerId },
+      msg
+    );
   }
 }
 
@@ -151,7 +178,7 @@ async function recordDelivery(
 ) {
   try {
     const supabase = await getServiceClient();
-    await supabase.from('qron_deliveries').upsert(
+    await supabase.from("qron_deliveries").upsert(
       {
         stripe_session_id: sessionId,
         customer_email: email,
@@ -160,12 +187,18 @@ async function recordDelivery(
         prompt,
         delivered_at: new Date().toISOString(),
       },
-      { onConflict: 'stripe_session_id' }
+      { onConflict: "stripe_session_id" }
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[webhook] recordDelivery error (non-fatal):', err);
-    await logAutomation('stripe_webhook.recordDelivery', 'event', 'failure', { sessionId, email }, msg);
+    console.error("[webhook] recordDelivery error (non-fatal):", err);
+    await logAutomation(
+      "stripe_webhook.recordDelivery",
+      "event",
+      "failure",
+      { sessionId, email },
+      msg
+    );
   }
 }
 
@@ -179,8 +212,8 @@ async function sendQrEmail(
 ) {
   const result = await sendEmail({
     to,
-    from: process.env.SENDGRID_FROM_EMAIL || 'QRON <hello@qron.space>',
-    subject: 'Your QRON QR Code is Ready',
+    from: process.env.SENDGRID_FROM_EMAIL || "QRON <hello@qron.space>",
+    subject: "Your QRON QR Code is Ready",
     html: `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#ededed;padding:32px;border-radius:12px;">
         <h1 style="color:#c9a227;margin-bottom:8px;">Your QRON is Ready</h1>
@@ -204,8 +237,14 @@ async function sendQrEmail(
     text: `Your QRON QR Code is ready!\n\nDownload: ${imageUrl}\nLinks to: ${qrUrl}\nStyle: ${prompt}`,
   });
   if (!result.ok) {
-    console.warn('[email] QR delivery failed:', result.provider, result.error);
-    await logAutomation('stripe_webhook.sendQrEmail', 'event', 'failure', { to, provider: result.provider }, result.error);
+    console.warn("[email] QR delivery failed:", result.provider, result.error);
+    await logAutomation(
+      "stripe_webhook.sendQrEmail",
+      "event",
+      "failure",
+      { to, provider: result.provider },
+      result.error
+    );
     return;
   }
   console.log(`[email] QR delivered to ${to} via ${result.provider}`);
@@ -220,7 +259,7 @@ async function generateAndDeliverQr(session: Stripe.Checkout.Session) {
 
   if (!url || !prompt || !customerEmail) {
     console.warn(
-      '[webhook] Skipping QR gen — missing url/prompt/email in metadata'
+      "[webhook] Skipping QR gen — missing url/prompt/email in metadata"
     );
     return;
   }
@@ -239,75 +278,83 @@ async function generateAndDeliverQr(session: Stripe.Checkout.Session) {
     ]);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[webhook] generateAndDeliverQr error:', err);
-    await logAutomation('stripe_webhook.generateAndDeliverQr', 'event', 'failure', { sessionId: session.id, customerEmail }, msg);
+    console.error("[webhook] generateAndDeliverQr error:", err);
+    await logAutomation(
+      "stripe_webhook.generateAndDeliverQr",
+      "event",
+      "failure",
+      { sessionId: session.id, customerEmail },
+      msg
+    );
   }
 }
 
 // ─── Targeted QRON generation for custom_qron purchases ──────────────────────
 
-async function generateAndDeliverTargetedQron(session: Stripe.Checkout.Session) {
+async function generateAndDeliverTargetedQron(
+  session: Stripe.Checkout.Session
+) {
   const {
     url,
     subject,
-    style = 'portrait',
-    _steps = '50',
+    style = "portrait",
+    _steps = "50",
     _referenceImageUrl,
-    mintNft = 'false',
+    mintNft = "false",
   } = session.metadata || {};
   const customerEmail =
     session.customer_email || session.customer_details?.email;
 
   if (!url || !subject || !customerEmail) {
     console.warn(
-      '[webhook] Skipping targeted QRON — missing url/subject/email in metadata'
+      "[webhook] Skipping targeted QRON — missing url/subject/email in metadata"
     );
     return;
   }
 
   // Build the same rich prompt as the targeted generator
   const isPreset = [
-    'cyberpunk',
-    'watercolor',
-    'miniature',
-    'luxury',
-    'graffiti',
-    'anime',
-    'portrait',
-    'geometric',
-    'nature',
+    "cyberpunk",
+    "watercolor",
+    "miniature",
+    "luxury",
+    "graffiti",
+    "anime",
+    "portrait",
+    "geometric",
+    "nature",
   ].includes(style);
 
   const STYLE_MAP: Record<string, string> = {
     cyberpunk:
-      'cyberpunk aesthetic, neon lights, glitch art, futuristic cityscape, electric blue and magenta hues',
+      "cyberpunk aesthetic, neon lights, glitch art, futuristic cityscape, electric blue and magenta hues",
     watercolor:
-      'watercolor painting, soft brush strokes, vibrant color splashes, artistic portrait, pastel tones with bold accents',
+      "watercolor painting, soft brush strokes, vibrant color splashes, artistic portrait, pastel tones with bold accents",
     miniature:
-      'tilt-shift photography, miniature architecture, tiny world, isometric city, vivid saturation, bokeh depth-of-field',
+      "tilt-shift photography, miniature architecture, tiny world, isometric city, vivid saturation, bokeh depth-of-field",
     luxury:
-      'luxury brand aesthetic, golden embossed seal, holographic foil, premium product photography, deep blacks and gold',
+      "luxury brand aesthetic, golden embossed seal, holographic foil, premium product photography, deep blacks and gold",
     graffiti:
-      'street art mural, graffiti style, spray paint texture, bold outlines, urban wall art, vibrant colors',
+      "street art mural, graffiti style, spray paint texture, bold outlines, urban wall art, vibrant colors",
     anime:
-      'anime art style, cel shading, vivid colors, manga panel composition, expressive character design',
+      "anime art style, cel shading, vivid colors, manga panel composition, expressive character design",
     portrait:
-      'classical oil painting portrait, rich textures, dramatic chiaroscuro lighting, detailed brushwork',
+      "classical oil painting portrait, rich textures, dramatic chiaroscuro lighting, detailed brushwork",
     geometric:
-      'abstract geometric art, bold shapes, primary color palette, Bauhaus-inspired composition',
+      "abstract geometric art, bold shapes, primary color palette, Bauhaus-inspired composition",
     nature:
-      'botanical illustration, lush jungle foliage, tropical flowers, vibrant greens and warm sunlight',
+      "botanical illustration, lush jungle foliage, tropical flowers, vibrant greens and warm sunlight",
   };
 
-  const styleDesc = isPreset ? STYLE_MAP[style] ?? STYLE_MAP.portrait : style;
+  const styleDesc = isPreset ? (STYLE_MAP[style] ?? STYLE_MAP.portrait) : style;
 
   const prompt = [
     `${subject},`,
     `${styleDesc},`,
-    'seamlessly integrated into a scannable QR code pattern,',
-    'the QR modules form the structure of the artwork,',
-    'highly detailed, photorealistic, award-winning digital art',
-  ].join(' ');
+    "seamlessly integrated into a scannable QR code pattern,",
+    "the QR modules form the structure of the artwork,",
+    "highly detailed, photorealistic, award-winning digital art",
+  ].join(" ");
 
   try {
     const hfResult = await generateLivingQR({
@@ -320,19 +367,20 @@ async function generateAndDeliverTargetedQron(session: Stripe.Checkout.Session) 
     // Optional NFT mint for Elite tier
     let txHash: string | undefined;
     if (
-      mintNft === 'true' &&
+      mintNft === "true" &&
       process.env.QRON_NFT_CONTRACT_ADDRESS &&
       process.env.THIRDWEB_MINTER_KEY
     ) {
       try {
         const mintRes = await fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space'}/api/qron/mint-nft`,
+          `${process.env.NEXT_PUBLIC_APP_URL || "https://qron.space"}/api/qron/mint-nft`,
           {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               recipient:
-                session.metadata?.walletAddress || process.env.DEMO_WALLET_ADDRESS,
+                session.metadata?.walletAddress ||
+                process.env.DEMO_WALLET_ADDRESS,
               imageUrl,
               destinationUrl: url,
               qronId: `custom-${session.id}`,
@@ -344,7 +392,7 @@ async function generateAndDeliverTargetedQron(session: Stripe.Checkout.Session) 
           txHash = mintData.txHash;
         }
       } catch (mintErr) {
-        console.warn('[webhook] Non-fatal NFT mint error:', mintErr);
+        console.warn("[webhook] Non-fatal NFT mint error:", mintErr);
       }
     }
 
@@ -360,8 +408,14 @@ async function generateAndDeliverTargetedQron(session: Stripe.Checkout.Session) 
     await recordDelivery(session.id, customerEmail, imageUrl, url, prompt);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[webhook] generateAndDeliverTargetedQron error:', err);
-    await logAutomation('stripe_webhook.generateAndDeliverTargetedQron', 'event', 'failure', { sessionId: session.id, customerEmail }, msg);
+    console.error("[webhook] generateAndDeliverTargetedQron error:", err);
+    await logAutomation(
+      "stripe_webhook.generateAndDeliverTargetedQron",
+      "event",
+      "failure",
+      { sessionId: session.id, customerEmail },
+      msg
+    );
   }
 }
 
@@ -377,11 +431,11 @@ async function sendTargetedQronEmail(
 ) {
   const nftSection = txHash
     ? `<p><strong style="color:#c9a227;">NFT Minted:</strong> <a href="https://basescan.org/tx/${txHash}" style="color:#c9a227;">${txHash.slice(0, 20)}...</a></p>`
-    : '';
+    : "";
 
   const result = await sendEmail({
     to,
-    from: process.env.SENDGRID_FROM_EMAIL || 'QRON <hello@qron.space>',
+    from: process.env.SENDGRID_FROM_EMAIL || "QRON <hello@qron.space>",
     subject: `Your Custom QRON is Ready — ${subject.slice(0, 40)}`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#ededed;padding:40px 32px;border-radius:16px;border:1px solid rgba(201,162,39,0.2);">
@@ -420,22 +474,34 @@ async function sendTargetedQronEmail(
           <a href="https://authichain.com" style="color:#c9a227;text-decoration:none;">authichain.com</a>       
         </p>
       </div>`,
-    text: `Your Custom QRON is ready!\n\nSubject: ${subject}\nStyle: ${style}\nLinks to: ${qrUrl}\n\nDownload: ${imageUrl}${txHash ? `\nNFT: https://basescan.org/tx/${txHash}` : ''}\n\nWant another? Use RETURN10 for 10% off.`,
+    text: `Your Custom QRON is ready!\n\nSubject: ${subject}\nStyle: ${style}\nLinks to: ${qrUrl}\n\nDownload: ${imageUrl}${txHash ? `\nNFT: https://basescan.org/tx/${txHash}` : ""}\n\nWant another? Use RETURN10 for 10% off.`,
   });
   if (!result.ok) {
-    console.warn('[email] Custom QRON delivery failed:', result.provider, result.error);
-    await logAutomation('stripe_webhook.sendTargetedQronEmail', 'event', 'failure', { to, provider: result.provider, subject }, result.error);
+    console.warn(
+      "[email] Custom QRON delivery failed:",
+      result.provider,
+      result.error
+    );
+    await logAutomation(
+      "stripe_webhook.sendTargetedQronEmail",
+      "event",
+      "failure",
+      { to, provider: result.provider, subject },
+      result.error
+    );
     return;
   }
-  console.log(`[email] Custom targeted QRON delivered to ${to} via ${result.provider}`);
+  console.log(
+    `[email] Custom targeted QRON delivered to ${to} via ${result.provider}`
+  );
 }
 
 // ─── Story Mode fulfillment ───────────────────────────────────────────────────
 
 async function fulfillStoryMode(session: Stripe.Checkout.Session) {
-  const { qronId, tier = 'pro' } = session.metadata || {};
+  const { qronId, tier = "pro" } = session.metadata || {};
   if (!qronId) {
-    console.warn('[webhook] story_mode: no qronId in metadata');
+    console.warn("[webhook] story_mode: no qronId in metadata");
     return;
   }
 
@@ -444,45 +510,45 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
   // Unlock story mode on the QRON (Permanent table)
   const isNumeric = /^\d+$/.test(qronId);
   const { error: _qronError } = await supabase
-    .from('qrons')
+    .from("qrons")
     .update({
       story_enabled: true,
       story_tier: tier,
       story_unlocked_at: new Date().toISOString(),
     })
-    .eq(isNumeric ? 'id' : 'id', qronId); // Assuming id is what we get
+    .eq(isNumeric ? "id" : "id", qronId); // Assuming id is what we get
 
   // Also grant story_mode_enabled on user profile
   const userId = session.metadata?.userId;
   if (userId) {
     await supabase
-      .from('profiles')
+      .from("profiles")
       .update({
         story_mode_enabled: true,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId);
+      .eq("id", userId);
   }
 
   // Backup: Also try updating qron_generations if qronId is a UUID
   if (!isNumeric) {
     await supabase
-      .from('qron_generations')
+      .from("qron_generations")
       .update({
         // story_enabled: true, // We don't have this column here yet, but qrons has it
       })
-      .eq('id', qronId);
+      .eq("id", qronId);
   }
 
   // Notify customer
   const customerEmail =
     session.customer_email || session.customer_details?.email;
   if (customerEmail) {
-    const dashUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space'}/dashboard`;
+    const dashUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://qron.space"}/dashboard`;
     const result = await sendEmail({
       to: customerEmail,
-      from: process.env.SENDGRID_FROM_EMAIL || 'QRON <hello@qron.space>',
-      subject: 'AI Story Mode Unlocked',
+      from: process.env.SENDGRID_FROM_EMAIL || "QRON <hello@qron.space>",
+      subject: "AI Story Mode Unlocked",
       html: `
           <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#ededed;padding:40px 32px;border-radius:16px;border:1px solid rgba(201,162,39,0.2);">
             <h1 style="color:#c9a227;">AI Story Mode Unlocked</h1>
@@ -492,7 +558,7 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
               <li>Update the destination URL anytime</li>
               <li>Write your brand story and narrative</li>
               <li>Add animated scenes and CTAs</li>
-              ${tier === 'elite' ? '<li>Embed video and track analytics</li>' : ''}
+              ${tier === "elite" ? "<li>Embed video and track analytics</li>" : ""}
             </ul>
             <div style="margin:28px 0;">
               <a href="${dashUrl}" style="background:linear-gradient(135deg,#c9a227,#a07c10);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:800;">
@@ -505,8 +571,18 @@ async function fulfillStoryMode(session: Stripe.Checkout.Session) {
       text: `AI Story Mode (${tier}) unlocked! Manage your QRON at ${dashUrl}`,
     });
     if (!result.ok) {
-      console.warn('[webhook] story mode email failed:', result.provider, result.error);
-      await logAutomation('stripe_webhook.fulfillStoryMode.email', 'event', 'failure', { to: customerEmail, qronId, tier, provider: result.provider }, result.error);
+      console.warn(
+        "[webhook] story mode email failed:",
+        result.provider,
+        result.error
+      );
+      await logAutomation(
+        "stripe_webhook.fulfillStoryMode.email",
+        "event",
+        "failure",
+        { to: customerEmail, qronId, tier, provider: result.provider },
+        result.error
+      );
     }
   }
 
@@ -520,10 +596,13 @@ export async function POST(request: Request) {
   // idempotency guard and read a stale `planId` metadata key. Point the Stripe
   // endpoint at /api/stripe/webhook. Set STRIPE_WEBHOOK_LEGACY_ENABLED=true to
   // temporarily re-enable during cutover.
-  if (process.env.STRIPE_WEBHOOK_LEGACY_ENABLED !== 'true') {
+  if (process.env.STRIPE_WEBHOOK_LEGACY_ENABLED !== "true") {
     return NextResponse.json(
-      { error: 'Endpoint retired — point Stripe at /api/stripe/webhook', deprecated: true },
-      { status: 410 },
+      {
+        error: "Endpoint retired — point Stripe at /api/stripe/webhook",
+        deprecated: true,
+      },
+      { status: 410 }
     );
   }
 
@@ -531,24 +610,38 @@ export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!stripeSecretKey || !webhookSecret) {
-    await logAutomation('stripe_webhook', 'event', 'failure', null, 'Stripe env not configured');
+    await logAutomation(
+      "stripe_webhook",
+      "event",
+      "failure",
+      null,
+      "Stripe env not configured"
+    );
     return NextResponse.json(
-      { error: 'Stripe not configured' },
+      { error: "Stripe not configured" },
       { status: 500 }
     );
   }
 
-  const signature = request.headers.get('stripe-signature');
+  const signature = request.headers.get("stripe-signature");
   if (!signature) {
-    await logAutomation('stripe_webhook', 'event', 'failure', null, 'missing stripe-signature header');
+    await logAutomation(
+      "stripe_webhook",
+      "event",
+      "failure",
+      null,
+      "missing stripe-signature header"
+    );
     return NextResponse.json(
-      { error: 'No stripe-signature header' },
+      { error: "No stripe-signature header" },
       { status: 400 }
     );
   }
 
-  const Stripe = (await import('stripe')).default;
-  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-07-29.dahlia' as const });
+  const Stripe = (await import("stripe")).default;
+  const stripe = new Stripe(stripeSecretKey, {
+    apiVersion: "2026-08-26.dahlia" as const,
+  });
 
   let event: Stripe.Event;
   try {
@@ -559,20 +652,26 @@ export async function POST(request: Request) {
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[webhook] Signature verification failed:', err);
-    await logAutomation('stripe_webhook', 'event', 'failure', null, `signature verification failed: ${msg}`);
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    console.error("[webhook] Signature verification failed:", err);
+    await logAutomation(
+      "stripe_webhook",
+      "event",
+      "failure",
+      null,
+      `signature verification failed: ${msg}`
+    );
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
   console.log(`[webhook] ${event.type}`);
 
   try {
     switch (event.type) {
-      case 'checkout.session.completed': {
+      case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const { planId, userId } = session.metadata || {};
         const customerId =
-          typeof session.customer === 'string' ? session.customer : null;
+          typeof session.customer === "string" ? session.customer : null;
 
         // Persist Stripe customer ID
         await saveCustomerId(userId, customerId);
@@ -585,11 +684,11 @@ export async function POST(request: Request) {
         await triggerTokenomics(userId, amount);
 
         // Route to the correct handler based on purchase type
-        if (session.mode === 'payment') {
+        if (session.mode === "payment") {
           const purchaseType = session.metadata?.type;
-          if (purchaseType === 'custom_qron') {
+          if (purchaseType === "custom_qron") {
             await generateAndDeliverTargetedQron(session);
-          } else if (purchaseType === 'story_mode') {
+          } else if (purchaseType === "story_mode") {
             await fulfillStoryMode(session);
           } else {
             await generateAndDeliverQr(session);
@@ -598,10 +697,10 @@ export async function POST(request: Request) {
         break;
       }
 
-      case 'customer.subscription.updated': {
+      case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
         // Re-fulfill if subscription reactivated
-        if (sub.status === 'active') {
+        if (sub.status === "active") {
           const userId = sub.metadata?.userId;
           const planId = sub.metadata?.planId;
           await fulfillPlan(userId, planId);
@@ -609,10 +708,10 @@ export async function POST(request: Request) {
         break;
       }
 
-      case 'customer.subscription.deleted': {
+      case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
         const customerId =
-          typeof sub.customer === 'string' ? sub.customer : null;
+          typeof sub.customer === "string" ? sub.customer : null;
         if (customerId) await downgradeUser(customerId);
         break;
       }
@@ -621,11 +720,20 @@ export async function POST(request: Request) {
         // Unhandled event types — ignore silently
         break;
     }
-    await logAutomation('stripe_webhook', 'event', 'success', { event_type: event.type, event_id: event.id });
+    await logAutomation("stripe_webhook", "event", "success", {
+      event_type: event.type,
+      event_id: event.id,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[webhook] Handler error for ${event.type}:`, err);
-    await logAutomation('stripe_webhook', 'event', 'failure', { event_type: event.type, event_id: event.id }, msg);
+    await logAutomation(
+      "stripe_webhook",
+      "event",
+      "failure",
+      { event_type: event.type, event_id: event.id },
+      msg
+    );
     // Return 200 so Stripe doesn't retry; errors are logged
   }
 
