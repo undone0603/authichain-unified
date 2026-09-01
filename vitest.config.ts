@@ -79,6 +79,7 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./apps/verifier-web/src/setupTests.ts"],
+    exclude: ["apps/agent-browser/**"],
     include: [
       "api/**/*.test.ts",
       "server/**/*.test.ts",

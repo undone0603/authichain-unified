@@ -1,8 +1,0 @@
-.worktrees
-.venv
-node_modules
-dist
-.next
-.open-next
-.git
-.wrangler

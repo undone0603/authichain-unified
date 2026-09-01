@@ -9,7 +9,11 @@ export const ALLOWED_ORIGIN_HOSTNAMES = new Set([
 
 function isAllowed(hostname: string): boolean {
   if (!ENV.isProduction && hostname === "localhost") return true;
-  return ALLOWED_ORIGIN_HOSTNAMES.has(hostname) || hostname.endsWith(".vercel.app");
+  return (
+    ALLOWED_ORIGIN_HOSTNAMES.has(hostname) ||
+    hostname.endsWith(".pages.dev") ||
+    hostname.endsWith(".workers.dev")
+  );
 }
 
 /** Returns a safe origin (scheme + host) from a raw user-supplied value.

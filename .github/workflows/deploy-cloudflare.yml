@@ -40,8 +40,8 @@ jobs:
       - name: Check required secrets
         id: secrets_check
         run: |
-          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
-            echo "CLOUDFLARE_API_TOKEN not set — skipping Cloudflare deploy"
+          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] || [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID not set — skipping Cloudflare deploy"
             echo "skip=true" >> $GITHUB_OUTPUT
           else
             echo "skip=false" >> $GITHUB_OUTPUT

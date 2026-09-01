@@ -5,11 +5,10 @@ import { ReferralTracker } from '@/components/ReferralTracker';
 import { FunnelTracker } from '@/components/FunnelTracker';
 import { ThemeManager } from '@/components/ThemeManager';
 import { TRPCProvider } from '@/components/TRPCProvider';
+import { UmamiAnalytics } from '@/components/UmamiAnalytics';
 import React, { Suspense } from 'react';
 import { ThirdwebProvider } from 'thirdweb/react';
 import { SiteNav } from '@/components/SiteNav';
-import { SpeedInsights } from '@vercel/speed-insights/next';
-import { Analytics } from '@vercel/analytics/next';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -76,8 +75,7 @@ export default function RootLayout({
             </ThirdwebProvider>
           </TRPCProvider>
         </ThemeManager>
-        <SpeedInsights />
-        <Analytics />
+        <UmamiAnalytics />
       </body>
     </html>
   );

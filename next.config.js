@@ -117,9 +117,12 @@ const nextConfig = {
   },
 
   env: {
-    NEXT_PUBLIC_CANONICAL_HOSTNAME: process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "https://authichain.com",
+    NEXT_PUBLIC_CANONICAL_HOSTNAME:
+      process.env.NEXT_PUBLIC_CANONICAL_HOSTNAME ??
+      process.env.NEXT_PUBLIC_APP_URL ??
+      (process.env.CF_PAGES_URL
+        ? `https://${process.env.CF_PAGES_URL}`
+        : "https://authichain.com"),
     // Build-time fallbacks: Turbopack inlines module-level instantiations,
     // so these secrets need a non-empty value at build time to prevent
     // constructor throws. At runtime, the real env vars take over.

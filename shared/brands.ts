@@ -119,13 +119,13 @@ export const BRAND_IDS: BrandId[] = ['authichain', 'qron', 'strainchain', 'govch
 export const DEFAULT_BRAND: BrandId = 'authichain';
 
 /**
- * Maps a hostname (e.g. `qron.space`, `www.qron.space`, `qron-staging.vercel.app`)
+ * Maps a hostname (e.g. `qron.space`, `www.qron.space`, `qron-preview.pages.dev`)
  * to a brand id. Returns DEFAULT_BRAND if no match.
  *
  * Matching rules:
  *   1. Exact match against `domain` or any `aliases`
  *   2. Endswith match against `domain` or any `aliases` (so `foo.qron.space` → qron)
- *   3. Substring match against the brand id (so `qron-preview.vercel.app` → qron)
+ *   3. Substring match against the brand id (so `qron-preview.pages.dev` → qron)
  */
 export function resolveBrand(hostname: string | null | undefined): BrandId {
   if (!hostname) return DEFAULT_BRAND;

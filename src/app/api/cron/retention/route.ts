@@ -1,7 +1,7 @@
 /**
  * Retention cron — runs the brand-aware dunning escalation (past-due payment
  * recovery) and the win-back campaign (re-engage cancelled customers) in one
- * scheduled pass. Registered in vercel.json.
+ * scheduled pass. Invoked by the Cloudflare-hosted app via GitHub Actions cron.
  *
  * Auth: requires `Authorization: Bearer <CRON_SECRET>`. (enforced via
  * `isCronAuthorized`). Requests without a valid ****** are rejected

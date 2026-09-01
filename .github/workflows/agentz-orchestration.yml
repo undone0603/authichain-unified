@@ -33,14 +33,14 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
       AGENTZ_WEBHOOK_SECRET: ${{ secrets.AGENTZ_WEBHOOK_SECRET }}
-      VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
+      APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
     steps:
       - id: check
         shell: bash
         run: |
           set -euo pipefail
           missing=()
-          for required in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY HUBSPOT_TOKEN AGENTZ_WEBHOOK_SECRET VERCEL_APP_URL; do
+          for required in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY HUBSPOT_TOKEN AGENTZ_WEBHOOK_SECRET; do
             if [ -z "${!required}" ]; then
               missing+=("$required")
             fi
@@ -145,7 +145,7 @@ jobs:
           SYNC_MI_LEADS_STATUS: ${{ needs.sync-mi-leads.result }}
           FUNNEL_REPORT_STATUS: ${{ needs.funnel-report.result }}
           AGENTZ_WEBHOOK_SECRET: ${{ secrets.AGENTZ_WEBHOOK_SECRET }}
-          VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
+          APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
         run: |
           set -euo pipefail
           status="success"
@@ -159,7 +159,7 @@ jobs:
           curl --fail-with-body --silent --show-error -X POST \
             -H "Content-Type: application/json" \
             -H "x-agentz-secret: $AGENTZ_WEBHOOK_SECRET" \
-            "$VERCEL_APP_URL/api/agentz/webhook" \
+            "$APP_URL/api/agentz/webhook" \
             -d "{\"event\":\"automation.complete\",\"payload\":{\"workflow\":\"agentz-orchestration\",\"run_id\":\"${{ github.run_id }}\",\"status\":\"$status\",\"stages\":{\"preflight\":\"$PREFLIGHT_STATUS\",\"qualify_leads\":\"$QUALIFY_LEADS_STATUS\",\"sync_mi_leads\":\"$SYNC_MI_LEADS_STATUS\",\"funnel_report\":\"$FUNNEL_REPORT_STATUS\"}}}"
 
           if [ "$status" != "success" ]; then

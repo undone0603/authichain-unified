@@ -9,8 +9,8 @@ name: Pipeline Tick (direct runner)
 # in this repository does not match CRON_SECRET in the deployed environment —
 # a mismatch nothing can detect until someone dispatches the job, and which
 # only a dashboard action can fix. Calling the function directly removes that
-# dependency, removes the dependency on a Vercel deployment being live and
-# inside its daily deploy cap, and turns an opaque 401 into a real stack trace.
+# dependency on a separate deploy target and turns an opaque 401 into a real
+# stack trace.
 #
 # This is the same shape as browser-vision-tasks.yml, which reaches the
 # database successfully on every run, IPv4 pin included.
@@ -25,25 +25,6 @@ name: Pipeline Tick (direct runner)
 # stop: unset it. No code change, no deploy, effective on the next run. That is
 # deliberately the whole switch — a variable a human sets, not a default this
 # workflow assumes.
-#
-# ── Why the variable is not called AUTONOMOUS_PIPELINE_ENABLED ────────────────
-# Because something else already is. set-pipeline-enabled.yml writes an
-# environment variable of that exact name into the Vercel production runtime,
-# where it gates the /api/cron/pipeline HTTP endpoint. Two switches, one name,
-# two different stores, independent values, and nothing that reports a
-# disagreement between them.
-#
-# They also do not do the same thing. THIS workflow is the only thing that runs
-# the pipeline on a schedule. Nothing calls /api/cron/pipeline on a schedule at
-# all: vercel.json declares no crons, and autonomous-business-cycle.yml gates
-# its only job on `github.event_name == 'workflow_dispatch' && inputs.live`, so
-# its thirteen cron entries start a run that skips the job every time. Setting
-# the Vercel-side variable therefore activates nothing recurring — which is a
-# surprising thing for a workflow named "Configure Autonomous Pipeline" to do,
-# and the reason this one reads a distinctly named variable instead.
-#
-# The old name is still honoured so an already-set variable does not silently
-# stop working, and the run says which name it read.
 #
 # Note what activation turns on: lead discovery, research browsing, and
 # outbound email drafting. Email still passes server/outreach/send-guard.ts,
@@ -90,17 +71,13 @@ jobs:
         if: steps.db-check.outputs.skip != 'true'
         env:
           CURRENT: ${{ vars.PIPELINE_TICK_ENABLED }}
-          LEGACY: ${{ vars.AUTONOMOUS_PIPELINE_ENABLED }}
         run: |
           # Say plainly which of the two outcomes this run is going to be, so a
           # green check never reads as "the pipeline ran" when it did not, and
-          # name the variable that decided it — the whole point of the rename is
-          # that a reader can tell which switch is in play.
+          # name the variable that decided it.
           if [ "$CURRENT" = "true" ]; then
             echo "::notice::PIPELINE_TICK_ENABLED=true — this run will execute the pipeline."
-          elif [ "$LEGACY" = "true" ]; then
-            echo "::warning::Running from the legacy repository variable AUTONOMOUS_PIPELINE_ENABLED. That name is also used for a different switch in the Vercel runtime; rename this one to PIPELINE_TICK_ENABLED."
-          elif [ -n "$CURRENT" ] || [ -n "$LEGACY" ]; then
+          elif [ -n "$CURRENT" ]; then
             echo "::notice::Pipeline switch is set but not to \"true\" — this run is a no-op."
           else
             echo "::notice::PIPELINE_TICK_ENABLED is unset — this run is a no-op. Set the repository variable to \"true\" to activate."
@@ -168,14 +145,10 @@ jobs:
         if: steps.db-check.outputs.skip != 'true'
         env:
           # server/_core/env.ts reads AUTONOMOUS_PIPELINE_ENABLED from the
-          # process environment, so that is the name it arrives under here. The
-          # repository variable that supplies it is PIPELINE_TICK_ENABLED, kept
-          # distinct from the same-named Vercel runtime variable that gates the
-          # HTTP endpoint. The legacy name is a fallback so an already-set
-          # variable keeps working; an empty `vars.*` is falsy to `||`.
-          #
-          # Absent or anything other than "true" makes the tick a no-op.
-          AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED || vars.AUTONOMOUS_PIPELINE_ENABLED }}
+          # process environment. PIPELINE_TICK_ENABLED is the single GitHub-side
+          # activation switch, and anything other than "true" makes the tick a
+          # no-op.
+          AUTONOMOUS_PIPELINE_ENABLED: ${{ vars.PIPELINE_TICK_ENABLED }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
