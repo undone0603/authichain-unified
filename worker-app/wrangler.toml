@@ -34,7 +34,7 @@ class_name = "RateLimiter"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["RateLimiter"]
+new_sqlite_classes = ["RateLimiter"]
 
 # ─── Cron Triggers ────────────────────────────────────────────────────────────
 # The scheduled() handler in index.ts is wired and ready. Triggers are split
