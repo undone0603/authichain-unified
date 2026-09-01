@@ -148,7 +148,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.31.10",
-    "esbuild": "^0.23.1",
+    "esbuild": "^0.28.2",
     "eslint": "^9.9.1",
     "eslint-config-next": "16.2.10",
     "hardhat": "^2.29.1",
