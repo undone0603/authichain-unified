@@ -442,13 +442,30 @@ async function handleRequest(req) {
         .join("")
         .slice(0, 32);
 
-    supaPost("subscriptions", {
-      email: email,
-      plan: "free",
+    var apiSecretBytes = new Uint8Array(32);
+    crypto.getRandomValues(apiSecretBytes);
+    var apiSecret = Array.from(apiSecretBytes)
+      .map(function (x) {
+        return x.toString(16).padStart(2, "0");
+      })
+      .join("");
+
+    // Was: supaPost('subscriptions', { email, api_key, product_limit, ... }) —
+    // none of those columns exist on the live `subscriptions` table (see
+    // resolveKey() above), so the key was silently never persisted anywhere
+    // and callers always fell back to the degraded free tier. Provisioned API
+    // tenants live in `white_label_clients` (verified against the live
+    // PostgREST schema: only `id`/`name` are actually required — `user_id` is
+    // nullable, so an anonymous self-serve signup is fine here).
+    supaPost("white_label_clients", {
+      name: email,
+      company_name: email,
       api_key: apiKey,
+      api_secret: apiSecret,
       status: "active",
-      product_limit: 5,
-      created_at: new Date().toISOString(),
+      billing_plan: "free",
+      monthly_api_calls: 0,
+      api_call_limit: PLANS.free.dailyLimit * 30,
     }).catch(function () {});
     supaPost("leads", {
       email: email,
