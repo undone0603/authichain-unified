@@ -70,6 +70,7 @@ Return JSON: { "intent": "<one of: interested | wants_proposal | objection | pri
       messages: [{ role: "user", content: prompt }],
       responseFormat: { type: "json_object" },
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parsed = parseLLMContent<any>(result.choices[0].message.content);
     return (parsed.intent as ReplyIntent) ?? "unknown";
   } catch {
@@ -265,6 +266,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
     responseFormat: { type: "json_object" },
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parsed_demo = parseLLMContent<any>(result.choices[0].message.content);
   const subject =
     parsed_demo.subject ?? `AuthiChain for ${leadOrg ?? segment}: How It Works`;
@@ -359,6 +361,7 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
     responseFormat: { type: "json_object" },
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parsed_proposal = parseLLMContent<any>(
     result.choices[0].message.content
   );
@@ -490,6 +493,7 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
     responseFormat: { type: "json_object" },
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parsed_contract = parseLLMContent<any>(
     result.choices[0].message.content
   );
@@ -613,6 +617,7 @@ Return JSON: { "subject": "Re: [keep thread subject]", "body": "..." }`;
     responseFormat: { type: "json_object" },
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parsed_reply = parseLLMContent<any>(result.choices[0].message.content);
   const subject = parsed_reply.subject ?? `Re: AuthiChain`;
   const body = parsed_reply.body ?? "";

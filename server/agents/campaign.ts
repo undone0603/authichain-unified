@@ -1,12 +1,12 @@
-import type { Db } from '../db-helpers';
-import type { MissionTask as Task } from '../../drizzle/schema';
-import { logActivity } from './db-helpers';
-import { sendEmail } from '../email-service';
-import { invokeLLM, parseLLMContent, type InvokeParams } from '../_core/llm';
+import type { Db } from "../db-helpers";
+import type { MissionTask as Task } from "../../drizzle/schema";
+import { logActivity } from "./db-helpers";
+import { sendEmail } from "../email-service";
+import { invokeLLM, parseLLMContent, type InvokeParams } from "../_core/llm";
 
 /**
  * runEmailCampaign Agent
- * 
+ *
  * Orchestrates automated email outreach:
  * 1. Takes a segment and campaign template ID.
  * 2. Fetches eligible leads for the segment.
@@ -23,14 +23,16 @@ export async function runEmailCampaign(task: Task, db: Db): Promise<void> {
 
   await logActivity(db, {
     userId: null,
-    action: 'email_campaign_started',
-    entityType: 'task',
+    action: "email_campaign_started",
+    entityType: "task",
     entityId: 0,
     details: { taskId: task.id, segment, campaignId },
   });
 
   // 1. Fetch eligible leads for this segment (not yet contacted)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const leadRows = await (db as any).query.leads.findMany({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     where: (leads: any, { and, eq, isNull }: any) =>
       and(eq(leads.segment, segment), isNull(leads.lastContactedAt)),
   });
@@ -40,11 +42,12 @@ export async function runEmailCampaign(task: Task, db: Db): Promise<void> {
     const params: InvokeParams = {
       messages: [
         {
-          role: 'system',
-          content: 'You are an expert B2B email copywriter. Return only valid JSON.',
+          role: "system",
+          content:
+            "You are an expert B2B email copywriter. Return only valid JSON.",
         },
         {
-          role: 'user',
+          role: "user",
           content: `Write a personalized email for ${lead.name} at ${lead.company ?? lead.org}.
     Template Context: ${templateId}
     Goal: AuthiChain trust infrastructure.
@@ -54,7 +57,9 @@ export async function runEmailCampaign(task: Task, db: Db): Promise<void> {
     };
 
     const result = await invokeLLM(params);
-    const email = parseLLMContent<{ subject: string; body: string }>(result.choices[0].message.content);
+    const email = parseLLMContent<{ subject: string; body: string }>(
+      result.choices[0].message.content
+    );
 
     // 3. Send/Queue
     const sendResult = await sendEmail({
@@ -66,8 +71,8 @@ export async function runEmailCampaign(task: Task, db: Db): Promise<void> {
     // 4. Log status
     await logActivity(db, {
       userId: null,
-      action: 'email_sent',
-      entityType: 'lead',
+      action: "email_sent",
+      entityType: "lead",
       entityId: lead.id,
       details: { taskId: task.id, campaignId, status: sendResult.status },
     });
@@ -75,8 +80,8 @@ export async function runEmailCampaign(task: Task, db: Db): Promise<void> {
 
   await logActivity(db, {
     userId: null,
-    action: 'email_campaign_completed',
-    entityType: 'task',
+    action: "email_campaign_completed",
+    entityType: "task",
     entityId: 0,
     details: { taskId: task.id, campaignId, leadsProcessed: leadRows.length },
   });

@@ -1,9 +1,9 @@
 /**
  * Security Audit Agent — Checks for vulnerabilities and compliance.
  */
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity, createSystemNotification } from '../db.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from "../_core/llm.js";
+import { logActivity, createSystemNotification } from "../db.js";
+import type { MissionTask as Task } from "../../drizzle/schema.js";
 
 export async function runSecurityAudit(task: Task): Promise<void> {
   const p = task.payload as {
@@ -18,7 +18,7 @@ Endpoints: /api/*, /verify/*, /dashboard/*
 Database: Supabase (PostgreSQL)
 Auth: JWT Cookie-based
 Encryption: Ed25519 (QRON)
-Compliance Requirements: ${p.compliance?.join(', ') || 'General SOC2'}
+Compliance Requirements: ${p.compliance?.join(", ") || "General SOC2"}
   `;
 
   const prompt = `You are a Senior Security Auditor for the AuthiChain platform.
@@ -31,7 +31,7 @@ Focus areas:
 - Injection vulnerabilities (SQL, XSS, etc.)
 - Authentication & Session Management
 - Cryptographic implementations (Ed25519)
-- Compliance with ${p.compliance?.join(' and ') || 'industry standards'}
+- Compliance with ${p.compliance?.join(" and ") || "industry standards"}
 - API rate limiting and DDoS protection
 
 Return JSON:
@@ -54,12 +54,21 @@ Return JSON:
   `;
 
   const result = await invokeLLM({
-    messages: [{ role: 'system', content: "You are a rigorous security auditor." }, { role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [
+      { role: "system", content: "You are a rigorous security auditor." },
+      { role: "user", content: prompt },
+    ],
+    responseFormat: { type: "json_object" },
   });
 
   const auditResult = parseLLMContent<{
-    findings: any[];
+    findings: Array<{
+      severity: string;
+      category: string;
+      title: string;
+      description: string;
+      recommendation: string;
+    }>;
     complianceStatus: Record<string, string>;
     summary: string;
   }>(result.choices[0].message.content);
@@ -67,8 +76,8 @@ Return JSON:
   // 2. Log findings and notify admins
   await logActivity({
     userId: null,
-    action: 'security_audit_completed',
-    entityType: 'task',
+    action: "security_audit_completed",
+    entityType: "task",
     entityId: 0,
     details: {
       taskId: task.id,
@@ -79,11 +88,15 @@ Return JSON:
     },
   });
 
-  if (auditResult.findings.some(f => f.severity === 'CRITICAL' || f.severity === 'HIGH')) {
+  if (
+    auditResult.findings.some(
+      f => f.severity === "CRITICAL" || f.severity === "HIGH"
+    )
+  ) {
     await createSystemNotification(
       1, // Admin user ID
       "🚨 Critical Security Findings",
-      `The Security Audit identified ${auditResult.findings.filter(f => f.severity === 'CRITICAL').length} critical issues. Action required immediately.`,
+      `The Security Audit identified ${auditResult.findings.filter(f => f.severity === "CRITICAL").length} critical issues. Action required immediately.`,
       "alert",
       "/admin/security"
     );

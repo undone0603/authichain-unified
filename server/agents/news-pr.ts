@@ -37,6 +37,7 @@ Return JSON:
       responseFormat: { type: "json_object" },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const story = parseLLMContent<any>(result.choices[0].message.content);
     console.log(`[Newsjacking] Target Story Found: ${story.storyTitle}`);
 
@@ -62,6 +63,7 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
       responseFormat: { type: "json_object" },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pr = parseLLMContent<any>(prResult.choices[0].message.content);
 
     // 3. Log findings and enqueue the next steps
@@ -86,6 +88,7 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
     });
 
     console.log(`✅ Newsjacking analysis complete for: ${story.storyTitle}`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (_err: any) {
     console.warn(
       "⚠️ Newsjacking Monitor primary path failed. Executing high-fidelity Production Fallback..."

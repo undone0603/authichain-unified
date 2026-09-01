@@ -58,6 +58,16 @@ const eslintConfig = defineConfig([
       'react-hooks/use-memo': 'warn',
     },
   },
+  // server/agents/ override: all 60 pre-existing no-explicit-any violations
+  // have been triaged (fixed or suppressed with inline comments). Promote the
+  // rule to 'error' here so new `any` introductions in this directory are
+  // caught at lint time instead of silently accumulating.
+  {
+    files: ['server/agents/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

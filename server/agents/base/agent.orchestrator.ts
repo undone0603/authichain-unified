@@ -3,13 +3,18 @@
  * Routes tasks to appropriate agents and manages execution flow
  */
 
-import { AgentRegistry } from './agent.registry.js';
-import { AgentContext, AgentCapability, AgentExecutionResult } from './agent.interface.js';
+import { AgentRegistry } from "./agent.registry.js";
+import {
+  AgentContext,
+  AgentCapability,
+  AgentExecutionResult,
+} from "./agent.interface.js";
 
 export interface AgentTask {
   id: string;
   capability: AgentCapability;
   action: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: any;
   context?: AgentContext;
   retries?: number;
@@ -44,7 +49,7 @@ export class AgentOrchestrator {
    */
   async initialize(): Promise<void> {
     await AgentRegistry.initialize();
-    console.log('✓ Agent Orchestrator initialized');
+    console.log("✓ Agent Orchestrator initialized");
   }
 
   /**
@@ -80,7 +85,7 @@ export class AgentOrchestrator {
         success: result.success,
         result,
         executedAt: new Date().toISOString(),
-        duration
+        duration,
       };
 
       this.recordExecution(orchestrationResult);
@@ -90,15 +95,15 @@ export class AgentOrchestrator {
       const duration = Date.now() - startTime;
       const orchestrationResult: OrchestrationResult = {
         taskId: task.id,
-        agent: 'unknown',
+        agent: "unknown",
         success: false,
         result: {
           success: false,
           error: error instanceof Error ? error.message : String(error),
-          executionTimeMs: duration
+          executionTimeMs: duration,
         },
         executedAt: new Date().toISOString(),
-        duration
+        duration,
       };
 
       this.recordExecution(orchestrationResult);
@@ -163,7 +168,7 @@ export class AgentOrchestrator {
           () => reject(new Error(`Task timeout after ${timeoutMs}ms`)),
           timeoutMs
         )
-      )
+      ),
     ]);
   }
 
@@ -207,7 +212,10 @@ export class AgentOrchestrator {
     successCount: number;
     failureCount: number;
     averageDuration: number;
-    byAgent: Record<string, { count: number; success: number; avgDuration: number }>;
+    byAgent: Record<
+      string,
+      { count: number; success: number; avgDuration: number }
+    >;
   } {
     const history = this.executionHistory;
 
@@ -215,10 +223,14 @@ export class AgentOrchestrator {
       totalExecutions: history.length,
       successCount: history.filter(r => r.success).length,
       failureCount: history.filter(r => !r.success).length,
-      averageDuration: history.length > 0
-        ? history.reduce((sum, r) => sum + r.duration, 0) / history.length
-        : 0,
-      byAgent: {} as Record<string, { count: number; success: number; avgDuration: number }>
+      averageDuration:
+        history.length > 0
+          ? history.reduce((sum, r) => sum + r.duration, 0) / history.length
+          : 0,
+      byAgent: {} as Record<
+        string,
+        { count: number; success: number; avgDuration: number }
+      >,
     };
 
     // Group by agent
@@ -229,8 +241,10 @@ export class AgentOrchestrator {
       stats.byAgent[result.agent].count++;
       if (result.success) stats.byAgent[result.agent].success++;
       stats.byAgent[result.agent].avgDuration =
-        (stats.byAgent[result.agent].avgDuration * (stats.byAgent[result.agent].count - 1) +
-          result.duration) / stats.byAgent[result.agent].count;
+        (stats.byAgent[result.agent].avgDuration *
+          (stats.byAgent[result.agent].count - 1) +
+          result.duration) /
+        stats.byAgent[result.agent].count;
     }
 
     return stats;

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Reason: agent plugin interface — params and outputs are open-ended by design.
 /**
  * AuthiChain Executive Agent
  * Advanced autonomous agent for sales, marketing, and strategic operations.
@@ -9,12 +11,12 @@ export const AUTHICHAIN_CONTEXT = {
   company: "AuthiChain",
   tagline: "The Truth Layer for the Physical World",
   product: "Multi-Chain Authentication & Industrial Audit Protocol",
-  
+
   domains: {
     core: "authichain.com",
     creative: "qron.space",
     compliance: "strainchain.io",
-    regulatory: "govchain.us"
+    regulatory: "govchain.us",
   },
 
   features: [
@@ -24,15 +26,15 @@ export const AUTHICHAIN_CONTEXT = {
     "METRC & BioTrack Seed-to-Sale Compliance Bridge",
     "Stripe Connect v2 direct balance billing",
     "Real-time Regulatory Audit Trails (Michigan CRA compliant)",
-    "White-label Enterprise Verification Marketplace"
+    "White-label Enterprise Verification Marketplace",
   ],
 
   monetization: {
     creator: { price: "$29/mo", fee: "5%" },
     pro: { price: "$79/mo", fee: "3%" },
     enterprise: { price: "$299/mo", fee: "1.5%" },
-    agency: { price: "$999/mo", fee: "0%" }
-  }
+    agency: { price: "$999/mo", fee: "0%" },
+  },
 };
 
 export class ExecutiveAgent {
@@ -58,7 +60,7 @@ export class ExecutiveAgent {
 
     const response = await invokeLLM({
       messages: [{ role: "system", content: prompt }],
-      responseFormat: { type: "text" }
+      responseFormat: { type: "text" },
     });
 
     return response.choices[0].message.content as string;
@@ -76,7 +78,7 @@ export class ExecutiveAgent {
     Max 300 characters.`;
 
     const response = await invokeLLM({
-      messages: [{ role: "system", content: prompt }]
+      messages: [{ role: "system", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
@@ -92,7 +94,7 @@ export class ExecutiveAgent {
     Include: 3 Highlights, 3 Priorities for Today, and 1 Strategic Recommendation.`;
 
     const response = await invokeLLM({
-      messages: [{ role: "system", content: prompt }]
+      messages: [{ role: "system", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
@@ -100,77 +102,151 @@ export class ExecutiveAgent {
 
   async draftSalesEmail(prospect: any): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Draft a personalized cold sales email for prospect: ${JSON.stringify(prospect)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}. Under 150 words. Professional tone.` }]
+      messages: [
+        {
+          role: "system",
+          content: `Draft a personalized cold sales email for prospect: ${JSON.stringify(prospect)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}. Under 150 words. Professional tone.`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }
 
   async draftPartnershipEmail(partner: any): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Draft a partnership proposal email for: ${JSON.stringify(partner)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}. Under 200 words.` }]
+      messages: [
+        {
+          role: "system",
+          content: `Draft a partnership proposal email for: ${JSON.stringify(partner)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}. Under 200 words.`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }
 
   async generateLinkedInPost(topic: string, options?: any): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Write a LinkedIn post about: ${topic}. Options: ${JSON.stringify(options ?? {})}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}. Engaging, professional, 150-300 words.` }]
+      messages: [
+        {
+          role: "system",
+          content: `Write a LinkedIn post about: ${topic}. Options: ${JSON.stringify(options ?? {})}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}. Engaging, professional, 150-300 words.`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }
 
-  async generateBlogPost(topic: string, length?: string, keywords?: string[]): Promise<string> {
+  async generateBlogPost(
+    topic: string,
+    length?: string,
+    keywords?: string[]
+  ): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Write a ${length ?? "medium"}-length blog post about: ${topic}. Keywords: ${(keywords ?? []).join(", ")}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.` }]
+      messages: [
+        {
+          role: "system",
+          content: `Write a ${length ?? "medium"}-length blog post about: ${topic}. Keywords: ${(keywords ?? []).join(", ")}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }
 
   async generateProductAnnouncement(details: any): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Write a product announcement (email + social + in-app copy) for: ${JSON.stringify(details)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.` }]
+      messages: [
+        {
+          role: "system",
+          content: `Write a product announcement (email + social + in-app copy) for: ${JSON.stringify(details)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }
 
-  async generateSocialMediaContent(platform: string, topic: string, style?: string): Promise<string> {
+  async generateSocialMediaContent(
+    platform: string,
+    topic: string,
+    style?: string
+  ): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Write a ${platform} post about: ${topic}. Style: ${style ?? "professional"}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.` }]
+      messages: [
+        {
+          role: "system",
+          content: `Write a ${platform} post about: ${topic}. Style: ${style ?? "professional"}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }
 
   async analyzeCompetitor(competitor: any): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Analyze competitor and provide positioning strategy: ${JSON.stringify(competitor)}. AuthiChain context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.` }]
+      messages: [
+        {
+          role: "system",
+          content: `Analyze competitor and provide positioning strategy: ${JSON.stringify(competitor)}. AuthiChain context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }
 
-  async summarizeText(text: string, maxWords?: number, style?: string): Promise<string> {
+  async summarizeText(
+    text: string,
+    maxWords?: number,
+    style?: string
+  ): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Summarize the following text in ${maxWords ?? 100} words. Style: ${style ?? "concise"}.\n\n${text}` }]
+      messages: [
+        {
+          role: "system",
+          content: `Summarize the following text in ${maxWords ?? 100} words. Style: ${style ?? "concise"}.\n\n${text}`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }
 
-  async improveWriting(text: string, style?: string, purpose?: string): Promise<string> {
+  async improveWriting(
+    text: string,
+    style?: string,
+    purpose?: string
+  ): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Improve the following text. Style: ${style ?? "professional"}. Purpose: ${purpose ?? "general"}.\n\n${text}` }]
+      messages: [
+        {
+          role: "system",
+          content: `Improve the following text. Style: ${style ?? "professional"}. Purpose: ${purpose ?? "general"}.\n\n${text}`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }
 
   async generateEmailCampaign(details: any): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Generate an email campaign (subject lines + body + CTA options) for: ${JSON.stringify(details)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.` }]
+      messages: [
+        {
+          role: "system",
+          content: `Generate an email campaign (subject lines + body + CTA options) for: ${JSON.stringify(details)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }
 
-  async generateFAQAnswer(question: string, category?: string): Promise<string> {
+  async generateFAQAnswer(
+    question: string,
+    category?: string
+  ): Promise<string> {
     const response = await invokeLLM({
-      messages: [{ role: "system", content: `Write a support FAQ answer. Category: ${category ?? "general"}. Question: ${question}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.` }]
+      messages: [
+        {
+          role: "system",
+          content: `Write a support FAQ answer. Category: ${category ?? "general"}. Question: ${question}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.`,
+        },
+      ],
     });
     return response.choices[0].message.content as string;
   }

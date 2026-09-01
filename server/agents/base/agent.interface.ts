@@ -4,17 +4,14 @@
  */
 
 export type AgentCapability =
-  | 'executive'
-  | 'technical'
-  | 'operations'
-  | 'data'
-  | 'compliance'
-  | 'sales';
+  "executive" | "technical" | "operations" | "data" | "compliance" | "sales";
 
 export interface AgentTool {
   name: string;
   description: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   execute: (params: any) => Promise<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   schema?: Record<string, any>;
 }
 
@@ -23,15 +20,18 @@ export interface AgentContext {
   sessionId?: string;
   missionId?: number;
   taskId?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: Record<string, any>;
 }
 
 export interface AgentExecutionResult {
   success: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   output?: any;
   error?: string;
   toolsUsed?: string[];
   executionTimeMs?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: Record<string, any>;
 }
 
@@ -46,6 +46,7 @@ export interface BaseAgent {
    */
   execute(
     action: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     params: any,
     context?: AgentContext
   ): Promise<AgentExecutionResult>;
@@ -86,12 +87,14 @@ export abstract class AbstractAgent implements BaseAgent {
 
   abstract execute(
     action: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     params: any,
     context?: AgentContext
   ): Promise<AgentExecutionResult>;
 
   protected createResult(
     success: boolean,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     output?: any,
     error?: string,
     toolsUsed?: string[],
