@@ -49,6 +49,7 @@ export async function handleLeadAutomation(lead: {
   email: string;
   name?: string;
   source?: string;
+  product_interest?: string;
 }) {
   const workflowName = 'lead_captured';
   try {

@@ -34,4 +34,9 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python -m agentz.workflows.runner --handler authichain_compliance_audit
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "::notice::Compliance audit skipped — SUPABASE_URL secret not configured."
+            exit 0
+          fi
+          python -m agentz.workflows.runner --handler authichain_compliance_audit
