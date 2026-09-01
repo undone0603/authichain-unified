@@ -186,6 +186,26 @@ export async function getDb() {
   }
 }
 
+/**
+ * Workers-runtime bridge: initialize the module-level `_db` singleton from a
+ * Hyperdrive connection string instead of `process.env.DATABASE_URL`.
+ *
+ * Call this once per Workers isolate (e.g. in a top-level `app.use("*", ...)`
+ * middleware) before any route handler runs, so that all `getDb()` calls made
+ * by the 70+ helper functions in this file reuse the Hyperdrive-backed pool
+ * rather than falling through to the Node-only `process.env.DATABASE_URL` path.
+ *
+ * Idempotent: if `_db` is already set (second request in same isolate), this
+ * is a no-op — the existing pool is reused, which is the correct behaviour.
+ */
+export function initDbFromHyperdrive(env: {
+  HYPERDRIVE: { connectionString: string };
+}): void {
+  if (_db) return;
+  const pool = new Pool({ connectionString: env.HYPERDRIVE.connectionString });
+  _db = drizzle(pool);
+}
+
 // Synchronous proxy for feature modules - throws if DB not initialised
 export const db: DrizzleInstance = new Proxy({} as DrizzleInstance, {
   get(_target, prop: string | symbol) {

@@ -3,7 +3,7 @@ import { trpcServer } from "@hono/trpc-server";
 import { appRouter } from "../server/routers";
 import { createWorkersContext } from "../server/_core/context.workers";
 import { resolveBrand, BRANDS, type BrandId } from "../shared/brands";
-import { getHyperdriveDb } from "../server/db";
+import { getHyperdriveDb, initDbFromHyperdrive } from "../server/db";
 import { timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "../server/_core/cookies";
@@ -41,6 +41,16 @@ export const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 // Named export above lets tests (routes.test.ts) exercise the Hono app's
 // own .request() test helper directly; the default export below is the
 // { fetch, scheduled } object shape Workers actually invokes.
+
+// DB singleton bridge: initialize the module-level `_db` from Hyperdrive
+// before any route handler runs, so that all ~70 db helper-function call
+// sites in server/db.ts use the Hyperdrive-backed pool rather than the
+// Node-only process.env.DATABASE_URL path. Idempotent — no-ops on
+// subsequent requests within the same isolate when _db is already set.
+app.use("*", async (c, next) => {
+  initDbFromHyperdrive(c.env);
+  await next();
+});
 
 // Brand resolution — same logic as src/middleware.ts and the old
 // server/_core/brand-middleware.ts, ported to Hono context instead of
