@@ -9,12 +9,15 @@ const store = vi.hoisted(() => {
   return {
     bonuses,
     nextId: () => ++seq,
-    reset: () => { bonuses.length = 0; seq = 200; },
+    reset: () => {
+      bonuses.length = 0;
+      seq = 200;
+    },
   };
 });
 
 // ─── Mock ./db ────────────────────────────────────────────────────────────────
-vi.mock("./db", async (importOriginal) => {
+vi.mock("./db", async importOriginal => {
   const actual = await importOriginal<typeof import("./db")>();
 
   // Minimal chainable db proxy so bonuses/marketplace code doesn't throw
@@ -47,7 +50,7 @@ vi.mock("./db", async (importOriginal) => {
     createReferral: vi.fn(async () => ({ id: store.nextId() })),
     // affiliate helpers
     getAffiliateByUserId: vi.fn(async () => undefined),
-    createAffiliate: vi.fn(async (data: any) => ({ id: store.nextId() })),
+    createAffiliate: vi.fn(async (_data: any) => ({ id: store.nextId() })),
     getAffiliateCommissions: vi.fn(async () => []),
     // email-draft helpers
     getPendingDrafts: vi.fn(async () => []),
@@ -59,7 +62,7 @@ vi.mock("./db", async (importOriginal) => {
 });
 
 // ─── Mock ./referral/core ─────────────────────────────────────────────────────
-vi.mock("./referral/core", async (importOriginal) => {
+vi.mock("./referral/core", async importOriginal => {
   const actual = await importOriginal<typeof import("./referral/core")>();
   return {
     ...actual, // keeps COMMISSION_RATES, AFFILIATE_BONUS_TIERS, generateReferralCode, generateAffiliateCode
@@ -82,31 +85,64 @@ vi.mock("./referral/core", async (importOriginal) => {
 // ─── Mock ./marketplace/db ────────────────────────────────────────────────────
 vi.mock("./marketplace/db", async () => ({
   listModels: vi.fn(async () => [
-    { id: "00000000-0000-4000-8000-000000000001", name: "Authenticator Pro", category: "vision", price: 1999, status: "active", downloads: 42, rating: "4.80", reviewCount: 10, creatorId: 99 },
-    { id: "00000000-0000-4000-8000-000000000002", name: "Chain Verifier",    category: "nlp",    price: 999,  status: "active", downloads: 18, rating: "4.20", reviewCount: 5,  creatorId: 99 },
+    {
+      id: "00000000-0000-4000-8000-000000000001",
+      name: "Authenticator Pro",
+      category: "vision",
+      price: 1999,
+      status: "active",
+      downloads: 42,
+      rating: "4.80",
+      reviewCount: 10,
+      creatorId: 99,
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000002",
+      name: "Chain Verifier",
+      category: "nlp",
+      price: 999,
+      status: "active",
+      downloads: 18,
+      rating: "4.20",
+      reviewCount: 5,
+      creatorId: 99,
+    },
   ]),
   getModelById: vi.fn(async (id: number) =>
     id === 1
-      ? { id: "00000000-0000-4000-8000-000000000001", name: "Authenticator Pro", price: 1999, status: "active", creatorId: 99 }
+      ? {
+          id: "00000000-0000-4000-8000-000000000001",
+          name: "Authenticator Pro",
+          price: 1999,
+          status: "active",
+          creatorId: 99,
+        }
       : undefined
   ),
-  createModel:    vi.fn(async () => ({ id: 500 })),
-  purchaseModel:  vi.fn(async () => ({ id: 600 })),
+  createModel: vi.fn(async () => ({ id: 500 })),
+  purchaseModel: vi.fn(async () => ({ id: 600 })),
   getUserPurchases: vi.fn(async () => []),
-  addReview:      vi.fn(async () => ({ id: 700 })),
+  addReview: vi.fn(async () => ({ id: 700 })),
   getModelReviews: vi.fn(async () => [
-    { id: "00000000-0000-4000-8000-000000000001", modelId: 1, userId: 5, rating: 5, review: "Excellent!", createdAt: new Date() },
+    {
+      id: "00000000-0000-4000-8000-000000000001",
+      modelId: 1,
+      userId: 5,
+      rating: 5,
+      review: "Excellent!",
+      createdAt: new Date(),
+    },
   ]),
 }));
 
 // ─── Mock ./email/smtp ────────────────────────────────────────────────────────
 vi.mock("./email/smtp", async () => ({
-  sendEmail:               vi.fn(async () => undefined),
-  sendBulkEmails:          vi.fn(async () => ({ sent: 0, failed: 0 })),
+  sendEmail: vi.fn(async () => undefined),
+  sendBulkEmails: vi.fn(async () => ({ sent: 0, failed: 0 })),
   replaceTemplateVariables: (t: string) => t,
-  textToHtml:              (t: string) => `<p>${t}</p>`,
-  sendSequenceEmail:       vi.fn(async () => undefined),
-  verifySMTPConfig:        vi.fn(async () => true),
+  textToHtml: (t: string) => `<p>${t}</p>`,
+  sendSequenceEmail: vi.fn(async () => undefined),
+  verifySMTPConfig: vi.fn(async () => true),
 }));
 
 // ─── Context helpers ──────────────────────────────────────────────────────────
@@ -114,9 +150,16 @@ type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
   const user: AuthenticatedUser = {
-    id: "00000000-0000-4000-8000-000000000001", openId: "test-user-001", email: "test@authichain.com",
-    name: "Test User", loginMethod: "manus", role, stripeCustomerId: null,
-    createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+    id: "00000000-0000-4000-8000-000000000001",
+    openId: "test-user-001",
+    email: "test@authichain.com",
+    name: "Test User",
+    loginMethod: "manus",
+    role,
+    stripeCustomerId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    lastSignedIn: new Date(),
   } as any;
   return {
     user,
@@ -144,47 +187,70 @@ describe("New Features", () => {
   describe("referral router", () => {
     describe("public endpoints", () => {
       it("referral.validate is public and returns invalid for unknown code", async () => {
-        const result = await appRouter.createCaller(createPublicContext()).referral.validate({ code: "BOGUS-123" });
+        const result = await appRouter
+          .createCaller(createPublicContext())
+          .referral.validate({ code: "BOGUS-123" });
         expect(result.valid).toBe(false);
         expect(result.referral).toBeUndefined();
       });
 
       it("referral.trackClick is public and returns success", async () => {
-        const result = await appRouter.createCaller(createPublicContext()).referral.trackClick({ referralCode: "REF-1-ABC", landingPage: "/signup" });
+        const result = await appRouter
+          .createCaller(createPublicContext())
+          .referral.trackClick({
+            referralCode: "REF-1-ABC",
+            landingPage: "/signup",
+          });
         expect(result).toEqual({ success: true });
       });
     });
 
     describe("auth guards", () => {
       it("referral.generateCode requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).referral.generateCode()).rejects.toThrow();
+        await expect(
+          appRouter.createCaller(createPublicContext()).referral.generateCode()
+        ).rejects.toThrow();
       });
       it("referral.getHistory requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).referral.getHistory()).rejects.toThrow();
+        await expect(
+          appRouter.createCaller(createPublicContext()).referral.getHistory()
+        ).rejects.toThrow();
       });
       it("referral.getStats requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).referral.getStats()).rejects.toThrow();
+        await expect(
+          appRouter.createCaller(createPublicContext()).referral.getStats()
+        ).rejects.toThrow();
       });
       it("referral.complete requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).referral.complete({ referralCode: "X", referredEmail: "a@b.com" })).rejects.toThrow();
+        await expect(
+          appRouter
+            .createCaller(createPublicContext())
+            .referral.complete({ referralCode: "X", referredEmail: "a@b.com" })
+        ).rejects.toThrow();
       });
     });
 
     describe("authenticated operations", () => {
       it("referral.generateCode returns id and referralCode", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).referral.generateCode();
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .referral.generateCode();
         expect(result).toHaveProperty("id");
         expect(result).toHaveProperty("referralCode");
         expect(result.referralCode).toMatch(/^REF-/);
       });
 
       it("referral.getHistory returns an array", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).referral.getHistory();
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .referral.getHistory();
         expect(Array.isArray(result)).toBe(true);
       });
 
       it("referral.getStats returns correct shape", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).referral.getStats();
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .referral.getStats();
         expect(result).toHaveProperty("totalReferrals");
         expect(result).toHaveProperty("convertedReferrals");
         expect(result).toHaveProperty("pendingReferrals");
@@ -195,11 +261,13 @@ describe("New Features", () => {
       });
 
       it("referral.complete returns success", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).referral.complete({
-          referralCode: "REF-9-ABCDEF",
-          referredEmail: "referred@example.com",
-          tier: "professional",
-        });
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .referral.complete({
+            referralCode: "REF-9-ABCDEF",
+            referredEmail: "referred@example.com",
+            tier: "professional",
+          });
         expect(result.success).toBe(true);
       });
     });
@@ -208,30 +276,56 @@ describe("New Features", () => {
   // ── Affiliate router ────────────────────────────────────────────────────────
   describe("affiliate router", () => {
     describe("auth guards", () => {
-      it("affiliate.getStatus requires auth",      async () => { await expect(appRouter.createCaller(createPublicContext()).affiliate.getStatus()).rejects.toThrow(); });
-      it("affiliate.getStats requires auth",       async () => { await expect(appRouter.createCaller(createPublicContext()).affiliate.getStats()).rejects.toThrow(); });
-      it("affiliate.submitApplication requires auth", async () => { await expect(appRouter.createCaller(createPublicContext()).affiliate.submitApplication({})).rejects.toThrow(); });
-      it("affiliate.getReferrals requires auth",   async () => { await expect(appRouter.createCaller(createPublicContext()).affiliate.getReferrals()).rejects.toThrow(); });
+      it("affiliate.getStatus requires auth", async () => {
+        await expect(
+          appRouter.createCaller(createPublicContext()).affiliate.getStatus()
+        ).rejects.toThrow();
+      });
+      it("affiliate.getStats requires auth", async () => {
+        await expect(
+          appRouter.createCaller(createPublicContext()).affiliate.getStats()
+        ).rejects.toThrow();
+      });
+      it("affiliate.submitApplication requires auth", async () => {
+        await expect(
+          appRouter
+            .createCaller(createPublicContext())
+            .affiliate.submitApplication({})
+        ).rejects.toThrow();
+      });
+      it("affiliate.getReferrals requires auth", async () => {
+        await expect(
+          appRouter.createCaller(createPublicContext()).affiliate.getReferrals()
+        ).rejects.toThrow();
+      });
     });
 
     describe("authenticated operations", () => {
       it("affiliate.getStatus returns undefined when not enrolled", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).affiliate.getStatus();
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .affiliate.getStatus();
         expect(result == null).toBe(true);
       });
 
       it("affiliate.getStats returns null when not enrolled", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).affiliate.getStats();
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .affiliate.getStats();
         expect(result).toBeNull();
       });
 
       it("affiliate.getReferrals returns array", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).affiliate.getReferrals();
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .affiliate.getReferrals();
         expect(Array.isArray(result)).toBe(true);
       });
 
       it("affiliate.submitApplication creates affiliate for new user", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).affiliate.submitApplication({ paypalEmail: "user@paypal.com" });
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .affiliate.submitApplication({ paypalEmail: "user@paypal.com" });
         expect(result.success).toBe(true);
         expect((result as any).affiliateCode).toMatch(/^AFF-/);
         expect((result as any).id).toBeDefined();
@@ -240,30 +334,67 @@ describe("New Features", () => {
       it("affiliate.submitApplication reports already-enrolled when affiliate exists", async () => {
         const { getAffiliateByUserId } = await import("./db");
         vi.mocked(getAffiliateByUserId).mockResolvedValueOnce({
-          id: 10, userId: 1, legacyAuthUid: null, affiliateCode: "AFF-1-EXISTING", status: "active",
-          commissionRate: "10.00", totalEarnings: "0", pendingPayout: "0",
-          totalReferrals: 0, totalConversions: 0, payoutMethod: null, payoutDetails: null,
-          createdAt: new Date(), updatedAt: new Date(),
-          tier: "basic" as any, activeReferrals: 0, paypalEmail: null,
+          id: 10,
+          userId: 1,
+          legacyAuthUid: null,
+          affiliateCode: "AFF-1-EXISTING",
+          status: "active",
+          commissionRate: "10.00",
+          totalEarnings: "0",
+          pendingPayout: "0",
+          totalReferrals: 0,
+          totalConversions: 0,
+          payoutMethod: null,
+          payoutDetails: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          tier: "basic" as any,
+          activeReferrals: 0,
+          paypalEmail: null,
         });
-        const result = await appRouter.createCaller(createAuthContext()).affiliate.submitApplication({});
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .affiliate.submitApplication({});
         expect(result.success).toBe(false);
         expect((result as any).message).toMatch(/already/i);
       });
 
       it("affiliate.getStats returns stats object when enrolled", async () => {
-        const { getAffiliateByUserId, getAffiliateCommissions } = await import("./db");
+        const { getAffiliateByUserId, getAffiliateCommissions } =
+          await import("./db");
         vi.mocked(getAffiliateByUserId).mockResolvedValueOnce({
-          id: 10, userId: 1, legacyAuthUid: null, affiliateCode: "AFF-1-GOLD", status: "active",
-          commissionRate: "15.00", totalEarnings: "250.00", pendingPayout: "50.00",
-          totalReferrals: 12, totalConversions: 5, payoutMethod: "paypal", payoutDetails: null,
-          createdAt: new Date(), updatedAt: new Date(),
-          tier: "gold" as any, activeReferrals: 3, paypalEmail: "gold@paypal.com",
+          id: 10,
+          userId: 1,
+          legacyAuthUid: null,
+          affiliateCode: "AFF-1-GOLD",
+          status: "active",
+          commissionRate: "15.00",
+          totalEarnings: "250.00",
+          pendingPayout: "50.00",
+          totalReferrals: 12,
+          totalConversions: 5,
+          payoutMethod: "paypal",
+          payoutDetails: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          tier: "gold" as any,
+          activeReferrals: 3,
+          paypalEmail: "gold@paypal.com",
         });
         vi.mocked(getAffiliateCommissions).mockResolvedValueOnce([
-          { id: 1, affiliateId: 10, paymentId: null, amount: "50.00", status: "pending", paidAt: null, createdAt: new Date() },
+          {
+            id: 1,
+            affiliateId: 10,
+            paymentId: null,
+            amount: "50.00",
+            status: "pending",
+            paidAt: null,
+            createdAt: new Date(),
+          },
         ]);
-        const result = await appRouter.createCaller(createAuthContext()).affiliate.getStats();
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .affiliate.getStats();
         expect(result).not.toBeNull();
         expect(result!.totalEarned).toBe(250);
         expect(result!.commissions).toHaveLength(1);
@@ -276,28 +407,51 @@ describe("New Features", () => {
   describe("bonuses router", () => {
     describe("auth / admin guards", () => {
       it("bonuses.getUserBonuses requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).bonuses.getUserBonuses()).rejects.toThrow();
+        await expect(
+          appRouter.createCaller(createPublicContext()).bonuses.getUserBonuses()
+        ).rejects.toThrow();
       });
       it("bonuses.claimBonus requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).bonuses.claimBonus({ bonusId: 1 })).rejects.toThrow();
+        await expect(
+          appRouter
+            .createCaller(createPublicContext())
+            .bonuses.claimBonus({ bonusId: 1 })
+        ).rejects.toThrow();
       });
       it("bonuses.createUserBonuses requires admin", async () => {
-        await expect(appRouter.createCaller(createAuthContext("user")).bonuses.createUserBonuses({
-          userId: 2, bonusType: "referral", bonusName: "Bonus", bonusValue: 1000,
-        })).rejects.toThrow();
+        await expect(
+          appRouter
+            .createCaller(createAuthContext("user"))
+            .bonuses.createUserBonuses({
+              userId: 2,
+              bonusType: "referral",
+              bonusName: "Bonus",
+              bonusValue: 1000,
+            })
+        ).rejects.toThrow();
       });
     });
 
     describe("authenticated operations", () => {
       it("bonuses.claimBonus throws for non-existent bonus", async () => {
         // mock returns [] so bonus is undefined → "Bonus not found"
-        await expect(appRouter.createCaller(createAuthContext()).bonuses.claimBonus({ bonusId: 99999 })).rejects.toThrow("Bonus not found");
+        await expect(
+          appRouter
+            .createCaller(createAuthContext())
+            .bonuses.claimBonus({ bonusId: 99999 })
+        ).rejects.toThrow("Bonus not found");
       });
 
       it("bonuses.createUserBonuses returns id for admin", async () => {
-        const result = await appRouter.createCaller(createAuthContext("admin")).bonuses.createUserBonuses({
-          userId: 2, bonusType: "milestone", bonusName: "10 Referrals", bonusValue: 2500, tier: "professional",
-        });
+        const result = await appRouter
+          .createCaller(createAuthContext("admin"))
+          .bonuses.createUserBonuses({
+            userId: 2,
+            bonusType: "milestone",
+            bonusName: "10 Referrals",
+            bonusValue: 2500,
+            tier: "professional",
+          });
         expect(result).toHaveProperty("id");
         expect(typeof result.id).toBe("number");
       });
@@ -308,7 +462,9 @@ describe("New Features", () => {
   describe("marketplace router", () => {
     describe("public endpoints", () => {
       it("marketplace.listModels returns array with correct shape", async () => {
-        const result = await appRouter.createCaller(createPublicContext()).marketplace.listModels({});
+        const result = await appRouter
+          .createCaller(createPublicContext())
+          .marketplace.listModels({});
         expect(Array.isArray(result)).toBe(true);
         expect(result).toHaveLength(2);
         expect(result[0]).toHaveProperty("name", "Authenticator Pro");
@@ -317,23 +473,31 @@ describe("New Features", () => {
       });
 
       it("marketplace.listModels supports limit and category", async () => {
-        const result = await appRouter.createCaller(createPublicContext()).marketplace.listModels({ category: "vision", limit: 5 });
+        const result = await appRouter
+          .createCaller(createPublicContext())
+          .marketplace.listModels({ category: "vision", limit: 5 });
         expect(Array.isArray(result)).toBe(true);
       });
 
       it("marketplace.getModel returns model for id=1", async () => {
-        const result = await appRouter.createCaller(createPublicContext()).marketplace.getModel({ id: 1 });
+        const result = await appRouter
+          .createCaller(createPublicContext())
+          .marketplace.getModel({ id: 1 });
         expect(result).toBeDefined();
         expect(result?.name).toBe("Authenticator Pro");
       });
 
       it("marketplace.getModel returns undefined for unknown id", async () => {
-        const result = await appRouter.createCaller(createPublicContext()).marketplace.getModel({ id: 99999 });
+        const result = await appRouter
+          .createCaller(createPublicContext())
+          .marketplace.getModel({ id: 99999 });
         expect(result).toBeUndefined();
       });
 
       it("marketplace.getReviews returns array", async () => {
-        const result = await appRouter.createCaller(createPublicContext()).marketplace.getReviews({ modelId: 1 });
+        const result = await appRouter
+          .createCaller(createPublicContext())
+          .marketplace.getReviews({ modelId: 1 });
         expect(Array.isArray(result)).toBe(true);
         expect(result[0]).toHaveProperty("rating", 5);
       });
@@ -341,45 +505,80 @@ describe("New Features", () => {
 
     describe("auth / admin guards", () => {
       it("marketplace.createModel requires admin", async () => {
-        await expect(appRouter.createCaller(createAuthContext("user")).marketplace.createModel({ name: "X", price: 0 })).rejects.toThrow();
+        await expect(
+          appRouter
+            .createCaller(createAuthContext("user"))
+            .marketplace.createModel({ name: "X", price: 0 })
+        ).rejects.toThrow();
       });
       it("marketplace.purchaseModel requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).marketplace.purchaseModel({ modelId: 1 })).rejects.toThrow();
+        await expect(
+          appRouter
+            .createCaller(createPublicContext())
+            .marketplace.purchaseModel({ modelId: 1 })
+        ).rejects.toThrow();
       });
       it("marketplace.myPurchases requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).marketplace.myPurchases()).rejects.toThrow();
+        await expect(
+          appRouter
+            .createCaller(createPublicContext())
+            .marketplace.myPurchases()
+        ).rejects.toThrow();
       });
       it("marketplace.addReview requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).marketplace.addReview({ modelId: 1, rating: 5 })).rejects.toThrow();
+        await expect(
+          appRouter
+            .createCaller(createPublicContext())
+            .marketplace.addReview({ modelId: 1, rating: 5 })
+        ).rejects.toThrow();
       });
     });
 
     describe("authenticated operations", () => {
       it("marketplace.createModel returns id for admin", async () => {
-        const result = await appRouter.createCaller(createAuthContext("admin")).marketplace.createModel({
-          name: "New Vision Model", price: 2999, category: "vision", description: "Detects counterfeits",
-        });
+        const result = await appRouter
+          .createCaller(createAuthContext("admin"))
+          .marketplace.createModel({
+            name: "New Vision Model",
+            price: 2999,
+            category: "vision",
+            description: "Detects counterfeits",
+          });
         expect(result).toHaveProperty("id", 500);
       });
 
       it("marketplace.purchaseModel returns id for known model", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).marketplace.purchaseModel({ modelId: 1 });
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .marketplace.purchaseModel({ modelId: 1 });
         expect(result).toHaveProperty("id", 600);
       });
 
       it("marketplace.purchaseModel throws for unknown model", async () => {
         const { getModelById } = await import("./marketplace/db");
         vi.mocked(getModelById).mockResolvedValueOnce(undefined);
-        await expect(appRouter.createCaller(createAuthContext()).marketplace.purchaseModel({ modelId: 99999 })).rejects.toThrow("Model not found");
+        await expect(
+          appRouter
+            .createCaller(createAuthContext())
+            .marketplace.purchaseModel({ modelId: 99999 })
+        ).rejects.toThrow("Model not found");
       });
 
       it("marketplace.myPurchases returns array", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).marketplace.myPurchases();
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .marketplace.myPurchases();
         expect(Array.isArray(result)).toBe(true);
       });
 
       it("marketplace.addReview returns id", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).marketplace.addReview({ modelId: 1, rating: 4, review: "Very useful" });
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .marketplace.addReview({
+            modelId: 1,
+            rating: 4,
+            review: "Very useful",
+          });
         expect(result).toHaveProperty("id", 700);
       });
     });
@@ -389,72 +588,126 @@ describe("New Features", () => {
   describe("emailDrafts router", () => {
     describe("auth guards", () => {
       it("emailDrafts.listPending requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).emailDrafts.listPending()).rejects.toThrow();
+        await expect(
+          appRouter
+            .createCaller(createPublicContext())
+            .emailDrafts.listPending()
+        ).rejects.toThrow();
       });
       it("emailDrafts.create requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).emailDrafts.create({
-          prospectEmail: "x@x.com", subject: "Hi", body: "Hello",
-        })).rejects.toThrow();
+        await expect(
+          appRouter.createCaller(createPublicContext()).emailDrafts.create({
+            prospectEmail: "x@x.com",
+            subject: "Hi",
+            body: "Hello",
+          })
+        ).rejects.toThrow();
       });
       it("emailDrafts.approve requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).emailDrafts.approve({ id: "00000000-0000-4000-8000-000000000001" })).rejects.toThrow();
+        await expect(
+          appRouter
+            .createCaller(createPublicContext())
+            .emailDrafts.approve({ id: "00000000-0000-4000-8000-000000000001" })
+        ).rejects.toThrow();
       });
       it("emailDrafts.reject requires auth", async () => {
-        await expect(appRouter.createCaller(createPublicContext()).emailDrafts.reject({ id: "00000000-0000-4000-8000-000000000001" })).rejects.toThrow();
+        await expect(
+          appRouter
+            .createCaller(createPublicContext())
+            .emailDrafts.reject({ id: "00000000-0000-4000-8000-000000000001" })
+        ).rejects.toThrow();
       });
     });
 
     describe("authenticated operations", () => {
       it("emailDrafts.listPending returns array", async () => {
-        const result = await appRouter.createCaller(createAuthContext("admin")).emailDrafts.listPending();
+        const result = await appRouter
+          .createCaller(createAuthContext("admin"))
+          .emailDrafts.listPending();
         expect(Array.isArray(result)).toBe(true);
       });
 
       it("emailDrafts.create returns draft id", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).emailDrafts.create({
-          prospectEmail: "ceo@bigco.com",
-          prospectName: "Big CEO",
-          prospectCompany: "BigCo",
-          subject: "AuthiChain for BigCo",
-          body: "<p>Hello, let's talk about authentication...</p>",
-        });
+        const result = await appRouter
+          .createCaller(createAuthContext())
+          .emailDrafts.create({
+            prospectEmail: "ceo@bigco.com",
+            prospectName: "Big CEO",
+            prospectCompany: "BigCo",
+            subject: "AuthiChain for BigCo",
+            body: "<p>Hello, let's talk about authentication...</p>",
+          });
         expect(result).toHaveProperty("id");
       });
 
       it("emailDrafts.reject returns success", async () => {
-        const result = await appRouter.createCaller(createAuthContext("admin")).emailDrafts.reject({ id: "00000000-0000-4000-8000-000000000001", notes: "Off-topic" });
+        const result = await appRouter
+          .createCaller(createAuthContext("admin"))
+          .emailDrafts.reject({
+            id: "00000000-0000-4000-8000-000000000001",
+            notes: "Off-topic",
+          });
         expect(result).toEqual({ success: true });
       });
 
       it("emailDrafts.bulkApprove returns count matching input ids", async () => {
-        const result = await appRouter.createCaller(createAuthContext("admin")).emailDrafts.bulkApprove({ ids: ["00000000-0000-4000-8000-000000000010", "00000000-0000-4000-8000-000000000011", "00000000-0000-4000-8000-000000000012"] });
+        const result = await appRouter
+          .createCaller(createAuthContext("admin"))
+          .emailDrafts.bulkApprove({
+            ids: [
+              "00000000-0000-4000-8000-000000000010",
+              "00000000-0000-4000-8000-000000000011",
+              "00000000-0000-4000-8000-000000000012",
+            ],
+          });
         expect(result.success).toBe(true);
         expect(result.count).toBe(3);
       });
 
       it("emailDrafts.approve does NOT send email when draft is not in pending list", async () => {
         // getPendingDrafts returns [] by default — draft 999 not found, no email sent
-        await appRouter.createCaller(createAuthContext("admin")).emailDrafts.approve({ id: "00000000-0000-4000-8000-000000000999" });
+        await appRouter
+          .createCaller(createAuthContext("admin"))
+          .emailDrafts.approve({ id: "00000000-0000-4000-8000-000000000999" });
         const { sendEmail } = await import("./email/smtp");
         expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
       });
 
       it("emailDrafts.approve DOES send email when draft is in pending list", async () => {
         const { getPendingDrafts } = await import("./db");
-        vi.mocked(getPendingDrafts).mockResolvedValueOnce([{
-          id: "00000000-0000-4000-8000-000000000042", userId: 4, prospectEmail: "lead@bigcorp.com", subject: "Our Partnership",
-          body: "<p>Hello!</p>", prospectName: "Alice",
-          prospectCompany: null, prospectTitle: null, industry: null,
-          status: "pending", templateUsed: null, generatedBy: "ai_manager",
-          approvedBy: null, approvedAt: null, sentAt: null, notes: null, taskId: null, createdAt: new Date(),
-        }]);
-        await appRouter.createCaller(createAuthContext("admin")).emailDrafts.approve({ id: "00000000-0000-4000-8000-000000000042" });
+        vi.mocked(getPendingDrafts).mockResolvedValueOnce([
+          {
+            id: "00000000-0000-4000-8000-000000000042",
+            userId: 4,
+            prospectEmail: "lead@bigcorp.com",
+            subject: "Our Partnership",
+            body: "<p>Hello!</p>",
+            prospectName: "Alice",
+            prospectCompany: null,
+            prospectTitle: null,
+            industry: null,
+            status: "pending",
+            templateUsed: null,
+            generatedBy: "ai_manager",
+            approvedBy: null,
+            approvedAt: null,
+            sentAt: null,
+            notes: null,
+            taskId: null,
+            createdAt: new Date(),
+          },
+        ]);
+        await appRouter
+          .createCaller(createAuthContext("admin"))
+          .emailDrafts.approve({ id: "00000000-0000-4000-8000-000000000042" });
         const { sendEmail } = await import("./email/smtp");
         expect(vi.mocked(sendEmail)).toHaveBeenCalledOnce();
-        expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(expect.objectContaining({
-          to: "lead@bigcorp.com",
-          subject: "Our Partnership",
-        }));
+        expect(vi.mocked(sendEmail)).toHaveBeenCalledWith(
+          expect.objectContaining({
+            to: "lead@bigcorp.com",
+            subject: "Our Partnership",
+          })
+        );
       });
     });
   });
@@ -462,16 +715,27 @@ describe("New Features", () => {
   // ── Paddle checkout ─────────────────────────────────────────────────────────
   describe("subscription.createPaddleCheckout", () => {
     it("requires auth", async () => {
-      await expect(appRouter.createCaller(createPublicContext()).subscription.createPaddleCheckout({
-        plan: "starter", successUrl: "https://app.authichain.com/success",
-      })).rejects.toThrow();
+      await expect(
+        appRouter
+          .createCaller(createPublicContext())
+          .subscription.createPaddleCheckout({
+            plan: "starter",
+            successUrl: "https://app.authichain.com/success",
+          })
+      ).rejects.toThrow();
     });
 
     it("throws BAD_REQUEST when Paddle price env var not set", async () => {
       // Paddle price env vars are not configured in test env
-      await expect(appRouter.createCaller(createAuthContext()).subscription.createPaddleCheckout({
-        plan: "starter", billing: "monthly", successUrl: "https://app.authichain.com/success",
-      })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      await expect(
+        appRouter
+          .createCaller(createAuthContext())
+          .subscription.createPaddleCheckout({
+            plan: "starter",
+            billing: "monthly",
+            successUrl: "https://app.authichain.com/success",
+          })
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     });
   });
 
@@ -479,9 +743,9 @@ describe("New Features", () => {
   describe("referral/core pure helpers", () => {
     it("COMMISSION_RATES has the four expected tiers", async () => {
       const { COMMISSION_RATES } = await import("./referral/core");
-      expect(COMMISSION_RATES.starter).toBe(0.10);
+      expect(COMMISSION_RATES.starter).toBe(0.1);
       expect(COMMISSION_RATES.professional).toBe(0.15);
-      expect(COMMISSION_RATES.enterprise).toBe(0.20);
+      expect(COMMISSION_RATES.enterprise).toBe(0.2);
       expect(COMMISSION_RATES.agency).toBe(0.25);
     });
 
@@ -501,7 +765,9 @@ describe("New Features", () => {
     it("AFFILIATE_BONUS_TIERS thresholds are ascending", async () => {
       const { AFFILIATE_BONUS_TIERS } = await import("./referral/core");
       for (let i = 1; i < AFFILIATE_BONUS_TIERS.length; i++) {
-        expect(AFFILIATE_BONUS_TIERS[i].threshold).toBeGreaterThan(AFFILIATE_BONUS_TIERS[i - 1].threshold);
+        expect(AFFILIATE_BONUS_TIERS[i].threshold).toBeGreaterThan(
+          AFFILIATE_BONUS_TIERS[i - 1].threshold
+        );
       }
     });
 

@@ -1,11 +1,28 @@
 // server/scheduled-jobs.ts
 import { getDb, logActivity } from "./db";
-import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger, serviceOrders } from "../drizzle/schema";
-import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
+import {
+  scheduledJobRuns,
+  subscriptions,
+  certificates,
+  leads,
+  notifications,
+  users,
+  authentications,
+  payments,
+  customerHealthScores,
+  fraudAlerts,
+  stakingPositions,
+  qronRewardLedger,
+  serviceOrders,
+} from "../drizzle/schema";
+import { eq, lt, and, sql, desc, lte, gte, count } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
-import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
+import {
+  isHubSpotConfigured,
+  syncLeadToHubSpot,
+  getCRMStats,
+} from "./hubspot-service";
 import { ENV } from "./_core/env";
-import { runStrainChainSync } from "./jobs/strainchain-sync";
 
 // ─── Job Registry ───────────────────────────────────────────────────────────
 interface JobDefinition {
@@ -40,18 +57,22 @@ export async function executeJob(job: JobDefinition): Promise<void> {
   console.log(`[Scheduler] Starting job: ${job.name}`);
 
   // Insert running record
-  const [runRecord] = await db.insert(scheduledJobRuns).values({
-    jobName: job.name,
-    status: "running",
-    startedAt: new Date(),
-  }).returning();
+  const [runRecord] = await db
+    .insert(scheduledJobRuns)
+    .values({
+      jobName: job.name,
+      status: "running",
+      startedAt: new Date(),
+    })
+    .returning();
   const runId = runRecord.id;
 
   try {
     const result = await job.handler();
     const duration = Date.now() - startTime;
 
-    await db.update(scheduledJobRuns)
+    await db
+      .update(scheduledJobRuns)
       .set({
         status: "completed",
         completedAt: new Date(),
@@ -61,7 +82,9 @@ export async function executeJob(job: JobDefinition): Promise<void> {
       })
       .where(eq(scheduledJobRuns.id, Number(runId)));
 
-    console.log(`[Scheduler] Completed ${job.name} in ${duration}ms (${result.itemsProcessed} items)`);
+    console.log(
+      `[Scheduler] Completed ${job.name} in ${duration}ms (${result.itemsProcessed} items)`
+    );
   } catch (error: any) {
     const duration = Date.now() - startTime;
 
@@ -72,15 +95,23 @@ export async function executeJob(job: JobDefinition): Promise<void> {
     // without anyone being able to say why. Surface the cause.
     const cause = error?.cause;
     const detail = cause
-      ? [cause.code && `[${cause.code}]`, cause.message, cause.detail, cause.hint]
+      ? [
+          cause.code && `[${cause.code}]`,
+          cause.message,
+          cause.detail,
+          cause.hint,
+        ]
           .filter(Boolean)
-          .join(' ')
+          .join(" ")
       : undefined;
-    const message = detail ? `${error.message} — ${detail}` : (error.message || "Unknown error");
+    const message = detail
+      ? `${error.message} — ${detail}`
+      : error.message || "Unknown error";
 
     console.error(`[Scheduler] Failed ${job.name}:`, message);
 
-    await db.update(scheduledJobRuns)
+    await db
+      .update(scheduledJobRuns)
       .set({
         status: "failed",
         completedAt: new Date(),
@@ -96,7 +127,8 @@ export async function executeJob(job: JobDefinition): Promise<void> {
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "subscription-health-check",
-  description: "Check expiring subscriptions, flag past-due accounts, reset monthly quotas",
+  description:
+    "Check expiring subscriptions, flag past-due accounts, reset monthly quotas",
   schedule: "0 6 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
@@ -109,13 +141,16 @@ registerJob({
     const details: Record<string, any> = {};
 
     // Find subscriptions expiring in 3 days
-    const expiringSubs = await db.select()
+    const expiringSubs = await db
+      .select()
       .from(subscriptions)
-      .where(and(
-        eq(subscriptions.status, "active"),
-        lte(subscriptions.currentPeriodEnd, threeDaysFromNow),
-        gte(subscriptions.currentPeriodEnd, now),
-      ))
+      .where(
+        and(
+          eq(subscriptions.status, "active"),
+          lte(subscriptions.currentPeriodEnd, threeDaysFromNow),
+          gte(subscriptions.currentPeriodEnd, now)
+        )
+      )
       .limit(1000);
 
     for (const sub of expiringSubs) {
@@ -131,16 +166,20 @@ registerJob({
     details.expiringNotified = expiringSubs.length;
 
     // Find past-due subscriptions (period ended but still active)
-    const pastDueSubs = await db.select()
+    const pastDueSubs = await db
+      .select()
       .from(subscriptions)
-      .where(and(
-        eq(subscriptions.status, "active"),
-        lt(subscriptions.currentPeriodEnd, now),
-      ))
+      .where(
+        and(
+          eq(subscriptions.status, "active"),
+          lt(subscriptions.currentPeriodEnd, now)
+        )
+      )
       .limit(1000);
 
     for (const sub of pastDueSubs) {
-      await db.update(subscriptions)
+      await db
+        .update(subscriptions)
         .set({ status: "past_due" })
         .where(eq(subscriptions.id, sub.id));
       processed++;
@@ -148,9 +187,10 @@ registerJob({
     details.markedPastDue = pastDueSubs.length;
 
     // Reset monthly quotas for subscriptions at period start
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const _firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     if (now.getDate() === 1) {
-      await db.update(subscriptions)
+      await db
+        .update(subscriptions)
         .set({ usedQuota: 0 })
         .where(eq(subscriptions.status, "active"));
       details.quotasReset = true;
@@ -167,13 +207,17 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "dunning-escalation",
-  description: "Escalate past-due subscriptions (day 3/7/14) to recover failed payments",
+  description:
+    "Escalate past-due subscriptions (day 3/7/14) to recover failed payments",
   schedule: "0 8 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
     const { runDunningEscalation } = await import("./jobs/dunning");
     const r = await runDunningEscalation();
-    return { itemsProcessed: r.remindersSent, details: { checked: r.checked, remindersSent: r.remindersSent } };
+    return {
+      itemsProcessed: r.remindersSent,
+      details: { checked: r.checked, remindersSent: r.remindersSent },
+    };
   },
 });
 
@@ -190,17 +234,22 @@ registerJob({
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
 
     const now = new Date();
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const thirtyDaysFromNow = new Date(
+      now.getTime() + 30 * 24 * 60 * 60 * 1000
+    );
     let processed = 0;
 
     // Find active certificates expiring within 30 days
-    const expiringCerts = await db.select()
+    const expiringCerts = await db
+      .select()
       .from(certificates)
-      .where(and(
-        eq(certificates.status, "active"),
-        lte(certificates.expiresAt, thirtyDaysFromNow),
-        gte(certificates.expiresAt, now),
-      ))
+      .where(
+        and(
+          eq(certificates.status, "active"),
+          lte(certificates.expiresAt, thirtyDaysFromNow),
+          gte(certificates.expiresAt, now)
+        )
+      )
       .limit(1000);
 
     for (const cert of expiringCerts) {
@@ -215,16 +264,19 @@ registerJob({
     }
 
     // Auto-expire certificates that have passed their expiry date
-    await db.update(certificates)
+    await db
+      .update(certificates)
       .set({ status: "expired" })
-      .where(and(
-        eq(certificates.status, "active"),
-        lt(certificates.expiresAt, now),
-      ));
+      .where(
+        and(eq(certificates.status, "active"), lt(certificates.expiresAt, now))
+      );
 
     return {
       itemsProcessed: processed,
-      details: { expiringNotified: expiringCerts.length, autoExpired: "checked" },
+      details: {
+        expiringNotified: expiringCerts.length,
+        autoExpired: "checked",
+      },
     };
   },
 });
@@ -234,7 +286,8 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "lead-nurturing",
-  description: "Identify stale leads, update scores, and sync unsynced leads to HubSpot",
+  description:
+    "Identify stale leads, update scores, and sync unsynced leads to HubSpot",
   schedule: "0 9 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
@@ -247,19 +300,18 @@ registerJob({
     const details: Record<string, any> = {};
 
     // Find new leads not contacted in 7 days
-    const staleLeads = await db.select()
+    const staleLeads = await db
+      .select()
       .from(leads)
-      .where(and(
-        eq(leads.status, "new"),
-        lt(leads.createdAt, sevenDaysAgo),
-      ))
+      .where(and(eq(leads.status, "new"), lt(leads.createdAt, sevenDaysAgo)))
       .limit(500);
 
     details.staleLeadsFound = staleLeads.length;
 
     // Sync unsynced leads to HubSpot
     if (isHubSpotConfigured()) {
-      const newLeads = await db.select()
+      const newLeads = await db
+        .select()
         .from(leads)
         .where(eq(leads.status, "new"))
         .limit(20);
@@ -274,7 +326,9 @@ registerJob({
             source: lead.source || "website",
           });
           synced++;
-        } catch { /* skip failed syncs */ }
+        } catch {
+          /* skip failed syncs */
+        }
       }
       details.hubspotSynced = synced;
       processed += synced;
@@ -289,7 +343,8 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "database-cleanup",
-  description: "Purge old read notifications, stale job runs, and expired sessions",
+  description:
+    "Purge old read notifications, stale job runs, and expired sessions",
   schedule: "0 3 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
@@ -302,20 +357,26 @@ registerJob({
     const details: Record<string, any> = {};
 
     // Delete read notifications older than 30 days
-    await db.delete(notifications)
-      .where(and(
-        eq(notifications.isRead, true),
-        lt(notifications.createdAt, thirtyDaysAgo),
-      ));
+    await db
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.isRead, true),
+          lt(notifications.createdAt, thirtyDaysAgo)
+        )
+      );
     details.oldNotificationsDeleted = "checked";
     processed++;
 
     // Delete completed job runs older than 90 days
-    await db.delete(scheduledJobRuns)
-      .where(and(
-        eq(scheduledJobRuns.status, "completed"),
-        lt(scheduledJobRuns.startedAt, ninetyDaysAgo),
-      ));
+    await db
+      .delete(scheduledJobRuns)
+      .where(
+        and(
+          eq(scheduledJobRuns.status, "completed"),
+          lt(scheduledJobRuns.startedAt, ninetyDaysAgo)
+        )
+      );
     details.oldJobRunsDeleted = "checked";
     processed++;
 
@@ -338,31 +399,36 @@ registerJob({
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     // Count new users this week
-    const [newUsersResult] = await db.select({ count: count() })
+    const [newUsersResult] = await db
+      .select({ count: count() })
       .from(users)
       .where(gte(users.createdAt, oneWeekAgo));
     const newUsers = newUsersResult?.count || 0;
 
     // Count authentications this week
-    const [authsResult] = await db.select({ count: count() })
+    const [authsResult] = await db
+      .select({ count: count() })
       .from(authentications)
       .where(gte(authentications.createdAt, oneWeekAgo));
     const newAuths = authsResult?.count || 0;
 
     // Count new leads this week
-    const [leadsResult] = await db.select({ count: count() })
+    const [leadsResult] = await db
+      .select({ count: count() })
       .from(leads)
       .where(gte(leads.createdAt, oneWeekAgo));
     const newLeads = leadsResult?.count || 0;
 
     // Count payments this week
-    const [paymentsResult] = await db.select({ count: count() })
+    const [paymentsResult] = await db
+      .select({ count: count() })
       .from(payments)
       .where(gte(payments.createdAt, oneWeekAgo));
     const newPayments = paymentsResult?.count || 0;
 
     // Total active subscriptions
-    const [activeSubs] = await db.select({ count: count() })
+    const [activeSubs] = await db
+      .select({ count: count() })
       .from(subscriptions)
       .where(eq(subscriptions.status, "active"));
     const totalActiveSubs = activeSubs?.count || 0;
@@ -372,8 +438,14 @@ registerJob({
     if (isHubSpotConfigured()) {
       try {
         const stats = await getCRMStats();
-        crmStats = { contacts: stats.contacts, companies: stats.companies, deals: stats.deals };
-      } catch { /* skip */ }
+        crmStats = {
+          contacts: stats.contacts,
+          companies: stats.companies,
+          deals: stats.deals,
+        };
+      } catch {
+        /* skip */
+      }
     }
 
     const digest = `📊 AuthiChain Weekly Digest (${oneWeekAgo.toLocaleDateString()} - ${new Date().toLocaleDateString()})
@@ -393,7 +465,14 @@ HubSpot CRM: ${crmStats.contacts} contacts | ${crmStats.companies} companies | $
 
     return {
       itemsProcessed: 1,
-      details: { newUsers, newAuths, newLeads, newPayments, totalActiveSubs, crmStats },
+      details: {
+        newUsers,
+        newAuths,
+        newLeads,
+        newPayments,
+        totalActiveSubs,
+        crmStats,
+      },
     };
   },
 });
@@ -408,7 +487,10 @@ registerJob({
   enabled: true,
   handler: async (): Promise<JobResult> => {
     if (!isHubSpotConfigured()) {
-      return { itemsProcessed: 0, details: { skipped: "HubSpot not configured" } };
+      return {
+        itemsProcessed: 0,
+        details: { skipped: "HubSpot not configured" },
+      };
     }
 
     const db = await getDb();
@@ -418,7 +500,8 @@ registerJob({
     let synced = 0;
 
     // Sync recent leads
-    const recentLeads = await db.select()
+    const recentLeads = await db
+      .select()
       .from(leads)
       .where(gte(leads.createdAt, fourHoursAgo))
       .limit(50);
@@ -432,7 +515,9 @@ registerJob({
           source: lead.source || "website",
         });
         synced++;
-      } catch { /* skip failed */ }
+      } catch {
+        /* skip failed */
+      }
     }
 
     return {
@@ -447,27 +532,30 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "customer-health-score",
-  description: "Recalculate customer health scores based on usage, payments, and engagement",
+  description:
+    "Recalculate customer health scores based on usage, payments, and engagement",
   schedule: "0 5 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
 
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const _thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     let processed = 0;
 
     // Get all active subscribers
-    const activeSubs = await db.select()
+    const activeSubs = await db
+      .select()
       .from(subscriptions)
       .where(eq(subscriptions.status, "active"))
       .limit(5000);
 
     for (const sub of activeSubs) {
       // Calculate score factors
-      const quotaUsage = sub.usedQuota && sub.monthlyQuota
-        ? Math.round((sub.usedQuota / sub.monthlyQuota) * 100)
-        : 0;
+      const quotaUsage =
+        sub.usedQuota && sub.monthlyQuota
+          ? Math.round((sub.usedQuota / sub.monthlyQuota) * 100)
+          : 0;
 
       // Score: 0-100 based on usage (higher usage = healthier customer)
       let score = Math.min(100, quotaUsage);
@@ -477,7 +565,8 @@ registerJob({
       else if (sub.plan === "professional") score = Math.min(100, score + 10);
 
       // Determine trend
-      const [existing] = await db.select()
+      const [existing] = await db
+        .select()
         .from(customerHealthScores)
         .where(eq(customerHealthScores.userId, sub.userId))
         .orderBy(desc(customerHealthScores.lastCalculatedAt))
@@ -500,7 +589,10 @@ registerJob({
       processed++;
     }
 
-    return { itemsProcessed: processed, details: { subscribersScored: processed } };
+    return {
+      itemsProcessed: processed,
+      details: { subscribersScored: processed },
+    };
   },
 });
 
@@ -509,7 +601,8 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "fraud-detection-sweep",
-  description: "Detect suspicious authentication patterns and flag potential fraud",
+  description:
+    "Detect suspicious authentication patterns and flag potential fraud",
   schedule: "0 */6 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
@@ -520,10 +613,11 @@ registerJob({
     let flagged = 0;
 
     // Detect users with unusually high authentication attempts
-    const highVolumeUsers = await db.select({
-      userId: authentications.userId,
-      authCount: count(),
-    })
+    const highVolumeUsers = await db
+      .select({
+        userId: authentications.userId,
+        authCount: count(),
+      })
       .from(authentications)
       .where(gte(authentications.createdAt, sixHoursAgo))
       .groupBy(authentications.userId)
@@ -541,15 +635,18 @@ registerJob({
     }
 
     // Detect products with multiple failed authentications
-    const failedAuths = await db.select({
-      productId: authentications.productId,
-      failCount: count(),
-    })
+    const failedAuths = await db
+      .select({
+        productId: authentications.productId,
+        failCount: count(),
+      })
       .from(authentications)
-      .where(and(
-        gte(authentications.createdAt, sixHoursAgo),
-        eq(authentications.result, "counterfeit"),
-      ))
+      .where(
+        and(
+          gte(authentications.createdAt, sixHoursAgo),
+          eq(authentications.result, "counterfeit")
+        )
+      )
       .groupBy(authentications.productId)
       .having(sql`count(*) > 5`);
 
@@ -566,7 +663,13 @@ registerJob({
       }
     }
 
-    return { itemsProcessed: flagged, details: { highVolumeUsers: highVolumeUsers.length, failedAuthProducts: failedAuths.length } };
+    return {
+      itemsProcessed: flagged,
+      details: {
+        highVolumeUsers: highVolumeUsers.length,
+        failedAuthProducts: failedAuths.length,
+      },
+    };
   },
 });
 
@@ -575,7 +678,8 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "autonomous-pipeline-tick",
-  description: "Run AgentZ revenue pipeline: find leads, draft outreach, monitor deals",
+  description:
+    "Run AgentZ revenue pipeline: find leads, draft outreach, monitor deals",
   schedule: "*/2 * * * *", // every 2 minutes
   enabled: ENV.autonomousPipelineEnabled,
   handler: async (): Promise<JobResult> => {
@@ -590,9 +694,9 @@ registerJob({
       itemsProcessed: tasksRan,
       details: {
         budgetMonitor: r.budgetMonitor,
-        dunning:        r.dunning,
-        retention:      r.retention,
-        taskResults:    r.taskResults,
+        dunning: r.dunning,
+        retention: r.retention,
+        taskResults: r.taskResults,
       },
     };
   },
@@ -613,8 +717,10 @@ export async function initializeScheduler(): Promise<void> {
     // dynamic import throws and we fall through to the warn+return below.
     const moduleName = ["node", "cron"].join("-");
     cron = (await import(/* @vite-ignore */ moduleName)).default;
-  } catch (err) {
-    console.warn("[Scheduler] node-cron not available in this environment, skipping initialization.");
+  } catch (_err) {
+    console.warn(
+      "[Scheduler] node-cron not available in this environment, skipping initialization."
+    );
     return;
   }
 
@@ -650,14 +756,21 @@ export function stopScheduler(): void {
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "vertical-cloner",
-  description: "Monitor for new industry expansion opportunities and spawn missions",
+  description:
+    "Monitor for new industry expansion opportunities and spawn missions",
   schedule: "*/10 * * * *",
   enabled: true,
   handler: async () => {
     const { runVerticalCloning } = await import("./jobs/vertical-cloner");
     await runVerticalCloning();
-    return { itemsProcessed: 2, details: { status: "cloning_cycle_complete", verticals: ["EV_BATTERY", "ARTISAN_COFFEE"] } };
-  }
+    return {
+      itemsProcessed: 2,
+      details: {
+        status: "cloning_cycle_complete",
+        verticals: ["EV_BATTERY", "ARTISAN_COFFEE"],
+      },
+    };
+  },
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -673,7 +786,6 @@ registerJob({
     return await runStrainChainSync();
   },
 });
-
 
 /**
  * The newsjacking monitor has no originating mission — it is triggered by the
@@ -711,7 +823,8 @@ async function ensureSystemPrMission(): Promise<string> {
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "newsjacking-monitor",
-  description: "Monitor global news for supply chain incidents and trigger PR missions",
+  description:
+    "Monitor global news for supply chain incidents and trigger PR missions",
   schedule: "*/30 * * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
@@ -719,7 +832,13 @@ registerJob({
     const missionId = await ensureSystemPrMission();
     await runNewsjackingMonitor({
       missionId,
-      payload: { topics: ['medical device recall', 'counterfeit pharma', 'luxury forgery'] }
+      payload: {
+        topics: [
+          "medical device recall",
+          "counterfeit pharma",
+          "luxury forgery",
+        ],
+      },
     } as any);
     return { itemsProcessed: 1, details: { status: "news_scan_complete" } };
   },
@@ -736,11 +855,14 @@ registerJob({
   handler: async (): Promise<JobResult> => {
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
-    
-    const activePositions = await db.select().from(stakingPositions)
+
+    const activePositions = await db
+      .select()
+      .from(stakingPositions)
       .where(eq(stakingPositions.status, "active"))
       .limit(10000);
-    if (activePositions.length === 0) return { itemsProcessed: 0, details: { status: "no_active_positions" } };
+    if (activePositions.length === 0)
+      return { itemsProcessed: 0, details: { status: "no_active_positions" } };
 
     const rewards = activePositions.map(pos => ({
       agentId: pos.agentId || 0,
@@ -750,7 +872,10 @@ registerJob({
       status: "pending" as const,
     }));
     await db.insert(qronRewardLedger).values(rewards);
-    return { itemsProcessed: activePositions.length, details: { status: "rewards_distributed" } };
+    return {
+      itemsProcessed: activePositions.length,
+      details: { status: "rewards_distributed" },
+    };
   },
 });
 
@@ -761,7 +886,8 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "founder-payout",
-  description: "Monthly pay-yourself-first split from last month's collected revenue",
+  description:
+    "Monthly pay-yourself-first split from last month's collected revenue",
   schedule: "0 9 1 * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
@@ -780,7 +906,8 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "live-systems-check",
-  description: "Verify revenue-critical integrations (Stripe, HubSpot, Gmail, PostHog, GA4) are live",
+  description:
+    "Verify revenue-critical integrations (Stripe, HubSpot, Gmail, PostHog, GA4) are live",
   schedule: "0 11 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
@@ -807,7 +934,8 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "token-metrics",
-  description: "Snapshot on-chain $QRON supply/block/gas metrics for trend tracking",
+  description:
+    "Snapshot on-chain $QRON supply/block/gas metrics for trend tracking",
   schedule: "0 12 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
@@ -826,7 +954,8 @@ registerJob({
 // ═══════════════════════════════════════════════════════════════════════════
 registerJob({
   name: "ecosystem-health",
-  description: "External uptime check across all product domains + on-chain token liveness",
+  description:
+    "External uptime check across all product domains + on-chain token liveness",
   schedule: "0 13 * * *",
   enabled: true,
   handler: async (): Promise<JobResult> => {
@@ -837,8 +966,8 @@ registerJob({
         await notifyOwner({
           title: "Ecosystem health check: domain(s) down",
           content: `${result.domainsHealthy}/${result.domainsTotal} domains healthy. ${result.domains
-            .filter((d) => !d.healthy)
-            .map((d) => `${d.name} (${d.url}): ${d.error ?? `HTTP ${d.status}`}`)
+            .filter(d => !d.healthy)
+            .map(d => `${d.name} (${d.url}): ${d.error ?? `HTTP ${d.status}`}`)
             .join("; ")}`,
         });
       } catch {
@@ -867,23 +996,31 @@ registerJob({
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     // Find pending orders created more than 24 hours ago
-    const timedOutOrders = await db.select()
+    const timedOutOrders = await db
+      .select()
       .from(serviceOrders)
-      .where(and(
-        eq(serviceOrders.status, "pending"),
-        lt(serviceOrders.createdAt, oneDayAgo),
-      ))
+      .where(
+        and(
+          eq(serviceOrders.status, "pending"),
+          lt(serviceOrders.createdAt, oneDayAgo)
+        )
+      )
       .limit(100);
 
     let expired = 0;
     for (const order of timedOutOrders) {
-      await db.update(serviceOrders)
+      await db
+        .update(serviceOrders)
         .set({ status: "expired" })
         .where(eq(serviceOrders.id, order.id));
 
       // Notify user that their pending order expired
       try {
-        const user = await db.select().from(users).where(eq(users.id, order.userId)).limit(1);
+        const user = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, order.userId))
+          .limit(1);
         if (user.length > 0) {
           await db.insert(notifications).values({
             userId: order.userId,
@@ -893,8 +1030,10 @@ registerJob({
             actionUrl: "/services",
           });
         }
-      } catch (e) {
-        console.warn(`[service-order-timeout] Failed to notify user ${order.userId}`);
+      } catch (_e) {
+        console.warn(
+          `[service-order-timeout] Failed to notify user ${order.userId}`
+        );
       }
 
       expired++;
@@ -929,7 +1068,7 @@ export function getSystemStatus() {
 
 export function toggleKillSwitch(active: boolean): boolean {
   if (_systemActive === active) return _systemActive;
-  
+
   _systemActive = active;
   console.log(`[System] Kill switch activated: ${!active}`);
 
@@ -960,14 +1099,16 @@ export async function getJobHistory(jobName?: string, limit = 50) {
   if (!db) return [];
 
   if (jobName) {
-    return db.select()
+    return db
+      .select()
       .from(scheduledJobRuns)
       .where(eq(scheduledJobRuns.jobName, jobName))
       .orderBy(desc(scheduledJobRuns.startedAt))
       .limit(limit);
   }
 
-  return db.select()
+  return db
+    .select()
     .from(scheduledJobRuns)
     .orderBy(desc(scheduledJobRuns.startedAt))
     .limit(limit);

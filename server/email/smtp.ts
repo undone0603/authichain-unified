@@ -1,8 +1,9 @@
 import type nodemailerType from "nodemailer";
-import type { Transporter } from "nodemailer";
 
 async function getNodemailer() {
-  return (await import("nodemailer")) as typeof nodemailerType & { default: typeof nodemailerType };
+  return (await import("nodemailer")) as typeof nodemailerType & {
+    default: typeof nodemailerType;
+  };
 }
 
 export interface EmailOptions {
@@ -12,7 +13,11 @@ export interface EmailOptions {
   text?: string;
   from?: string;
   replyTo?: string;
-  attachments?: Array<{ filename: string; content: string | Buffer; contentType?: string }>;
+  attachments?: Array<{
+    filename: string;
+    content: string | Buffer;
+    contentType?: string;
+  }>;
 }
 
 function getFrom(): string {
@@ -51,7 +56,9 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   });
 }
 
-export async function sendBulkEmails(emails: EmailOptions[]): Promise<{ sent: number; failed: number }> {
+export async function sendBulkEmails(
+  emails: EmailOptions[]
+): Promise<{ sent: number; failed: number }> {
   let sent = 0;
   let failed = 0;
   const transporter = await createTransporter();
@@ -73,9 +80,13 @@ export async function sendBulkEmails(emails: EmailOptions[]): Promise<{ sent: nu
   return { sent, failed };
 }
 
-export function replaceTemplateVariables(template: string, vars: Record<string, string>): string {
+export function replaceTemplateVariables(
+  template: string,
+  vars: Record<string, string>
+): string {
   return Object.entries(vars).reduce(
-    (result, [key, value]) => result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value),
+    (result, [key, value]) =>
+      result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value),
     template
   );
 }

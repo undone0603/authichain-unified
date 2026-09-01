@@ -2,18 +2,19 @@ import { z } from "zod";
 import { adminProcedure, router, publicProcedure } from "../_core/trpc";
 import { issueSovereignPassport, verifySovereignPassport } from "./vc-service";
 import * as db from "../db";
-import { TRPCError } from "@trpc/server";
 
 export const govchainRouter = router({
   /**
    * Government Issuer: Issue a Sovereign Document Passport
    */
   issuePassport: adminProcedure
-    .input(z.object({
-      documentId: z.string(),
-      claims: z.record(z.any()),
-      recipientEmail: z.string().email(),
-    }))
+    .input(
+      z.object({
+        documentId: z.string(),
+        claims: z.record(z.any()),
+        recipientEmail: z.string().email(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const issuerDid = `did:authichain:gov:${ctx.user.id}`;
       const subjectDid = `did:authichain:user:${input.recipientEmail}`;
@@ -31,11 +32,11 @@ export const govchainRouter = router({
         action: "govchain_passport_issued",
         entityType: "passport",
         entityId: 0,
-        details: { 
+        details: {
           documentId: input.documentId,
           recipient: input.recipientEmail,
-          vcId: vc.id
-        }
+          vcId: vc.id,
+        },
       });
 
       return { success: true, vc };
@@ -45,19 +46,21 @@ export const govchainRouter = router({
    * Public Verification: Verify a Sovereign Document Passport
    */
   verifyPassport: publicProcedure
-    .input(z.object({
-      vc: z.any(),
-    }))
+    .input(
+      z.object({
+        vc: z.any(),
+      })
+    )
     .query(async ({ input }) => {
       const result = await verifySovereignPassport(input.vc);
-      
+
       if (result.valid) {
         await db.logActivity({
           userId: null,
           action: "govchain_passport_verified",
           entityType: "passport",
           entityId: 0,
-          details: { issuer: result.issuer, vcId: input.vc.id }
+          details: { issuer: result.issuer, vcId: input.vc.id },
         });
       }
 
@@ -72,7 +75,7 @@ export const govchainRouter = router({
       activeAgencies: 12,
       passportsIssued: 1420,
       complianceScore: 99.9,
-      network: "GovChain Federal Hub (Ed25519 / FIPS 186-5)"
+      network: "GovChain Federal Hub (Ed25519 / FIPS 186-5)",
     };
   }),
 });

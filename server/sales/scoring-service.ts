@@ -1,11 +1,9 @@
 import * as db from "../db";
-import { missions, missionTasks } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
 
 function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  if (!domain) return '***';
-  return `${local?.[0] ?? ''}***@${domain}`;
+  const [local, domain] = email.split("@");
+  if (!domain) return "***";
+  return `${local?.[0] ?? ""}***@${domain}`;
 }
 
 /**
@@ -16,7 +14,7 @@ export async function calculateLeadScore(leadId: number): Promise<number> {
   // In our unified schema, "leads" are often represented by "users" with a specific role
   // or stored in the 'leads' table if it exists.
   // For this implementation, we'll assume a 'leads' table with activity tracking.
-  
+
   const lead = await db.getLeadById(leadId);
   if (!lead) return 0;
 
@@ -30,7 +28,7 @@ export async function calculateLeadScore(leadId: number): Promise<number> {
   // 2. Platform Engagement
   if (lead.roiCalculated) score += 20;
   if (lead.demoStarted) score += 10;
-  
+
   // interaction score (max 15)
   const interactions = lead.interactionsCount || 0;
   score += Math.min(15, interactions * 3);
@@ -42,14 +40,16 @@ export async function calculateLeadScore(leadId: number): Promise<number> {
   const finalScore = Math.min(100, score);
 
   // Update lead with new score
-  await db.updateLead(leadId, { 
+  await db.updateLead(leadId, {
     leadScore: finalScore,
-    status: finalScore >= 70 ? "HOT" : finalScore >= 40 ? "WARM" : "COLD"
+    status: finalScore >= 70 ? "HOT" : finalScore >= 40 ? "WARM" : "COLD",
   });
 
   // Auto-trigger contract for hot leads
   if (finalScore >= 70 && !lead.contractSent) {
-    console.log(`[Sales Automation] HOT lead detected: ${maskEmail(lead.email || '')}. Triggering contract...`);
+    console.log(
+      `[Sales Automation] HOT lead detected: ${maskEmail(lead.email || "")}. Triggering contract...`
+    );
     await triggerAutoContract(leadId);
   }
 
@@ -77,7 +77,7 @@ async function triggerAutoContract(leadId: number) {
       name: lead.name,
       company: lead.company,
       numProducts: lead.numProducts || 1000,
-      applyDiscount: true
-    }
+      applyDiscount: true,
+    },
   });
 }

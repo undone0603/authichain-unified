@@ -1,9 +1,9 @@
 /**
  * SignWell Blitz Script - Zero-cost DocuSign replacement
  * Replaces docusign_blitz.ts for AuthiChain outreach flows
- * 
+ *
  * Usage: npx tsx scripts/signwell-blitz.ts
- * 
+ *
  * Environment variables:
  * - SIGNWELL_API_KEY: Your SignWell API key (get from signwell.com)
  * - SIGNWELL_TEST_MODE: Set to "true" to create drafts only (no sends)
@@ -12,7 +12,11 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { SignWellClient, createSignWellClientFromEnv, type OutreachRecipient } from "./lib/signwell.ts";
+import {
+  SignWellClient,
+  createSignWellClientFromEnv,
+  type OutreachRecipient,
+} from "./lib/signwell.ts";
 
 interface OutreachQueueItem {
   id: string;
@@ -39,14 +43,19 @@ interface OutreachQueue {
   };
 }
 
-const QUEUE_FILE = path.join(process.cwd(), "scripts", "kv-data", "outreach_queue.json");
+const QUEUE_FILE = path.join(
+  process.cwd(),
+  "scripts",
+  "kv-data",
+  "outreach_queue.json"
+);
 const DELAY_MS = 2000;
 
 function loadQueue(): OutreachQueue {
   try {
     const raw = fs.readFileSync(QUEUE_FILE, "utf-8");
     return JSON.parse(raw) as OutreachQueue;
-  } catch (err) {
+  } catch (_err) {
     console.error(`Failed to load queue from ${QUEUE_FILE}`);
     process.exit(1);
   }
@@ -57,16 +66,16 @@ function saveQueue(queue: OutreachQueue) {
     ...queue,
     metadata: {
       lastUpdated: new Date().toISOString(),
-      totalSent: queue.queue.filter((i) => i.status === "sent").length,
-      totalSigned: queue.queue.filter((i) => i.status === "signed").length,
-      totalPending: queue.queue.filter((i) => i.status === "pending").length,
+      totalSent: queue.queue.filter(i => i.status === "sent").length,
+      totalSigned: queue.queue.filter(i => i.status === "signed").length,
+      totalPending: queue.queue.filter(i => i.status === "pending").length,
     },
   };
   fs.writeFileSync(QUEUE_FILE, JSON.stringify(updated, null, 2));
 }
 
 function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function main() {
@@ -84,18 +93,26 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`\nConnected to SignWell (${client.isTestMode() ? "TEST MODE" : "LIVE"} )`);
-  console.log(`Remaining free docs this month: ${client.getRemainingFreeDocs()}`);
+  console.log(
+    `\nConnected to SignWell (${client.isTestMode() ? "TEST MODE" : "LIVE"} )`
+  );
+  console.log(
+    `Remaining free docs this month: ${client.getRemainingFreeDocs()}`
+  );
 
   if (!process.env.SIGNWELL_TEMPLATE_ID) {
-    console.log("\nNo SIGNWELL_TEMPLATE_ID set. Running in list/get templates mode only.");
+    console.log(
+      "\nNo SIGNWELL_TEMPLATE_ID set. Running in list/get templates mode only."
+    );
     try {
       const templates = await client.getTemplates();
       if (templates.length === 0) {
-        console.log("No templates found. Create one at https://app.signwell.com");
+        console.log(
+          "No templates found. Create one at https://app.signwell.com"
+        );
       } else {
         console.log("\nAvailable templates:");
-        templates.forEach((t) => console.log(`  - ${t.id}: ${t.title}`));
+        templates.forEach(t => console.log(`  - ${t.id}: ${t.title}`));
       }
     } catch (err) {
       console.error(`Template fetch error: ${(err as Error).message}`);
@@ -104,9 +121,11 @@ async function main() {
   }
 
   const queue = loadQueue();
-  const pendingItems = queue.queue.filter((item) => item.status === "pending");
+  const pendingItems = queue.queue.filter(item => item.status === "pending");
 
-  console.log(`\nQueue: ${pendingItems.length} pending item(s) out of ${queue.queue.length} total`);
+  console.log(
+    `\nQueue: ${pendingItems.length} pending item(s) out of ${queue.queue.length} total`
+  );
 
   if (pendingItems.length === 0) {
     console.log("No pending items to process. Done.");
@@ -120,7 +139,9 @@ async function main() {
   }
 
   for (const item of pendingItems) {
-    console.log(`\n[${new Date().toISOString()}] Processing: ${item.contact.name} (${item.contact.email})`);
+    console.log(
+      `\n[${new Date().toISOString()}] Processing: ${item.contact.name} (${item.contact.email})`
+    );
 
     try {
       const recipient: OutreachRecipient = {
@@ -173,7 +194,7 @@ async function main() {
   console.log(`Remaining free docs: ${client.getRemainingFreeDocs()}`);
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error("Fatal error:", err);
   process.exit(1);
 });

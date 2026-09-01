@@ -1,6 +1,6 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity } from '../db.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from "../_core/llm.js";
+import { logActivity } from "../db.js";
+import type { MissionTask as Task } from "../../drizzle/schema.js";
 
 interface PilotPacketPayload {
   segment?: string;
@@ -8,16 +8,19 @@ interface PilotPacketPayload {
 }
 
 const segmentContext: Record<string, string> = {
-  GOV: 'government agencies focused on supply chain integrity, border control, and anti-counterfeiting compliance',
-  RETAIL: 'retail businesses (dispensaries, specialty retail) focused on product authenticity and brand protection',
-  TECH: 'technology partners and enterprise integrators evaluating authentication API capabilities',
-  PARTNER: 'strategic partners interested in co-selling or embedding AuthiChain in their platform',
+  GOV: "government agencies focused on supply chain integrity, border control, and anti-counterfeiting compliance",
+  RETAIL:
+    "retail businesses (dispensaries, specialty retail) focused on product authenticity and brand protection",
+  TECH: "technology partners and enterprise integrators evaluating authentication API capabilities",
+  PARTNER:
+    "strategic partners interested in co-selling or embedding AuthiChain in their platform",
 };
 
 export async function runBuildPilotPacket(task: Task): Promise<void> {
   const payload = task.payload as PilotPacketPayload;
-  const segment = payload.segment ?? 'GOV';
-  const focus = payload.focus ?? segmentContext[segment] ?? 'enterprise customers';
+  const segment = payload.segment ?? "GOV";
+  const focus =
+    payload.focus ?? segmentContext[segment] ?? "enterprise customers";
 
   const prompt = `You are preparing a pilot program proposal document for AuthiChain (authichain.com).
 
@@ -35,24 +38,34 @@ Create a comprehensive pilot packet outline including:
 Return JSON: { "title": "...", "sections": [{ "heading": "...", "content": "..." }] }`;
 
   const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [{ role: "user", content: prompt }],
+    responseFormat: { type: "json_object" },
   });
 
-  const packet = parseLLMContent<{ title: string; sections: { heading: string; content: string }[] }>(result.choices[0].message.content);
+  const packet = parseLLMContent<{
+    title: string;
+    sections: { heading: string; content: string }[];
+  }>(result.choices[0].message.content);
 
-  await logActivity({ userId: null, action: 'pilot_packet_built', entityType: 'task', entityId: 0, details: { taskId: task.id,
-    segment,
-    title: packet.title,
-    sectionCount: packet.sections?.length ?? 0,
-    missionId: task.missionId,
-  }});
+  await logActivity({
+    userId: null,
+    action: "pilot_packet_built",
+    entityType: "task",
+    entityId: 0,
+    details: {
+      taskId: task.id,
+      segment,
+      title: packet.title,
+      sectionCount: packet.sections?.length ?? 0,
+      missionId: task.missionId,
+    },
+  });
 }
 
 export async function runDraftIntelDossier(task: Task): Promise<void> {
   const payload = task.payload as PilotPacketPayload;
-  const segment = payload.segment ?? 'GOV';
-  const focus = payload.focus ?? segmentContext[segment] ?? 'market landscape';
+  const segment = payload.segment ?? "GOV";
+  const focus = payload.focus ?? segmentContext[segment] ?? "market landscape";
 
   const prompt = `You are an intelligence analyst preparing a competitive and market dossier for AuthiChain's ${segment} sales team.
 
@@ -69,15 +82,17 @@ Include:
 Return JSON: { "title": "...", "sections": [{ "heading": "...", "content": "..." }] }`;
 
   const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [{ role: "user", content: prompt }],
+    responseFormat: { type: "json_object" },
   });
 
-  const dossier = parseLLMContent<unknown>(result.choices[0].message.content);
+  const _dossier = parseLLMContent<unknown>(result.choices[0].message.content);
 
-  await logActivity({ userId: null, action: 'intel_dossier_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
-    segment,
-    focus,
-    missionId: task.missionId,
-  }});
+  await logActivity({
+    userId: null,
+    action: "intel_dossier_drafted",
+    entityType: "task",
+    entityId: 0,
+    details: { taskId: task.id, segment, focus, missionId: task.missionId },
+  });
 }

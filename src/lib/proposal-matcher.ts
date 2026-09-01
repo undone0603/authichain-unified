@@ -1,6 +1,6 @@
-import { db } from '@/db';
-import { leads, proposals } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { db } from "@/db";
+import { leads, proposals } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 interface MatchResult {
   proposalId: string | null;
@@ -18,10 +18,14 @@ export async function matchReplyToProposal(
   senderEmail: string,
   subject: string,
   messageId?: string,
-  inReplyTo?: string,
+  inReplyTo?: string
 ): Promise<MatchResult> {
   // Strategy 1: Exact email match (highest confidence)
-  const leadByEmail = await db.select().from(leads).where(eq(leads.email, senderEmail.toLowerCase())).limit(1);
+  const leadByEmail = await db
+    .select()
+    .from(leads)
+    .where(eq(leads.email, senderEmail.toLowerCase()))
+    .limit(1);
 
   if (leadByEmail.length > 0) {
     const lead = leadByEmail[0];
@@ -39,8 +43,8 @@ export async function matchReplyToProposal(
         proposalId: proposal[0].id,
         leadId: lead.id,
         confidence: 1.0,
-        method: 'exact_email',
-        reason: 'Perfect match on sender email',
+        method: "exact_email",
+        reason: "Perfect match on sender email",
       };
     }
   }
@@ -64,8 +68,8 @@ export async function matchReplyToProposal(
     proposalId: null,
     leadId: null,
     confidence: 0,
-    method: 'no_match',
-    reason: 'Could not match email to any proposal',
+    method: "no_match",
+    reason: "Could not match email to any proposal",
   };
 }
 
@@ -76,7 +80,8 @@ export async function matchReplyToProposal(
 function matchSubjectToProposal(subject: string): MatchResult | null {
   // Pattern: "RE: Proposal: Blockchain Auth for Acme Corp"
   // Use atomic grouping and possessive quantifiers to prevent ReDoS
-  const proposalPattern = /^(?:RE|FW):\s*Proposal[^:]*?(?:for|to)\s+([A-Za-z0-9\s&.,\-]{1,100})/i;
+  const proposalPattern =
+    /^(?:RE|FW):\s*Proposal[^:]*?(?:for|to)\s+([A-Za-z0-9\s&.,\-]{1,100})/i;
   const match = subject.match(proposalPattern);
 
   if (match && match[1]) {
@@ -88,7 +93,7 @@ function matchSubjectToProposal(subject: string): MatchResult | null {
       proposalId: null,
       leadId: null,
       confidence: 0.6,
-      method: 'subject_match',
+      method: "subject_match",
       reason: `Found company name "${companyName}" in subject, but could not verify proposal`,
     };
   }
@@ -103,7 +108,7 @@ function matchSubjectToProposal(subject: string): MatchResult | null {
       proposalId: idMatch[1],
       leadId: null,
       confidence: 0.7,
-      method: 'subject_match',
+      method: "subject_match",
       reason: `Found proposal ID in subject line`,
     };
   }
@@ -115,7 +120,9 @@ function matchSubjectToProposal(subject: string): MatchResult | null {
  * Attempt to match by In-Reply-To message ID (thread matching).
  * This requires tracking original email message IDs in proposals.
  */
-async function matchByThreadId(inReplyTo: string): Promise<MatchResult | null> {
+async function matchByThreadId(
+  _inReplyTo: string
+): Promise<MatchResult | null> {
   // For now, this is a placeholder. In a full implementation,
   // we would store the original email's messageId in proposals.metadata
   // and look it up here.

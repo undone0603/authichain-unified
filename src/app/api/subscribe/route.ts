@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   // Return available plans with prices for self-serve pricing page
   const plans = [
     {

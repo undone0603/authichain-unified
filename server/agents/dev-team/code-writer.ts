@@ -18,17 +18,17 @@
  *   Reads existing files, LLM proposes changes, writes them via GitHub API.
  */
 
-import { invokeLLM, parseLLMContent } from '../../_core/llm.js';
-import { logActivity, getDb } from '../../db.js';
-import { missionTasks } from '../../../drizzle/schema.js';
-import type { MissionTask as Task } from '../../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from "../../_core/llm.js";
+import { logActivity, getDb } from "../../db.js";
+import { missionTasks } from "../../../drizzle/schema.js";
+import type { MissionTask as Task } from "../../../drizzle/schema.js";
 import {
   createBranch,
   getFile,
   writeFile,
   searchCode,
-  listFiles,
-} from './github-service.js';
+  _listFiles,
+} from "./github-service.js";
 
 // ─── Codebase knowledge injected into every code-write prompt ────────────
 
@@ -100,8 +100,8 @@ export async function runPlanSprint(task: Task): Promise<void> {
   const prompt = `You are AgentZ, technical lead for authichain-unified.
 
 Feature request: "${p.feature}"
-${p.context ? `\nAdditional context: ${p.context}` : ''}
-${p.targetFiles?.length ? `\nHinted files: ${p.targetFiles.join(', ')}` : ''}
+${p.context ? `\nAdditional context: ${p.context}` : ""}
+${p.targetFiles?.length ? `\nHinted files: ${p.targetFiles.join(", ")}` : ""}
 
 Break this feature into a concrete development plan. Return JSON:
 {
@@ -134,10 +134,10 @@ Rules:
 
   const result = await invokeLLM({
     messages: [
-      { role: 'system', content: CODEBASE_SYSTEM_PROMPT },
-      { role: 'user',   content: prompt },
+      { role: "system", content: CODEBASE_SYSTEM_PROMPT },
+      { role: "user", content: prompt },
     ],
-    responseFormat: { type: 'json_object' },
+    responseFormat: { type: "json_object" },
   });
 
   const plan: {
@@ -160,17 +160,17 @@ Rules:
       id: crypto.randomUUID(),
       missionId: task.missionId,
       kind: t.kind,
-      title: `${t.kind.replace(/_/g, ' ')}: ${p.feature.slice(0, 60)}`,
+      title: `${t.kind.replace(/_/g, " ")}: ${p.feature.slice(0, 60)}`,
       payload: t.payload,
-      status: 'PENDING' as const,
+      status: "PENDING" as const,
       scheduledAt: new Date(Date.now() + (i + 1) * 5 * 60 * 1000),
     }))
   );
 
   await logActivity({
     userId: null,
-    action: 'sprint_planned',
-    entityType: 'task',
+    action: "sprint_planned",
+    entityType: "task",
     entityId: 0,
     details: {
       taskId: task.id,
@@ -206,7 +206,9 @@ export async function runWriteCode(task: Task): Promise<void> {
 
   // Search for relevant symbols if files weren't specified
   if (!filesToModify.length && !filesToCreate.length) {
-    const searchResults = await searchCode(p.feature.split(' ').slice(0, 3).join(' '));
+    const searchResults = await searchCode(
+      p.feature.split(" ").slice(0, 3).join(" ")
+    );
     for (const r of searchResults.slice(0, 4)) {
       const file = await getFile(r.path, p.branch);
       if (file) existingFiles.push({ path: r.path, content: file.content });
@@ -214,43 +216,44 @@ export async function runWriteCode(task: Task): Promise<void> {
   }
 
   // Also include key architectural files for context
-  const archFiles = ['server/missions/types.ts', 'server/_core/env.ts'];
+  const archFiles = ["server/missions/types.ts", "server/_core/env.ts"];
   for (const path of archFiles) {
     if (!existingFiles.find(f => f.path === path)) {
       const file = await getFile(path, p.branch);
-      if (file) existingFiles.push({ path, content: file.content.slice(0, 2000) }); // truncate long files
+      if (file)
+        existingFiles.push({ path, content: file.content.slice(0, 2000) }); // truncate long files
     }
   }
 
-  const fileContext = existingFiles.map(f =>
-    `### ${f.path}\n\`\`\`typescript\n${f.content}\n\`\`\``
-  ).join('\n\n');
+  const fileContext = existingFiles
+    .map(f => `### ${f.path}\n\`\`\`typescript\n${f.content}\n\`\`\``)
+    .join("\n\n");
 
   const userPrompt = `Feature: "${p.feature}"
-${p.context ? `\nInstructions: ${p.context}` : ''}
-${p.prNumber ? `\nThis is a fix for review feedback on PR #${p.prNumber}` : ''}
+${p.context ? `\nInstructions: ${p.context}` : ""}
+${p.prNumber ? `\nThis is a fix for review feedback on PR #${p.prNumber}` : ""}
 
-Files to modify: ${filesToModify.join(', ') || 'none — use your judgement based on codebase knowledge'}
-Files to create: ${filesToCreate.join(', ') || 'none specified'}
+Files to modify: ${filesToModify.join(", ") || "none — use your judgement based on codebase knowledge"}
+Files to create: ${filesToCreate.join(", ") || "none specified"}
 
 ## Current file contents:
-${fileContext || '(no files provided — create new files as needed)'}
+${fileContext || "(no files provided — create new files as needed)"}
 
 Write the code changes. Return the full JSON response as specified in your system prompt.`;
 
   const result = await invokeLLM({
     messages: [
-      { role: 'system', content: CODEBASE_SYSTEM_PROMPT },
-      { role: 'user',   content: userPrompt },
+      { role: "system", content: CODEBASE_SYSTEM_PROMPT },
+      { role: "user", content: userPrompt },
     ],
-    responseFormat: { type: 'json_object' },
+    responseFormat: { type: "json_object" },
   });
 
   const codeResult: {
     files: Array<{
       path: string;
       content: string;
-      action: 'create' | 'update';
+      action: "create" | "update";
       commitMessage: string;
     }>;
     summary: string;
@@ -258,7 +261,7 @@ Write the code changes. Return the full JSON response as specified in your syste
   } = parseLLMContent(result.choices[0].message.content);
 
   if (!codeResult.files?.length) {
-    throw new Error('WRITE_CODE: LLM returned no files');
+    throw new Error("WRITE_CODE: LLM returned no files");
   }
 
   // Commit each file to the feature branch
@@ -266,26 +269,26 @@ Write the code changes. Return the full JSON response as specified in your syste
   for (const file of codeResult.files) {
     const existing = await getFile(file.path, p.branch);
     await writeFile({
-      path:    file.path,
+      path: file.path,
       content: file.content,
       message: `[AgentZ] ${file.commitMessage}`,
-      branch:  p.branch,
-      sha:     existing?.sha,
+      branch: p.branch,
+      sha: existing?.sha,
     });
     committedFiles.push(file.path);
   }
 
   await logActivity({
     userId: null,
-    action: 'code_written',
-    entityType: 'task',
+    action: "code_written",
+    entityType: "task",
     entityId: 0,
     details: {
-      taskId:    task.id,
+      taskId: task.id,
       missionId: task.missionId,
-      branch:    p.branch,
-      files:     committedFiles,
-      summary:   codeResult.summary,
+      branch: p.branch,
+      files: committedFiles,
+      summary: codeResult.summary,
       nextSteps: codeResult.nextSteps,
     },
   });

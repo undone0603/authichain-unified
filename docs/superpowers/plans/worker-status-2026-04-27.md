@@ -189,32 +189,35 @@ This Phase 0 output produces these changes to `2026-04-27-ecosystem-consolidatio
 
 **Why added:** Q3 revealed top-level `src/` is a Worker, not orphan source. Cannot proceed with deletions until classified.
 
-- [ ] **Step 1: Read `src/index.ts` end-to-end and `src/agents/government-lead-gen-v2.ts`**
+**Status: COMPLETE (2026-09-01)**
 
-```bash
-cat src/index.ts
-cat src/agents/government-lead-gen-v2.ts
-```
+- [x] **Step 1: Read `src/index.ts` end-to-end and `src/agents/government-lead-gen-v2.ts`**
 
-Identify what this worker does and whether it overlaps with any existing `workers/<name>/` worker.
+  The worker was a Hono-based bridge with JWT, Supabase, and RapidAPI bindings,
+  plus a `government-lead-gen-v2.ts` agent. It is a real, purpose-built worker.
 
-- [ ] **Step 2: Check if it's deployed under any name**
+- [x] **Step 2: Check if it's deployed under any name**
 
-```bash
-cd /tmp
-# pick the most likely name based on file content — try several
-wrangler deployments list --name authichain-bridge 2>&1 | tail -3
-wrangler deployments list --name authichain-government 2>&1 | tail -3
-# add others based on hints in the code
-```
+  Not deployed under its own name at the time of investigation, but the code
+  was clearly intended for the `authichain-bridge` fleet slot.
 
-- [ ] **Step 3: Decide one of**
+- [x] **Step 3: Decision — MOVE to `workers/authichain-bridge/`**
 
-  - **MOVE to `workers/<name>/`**: it's a real worker, just lives in the wrong place
-  - **DELETE**: it's a superseded scaffold, not deployed, no unique value
-  - **KEEP at top-level with docs**: rare; needs a clear structural reason
+  The worker was moved to `workers/authichain-bridge/src/` (alongside the
+  existing `wrangler.toml`). The top-level `src/` is now the Next.js App Router
+  source tree, not a worker.
 
-- [ ] **Step 4: Document decision in this file** (append a "Top-level src/ disposition" section)
+- [x] **Step 4: Documented here. Task 0.6 complete.**
+
+---
+
+## Top-level `src/` disposition (Task 0.6 outcome)
+
+The original `src/index.ts` Hono bridge worker was **moved to
+`workers/authichain-bridge/`**. The top-level `src/` now contains only the
+Next.js App Router tree (`src/app/`, `src/lib/`, `src/db/`, etc.) — no Cloudflare
+Worker code remains at the repo root. Phase 1.4 (the old "delete top-level `src/`"
+task) is **cancelled** — the directory is legitimate and essential.
 
 ---
 
@@ -225,4 +228,4 @@ wrangler deployments list --name authichain-government 2>&1 | tail -3
 - [x] Q3 top-level `src/` classified (Hono worker, NOT orphan)
 - [x] Q4 lib/ consumers identified, target dir decided (`shared/`)
 - [x] Plan revisions enumerated (6 changes required to ecosystem-consolidation.md)
-- [ ] Task 0.6 executed (Hono worker disposition) — gates Phase 1.4 cancellation
+- [x] Task 0.6 executed — bridge worker moved to `workers/authichain-bridge/`, Phase 1.4 cancelled

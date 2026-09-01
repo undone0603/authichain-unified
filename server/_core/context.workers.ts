@@ -1,8 +1,7 @@
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
-import type { IMissionsRepository } from "../missions/types";
-import type { IAdminRepository } from "../admin/types";
+
 import { DbMissionsRepository } from "../missions/db-repository";
 import { DbAdminRepository } from "../admin/db-repository";
 import { getHyperdriveDb } from "../db";
@@ -17,8 +16,10 @@ export async function createWorkersContext(
   let user: User | null = null;
 
   try {
-    user = await sdk.authenticateRequest(opts.req as unknown as import("express").Request);
-  } catch (error) {
+    user = await sdk.authenticateRequest(
+      opts.req as unknown as import("express").Request
+    );
+  } catch (_error) {
     // Authentication is optional for public procedures.
     user = null;
   }
@@ -29,13 +30,16 @@ export async function createWorkersContext(
   const forwardedProto = opts.req.headers.get("x-forwarded-proto");
   const secure =
     url.protocol === "https:" ||
-    (forwardedProto?.split(",").some(p => p.trim().toLowerCase() === "https") ?? false);
+    (forwardedProto?.split(",").some(p => p.trim().toLowerCase() === "https") ??
+      false);
 
   return {
     db,
     user,
     secure,
-    setCookieHeader: (value: string) => { opts.resHeaders.append("Set-Cookie", value); },
+    setCookieHeader: (value: string) => {
+      opts.resHeaders.append("Set-Cookie", value);
+    },
     // DbMissionsRepository accepts an optional injected db (Task 2b-3) --
     // pass the real per-request Workers db so ctx.missionsRepo doesn't fall
     // through to its legacy getDb()/process.env.DATABASE_URL bridge, which

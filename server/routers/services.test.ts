@@ -14,14 +14,17 @@ vi.mock("../db.js", () => ({
 }));
 
 vi.mock("../stripe-service.js", () => ({
-  createPaymentCheckout: vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/mock", sessionId: "cs_mock_123" }),
+  createPaymentCheckout: vi.fn().mockResolvedValue({
+    url: "https://checkout.stripe.com/mock",
+    sessionId: "cs_mock_123",
+  }),
 }));
 
 vi.mock("../_core/trpc.js", () => {
   const makeProc = () => ({
     query: (fn: any) => ({ _type: "query", _fn: fn }),
     mutation: (fn: any) => ({ _type: "mutation", _fn: fn }),
-    input: (schema: any) => ({
+    input: (_schema: any) => ({
       query: (fn: any) => ({ _type: "query", _fn: fn }),
       mutation: (fn: any) => ({ _type: "mutation", _fn: fn }),
     }),
@@ -82,7 +85,10 @@ describe("servicesRouter — checkout", () => {
     const { servicesRouter } = await import("../services/router.js");
     const ctx = { user: { id: 1, email: "a@b.com", name: "Test" } };
     await expect(
-      (servicesRouter as any).checkout._fn({ ctx, input: { origin: "https://example.com" } }),
+      (servicesRouter as any).checkout._fn({
+        ctx,
+        input: { origin: "https://example.com" },
+      })
     ).rejects.toThrow("serviceKey or serviceType is required");
   });
 
@@ -92,7 +98,10 @@ describe("servicesRouter — checkout", () => {
     const ctx = { user: { id: 1, email: "a@b.com", name: "Test" } };
     const result = await (servicesRouter as any).checkout._fn({
       ctx,
-      input: { serviceKey: "authenticity_audit", origin: "https://example.com" },
+      input: {
+        serviceKey: "authenticity_audit",
+        origin: "https://example.com",
+      },
     });
     expect(vi.mocked(createPaymentCheckout)).toHaveBeenCalledOnce();
     expect(result.checkoutUrl).toBe("https://checkout.stripe.com/mock");
@@ -108,7 +117,10 @@ describe("servicesRouter — updateStatus", () => {
     const result = await (servicesRouter as any).updateStatus._fn({
       input: { id: 7, status: "completed" },
     });
-    expect(vi.mocked(updateServiceOrderStatus)).toHaveBeenCalledWith(7, "completed");
+    expect(vi.mocked(updateServiceOrderStatus)).toHaveBeenCalledWith(
+      7,
+      "completed"
+    );
     expect(result.success).toBe(true);
   });
 });

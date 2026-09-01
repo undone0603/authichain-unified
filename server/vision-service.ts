@@ -1,6 +1,6 @@
 /**
  * AuthiChain Vision Service — ProductDNA™ Engine
- * Uses GPT-4o Vision to analyze product snapshots against 
+ * Uses GPT-4o Vision to analyze product snapshots against
  * harvest-level visual markers.
  */
 import { invokeLLM, parseLLMContent } from "./_core/llm";
@@ -16,8 +16,13 @@ export interface DNAAnalysisResult {
 /**
  * Analyzes a product image using real GPT-4o Vision.
  */
-export async function analyzeProductVision(imageUrl: string, productType: string): Promise<DNAAnalysisResult> {
-  console.log(`🧬 Analyzing ProductDNA for ${productType} via GPT-4o Vision...`);
+export async function analyzeProductVision(
+  imageUrl: string,
+  productType: string
+): Promise<DNAAnalysisResult> {
+  console.log(
+    `🧬 Analyzing ProductDNA for ${productType} via GPT-4o Vision...`
+  );
 
   try {
     const systemPrompt = `You are the AuthiChain ProductDNA verification engine. 
@@ -31,15 +36,18 @@ export async function analyzeProductVision(imageUrl: string, productType: string
     const response = await invokeLLM({
       messages: [
         { role: "system", content: systemPrompt },
-        { 
-          role: "user", 
+        {
+          role: "user",
           content: [
-            { type: "text", text: "Please verify if this product matches the recorded harvest DNA markers." },
-            { type: "image_url", image_url: { url: imageUrl, detail: "high" } }
-          ] as any
-        }
+            {
+              type: "text",
+              text: "Please verify if this product matches the recorded harvest DNA markers.",
+            },
+            { type: "image_url", image_url: { url: imageUrl, detail: "high" } },
+          ] as any,
+        },
       ],
-      responseFormat: { type: "json_object" }
+      responseFormat: { type: "json_object" },
     });
 
     const content = response.choices[0].message.content;
@@ -47,16 +55,21 @@ export async function analyzeProductVision(imageUrl: string, productType: string
 
     try {
       analysis = parseLLMContent<any>(content);
-    } catch (e) {
-      console.warn("[Vision] Failed to parse LLM response, using partial extraction...");
+    } catch (_e) {
+      console.warn(
+        "[Vision] Failed to parse LLM response, using partial extraction..."
+      );
       // Simple regex fallback for malformed JSON
-      const resultMatch = typeof content === "string" ? content.match(/"result":\s*"([^"]+)"/) : null;
+      const resultMatch =
+        typeof content === "string"
+          ? content.match(/"result":\s*"([^"]+)"/)
+          : null;
       analysis = {
         result: resultMatch ? resultMatch[1] : "mismatch",
         confidence: 50,
         markers: ["Automatic parsing failed"],
         anomalies: ["Unstructured response"],
-        recommendation: "Manual review required due to system variance."
+        recommendation: "Manual review required due to system variance.",
       };
     }
 
@@ -65,9 +78,8 @@ export async function analyzeProductVision(imageUrl: string, productType: string
       confidence: analysis.confidence || 0,
       markers: analysis.markers || [],
       visualAnomalies: analysis.anomalies || [],
-      recommendation: analysis.recommendation || "No recommendation provided."
+      recommendation: analysis.recommendation || "No recommendation provided.",
     };
-
   } catch (error: any) {
     console.error("[Vision] Critical failure:", error.message);
     return {
@@ -75,7 +87,8 @@ export async function analyzeProductVision(imageUrl: string, productType: string
       confidence: 0,
       markers: [],
       visualAnomalies: ["Vision system offline"],
-      recommendation: "System error during analysis. Flag for manual inspection."
+      recommendation:
+        "System error during analysis. Flag for manual inspection.",
     };
   }
 }

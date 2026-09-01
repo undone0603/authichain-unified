@@ -1,19 +1,19 @@
 import { nanoid } from "nanoid";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "../db";
-import { referrals, referralClicks, affiliates } from "../../drizzle/schema";
+import { referrals, referralClicks } from "../../drizzle/schema";
 
 export const COMMISSION_RATES: Record<string, number> = {
-  starter: 0.10,      // 10%
+  starter: 0.1, // 10%
   professional: 0.15, // 15%
-  enterprise: 0.20,   // 20%
-  agency: 0.25,       // 25%
+  enterprise: 0.2, // 20%
+  agency: 0.25, // 25%
 };
 
 export const AFFILIATE_BONUS_TIERS = [
-  { threshold: 5,  bonus: 1000,  tier: "silver" },   // $10 bonus at 5 referrals
-  { threshold: 10, bonus: 2500,  tier: "gold" },     // $25 bonus at 10 referrals
-  { threshold: 25, bonus: 7500,  tier: "platinum" }, // $75 bonus at 25 referrals
+  { threshold: 5, bonus: 1000, tier: "silver" }, // $10 bonus at 5 referrals
+  { threshold: 10, bonus: 2500, tier: "gold" }, // $25 bonus at 10 referrals
+  { threshold: 25, bonus: 7500, tier: "platinum" }, // $75 bonus at 25 referrals
 ];
 
 /** Pure recurring-commission calculator (in cents). Unknown plans fall back to starter. */
@@ -31,13 +31,18 @@ export function generateAffiliateCode(userId: number): string {
   return `AFF-${userId}-${nanoid(6).toUpperCase()}`;
 }
 
-export async function createReferralCode(referrerId: number): Promise<{ id: number; referralCode: string }> {
+export async function createReferralCode(
+  referrerId: number
+): Promise<{ id: number; referralCode: string }> {
   const code = generateReferralCode(referrerId);
-  const [result] = await db.insert(referrals).values({
-    referrerId,
-    referralCode: code,
-    status: "pending",
-  }).returning();
+  const [result] = await db
+    .insert(referrals)
+    .values({
+      referrerId,
+      referralCode: code,
+      status: "pending",
+    })
+    .returning();
   return { id: result.id, referralCode: code };
 }
 
@@ -57,16 +62,20 @@ export async function completeReferral(params: {
   referredEmail: string;
   tier: string;
 }): Promise<void> {
-  const [existing] = await db.select()
+  const [existing] = await db
+    .select()
     .from(referrals)
     .where(eq(referrals.referralCode, params.referralCode))
     .limit(1);
 
   if (!existing) throw new Error("Referral code not found");
-  if (existing.status !== "pending") throw new Error("Referral code already used");
-  if (existing.referrerId === params.referredId) throw new Error("Cannot use your own referral code");
+  if (existing.status !== "pending")
+    throw new Error("Referral code already used");
+  if (existing.referrerId === params.referredId)
+    throw new Error("Cannot use your own referral code");
 
-  const updated = await db.update(referrals)
+  const updated = await db
+    .update(referrals)
     .set({
       referredId: params.referredId,
       referredEmail: params.referredEmail,
@@ -74,21 +83,33 @@ export async function completeReferral(params: {
       tier: params.tier as any,
       convertedAt: new Date(),
     })
-    .where(and(eq(referrals.referralCode, params.referralCode), eq(referrals.status, "pending")))
+    .where(
+      and(
+        eq(referrals.referralCode, params.referralCode),
+        eq(referrals.status, "pending")
+      )
+    )
     .returning({ id: referrals.id });
 
   if (updated.length === 0) throw new Error("Referral code already used");
 }
 
 export async function getReferralStats(referrerId: number) {
-  const all = await db.select().from(referrals).where(eq(referrals.referrerId, referrerId));
+  const all = await db
+    .select()
+    .from(referrals)
+    .where(eq(referrals.referrerId, referrerId));
   const converted = all.filter(r => r.status === "converted");
-  const totalCommission = converted.reduce((sum, r) => sum + parseFloat(r.commissionPaid || "0"), 0);
+  const totalCommission = converted.reduce(
+    (sum, r) => sum + parseFloat(r.commissionPaid || "0"),
+    0
+  );
   return {
     totalReferrals: all.length,
     convertedReferrals: converted.length,
     pendingReferrals: all.filter(r => r.status === "pending").length,
     totalCommission,
-    conversionRate: all.length > 0 ? Math.round((converted.length / all.length) * 100) : 0,
+    conversionRate:
+      all.length > 0 ? Math.round((converted.length / all.length) * 100) : 0,
   };
 }

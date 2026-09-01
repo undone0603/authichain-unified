@@ -3,73 +3,73 @@
 
 export const BRANDS = {
   authichain: {
-    name: 'AuthiChain',
-    tagline: 'The Truth Layer for the Global Economy',
-    primary: '#d4af37',
-    primaryDim: '#b8941f',
-    secondary: '#8b5cf6',
-    bg: '#050507',
-    bg2: '#0a0a0f',
-    bg3: '#12121a',
-    text: '#f8fafc',
-    textDim: '#94a3b8',
-    border: 'rgba(212,175,55,0.25)',
-    borderDim: 'rgba(212,175,55,0.12)',
-    glowRgba: 'rgba(212,175,55,0.15)',
-    logoMark: 'AC',
-    url: 'https://authichain.com',
+    name: "AuthiChain",
+    tagline: "The Truth Layer for the Global Economy",
+    primary: "#d4af37",
+    primaryDim: "#b8941f",
+    secondary: "#8b5cf6",
+    bg: "#050507",
+    bg2: "#0a0a0f",
+    bg3: "#12121a",
+    text: "#f8fafc",
+    textDim: "#94a3b8",
+    border: "rgba(212,175,55,0.25)",
+    borderDim: "rgba(212,175,55,0.12)",
+    glowRgba: "rgba(212,175,55,0.15)",
+    logoMark: "AC",
+    url: "https://authichain.com",
   },
   qron: {
-    name: 'QRON Studio',
-    tagline: 'Authentic Blockchain Verified Art QR',
-    primary: '#d4af37',
-    primaryDim: '#b8941f',
-    secondary: '#14b8a6',
-    bg: '#050507',
-    bg2: '#0a0a0f',
-    bg3: '#12121a',
-    text: '#f8fafc',
-    textDim: '#94a3b8',
-    border: 'rgba(212,175,55,0.25)',
-    borderDim: 'rgba(212,175,55,0.12)',
-    glowRgba: 'rgba(212,175,55,0.15)',
-    logoMark: 'QR',
-    url: 'https://qron.space',
+    name: "QRON Studio",
+    tagline: "Authentic Blockchain Verified Art QR",
+    primary: "#d4af37",
+    primaryDim: "#b8941f",
+    secondary: "#14b8a6",
+    bg: "#050507",
+    bg2: "#0a0a0f",
+    bg3: "#12121a",
+    text: "#f8fafc",
+    textDim: "#94a3b8",
+    border: "rgba(212,175,55,0.25)",
+    borderDim: "rgba(212,175,55,0.12)",
+    glowRgba: "rgba(212,175,55,0.15)",
+    logoMark: "QR",
+    url: "https://qron.space",
   },
   strainchain: {
-    name: 'StrainChain',
-    tagline: 'Cannabis Provenance & Seed-to-Sale Storymode',
-    primary: '#22c55e',
-    primaryDim: '#16a34a',
-    secondary: '#f59e0b',
-    bg: '#050705',
-    bg2: '#0a0f0a',
-    bg3: '#111811',
-    text: '#f0fdf4',
-    textDim: '#86efac',
-    border: 'rgba(34,197,94,0.25)',
-    borderDim: 'rgba(34,197,94,0.12)',
-    glowRgba: 'rgba(34,197,94,0.15)',
-    logoMark: 'SC',
-    url: 'https://strainchain.io',
+    name: "StrainChain",
+    tagline: "Cannabis Provenance & Seed-to-Sale Storymode",
+    primary: "#22c55e",
+    primaryDim: "#16a34a",
+    secondary: "#f59e0b",
+    bg: "#050705",
+    bg2: "#0a0f0a",
+    bg3: "#111811",
+    text: "#f0fdf4",
+    textDim: "#86efac",
+    border: "rgba(34,197,94,0.25)",
+    borderDim: "rgba(34,197,94,0.12)",
+    glowRgba: "rgba(34,197,94,0.15)",
+    logoMark: "SC",
+    url: "https://strainchain.io",
   },
   govchain: {
-    name: 'GovChain',
-    tagline: 'Sovereign Document Verification Protocol',
-    primary: '#3b82f6',
-    primaryDim: '#2563eb',
-    secondary: '#facc15',
-    bg: '#05060b',
-    bg2: '#0a0c14',
-    bg3: '#101423',
-    text: '#f0f9ff',
-    textDim: '#93c5fd',
-    border: 'rgba(59,130,246,0.25)',
-    borderDim: 'rgba(59,130,246,0.12)',
-    glowRgba: 'rgba(59,130,246,0.15)',
-    logoMark: 'GC',
-    url: 'https://govchain.us',
-  }
+    name: "GovChain",
+    tagline: "Sovereign Document Verification Protocol",
+    primary: "#3b82f6",
+    primaryDim: "#2563eb",
+    secondary: "#facc15",
+    bg: "#05060b",
+    bg2: "#0a0c14",
+    bg3: "#101423",
+    text: "#f0f9ff",
+    textDim: "#93c5fd",
+    border: "rgba(59,130,246,0.25)",
+    borderDim: "rgba(59,130,246,0.12)",
+    glowRgba: "rgba(59,130,246,0.15)",
+    logoMark: "GC",
+    url: "https://govchain.us",
+  },
 };
 
 export const FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">`;
@@ -103,7 +103,7 @@ export function svgLogo(brand: keyof typeof BRANDS, size = 36) {
       <polygon points="18,5 30,11.5 30,24.5 18,31 6,24.5 6,11.5" fill="${b.bg}" stroke="${b.primary}" stroke-width="0.5" opacity="0.6"/>
       <path d="M12,24 L12,16 L18,11 L24,16 L24,24 Z" stroke="${b.primary}" stroke-width="1.5" fill="none"/>
       <line x1="18" y1="11" x2="18" y2="8" stroke="${b.secondary}" stroke-width="1.5" stroke-linecap="round"/>
-    </svg>`
+    </svg>`,
   };
   return logos[brand] || logos.authichain;
 }
@@ -435,7 +435,7 @@ export function seoMetadata(brand: keyof typeof BRANDS) {
   <meta property="twitter:image" content="https://images.unsplash.com/photo-1639322537228-f710d846310a?w=1200&q=80&auto=format">`;
 }
 
-export function growthBand(brand: keyof typeof BRANDS) {
+export function growthBand(_brand: keyof typeof BRANDS) {
   return `
 <section style="background: var(--primary); padding: 12px 24px; text-align: center; position: relative; z-index: 1001">
   <p style="color: #000; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 1px; margin: 0">
@@ -444,7 +444,7 @@ export function growthBand(brand: keyof typeof BRANDS) {
 </section>`;
 }
 
-export function communityHub(brand: keyof typeof BRANDS) {
+export function communityHub(_brand: keyof typeof BRANDS) {
   return `
 <section class="web3-section" id="community">
   <div class="hero-content" style="max-width:1000px">
@@ -523,7 +523,7 @@ export function techStack() {
 </section>`;
 }
 
-export function ecosystemFooter(currentBrand: keyof typeof BRANDS) {
+export function ecosystemFooter(_currentBrand: keyof typeof BRANDS) {
   return `
 <!-- REAL-TIME VERIFICATION TICKER -->
 <div style="background: rgba(0,0,0,0.5); border-top: 1px solid var(--border-dim); padding: 8px 24px; overflow: hidden; white-space: nowrap; position: relative; z-index: 10">
@@ -540,7 +540,7 @@ export function ecosystemFooter(currentBrand: keyof typeof BRANDS) {
   <div class="footer-grid" style="max-width: 1200px; margin: 0 auto">
     <div>
       <div class="nav-logo" style="margin-bottom:16px">
-        ${svgLogo('authichain', 28)}
+        ${svgLogo("authichain", 28)}
         <span class="nav-logo-text">AUTHI<span>CHAIN</span></span>
       </div>
       <p style="font-size:14px; color:var(--text-dim)">The Truth Layer for the Global Economy. Built on Polygon. Anchored to Bitcoin.</p>

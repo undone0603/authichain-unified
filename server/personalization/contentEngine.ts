@@ -2,7 +2,7 @@ import { invokeLLM, parseLLMContent } from "../_core/llm";
 
 /**
  * AI Content Personalization Engine
- * 
+ *
  * Automatically generates personalized content based on visitor segments
  */
 
@@ -41,13 +41,13 @@ export async function generatePersonalizedContent(
   const prompt = `You are an expert conversion copywriter personalizing landing page content for AuthiChain, an AI-powered blockchain authentication platform.
 
 **Visitor Context:**
-${context.country ? `- Location: ${context.city || ''} ${context.country}` : ''}
-${context.trafficSource ? `- Traffic Source: ${context.trafficSource}` : ''}
-${context.utmSource ? `- UTM Source: ${context.utmSource}` : ''}
-${context.utmMedium ? `- UTM Medium: ${context.utmMedium}` : ''}
-${context.utmCampaign ? `- Campaign: ${context.utmCampaign}` : ''}
-${context.deviceType ? `- Device: ${context.deviceType}` : ''}
-${context.segment ? `- Segment: ${context.segment}` : ''}
+${context.country ? `- Location: ${context.city || ""} ${context.country}` : ""}
+${context.trafficSource ? `- Traffic Source: ${context.trafficSource}` : ""}
+${context.utmSource ? `- UTM Source: ${context.utmSource}` : ""}
+${context.utmMedium ? `- UTM Medium: ${context.utmMedium}` : ""}
+${context.utmCampaign ? `- Campaign: ${context.utmCampaign}` : ""}
+${context.deviceType ? `- Device: ${context.deviceType}` : ""}
+${context.segment ? `- Segment: ${context.segment}` : ""}
 
 **Base Content:**
 - Headline: ${baseContent.headline}
@@ -76,7 +76,8 @@ Return personalized headline, subheadline, CTA, hero text, reasoning, and confid
     messages: [
       {
         role: "system",
-        content: "You are an expert conversion copywriter who creates highly personalized content that resonates with specific audience segments.",
+        content:
+          "You are an expert conversion copywriter who creates highly personalized content that resonates with specific audience segments.",
       },
       {
         role: "user",
@@ -98,7 +99,14 @@ Return personalized headline, subheadline, CTA, hero text, reasoning, and confid
             reasoning: { type: "string" },
             confidence: { type: "number" },
           },
-          required: ["headline", "subheadline", "cta", "heroText", "reasoning", "confidence"],
+          required: [
+            "headline",
+            "subheadline",
+            "cta",
+            "heroText",
+            "reasoning",
+            "confidence",
+          ],
           additionalProperties: false,
         },
       },
@@ -115,13 +123,15 @@ Return personalized headline, subheadline, CTA, hero text, reasoning, and confid
 export async function generatePersonalizationRules(
   targetElement: string,
   baseContent: string
-): Promise<Array<{
-  name: string;
-  conditions: Record<string, any>;
-  content: string;
-  reasoning: string;
-  expectedLift: number;
-}>> {
+): Promise<
+  Array<{
+    name: string;
+    conditions: Record<string, any>;
+    content: string;
+    reasoning: string;
+    expectedLift: number;
+  }>
+> {
   const prompt = `Generate personalization rules for AuthiChain landing page.
 
 **Element:** ${targetElement}
@@ -158,7 +168,8 @@ Return array of personalization rules.`;
     messages: [
       {
         role: "system",
-        content: "You are an expert in audience segmentation and personalized marketing.",
+        content:
+          "You are an expert in audience segmentation and personalized marketing.",
       },
       {
         role: "user",
@@ -184,7 +195,13 @@ Return array of personalization rules.`;
                   reasoning: { type: "string" },
                   expectedLift: { type: "number" },
                 },
-                required: ["name", "conditions", "content", "reasoning", "expectedLift"],
+                required: [
+                  "name",
+                  "conditions",
+                  "content",
+                  "reasoning",
+                  "expectedLift",
+                ],
                 additionalProperties: false,
               },
             },
@@ -209,14 +226,22 @@ export function detectSegment(context: VisitorContext): string {
 
   // Geographic segments
   if (context.country === "US") segments.push("us");
-  else if (["GB", "DE", "FR", "IT", "ES"].includes(context.country || "")) segments.push("europe");
-  else if (["CN", "JP", "KR", "SG"].includes(context.country || "")) segments.push("asia");
+  else if (["GB", "DE", "FR", "IT", "ES"].includes(context.country || ""))
+    segments.push("europe");
+  else if (["CN", "JP", "KR", "SG"].includes(context.country || ""))
+    segments.push("asia");
 
   // Traffic source segments
   if (context.trafficSource?.includes("google")) segments.push("search");
-  else if (context.trafficSource?.includes("linkedin")) segments.push("linkedin");
-  else if (context.trafficSource?.includes("facebook") || context.trafficSource?.includes("twitter")) segments.push("social");
-  else if (!context.trafficSource || context.trafficSource === "direct") segments.push("direct");
+  else if (context.trafficSource?.includes("linkedin"))
+    segments.push("linkedin");
+  else if (
+    context.trafficSource?.includes("facebook") ||
+    context.trafficSource?.includes("twitter")
+  )
+    segments.push("social");
+  else if (!context.trafficSource || context.trafficSource === "direct")
+    segments.push("direct");
 
   // Device segments
   if (context.deviceType === "mobile") segments.push("mobile");
@@ -224,8 +249,10 @@ export function detectSegment(context: VisitorContext): string {
 
   // Campaign segments
   if (context.utmCampaign?.includes("brand")) segments.push("brand_aware");
-  else if (context.utmCampaign?.includes("product")) segments.push("product_interest");
-  else if (context.utmCampaign?.includes("retarget")) segments.push("retargeting");
+  else if (context.utmCampaign?.includes("product"))
+    segments.push("product_interest");
+  else if (context.utmCampaign?.includes("retarget"))
+    segments.push("retargeting");
 
   return segments.join("_") || "default";
 }
@@ -248,12 +275,12 @@ export function matchRules(
   for (const rule of sortedRules) {
     try {
       const conditions = JSON.parse(rule.conditions);
-      
+
       // Check if all conditions match
       let matches = true;
       for (const [key, value] of Object.entries(conditions)) {
         const contextValue = (context as any)[key];
-        
+
         if (Array.isArray(value)) {
           // Array means "any of these values"
           if (!value.includes(contextValue)) {
@@ -304,7 +331,7 @@ export async function getGeolocation(ipAddress: string): Promise<{
     // Use ipapi.co for geolocation (free tier: 1000 requests/day)
     const response = await fetch(`https://ipapi.co/${ipAddress}/json/`);
     const data = await response.json();
-    
+
     return {
       country: data.country_code,
       city: data.city,
@@ -331,7 +358,7 @@ export function parseUTMParams(url: string): {
       utmMedium: urlObj.searchParams.get("utm_medium") || undefined,
       utmCampaign: urlObj.searchParams.get("utm_campaign") || undefined,
     };
-  } catch (error) {
+  } catch (_error) {
     return {};
   }
 }
@@ -341,16 +368,17 @@ export function parseUTMParams(url: string): {
  */
 export function detectTrafficSource(referrer?: string): string {
   if (!referrer) return "direct";
-  
+
   const lowerReferrer = referrer.toLowerCase();
-  
+
   if (lowerReferrer.includes("google")) return "google";
   if (lowerReferrer.includes("bing")) return "bing";
   if (lowerReferrer.includes("linkedin")) return "linkedin";
   if (lowerReferrer.includes("facebook")) return "facebook";
-  if (lowerReferrer.includes("twitter") || lowerReferrer.includes("t.co")) return "twitter";
+  if (lowerReferrer.includes("twitter") || lowerReferrer.includes("t.co"))
+    return "twitter";
   if (lowerReferrer.includes("reddit")) return "reddit";
-  
+
   return "referral";
 }
 
@@ -373,13 +401,17 @@ export async function analyzePersonalizationPerformance(
   const prompt = `Analyze personalization performance and provide insights:
 
 **Rules Performance:**
-${rules.map(r => `
+${rules
+  .map(
+    r => `
 - **${r.name}**
   - Conditions: ${r.conditions}
   - Views: ${r.views}
   - Conversions: ${r.conversions}
   - Conversion Rate: ${r.conversionRate}%
-`).join('\n')}
+`
+  )
+  .join("\n")}
 
 **Task:**
 1. Identify which segments respond best to personalization
@@ -393,7 +425,8 @@ Provide actionable insights for optimization.`;
     messages: [
       {
         role: "system",
-        content: "You are an expert data analyst specializing in personalization and conversion optimization.",
+        content:
+          "You are an expert data analyst specializing in personalization and conversion optimization.",
       },
       {
         role: "user",
@@ -429,5 +462,9 @@ Provide actionable insights for optimization.`;
   });
 
   const content = response.choices[0].message.content;
-  return parseLLMContent<{ insights: string[]; recommendations: string[]; topPerformers: string[] }>(content);
+  return parseLLMContent<{
+    insights: string[];
+    recommendations: string[];
+    topPerformers: string[];
+  }>(content);
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ShieldCheck, ChevronLeft, Smartphone, Cpu } from "lucide-react";
+import { ChevronLeft, Smartphone, Cpu } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Hardware Integration | StrainChain Protocol",

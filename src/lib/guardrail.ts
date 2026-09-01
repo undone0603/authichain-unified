@@ -1,8 +1,17 @@
-import { eq, sql } from 'drizzle-orm';
-import { db } from '@/db';
-import { guardrailChannels, guardrailCounters, suppressionList, killSwitches, guardrailEvents } from '@/db/schema';
+import { eq, sql } from "drizzle-orm";
+import { db } from "@/db";
+import {
+  guardrailChannels,
+  suppressionList,
+  killSwitches,
+  guardrailEvents,
+} from "@/db/schema";
 
-export type CheckResult = { allowed: boolean; remaining: number; reason?: string };
+export type CheckResult = {
+  allowed: boolean;
+  remaining: number;
+  reason?: string;
+};
 
 export function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
@@ -19,39 +28,75 @@ export function todayUtc(): string {
 export async function checkAndReserve(
   channelName: string,
   count = 1,
-  recipient?: string,
+  recipient?: string
 ): Promise<CheckResult> {
-  const [globalKill] = await db.select().from(killSwitches).where(eq(killSwitches.scope, 'global')).limit(1);
+  const [globalKill] = await db
+    .select()
+    .from(killSwitches)
+    .where(eq(killSwitches.scope, "global"))
+    .limit(1);
   if (globalKill?.enabled) {
-    return { allowed: false, remaining: 0, reason: 'global kill switch engaged' };
+    return {
+      allowed: false,
+      remaining: 0,
+      reason: "global kill switch engaged",
+    };
   }
 
   if (!Number.isInteger(count) || count < 1) {
-    return { allowed: false, remaining: 0, reason: 'invalid count' };
+    return { allowed: false, remaining: 0, reason: "invalid count" };
   }
 
-  const [channel] = await db.select().from(guardrailChannels).where(eq(guardrailChannels.name, channelName)).limit(1);
+  const [channel] = await db
+    .select()
+    .from(guardrailChannels)
+    .where(eq(guardrailChannels.name, channelName))
+    .limit(1);
   if (!channel) {
-    return { allowed: false, remaining: 0, reason: `unknown channel: ${channelName}` };
+    return {
+      allowed: false,
+      remaining: 0,
+      reason: `unknown channel: ${channelName}`,
+    };
   }
   if (!channel.enabled) {
-    return { allowed: false, remaining: 0, reason: 'channel disabled' };
+    return { allowed: false, remaining: 0, reason: "channel disabled" };
   }
 
-  const [channelKill] = await db.select().from(killSwitches).where(eq(killSwitches.scope, channelName)).limit(1);
+  const [channelKill] = await db
+    .select()
+    .from(killSwitches)
+    .where(eq(killSwitches.scope, channelName))
+    .limit(1);
   if (channelKill?.enabled) {
-    return { allowed: false, remaining: 0, reason: `channel kill switch engaged: ${channelKill.reason ?? 'no reason given'}` };
+    return {
+      allowed: false,
+      remaining: 0,
+      reason: `channel kill switch engaged: ${channelKill.reason ?? "no reason given"}`,
+    };
   }
 
   if (recipient) {
-    const [suppressed] = await db.select().from(suppressionList).where(eq(suppressionList.email, recipient.toLowerCase())).limit(1);
+    const [suppressed] = await db
+      .select()
+      .from(suppressionList)
+      .where(eq(suppressionList.email, recipient.toLowerCase()))
+      .limit(1);
     if (suppressed) {
-      return { allowed: false, remaining: 0, reason: `recipient suppressed: ${suppressed.reason}` };
+      return {
+        allowed: false,
+        remaining: 0,
+        reason: `recipient suppressed: ${suppressed.reason}`,
+      };
     }
   }
 
   if (count > channel.dailyCap) {
-    return { allowed: false, remaining: 0, reason: 'requested count exceeds daily cap' };
+    return {
+      allowed: false,
+      remaining: 0,
+      reason: "requested count exceeds daily cap",
+    };
   }
 
   const today = todayUtc();
@@ -68,19 +113,23 @@ export async function checkAndReserve(
   `);
   const rows = updated as unknown as Array<{ count: number }>;
   if (!rows.length) {
-    return { allowed: false, remaining: 0, reason: 'daily cap reached' };
+    return { allowed: false, remaining: 0, reason: "daily cap reached" };
   }
   return { allowed: true, remaining: channel.dailyCap - rows[0].count };
 }
 
 export async function recordEvent(input: {
   channel: string;
-  action: 'check' | 'record' | 'suppress' | 'kill_toggle';
+  action: "check" | "record" | "suppress" | "kill_toggle";
   allowed?: boolean;
   reason?: string;
   metadata?: Record<string, unknown>;
 }): Promise<void> {
-  const [channel] = await db.select().from(guardrailChannels).where(eq(guardrailChannels.name, input.channel)).limit(1);
+  const [channel] = await db
+    .select()
+    .from(guardrailChannels)
+    .where(eq(guardrailChannels.name, input.channel))
+    .limit(1);
   await db.insert(guardrailEvents).values({
     channelId: channel?.id ?? null,
     action: input.action,
@@ -90,14 +139,23 @@ export async function recordEvent(input: {
   });
 }
 
-export async function addSuppression(email: string, reason: string, source: string): Promise<void> {
+export async function addSuppression(
+  email: string,
+  reason: string,
+  source: string
+): Promise<void> {
   await db
     .insert(suppressionList)
     .values({ email: email.toLowerCase(), reason, source })
     .onConflictDoNothing({ target: suppressionList.email });
 }
 
-export async function toggleKillSwitch(scope: string, enabled: boolean, reason: string, updatedBy: string): Promise<void> {
+export async function toggleKillSwitch(
+  scope: string,
+  enabled: boolean,
+  reason: string,
+  updatedBy: string
+): Promise<void> {
   await db
     .insert(killSwitches)
     .values({ scope, enabled, reason, updatedBy })

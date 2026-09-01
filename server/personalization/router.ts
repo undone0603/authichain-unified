@@ -1,10 +1,14 @@
 import { router, publicProcedure, adminProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
-import { visitorProfiles, personalizationRules, personalizationEvents } from "../../drizzle/schema";
+import {
+  visitorProfiles,
+  personalizationRules,
+  personalizationEvents,
+} from "../../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 import {
-  generatePersonalizedContent,
+  _generatePersonalizedContent,
   generatePersonalizationRules,
   detectSegment,
   matchRules,
@@ -17,31 +21,37 @@ import {
 export const personalizationRouter = router({
   // Track visitor and get personalized content (public endpoint)
   getPersonalizedContent: publicProcedure
-    .input(z.object({
-      sessionId: z.string(),
-      ipAddress: z.string().optional(),
-      referrer: z.string().optional(),
-      userAgent: z.string().optional(),
-      url: z.string().optional(),
-      targetElement: z.string().optional().default("headline"),
-    }))
+    .input(
+      z.object({
+        sessionId: z.string(),
+        ipAddress: z.string().optional(),
+        referrer: z.string().optional(),
+        userAgent: z.string().optional(),
+        url: z.string().optional(),
+        targetElement: z.string().optional().default("headline"),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return null;
 
       // Check if visitor profile exists
-      let profile = (await db
-        .select()
-        .from(visitorProfiles)
-        .where(eq(visitorProfiles.sessionId, input.sessionId))
-        .limit(1))[0];
+      let profile = (
+        await db
+          .select()
+          .from(visitorProfiles)
+          .where(eq(visitorProfiles.sessionId, input.sessionId))
+          .limit(1)
+      )[0];
 
       if (!profile) {
         // Create new visitor profile
-        const geo = input.ipAddress ? await getGeolocation(input.ipAddress) : {};
+        const geo = input.ipAddress
+          ? await getGeolocation(input.ipAddress)
+          : {};
         const utmParams = input.url ? parseUTMParams(input.url) : {};
         const trafficSource = detectTrafficSource(input.referrer);
-        
+
         // Detect device type from user agent
         let deviceType: "desktop" | "mobile" | "tablet" = "desktop";
         if (input.userAgent) {
@@ -71,11 +81,13 @@ export const personalizationRouter = router({
           pageViews: 1,
         });
 
-        profile = (await db
-          .select()
-          .from(visitorProfiles)
-          .where(eq(visitorProfiles.sessionId, input.sessionId))
-          .limit(1))[0];
+        profile = (
+          await db
+            .select()
+            .from(visitorProfiles)
+            .where(eq(visitorProfiles.sessionId, input.sessionId))
+            .limit(1)
+        )[0];
       } else {
         // Update existing profile
         await db
@@ -107,7 +119,8 @@ export const personalizationRouter = router({
           utmSource: profile.utmSource || undefined,
           utmMedium: profile.utmMedium || undefined,
           utmCampaign: profile.utmCampaign || undefined,
-          deviceType: profile.deviceType as "desktop" | "mobile" | "tablet" | undefined,
+          deviceType: profile.deviceType as
+            "desktop" | "mobile" | "tablet" | undefined,
           segment: profile.segment || undefined,
         },
         rules.map(r => ({
@@ -137,7 +150,10 @@ export const personalizationRouter = router({
             .where(eq(personalizationRules.id, matchedRule.id));
 
           // Recalculate conversion rate
-          const newRate = rule.views > 0 ? Math.round((rule.conversions / rule.views) * 10000) / 100 : 0;
+          const newRate =
+            rule.views > 0
+              ? Math.round((rule.conversions / rule.views) * 10000) / 100
+              : 0;
           await db
             .update(personalizationRules)
             .set({
@@ -158,10 +174,12 @@ export const personalizationRouter = router({
 
   // Track conversion (public endpoint)
   trackConversion: publicProcedure
-    .input(z.object({
-      sessionId: z.string(),
-      ruleId: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        sessionId: z.string(),
+        ruleId: z.number().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) return { success: false };
@@ -183,11 +201,13 @@ export const personalizationRouter = router({
         });
 
         // Update rule stats
-        const rule = (await db
-          .select()
-          .from(personalizationRules)
-          .where(eq(personalizationRules.id, input.ruleId))
-          .limit(1))[0];
+        const rule = (
+          await db
+            .select()
+            .from(personalizationRules)
+            .where(eq(personalizationRules.id, input.ruleId))
+            .limit(1)
+        )[0];
 
         if (rule) {
           await db
@@ -198,7 +218,10 @@ export const personalizationRouter = router({
             .where(eq(personalizationRules.id, input.ruleId));
 
           // Recalculate conversion rate
-          const newRate = rule.views > 0 ? Math.round((rule.conversions / rule.views) * 10000) / 100 : 0;
+          const newRate =
+            rule.views > 0
+              ? Math.round((rule.conversions / rule.views) * 10000) / 100
+              : 0;
           await db
             .update(personalizationRules)
             .set({
@@ -213,17 +236,19 @@ export const personalizationRouter = router({
 
   // Create personalization rule
   createRule: adminProcedure
-    .input(z.object({
-      name: z.string(),
-      description: z.string().optional(),
-      targetElement: z.string(),
-      conditions: z.record(z.string(), z.any()),
-      content: z.string(),
-      priority: z.number().optional().default(0),
-    }))
+    .input(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        targetElement: z.string(),
+        conditions: z.record(z.string(), z.any()),
+        content: z.string(),
+        priority: z.number().optional().default(0),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not available');
+      if (!db) throw new Error("Database not available");
 
       await db.insert(personalizationRules).values({
         name: input.name,
@@ -242,13 +267,15 @@ export const personalizationRouter = router({
 
   // Generate personalization rules using AI
   generateRules: adminProcedure
-    .input(z.object({
-      targetElement: z.string(),
-      baseContent: z.string(),
-    }))
+    .input(
+      z.object({
+        targetElement: z.string(),
+        baseContent: z.string(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not available');
+      if (!db) throw new Error("Database not available");
 
       // Generate rules using AI
       const rules = await generatePersonalizationRules(
@@ -275,17 +302,26 @@ export const personalizationRouter = router({
 
   // List all rules
   listRules: adminProcedure
-    .input(z.object({
-      status: z.enum(["active", "paused", "draft"]).optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          status: z.enum(["active", "paused", "draft"]).optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
 
-      let query = db.select().from(personalizationRules).orderBy(desc(personalizationRules.createdAt)) as any;
+      let query = db
+        .select()
+        .from(personalizationRules)
+        .orderBy(desc(personalizationRules.createdAt)) as any;
 
       if (input?.status) {
-        query = query.where(eq(personalizationRules.status, input.status)) as any;
+        query = query.where(
+          eq(personalizationRules.status, input.status)
+        ) as any;
       }
 
       return await query;
@@ -293,9 +329,11 @@ export const personalizationRouter = router({
 
   // Get rule details
   getRule: adminProcedure
-    .input(z.object({
-      ruleId: z.number(),
-    }))
+    .input(
+      z.object({
+        ruleId: z.number(),
+      })
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return null;
@@ -311,12 +349,14 @@ export const personalizationRouter = router({
 
   // Activate rule
   activateRule: adminProcedure
-    .input(z.object({
-      ruleId: z.number(),
-    }))
+    .input(
+      z.object({
+        ruleId: z.number(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not available');
+      if (!db) throw new Error("Database not available");
 
       await db
         .update(personalizationRules)
@@ -330,12 +370,14 @@ export const personalizationRouter = router({
 
   // Pause rule
   pauseRule: adminProcedure
-    .input(z.object({
-      ruleId: z.number(),
-    }))
+    .input(
+      z.object({
+        ruleId: z.number(),
+      })
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not available');
+      if (!db) throw new Error("Database not available");
 
       await db
         .update(personalizationRules)
@@ -348,15 +390,15 @@ export const personalizationRouter = router({
     }),
 
   // Get visitor segments analytics
-  getSegmentAnalytics: adminProcedure
-    .query(async () => {
-      const db = await getDb();
-      if (!db) return [];
+  getSegmentAnalytics: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
 
-      const profiles = await db.select().from(visitorProfiles);
+    const profiles = await db.select().from(visitorProfiles);
 
-      // Group by segment
-      const segmentStats = profiles.reduce((acc, profile) => {
+    // Group by segment
+    const segmentStats = profiles.reduce(
+      (acc, profile) => {
         const segment = profile.segment || "unknown";
         if (!acc[segment]) {
           acc[segment] = {
@@ -375,49 +417,53 @@ export const personalizationRouter = router({
         acc[segment].avgPageViews += profile.pageViews;
 
         return acc;
-      }, {} as Record<string, any>);
+      },
+      {} as Record<string, any>
+    );
 
-      // Calculate averages
-      Object.values(segmentStats).forEach((stats: any) => {
-        stats.conversionRate = (stats.conversions / stats.visitors) * 100;
-        stats.avgTimeOnSite = Math.round(stats.avgTimeOnSite / stats.visitors);
-        stats.avgPageViews = Math.round((stats.avgPageViews / stats.visitors) * 10) / 10;
-      });
+    // Calculate averages
+    Object.values(segmentStats).forEach((stats: any) => {
+      stats.conversionRate = (stats.conversions / stats.visitors) * 100;
+      stats.avgTimeOnSite = Math.round(stats.avgTimeOnSite / stats.visitors);
+      stats.avgPageViews =
+        Math.round((stats.avgPageViews / stats.visitors) * 10) / 10;
+    });
 
-      return Object.values(segmentStats);
-    }),
+    return Object.values(segmentStats);
+  }),
 
   // Get personalization performance analytics
-  getPerformanceAnalytics: adminProcedure
-    .query(async () => {
-      const db = await getDb();
-      if (!db) return null;
+  getPerformanceAnalytics: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return null;
 
-      const rules = await db
-        .select()
-        .from(personalizationRules)
-        .where(eq(personalizationRules.status, "active"));
+    const rules = await db
+      .select()
+      .from(personalizationRules)
+      .where(eq(personalizationRules.status, "active"));
 
-      if (rules.length === 0) return null;
+    if (rules.length === 0) return null;
 
-      const analysis = await analyzePersonalizationPerformance(
-        rules.map(r => ({
-          name: r.name,
-          conditions: JSON.stringify(r.conditions ?? {}),
-          views: r.views,
-          conversions: r.conversions,
-          conversionRate: Number(r.conversionRate),
-        }))
-      );
+    const analysis = await analyzePersonalizationPerformance(
+      rules.map(r => ({
+        name: r.name,
+        conditions: JSON.stringify(r.conditions ?? {}),
+        views: r.views,
+        conversions: r.conversions,
+        conversionRate: Number(r.conversionRate),
+      }))
+    );
 
-      return {
-        totalRules: rules.length,
-        totalViews: rules.reduce((sum, r) => sum + r.views, 0),
-        totalConversions: rules.reduce((sum, r) => sum + r.conversions, 0),
-        avgConversionRate: rules.reduce((sum, r) => sum + Number(r.conversionRate), 0) / rules.length,
-        topPerformers: analysis.topPerformers,
-        insights: analysis.insights,
-        recommendations: analysis.recommendations,
-      };
-    }),
+    return {
+      totalRules: rules.length,
+      totalViews: rules.reduce((sum, r) => sum + r.views, 0),
+      totalConversions: rules.reduce((sum, r) => sum + r.conversions, 0),
+      avgConversionRate:
+        rules.reduce((sum, r) => sum + Number(r.conversionRate), 0) /
+        rules.length,
+      topPerformers: analysis.topPerformers,
+      insights: analysis.insights,
+      recommendations: analysis.recommendations,
+    };
+  }),
 });

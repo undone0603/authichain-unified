@@ -14,17 +14,25 @@ import { generateProductAudioStory } from "./audio-service";
  */
 export async function generateProductAssets(productId: string) {
   const db = await getDb();
-  const [product] = await db.select().from(products).where(eq(products.id, productId));
+  const [product] = await db
+    .select()
+    .from(products)
+    .where(eq(products.id, productId));
 
   if (!product) throw new Error(`Product ${productId} not found`);
 
-  console.log(`🚀 Starting asset generation for Product ${productId}: ${product.name}`);
+  console.log(
+    `🚀 Starting asset generation for Product ${productId}: ${product.name}`
+  );
 
   try {
     // 1. Generate ProductDNA (Vision)
     let visionResult = null;
     if (product.imageUrl) {
-      visionResult = await analyzeProductVision(product.imageUrl, product.category || "General");
+      visionResult = await analyzeProductVision(
+        product.imageUrl,
+        product.category || "General"
+      );
     }
 
     // 2. Generate BrandVoice (Audio)
@@ -32,31 +40,36 @@ export async function generateProductAssets(productId: string) {
       brandName: product.brand || "AuthiChain Partner",
       strainName: product.name,
       thcContent: (product.metadata as any)?.thc || "N/A",
-      harvestDate: product.manufacturingDate ? product.manufacturingDate.toISOString() : "Recent"
+      harvestDate: product.manufacturingDate
+        ? product.manufacturingDate.toISOString()
+        : "Recent",
     });
 
     // 3. Persist to Database
-    await db.update(products)
+    await db
+      .update(products)
       .set({
         audioUrl,
         visionMarkers: visionResult?.markers || [],
         rarityScore: (product.metadata as any)?.rarity || 50, // Default rarity
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(products.id, productId));
 
     console.log(`✅ Assets persisted for Product ${productId}`);
-
   } catch (error: any) {
-    console.error(`❌ Asset generation failed for Product ${productId}:`, error.message);
-    
+    console.error(
+      `❌ Asset generation failed for Product ${productId}:`,
+      error.message
+    );
+
     // Push to Dead Letter Queue for retry
     await db.insert(deadLetterQueue).values({
       taskType: "asset_generation",
       payload: { productId },
       error: error.message,
       status: "pending",
-      lastAttemptedAt: new Date()
+      lastAttemptedAt: new Date(),
     });
   }
 }
@@ -66,7 +79,8 @@ export async function generateProductAssets(productId: string) {
  */
 export async function retryFailedAssets() {
   const db = await getDb();
-  const failedTasks = await db.select()
+  const failedTasks = await db
+    .select()
     .from(deadLetterQueue)
     .where(eq(deadLetterQueue.status, "pending"));
 
@@ -76,14 +90,16 @@ export async function retryFailedAssets() {
     const { productId } = task.payload as any;
     try {
       await generateProductAssets(productId);
-      await db.update(deadLetterQueue)
+      await db
+        .update(deadLetterQueue)
         .set({ status: "resolved" })
         .where(eq(deadLetterQueue.id, task.id));
-    } catch (e) {
-      await db.update(deadLetterQueue)
-        .set({ 
+    } catch (_e) {
+      await db
+        .update(deadLetterQueue)
+        .set({
           retryCount: (task.retryCount || 0) + 1,
-          lastAttemptedAt: new Date() 
+          lastAttemptedAt: new Date(),
         })
         .where(eq(deadLetterQueue.id, task.id));
     }

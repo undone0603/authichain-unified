@@ -1,8 +1,8 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity } from '../db.js';
-import { postThread } from '../twitter-service.js';
-import { postLinkedInThread } from '../linkedin-service.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from "../_core/llm.js";
+import { logActivity } from "../db.js";
+import { postThread } from "../twitter-service.js";
+import { postLinkedInThread } from "../linkedin-service.js";
+import type { MissionTask as Task } from "../../drizzle/schema.js";
 
 interface ContentPayload {
   audience?: string;
@@ -12,7 +12,7 @@ interface ContentPayload {
 
 export async function runGenerateLaunchChecklist(task: Task): Promise<void> {
   const payload = task.payload as ContentPayload;
-  const scope = payload.scope ?? 'full_launch';
+  const scope = payload.scope ?? "full_launch";
 
   const prompt = `Create a comprehensive launch checklist for AuthiChain (authichain.com), scope: ${scope}.
 
@@ -28,21 +28,26 @@ Categories:
 Return JSON: { "title": "...", "categories": [{ "name": "...", "items": [{ "task": "...", "owner": "...", "done": false }] }] }`;
 
   const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [{ role: "user", content: prompt }],
+    responseFormat: { type: "json_object" },
   });
 
-  const checklist = parseLLMContent<unknown>(result.choices[0].message.content);
+  const _checklist = parseLLMContent<unknown>(
+    result.choices[0].message.content
+  );
 
-  await logActivity({ userId: null, action: 'launch_checklist_generated', entityType: 'task', entityId: 0, details: { taskId: task.id,
-    scope,
-    missionId: task.missionId,
-  }});
+  await logActivity({
+    userId: null,
+    action: "launch_checklist_generated",
+    entityType: "task",
+    entityId: 0,
+    details: { taskId: task.id, scope, missionId: task.missionId },
+  });
 }
 
 export async function runDraftLaunchEmail(task: Task): Promise<void> {
   const payload = task.payload as ContentPayload;
-  const audience = payload.audience ?? 'founders';
+  const audience = payload.audience ?? "founders";
 
   const prompt = `Write a launch announcement email for AuthiChain (authichain.com).
 
@@ -59,17 +64,26 @@ Write an engaging, founder-voiced launch email (300-400 words) covering:
 Return JSON: { "subject": "...", "body": "..." }`;
 
   const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [{ role: "user", content: prompt }],
+    responseFormat: { type: "json_object" },
   });
 
-  const email = parseLLMContent<{ subject: string; body: string }>(result.choices[0].message.content);
+  const email = parseLLMContent<{ subject: string; body: string }>(
+    result.choices[0].message.content
+  );
 
-  await logActivity({ userId: null, action: 'launch_email_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
-    audience,
-    subject: email.subject,
-    missionId: task.missionId,
-  }});
+  await logActivity({
+    userId: null,
+    action: "launch_email_drafted",
+    entityType: "task",
+    entityId: 0,
+    details: {
+      taskId: task.id,
+      audience,
+      subject: email.subject,
+      missionId: task.missionId,
+    },
+  });
 }
 
 export async function runDraftPressRelease(task: Task): Promise<void> {
@@ -90,24 +104,28 @@ Follow standard press release format:
 Return JSON: { "headline": "...", "subheadline": "...", "body": "...", "quote": "...", "boilerplate": "..." }`;
 
   const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [{ role: "user", content: prompt }],
+    responseFormat: { type: "json_object" },
   });
 
-  const pr = parseLLMContent<unknown>(result.choices[0].message.content);
+  const _pr = parseLLMContent<unknown>(result.choices[0].message.content);
 
-  await logActivity({ userId: null, action: 'press_release_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
-    missionId: task.missionId,
-  }});
+  await logActivity({
+    userId: null,
+    action: "press_release_drafted",
+    entityType: "task",
+    entityId: 0,
+    details: { taskId: task.id, missionId: task.missionId },
+  });
 }
 
 export async function runScheduleSocialPosts(task: Task): Promise<void> {
   const payload = task.payload as ContentPayload;
-  const platforms = payload.platforms ?? ['twitter', 'linkedin'];
+  const platforms = payload.platforms ?? ["twitter", "linkedin"];
 
   const prompt = `Create a social media launch content calendar for AuthiChain (authichain.com).
 
-Platforms: ${platforms.join(', ')}
+Platforms: ${platforms.join(", ")}
 Timeline: launch week (7 days)
 
 For each platform, write 5-7 posts covering:
@@ -120,54 +138,87 @@ For each platform, write 5-7 posts covering:
 Return JSON: { "platforms": { "<platform>": [{ "day": 0, "copy": "...", "hashtags": ["..."] }] } }`;
 
   const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [{ role: "user", content: prompt }],
+    responseFormat: { type: "json_object" },
   });
 
-  const calendar = parseLLMContent<{ platforms?: Record<string, { day: number; copy: string; hashtags: string[] }[]> }>(result.choices[0].message.content);
+  const calendar = parseLLMContent<{
+    platforms?: Record<
+      string,
+      { day: number; copy: string; hashtags: string[] }[]
+    >;
+  }>(result.choices[0].message.content);
 
   const postedUrls: string[] = [];
 
   // Build today's (day 0) posts per platform, then fire in parallel
-  const twitterPosts  = (calendar.platforms?.['twitter'] ?? calendar.platforms?.['x'] ?? []).filter(p => p.day === 0);
-  const linkedinPosts = (calendar.platforms?.['linkedin'] ?? []).filter(p => p.day === 0);
+  const twitterPosts = (
+    calendar.platforms?.["twitter"] ??
+    calendar.platforms?.["x"] ??
+    []
+  ).filter(p => p.day === 0);
+  const linkedinPosts = (calendar.platforms?.["linkedin"] ?? []).filter(
+    p => p.day === 0
+  );
 
-  const formatText = (post: { copy: string; hashtags?: string[] }, maxLen = 0): string => {
+  const formatText = (
+    post: { copy: string; hashtags?: string[] },
+    maxLen = 0
+  ): string => {
     const tagged = post.hashtags?.length
-      ? `${post.copy}\n\n${post.hashtags.map(h => `#${h.replace(/^#/, '')}`).join(' ')}`
+      ? `${post.copy}\n\n${post.hashtags.map(h => `#${h.replace(/^#/, "")}`).join(" ")}`
       : post.copy;
-    return maxLen && tagged.length > maxLen ? tagged.slice(0, maxLen - 3) + '…' : tagged;
+    return maxLen && tagged.length > maxLen
+      ? tagged.slice(0, maxLen - 3) + "…"
+      : tagged;
   };
 
   const [twitterResults, linkedinResults] = await Promise.allSettled([
     // Twitter/X — 280 char limit, real thread support
     (async () => {
-      if (!(platforms.includes('twitter') || platforms.includes('x')) || twitterPosts.length === 0) return [];
+      if (
+        !(platforms.includes("twitter") || platforms.includes("x")) ||
+        twitterPosts.length === 0
+      )
+        return [];
       const texts = twitterPosts.map(p => formatText(p, 280));
-      const tweets = await postThread(texts, 'authichain');
-      return tweets.map(t => t?.url ?? '').filter(Boolean);
+      const tweets = await postThread(texts, "authichain");
+      return tweets.map(t => t?.url ?? "").filter(Boolean);
     })(),
 
     // LinkedIn — 3000 char limit, sequential posts
     (async () => {
-      if (!platforms.includes('linkedin') || linkedinPosts.length === 0) return [];
+      if (!platforms.includes("linkedin") || linkedinPosts.length === 0)
+        return [];
       const texts = linkedinPosts.map(p => formatText(p, 3000));
-      const posts = await postLinkedInThread(texts, 'person');
+      const posts = await postLinkedInThread(texts, "person");
       return posts.map(p => p.postUrl).filter(Boolean);
     })(),
   ]);
 
-  if (twitterResults.status === 'fulfilled')  postedUrls.push(...twitterResults.value);
-  else console.warn('[content.ts] Twitter post failed:', twitterResults.reason);
+  if (twitterResults.status === "fulfilled")
+    postedUrls.push(...twitterResults.value);
+  else console.warn("[content.ts] Twitter post failed:", twitterResults.reason);
 
-  if (linkedinResults.status === 'fulfilled') postedUrls.push(...linkedinResults.value);
-  else console.warn('[content.ts] LinkedIn post failed:', linkedinResults.reason);
+  if (linkedinResults.status === "fulfilled")
+    postedUrls.push(...linkedinResults.value);
+  else
+    console.warn("[content.ts] LinkedIn post failed:", linkedinResults.reason);
 
-  await logActivity({ userId: null, action: 'social_posts_scheduled', entityType: 'task', entityId: 0, details: {
-    taskId: task.id,
-    platforms,
-    missionId: task.missionId,
-    postedUrls,
-    totalScheduled: Object.values(calendar.platforms ?? {}).reduce((s, arr) => s + arr.length, 0),
-  }});
+  await logActivity({
+    userId: null,
+    action: "social_posts_scheduled",
+    entityType: "task",
+    entityId: 0,
+    details: {
+      taskId: task.id,
+      platforms,
+      missionId: task.missionId,
+      postedUrls,
+      totalScheduled: Object.values(calendar.platforms ?? {}).reduce(
+        (s, arr) => s + arr.length,
+        0
+      ),
+    },
+  });
 }

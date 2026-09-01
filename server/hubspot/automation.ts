@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
-import { syncPaymentToHubSpot, createDeal, isHubSpotConfigured } from "../hubspot-service";
+import { createDeal, isHubSpotConfigured } from "../hubspot-service";
 import * as db from "../db";
 import { protocolAgents } from "../../drizzle/schema";
 
 function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  return `${local?.[0] ?? ''}***@${domain ?? '***'}`;
+  const [local, domain] = email.split("@");
+  return `${local?.[0] ?? ""}***@${domain ?? "***"}`;
 }
 
 const SCAN_THRESHOLD = 50;
@@ -27,32 +27,54 @@ export async function checkUserMilestones(userId: number) {
     // Note: getDashboardMetrics returns totals. For individual product scans, we'd need more detail,
     // but total authentications is a good proxy for "High Activity".
     if (metrics.totalAuthentications >= SCAN_THRESHOLD) {
-      const alreadyLogged = await db.hasUserActionLogged(userId, "hubspot_milestone_scans");
+      const alreadyLogged = await db.hasUserActionLogged(
+        userId,
+        "hubspot_milestone_scans"
+      );
       if (!alreadyLogged) {
         await createDeal({
           dealname: `High-Activity User: ${user.email} (${metrics.totalAuthentications} scans)`,
           amount: "999", // Enterprise potential
           dealstage: "appointmentscheduled",
         });
-        await db.logActivity({ userId, action: "hubspot_milestone_scans", details: { count: metrics.totalAuthentications } });
-        console.log(`[HubSpot Automation] High-activity deal created for ${maskEmail(user.email || '')}`);
+        await db.logActivity({
+          userId,
+          action: "hubspot_milestone_scans",
+          details: { count: metrics.totalAuthentications },
+        });
+        console.log(
+          `[HubSpot Automation] High-activity deal created for ${maskEmail(user.email || "")}`
+        );
       }
     }
 
     // 2. Check Reputation/XP Threshold (from Protocol Agent)
     const dbInstance = await db.getDb();
     if (!dbInstance) return;
-    const [agent] = await dbInstance.select().from(protocolAgents).where(eq(protocolAgents.userId, userId)).limit(1);
+    const [agent] = await dbInstance
+      .select()
+      .from(protocolAgents)
+      .where(eq(protocolAgents.userId, userId))
+      .limit(1);
     if (agent && (agent.xp || 0) >= XP_THRESHOLD) {
-      const alreadyLogged = await db.hasUserActionLogged(userId, "hubspot_milestone_reputation");
+      const alreadyLogged = await db.hasUserActionLogged(
+        userId,
+        "hubspot_milestone_reputation"
+      );
       if (!alreadyLogged) {
         await createDeal({
           dealname: `Power Agent: ${user.email} (${agent.xp} XP)`,
           amount: "2499", // White-label potential
           dealstage: "appointmentscheduled",
         });
-        await db.logActivity({ userId, action: "hubspot_milestone_reputation", details: { xp: agent.xp } });
-        console.log(`[HubSpot Automation] Power agent deal created for ${maskEmail(user.email || '')}`);
+        await db.logActivity({
+          userId,
+          action: "hubspot_milestone_reputation",
+          details: { xp: agent.xp },
+        });
+        console.log(
+          `[HubSpot Automation] Power agent deal created for ${maskEmail(user.email || "")}`
+        );
       }
     }
   } catch (error) {

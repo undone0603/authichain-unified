@@ -1,9 +1,12 @@
 import "dotenv/config";
 
-const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?.[0] ?? ''}***@${d}` : '***'; };
+const maskEmail = (e: string) => {
+  const [l, d] = e.split("@");
+  return d ? `${l?.[0] ?? ""}***@${d}` : "***";
+};
 import { getDb } from "../db.js";
 import { activityLog, leads } from "../../drizzle/schema.js";
-import { desc, eq, and } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 async function monitorActivity() {
   console.log("🕵️  AgentZ Activity Monitor: ACTIVE");
@@ -17,7 +20,8 @@ async function monitorActivity() {
 
   // 1. Check for recent Outbound Activity
   console.log("📡 Polling for recent outreach signals...");
-  const recentEmails = await db.select()
+  const recentEmails = await db
+    .select()
     .from(activityLog)
     .where(eq(activityLog.action, "outbound_email_sent"))
     .orderBy(desc(activityLog.createdAt))
@@ -39,28 +43,34 @@ async function monitorActivity() {
 
   // 3. Monitor ROI Calculator Usage
   console.log("\n📈 Monitoring ROI Calculator Engagement...");
-  const recentRoi = await db.select()
+  const recentRoi = await db
+    .select()
     .from(activityLog)
     .where(eq(activityLog.action, "roi_calculated"))
     .orderBy(desc(activityLog.createdAt))
     .limit(5);
 
   if (recentRoi.length > 0) {
-    console.log(`🔥 ALERT: ${recentRoi.length} prospects have generated ROI reports!`);
+    console.log(
+      `🔥 ALERT: ${recentRoi.length} prospects have generated ROI reports!`
+    );
   } else {
     console.log(" [LOG] Waiting for first ROI calculation event...");
   }
 
   // 4. Monitor Sales Pipeline (Hot Leads)
   console.log("\n🔥 Monitoring HOT Leads (Score > 70)...");
-  const hotLeads = await db.select()
+  const hotLeads = await db
+    .select()
     .from(leads)
     .where(eq(leads.status, "HOT"))
     .limit(5);
 
   if (hotLeads.length > 0) {
     for (const lead of hotLeads) {
-      console.log(`!!! HOT LEAD: ${maskEmail(lead.email)} (${lead.company}) - Score: ${lead.leadScore}`);
+      console.log(
+        `!!! HOT LEAD: ${maskEmail(lead.email)} (${lead.company}) - Score: ${lead.leadScore}`
+      );
     }
   } else {
     console.log(" [LOG] No leads have crossed the HOT threshold yet.");

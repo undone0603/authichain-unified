@@ -16,7 +16,12 @@ vi.mock("../db.js", () => ({
 }));
 
 vi.mock("../../drizzle/schema.js", () => ({
-  stakingPositions: { id: "id", userId: "userId", status: "status", createdAt: "createdAt" },
+  stakingPositions: {
+    id: "id",
+    userId: "userId",
+    status: "status",
+    createdAt: "createdAt",
+  },
   platformFees: {},
   transactions: {},
 }));
@@ -24,7 +29,7 @@ vi.mock("../../drizzle/schema.js", () => ({
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col, val) => ({ col, val, op: "eq" })),
   and: vi.fn((...args) => ({ op: "and", args })),
-  desc: vi.fn((col) => ({ col, dir: "desc" })),
+  desc: vi.fn(col => ({ col, dir: "desc" })),
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -59,7 +64,7 @@ function makeInsertChain(returnedRow = { id: 1 }) {
   return chain;
 }
 
-function makeUpdateChain() {
+function _makeUpdateChain() {
   const chain = {
     set: vi.fn().mockReturnThis(),
     where: vi.fn().mockResolvedValue(undefined),
@@ -97,9 +102,9 @@ describe("createStakingPosition", () => {
     const { getDb } = await import("../db.js");
     vi.mocked(getDb).mockResolvedValueOnce(null as any);
     const { createStakingPosition } = await import("./db.js");
-    await expect(createStakingPosition({ userId: 1, amount: 100, apy: 1200 })).rejects.toThrow(
-      "Database not available",
-    );
+    await expect(
+      createStakingPosition({ userId: 1, amount: 100, apy: 1200 })
+    ).rejects.toThrow("Database not available");
   });
 
   it("inserts with stringified amount and apy and rewardsEarned=0", async () => {
@@ -107,7 +112,12 @@ describe("createStakingPosition", () => {
     const { createStakingPosition } = await import("./db.js");
     await createStakingPosition({ userId: 5, amount: 250, apy: 800 });
     expect(values).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: "250", apy: "800", rewardsEarned: "0", status: "active" }),
+      expect.objectContaining({
+        amount: "250",
+        apy: "800",
+        rewardsEarned: "0",
+        status: "active",
+      })
     );
   });
 });
@@ -150,7 +160,9 @@ describe("calculateRewards", () => {
     };
     mockDb.select.mockReturnValue(chain);
     const { calculateRewards } = await import("./db.js");
-    await expect(calculateRewards(999)).rejects.toThrow("Staking position not found");
+    await expect(calculateRewards(999)).rejects.toThrow(
+      "Staking position not found"
+    );
   });
 
   it("returns 0 for non-active positions", async () => {
@@ -158,7 +170,15 @@ describe("calculateRewards", () => {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue([
-        { id: 1, status: "withdrawn", amount: "100", apy: "1200", rewardsEarned: "0", lastRewardCalculation: new Date(), stakedAt: new Date() },
+        {
+          id: 1,
+          status: "withdrawn",
+          amount: "100",
+          apy: "1200",
+          rewardsEarned: "0",
+          lastRewardCalculation: new Date(),
+          stakedAt: new Date(),
+        },
       ]),
     };
     mockDb.select.mockReturnValue(chain);
@@ -173,9 +193,18 @@ describe("createTransaction", () => {
   it("inserts with stringified amount", async () => {
     const { values } = makeInsertChain();
     const { createTransaction } = await import("./db.js");
-    await createTransaction({ userId: 1, type: "stake", amount: 100, status: "completed" });
+    await createTransaction({
+      userId: 1,
+      type: "stake",
+      amount: 100,
+      status: "completed",
+    });
     expect(values).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: "100", type: "stake", status: "completed" }),
+      expect.objectContaining({
+        amount: "100",
+        type: "stake",
+        status: "completed",
+      })
     );
   });
 });

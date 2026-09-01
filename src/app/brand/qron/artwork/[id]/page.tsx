@@ -1,20 +1,26 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
-  ArrowLeft, Sparkles, Download, Copy, Share2, CheckCircle,
-  ExternalLink, AlertCircle,
-} from 'lucide-react';
+  ArrowLeft,
+  Sparkles,
+  Download,
+  Copy,
+  Share2,
+  _CheckCircle,
+  _ExternalLink,
+  _AlertCircle,
+} from "lucide-react";
 
-const PURPLE = '#8b5cf6';
+const PURPLE = "#8b5cf6";
 
 export default function ArtworkDetail() {
   const params = useParams();
   const id = params.id as string;
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [_copied, _setCopied] = useState(false);
 
   useEffect(() => {
     setLoading(false);
@@ -36,7 +42,10 @@ export default function ArtworkDetail() {
       {/* Header */}
       <nav className="border-b border-zinc-900 px-6 py-4 sticky top-0 z-50 bg-[#0a0a0a]/80 backdrop-blur">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Link href="/brand/qron/gallery" className="flex items-center gap-2 text-purple-400 hover:text-purple-300">
+          <Link
+            href="/brand/qron/gallery"
+            className="flex items-center gap-2 text-purple-400 hover:text-purple-300"
+          >
             <ArrowLeft className="w-5 h-5" />
             <span className="font-bold">Back to Gallery</span>
           </Link>
@@ -47,19 +56,23 @@ export default function ArtworkDetail() {
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           {/* Artwork Preview */}
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 overflow-hidden">
-            <div
-              className="h-96 bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center relative"
-            >
+            <div className="h-96 bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center relative">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10" />
               <Sparkles className="w-20 h-20 text-zinc-600" />
             </div>
             <div className="p-6">
               <h1 className="text-3xl font-black mb-4">Artwork Customizer</h1>
               <p className="text-zinc-400 mb-6">
-                Download, customize, and integrate this QRON QR art into your campaigns.
+                Download, customize, and integrate this QRON QR art into your
+                campaigns.
               </p>
               <div className="space-y-3">
-                <button className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold text-white" style={{ background: `linear-gradient(135deg, ${PURPLE} 0%, #7c3aed 100%)` }}>
+                <button
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold text-white"
+                  style={{
+                    background: `linear-gradient(135deg, ${PURPLE} 0%, #7c3aed 100%)`,
+                  }}
+                >
                   <Download className="w-5 h-5" />
                   Download (SVG / PNG)
                 </button>
@@ -135,25 +148,51 @@ export default function ArtworkDetail() {
           <h2 className="text-2xl font-black mb-4">How to Use QRON</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <div>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${PURPLE}15`, border: `1px solid ${PURPLE}30` }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                style={{
+                  background: `${PURPLE}15`,
+                  border: `1px solid ${PURPLE}30`,
+                }}
+              >
                 <Download className="w-5 h-5" style={{ color: PURPLE }} />
               </div>
               <h3 className="font-bold mb-2">1. Download</h3>
-              <p className="text-xs text-zinc-500">Download the QRON artwork in SVG or PNG format optimized for print or digital</p>
+              <p className="text-xs text-zinc-500">
+                Download the QRON artwork in SVG or PNG format optimized for
+                print or digital
+              </p>
             </div>
             <div>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${PURPLE}15`, border: `1px solid ${PURPLE}30` }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                style={{
+                  background: `${PURPLE}15`,
+                  border: `1px solid ${PURPLE}30`,
+                }}
+              >
                 <Sparkles className="w-5 h-5" style={{ color: PURPLE }} />
               </div>
               <h3 className="font-bold mb-2">2. Customize</h3>
-              <p className="text-xs text-zinc-500">Adjust colors, sizing, and branding to match your campaign needs</p>
+              <p className="text-xs text-zinc-500">
+                Adjust colors, sizing, and branding to match your campaign needs
+              </p>
             </div>
             <div>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${PURPLE}15`, border: `1px solid ${PURPLE}30` }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                style={{
+                  background: `${PURPLE}15`,
+                  border: `1px solid ${PURPLE}30`,
+                }}
+              >
                 <Share2 className="w-5 h-5" style={{ color: PURPLE }} />
               </div>
               <h3 className="font-bold mb-2">3. Deploy</h3>
-              <p className="text-xs text-zinc-500">Use on packaging, marketing materials, or digital campaigns. Track scans in real-time</p>
+              <p className="text-xs text-zinc-500">
+                Use on packaging, marketing materials, or digital campaigns.
+                Track scans in real-time
+              </p>
             </div>
           </div>
         </div>

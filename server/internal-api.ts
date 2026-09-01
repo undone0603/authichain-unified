@@ -7,9 +7,17 @@ function timingSafeStringEqual(a: string, b: string): boolean {
   return timingSafeEqual(bufA, bufB);
 }
 import { Router, type Request, type Response } from "express";
-import { getCertificateByNumber, getWhiteLabelByApiKey, createProduct, getDb } from "./db";
+import {
+  getCertificateByNumber,
+  getWhiteLabelByApiKey,
+  createProduct,
+  getDb,
+} from "./db";
 import { computeTrustScore, generateProductQRON } from "./qron-service";
-import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
+import {
+  calculateStrainRarity,
+  formatTruthLayerMetadata,
+} from "./cannabis-service";
 import { invokeLLM, parseLLMContent } from "./_core/llm";
 import { ENV } from "./_core/env";
 import { reportUsageToStripe } from "./tenant-billing";
@@ -24,7 +32,11 @@ export function createInternalRouter(): Router {
   // Auth middleware
   router.use((req: Request, res: Response, next) => {
     const secret = req.headers["x-internal-secret"];
-    if (!secret || typeof secret !== "string" || !timingSafeStringEqual(secret, ENV.internalApiSecret)) {
+    if (
+      !secret ||
+      typeof secret !== "string" ||
+      !timingSafeStringEqual(secret, ENV.internalApiSecret)
+    ) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     next();
@@ -35,7 +47,10 @@ export function createInternalRouter(): Router {
     try {
       const { identifier, productId, barcode, imageUrl } = req.body;
       const lookupId = identifier || productId || barcode;
-      if (!lookupId) return res.status(400).json({ error: "identifier, productId, or barcode required" });
+      if (!lookupId)
+        return res
+          .status(400)
+          .json({ error: "identifier, productId, or barcode required" });
 
       // Check if it's a certificate number
       const cert = await getCertificateByNumber(lookupId);
@@ -51,7 +66,9 @@ export function createInternalRouter(): Router {
       }
 
       // Prevent prompt injection — only the sanitized identifier reaches the LLM
-      const safeLookupId = String(lookupId).replace(/[^a-zA-Z0-9\-_.]/g, "").slice(0, 128);
+      const safeLookupId = String(lookupId)
+        .replace(/[^a-zA-Z0-9\-_.]/g, "")
+        .slice(0, 128);
 
       // AI-based verification
       const analysis = await invokeLLM({
@@ -62,13 +79,21 @@ export function createInternalRouter(): Router {
           },
           {
             role: "user",
-            content: JSON.stringify({ identifier: safeLookupId, hasImage: !!imageUrl }),
+            content: JSON.stringify({
+              identifier: safeLookupId,
+              hasImage: !!imageUrl,
+            }),
           },
         ],
         responseFormat: { type: "json_object" },
       });
 
-      let result: { verified: boolean; confidence: number; reasoning: string; riskFlags: string[] };
+      let result: {
+        verified: boolean;
+        confidence: number;
+        reasoning: string;
+        riskFlags: string[];
+      };
       try {
         result = parseLLMContent(analysis.choices[0].message.content);
       } catch {
@@ -92,9 +117,11 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/qr/generate ──────────────────────────��─────────────
   router.post("/qr/generate", async (req: Request, res: Response) => {
     try {
-      const { url, data, style, productName, brand, productId, prompt } = req.body;
+      const { url, data, style, productName, brand, productId, _prompt } =
+        req.body;
       const qrData = url || data;
-      if (!qrData) return res.status(400).json({ error: "url or data required" });
+      if (!qrData)
+        return res.status(400).json({ error: "url or data required" });
 
       const result = await generateProductQRON({
         productId: productId || 0,
@@ -115,12 +142,19 @@ export function createInternalRouter(): Router {
   router.post("/certificates/verify", async (req: Request, res: Response) => {
     try {
       const raw = req.body?.certNumber ?? req.body?.number;
-      const number = typeof raw === 'string' ? raw : undefined;
-      if (!number) return res.status(400).json({ error: "certNumber body field required" });
-      if (number.length > 64) return res.status(400).json({ error: "certNumber too long" });
+      const number = typeof raw === "string" ? raw : undefined;
+      if (!number)
+        return res
+          .status(400)
+          .json({ error: "certNumber body field required" });
+      if (number.length > 64)
+        return res.status(400).json({ error: "certNumber too long" });
 
       const cert = await getCertificateByNumber(number);
-      if (!cert) return res.status(404).json({ error: "Certificate not found", valid: false });
+      if (!cert)
+        return res
+          .status(404)
+          .json({ error: "Certificate not found", valid: false });
 
       res.json({
         valid: cert.status === "active",
@@ -138,9 +172,19 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/cannabis/verify ────────────────────────────────────
   router.post("/cannabis/verify", async (req: Request, res: Response) => {
     try {
-      const { strainId, strainName, dispensaryId, batchId, thcPercent, cbdPercent } = req.body;
+      const {
+        strainId,
+        strainName,
+        dispensaryId,
+        batchId,
+        thcPercent,
+        cbdPercent,
+      } = req.body;
       const strain = strainName || strainId;
-      if (!strain) return res.status(400).json({ error: "strainName or strainId required" });
+      if (!strain)
+        return res
+          .status(400)
+          .json({ error: "strainName or strainId required" });
 
       const metadata = {
         name: strain,
@@ -150,7 +194,13 @@ export function createInternalRouter(): Router {
         cbdContent: cbdPercent || 1,
         harvestDate: new Date().toISOString(),
       };
-      const profile = { thc: thcPercent || 25, thca: (thcPercent || 25) * 1.12, cbd: cbdPercent || 1, cbda: (cbdPercent || 1) * 1.2, total: (thcPercent || 25) + (cbdPercent || 1) + 5 };
+      const profile = {
+        thc: thcPercent || 25,
+        thca: (thcPercent || 25) * 1.12,
+        cbd: cbdPercent || 1,
+        cbda: (cbdPercent || 1) * 1.2,
+        total: (thcPercent || 25) + (cbdPercent || 1) + 5,
+      };
 
       const rarity = calculateStrainRarity(metadata, profile);
       const truthLayer = formatTruthLayerMetadata(metadata, profile);
@@ -173,7 +223,13 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/trust-score ────────────────────────────────────────
   router.post("/trust-score", async (req: Request, res: Response) => {
     try {
-      const { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk } = req.body;
+      const {
+        qrDecodePass,
+        blockchainCertExists,
+        nfcMatch,
+        visualMatch,
+        geoFenceOk,
+      } = req.body;
 
       const score = computeTrustScore({
         qrDecodePass: qrDecodePass ?? true,
@@ -185,7 +241,13 @@ export function createInternalRouter(): Router {
 
       res.json({
         ...score,
-        inputs: { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk },
+        inputs: {
+          qrDecodePass,
+          blockchainCertExists,
+          nfcMatch,
+          visualMatch,
+          geoFenceOk,
+        },
       });
     } catch (err: any) {
       console.error("[Internal API] trust-score error:", err.message);
@@ -207,7 +269,8 @@ export function createInternalRouter(): Router {
         qrCodesGenerated: 0,
         certificatesIssued: 0,
         activeAgents: 5,
-        message: "Analytics data will be populated once usage metering is active",
+        message:
+          "Analytics data will be populated once usage metering is active",
       });
     } catch (err: any) {
       console.error("[Internal API] analytics error:", err.message);
@@ -218,7 +281,8 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/products/register ──────────────────────────────────
   router.post("/products/register", async (req: Request, res: Response) => {
     try {
-      const { name, brand, category, serialNumber, description, userId } = req.body;
+      const { name, brand, category, serialNumber, description, userId } =
+        req.body;
       if (!name) return res.status(400).json({ error: "name required" });
       const parsedUserId = parseInt(userId, 10);
       if (!userId || !Number.isFinite(parsedUserId) || parsedUserId <= 0) {
@@ -252,9 +316,10 @@ export function createInternalRouter(): Router {
 
       // Process each usage record
       await Promise.all(
-        records.map((r: { tenantId: string; endpoint: string; count: number }) =>
-          reportUsageToStripe(r.tenantId, r.endpoint, r.count),
-        ),
+        records.map(
+          (r: { tenantId: string; endpoint: string; count: number }) =>
+            reportUsageToStripe(r.tenantId, r.endpoint, r.count)
+        )
       );
 
       res.json({ success: true, processed: records.length });
@@ -268,8 +333,13 @@ export function createInternalRouter(): Router {
   router.get("/tenant", async (req: Request, res: Response) => {
     try {
       const authHeader = req.headers["authorization"];
-      const apiKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-      if (!apiKey) return res.status(400).json({ error: "Authorization: Bearer <apiKey> required" });
+      const apiKey = authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : null;
+      if (!apiKey)
+        return res
+          .status(400)
+          .json({ error: "Authorization: Bearer <apiKey> required" });
 
       const tenant = await getWhiteLabelByApiKey(apiKey);
       if (!tenant) return res.status(404).json({ error: "Tenant not found" });

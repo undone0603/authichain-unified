@@ -92,7 +92,7 @@ dist/
 # Externally cloned repos (exploration only)
 authichain_premium/
 qron-platform/
-qron/
+/qron/
 govchain.us/
 maison-elite-ai-dropship/
 

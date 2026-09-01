@@ -18,29 +18,53 @@
 
 ---
 
+## Status Update — 2026-09-01
+
+The following tasks are **COMPLETE** (code exists in the repo; plan checkboxes not
+yet ticked because the implementation predates this audit):
+
+| Task                                  | Status         | Evidence                                                                                               |
+| ------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
+| Task 1 (Hyperdrive `getHyperdriveDb`) | ✅ DONE        | `server/db.ts:1677` exports `getHyperdriveDb(env)`                                                     |
+| Task 2 (Workers tRPC context)         | ✅ DONE        | `server/_core/context.workers.ts` exists; uses `getHyperdriveDb`                                       |
+| Task 5 (Hono Worker entrypoint)       | ✅ DONE        | `worker-app/index.ts` — full Hono app with tRPC mount, brand middleware, standalone routes             |
+| Task 2b (DB call-site migration)      | 🔲 PENDING     | tRPC routers still import `db` singleton directly; `ctx.db` path exists but not wired into sub-routers |
+| Task 11 (Parity checklist)            | 🔲 PENDING     | DNS cutover not started; `worker-app/` untested against `*.workers.dev`                                |
+| Tasks 3, 4, 6–10                      | status unknown | audit task-by-task before resuming                                                                     |
+
+**Next action:** Tackle Task 2b (6 sub-clusters, ~114 files) to propagate `ctx.db`
+through all tRPC routers, then run Task 11's parity checklist.
+
+---
+
 ## Phase 0: Foundation — Worker Entrypoint, DB, Sessions
 
 ### Task 1: Hyperdrive binding for the existing `pg` connection
 
 **Files:**
+
 - Modify: `wrangler.toml` (repo root)
 - Modify: `server/db.ts` (additive only — append `getDb()`, do not remove or change the existing `db` export)
 - Test: `server/db.test.ts` (new)
 
 **Interfaces:**
+
 - Produces: `getDb(env: { HYPERDRIVE: Hyperdrive }): ReturnType<typeof drizzle>` — the DB accessor the Workers entrypoint (Task 6) and Workers tRPC context (Task 2) use. The existing `db` singleton export is untouched and keeps serving the 47-77 existing call sites until Task 2b migrates them.
 
 - [ ] **Step 1: Create the Hyperdrive config against the existing Supabase Postgres**
 
 Run (requires `wrangler` ≥ 3.x, already a devDependency per `package.json`):
+
 ```bash
 npx wrangler hyperdrive create authichain-db --connection-string="$DATABASE_URL"
 ```
+
 This prints a `hyperdrive_id`. Copy it into `wrangler.toml` in the next step. Hyperdrive itself has no separate free-tier gate — it's a connection-pooling proxy in front of your existing Postgres, priced only by the Workers requests that use it.
 
 - [ ] **Step 2: Add the Hyperdrive binding to `wrangler.toml`**
 
 Append to `wrangler.toml`:
+
 ```toml
 [[hyperdrive]]
 binding = "HYPERDRIVE"
@@ -57,7 +81,9 @@ import { getDb } from "./db";
 describe("getDb", () => {
   it("builds a drizzle client from a Hyperdrive connection string", () => {
     const fakeEnv = {
-      HYPERDRIVE: { connectionString: "postgres://fake:fake@localhost:5432/fake" },
+      HYPERDRIVE: {
+        connectionString: "postgres://fake:fake@localhost:5432/fake",
+      },
     } as unknown as { HYPERDRIVE: Hyperdrive };
     const db = getDb(fakeEnv);
     expect(db).toBeDefined();
@@ -77,6 +103,7 @@ Expected: FAIL with `getDb is not exported` (or similar — `getDb` doesn't exis
 **Correction from the original plan draft:** a direct grep (`grep -rln "from [\"'].*\/db[\"']" server --include="*.ts" | grep -v node_modules`) shows **47–77 files** reference `server/db.ts`, not just `server/_core/context.ts` as originally assumed from sampling `ctx.req`/`ctx.res` usage alone (that sampling only checked Express coupling, not database-access coupling — a different question). Removing the module-level `db` export in this task would break most of those files and very likely the 503-test baseline this plan's worktree setup established before any task ran. **Task 2b (new, inserted after Task 2) enumerates and migrates those call sites — this task does not touch them.**
 
 `server/db.ts` currently opens `new Pool({ connectionString: process.env.DATABASE_URL })` at import time and exports `db` as a singleton. Leave that exactly as-is. Add the new factory alongside it:
+
 ```typescript
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -117,11 +144,13 @@ git commit -m "feat(workers): add Hyperdrive-backed getDb() factory alongside th
 ### Task 2: Workers-native tRPC context (Fetch adapter instead of Express adapter)
 
 **Files:**
+
 - Create: `server/_core/context.workers.ts`
 - Modify: `server/_core/sdk.ts` (only if `authenticateRequest` isn't already Fetch-`Request`-typed — verify first)
 - Test: `server/_core/context.workers.test.ts`
 
 **Interfaces:**
+
 - Consumes: `getHyperdriveDb` from Task 1 (`server/db.ts`) — **not** `getDb`. Task 1 originally planned to export this as `getDb(env)`, but its review cycle found a pre-existing, unrelated `getDb()` already in `server/db.ts` (async, zero-arg, used by ~30 files) and renamed the new Hyperdrive factory to `getHyperdriveDb(env)` to avoid colliding with it. Importing `getDb` here would silently pull in the wrong (old, Node-only, zero-arg) function — use `getHyperdriveDb`.
 - Produces: `createWorkersContext(opts: FetchCreateContextFnOptions, env: Env): Promise<TrpcContext>` — used by Task 5's Worker entrypoint.
 
@@ -130,6 +159,7 @@ git commit -m "feat(workers): add Hyperdrive-backed getDb() factory alongside th
 ```bash
 grep -n "^import.*Request" server/_core/sdk.ts | head -5
 ```
+
 If it imports `Request` from `"express"` (or has no explicit import, meaning it's using the ambient DOM `Request` type only by accident), it needs a signature check against a real Fetch `Request` object before Task 2 can rely on it unchanged. If it's already the global Fetch `Request` (no import, or `import type {} from "@cloudflare/workers-types"`), skip straight to Step 2 — no source change needed here, note that finding in the commit message.
 
 - [ ] **Step 2: Write the failing test**
@@ -146,8 +176,13 @@ vi.mock("./sdk", () => ({
 describe("createWorkersContext", () => {
   it("builds a context with db, user, and repos from a Fetch Request", async () => {
     const req = new Request("https://authichain.com/api/trpc/health");
-    const env = { HYPERDRIVE: { connectionString: "postgres://fake/fake" } } as any;
-    const ctx = await createWorkersContext({ req, resHeaders: new Headers() } as any, env);
+    const env = {
+      HYPERDRIVE: { connectionString: "postgres://fake/fake" },
+    } as any;
+    const ctx = await createWorkersContext(
+      { req, resHeaders: new Headers() } as any,
+      env
+    );
     expect(ctx.user).toBeNull();
     expect(ctx.missionsRepo).toBeDefined();
     expect(ctx.adminRepo).toBeDefined();
@@ -202,6 +237,7 @@ export async function createWorkersContext(
   };
 }
 ```
+
 Note this drops `req`/`res` from `TrpcContext` entirely (the Express version kept them for the one router that used them directly — `server/auth/router.ts`, handled in Task 4) and adds `db` (previously a bare module import, now threaded through context via `getHyperdriveDb`, Task 1's additive Hyperdrive factory).
 
 - [ ] **Step 5: Run test to verify it passes**
@@ -221,29 +257,37 @@ git commit -m "feat(workers): add Fetch-adapter tRPC context alongside the exist
 ### Task 2b: Migrate `db`/`getDb()`/helper-function call sites to `ctx.db` — split into 6 sub-tasks
 
 **Why this task exists, and two corrections along the way:** discovered during pre-flight plan review, then refined twice more during Task 1 and Task 2's review cycles. `server/db.ts` has three access surfaces that all share one underlying connection, not independent things:
+
 ```typescript
 let _db: DrizzleInstance | null = null;
 
-export async function getDb() {              // lazy-initializes _db on first call,
-  if (_db) return _db;                        // using process.env.DATABASE_URL,
+export async function getDb() {
+  // lazy-initializes _db on first call,
+  if (_db) return _db; // using process.env.DATABASE_URL,
   // ...new Pool({ connectionString: process.env.DATABASE_URL }); _db = drizzle(pool);
 }
 
 export const db: DrizzleInstance = new Proxy({} as DrizzleInstance, {
   get(_target, prop) {
-    if (!_db) throw new Error("Database not available");  // depends on getDb()
-    return Reflect.get(_db as object, prop as string);      // having run first
+    if (!_db) throw new Error("Database not available"); // depends on getDb()
+    return Reflect.get(_db as object, prop as string); // having run first
   },
 });
 
 // Plus 151 named query helpers exported from this same file, e.g.:
-export async function getUserByOpenId(openId: string) { /* uses db/getDb internally */ }
-export async function upsertUser(user: InsertUser): Promise<void> { /* ditto */ }
+export async function getUserByOpenId(openId: string) {
+  /* uses db/getDb internally */
+}
+export async function upsertUser(user: InsertUser): Promise<void> {
+  /* ditto */
+}
 // ...149 more (createProduct, getLeadByEmail, upsertStripeSubscription, etc.)
 ```
+
 All three are incompatible with Workers for the same reason: `process.env.DATABASE_URL` and the module-scope `_db` cache both assume a long-lived Node process, not a per-request Workers invocation where `env` bindings are only available inside the request handler.
 
 A real usage-based investigation (not an import-statement guess — that undercounted twice in a row during this plan's review cycles) found the true scope:
+
 - 35 files call `getDb(` directly
 - 29 files use `db.<method>(` directly
 - 115 files call at least one of the 151 named helper functions
@@ -251,18 +295,19 @@ A real usage-based investigation (not an import-statement guess — that underco
 
 A single task covering 112 files isn't reviewable or safely executable as one unit, so this is split into 6 sub-tasks by subsystem, ~17-19 files each, matching the codebase's own `server/` subdirectory organization:
 
-| Sub-task | Files | Scope |
-|---|---|---|
-| Task 2b-1 | 19 | `server/agents/**` — AI/automation agents |
-| Task 2b-2 | 19 | `server/jobs/**`, `server/scheduled-jobs.ts` — background jobs |
-| Task 2b-3 | 17 | `server/scripts/**`, `server/missions/**`, `server/_core/**`, `server/db/**` — infra/tooling/core |
-| Task 2b-4 | 19 | `server/webhooks/**`, `server/services/**`, `server/sales/**`, `server/admin/**`, `server/payments/**`, `server/paddle/**`, `server/subscriptions/**`, `server/stripe-connect-service.ts`, `server/tenant-billing.ts`, `server/revenue-orchestrator.ts`, `server/fulfillment-service.ts` — commerce/revenue |
-| Task 2b-5 | 19 | `server/staking/**`, `server/referral/**`, `server/white-label/**`, `server/affiliate/**`, `server/bonuses/**`, `server/authenticate/**`, `server/b44-service.ts`, `server/asset-service.ts`, `server/supply-chain/**`, `server/qron/**`, `server/qrcode/**`, `server/products/**`, `server/nft/**`, `server/marketplace/**`, `server/certificates/**`, `server/ordinals-service.ts`, `server/metrc-service.ts` — identity/product |
-| Task 2b-6 | 19 | `server/social-service.ts`, `server/marketing/**`, `server/hubspot/**`, `server/gpt/**`, `server/email-drafts/**`, `server/email-campaigns/**`, `server/notifications/**`, `server/feedback/**`, `server/personalization/**`, `server/character-service.ts`, `server/govchain/**`, `server/mcp/**`, `server/internal-api.ts`, `server/dashboard/**`, `server/blockchain/**`, `server/analytics/**`, `server/ab-testing/**`, `server/routers/**` (the tRPC composition file itself), `server/autopilot/**` — content/comms/composition |
+| Sub-task  | Files | Scope                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Task 2b-1 | 19    | `server/agents/**` — AI/automation agents                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Task 2b-2 | 19    | `server/jobs/**`, `server/scheduled-jobs.ts` — background jobs                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Task 2b-3 | 17    | `server/scripts/**`, `server/missions/**`, `server/_core/**`, `server/db/**` — infra/tooling/core                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Task 2b-4 | 19    | `server/webhooks/**`, `server/services/**`, `server/sales/**`, `server/admin/**`, `server/payments/**`, `server/paddle/**`, `server/subscriptions/**`, `server/stripe-connect-service.ts`, `server/tenant-billing.ts`, `server/revenue-orchestrator.ts`, `server/fulfillment-service.ts` — commerce/revenue                                                                                                                                                                                                                           |
+| Task 2b-5 | 19    | `server/staking/**`, `server/referral/**`, `server/white-label/**`, `server/affiliate/**`, `server/bonuses/**`, `server/authenticate/**`, `server/b44-service.ts`, `server/asset-service.ts`, `server/supply-chain/**`, `server/qron/**`, `server/qrcode/**`, `server/products/**`, `server/nft/**`, `server/marketplace/**`, `server/certificates/**`, `server/ordinals-service.ts`, `server/metrc-service.ts` — identity/product                                                                                                    |
+| Task 2b-6 | 19    | `server/social-service.ts`, `server/marketing/**`, `server/hubspot/**`, `server/gpt/**`, `server/email-drafts/**`, `server/email-campaigns/**`, `server/notifications/**`, `server/feedback/**`, `server/personalization/**`, `server/character-service.ts`, `server/govchain/**`, `server/mcp/**`, `server/internal-api.ts`, `server/dashboard/**`, `server/blockchain/**`, `server/analytics/**`, `server/ab-testing/**`, `server/routers/**` (the tRPC composition file itself), `server/autopilot/**` — content/comms/composition |
 
 Each sub-task below follows the same procedure; only the file scope differs. Run them in order (2b-1 through 2b-6) so the full suite's growing pass count stays a meaningful regression signal between them, but they have no interface dependency on each other — a review finding in 2b-3 does not block starting 2b-4.
 
 **Interfaces (shared across all six sub-tasks):**
+
 - Consumes: `TrpcContext.db` from Task 2 (`server/_core/context.workers.ts`) — already present in the type, populated via `getHyperdriveDb(env)` (Task 1's factory — **not** `getDb()`, which is one of the things being migrated away from).
 
 ---
@@ -270,6 +315,7 @@ Each sub-task below follows the same procedure; only the file scope differs. Run
 #### Task 2b-1: Migrate `server/agents/**` (19 files)
 
 **Files:**
+
 - Modify: `server/agents/browser-vision.ts`, `server/agents/browser.ts`, `server/agents/closer.ts`, `server/agents/content.ts`, `server/agents/crm-update.ts`, `server/agents/dev-team/code-writer.ts`, `server/agents/dev-team/pr-manager.ts`, `server/agents/dev-team/router.ts`, `server/agents/dev-team/test-runner.ts`, `server/agents/followup.ts`, `server/agents/heygen-video.ts`, `server/agents/infra.ts`, `server/agents/lead-finder.ts`, `server/agents/news-pr.ts`, `server/agents/outbound-email.ts`, `server/agents/pilot-packet.ts`, `server/agents/retail.ts`, `server/agents/security.ts`, `server/agents/seo-content.ts`
 - Test: each file's matching `*.test.ts` (run per-file after each migration)
 
@@ -278,6 +324,7 @@ Each sub-task below follows the same procedure; only the file scope differs. Run
 ```bash
 grep -rl "getDb(\|(getUserByOpenId\|upsertUser\|getAllUsers\|createProduct" server/agents --include="*.ts" | grep -v "\.test\.ts$"
 ```
+
 (Substitute the actual helper-function names each file uses — this plan's investigation used a loop over all 151 names; for a 19-file cluster, a manual read of each file's imports from `../db` or `../../db` is faster than re-running the full 151-name loop. Confirm no file has been added to or removed from `server/agents/` since this plan was written that would change the list above.)
 
 - [ ] **Step 2: Classify each file — router-adjacent (has access to a tRPC `ctx`) vs. standalone service module**
@@ -307,6 +354,7 @@ git commit -m "refactor(workers): migrate server/agents/<name> off direct db acc
 ```bash
 grep -rl "getDb(\|\bdb\.\(select\|insert\|update\|delete\|query\|transaction\|execute\)(" server/agents --include="*.ts" | grep -v "\.test\.ts$"
 ```
+
 Expected: empty.
 
 ---
@@ -314,6 +362,7 @@ Expected: empty.
 #### Task 2b-2: Migrate `server/jobs/**` + `server/scheduled-jobs.ts` (19 files)
 
 **Files:**
+
 - Modify: every file under `server/jobs/` (18 files — enumerate via `find server/jobs -name "*.ts" | grep -v test`, do not assume the count is exactly 18 without checking, this plan's own file-count discovery process has been wrong twice already) plus `server/scheduled-jobs.ts`
 - Test: each file's matching `*.test.ts`
 
@@ -323,13 +372,14 @@ Expected: empty.
 find server/jobs -name "*.ts" | grep -v "\.test\.ts$" | sort
 ```
 
-- [ ] **Step 2 through 6: same procedure as Task 2b-1**, scoped to this file list. `server/scheduled-jobs.ts` is the Node `setInterval`-based scheduler that Task 8 (Cron Triggers) also touches — coordinate: this sub-task migrates its *database access* off the module singleton; Task 8 migrates its *scheduling mechanism* off `setInterval`. If both tasks touch the same lines, whichever runs second should read the other's diff first rather than conflict blindly. Flag this coordination note in your commit message if you touch `server/scheduled-jobs.ts`.
+- [ ] **Step 2 through 6: same procedure as Task 2b-1**, scoped to this file list. `server/scheduled-jobs.ts` is the Node `setInterval`-based scheduler that Task 8 (Cron Triggers) also touches — coordinate: this sub-task migrates its _database access_ off the module singleton; Task 8 migrates its _scheduling mechanism_ off `setInterval`. If both tasks touch the same lines, whichever runs second should read the other's diff first rather than conflict blindly. Flag this coordination note in your commit message if you touch `server/scheduled-jobs.ts`.
 
 ---
 
 #### Task 2b-3: Migrate `server/scripts/**`, `server/missions/**`, `server/_core/**`, `server/db/**` (17 files)
 
 **Files:**
+
 - Modify: every file under `server/scripts/` (6 files), `server/missions/` (5 files), `server/_core/` (5 files — **note:** `server/_core/context.ts`, `server/_core/context.workers.ts`, and `server/_core/sdk.ts` are expected to import `getDb`/`getHyperdriveDb` directly, that's their job — exclude those three from this migration, only migrate the other 2 `_core` files that showed up in the original scan), `server/db/` (1 file, `server/db/users.ts`)
 - Test: matching `*.test.ts` files
 
@@ -346,6 +396,7 @@ find server/scripts server/missions server/_core server/db -name "*.ts" | grep -
 #### Task 2b-4: Migrate commerce/revenue cluster (19 files)
 
 **Files:**
+
 - Modify: `server/webhooks/**` (3 files), `server/services/**` (3 files), `server/sales/**` (3 files), `server/admin/**` (3 files), `server/payments/**` (1 file), `server/paddle/**` (1 file), `server/subscriptions/**` (1 file), `server/stripe-connect-service.ts`, `server/tenant-billing.ts`, `server/revenue-orchestrator.ts`, `server/fulfillment-service.ts`
 - Test: matching `*.test.ts` files
 
@@ -365,6 +416,7 @@ echo "server/stripe-connect-service.ts server/tenant-billing.ts server/revenue-o
 #### Task 2b-5: Migrate identity/product cluster (19 files)
 
 **Files:**
+
 - Modify: `server/staking/**` (2), `server/referral/**` (2), `server/white-label/**` (1), `server/affiliate/**` (1), `server/bonuses/**` (1), `server/authenticate/**` (1), `server/b44-service.ts`, `server/asset-service.ts`, `server/supply-chain/**` (1), `server/qron/**` (1), `server/qrcode/**` (1), `server/products/**` (1), `server/nft/**` (1), `server/marketplace/**` (1), `server/certificates/**` (1), `server/ordinals-service.ts`, `server/metrc-service.ts`
 - Test: matching `*.test.ts` files
 
@@ -382,6 +434,7 @@ echo "server/b44-service.ts server/asset-service.ts server/ordinals-service.ts s
 #### Task 2b-6: Migrate content/comms/composition cluster (19 files)
 
 **Files:**
+
 - Modify: `server/social-service.ts`, `server/marketing/**` (1), `server/hubspot/**` (1), `server/gpt/**` (1), `server/email-drafts/**` (1), `server/email-campaigns/**` (1), `server/notifications/**` (1), `server/feedback/**` (1), `server/personalization/**` (1), `server/character-service.ts`, `server/govchain/**` (1), `server/mcp/**` (1), `server/internal-api.ts`, `server/dashboard/**` (1), `server/blockchain/**` (1), `server/analytics/**` (1), `server/ab-testing/**` (1), `server/routers/**` (1), `server/autopilot/**` (1)
 - Test: matching `*.test.ts` files
 
@@ -406,18 +459,22 @@ grep -rlE "\bdb\.(select|insert|update|delete|query|transaction|execute)\(" serv
 npx tsc --noEmit
 pnpm vitest run
 ```
+
 Expected: both greps empty, zero type errors, full suite passing. This is the true gate for "the app no longer depends on the Node-only db singleton anywhere outside server/db.ts's own definitions" — not any individual sub-task's local check.
 
 ---
+
 ---
 
 ### Task 4: Adapt `server/auth/router.ts` off `ctx.req`/`ctx.res`
 
 **Files:**
+
 - Modify: `server/auth/router.ts` (read fully first — this task can't be completed blind; the exact diff depends on what it currently does with `req`/`res`, which the investigation for this plan did not enumerate beyond confirming it's the only file touching them)
 - Test: `server/auth/router.test.ts` (extend existing, or create if absent)
 
 **Interfaces:**
+
 - Consumes: `TrpcContext` from Task 2 (no `req`/`res` fields)
 - Produces: same public tRPC procedure surface as today (`auth.*` — do not rename procedures; anything importing `trpc.auth.*` on the frontend must keep working unchanged)
 
@@ -426,7 +483,9 @@ Expected: both greps empty, zero type errors, full suite passing. This is the tr
 ```bash
 grep -n "ctx\.req\.\|ctx\.res\." server/auth/router.ts
 ```
+
 Common patterns and their Workers-compatible replacement:
+
 - `ctx.req.headers.cookie` / `ctx.req.cookies.x` → read from a `cookie` header parsed with a small helper (e.g. `hono/cookie`'s `getCookie`), threaded into context as `ctx.cookies: Record<string, string>` in Task 2's `createWorkersContext`.
 - `ctx.res.cookie(...)` / `ctx.res.clearCookie(...)` → tRPC's Fetch adapter can't mutate response headers mid-procedure the way Express `res` can; set-cookie must go through `responseMeta` on the router, or the procedure returns the cookie value and a thin Hono route sets it. Prefer: procedures return `{ ...data, setCookie?: string }`, and the Hono mount point (Task 6) checks for that key and calls `c.header("Set-Cookie", ...)`.
 - `ctx.res.status(...)` — tRPC errors already carry HTTP status via `TRPCError({ code })`; if this is being used to set a non-error status, that's unusual enough to flag rather than guess — write down what's found here before changing it.
@@ -461,11 +520,13 @@ git commit -m "fix(workers): remove ctx.req/ctx.res coupling from auth router"
 ### Task 5: Hono Worker entrypoint mounting tRPC + static assets
 
 **Files:**
+
 - Create: `worker-app/index.ts` (kept separate from the existing `worker/index.ts` marketing-page worker until Task 11's cutover — do not overwrite `worker/index.ts` yet, it's still live in production for `authichain.com`'s root path)
 - Create: `worker-app/wrangler.toml`
 - Test: manual (curl against `wrangler dev`, see Step 4 — this task is an integration point, not a unit-testable pure function)
 
 **Interfaces:**
+
 - Consumes: `createWorkersContext` (Task 2), `appRouter` from `server/routers.ts` (unchanged)
 - Produces: the `fetch(request, env, ctx)` handler that Task 6 (raw routes) and Task 11 (cutover) both extend.
 
@@ -506,15 +567,17 @@ app.use(
   })
 );
 
-app.get("/api/health", (c) => c.json({ status: "ok" }));
+app.get("/api/health", c => c.json({ status: "ok" }));
 
 // Static assets fallback (Vite build output, same dist/public the existing
 // worker/index.ts already serves for the marketing page).
-app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
+app.get("*", c => c.env.ASSETS.fetch(c.req.raw));
 
 export default app;
 ```
+
 Requires adding `@hono/trpc-server` to `package.json` dependencies:
+
 ```bash
 pnpm add hono @hono/trpc-server
 ```
@@ -540,6 +603,7 @@ id = "7c8e9466e57843199f6f768615e42a5c"  # reuse the existing SESSIONS KV from t
 binding = "HYPERDRIVE"
 id = "REPLACE_WITH_ID_FROM_TASK_1"
 ```
+
 This is intentionally a **separate** wrangler config/worker name (`authichain-app`, not `authichain`) from the root `worker/index.ts` — they stay independent deployments until Task 11 merges them, so a bad build here can't touch the currently-live marketing worker.
 
 - [ ] **Step 3: Build the frontend so `dist/public` exists**
@@ -551,12 +615,14 @@ Expected: `dist/public/` populated (same output the existing Vercel deploy and `
 
 Run: `cd worker-app && npx wrangler dev`
 Then in a second terminal:
+
 ```bash
 curl http://localhost:8787/api/health
 # Expected: {"status":"ok"}
 curl "http://localhost:8787/api/trpc/system.ping" # or whichever no-auth query exists in the system router
 # Expected: a valid tRPC JSON response, not a 500
 ```
+
 If the tRPC call 500s, read the error — it's almost certainly one of: a router file that does import something Node-only (the 3 files flagged by the `fs`/`child_process` grep in the architecture investigation — check if any are reachable from a no-auth query), or a missing env binding. Fix and re-run before moving on; do not proceed to Task 6 with a failing tRPC mount.
 
 - [ ] **Step 5: Commit**
@@ -571,11 +637,13 @@ git commit -m "feat(workers): scaffold Hono entrypoint mounting tRPC + static as
 ### Task 6: Port the raw (non-tRPC) Express routes
 
 **Files:**
+
 - Modify: `worker-app/index.ts`
 - Reference (read, do not modify — reuse the exported handler functions as-is): `server/webhooks/stripe.ts`, `server/webhooks/paddle.ts` (or wherever Paddle's handler lives per `app.ts:95` — confirm exact path), `server/_core/oauth.ts`, `.github-staging/gmail-oauth.ts`, `server/contact/router.ts` (or equivalent — confirm exact export used by `contactRouter` in `app.ts:189`), `server/gpt/router.ts`, `server/internal-api.ts`
 - Test: `worker-app/routes.test.ts`
 
 **Interfaces:**
+
 - Consumes: whatever each existing raw handler already exports (confirmed pattern for Stripe: `handleStripeWebhook(rawBody: string, sig: string)` — framework-agnostic, no change needed, just a new call site)
 - Produces: nothing new — this task's job is wiring, not new business logic.
 
@@ -590,13 +658,14 @@ For each of the 8 non-tRPC concerns found in `server/_core/app.ts` (excluding `/
 import { handleStripeWebhook } from "../server/webhooks/stripe";
 // import { handlePaddleWebhook } from "../server/webhooks/paddle"; // confirm exact path from Step 1
 
-app.post("/api/stripe/webhook", async (c) => {
+app.post("/api/stripe/webhook", async c => {
   const rawBody = await c.req.text();
   const sig = c.req.header("stripe-signature") ?? "";
   const result = await handleStripeWebhook(rawBody, sig);
   return c.json(result);
 });
 ```
+
 Repeat the same pattern for `/api/paddle/webhook` once Step 1 confirms its handler's exact signature.
 
 - [ ] **Step 3: Write the test for the webhook routes**
@@ -619,7 +688,10 @@ describe("POST /api/stripe/webhook", () => {
     });
     expect(res.status).toBe(200);
     const { handleStripeWebhook } = await import("../server/webhooks/stripe");
-    expect(handleStripeWebhook).toHaveBeenCalledWith("raw-stripe-payload", "t=123,v1=fake");
+    expect(handleStripeWebhook).toHaveBeenCalledWith(
+      "raw-stripe-payload",
+      "t=123,v1=fake"
+    );
   });
 });
 ```
@@ -647,12 +719,14 @@ git commit -m "feat(workers): port <route-name> off Express"
 ### Task 7: Rate limiting via Durable Object
 
 **Files:**
+
 - Create: `worker-app/rate-limiter.ts`
 - Modify: `worker-app/wrangler.toml` (add the Durable Object binding)
 - Modify: `worker-app/index.ts` (replace the Express `oauthRateLimit`/`contactRateLimit`/`gptRateLimit`/`globalApiRateLimit`/`adminRateLimit` middleware calls)
 - Test: `worker-app/rate-limiter.test.ts`
 
 **Interfaces:**
+
 - Produces: `checkRateLimit(stub: DurableObjectStub, key: string, limit: number, windowMs: number): Promise<boolean>` (`true` = allowed)
 
 - [ ] **Step 1: Write the failing test**
@@ -676,6 +750,7 @@ describe("RateLimiter", () => {
   });
 });
 ```
+
 This requires `@cloudflare/vitest-pool-workers` (add as a devDependency if not already present — check `package.json` first, several Cloudflare-adjacent packages are already installed per the earlier dependency audit).
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -692,13 +767,22 @@ import { DurableObject } from "cloudflare:workers";
 export class RateLimiter extends DurableObject {
   async check(limit: number, windowMs: number): Promise<boolean> {
     const now = Date.now();
-    const stored = await this.ctx.storage.get<{ count: number; resetAt: number }>("entry");
+    const stored = await this.ctx.storage.get<{
+      count: number;
+      resetAt: number;
+    }>("entry");
     if (!stored || now >= stored.resetAt) {
-      await this.ctx.storage.put("entry", { count: 1, resetAt: now + windowMs });
+      await this.ctx.storage.put("entry", {
+        count: 1,
+        resetAt: now + windowMs,
+      });
       return true;
     }
     if (stored.count >= limit) return false;
-    await this.ctx.storage.put("entry", { count: stored.count + 1, resetAt: stored.resetAt });
+    await this.ctx.storage.put("entry", {
+      count: stored.count + 1,
+      resetAt: stored.resetAt,
+    });
     return true;
   }
 }
@@ -714,6 +798,7 @@ export async function checkRateLimit(
   return stub.check(limit, windowMs);
 }
 ```
+
 This mirrors the eviction/window logic already in `server/_core/rate-limit.ts`'s in-memory `Map` implementation (confirmed via `store.size > 10_000` eviction check during the architecture investigation) — same algorithm, durable/distributed storage instead of a process-local `Map`.
 
 - [ ] **Step 4: Wire the Durable Object binding**
@@ -735,16 +820,23 @@ new_classes = ["RateLimiter"]
 // worker-app/index.ts — example for the global API limit; repeat per limiter
 app.use("/api/*", async (c, next) => {
   const key = c.req.header("cf-connecting-ip") ?? "unknown";
-  const allowed = await checkRateLimit(c.env.RATE_LIMITER, `global:${key}`, 100, 60_000);
+  const allowed = await checkRateLimit(
+    c.env.RATE_LIMITER,
+    `global:${key}`,
+    100,
+    60_000
+  );
   if (!allowed) return c.json({ error: "rate limited" }, 429);
   await next();
 });
 ```
+
 Use the same per-route limit values already defined in `server/_core/rate-limit.ts` for `oauthRateLimit`/`contactRateLimit`/`gptRateLimit`/`adminRateLimit` — read that file's exact numbers before hardcoding new ones here, do not guess different limits.
 
 - [ ] **Step 6: Run test to verify it passes, then commit**
 
 Run: `pnpm vitest run worker-app/rate-limiter.test.ts`
+
 ```bash
 git add worker-app/rate-limiter.ts worker-app/wrangler.toml worker-app/index.ts worker-app/rate-limiter.test.ts
 git commit -m "feat(workers): move rate limiting from in-memory Map to a Durable Object"
@@ -755,11 +847,13 @@ git commit -m "feat(workers): move rate limiting from in-memory Map to a Durable
 ### Task 8: Scheduled jobs via Cron Triggers
 
 **Files:**
+
 - Read first: `server/scheduled-jobs.ts` (the `initializeScheduler` function called by `server/_core/index.ts` — enumerate every job it registers and each one's interval before writing this task's real steps)
 - Create: `worker-app/scheduled.ts`
 - Modify: `worker-app/wrangler.toml`
 
 **Interfaces:**
+
 - Consumes: whatever individual job functions `server/scheduled-jobs.ts` currently calls on a `setInterval` — reuse them unchanged, same framework-agnostic-function pattern as Task 6's webhook handlers.
 
 - [ ] **Step 1: Enumerate the existing jobs**
@@ -767,19 +861,27 @@ git commit -m "feat(workers): move rate limiting from in-memory Map to a Durable
 ```bash
 grep -n "setInterval\|cron\|schedule" server/scheduled-jobs.ts
 ```
+
 List every job name and its interval here before proceeding — Cloudflare Cron Triggers are declared in `wrangler.toml` with cron expressions, not arbitrary millisecond intervals, so a job running every 90 seconds needs to become "every minute" (closest supported granularity) with an internal check, not a literal 90s trigger.
 
 - [ ] **Step 2: Write `worker-app/scheduled.ts`'s `scheduled()` handler**
 
 (Concrete implementation depends entirely on Step 1's enumeration — for each job, add a cron trigger in `wrangler.toml`:
+
 ```toml
 [triggers]
 crons = ["*/5 * * * *"]  # one line per distinct schedule found in Step 1, replace with real cadences
 ```
+
 and a dispatcher:
+
 ```typescript
 // worker-app/scheduled.ts
-export async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+export async function scheduled(
+  event: ScheduledEvent,
+  env: Env,
+  ctx: ExecutionContext
+) {
   switch (event.cron) {
     case "*/5 * * * *":
       // ctx.waitUntil(existingJobFunction(getHyperdriveDb(env))); // NOT getDb — see Task 1/2's naming note
@@ -788,6 +890,7 @@ export async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionC
   }
 }
 ```
+
 Fill in the real job function calls once Step 1's enumeration exists — do not invent job names.)
 
 - [ ] **Step 3: Export the scheduled handler alongside the fetch handler**
@@ -824,6 +927,7 @@ git commit -m "feat(workers): move scheduled jobs from setInterval to Cron Trigg
 ```bash
 cd worker-app && npx wrangler deploy
 ```
+
 This publishes to `authichain-app.<your-subdomain>.workers.dev` — no DNS/domain risk, purely additive.
 
 - [ ] **Step 2: Set production secrets**
@@ -851,12 +955,12 @@ Check Vercel Analytics (or the existing `activity_log`/`analytics` tables the ap
 
 - [ ] **Step 2: Compare against free-tier ceilings**
 
-| Resource | Free tier | Check against |
-|---|---|---|
-| Workers requests | 100,000/day | Total combined requests/day across all 4 domains |
-| KV reads | 100,000/day | Session reads (~1 per authenticated request) |
-| KV writes | 1,000/day | Session writes (login events) |
-| Durable Object requests | 100,000/day | Rate-limiter checks (~1 per `/api/*` request) |
+| Resource                | Free tier   | Check against                                    |
+| ----------------------- | ----------- | ------------------------------------------------ |
+| Workers requests        | 100,000/day | Total combined requests/day across all 4 domains |
+| KV reads                | 100,000/day | Session reads (~1 per authenticated request)     |
+| KV writes               | 1,000/day   | Session writes (login events)                    |
+| Durable Object requests | 100,000/day | Rate-limiter checks (~1 per `/api/*` request)    |
 
 If any real number is within 2x of its ceiling, note it here as a blocker for the "free tier" framing specifically — the migration can still proceed, but "delete Vercel" doesn't have to mean "stay on Workers Free" if traffic doesn't fit; Workers Paid is $5/mo flat with 10M included requests, a much higher ceiling, and still far cheaper than Vercel Pro. Flag this explicitly to the user rather than silently assuming free tier is sufficient.
 
@@ -869,6 +973,7 @@ If any real number is within 2x of its ceiling, note it here as a blocker for th
 - [ ] **Step 1: Automated route diff**
 
 For every route Task 6 enumerated plus every tRPC procedure in the 44 routers, hit both the live production domain and the `workers.dev` URL (with a `Host` header override to select the right brand) and diff response status + shape:
+
 ```bash
 for path in /api/health /dashboard /login /pricing; do
   echo "=== $path ==="
@@ -876,6 +981,7 @@ for path in /api/health /dashboard /login /pricing; do
        <(curl -s -H "Host: govchain.us" "https://authichain-app.<subdomain>.workers.dev$path")
 done
 ```
+
 Expect meaningful diffs on anything involving session cookies (domain-scoped) or timestamps — filter those, but any diff in status code or structural JSON shape is a real gap to fix before Task 12.
 
 - [ ] **Step 2: Manual auth flow check**
@@ -891,6 +997,7 @@ Use Stripe CLI (`stripe listen --forward-to https://authichain-app.<subdomain>.w
 ### Task 12: DNS/Route cutover, per domain
 
 **Files:**
+
 - Modify: `worker-app/wrangler.toml` (add `routes` once Task 11 passes — same pattern already used by the existing `workers/govchain-us/wrangler.toml`: `pattern = "govchain.us/*"`, `zone_name = "govchain.us"`)
 
 - [ ] **Step 1: Cut over one domain first** (govchain.us — smallest brand by the stats shown on its own marketing page, lowest blast radius)
@@ -903,6 +1010,7 @@ zone_name = "govchain.us"
 pattern = "www.govchain.us/*"
 zone_name = "govchain.us"
 ```
+
 Deploy: `npx wrangler deploy`. Cloudflare Routes activate near-instantly (not DNS-TTL-bound) — if something's wrong, delete the route block and redeploy to fall back to whatever the domain's Vercel/DNS config was serving before, without waiting on DNS propagation.
 
 - [ ] **Step 2: Monitor for 24–48h**, checking error rates via `npx wrangler tail` and the existing `activity_log` table for anomalies, before repeating Step 1 for `qron.space`, `strainchain.io`, and finally `authichain.com`/`app.authichain.com` (root domain last — it's the brand default and highest-traffic).
@@ -915,8 +1023,10 @@ Deploy: `npx wrangler deploy`. Cloudflare Routes activate near-instantly (not DN
 
 - [ ] **Step 1:** Confirm all 4 domains + subdomains have been repointed and stable for the monitoring window in Task 12.
 - [ ] **Step 2:** Delete via the same pattern used earlier this session:
+
 ```bash
 curl -X DELETE -H "Authorization: Bearer $VERCEL_TOKEN" \
   "https://api.vercel.com/v9/projects/prj_GD9ypyGrjibx4Ab88M52xufUf1ph?teamId=team_PKVRDwUXPRFjmGTM7PZxjNys"
 ```
+
 Expected: HTTP 204. This is the last Vercel project — after this, "delete Vercel" is complete.

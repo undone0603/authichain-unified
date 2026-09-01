@@ -26,8 +26,8 @@ async function acquireLock(lockFilePath: string) {
         startedAt: new Date().toISOString(),
       },
       null,
-      2,
-    ),
+      2
+    )
   );
   return handle;
 }
@@ -48,14 +48,20 @@ async function runSingleTick() {
 export async function runAgentZSupervisor(options?: { once?: boolean }) {
   if (!ENV.autonomousPipelineEnabled) {
     throw new Error(
-      "AgentZ requires AUTONOMOUS_PIPELINE_ENABLED=true. Set it in runtime environment before starting.",
+      "AgentZ requires AUTONOMOUS_PIPELINE_ENABLED=true. Set it in runtime environment before starting."
     );
   }
 
   const once = options?.once ?? process.argv.includes("--once");
   const tickSeconds = parsePositiveInt(process.env.AGENTZ_TICK_SECONDS, 300);
-  const baseBackoffSeconds = parsePositiveInt(process.env.AGENTZ_FAILURE_BACKOFF_SECONDS, 60);
-  const lockFilePath = resolve(process.cwd(), process.env.AGENTZ_LOCK_FILE ?? ".agentz.lock");
+  const baseBackoffSeconds = parsePositiveInt(
+    process.env.AGENTZ_FAILURE_BACKOFF_SECONDS,
+    60
+  );
+  const lockFilePath = resolve(
+    process.cwd(),
+    process.env.AGENTZ_LOCK_FILE ?? ".agentz.lock"
+  );
 
   let lockHandle: Awaited<ReturnType<typeof acquireLock>> | null = null;
   let shouldStop = false;
@@ -70,9 +76,9 @@ export async function runAgentZSupervisor(options?: { once?: boolean }) {
 
   try {
     lockHandle = await acquireLock(lockFilePath);
-  } catch (error) {
+  } catch (_error) {
     throw new Error(
-      `AgentZ supervisor is already running or lock file is stale (${lockFilePath}). Remove the lock file if no process is active.`,
+      `AgentZ supervisor is already running or lock file is stale (${lockFilePath}). Remove the lock file if no process is active.`
     );
   }
 
@@ -107,7 +113,8 @@ export async function runAgentZSupervisor(options?: { once?: boolean }) {
       } catch (error) {
         consecutiveFailures += 1;
         const failureMessage = toErrorMessage(error);
-        const backoffSeconds = baseBackoffSeconds * Math.min(consecutiveFailures, 10);
+        const backoffSeconds =
+          baseBackoffSeconds * Math.min(consecutiveFailures, 10);
 
         await logActivity({
           userId: null,
@@ -121,7 +128,9 @@ export async function runAgentZSupervisor(options?: { once?: boolean }) {
           },
         });
 
-        console.error(`AgentZ tick failed (${consecutiveFailures}): ${failureMessage}`);
+        console.error(
+          `AgentZ tick failed (${consecutiveFailures}): ${failureMessage}`
+        );
 
         if (once) {
           throw error;
@@ -160,7 +169,8 @@ export async function runAgentZSupervisor(options?: { once?: boolean }) {
   }
 }
 
-const isMain = !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMain =
+  !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
   runAgentZSupervisor()

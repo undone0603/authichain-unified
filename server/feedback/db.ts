@@ -1,6 +1,11 @@
 import { eq, desc, and, sql } from "drizzle-orm";
 import { getDb } from "../db";
-import { feedback, feedbackVotes, users, InsertFeedback, InsertFeedbackVote } from "../../drizzle/schema";
+import {
+  feedback,
+  feedbackVotes,
+  users,
+  InsertFeedback,
+} from "../../drizzle/schema";
 
 /**
  * Create new feedback
@@ -132,7 +137,11 @@ export async function updateFeedbackPriority(
 /**
  * Vote on feedback
  */
-export async function voteFeedback(feedbackId: number, userId: number, voteType: "up" | "down") {
+export async function voteFeedback(
+  feedbackId: number,
+  userId: number,
+  voteType: "up" | "down"
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -140,7 +149,12 @@ export async function voteFeedback(feedbackId: number, userId: number, voteType:
   const existingVote = await db
     .select()
     .from(feedbackVotes)
-    .where(and(eq(feedbackVotes.feedbackId, feedbackId), eq(feedbackVotes.userId, userId)))
+    .where(
+      and(
+        eq(feedbackVotes.feedbackId, feedbackId),
+        eq(feedbackVotes.userId, userId)
+      )
+    )
     .limit(1);
 
   if (existingVote.length > 0) {
@@ -148,7 +162,12 @@ export async function voteFeedback(feedbackId: number, userId: number, voteType:
     await db
       .update(feedbackVotes)
       .set({ voteType })
-      .where(and(eq(feedbackVotes.feedbackId, feedbackId), eq(feedbackVotes.userId, userId)));
+      .where(
+        and(
+          eq(feedbackVotes.feedbackId, feedbackId),
+          eq(feedbackVotes.userId, userId)
+        )
+      );
   } else {
     // Create new vote
     await db.insert(feedbackVotes).values({
@@ -171,7 +190,12 @@ export async function removeVote(feedbackId: number, userId: number) {
 
   await db
     .delete(feedbackVotes)
-    .where(and(eq(feedbackVotes.feedbackId, feedbackId), eq(feedbackVotes.userId, userId)));
+    .where(
+      and(
+        eq(feedbackVotes.feedbackId, feedbackId),
+        eq(feedbackVotes.userId, userId)
+      )
+    );
 
   // Update vote count
   await recalculateVotes(feedbackId);
@@ -191,11 +215,14 @@ async function recalculateVotes(feedbackId: number) {
     .from(feedbackVotes)
     .where(eq(feedbackVotes.feedbackId, feedbackId));
 
-  const upvotes = votes.filter((v) => v.voteType === "up").length;
-  const downvotes = votes.filter((v) => v.voteType === "down").length;
+  const upvotes = votes.filter(v => v.voteType === "up").length;
+  const downvotes = votes.filter(v => v.voteType === "down").length;
   const totalVotes = upvotes - downvotes;
 
-  await db.update(feedback).set({ votes: totalVotes }).where(eq(feedback.id, feedbackId));
+  await db
+    .update(feedback)
+    .set({ votes: totalVotes })
+    .where(eq(feedback.id, feedbackId));
 }
 
 /**
@@ -208,7 +235,12 @@ export async function getUserVote(feedbackId: number, userId: number) {
   const results = await db
     .select()
     .from(feedbackVotes)
-    .where(and(eq(feedbackVotes.feedbackId, feedbackId), eq(feedbackVotes.userId, userId)))
+    .where(
+      and(
+        eq(feedbackVotes.feedbackId, feedbackId),
+        eq(feedbackVotes.userId, userId)
+      )
+    )
     .limit(1);
 
   return results[0] || null;

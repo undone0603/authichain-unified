@@ -1,6 +1,6 @@
 /**
  * AuthiCharacter Generation Service — OpenArt Protocol Edition
- * 
+ *
  * Integrates: Protocol-grade prompt builder (7 archetypes),
  * 7-dimension scoring (protocol_fit, thumbnail_clarity, premium_feel,
  * silhouette, trust_symbolism, mint_readiness, ui_compatibility),
@@ -8,11 +8,16 @@
  */
 import { getDb } from "./db";
 import {
-  characterGenerations, characterAssets, protocolAgents,
-  verificationClaims, consensusResults, qronRewardLedger,
+  characterGenerations,
+  characterAssets,
+  protocolAgents,
+  verificationClaims,
+  consensusResults,
+  qronRewardLedger,
   checkpointBatches,
-  type InsertCharacterGeneration, type InsertCharacterAsset,
-  type InsertProtocolAgent,
+  type _InsertCharacterGeneration,
+  type _InsertCharacterAsset,
+  type _InsertProtocolAgent,
 } from "../drizzle/schema";
 import { eq, desc, sql, and, count } from "drizzle-orm";
 import { generateImage } from "./_core/imageGeneration";
@@ -61,7 +66,8 @@ const ARCHETYPES = {
       armor: "sensor-mesh plating with pulsing IoT nodes",
       weapon: "radar-like scanning eyes that pierce deception",
       aura: "crimson alert pulses radiating outward",
-      environment: "elevated observation post overlooking global supply networks",
+      environment:
+        "elevated observation post overlooking global supply networks",
     },
   },
   scout: {
@@ -103,7 +109,8 @@ const ARCHETYPES = {
       armor: "merchant vestments threaded with smart-contract filigree",
       weapon: "authentication stamp that brands genuine articles",
       aura: "warm rose-gold shimmer of trusted commerce",
-      environment: "bustling digital bazaar where every item bears proof of origin",
+      environment:
+        "bustling digital bazaar where every item bears proof of origin",
     },
   },
   explorer: {
@@ -117,7 +124,8 @@ const ARCHETYPES = {
       armor: "adaptive exploration suit with multi-protocol interfaces",
       weapon: "compass that points toward undiscovered authentication methods",
       aura: "cyan trails of newly charted protocol paths",
-      environment: "edge of the known verification network, peering into unexplored chains",
+      environment:
+        "edge of the known verification network, peering into unexplored chains",
     },
   },
 } as const;
@@ -127,7 +135,12 @@ export type ArchetypeKey = keyof typeof ARCHETYPES;
 // ─── Protocol-Grade Prompt Builder (from OpenArt spec) ─────────────────────
 function buildCharacterPrompt(
   archetype: ArchetypeKey,
-  context?: { brand?: string; object?: string; colorway?: string; mood?: string }
+  context?: {
+    brand?: string;
+    object?: string;
+    colorway?: string;
+    mood?: string;
+  }
 ): { prompt: string; negativePrompt: string } {
   const arch = ARCHETYPES[archetype];
   const v = arch.visual;
@@ -174,27 +187,35 @@ violent, gore, nsfw, offensive symbols, real brand logos`;
 export async function startCharacterGeneration(
   userId: number,
   archetype: ArchetypeKey,
-  context?: { brand?: string; object?: string; colorway?: string; mood?: string }
+  context?: {
+    brand?: string;
+    object?: string;
+    colorway?: string;
+    mood?: string;
+  }
 ): Promise<{ generationId: number; prompt: string }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const { prompt, negativePrompt } = buildCharacterPrompt(archetype, context);
 
-  const [result] = await db.insert(characterGenerations).values({
-    userId,
-    archetype,
-    style: "premium futuristic heraldic concept art",
-    colorway: context?.colorway || null,
-    mood: context?.mood || null,
-    prompt,
-    negativePrompt,
-    provider: "built-in",
-    providerModel: "image-gen-v1",
-    variantCount: 4,
-    status: "pending",
-    context: context ? JSON.stringify(context) : null,
-  }).returning();
+  const [result] = await db
+    .insert(characterGenerations)
+    .values({
+      userId,
+      archetype,
+      style: "premium futuristic heraldic concept art",
+      colorway: context?.colorway || null,
+      mood: context?.mood || null,
+      prompt,
+      negativePrompt,
+      provider: "built-in",
+      providerModel: "image-gen-v1",
+      variantCount: 4,
+      status: "pending",
+      context: context ? JSON.stringify(context) : null,
+    })
+    .returning();
 
   const generationId = result.id;
 
@@ -207,12 +228,16 @@ export async function startCharacterGeneration(
 }
 
 async function generateVariants(
-  generationId: number, prompt: string, archetype: ArchetypeKey, userId: number
+  generationId: number,
+  prompt: string,
+  archetype: ArchetypeKey,
+  userId: number
 ): Promise<void> {
   const db = await getDb();
   if (!db) return;
 
-  await db.update(characterGenerations)
+  await db
+    .update(characterGenerations)
     .set({ status: "generating" })
     .where(eq(characterGenerations.id, generationId));
 
@@ -238,7 +263,8 @@ async function generateVariants(
   }
 
   if (variants.length === 0) {
-    await db.update(characterGenerations)
+    await db
+      .update(characterGenerations)
       .set({ status: "failed" })
       .where(eq(characterGenerations.id, generationId));
     return;
@@ -249,19 +275,26 @@ async function generateVariants(
   let bestAssetId: number | null = null;
 
   for (const variant of variants) {
-    const [assetResult] = await db.insert(characterAssets).values({
-      generationId,
-      userId,
-      imageUrl: variant.imageUrl,
-      prompt: variant.variantPrompt,
-      mintStatus: "not_minted",
-    }).returning();
+    const [assetResult] = await db
+      .insert(characterAssets)
+      .values({
+        generationId,
+        userId,
+        imageUrl: variant.imageUrl,
+        prompt: variant.variantPrompt,
+        mintStatus: "not_minted",
+      })
+      .returning();
 
     const assetId = assetResult.id;
 
     // Score and track best
     try {
-      const score = await scoreCharacterAsset(assetId, variant.imageUrl, archetype);
+      const score = await scoreCharacterAsset(
+        assetId,
+        variant.imageUrl,
+        archetype
+      );
       if (score > bestScore) {
         bestScore = score;
         bestAssetId = assetId;
@@ -273,12 +306,14 @@ async function generateVariants(
 
   // Mark best asset as recommended
   if (bestAssetId) {
-    await db.update(characterAssets)
+    await db
+      .update(characterAssets)
       .set({ isRecommended: 1 })
       .where(eq(characterAssets.id, bestAssetId));
   }
 
-  await db.update(characterGenerations)
+  await db
+    .update(characterGenerations)
     .set({
       status: "completed",
       completedAt: new Date(),
@@ -289,7 +324,9 @@ async function generateVariants(
 
 // ─── 7-Dimension Character Scoring (OpenArt Protocol) ──────────────────────
 async function scoreCharacterAsset(
-  assetId: number, imageUrl: string, archetype: ArchetypeKey
+  assetId: number,
+  imageUrl: string,
+  archetype: ArchetypeKey
 ): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
@@ -315,7 +352,10 @@ Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`,
         {
           role: "user",
           content: [
-            { type: "text", text: `Score this ${archetype} character avatar for the AuthiChain protocol:` },
+            {
+              type: "text",
+              text: `Score this ${archetype} character avatar for the AuthiChain protocol:`,
+            },
             { type: "image_url", image_url: { url: imageUrl, detail: "high" } },
           ],
         },
@@ -336,7 +376,15 @@ Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`,
               mint_readiness: { type: "number" },
               ui_compatibility: { type: "number" },
             },
-            required: ["protocol_fit", "thumbnail_clarity", "premium_feel", "silhouette", "trust_symbolism", "mint_readiness", "ui_compatibility"],
+            required: [
+              "protocol_fit",
+              "thumbnail_clarity",
+              "premium_feel",
+              "silhouette",
+              "trust_symbolism",
+              "mint_readiness",
+              "ui_compatibility",
+            ],
             additionalProperties: false,
           },
         },
@@ -347,19 +395,19 @@ Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`,
     const scores = parseLLMContent<any>(content);
 
     // Calculate weighted total (out of 10)
-    const totalScore = (
-      scores.protocol_fit * 0.20 +
+    const totalScore =
+      scores.protocol_fit * 0.2 +
       scores.thumbnail_clarity * 0.15 +
-      scores.premium_feel * 0.20 +
-      scores.silhouette * 0.10 +
+      scores.premium_feel * 0.2 +
+      scores.silhouette * 0.1 +
       scores.trust_symbolism * 0.15 +
-      scores.mint_readiness * 0.10 +
-      scores.ui_compatibility * 0.10
-    );
+      scores.mint_readiness * 0.1 +
+      scores.ui_compatibility * 0.1;
 
     const roundedTotal = Math.round(totalScore * 100) / 100;
 
-    await db.update(characterAssets)
+    await db
+      .update(characterAssets)
       .set({
         protocolFitScore: String(scores.protocol_fit),
         thumbnailClarityScore: String(scores.thumbnail_clarity),
@@ -382,17 +430,29 @@ Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`,
 
     return roundedTotal;
   } catch (err) {
-    console.error(`[CharacterGen] LLM scoring failed for asset ${assetId}:`, err);
+    console.error(
+      `[CharacterGen] LLM scoring failed for asset ${assetId}:`,
+      err
+    );
     // Set default scores if LLM fails
     const defaultScore = "7.0";
-    await db.update(characterAssets)
+    await db
+      .update(characterAssets)
       .set({
-        protocolFitScore: defaultScore, thumbnailClarityScore: defaultScore,
-        premiumFeelScore: defaultScore, silhouetteScore: defaultScore,
-        trustSymbolismScore: defaultScore, mintReadinessScore: defaultScore,
-        uiCompatibilityScore: defaultScore, totalScore: defaultScore,
-        scoreIconity: 70, scoreTrustClarity: 70, scorePremiumFeel: 70,
-        scoreSilhouette: 70, scoreUiCompat: 70, scoreMintReady: 70,
+        protocolFitScore: defaultScore,
+        thumbnailClarityScore: defaultScore,
+        premiumFeelScore: defaultScore,
+        silhouetteScore: defaultScore,
+        trustSymbolismScore: defaultScore,
+        mintReadinessScore: defaultScore,
+        uiCompatibilityScore: defaultScore,
+        totalScore: defaultScore,
+        scoreIconity: 70,
+        scoreTrustClarity: 70,
+        scorePremiumFeel: 70,
+        scoreSilhouette: 70,
+        scoreUiCompat: 70,
+        scoreMintReady: 70,
         scoreProtocolAlign: 70,
       })
       .where(eq(characterAssets.id, assetId));
@@ -402,56 +462,110 @@ Return ONLY a JSON object with these exact keys and float scores (e.g., 7.5).`,
 
 // ─── Character Selection (from uploaded select route) ──────────────────────
 export async function selectCharacterAsset(
-  userId: number, assetId: number
+  userId: number,
+  assetId: number
 ): Promise<{ success: boolean; metadataHash?: string }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   // Verify ownership
-  const [asset] = await db.select()
+  const [asset] = await db
+    .select()
     .from(characterAssets)
-    .innerJoin(characterGenerations, eq(characterAssets.generationId, characterGenerations.id))
-    .where(and(eq(characterAssets.id, assetId), eq(characterGenerations.userId, userId)))
+    .innerJoin(
+      characterGenerations,
+      eq(characterAssets.generationId, characterGenerations.id)
+    )
+    .where(
+      and(
+        eq(characterAssets.id, assetId),
+        eq(characterGenerations.userId, userId)
+      )
+    )
     .limit(1);
 
   if (!asset) throw new Error("Asset not found or not owned by user");
 
   // Deselect ALL previously selected assets for this user (OpenArt pattern)
-  const userGens = await db.select({ id: characterGenerations.id })
+  const userGens = await db
+    .select({ id: characterGenerations.id })
     .from(characterGenerations)
     .where(eq(characterGenerations.userId, userId));
 
   for (const gen of userGens) {
-    await db.update(characterAssets)
+    await db
+      .update(characterAssets)
       .set({ isSelected: 0 })
       .where(eq(characterAssets.generationId, gen.id));
   }
 
   // Build NFT metadata
-  const arch = ARCHETYPES[asset.character_generations.archetype as ArchetypeKey];
+  const arch =
+    ARCHETYPES[asset.character_generations.archetype as ArchetypeKey];
   const metadata = {
     name: `AuthiCharacter #${assetId} — ${arch?.name || asset.character_generations.archetype}`,
     description: `Protocol ${asset.character_generations.archetype} agent for the AuthiChain verification network. ${arch?.description || ""}`,
     image: asset.character_assets.imageUrl,
     external_url: "https://authichain-gpea3uhe.manus.space",
     attributes: [
-      { trait_type: "Archetype", value: arch?.name || asset.character_generations.archetype },
-      { trait_type: "Protocol Fit", value: parseFloat(asset.character_assets.protocolFitScore || "0"), display_type: "number" },
-      { trait_type: "Thumbnail Clarity", value: parseFloat(asset.character_assets.thumbnailClarityScore || "0"), display_type: "number" },
-      { trait_type: "Premium Feel", value: parseFloat(asset.character_assets.premiumFeelScore || "0"), display_type: "number" },
-      { trait_type: "Silhouette", value: parseFloat(asset.character_assets.silhouetteScore || "0"), display_type: "number" },
-      { trait_type: "Trust Symbolism", value: parseFloat(asset.character_assets.trustSymbolismScore || "0"), display_type: "number" },
-      { trait_type: "Mint Readiness", value: parseFloat(asset.character_assets.mintReadinessScore || "0"), display_type: "number" },
-      { trait_type: "UI Compatibility", value: parseFloat(asset.character_assets.uiCompatibilityScore || "0"), display_type: "number" },
-      { trait_type: "Total Score", value: parseFloat(asset.character_assets.totalScore || "0"), display_type: "number" },
+      {
+        trait_type: "Archetype",
+        value: arch?.name || asset.character_generations.archetype,
+      },
+      {
+        trait_type: "Protocol Fit",
+        value: parseFloat(asset.character_assets.protocolFitScore || "0"),
+        display_type: "number",
+      },
+      {
+        trait_type: "Thumbnail Clarity",
+        value: parseFloat(asset.character_assets.thumbnailClarityScore || "0"),
+        display_type: "number",
+      },
+      {
+        trait_type: "Premium Feel",
+        value: parseFloat(asset.character_assets.premiumFeelScore || "0"),
+        display_type: "number",
+      },
+      {
+        trait_type: "Silhouette",
+        value: parseFloat(asset.character_assets.silhouetteScore || "0"),
+        display_type: "number",
+      },
+      {
+        trait_type: "Trust Symbolism",
+        value: parseFloat(asset.character_assets.trustSymbolismScore || "0"),
+        display_type: "number",
+      },
+      {
+        trait_type: "Mint Readiness",
+        value: parseFloat(asset.character_assets.mintReadinessScore || "0"),
+        display_type: "number",
+      },
+      {
+        trait_type: "UI Compatibility",
+        value: parseFloat(asset.character_assets.uiCompatibilityScore || "0"),
+        display_type: "number",
+      },
+      {
+        trait_type: "Total Score",
+        value: parseFloat(asset.character_assets.totalScore || "0"),
+        display_type: "number",
+      },
     ],
     protocol: "AuthiChain",
     version: "2.0",
   };
 
   const metadataJson = JSON.stringify(metadata);
-  const metadataHash = crypto.createHash("sha256").update(metadataJson).digest("hex");
-  const imageHash = crypto.createHash("sha256").update(asset.character_assets.imageUrl).digest("hex");
+  const metadataHash = crypto
+    .createHash("sha256")
+    .update(metadataJson)
+    .digest("hex");
+  const imageHash = crypto
+    .createHash("sha256")
+    .update(asset.character_assets.imageUrl)
+    .digest("hex");
 
   // Upload metadata to S3
   const { url: metadataUri } = await storagePut(
@@ -461,7 +575,8 @@ export async function selectCharacterAsset(
   );
 
   // Mark selected
-  await db.update(characterAssets)
+  await db
+    .update(characterAssets)
     .set({
       isSelected: 1,
       selectedAt: new Date(),
@@ -473,7 +588,8 @@ export async function selectCharacterAsset(
     .where(eq(characterAssets.id, assetId));
 
   // Update generation status
-  await db.update(characterGenerations)
+  await db
+    .update(characterGenerations)
     .set({ status: "selected", selectedAssetId: assetId })
     .where(eq(characterGenerations.id, asset.character_assets.generationId));
 
@@ -481,7 +597,10 @@ export async function selectCharacterAsset(
 }
 
 // ─── Mint Prep (from uploaded mint-prep route) ─────────────────────────────
-export async function prepareMint(userId: number, assetId: number): Promise<{
+export async function prepareMint(
+  userId: number,
+  assetId: number
+): Promise<{
   success: boolean;
   metadataUri: string;
   metadataHash: string;
@@ -492,30 +611,41 @@ export async function prepareMint(userId: number, assetId: number): Promise<{
   if (!db) throw new Error("Database not available");
 
   // Verify ownership and selection
-  const [asset] = await db.select()
+  const [asset] = await db
+    .select()
     .from(characterAssets)
-    .innerJoin(characterGenerations, eq(characterAssets.generationId, characterGenerations.id))
-    .where(and(
-      eq(characterAssets.id, assetId),
-      eq(characterGenerations.userId, userId),
-      eq(characterAssets.isSelected, 1)
-    ))
+    .innerJoin(
+      characterGenerations,
+      eq(characterAssets.generationId, characterGenerations.id)
+    )
+    .where(
+      and(
+        eq(characterAssets.id, assetId),
+        eq(characterGenerations.userId, userId),
+        eq(characterAssets.isSelected, 1)
+      )
+    )
     .limit(1);
 
   if (!asset) throw new Error("Asset not found, not owned, or not selected");
 
   // Ensure metadata is ready
-  if (!asset.character_assets.metadataUri || !asset.character_assets.metadataHash) {
+  if (
+    !asset.character_assets.metadataUri ||
+    !asset.character_assets.metadataHash
+  ) {
     throw new Error("Asset metadata not prepared — select the asset first");
   }
 
   // Update mint status to queued
-  await db.update(characterAssets)
+  await db
+    .update(characterAssets)
     .set({ mintStatus: "queued" })
     .where(eq(characterAssets.id, assetId));
 
   // Update generation to mint_ready
-  await db.update(characterGenerations)
+  await db
+    .update(characterGenerations)
     .set({ status: "mint_ready" })
     .where(eq(characterGenerations.id, asset.character_assets.generationId));
 
@@ -540,18 +670,21 @@ export async function createProtocolAgent(
 
   const arch = ARCHETYPES[agentType];
 
-  const [result] = await db.insert(protocolAgents).values({
-    userId,
-    characterAssetId,
-    name,
-    agentType,
-    status: "active",
-    level: 1,
-    xp: arch.baseXP,
-    reputationScore: 100,
-    featureScopes: JSON.stringify(arch.featureScopes),
-    policyConfig: JSON.stringify({ autoVerify: false, minConfidence: 70 }),
-  }).returning();
+  const [result] = await db
+    .insert(protocolAgents)
+    .values({
+      userId,
+      characterAssetId,
+      name,
+      agentType,
+      status: "active",
+      level: 1,
+      xp: arch.baseXP,
+      reputationScore: 100,
+      featureScopes: JSON.stringify(arch.featureScopes),
+      policyConfig: JSON.stringify({ autoVerify: false, minConfidence: 70 }),
+    })
+    .returning();
 
   return { agentId: result.id };
 }
@@ -561,9 +694,15 @@ export async function getAgentByUser(userId: number) {
   const db = await getDb();
   if (!db) return null;
 
-  const [agent] = await db.select()
+  const [agent] = await db
+    .select()
     .from(protocolAgents)
-    .where(and(eq(protocolAgents.userId, userId), eq(protocolAgents.status, "active")))
+    .where(
+      and(
+        eq(protocolAgents.userId, userId),
+        eq(protocolAgents.status, "active")
+      )
+    )
     .orderBy(desc(protocolAgents.createdAt))
     .limit(1);
 
@@ -574,7 +713,8 @@ export async function getAgentLeaderboard(limit = 20) {
   const db = await getDb();
   if (!db) return [];
 
-  return db.select()
+  return db
+    .select()
     .from(protocolAgents)
     .where(eq(protocolAgents.status, "active"))
     .orderBy(desc(protocolAgents.reputationScore), desc(protocolAgents.xp))
@@ -585,14 +725,16 @@ export async function getGenerationStatus(generationId: number) {
   const db = await getDb();
   if (!db) return null;
 
-  const [gen] = await db.select()
+  const [gen] = await db
+    .select()
     .from(characterGenerations)
     .where(eq(characterGenerations.id, generationId))
     .limit(1);
 
   if (!gen) return null;
 
-  const assets = await db.select()
+  const assets = await db
+    .select()
     .from(characterAssets)
     .where(eq(characterAssets.generationId, generationId))
     .orderBy(desc(characterAssets.totalScore));
@@ -604,7 +746,8 @@ export async function getUserGenerations(userId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  return db.select()
+  return db
+    .select()
     .from(characterGenerations)
     .where(eq(characterGenerations.userId, userId))
     .orderBy(desc(characterGenerations.createdAt));
@@ -614,12 +757,16 @@ export async function getUserCharacterAssets(userId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  return db.select({
-    asset: characterAssets,
-    generation: characterGenerations,
-  })
+  return db
+    .select({
+      asset: characterAssets,
+      generation: characterGenerations,
+    })
     .from(characterAssets)
-    .innerJoin(characterGenerations, eq(characterAssets.generationId, characterGenerations.id))
+    .innerJoin(
+      characterGenerations,
+      eq(characterAssets.generationId, characterGenerations.id)
+    )
     .where(eq(characterGenerations.userId, userId))
     .orderBy(desc(characterAssets.totalScore));
 }
@@ -629,7 +776,14 @@ export async function awardQRON(
   agentId: number,
   userId: number,
   amount: string,
-  reason: "verification_reward" | "consensus_participation" | "accuracy_bonus" | "streak_bonus" | "referral_reward" | "staking_yield" | "penalty",
+  reason:
+    | "verification_reward"
+    | "consensus_participation"
+    | "accuracy_bonus"
+    | "streak_bonus"
+    | "referral_reward"
+    | "staking_yield"
+    | "penalty",
   referenceType?: string,
   referenceId?: number
 ): Promise<void> {
@@ -646,7 +800,8 @@ export async function awardQRON(
     status: "pending",
   });
 
-  await db.update(protocolAgents)
+  await db
+    .update(protocolAgents)
     .set({
       qronPending: sql`${protocolAgents.qronPending} + ${amount}`,
     })
@@ -657,7 +812,8 @@ export async function getAgentRewards(agentId: number, limit = 50) {
   const db = await getDb();
   if (!db) return [];
 
-  return db.select()
+  return db
+    .select()
     .from(qronRewardLedger)
     .where(eq(qronRewardLedger.agentId, agentId))
     .orderBy(desc(qronRewardLedger.createdAt))
@@ -667,30 +823,45 @@ export async function getAgentRewards(agentId: number, limit = 50) {
 // ─── Network Stats ──────────────────────────────────────────────────────────
 export async function getNetworkStats() {
   const db = await getDb();
-  if (!db) return {
-    totalAgents: 0, totalVerifications: 0, totalConsensus: 0,
-    totalQRONDistributed: "0", totalCheckpoints: 0,
-    agentsByType: [], recentActivity: [],
-  };
+  if (!db)
+    return {
+      totalAgents: 0,
+      totalVerifications: 0,
+      totalConsensus: 0,
+      totalQRONDistributed: "0",
+      totalCheckpoints: 0,
+      agentsByType: [],
+      recentActivity: [],
+    };
 
   const [agentCount] = await db.select({ count: count() }).from(protocolAgents);
-  const [verifyCount] = await db.select({ count: count() }).from(verificationClaims);
-  const [consensusCount] = await db.select({ count: count() }).from(consensusResults);
-  const [checkpointCount] = await db.select({ count: count() }).from(checkpointBatches);
+  const [verifyCount] = await db
+    .select({ count: count() })
+    .from(verificationClaims);
+  const [consensusCount] = await db
+    .select({ count: count() })
+    .from(consensusResults);
+  const [checkpointCount] = await db
+    .select({ count: count() })
+    .from(checkpointBatches);
 
-  const [qronSum] = await db.select({
-    total: sql<string>`COALESCE(SUM(${qronRewardLedger.amount}), 0)`,
-  }).from(qronRewardLedger);
+  const [qronSum] = await db
+    .select({
+      total: sql<string>`COALESCE(SUM(${qronRewardLedger.amount}), 0)`,
+    })
+    .from(qronRewardLedger);
 
-  const agentsByType = await db.select({
-    agentType: protocolAgents.agentType,
-    count: count(),
-  })
+  const agentsByType = await db
+    .select({
+      agentType: protocolAgents.agentType,
+      count: count(),
+    })
     .from(protocolAgents)
     .where(eq(protocolAgents.status, "active"))
     .groupBy(protocolAgents.agentType);
 
-  const recentAgents = await db.select()
+  const recentAgents = await db
+    .select()
     .from(protocolAgents)
     .orderBy(desc(protocolAgents.createdAt))
     .limit(10);
@@ -719,33 +890,47 @@ export async function submitVerificationClaim(
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const [agent] = await db.select()
+  const [agent] = await db
+    .select()
     .from(protocolAgents)
     .where(eq(protocolAgents.id, agentId))
     .limit(1);
 
-  const weight = agent?.reputationScore ? (agent.reputationScore / 100).toFixed(3) : "1.000";
+  const weight = agent?.reputationScore
+    ? (agent.reputationScore / 100).toFixed(3)
+    : "1.000";
 
-  const [result] = await db.insert(verificationClaims).values({
-    agentId,
-    productId,
-    authenticationId,
-    claimType,
-    confidence,
-    evidence: evidence ? JSON.stringify(evidence) : null,
-    reasoning,
-    weight,
-    status: "pending",
-  }).returning();
+  const [result] = await db
+    .insert(verificationClaims)
+    .values({
+      agentId,
+      productId,
+      authenticationId,
+      claimType,
+      confidence,
+      evidence: evidence ? JSON.stringify(evidence) : null,
+      reasoning,
+      weight,
+      status: "pending",
+    })
+    .returning();
 
-  await db.update(protocolAgents)
+  await db
+    .update(protocolAgents)
     .set({
       totalClaims: sql`${protocolAgents.totalClaims} + 1`,
       xp: sql`${protocolAgents.xp} + 10`,
     })
     .where(eq(protocolAgents.id, agentId));
 
-  await awardQRON(agentId, agent?.userId || 0, "0.50", "verification_reward", "claim", result.id);
+  await awardQRON(
+    agentId,
+    agent?.userId || 0,
+    "0.50",
+    "verification_reward",
+    "claim",
+    result.id
+  );
 
   return { claimId: result.id };
 }
@@ -755,10 +940,17 @@ import { checkUserMilestones } from "./hubspot/automation";
 /**
  * Reward user's agent for completing a verification (called from authenticate.analyze)
  */
-export async function rewardAgentForVerification(userId: number, wasSuccessful: boolean) {
+export async function rewardAgentForVerification(
+  userId: number,
+  wasSuccessful: boolean
+) {
   const db = await getDb();
   if (!db) return;
-  const [agent] = await db.select().from(protocolAgents).where(eq(protocolAgents.userId, userId)).limit(1);
+  const [agent] = await db
+    .select()
+    .from(protocolAgents)
+    .where(eq(protocolAgents.userId, userId))
+    .limit(1);
   if (!agent) return;
 
   const xpReward = wasSuccessful ? 25 : 10;
@@ -772,16 +964,25 @@ export async function rewardAgentForVerification(userId: number, wasSuccessful: 
     updateSet.successfulVerifications = sql`${protocolAgents.successfulVerifications} + 1`;
   }
 
-  await db.update(protocolAgents)
+  await db
+    .update(protocolAgents)
     .set(updateSet)
     .where(eq(protocolAgents.id, agent.id));
 
-  await awardQRON(agent.id, userId, qronReward, "verification_reward", "verification", 0);
-  console.log(`[Agent XP] User ${userId} agent ${agent.id} earned ${xpReward} XP + ${qronReward} QRON`);
+  await awardQRON(
+    agent.id,
+    userId,
+    qronReward,
+    "verification_reward",
+    "verification",
+    0
+  );
+  console.log(
+    `[Agent XP] User ${userId} agent ${agent.id} earned ${xpReward} XP + ${qronReward} QRON`
+  );
 
   // Check for HubSpot automation milestones
   await checkUserMilestones(userId);
 }
-
 
 export { ARCHETYPES };

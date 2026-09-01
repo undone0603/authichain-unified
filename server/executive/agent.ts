@@ -1,45 +1,45 @@
 export class ExecutiveAgent {
-  draftSalesEmail(input: any) {
+  draftSalesEmail(_input: any) {
     return "draftSalesEmail";
   }
 
-  draftPartnershipEmail(input: any) {
+  draftPartnershipEmail(_input: any) {
     return "draftPartnershipEmail";
   }
 
-  generateLinkedInPost(input: any) {
+  generateLinkedInPost(_input: any) {
     return "generateLinkedInPost";
   }
 
-  generateBlogPost(input: any) {
+  generateBlogPost(_input: any) {
     return "generateBlogPost";
   }
 
-  generateProductAnnouncement(input: any) {
+  generateProductAnnouncement(_input: any) {
     return "generateProductAnnouncement";
   }
 
-  generateSocialMediaContent(input: any) {
+  generateSocialMediaContent(_input: any) {
     return "generateSocialMediaContent";
   }
 
-  analyzeCompetitor(input: any) {
+  analyzeCompetitor(_input: any) {
     return "analyzeCompetitor";
   }
 
-  summarizeText(input: any) {
+  summarizeText(_input: any) {
     return "summarizeText";
   }
 
-  improveWriting(input: any) {
+  improveWriting(_input: any) {
     return "improveWriting";
   }
 
-  generateEmailCampaign(input: any) {
+  generateEmailCampaign(_input: any) {
     return "generateEmailCampaign";
   }
 
-  generateFAQAnswer(input: any) {
+  generateFAQAnswer(_input: any) {
     return "generateFAQAnswer";
   }
 }

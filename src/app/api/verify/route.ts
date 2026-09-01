@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { randomUUID } from 'crypto';
-import { onVerificationEvent } from '../../../../server/revenue-engine/loop';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+import { onVerificationEvent } from "../../../../server/revenue-engine/loop";
 import {
   consumeVerificationQuota,
   statusForDenial,
   isRetryable,
   verificationPriceCents,
-} from '@/lib/verification-caps';
+} from "@/lib/verification-caps";
 
 export async function POST(req: NextRequest) {
   // Caps before work. This endpoint is the one agents will call and pay for, so
@@ -25,49 +25,61 @@ export async function POST(req: NextRequest) {
         // Advertise the price on the 402 so an x402 client knows what to settle.
         ...(status === 402 ? { price_cents: verificationPriceCents() } : {}),
       },
-      { status },
+      { status }
     );
   }
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
   try {
     const { seal_id, scan_context } = await req.json();
     if (!seal_id) {
-      return NextResponse.json({ error: 'seal_id is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: "seal_id is required" },
+        { status: 400 }
+      );
     }
 
     // 1. Fetch the seal record
     const { data: seal, error: fetchError } = await supabase
-      .from('auth_seals')
-      .select('*')
-      .eq('id', seal_id)
+      .from("auth_seals")
+      .select("*")
+      .eq("id", seal_id)
       .single();
 
     if (fetchError || !seal) {
       await onVerificationEvent({
         seal_id,
-        brand: scan_context?.brand ?? 'authichain.com',
+        brand: scan_context?.brand ?? "authichain.com",
         scan_context: scan_context ?? {},
-        status: 'invalid',
+        status: "invalid",
       });
-      return NextResponse.json({ status: 'invalid', details: { reason: 'seal_not_found' } });
+      return NextResponse.json({
+        status: "invalid",
+        details: { reason: "seal_not_found" },
+      });
     }
 
     // 2. Optionally validate chain anchor (non-blocking)
     let chain_valid = true;
     if (seal.polygon_tx) {
       try {
-        const chainRes = await fetch(`${process.env.WORKER_URL ?? ''}/chain-verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.WORKER_API_KEY ?? '' },
-          body: JSON.stringify({ seal_id, polygon_tx: seal.polygon_tx }),
-        });
+        const chainRes = await fetch(
+          `${process.env.WORKER_URL ?? ""}/chain-verify`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": process.env.WORKER_API_KEY ?? "",
+            },
+            body: JSON.stringify({ seal_id, polygon_tx: seal.polygon_tx }),
+          }
+        );
         if (chainRes.ok) {
-          const chainData = await chainRes.json() as { valid?: boolean };
+          const chainData = (await chainRes.json()) as { valid?: boolean };
           chain_valid = chainData.valid !== false;
         }
       } catch {
@@ -75,7 +87,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const status: 'valid' | 'invalid' = chain_valid ? 'valid' : 'invalid';
+    const status: "valid" | "invalid" = chain_valid ? "valid" : "invalid";
 
     // 3. Fire revenue engine event
     await onVerificationEvent({
@@ -96,7 +108,10 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error('[verify] Unexpected error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("[verify] Unexpected error:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

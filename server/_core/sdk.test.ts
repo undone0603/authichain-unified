@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { COOKIE_NAME } from "@shared/const";
 import { sdk } from "./sdk";
-import * as db from "../db";
+import * as _db from "../db";
 
 // Mock the db module to avoid database dependencies
 vi.mock("../db", () => ({

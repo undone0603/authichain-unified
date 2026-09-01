@@ -25,7 +25,7 @@ const eslintConfig = defineConfig([
     plugins: nextPlugins,
     rules: {
       '@typescript-eslint/no-unused-vars': [
-        'warn',
+        'error',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',

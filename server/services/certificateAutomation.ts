@@ -1,28 +1,31 @@
-import { getDb } from '../db';
-import { certificates, products, users } from '../../drizzle/schema';
-import { eq } from 'drizzle-orm';
-import { storagePut } from '../storage';
-import { notifyOwner } from '../_core/notification';
+import { getDb } from "../db";
+import { certificates, products, users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
+import { storagePut } from "../storage";
+import { notifyOwner } from "../_core/notification";
 
 function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  if (!domain) return '***';
-  return `${local?.[0] ?? ''}***@${domain}`;
+  const [local, domain] = email.split("@");
+  if (!domain) return "***";
+  return `${local?.[0] ?? ""}***@${domain}`;
 }
-import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../thirdweb';
-import { ENV } from '../_core/env';
-import { sendCertificateEmail as sendCrispCertificateEmail } from './crispService';
+import {
+  mintAuthenticationNFT,
+  buildAuthCertificateMetadata,
+} from "../thirdweb";
+import { ENV } from "../_core/env";
+import { sendCertificateEmail as sendCrispCertificateEmail } from "./crispService";
 
 /**
  * Automated Certificate Generation Service
  * Handles the complete workflow: Payment → Certificate → NFT → Email
  */
 
-interface CertificateData {
+interface _CertificateData {
   certificateId: string;
   userId: number;
   productName: string;
-  tier: 'basic' | 'premium' | 'enterprise';
+  tier: "basic" | "premium" | "enterprise";
   productImageUrl?: string;
   isAuthentic: number;
   confidenceScore: number;
@@ -33,15 +36,19 @@ interface CertificateData {
  * Generate certificate automatically after payment
  * This is called by the Paddle webhook handler
  */
-export async function generateCertificateAfterPayment(certificateId: string): Promise<void> {
+export async function generateCertificateAfterPayment(
+  certificateId: string
+): Promise<void> {
   const db = await getDb();
   if (!db) {
-    console.error('[Certificate Automation] Database not available');
+    console.error("[Certificate Automation] Database not available");
     return;
   }
 
   try {
-    console.log(`[Certificate Automation] Starting automated generation for certificate ${certificateId}`);
+    console.log(
+      `[Certificate Automation] Starting automated generation for certificate ${certificateId}`
+    );
 
     // Get certificate data
     const cert = await db
@@ -51,7 +58,9 @@ export async function generateCertificateAfterPayment(certificateId: string): Pr
       .limit(1);
 
     if (!cert || cert.length === 0) {
-      console.error(`[Certificate Automation] Certificate ${certificateId} not found`);
+      console.error(
+        `[Certificate Automation] Certificate ${certificateId} not found`
+      );
       return;
     }
 
@@ -61,7 +70,10 @@ export async function generateCertificateAfterPayment(certificateId: string): Pr
     const nftData = await generateNFT(certificateData);
 
     // Step 2: Create certificate PDF/image
-    const certificateUrl = await generateCertificatePDF(certificateData, nftData);
+    const certificateUrl = await generateCertificatePDF(
+      certificateData,
+      nftData
+    );
 
     // Step 3: Update certificate with blockchain data
     await db
@@ -80,18 +92,22 @@ export async function generateCertificateAfterPayment(certificateId: string): Pr
 
     // Step 5: Notify owner
     await notifyOwner({
-      title: '✅ Certificate Generated',
+      title: "✅ Certificate Generated",
       content: `Certificate #${certificateData.certificateNumber} has been generated and sent to customer`,
     });
 
-    console.log(`[Certificate Automation] Successfully generated certificate ${certificateId}`);
-
+    console.log(
+      `[Certificate Automation] Successfully generated certificate ${certificateId}`
+    );
   } catch (error) {
-    console.error(`[Certificate Automation] Error generating certificate ${certificateId}:`, error);
-    
+    console.error(
+      `[Certificate Automation] Error generating certificate ${certificateId}:`,
+      error
+    );
+
     // Notify owner of failure
     await notifyOwner({
-      title: '⚠️ Certificate Generation Failed',
+      title: "⚠️ Certificate Generation Failed",
       content: `Failed to generate certificate #${certificateId}: ${error}`,
     });
   }
@@ -109,19 +125,35 @@ async function generateNFT(certificateData: any): Promise<{
   const privateKey = ENV.walletPrivateKey;
 
   if (!contractAddress || !privateKey) {
-    console.warn('[NFT] Blockchain env vars not set — using placeholder values');
+    console.warn(
+      "[NFT] Blockchain env vars not set — using placeholder values"
+    );
     return {
       tokenId: `NFT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      contractAddress: '0x' + '0'.repeat(40),
-      txHash: '0x' + '0'.repeat(64),
-      blockchainNetwork: 'polygon',
+      contractAddress: "0x" + "0".repeat(40),
+      txHash: "0x" + "0".repeat(64),
+      blockchainNetwork: "polygon",
     };
   }
 
   const db = await getDb();
   const [product, userRecord] = await Promise.all([
-    db ? db.select().from(products).where(eq(products.id, certificateData.productId)).limit(1).then(r => r[0]) : null,
-    db ? db.select({ walletAddress: users.walletAddress }).from(users).where(eq(users.id, certificateData.userId)).limit(1).then(r => r[0]) : null,
+    db
+      ? db
+          .select()
+          .from(products)
+          .where(eq(products.id, certificateData.productId))
+          .limit(1)
+          .then(r => r[0])
+      : null,
+    db
+      ? db
+          .select({ walletAddress: users.walletAddress })
+          .from(users)
+          .where(eq(users.id, certificateData.userId))
+          .limit(1)
+          .then(r => r[0])
+      : null,
   ]);
 
   const metadata = buildAuthCertificateMetadata({
@@ -149,7 +181,7 @@ async function generateNFT(certificateData: any): Promise<{
     tokenId: result.transactionHash,
     contractAddress,
     txHash: result.transactionHash,
-    blockchainNetwork: ENV.isProduction ? 'polygon' : 'polygon-amoy',
+    blockchainNetwork: ENV.isProduction ? "polygon" : "polygon-amoy",
   };
 }
 
@@ -160,7 +192,9 @@ async function generateCertificatePDF(
   certificateData: any,
   nftData: { tokenId: string; txHash: string }
 ): Promise<string> {
-  console.log(`[Certificate PDF] Generating PDF for certificate ${certificateData.id}`);
+  console.log(
+    `[Certificate PDF] Generating PDF for certificate ${certificateData.id}`
+  );
 
   // Create certificate HTML
   const html = `
@@ -247,12 +281,12 @@ async function generateCertificatePDF(
           
           <div class="field">
             <span class="label">Category:</span>
-            <span class="value">${certificateData.productCategory || 'Luxury Goods'}</span>
+            <span class="value">${certificateData.productCategory || "Luxury Goods"}</span>
           </div>
           
           <div class="field">
             <span class="label">Authentication Result:</span>
-            <span class="value">${certificateData.isAuthentic ? '✅ AUTHENTIC' : '❌ COUNTERFEIT'}</span>
+            <span class="value">${certificateData.isAuthentic ? "✅ AUTHENTIC" : "❌ COUNTERFEIT"}</span>
           </div>
           
           <div class="field">
@@ -296,8 +330,8 @@ async function generateCertificatePDF(
   const filename = `certificate-${certificateData.certificateNumber}.html`;
   const { url } = await storagePut(
     `certificates/${filename}`,
-    Buffer.from(html, 'utf-8'),
-    'text/html'
+    Buffer.from(html, "utf-8"),
+    "text/html"
   );
 
   console.log(`[Certificate PDF] Generated and uploaded: ${url}`);
@@ -318,7 +352,7 @@ async function sendCertificateEmail(
   // Get user email from database
   const db = await getDb();
   if (!db) {
-    console.error('[Email] Database not available');
+    console.error("[Email] Database not available");
     return;
   }
 
@@ -329,7 +363,7 @@ async function sendCertificateEmail(
     .limit(1);
 
   if (!userResult || userResult.length === 0) {
-    console.error('[Email] User not found');
+    console.error("[Email] User not found");
     return;
   }
 
@@ -337,7 +371,7 @@ async function sendCertificateEmail(
   const customerEmail = user.email;
 
   if (!customerEmail) {
-    console.error('[Email] User email not available');
+    console.error("[Email] User email not available");
     return;
   }
 
@@ -354,8 +388,12 @@ async function sendCertificateEmail(
   });
 
   if (emailSent) {
-    console.log(`[Email] Certificate email sent successfully to ${maskEmail(customerEmail)}`);
+    console.log(
+      `[Email] Certificate email sent successfully to ${maskEmail(customerEmail)}`
+    );
   } else {
-    console.error(`[Email] Failed to send certificate email to ${maskEmail(customerEmail)}`);
+    console.error(
+      `[Email] Failed to send certificate email to ${maskEmail(customerEmail)}`
+    );
   }
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure } from "../_core/trpc";
 
 const HEYGEN_BASE = "https://api.heygen.com";
 
@@ -42,7 +42,10 @@ export const heygenRouter = router({
 
   avatars: protectedProcedure.query(async () => {
     const data = await heygenGet("/v2/avatars");
-    return (data.data?.avatars ?? []) as Array<{ avatar_id: string; avatar_name: string }>;
+    return (data.data?.avatars ?? []) as Array<{
+      avatar_id: string;
+      avatar_name: string;
+    }>;
   }),
 
   voices: protectedProcedure.query(async () => {
@@ -91,7 +94,9 @@ export const heygenRouter = router({
   videoStatus: protectedProcedure
     .input(z.object({ videoId: z.string() }))
     .query(async ({ input }) => {
-      const data = await heygenGet(`/v1/video_status.get?video_id=${input.videoId}`);
+      const data = await heygenGet(
+        `/v1/video_status.get?video_id=${input.videoId}`
+      );
       const v = data.data ?? {};
       return {
         status: v.status as string,
