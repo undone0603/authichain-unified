@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
 
     if (plan) query.eq("plan", plan);
 
-    const { data, _error } = await query;
+    const { data } = await query;
 
     const testimonials =
       data && data.length > 0

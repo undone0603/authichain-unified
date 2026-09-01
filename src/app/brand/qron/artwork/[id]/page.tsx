@@ -3,16 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import {
-  ArrowLeft,
-  Sparkles,
-  Download,
-  Copy,
-  Share2,
-  _CheckCircle,
-  _ExternalLink,
-  _AlertCircle,
-} from "lucide-react";
+import { ArrowLeft, Sparkles, Download, Copy, Share2 } from "lucide-react";
 
 const PURPLE = "#8b5cf6";
 

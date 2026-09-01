@@ -56,7 +56,7 @@ server.tool(
       .optional()
       .describe("Amount of $QRON to lock as a trust bounty"),
   },
-  async ({ productId, _userId, _bountyAmount }) => {
+  async ({ productId, userId: _userId, bountyAmount: _bountyAmount }) => {
     // This calls our internal DB/Blockchain logic
     return {
       content: [

@@ -8,7 +8,6 @@ import {
   recordRevenue,
   upsertPaddleSubscription,
   setSubscriptionStatusByPaddleId,
-  _getSubscriptionByPaddleSubscriptionId,
   createSystemNotification,
   createInvoice,
 } from "../db";

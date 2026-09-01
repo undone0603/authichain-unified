@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  _Shield,
-  ChevronLeft,
-  PieChart,
-  Flame,
-  ArrowRight,
-} from "lucide-react";
+import { ChevronLeft, PieChart, Flame, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Tokenomics | GovChain Protocol DAO",

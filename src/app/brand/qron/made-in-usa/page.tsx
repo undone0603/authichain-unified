@@ -5,15 +5,12 @@ import { useState, useEffect } from "react";
 import {
   Filter,
   Search,
-  _TrendingUp,
   MapPin,
   Building2,
   AlertCircle,
   ExternalLink,
-  _Zap,
   Flag,
   Award,
-  _BarChart3,
   Users,
 } from "lucide-react";
 

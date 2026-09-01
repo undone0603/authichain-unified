@@ -8,7 +8,6 @@ import {
   TrendingUp,
   Eye,
   Share2,
-  _Download,
   ExternalLink,
   Zap,
   Sparkles,

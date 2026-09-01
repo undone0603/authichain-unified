@@ -1100,5 +1100,6 @@ app.get("*", async c => {
 });
 
 export { RateLimiter } from "./rate-limiter";
+export { scheduled } from "./scheduled";
 
-export default { fetch: app.fetch };
+export default { fetch: app.fetch, scheduled };

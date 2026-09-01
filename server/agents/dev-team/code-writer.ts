@@ -27,7 +27,6 @@ import {
   getFile,
   writeFile,
   searchCode,
-  _listFiles,
 } from "./github-service.js";
 
 // ─── Codebase knowledge injected into every code-write prompt ────────────

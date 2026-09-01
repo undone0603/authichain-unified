@@ -15,9 +15,6 @@ import {
   consensusResults,
   qronRewardLedger,
   checkpointBatches,
-  type _InsertCharacterGeneration,
-  type _InsertCharacterAsset,
-  type _InsertProtocolAgent,
 } from "../drizzle/schema";
 import { eq, desc, sql, and, count } from "drizzle-orm";
 import { generateImage } from "./_core/imageGeneration";

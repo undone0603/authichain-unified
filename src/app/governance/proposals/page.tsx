@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { _Shield, ChevronLeft, Vote, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Vote, CheckCircle2 } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Active Proposals | GovChain Protocol DAO",

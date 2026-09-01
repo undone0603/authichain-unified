@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       position: null,
     });
 
-  const { _data, error } = await supabase
+  const { error } = await supabase
     .from("waitlist")
     .insert({ email, name, use_case, joined_at: new Date().toISOString() })
     .select("id")

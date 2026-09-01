@@ -23,17 +23,23 @@
 The following tasks are **COMPLETE** (code exists in the repo; plan checkboxes not
 yet ticked because the implementation predates this audit):
 
-| Task                                  | Status         | Evidence                                                                                               |
-| ------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------ |
-| Task 1 (Hyperdrive `getHyperdriveDb`) | ✅ DONE        | `server/db.ts:1677` exports `getHyperdriveDb(env)`                                                     |
-| Task 2 (Workers tRPC context)         | ✅ DONE        | `server/_core/context.workers.ts` exists; uses `getHyperdriveDb`                                       |
-| Task 5 (Hono Worker entrypoint)       | ✅ DONE        | `worker-app/index.ts` — full Hono app with tRPC mount, brand middleware, standalone routes             |
-| Task 2b (DB call-site migration)      | 🔲 PENDING     | tRPC routers still import `db` singleton directly; `ctx.db` path exists but not wired into sub-routers |
-| Task 11 (Parity checklist)            | 🔲 PENDING     | DNS cutover not started; `worker-app/` untested against `*.workers.dev`                                |
-| Tasks 3, 4, 6–10                      | status unknown | audit task-by-task before resuming                                                                     |
+| Task                                  | Status     | Evidence                                                                                                       |
+| ------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| Task 1 (Hyperdrive `getHyperdriveDb`) | ✅ DONE    | `server/db.ts:1677` exports `getHyperdriveDb(env)`                                                             |
+| Task 2 (Workers tRPC context)         | ✅ DONE    | `server/_core/context.workers.ts` exists; uses `getHyperdriveDb`                                               |
+| Task 3                                | N/A        | No Task 3 in plan (numbering jumps 2b → 4)                                                                     |
+| Task 4 (Auth router adaptation)       | ✅ DONE    | `server/auth/router.ts` adapted; `ctx.req!`/`ctx.res!` removed; uses `ctx.setCookieHeader`                     |
+| Task 5 (Hono Worker entrypoint)       | ✅ DONE    | `worker-app/index.ts` — full Hono app with tRPC mount, brand middleware, standalone routes                     |
+| Task 6 (Raw Express routes as Hono)   | ✅ DONE    | Stripe/Paddle webhooks, GPT, internal routes all ported in `worker-app/index.ts`; `routes.test.ts` exists      |
+| Task 7 (Rate limiter Durable Object)  | ✅ DONE    | `worker-app/rate-limiter.ts`; DO binding + SQLite migration in `worker-app/wrangler.toml`; middleware wired    |
+| Task 8 (Cron Triggers)                | ✅ DONE    | `worker-app/scheduled.ts` dispatcher; crons defined in `wrangler.toml` (commented until Vercel decommissioned) |
+| Task 2b (DB call-site migration)      | 🔲 PENDING | tRPC routers still import `db` singleton directly; `ctx.db` path exists but not wired into sub-routers         |
+| Task 9 (Deploy to workers.dev)        | 🔲 PENDING | Requires `wrangler deploy` from `worker-app/`; blocked until Task 2b complete                                  |
+| Task 10 (Free-tier traffic audit)     | 🔲 PENDING | Requires Vercel Analytics + `activity_log` query; do before Task 11                                            |
+| Task 11 (Parity checklist)            | 🔲 PENDING | DNS cutover not started; gate on Tasks 2b, 9, 10                                                               |
 
-**Next action:** Tackle Task 2b (6 sub-clusters, ~114 files) to propagate `ctx.db`
-through all tRPC routers, then run Task 11's parity checklist.
+**Next action:** Task 2b (6 sub-clusters, ~114 files) to wire `ctx.db` into all
+tRPC sub-routers, then Tasks 9 → 10 → 11.
 
 ---
 

@@ -8,7 +8,6 @@ import {
 } from "../../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 import {
-  _generatePersonalizedContent,
   generatePersonalizationRules,
   detectSegment,
   matchRules,

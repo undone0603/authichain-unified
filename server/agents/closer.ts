@@ -330,7 +330,7 @@ export async function runGenerateProposal(task: Task): Promise<void> {
     leadTitle,
     segment,
     replyText,
-    _threadId,
+    threadId: _threadId,
   } = payload;
   const priceUsd = PILOT_PRICE_USD[segment] ?? PILOT_PRICE_USD.DEFAULT;
 
