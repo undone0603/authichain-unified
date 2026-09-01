@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { logAutomation } from '@/lib/automation';
+import { NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/server";
+import { logAutomation } from "@/lib/automation";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * POST /api/trial/start
@@ -26,48 +26,57 @@ export async function POST(request: Request) {
     const trialPriceId = process.env.STRIPE_TRIAL_PRICE_ID;
     if (!stripeSecretKey || !trialPriceId) {
       return NextResponse.json(
-        { error: 'Free trial is not configured', code: 'TRIAL_NOT_CONFIGURED' },
-        { status: 503 },
+        { error: "Free trial is not configured", code: "TRIAL_NOT_CONFIGURED" },
+        { status: 503 }
       );
     }
 
     // A trial subscription must attach to an account.
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: 'Sign in to start your free trial' }, { status: 401 });
+      return NextResponse.json(
+        { error: "Sign in to start your free trial" },
+        { status: 401 }
+      );
     }
 
-    const trialDays = parseInt(process.env.STRIPE_TRIAL_DAYS || '7', 10);
-    const trialGrant = process.env.STRIPE_TRIAL_GENERATIONS || '100';
+    const trialDays = parseInt(process.env.STRIPE_TRIAL_DAYS || "7", 10);
+    const trialGrant = process.env.STRIPE_TRIAL_GENERATIONS || "100";
 
-    const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-07-29.dahlia' as const });
+    const Stripe = (await import("stripe")).default;
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: "2026-08-26.dahlia" as const,
+    });
 
-    const origin = request.headers.get('origin') || new URL(request.url).origin;
+    const origin = request.headers.get("origin") || new URL(request.url).origin;
 
     // Carry affiliate attribution through the trial too (aff_ref cookie).
-    const cookieHeader = request.headers.get('cookie') || '';
+    const cookieHeader = request.headers.get("cookie") || "";
     const cookieRef = cookieHeader
-      .split(';')
-      .map((c) => c.trim())
-      .find((c) => c.startsWith('aff_ref='))
-      ?.slice('aff_ref='.length);
-    const affiliateCode = cookieRef ? decodeURIComponent(cookieRef).trim().slice(0, 64) : '';
+      .split(";")
+      .map(c => c.trim())
+      .find(c => c.startsWith("aff_ref="))
+      ?.slice("aff_ref=".length);
+    const affiliateCode = cookieRef
+      ? decodeURIComponent(cookieRef).trim().slice(0, 64)
+      : "";
 
     const meta: Record<string, string> = {
-      plan: 'trial',
+      plan: "trial",
       user_id: user.id,
-      trial: 'true',
+      trial: "true",
       grant: trialGrant,
       ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
     };
 
     const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
+      mode: "subscription",
+      payment_method_types: ["card"],
       // Card required up front even though the trial does not charge now.
-      payment_method_collection: 'always',
+      payment_method_collection: "always",
       line_items: [{ price: trialPriceId, quantity: 1 }],
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}&trial=1`,
       cancel_url: `${origin}/#pricing`,
@@ -76,7 +85,7 @@ export async function POST(request: Request) {
       subscription_data: {
         trial_period_days: trialDays,
         // If the card is removed/invalid at trial end, cancel rather than leave unpaid.
-        trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
+        trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
         metadata: meta,
       },
       metadata: meta,
@@ -85,7 +94,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ url: session.url });
   } catch (error: unknown) {
     const err = error as { type?: string; message?: string };
-    await logAutomation('trial_start', 'event', 'failure', null, `${err?.type || 'Error'}: ${err?.message || 'unknown'}`);
-    return NextResponse.json({ error: 'Failed to start trial', detail: err?.message }, { status: 500 });
+    await logAutomation(
+      "trial_start",
+      "event",
+      "failure",
+      null,
+      `${err?.type || "Error"}: ${err?.message || "unknown"}`
+    );
+    return NextResponse.json(
+      { error: "Failed to start trial", detail: err?.message },
+      { status: 500 }
+    );
   }
 }

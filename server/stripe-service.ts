@@ -13,7 +13,9 @@ export function getStripe(): Stripe {
   if (!_stripe) {
     const secretKey = ENV.stripeSecretKey;
     if (!secretKey) throw new Error("STRIPE_SECRET_KEY not configured");
-    _stripe = new Stripe(secretKey, { apiVersion: "2026-07-29.dahlia" as const });
+    _stripe = new Stripe(secretKey, {
+      apiVersion: "2026-08-26.dahlia" as const,
+    });
   }
   return _stripe;
 }
@@ -31,12 +33,13 @@ export interface CreateCheckoutParams {
   trialDays?: number;
 }
 
-export async function createSubscriptionCheckout(params: CreateCheckoutParams): Promise<string> {
+export async function createSubscriptionCheckout(
+  params: CreateCheckoutParams
+): Promise<string> {
   const stripe = getStripe();
   const product = STRIPE_PRODUCTS[params.plan];
-  const priceAmount = params.billing === "annual"
-    ? product.priceAnnual
-    : product.priceMonthly;
+  const priceAmount =
+    params.billing === "annual" ? product.priceAnnual : product.priceMonthly;
 
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
@@ -97,7 +100,9 @@ export interface CreatePaymentCheckoutParams {
   metadata?: Record<string, string>;
 }
 
-export async function createPaymentCheckout(params: CreatePaymentCheckoutParams): Promise<{ url: string; sessionId: string }> {
+export async function createPaymentCheckout(
+  params: CreatePaymentCheckoutParams
+): Promise<{ url: string; sessionId: string }> {
   const stripe = getStripe();
 
   const session = await stripe.checkout.sessions.create({
@@ -167,7 +172,10 @@ export async function getSubscriptionDetails(subscriptionId: string) {
   return await stripe.subscriptions.retrieve(subscriptionId);
 }
 
-export async function cancelSubscription(subscriptionId: string, immediately = false) {
+export async function cancelSubscription(
+  subscriptionId: string,
+  immediately = false
+) {
   const stripe = getStripe();
   if (immediately) {
     return await stripe.subscriptions.cancel(subscriptionId);
@@ -227,7 +235,9 @@ export interface WebhookResult {
   customerName?: string;
 }
 
-export async function processWebhookEvent(event: Stripe.Event): Promise<WebhookResult> {
+export async function processWebhookEvent(
+  event: Stripe.Event
+): Promise<WebhookResult> {
   const result: WebhookResult = {
     eventType: event.type,
     handled: false,
@@ -236,11 +246,14 @@ export async function processWebhookEvent(event: Stripe.Event): Promise<WebhookR
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      result.userId = session.metadata?.user_id ? parseInt(session.metadata.user_id) : undefined;
+      result.userId = session.metadata?.user_id
+        ? parseInt(session.metadata.user_id)
+        : undefined;
       result.plan = session.metadata?.plan;
       result.subscriptionId = session.subscription as string;
       result.customerId = session.customer as string;
-      result.email = session.customer_email || session.metadata?.customer_email || undefined;
+      result.email =
+        session.customer_email || session.metadata?.customer_email || undefined;
       result.customerName = session.metadata?.customer_name || undefined;
       result.handled = true;
       break;
@@ -264,16 +277,28 @@ export async function processWebhookEvent(event: Stripe.Event): Promise<WebhookR
 
     case "invoice.paid": {
       const invoice = event.data.object as any;
-      result.customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
-      result.subscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+      result.customerId =
+        typeof invoice.customer === "string"
+          ? invoice.customer
+          : invoice.customer?.id;
+      result.subscriptionId =
+        typeof invoice.subscription === "string"
+          ? invoice.subscription
+          : invoice.subscription?.id;
       result.handled = true;
       break;
     }
 
     case "invoice.payment_failed": {
       const invoice = event.data.object as any;
-      result.customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
-      result.subscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+      result.customerId =
+        typeof invoice.customer === "string"
+          ? invoice.customer
+          : invoice.customer?.id;
+      result.subscriptionId =
+        typeof invoice.subscription === "string"
+          ? invoice.subscription
+          : invoice.subscription?.id;
       result.handled = true;
       break;
     }
@@ -304,13 +329,18 @@ export interface PayoutConfig {
  * @returns Payout object with ID, status, and arrival date
  * @throws Error if payout fails (invalid account, insufficient balance, etc.)
  */
-export async function createFounderPayout(amountCents: number, config: PayoutConfig): Promise<{
+export async function createFounderPayout(
+  amountCents: number,
+  config: PayoutConfig
+): Promise<{
   payoutId: string;
   status: string;
   arrivalDate: Date;
 }> {
   if (!config.stripeConnectAccountId) {
-    throw new Error("[founder-payout] No Stripe Connect account configured for founder");
+    throw new Error(
+      "[founder-payout] No Stripe Connect account configured for founder"
+    );
   }
   if (amountCents < config.minPayoutCents) {
     return {
@@ -330,12 +360,14 @@ export async function createFounderPayout(amountCents: number, config: PayoutCon
     },
     {
       stripeAccount: config.stripeConnectAccountId,
-    },
+    }
   );
 
   return {
     payoutId: payout.id,
     status: payout.status,
-    arrivalDate: payout.arrival_date ? new Date(payout.arrival_date * 1000) : new Date(),
+    arrivalDate: payout.arrival_date
+      ? new Date(payout.arrival_date * 1000)
+      : new Date(),
   };
 }

@@ -293,7 +293,7 @@ app.post("/webhook/stripe", async c => {
   }
 
   const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2026-07-29.dahlia",
+    apiVersion: "2026-08-26.dahlia",
   });
 
   let event: Stripe.Event;

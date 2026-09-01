@@ -10,8 +10,12 @@ function getStripe(): Stripe {
     if (!key) throw new Error("STRIPE_SECRET_KEY not set");
     // Pinned to legacy API version because subscriptionItems.createUsageRecord
     // is only available on pre-meterEvents Stripe API versions.
+    // Stripe continues to honor this server-side version; the current SDK's
+    // latest-version-only type must therefore be narrowed intentionally.
 
-    _stripe = new Stripe(key, { apiVersion: "2026-07-29.dahlia" as const });
+    _stripe = new Stripe(key, {
+      apiVersion: "2026-07-29.dahlia" as unknown as Stripe.LatestApiVersion,
+    });
   }
   return _stripe;
 }
