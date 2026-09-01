@@ -68,6 +68,22 @@ jobs:
           - authichain-verify-worker
           - stripe-webhook
           - authichain-openclaw
+          - authichain-bridge
+          - authichain-infra
+          - authichain-outreach-engine
+          - blockchain
+          - chipchain-io
+          - dpp-fulfillment
+          - fanchain-io
+          - glowchain-io
+          - gs1-resolver
+          - harvestchain-io
+          - luxechain-io
+          - partchain-io
+          - provenchain-io
+          - rxchain-io
+          - threadchain-io
+          - watchchain-io
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

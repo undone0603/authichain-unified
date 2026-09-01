@@ -30,3 +30,6 @@ jobs:
 
       - name: Check for job-level continue-on-error in workflows
         run: node scripts/check-workflow-continue-on-error.mjs
+
+      - name: Check wrangler.toml Durable Object migrations
+        run: node scripts/check-wrangler-durable-objects.mjs

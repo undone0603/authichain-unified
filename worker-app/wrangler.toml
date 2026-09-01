@@ -3,6 +3,15 @@ main = "index.ts"
 compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 
+# NOTE: services/worker-app/wrangler.toml declares the same worker name and
+# KV/Hyperdrive/Durable Object bindings as this file (only the assets
+# directory and alias differ). Keep the [[kv_namespaces]], [[hyperdrive]],
+# [[durable_objects.bindings]] and [[migrations]] blocks below in sync with
+# that file — a divergence here previously caused the RateLimiter Durable
+# Object migration to use new_classes in one file and new_sqlite_classes in
+# the other. scripts/check-wrangler-durable-objects.mjs (run in CI) will
+# catch a `new_classes` regression in either file.
+
 [alias]
 playwright-core = "./playwright-unavailable.ts"
 

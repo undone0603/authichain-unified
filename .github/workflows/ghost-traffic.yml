@@ -18,6 +18,12 @@ jobs:
   run-strike:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Manual runs (workflow_dispatch) are always allowed. Scheduled runs only
+    # publish live once GHOST_TRAFFIC_ENABLED is explicitly set to "true" as
+    # a repository variable — same kill-switch convention as
+    # autonomous-business-cycle.yml, so this daily cron can't silently go
+    # live before someone has opted in.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.GHOST_TRAFFIC_ENABLED == 'true' }}
 
     steps:
       - name: Checkout repository
