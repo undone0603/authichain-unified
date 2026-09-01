@@ -18,6 +18,12 @@ export interface Env {
   OUTREACH_FROM_EMAIL: string;
   OUTREACH_REPLY_TO: string;
   BATCH_SIZE: string;
+  /** Base URL of the authichain worker-app (e.g. https://app.authichain.com).
+   *  Set via `npx wrangler secret put GUARDRAIL_API_URL`. */
+  GUARDRAIL_API_URL?: string;
+  /** Shared internal secret that authorises calls to /api/guardrail/*.
+   *  Set via `npx wrangler secret put INTERNAL_SECRET`. */
+  INTERNAL_SECRET?: string;
 }
 
 interface Lead {
@@ -150,6 +156,53 @@ async function logOutreach(
     .run();
 }
 
+// --- Guardrail gate ----------------------------------------------------------
+
+/** Calls the shared guardrail /api/guardrail/check endpoint.
+ *  Returns allowed=true if the send should proceed.
+ *  Falls back to allowed=true when GUARDRAIL_API_URL is not configured so
+ *  the worker remains functional in environments that haven't set the secret
+ *  yet — the operator is expected to set it before enabling real traffic. */
+async function checkGuardrail(
+  env: Env,
+  count: number,
+  recipient?: string
+): Promise<{ allowed: boolean; remaining: number; reason?: string }> {
+  if (!env.GUARDRAIL_API_URL || !env.INTERNAL_SECRET) {
+    console.warn(
+      "[guardrail] GUARDRAIL_API_URL or INTERNAL_SECRET not set — skipping guardrail check"
+    );
+    return { allowed: true, remaining: 999 };
+  }
+  try {
+    const res = await fetch(`${env.GUARDRAIL_API_URL}/api/guardrail/check`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-internal-secret": env.INTERNAL_SECRET,
+      },
+      body: JSON.stringify({ channel: "outreach", count, recipient }),
+    });
+    if (!res.ok) {
+      console.error(`[guardrail] check HTTP ${res.status} — blocking send`);
+      return {
+        allowed: false,
+        remaining: 0,
+        reason: `guardrail HTTP ${res.status}`,
+      };
+    }
+    return (await res.json()) as {
+      allowed: boolean;
+      remaining: number;
+      reason?: string;
+    };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[guardrail] check failed: ${msg} — blocking send`);
+    return { allowed: false, remaining: 0, reason: `guardrail error: ${msg}` };
+  }
+}
+
 // --- Admin handlers ----------------------------------------------------------
 
 async function addLead(request: Request, env: Env): Promise<Response> {
@@ -215,6 +268,28 @@ async function runBatch(env: Env): Promise<Response> {
     );
   }
   const batchSize = Math.max(1, Math.min(25, Number(env.BATCH_SIZE) || 5));
+
+  // Guardrail batch-level check: reserve `batchSize` outreach slots up front.
+  // If the daily cap has fewer than batchSize remaining, the check still
+  // succeeds with the actual remaining count — we cap sends to that number.
+  const batchGuard = await checkGuardrail(env, batchSize);
+  if (!batchGuard.allowed) {
+    return Response.json(
+      {
+        processed: 0,
+        sent: 0,
+        failed: 0,
+        suppressed: 0,
+        remaining_pending: null,
+        results: [],
+        blocked: true,
+        reason: batchGuard.reason ?? "guardrail blocked batch",
+        timestamp: new Date().toISOString(),
+      },
+      { status: 429 }
+    );
+  }
+
   const { results } = await env.DB.prepare(
     `SELECT id, email, name, company, industry, score, status, created_at
      FROM leads WHERE status = 'new' ORDER BY score DESC, id ASC LIMIT ?1`
@@ -245,6 +320,27 @@ async function runBatch(env: Env): Promise<Response> {
         "on suppression list"
       );
       outcomes.push({ id: lead.id, to: lead.email, status: "suppressed" });
+      suppressed++;
+      continue;
+    }
+
+    // Per-recipient guardrail check: catches guardrail-side suppressions and
+    // kill switches that may have tripped since the batch-level check ran.
+    const recipientGuard = await checkGuardrail(env, 1, lead.email);
+    if (!recipientGuard.allowed) {
+      await logOutreach(
+        env,
+        lead.id,
+        templateKey,
+        "suppressed",
+        recipientGuard.reason ?? "guardrail blocked recipient"
+      );
+      outcomes.push({
+        id: lead.id,
+        to: lead.email,
+        status: "suppressed",
+        reason: recipientGuard.reason,
+      });
       suppressed++;
       continue;
     }

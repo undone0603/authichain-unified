@@ -7,6 +7,8 @@ workers_dev = true
 # Secrets (set via `npx wrangler secret put <NAME>`, never in this file):
 #   OUTREACH_ADMIN_TOKEN — bearer token for /admin/* (mirrors agentz .env)
 #   RESEND_API_KEY       — Resend send key
+#   GUARDRAIL_API_URL    — base URL of authichain app (e.g. https://app.authichain.com)
+#   INTERNAL_SECRET      — shared secret for x-internal-secret header on /api/guardrail/*
 
 [[d1_databases]]
 binding = "DB"

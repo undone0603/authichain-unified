@@ -30,7 +30,10 @@ const CRON_TO_JOB: Record<string, string> = {
   "0 13 * * *": "ecosystem-health",
   "0 */6 * * *": "fraud-detection-sweep",
 
-  // GROUP B — held; do NOT enable without explicit per-job sign-off
+  // GROUP B — held; do NOT enable without explicit per-job sign-off.
+  // Each job below must also verify via the shared guardrail layer
+  // (checkAndReserve from src/lib/guardrail.ts or via /api/guardrail/check)
+  // before triggering any outbound action (email, LinkedIn, webhook, etc.).
   "0 9 * * *": "lead-nurturing",
   "0 */4 * * *": "hubspot-crm-sync",
   "0 4 * * *": "staking-rewards",
