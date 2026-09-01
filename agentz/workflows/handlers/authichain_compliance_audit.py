@@ -18,12 +18,26 @@ from agentz.core.compliance import (
     research_dpp_requirements,
     run_global_compliance_audit,
 )
-from agentz.core.credentials import get_or_placeholder
+from agentz.core.credentials import check_all, get_or_placeholder
 from agentz.core.llm import lm_manager
 from agentz.core.modes import ExecutionContext, Mode
 
+# Credentials required to talk to the live product ledger. Both must resolve
+# to env vars (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY) for a live run.
+REQUIRED_CREDENTIALS = ["supabase_url", "supabase_service_key"]
+
 
 def run(ctx: ExecutionContext) -> str:
+    # 0. Skip gracefully instead of crashing when Supabase creds aren't
+    # configured (e.g. PRs/forks without repo secrets). Dry-run mode already
+    # tolerates missing credentials via get_or_placeholder below.
+    if ctx.mode != Mode.DRY_RUN:
+        _, missing = check_all(REQUIRED_CREDENTIALS)
+        if missing:
+            msg = f"Skipping compliance audit: missing credentials {missing}"
+            ctx.step(msg)
+            return msg
+
     # 1. Smarter Initialization: Check the environment first
     active_provider = os.getenv("LLM_PROVIDER", "openai").lower()
     use_local_model = active_provider == "local"

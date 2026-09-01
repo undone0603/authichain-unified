@@ -9,7 +9,8 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.13.1"
+    "hono": "^4.13.1",
+    "stripe": "22.5.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260807.2",
