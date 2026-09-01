@@ -42,6 +42,12 @@ env:
 jobs:
   outreach:
     name: B2B Cold Outreach — ${{ inputs.segment || 'all' }}
+    # Manual runs (workflow_dispatch) are always allowed. Scheduled runs only
+    # send live outreach once B2B_OUTREACH_ENABLED is explicitly set to
+    # "true" as a repository variable — the same kill-switch convention used
+    # by autonomous-business-cycle.yml, so this cron trigger can't silently
+    # send live cold email before someone has opted in.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.B2B_OUTREACH_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
