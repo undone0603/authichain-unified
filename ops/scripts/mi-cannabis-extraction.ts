@@ -73,7 +73,7 @@ async function upsertLeadDirect(data: any) {
   const existing = await supabaseRest('leads', 'GET', undefined, `email=eq.${email.toLowerCase()}&select=id`);
   
   if (existing && existing.length > 0) {
-    const updated = await supabaseRest('leads', 'PATCH', rest, `id=eq.${existing[0].id}`);
+    const _unused_updated_76 = await supabaseRest('leads', 'PATCH', rest, `id=eq.${existing[0].id}`);
     return { id: existing[0].id, created: false };
   } else {
     const inserted = await supabaseRest('leads', 'POST', { email: email.toLowerCase(), ...rest });

@@ -1,58 +1,53 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-import { eq, desc, and, or, gte, lte, isNull, like, sql, SQL } from "drizzle-orm";
-import { randomUUID } from "crypto";
-import tls from "node:tls";
-import {
-  users,
-  products,
-  authentications,
-  certificates,
-  qrCodes,
-  qrScanEvents,
-  nftCollections,
-  nfts,
-  auctions,
-  auctionBids,
-  subscriptions,
-  usageRecords,
-  invoices,
-  payments,
-  leads,
-  emailCampaigns,
-  emailDrafts,
-  supplyChainEvents,
-  referrals,
-  affiliates,
-  affiliateCommissions,
-  autopilotConfig,
-  autopilotDecisions,
-  abTests,
-  whiteLabelClients,
-  activityLog,
-  fraudAlerts,
-  customerHealthScores,
-  revenueRecords,
-  notifications,
-  bonuses,
-  referralClicks,
-  aiModels,
-  modelPurchases,
-  modelReviews,
-  serviceOrders,
-  missions,
-  missionTasks,
-  stakingPositions,
-  budgetConfig,
-  proposals,
-  type Product,
-  type InsertProduct,
-  type InsertNotification,
-  type InsertUser,
-} from "../drizzle/schema";
-import { ENV } from './_core/env';
-import { SEGMENT_PRIORS } from './_core/bayesian';
-import { bayesianPriors, scheduledJobRuns } from '../drizzle/schema';
+  import { randomUUID } from "crypto";
+  import { and,desc,eq,gte,isNull,like,lte,or,sql,SQL } from "drizzle-orm";
+  import { drizzle } from "drizzle-orm/node-postgres";
+  import tls from "node:tls";
+  import { Pool } from "pg";
+  import {
+    abTests,
+    activityLog,
+    affiliateCommissions,
+    affiliates,
+    auctionBids,
+    auctions,
+    authentications,
+    autopilotConfig,
+    autopilotDecisions,
+    bayesianPriors,
+    budgetConfig,
+    certificates,
+    customerHealthScores,
+    emailCampaigns,
+    emailDrafts,
+    fraudAlerts,
+    invoices,
+    leads,
+    missions,
+    missionTasks,
+    nftCollections,
+    nfts,
+    notifications,
+    payments,
+    products,
+    proposals,
+    qrCodes,
+    qrScanEvents,
+    referrals,
+    revenueRecords,
+    scheduledJobRuns,
+    serviceOrders,
+    stakingPositions,
+    subscriptions,
+    supplyChainEvents,
+    usageRecords,
+    users,
+    whiteLabelClients,
+    type InsertNotification,
+    type InsertProduct,
+    type InsertUser
+  } from "../drizzle/schema";
+  import { SEGMENT_PRIORS } from './_core/bayesian';
+  import { ENV } from './_core/env';
 
 // Supabase's Transaction Mode pooler (port 6543) may chain through a root CA
 // that is not in Node.js's default trust store, so we allow an extra CA to be
@@ -116,6 +111,43 @@ o/bKiIz+Fq8=
 -----END CERTIFICATE-----`;
 
 type DrizzleInstance = ReturnType<typeof drizzle>;
+type FlexibleInsert<T> = T & Record<string, unknown>;
+type FlexibleUpdate<T> = Partial<T> & Record<string, unknown>;
+type ActivityPayload = {
+  userId?: number | null;
+  action: string;
+  entityType?: string;
+  entityId?: number | string;
+  details?: unknown;
+};
+type StakingPositionInsert = typeof stakingPositions.$inferInsert;
+type LeadInsert = typeof leads.$inferInsert;
+type ServiceOrderInsert = typeof serviceOrders.$inferInsert;
+type MissionInsert = typeof missions.$inferInsert;
+type MissionTaskInsert = typeof missionTasks.$inferInsert;
+type ProductInsert = typeof products.$inferInsert;
+type AuthenticationInsert = typeof authentications.$inferInsert;
+type CertificateInsert = typeof certificates.$inferInsert;
+type QrCodeInsert = typeof qrCodes.$inferInsert;
+type NftInsert = typeof nfts.$inferInsert;
+type NftCollectionInsert = typeof nftCollections.$inferInsert;
+type AuctionInsert = typeof auctions.$inferInsert;
+type SubscriptionInsert = typeof subscriptions.$inferInsert;
+type UsageRecordInsert = typeof usageRecords.$inferInsert;
+type InvoiceInsert = typeof invoices.$inferInsert;
+type PaymentInsert = typeof payments.$inferInsert;
+type EmailCampaignInsert = typeof emailCampaigns.$inferInsert;
+type EmailDraftInsert = typeof emailDrafts.$inferInsert;
+type SupplyChainEventInsert = typeof supplyChainEvents.$inferInsert;
+type ReferralInsert = typeof referrals.$inferInsert;
+type AffiliateInsert = typeof affiliates.$inferInsert;
+type AutopilotConfigInsert = typeof autopilotConfig.$inferInsert;
+type AutopilotDecisionInsert = typeof autopilotDecisions.$inferInsert;
+type AbTestInsert = typeof abTests.$inferInsert;
+type WhiteLabelClientInsert = typeof whiteLabelClients.$inferInsert;
+type FraudAlertInsert = typeof fraudAlerts.$inferInsert;
+type CustomerHealthScoreInsert = typeof customerHealthScores.$inferInsert;
+type RevenueRecordInsert = typeof revenueRecords.$inferInsert;
 let _db: DrizzleInstance | null = null;
 /** Strip `sslmode=` from a postgres URL and pin the Supabase pooler CA when the
  *  host is a Supabase Transaction Mode pooler (*.pooler.supabase.com). */
@@ -202,7 +234,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       const value = user[field];
       if (value === undefined) return;
       const normalized = value ?? null;
-      values[field] = normalized as any;
+      values[field] = normalized;
       updateSet[field] = normalized;
     };
     textFields.forEach(assignNullable);
@@ -255,14 +287,14 @@ export async function getUserStakingPositions(userId: number) {
   return await db.select().from(stakingPositions).where(eq(stakingPositions.userId, userId)).orderBy(desc(stakingPositions.stakedAt));
 }
 
-export async function createStakingPosition(data: any) {
+export async function createStakingPosition(data: FlexibleInsert<StakingPositionInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(stakingPositions).values(data).returning();
   return { id: result.id, ...data };
 }
 
-export async function updateStakingPosition(id: number, userId: number, data: any) {
+export async function updateStakingPosition(id: number, userId: number, data: FlexibleUpdate<StakingPositionInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(stakingPositions).set(data).where(and(eq(stakingPositions.id, id), eq(stakingPositions.userId, userId)));
@@ -286,7 +318,7 @@ export async function getRecentDecisions(limit = 10) {
   return d.select().from(autopilotDecisions).orderBy(desc(autopilotDecisions.createdAt)).limit(limit);
 }
 
-export async function logActivity(actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any }, details?: string) {
+export async function logActivity(actionOrData: string | ActivityPayload, details?: string) {
   const d = await getDb();
   if (typeof actionOrData === "string") {
     await d.insert(activityLog).values({ action: actionOrData, details: details ? { text: details } : undefined });
@@ -357,9 +389,9 @@ export async function getAdaptivePriors(): Promise<Record<string, { alpha: numbe
   }
 }
 
-export async function createLead(data: any) {
+export async function createLead(data: FlexibleInsert<Pick<LeadInsert, "email"> & Partial<Omit<LeadInsert, "email">>>) {
   const d = await getDb();
-  const values = {
+  const values: LeadInsert = {
     email: data.email,
     name: data.name ?? null,
     company: data.company ?? null,
@@ -381,7 +413,7 @@ export async function getLeadByEmail(email: string) {
   return rows[0] ?? null;
 }
 
-export async function updateLead(id: number, data: any) {
+export async function updateLead(id: number, data: FlexibleUpdate<LeadInsert>) {
   const d = await getDb();
   await d.update(leads).set(data).where(eq(leads.id, id));
 }
@@ -407,9 +439,9 @@ export async function updateLeadScore(id: number, score: number) {
   await d.update(leads).set({ score }).where(eq(leads.id, id));
 }
 
-export async function updateLeadStatus(id: number, status: string) {
+export async function updateLeadStatus(id: number, status: NonNullable<LeadInsert["status"]>) {
   const d = await getDb();
-  await d.update(leads).set({ status: status as any }).where(eq(leads.id, id));
+  await d.update(leads).set({ status }).where(eq(leads.id, id));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -422,12 +454,16 @@ export async function getServiceOrderById(id: number) {
   return rows[0] ?? null;
 }
 
-export async function updateServiceOrderStatus(id: number, status: string, extra?: Record<string, any>) {
+export async function updateServiceOrderStatus(
+  id: number,
+  status: NonNullable<ServiceOrderInsert["status"]>,
+  extra?: FlexibleUpdate<ServiceOrderInsert>,
+) {
   const d = await getDb();
   await d.update(serviceOrders).set({ status, ...(extra ?? {}), updatedAt: new Date() }).where(eq(serviceOrders.id, id));
 }
 
-export async function createServiceOrder(data: any) {
+export async function createServiceOrder(data: FlexibleInsert<ServiceOrderInsert>) {
   const d = await getDb();
   const [result] = await d.insert(serviceOrders).values(data).returning();
   const id = result.id;
@@ -482,7 +518,7 @@ export async function markTaskRunning(id: string): Promise<boolean> {
   return rows.length > 0;
 }
 
-export async function markTaskDone(id: string, result?: any) {
+export async function markTaskDone(id: string, result?: MissionTaskInsert["result"]) {
   const d = await getDb();
   // WHERE status='in_progress' preserves 'waiting_human' if an agent set it during execution
   await d.update(missionTasks).set({ status: "completed", result, updatedAt: new Date() }).where(and(eq(missionTasks.id, id), eq(missionTasks.status, "in_progress")));
@@ -493,7 +529,12 @@ export async function markTaskFailed(id: string, error: string) {
   await d.update(missionTasks).set({ status: "failed", error, updatedAt: new Date() }).where(eq(missionTasks.id, id));
 }
 
-export async function enqueueTask(missionId: string, kind: string, payload: any, scheduledAt?: Date) {
+export async function enqueueTask(
+  missionId: string,
+  kind: string,
+  payload: MissionTaskInsert["payload"],
+  scheduledAt?: Date,
+) {
   const d = await getDb();
   const id = randomUUID();
   await d.insert(missionTasks).values({
@@ -577,7 +618,7 @@ export async function getQuarterlyValueReport() {
 // USER SEGMENT QUERIES (used by jobs/retention.ts, onboarding)
 // ─────────────────────────────────────────────────────────────
 
-export async function listHighScanUsers(minScans = 10) {
+export async function listHighScanUsers(_unused_minScans_575 = 10) {
   const d = await getDb();
   return d.select().from(users).orderBy(desc(users.lastSignedIn)).limit(50);
 }
@@ -588,7 +629,7 @@ export async function listInactiveUsersNoRecentScans(daysSinceLastScan = 30) {
   return d.select().from(users).where(lte(users.lastSignedIn, cutoff)).limit(500);
 }
 
-export async function listUsersForOnboardingStep(step: string | number) {
+export async function listUsersForOnboardingStep(_unused_step_586: string | number) {
   const d = await getDb();
   return d.select().from(users).orderBy(desc(users.createdAt)).limit(100);
 }
@@ -628,13 +669,13 @@ export async function hasUserActionLogged(userId: number, action: string, sinceD
 // MISSIONS CRUD (used by missions/router.ts)
 // ─────────────────────────────────────────────────────────────
 
-import type { MissionType, MissionStatus } from "./missions/types";
-import { MISSION_STATUS_TO_DB } from "./missions/types";
+  import type { MissionStatus,MissionType } from "./missions/types";
+  import { MISSION_STATUS_TO_DB } from "./missions/types";
 
-export async function getMissions(statusFilter?: string) {
+export async function getMissions(statusFilter?: NonNullable<MissionInsert["status"]>) {
   const d = await getDb();
   if (statusFilter) {
-    return d.select().from(missions).where(eq(missions.status, statusFilter as any));
+    return d.select().from(missions).where(eq(missions.status, statusFilter));
   }
   return d.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
 }
@@ -658,7 +699,9 @@ export async function createMission(type: MissionType) {
   return id;
 }
 
-export async function createTask(data: any) {
+export async function createTask(
+  data: FlexibleInsert<Pick<MissionTaskInsert, "missionId" | "kind"> & Partial<Omit<MissionTaskInsert, "id" | "missionId" | "kind">>>,
+) {
   const d = await getDb();
   const id = randomUUID();
   await d.insert(missionTasks).values({
@@ -716,14 +759,14 @@ export async function getProductById(id: string) {
   return result[0];
 }
 
-export async function updateProduct(id: string, data: any) {
+export async function updateProduct(id: string, data: FlexibleUpdate<ProductInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(products).set(data).where(eq(products.id, id));
 }
 
 // ─── Authentication Helpers ──────────────────────────────────────────────────
-export async function createAuthentication(data: any) {
+export async function createAuthentication(data: FlexibleInsert<AuthenticationInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(authentications).values(data).returning();
@@ -756,7 +799,7 @@ export async function incrementShareCount(id: string) {
 }
 
 // ─── Certificate Helpers ─────────────────────────────────────────────────────
-export async function createCertificate(data: any) {
+export async function createCertificate(data: FlexibleInsert<CertificateInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(certificates).values(data).returning();
@@ -777,7 +820,7 @@ export async function getUserCertificates(userId: number) {
 }
 
 // ─── QR Code Helpers ─────────────────────────────────────────────────────────
-export async function createQrCode(data: any) {
+export async function createQrCode(data: FlexibleInsert<QrCodeInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(qrCodes).values(data).returning();
@@ -860,7 +903,7 @@ export async function getNftById(id: string) {
   return result[0];
 }
 
-export async function createNft(data: any) {
+export async function createNft(data: FlexibleInsert<NftInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(nfts).values(data).returning();
@@ -880,7 +923,7 @@ export async function getCollectionBySlug(slug: string) {
   return result[0];
 }
 
-export async function createCollection(data: any) {
+export async function createCollection(data: FlexibleInsert<NftCollectionInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(nftCollections).values(data).returning();
@@ -888,7 +931,7 @@ export async function createCollection(data: any) {
 }
 
 // ─── Auction Helpers ─────────────────────────────────────────────────────────
-export async function createAuction(data: any) {
+export async function createAuction(data: FlexibleInsert<AuctionInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(auctions).values(data).returning();
@@ -933,7 +976,7 @@ export async function getUserSubscription(userId: number) {
   return result[0];
 }
 
-export async function createSubscription(data: any) {
+export async function createSubscription(data: FlexibleInsert<SubscriptionInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(subscriptions).values(data).returning();
@@ -965,14 +1008,14 @@ export async function consumeSubscriptionQuota(userId: number): Promise<"ok" | "
   return sub ? "exceeded" : "no_subscription";
 }
 
-export async function recordUsage(data: any) {
+export async function recordUsage(data: FlexibleInsert<UsageRecordInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.insert(usageRecords).values(data);
 }
 
 // ─── Invoice Helpers ─────────────────────────────────────────────────────────
-export async function createInvoice(data: any) {
+export async function createInvoice(data: FlexibleInsert<InvoiceInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(invoices).values(data).returning();
@@ -986,7 +1029,7 @@ export async function getUserInvoices(userId: number) {
 }
 
 // ─── Payment Helpers ─────────────────────────────────────────────────────────
-export async function createPayment(data: any) {
+export async function createPayment(data: FlexibleInsert<PaymentInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(payments).values(data).returning();
@@ -999,14 +1042,14 @@ export async function getUserPayments(userId: number) {
   return await db.select().from(payments).where(eq(payments.userId, userId)).orderBy(desc(payments.createdAt));
 }
 
-export async function updatePaymentStatus(id: string, status: string) {
+export async function updatePaymentStatus(id: string, status: NonNullable<PaymentInsert["status"]>) {
   const db = await getDb();
   if (!db) return;
-  await db.update(payments).set({ status: status as any }).where(eq(payments.id, id));
+  await db.update(payments).set({ status }).where(eq(payments.id, id));
 }
 
 // ─── Email Campaign Helpers ──────────────────────────────────────────────────
-export async function createEmailCampaign(data: any) {
+export async function createEmailCampaign(data: FlexibleInsert<EmailCampaignInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(emailCampaigns).values(data).returning();
@@ -1019,14 +1062,14 @@ export async function getUserEmailCampaigns(userId: number) {
   return await db.select().from(emailCampaigns).where(eq(emailCampaigns.userId, userId)).orderBy(desc(emailCampaigns.createdAt));
 }
 
-export async function updateEmailCampaign(id: string, data: any) {
+export async function updateEmailCampaign(id: string, data: FlexibleUpdate<EmailCampaignInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(emailCampaigns).set(data).where(eq(emailCampaigns.id, id));
 }
 
 // ─── Email Draft Helpers ─────────────────────────────────────────────────────
-export async function createEmailDraft(data: any) {
+export async function createEmailDraft(data: FlexibleInsert<EmailDraftInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(emailDrafts).values(data).returning();
@@ -1039,17 +1082,17 @@ export async function getPendingDrafts() {
   return await db.select().from(emailDrafts).where(eq(emailDrafts.status, "pending")).orderBy(desc(emailDrafts.createdAt)).limit(200);
 }
 
-export async function updateDraftStatus(id: string, status: string, approvedBy?: number) {
+export async function updateDraftStatus(id: string, status: NonNullable<EmailDraftInsert["status"]>, approvedBy?: number) {
   const db = await getDb();
   if (!db) return;
-  const updateData: any = { status };
+  const updateData: Pick<EmailDraftInsert, "status" | "approvedBy" | "approvedAt" | "sentAt"> = { status };
   if (approvedBy) { updateData.approvedBy = approvedBy; updateData.approvedAt = new Date(); }
   if (status === "sent") updateData.sentAt = new Date();
   await db.update(emailDrafts).set(updateData).where(eq(emailDrafts.id, id));
 }
 
 // ─── Supply Chain Helpers ────────────────────────────────────────────────────
-export async function createSupplyChainEvent(data: any) {
+export async function createSupplyChainEvent(data: FlexibleInsert<SupplyChainEventInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(supplyChainEvents).values(data).returning();
@@ -1063,7 +1106,7 @@ export async function getProductSupplyChain(productId: string) {
 }
 
 // ─── Referral Helpers ────────────────────────────────────────────────────────
-export async function createReferral(data: any) {
+export async function createReferral(data: FlexibleInsert<ReferralInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(referrals).values(data).returning();
@@ -1091,7 +1134,7 @@ export async function getAffiliateByUserId(userId: number) {
   return result[0];
 }
 
-export async function createAffiliate(data: any) {
+export async function createAffiliate(data: FlexibleInsert<AffiliateInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(affiliates).values(data).returning();
@@ -1112,14 +1155,14 @@ export async function getAutopilotConfig() {
   return result[0];
 }
 
-export async function upsertAutopilotConfig(data: any) {
+export async function upsertAutopilotConfig(data: FlexibleInsert<AutopilotConfigInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(autopilotConfig).values(data).onConflictDoUpdate({ target: autopilotConfig.tenantId, set: data }).returning();
   return result?.id;
 }
 
-export async function createAutopilotDecision(data: any) {
+export async function createAutopilotDecision(data: FlexibleInsert<AutopilotDecisionInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(autopilotDecisions).values(data).returning();
@@ -1139,7 +1182,7 @@ export async function getAutopilotDecisionCountByMonth(_type?: string): Promise<
 }
 
 // ─── A/B Test Helpers ────────────────────────────────────────────────────────
-export async function createAbTest(data: any) {
+export async function createAbTest(data: FlexibleInsert<AbTestInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(abTests).values(data).returning();
@@ -1159,7 +1202,7 @@ export async function getAllAbTests() {
 }
 
 // ─── White Label Helpers ─────────────────────────────────────────────────────
-export async function createWhiteLabelClient(data: any) {
+export async function createWhiteLabelClient(data: FlexibleInsert<WhiteLabelClientInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(whiteLabelClients).values(data).returning();
@@ -1180,7 +1223,7 @@ export async function getWhiteLabelByApiKey(apiKey: string) {
 }
 
 // ─── Fraud Alert Helpers ─────────────────────────────────────────────────────
-export async function createFraudAlert(data: any) {
+export async function createFraudAlert(data: FlexibleInsert<FraudAlertInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(fraudAlerts).values(data).returning();
@@ -1194,12 +1237,17 @@ export async function getOpenFraudAlerts() {
 }
 
 // ─── Customer Health Helpers ─────────────────────────────────────────────────
-export async function upsertHealthScore(userId: number, score: number, factors: any, trend: string) {
+export async function upsertHealthScore(
+  userId: number,
+  score: number,
+  factors: CustomerHealthScoreInsert["factors"],
+  trend: NonNullable<CustomerHealthScoreInsert["trend"]>,
+) {
   const db = await getDb();
   if (!db) return;
   await db.insert(customerHealthScores)
-    .values({ userId, score, factors, trend: trend as any })
-    .onConflictDoUpdate({ target: customerHealthScores.userId, set: { score, factors, trend: trend as any, lastCalculatedAt: new Date() } });
+    .values({ userId, score, factors, trend })
+    .onConflictDoUpdate({ target: customerHealthScores.userId, set: { score, factors, trend, lastCalculatedAt: new Date() } });
 }
 
 export async function getAllHealthScores() {
@@ -1209,7 +1257,7 @@ export async function getAllHealthScores() {
 }
 
 // ─── Revenue Helpers ─────────────────────────────────────────────────────────
-export async function recordRevenue(data: any) {
+export async function recordRevenue(data: FlexibleInsert<RevenueRecordInsert>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.insert(revenueRecords).values(data);
@@ -1320,7 +1368,7 @@ export async function deleteNotification(id: string, userId: number) {
 }
 
 export async function createSystemNotification(userId: number, title: string, message: string, type: InsertNotification["type"], actionUrl?: string) {
-  return createNotification({ userId, type: type as any, title, message, isRead: false, actionUrl });
+  return createNotification({ userId, type, title, message, isRead: false, actionUrl });
 }
 
 // ─── Automation Audit ────────────────────────────────────────────────────────

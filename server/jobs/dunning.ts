@@ -8,6 +8,7 @@ import {
   getUserById,
 } from "../db";
 import { sendEmail } from "../email-service";
+import type { Subscription } from "../../drizzle/schema";
 
 function daysSince(date: Date | null | undefined) {
   if (!date) return 0;
@@ -32,7 +33,7 @@ const EMAIL_BODY: Record<Step, (name: string, plan: string) => string> = {
     `Hi ${name},\n\nThis is a final notice. Your AuthiChain ${plan} subscription payment is 14 days overdue. Please update your billing details immediately to avoid account suspension.\n\nUpdate billing: https://authichain.com/subscriptions\n\nThe AuthiChain Team`,
 };
 
-async function runStep(subscription: any, step: Step, message: string) {
+async function runStep(subscription: Subscription, step: Step, message: string) {
   const alreadyLogged = await hasDunningStepLogged(subscription.id, step);
   if (alreadyLogged) return false;
 

@@ -46,7 +46,7 @@ function loadQueue(): OutreachQueue {
   try {
     const raw = fs.readFileSync(QUEUE_FILE, "utf-8");
     return JSON.parse(raw) as OutreachQueue;
-  } catch (err) {
+  } catch (_unused_err_49) {
     console.error(`Failed to load queue from ${QUEUE_FILE}`);
     process.exit(1);
   }

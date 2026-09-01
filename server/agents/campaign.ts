@@ -1,5 +1,7 @@
 import type { Db } from '../db-helpers';
 import type { MissionTask as Task } from '../../drizzle/schema';
+import { leads } from '../../drizzle/schema';
+import { and, eq, isNull } from 'drizzle-orm';
 import { logActivity } from './db-helpers';
 import { sendEmail } from '../email-service';
 import { invokeLLM, parseLLMContent, type InvokeParams } from '../_core/llm';
@@ -30,10 +32,9 @@ export async function runEmailCampaign(task: Task, db: Db): Promise<void> {
   });
 
   // 1. Fetch eligible leads for this segment (not yet contacted)
-  const leadRows = await (db as any).query.leads.findMany({
-    where: (leads: any, { and, eq, isNull }: any) =>
-      and(eq(leads.segment, segment), isNull(leads.lastContactedAt)),
-  });
+  const leadRows = await db.select().from(leads).where(
+    and(eq(leads.segment, segment), isNull(leads.lastContactedAt)),
+  );
 
   for (const lead of leadRows) {
     // 2. Personalize email

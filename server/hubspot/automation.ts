@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
-import { syncPaymentToHubSpot, createDeal, isHubSpotConfigured } from "../hubspot-service";
-import * as db from "../db";
-import { protocolAgents } from "../../drizzle/schema";
+  import { eq } from "drizzle-orm";
+  import { protocolAgents } from "../../drizzle/schema";
+  import * as db from "../db";
+  import { createDeal,isHubSpotConfigured } from "../hubspot-service";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split('@');

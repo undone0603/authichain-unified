@@ -1,11 +1,18 @@
 'use client';
 
-import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import {
-  Filter, Search, TrendingUp, Eye, Share2, Download,
-  ExternalLink, Zap, Sparkles, BarChart3, Users,
-} from 'lucide-react';
+  import {
+    BarChart3,
+    ExternalLink,
+    Eye,
+    Filter,Search,
+    Share2,
+    Sparkles,
+    TrendingUp,
+    Users,
+    Zap
+  } from 'lucide-react';
+  import Link from 'next/link';
+  import { useEffect,useState } from 'react';
 
 const PURPLE = '#8b5cf6';
 const PINK = '#ec4899';
@@ -28,13 +35,15 @@ interface QRONArt {
   tags: string[];
 }
 
+type GallerySort = 'trending' | 'recent' | 'popular';
+
 export default function QRONGallery() {
   const [artworks, setArtworks] = useState<QRONArt[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<'all' | QRONArt['style']>('all');
   const [selectedCategory, setSelectedCategory] = useState<'all' | QRONArt['category']>('all');
-  const [sortBy, setSortBy] = useState<'trending' | 'recent' | 'popular'>('trending');
+  const [sortBy, setSortBy] = useState<GallerySort>('trending');
 
   useEffect(() => {
     fetchArtworks();
@@ -153,7 +162,7 @@ export default function QRONGallery() {
             {/* Sort */}
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
+              onChange={e => setSortBy(e.target.value as GallerySort)}
               className="px-4 py-3 rounded-xl border border-zinc-800 bg-zinc-950 text-white focus:outline-none focus:border-purple-500 transition-colors"
             >
               <option value="trending">Sort: Trending</option>

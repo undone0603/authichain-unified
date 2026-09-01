@@ -150,7 +150,7 @@ async function visionLoop(page: Page, objective: string): Promise<string> {
       content: typeof choice.message.content === 'string' ? choice.message.content : '',
     };
     if (choice.message.tool_calls) {
-      (assistantMsg as any).tool_calls = choice.message.tool_calls;
+      assistantMsg.tool_calls = choice.message.tool_calls;
     }
     history.push(assistantMsg);
 

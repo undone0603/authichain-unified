@@ -4,6 +4,17 @@ import { ENV } from "./_core/env";
 // ─── Client ──────────────────────────────────────────────────────────────────
 let _client: Client | null = null;
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return typeof err === "string" ? err : "Unknown error";
+}
+
+function isMissingScopesError(reason: unknown): reason is { code?: number; body?: { category?: string } } {
+  if (!reason || typeof reason !== "object") return false;
+  const candidate = reason as { code?: unknown; body?: { category?: unknown } };
+  return candidate.code === 403 || candidate.body?.category === "MISSING_SCOPES";
+}
+
 function getClient(): Client {
   if (!_client) {
     if (!ENV.hubspotServiceKey) throw new Error("HUBSPOT_SERVICE_KEY is not configured");
@@ -25,8 +36,8 @@ export async function listContacts(limit = 50) {
       ["firstname", "lastname", "email", "phone", "company", "hs_lead_status", "createdate", "lastmodifieddate"],
     );
     return response.results.map(c => ({ id: c.id, ...c.properties }));
-  } catch (err: any) {
-    console.error("[HubSpot] List contacts error:", err.message || err);
+  } catch (err: unknown) {
+    console.error("[HubSpot] List contacts error:", getErrorMessage(err));
     return [];
   }
 }
@@ -43,8 +54,8 @@ export async function searchContacts(query: string) {
       after: "0",
     });
     return response.results.map(c => ({ id: c.id, ...c.properties }));
-  } catch (err: any) {
-    console.error("[HubSpot] Search contacts error:", err.message || err);
+  } catch (err: unknown) {
+    console.error("[HubSpot] Search contacts error:", getErrorMessage(err));
     return [];
   }
 }
@@ -60,9 +71,10 @@ export async function createContact(data: {
       associations: [],
     });
     return { success: true as const, id: response.id, properties: response.properties };
-  } catch (err: any) {
-    console.error("[HubSpot] Create contact error:", err.message || err);
-    return { success: false as const, error: err.message || "Failed to create contact" };
+  } catch (err: unknown) {
+    const message = getErrorMessage(err);
+    console.error("[HubSpot] Create contact error:", message);
+    return { success: false as const, error: message || "Failed to create contact" };
   }
 }
 
@@ -75,8 +87,8 @@ export async function listCompanies(limit = 50) {
       ["name", "domain", "industry", "description", "createdate"],
     );
     return response.results.map(c => ({ id: c.id, ...c.properties }));
-  } catch (err: any) {
-    console.error("[HubSpot] List companies error:", err.message || err);
+  } catch (err: unknown) {
+    console.error("[HubSpot] List companies error:", getErrorMessage(err));
     return [];
   }
 }
@@ -91,9 +103,10 @@ export async function createCompany(data: {
       associations: [],
     });
     return { success: true as const, id: response.id, properties: response.properties };
-  } catch (err: any) {
-    console.error("[HubSpot] Create company error:", err.message || err);
-    return { success: false as const, error: err.message || "Failed to create company" };
+  } catch (err: unknown) {
+    const message = getErrorMessage(err);
+    console.error("[HubSpot] Create company error:", message);
+    return { success: false as const, error: message || "Failed to create company" };
   }
 }
 
@@ -109,9 +122,10 @@ export async function createDeal(data: {
       associations: [],
     });
     return { success: true as const, id: response.id, properties: response.properties };
-  } catch (err: any) {
-    console.error("[HubSpot] Create deal error:", err.message || err);
-    return { success: false as const, error: err.message || "Failed to create deal" };
+  } catch (err: unknown) {
+    const message = getErrorMessage(err);
+    console.error("[HubSpot] Create deal error:", message);
+    return { success: false as const, error: message || "Failed to create deal" };
   }
 }
 
@@ -123,8 +137,8 @@ export async function listDeals(limit = 50) {
       ["dealname", "amount", "dealstage", "pipeline", "createdate", "closedate", "hs_lastmodifieddate"],
     );
     return response.results.map(d => ({ id: d.id, ...d.properties }));
-  } catch (err: any) {
-    console.error("[HubSpot] List deals error:", err.message || err);
+  } catch (err: unknown) {
+    console.error("[HubSpot] List deals error:", getErrorMessage(err));
     return [];
   }
 }
@@ -145,23 +159,24 @@ export async function getCRMStats() {
     let isConnected = false;
 
     if (contactResult.status === "fulfilled") { contactCount = contactResult.value.total; isConnected = true; }
-    else if (contactResult.reason?.code === 403 || contactResult.reason?.body?.category === "MISSING_SCOPES") missingScopes.push("contacts");
+    else if (isMissingScopesError(contactResult.reason)) missingScopes.push("contacts");
     else throw contactResult.reason;
 
     if (companyResult.status === "fulfilled") { companyCount = companyResult.value.total; isConnected = true; }
-    else if (companyResult.reason?.code === 403 || companyResult.reason?.body?.category === "MISSING_SCOPES") missingScopes.push("companies");
+    else if (isMissingScopesError(companyResult.reason)) missingScopes.push("companies");
 
     if (dealResult.status === "fulfilled") { dealCount = dealResult.value.total; isConnected = true; }
-    else if (dealResult.reason?.code === 403 || dealResult.reason?.body?.category === "MISSING_SCOPES") missingScopes.push("deals");
+    else if (isMissingScopesError(dealResult.reason)) missingScopes.push("deals");
 
     return {
       contacts: contactCount, companies: companyCount, deals: dealCount,
       connected: isConnected,
       missingScopes: missingScopes.length > 0 ? missingScopes : undefined,
     };
-  } catch (err: any) {
-    console.error("[HubSpot] Get CRM stats error:", err.message || err);
-    return { contacts: 0, companies: 0, deals: 0, connected: false, error: err.message };
+  } catch (err: unknown) {
+    const message = getErrorMessage(err);
+    console.error("[HubSpot] Get CRM stats error:", message);
+    return { contacts: 0, companies: 0, deals: 0, connected: false, error: message };
   }
 }
 
@@ -181,8 +196,8 @@ export async function syncLeadToHubSpot(lead: {
     });
     console.log("[HubSpot] Lead synced:", result.success ? result.id : result.error);
     return result;
-  } catch (err: any) {
-    console.error("[HubSpot] Lead sync failed:", err.message);
+  } catch (err: unknown) {
+    console.error("[HubSpot] Lead sync failed:", getErrorMessage(err));
     return null;
   }
 }
@@ -200,8 +215,8 @@ export async function syncPaymentToHubSpot(payment: {
     });
     console.log("[HubSpot] Payment synced as deal:", result.success ? result.id : result.error);
     return result;
-  } catch (err: any) {
-    console.error("[HubSpot] Payment sync failed:", err.message);
+  } catch (err: unknown) {
+    console.error("[HubSpot] Payment sync failed:", getErrorMessage(err));
     return null;
   }
 }

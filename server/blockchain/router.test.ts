@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { blockchainRouter } from './router';
-import * as thirdweb from '../thirdweb';
+  import { describe,expect,it,vi } from 'vitest';
+  import { blockchainRouter } from './router';
 
 vi.mock('../thirdweb', () => ({
   mintAuthenticationNFT: vi.fn(),

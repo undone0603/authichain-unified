@@ -32,6 +32,10 @@ import {
 import { getDb } from "../db";
 import { getOpsSummary } from "./db-helpers";
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /**
  * Creates and configures the Express app without binding to a port.
  * Used by the standalone server (index.ts) AND the Vercel serverless function (api/server.ts).
@@ -85,9 +89,10 @@ export function createApp() {
       // req.body as sig, which cannot verify a Stripe signature.
       const result = await handleStripeWebhook(req.body, sig);
       res.json(result);
-    } catch (err: any) {
-      console.error(`[Stripe Webhook] Error: ${err.message}`);
-      res.status(400).json({ error: err.message });
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      console.error(`[Stripe Webhook] Error: ${message}`);
+      res.status(400).json({ error: message });
     }
   });
 
@@ -100,9 +105,10 @@ export function createApp() {
     try {
       const { handlePaddleWebhook } = await import("../paddle/webhook");
       await handlePaddleWebhook(req, res);
-    } catch (err: any) {
-      console.error(`[Paddle Webhook] Error: ${err.message}`);
-      res.status(400).json({ error: err.message });
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      console.error(`[Paddle Webhook] Error: ${message}`);
+      res.status(400).json({ error: message });
     }
   });
 
@@ -119,9 +125,10 @@ export function createApp() {
       const { handleInstantlyWebhook } = await import("../webhooks/instantly.js");
       const result = await handleInstantlyWebhook(req.body);
       res.json(result);
-    } catch (err: any) {
-      console.error(`[Instantly Webhook] Error: ${err.message}`);
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      console.error(`[Instantly Webhook] Error: ${message}`);
+      res.status(500).json({ error: message });
     }
   });
 
@@ -138,9 +145,10 @@ export function createApp() {
       const { handleDocuSignWebhook } = await import("../webhooks/docusign.js");
       const result = await handleDocuSignWebhook(req.body);
       res.json(result);
-    } catch (err: any) {
-      console.error(`[DocuSign Webhook] Error: ${err.message}`);
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      console.error(`[DocuSign Webhook] Error: ${message}`);
+      res.status(500).json({ error: message });
     }
   });
 

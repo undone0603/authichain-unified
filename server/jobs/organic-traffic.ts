@@ -14,6 +14,10 @@ type OrganicContentPlanItem = {
   publishWindowDays: number;
 };
 
+type OrganicContentPlanResponse = {
+  items?: unknown;
+};
+
 const DEFAULT_TOPICS: Array<{ segment: string; topics: string[] }> = [
   {
     segment: "restaurants",
@@ -122,20 +126,23 @@ async function buildLlmPlan(): Promise<OrganicContentPlanItem[]> {
     },
   });
 
-  const parsed = parseLLMContent<any>(response.choices[0]?.message?.content);
+  const parsed = parseLLMContent<OrganicContentPlanResponse>(response.choices[0]?.message?.content);
   const items = Array.isArray(parsed?.items) ? parsed.items : [];
-  return items.map((item: any) => ({
-    segment: String(item.segment || "unknown"),
-    channel: item.channel === "email" || item.channel === "linkedin" ? item.channel : "blog",
-    topic: String(item.topic || "Untitled"),
-    title: String(item.title || "Untitled"),
-    slug: slugify(String(item.slug || item.title || item.topic || "untitled")),
-    keywords: Array.isArray(item.keywords) ? item.keywords.map((x: unknown) => String(x)) : [],
-    cta: String(item.cta || "Book a demo"),
-    publishWindowDays: Number.isFinite(Number(item.publishWindowDays))
-      ? Math.max(1, Math.min(30, Number(item.publishWindowDays)))
+  return items.map((item) => {
+    const row = typeof item === "object" && item !== null ? item as Record<string, unknown> : {};
+    return {
+      segment: String(row.segment || "unknown"),
+      channel: row.channel === "email" || row.channel === "linkedin" ? row.channel : "blog",
+      topic: String(row.topic || "Untitled"),
+      title: String(row.title || "Untitled"),
+      slug: slugify(String(row.slug || row.title || row.topic || "untitled")),
+      keywords: Array.isArray(row.keywords) ? row.keywords.map((x: unknown) => String(x)) : [],
+      cta: String(row.cta || "Book a demo"),
+      publishWindowDays: Number.isFinite(Number(row.publishWindowDays))
+      ? Math.max(1, Math.min(30, Number(row.publishWindowDays)))
       : 7,
-  }));
+    };
+  });
 }
 
 async function emitAnalyticsEvents(itemCount: number) {

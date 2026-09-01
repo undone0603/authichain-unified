@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+  import { NextRequest,NextResponse } from 'next/server';
 
 // GET /api/v1/webhook - List registered webhooks
 export async function GET(req: NextRequest) {
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     };
 
     return NextResponse.json({ success: true, webhook }, { status: 201 });
-  } catch (err) {
+  } catch (_unused_err_104) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 }

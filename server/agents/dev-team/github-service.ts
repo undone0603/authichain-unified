@@ -11,6 +11,18 @@
 
 const GH_API = "https://api.github.com";
 
+type GitHubContentEntry = {
+  type: string;
+  path: string;
+};
+
+type SearchCodeResult = {
+  path: string;
+  html_url: string;
+};
+
+type Deployment = Record<string, unknown>;
+
 function headers(): Record<string, string> {
   const token = process.env.GITHUB_TOKEN;
   if (!token) throw new Error("GITHUB_TOKEN not set");
@@ -28,7 +40,7 @@ function repo(): string {
   return `${owner}/${name}`;
 }
 
-async function gh(method: string, path: string, body?: unknown): Promise<any> {
+async function gh<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${GH_API}${path}`, {
     method,
     headers: headers(),
@@ -38,19 +50,19 @@ async function gh(method: string, path: string, body?: unknown): Promise<any> {
     const text = await res.text();
     throw new Error(`GitHub API ${method} ${path} → ${res.status}: ${text}`);
   }
-  if (res.status === 204) return null;
-  return res.json();
+  if (res.status === 204) return null as T;
+  return res.json() as Promise<T>;
 }
 
 // ─── Branch operations ────────────────────────────────────────────────────
 
 export async function getDefaultBranch(): Promise<string> {
-  const data = await gh("GET", `/repos/${repo()}`);
+  const data = await gh<{ default_branch?: string }>("GET", `/repos/${repo()}`);
   return data.default_branch ?? "main";
 }
 
 export async function getBranchSha(branch: string): Promise<string> {
-  const data = await gh("GET", `/repos/${repo()}/git/ref/heads/${encodeURIComponent(branch)}`);
+  const data = await gh<{ object: { sha: string } }>("GET", `/repos/${repo()}/git/ref/heads/${encodeURIComponent(branch)}`);
   return data.object.sha;
 }
 
@@ -80,7 +92,7 @@ export interface FileContent {
 export async function getFile(path: string, branch?: string): Promise<FileContent | null> {
   try {
     const qs = branch ? `?ref=${encodeURIComponent(branch)}` : "";
-    const data = await gh("GET", `/repos/${repo()}/contents/${path}${qs}`);
+    const data = await gh<{ content: string; sha: string; encoding: string }>("GET", `/repos/${repo()}/contents/${path}${qs}`);
     return {
       path,
       content: Buffer.from(data.content, "base64").toString("utf-8"),
@@ -95,11 +107,11 @@ export async function getFile(path: string, branch?: string): Promise<FileConten
 export async function listFiles(dirPath: string, branch?: string): Promise<string[]> {
   try {
     const qs = branch ? `?ref=${encodeURIComponent(branch)}` : "";
-    const data = await gh("GET", `/repos/${repo()}/contents/${dirPath}${qs}`);
+    const data = await gh<GitHubContentEntry[] | GitHubContentEntry>("GET", `/repos/${repo()}/contents/${dirPath}${qs}`);
     if (!Array.isArray(data)) return [];
     return data
-      .filter((f: any) => f.type === "file")
-      .map((f: any) => f.path as string);
+      .filter((f) => f.type === "file")
+      .map((f) => f.path);
   } catch {
     return [];
   }
@@ -119,7 +131,7 @@ export async function writeFile(opts: {
     branch:  opts.branch,
   };
   if (opts.sha) body.sha = opts.sha;
-  const data = await gh("PUT", `/repos/${repo()}/contents/${opts.path}`, body);
+  const data = await gh<{ content: { sha: string } }>("PUT", `/repos/${repo()}/contents/${opts.path}`, body);
   return { sha: data.content.sha };
 }
 
@@ -144,7 +156,7 @@ export async function createPR(opts: {
   base?: string;  // target branch (default: main)
 }): Promise<PullRequest> {
   const base = opts.base ?? await getDefaultBranch();
-  return gh("POST", `/repos/${repo()}/pulls`, {
+  return gh<PullRequest>("POST", `/repos/${repo()}/pulls`, {
     title: opts.title,
     body:  opts.body,
     head:  opts.head,
@@ -154,11 +166,11 @@ export async function createPR(opts: {
 }
 
 export async function getPR(number: number): Promise<PullRequest> {
-  return gh("GET", `/repos/${repo()}/pulls/${number}`);
+  return gh<PullRequest>("GET", `/repos/${repo()}/pulls/${number}`);
 }
 
 export async function getPRFiles(number: number): Promise<{ filename: string; status: string; patch?: string }[]> {
-  return gh("GET", `/repos/${repo()}/pulls/${number}/files`);
+  return gh<{ filename: string; status: string; patch?: string }[]>("GET", `/repos/${repo()}/pulls/${number}/files`);
 }
 
 export async function addPRReview(opts: {
@@ -197,7 +209,7 @@ export interface WorkflowRun {
 
 /** Get the latest CI run for a given commit SHA on a branch. */
 export async function getLatestRunForSha(sha: string): Promise<WorkflowRun | null> {
-  const data = await gh("GET", `/repos/${repo()}/actions/runs?head_sha=${sha}&per_page=10`);
+  const data = await gh<{ workflow_runs?: WorkflowRun[] }>("GET", `/repos/${repo()}/actions/runs?head_sha=${sha}&per_page=10`);
   const runs: WorkflowRun[] = data.workflow_runs ?? [];
   // Return the most recently created run
   return runs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] ?? null;
@@ -244,14 +256,14 @@ export async function createIssue(opts: {
 /** Search the repo for a symbol/pattern to help the code-writer locate relevant files. */
 export async function searchCode(query: string): Promise<{ path: string; url: string }[]> {
   const q = encodeURIComponent(`${query} repo:${repo()}`);
-  const data = await gh("GET", `/search/code?q=${q}&per_page=10`);
-  return (data.items ?? []).map((i: any) => ({ path: i.path, url: i.html_url }));
+  const data = await gh<{ items?: SearchCodeResult[] }>("GET", `/search/code?q=${q}&per_page=10`);
+  return (data.items ?? []).map((i) => ({ path: i.path, url: i.html_url }));
 }
 
 // ─── Deployments ──────────────────────────────────────────────────────────
 
-export async function listDeployments(environment?: string): Promise<any[]> {
+export async function listDeployments(environment?: string): Promise<Deployment[]> {
   const qs = environment ? `?environment=${encodeURIComponent(environment)}` : "";
-  const data = await gh("GET", `/repos/${repo()}/deployments${qs}`);
+  const data = await gh<Deployment[] | unknown>("GET", `/repos/${repo()}/deployments${qs}`);
   return Array.isArray(data) ? data : [];
 }

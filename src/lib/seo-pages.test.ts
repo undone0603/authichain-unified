@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { listSeoPages, listSeoSlugs, getSeoPageBySlug } from './seo-pages';
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+}
+
 describe('seo-pages loader', () => {
   it('loads committed pages with required fields', () => {
     const pages = listSeoPages();
@@ -10,9 +14,9 @@ describe('seo-pages loader', () => {
       expect(p.title.length).toBeLessThanOrEqual(60);
       expect(p.metaDescription.length).toBeLessThanOrEqual(160);
       expect(p.bodyHtml).not.toContain('<script');
-      const jsonLd = p.jsonLd as any;
+      const jsonLd: Record<string, unknown> = p.jsonLd;
       const graph = jsonLd['@graph'];
-      const entity = Array.isArray(graph) ? graph[0] : jsonLd;
+      const entity = Array.isArray(graph) ? asRecord(graph[0]) : jsonLd;
       // Article belongs here: two committed pages are explainers rather than
       // offerings ("What Is a Digital Product Passport?", "EU DPP Compliance
       // Checklist"). Typing editorial content as Product would be inaccurate

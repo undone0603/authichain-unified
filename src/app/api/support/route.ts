@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+  import { NextRequest,NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { name, email, subject, message, category, priority = 'normal' } = body;
+  const { _unused_name_77, email, subject, message, _unused_category_77, priority = 'normal' } = body;
 
   if (!email || !subject || !message) {
     return NextResponse.json(

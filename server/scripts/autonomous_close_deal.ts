@@ -4,6 +4,10 @@ import { calculateLeadScore } from "../sales/scoring-service.js";
 import { sendDocuSignContract } from "../sales/docusign-service.js";
 import { revenueRecords } from "../../drizzle/schema.js";
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function autonomousClose() {
   console.log("🤖 AgentZ: Initiating End-to-End Autonomous Close for Medtronic...");
   console.log("------------------------------------------------------------------");
@@ -92,8 +96,8 @@ async function autonomousClose() {
       }
     }
 
-  } catch (err: any) {
-    console.error("❌ Autonomous Close failed:", err.message);
+  } catch (err: unknown) {
+    console.error("❌ Autonomous Close failed:", getErrorMessage(err));
   }
 }
 

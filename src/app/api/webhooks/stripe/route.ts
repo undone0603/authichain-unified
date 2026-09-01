@@ -5,6 +5,13 @@ import { createClient } from "@supabase/supabase-js";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type AdminSupabase = ReturnType<typeof createClient>;
+type AuditPayload = Record<string, unknown>;
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
 // Lazy singletons — avoid build-time throw when env vars are absent.
 let _stripe: Stripe | null = null;
 function getStripe(): Stripe {
@@ -16,9 +23,8 @@ function getStripe(): Stripe {
   return _stripe;
 }
 
-let _supabase: ReturnType<typeof createClient> | null = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getSupabase(): any {
+let _supabase: AdminSupabase | null = null;
+function getSupabase(): AdminSupabase {
   if (!_supabase) {
     _supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -79,13 +85,13 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-  } catch (err: any) {
+  } catch (err) {
     console.error(
       "[stripe-webhook] Signature verification failed:",
-      err.message
+      getErrorMessage(err)
     );
     return NextResponse.json(
-      { error: `Webhook Error: ${err.message}` },
+      { error: `Webhook Error: ${getErrorMessage(err)}` },
       { status: 400 }
     );
   }
@@ -149,16 +155,16 @@ export async function POST(req: NextRequest) {
     await logAuditEvent(supabase, event.type, event.id, "success", {});
 
     return NextResponse.json({ received: true, type: event.type });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[stripe-webhook] Processing error:", err);
 
     // Log failure to audit_log
     await logAuditEvent(supabase, event.type, event.id, "error", {
-      error: err.message,
-      stack: err.stack?.split("\n").slice(0, 3).join("\n"),
+      error: getErrorMessage(err),
+      stack: err instanceof Error ? err.stack?.split("\n").slice(0, 3).join("\n") : undefined,
     }).catch(() => {});
 
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -168,7 +174,7 @@ export async function POST(req: NextRequest) {
  * - Tag lead as customer in lead_captures (status='customer')
  */
 async function handleCheckoutSessionCompleted(
-  supabase: any,
+  supabase: AdminSupabase,
   event: Stripe.Event
 ) {
   const session = event.data.object as Stripe.Checkout.Session;
@@ -232,7 +238,7 @@ async function handleCheckoutSessionCompleted(
  * - Update subscriptions table (status='active', next_billing_date)
  */
 async function handleInvoicePaymentSucceeded(
-  supabase: any,
+  supabase: AdminSupabase,
   event: Stripe.Event
 ) {
   const invoice = event.data.object as Stripe.Invoice;
@@ -346,7 +352,7 @@ async function handleInvoicePaymentSucceeded(
  * - Update subscriptions table (status='payment_failed')
  * - Insert alert for sales team
  */
-async function handleInvoicePaymentFailed(supabase: any, event: Stripe.Event) {
+async function handleInvoicePaymentFailed(supabase: AdminSupabase, event: Stripe.Event) {
   const invoice = event.data.object as Stripe.Invoice;
 
   const customerId = invoice.customer as string;
@@ -419,7 +425,7 @@ async function handleInvoicePaymentFailed(supabase: any, event: Stripe.Event) {
  * - Update subscriptions table (status='canceled', canceled_at)
  */
 async function handleCustomerSubscriptionDeleted(
-  supabase: any,
+  supabase: AdminSupabase,
   event: Stripe.Event
 ) {
   const subscription = event.data.object as Stripe.Subscription;
@@ -460,11 +466,11 @@ async function handleCustomerSubscriptionDeleted(
  * Log event to audit_log table for compliance and debugging
  */
 async function logAuditEvent(
-  supabase: any,
+  supabase: AdminSupabase,
   eventType: string,
   eventId: string,
   status: "success" | "error" | "duplicate",
-  payload: any
+  payload: AuditPayload
 ) {
   try {
     await supabase.from("audit_log").insert({

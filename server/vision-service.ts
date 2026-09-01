@@ -3,7 +3,7 @@
  * Uses GPT-4o Vision to analyze product snapshots against 
  * harvest-level visual markers.
  */
-import { invokeLLM, parseLLMContent } from "./_core/llm";
+  import { invokeLLM,parseLLMContent } from "./_core/llm";
 
 export interface DNAAnalysisResult {
   isMatch: boolean;
@@ -47,7 +47,7 @@ export async function analyzeProductVision(imageUrl: string, productType: string
 
     try {
       analysis = parseLLMContent<any>(content);
-    } catch (e) {
+    } catch (_unused_e_50) {
       console.warn("[Vision] Failed to parse LLM response, using partial extraction...");
       // Simple regex fallback for malformed JSON
       const resultMatch = typeof content === "string" ? content.match(/"result":\s*"([^"]+)"/) : null;

@@ -5,11 +5,24 @@ import { recordEvent } from '@/lib/guardrail';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const validActions = ['check', 'record', 'suppress', 'kill_toggle'] as const;
+type ValidAction = (typeof validActions)[number];
+
+function isValidAction(action: string): action is ValidAction {
+  return validActions.includes(action as ValidAction);
+}
+
 export async function POST(req: NextRequest) {
   const denied = requireInternalSecret(req);
   if (denied) return denied;
 
-  let body: { channel?: string; action?: string; allowed?: boolean; reason?: string; metadata?: Record<string, unknown> };
+  let body: {
+    channel?: string;
+    action?: string;
+    allowed?: boolean;
+    reason?: string;
+    metadata?: Record<string, unknown>;
+  };
   try {
     body = await req.json();
   } catch {
@@ -20,15 +33,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'channel and action are required' }, { status: 400 });
   }
 
-  const validActions = ['check', 'record', 'suppress', 'kill_toggle'] as const;
-  if (!validActions.includes(body.action as any)) {
+  if (!isValidAction(body.action)) {
     return NextResponse.json({ error: 'action must be one of: check, record, suppress, kill_toggle' }, { status: 400 });
   }
 
   try {
     await recordEvent({
       channel: body.channel,
-      action: body.action as 'check' | 'record' | 'suppress' | 'kill_toggle',
+      action: body.action,
       allowed: body.allowed,
       reason: body.reason,
       metadata: body.metadata,

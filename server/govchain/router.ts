@@ -1,8 +1,7 @@
-import { z } from "zod";
-import { adminProcedure, router, publicProcedure } from "../_core/trpc";
-import { issueSovereignPassport, verifySovereignPassport } from "./vc-service";
-import * as db from "../db";
-import { TRPCError } from "@trpc/server";
+  import { z } from "zod";
+  import { adminProcedure,publicProcedure,router } from "../_core/trpc";
+  import * as db from "../db";
+  import { issueSovereignPassport,verifySovereignPassport } from "./vc-service";
 
 export const govchainRouter = router({
   /**

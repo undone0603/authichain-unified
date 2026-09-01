@@ -1,10 +1,10 @@
-import "dotenv/config";
-import { promises as fs } from "node:fs";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { ENV } from "../_core/env";
-import { logActivity } from "../db";
-import { runPipelineTick } from "./pipeline-tick";
+  import "dotenv/config";
+  import { promises as fs } from "node:fs";
+  import { resolve } from "node:path";
+  import { pathToFileURL } from "node:url";
+  import { ENV } from "../_core/env";
+  import { logActivity } from "../db";
+  import { runPipelineTick } from "./pipeline-tick";
 
 type TickResult = Awaited<ReturnType<typeof runPipelineTick>>;
 
@@ -70,7 +70,7 @@ export async function runAgentZSupervisor(options?: { once?: boolean }) {
 
   try {
     lockHandle = await acquireLock(lockFilePath);
-  } catch (error) {
+  } catch (_unused_error_73) {
     throw new Error(
       `AgentZ supervisor is already running or lock file is stale (${lockFilePath}). Remove the lock file if no process is active.`,
     );

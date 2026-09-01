@@ -4,9 +4,9 @@ import axios, { type AxiosInstance } from "axios";
 import * as cookie from "cookie";
 import type { Request } from "express";
 // cookie@2 renamed parse → parseCookie; keep a local alias for either shape.
+const cookieModule = cookie as typeof cookie & { parseCookie?: typeof cookie.parse };
 const parseCookieHeader: (str: string) => Record<string, string | undefined> =
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (cookie as any).parseCookie ?? (cookie as any).parse;
+  cookieModule.parseCookie ?? cookieModule.parse;
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
@@ -21,6 +21,14 @@ import type {
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
+
+type UserInfoWithPlatforms<T> = T & {
+  platform?: string | null;
+  platforms?: unknown;
+};
+
+type HeaderCarrier = Request | { headers: { cookie?: string } };
+type RequestHeadersLike = HeaderCarrier["headers"] & { get?: (name: string) => string | null };
 
 export type SessionPayload = {
   openId: string;
@@ -138,12 +146,13 @@ class SDKServer {
     const data = await this.oauthService.getUserInfoByToken({
       accessToken,
     } as ExchangeTokenResponse);
+    const enrichedData = data as UserInfoWithPlatforms<GetUserInfoResponse>;
     const loginMethod = this.deriveLoginMethod(
-      (data as any)?.platforms,
-      (data as any)?.platform ?? data.platform ?? null
+      enrichedData.platforms,
+      enrichedData.platform ?? data.platform ?? null
     );
     return {
-      ...(data as any),
+      ...data,
       platform: loginMethod,
       loginMethod,
     } as GetUserInfoResponse;
@@ -252,24 +261,22 @@ class SDKServer {
       payload
     );
 
-    const loginMethod = this.deriveLoginMethod(
-      (data as any)?.platforms,
-      (data as any)?.platform ?? data.platform ?? null
-    );
+    const enrichedData = data as UserInfoWithPlatforms<GetUserInfoWithJwtResponse>;
+    const loginMethod = this.deriveLoginMethod(enrichedData.platforms, enrichedData.platform ?? data.platform ?? null);
     return {
-      ...(data as any),
+      ...data,
       platform: loginMethod,
       loginMethod,
     } as GetUserInfoWithJwtResponse;
   }
 
-  async authenticateRequest(req: Request | { headers: { cookie?: string } }): Promise<User> {
+  async authenticateRequest(req: HeaderCarrier): Promise<User> {
     // Regular authentication flow
     // Support both Fetch API Request (headers.get()) and Express-like objects (headers.cookie).
     let cookieHeader: string | undefined;
 
     // Try Fetch API headers.get() first
-    const headersObj = req.headers as any;
+    const headersObj = req.headers as RequestHeadersLike;
     if (typeof headersObj.get === "function") {
       const result = headersObj.get("cookie");
       if (result) {

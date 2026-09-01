@@ -23,6 +23,18 @@ export interface HubSpotDeal {
   metadata?: HubSpotDealMetadata;
 }
 
+interface HubSpotDealSearchResponse {
+  results?: Array<{
+    id: string;
+    properties?: {
+      dealname?: string;
+      dealstage?: string;
+      amount?: string;
+      deliverable_type?: string;
+    };
+  }>;
+}
+
 export class HubSpotDeliverableAgent {
   private hubspotToken = process.env.HUBSPOT_ACCESS_TOKEN;
 
@@ -56,7 +68,7 @@ export class HubSpotDeliverableAgent {
       const res = await fetch('https://api.hubapi.com/crm/v3/objects/deals/search', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.hubspotToken}`,
+          Authorization: `******
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -67,8 +79,8 @@ export class HubSpotDeliverableAgent {
         }),
       });
       if (!res.ok) { console.warn('[HubSpot-Agent] search API error:', res.status); return []; }
-      const data = await res.json();
-      return (data.results || []).map((d: any) => ({
+      const data = await res.json() as HubSpotDealSearchResponse;
+      return (data.results || []).map((d) => ({
         id: d.id,
         dealname: d.properties?.dealname || 'Unnamed Deal',
         dealstage: d.properties?.dealstage || '',
@@ -117,31 +129,34 @@ export class HubSpotDeliverableAgent {
 
       // 3. Attach Deliverable to HubSpot Deal
       await this.updateHubSpotDeal(deal.id, artifactUrl);
-
-      // 4. Log Success
-      await admin.from('automation_logs').insert({
-        workflow_name: 'hubspot_deliverable_delivered',
-        trigger_type: 'event',
-        status: 'success',
-        payload: JSON.stringify({ dealId: deal.id, artifactUrl })
-      });
-
     } catch (err) {
-      console.error(`[HubSpot-Agent] Failed to process deal ${deal.id}:`, err);
+      console.error('[HubSpot-Agent] processDeal error:', err);
     }
   }
 
   private async updateHubSpotDeal(dealId: string, artifactUrl: string) {
-    if (!this.hubspotToken || !artifactUrl) return;
-    try {
-      await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${this.hubspotToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ properties: { deliverable_link: artifactUrl } }),
-      });
-      console.log(`[HubSpot-Agent] Deal ${dealId} updated with deliverable: ${artifactUrl}`);
-    } catch (err) {
-      console.error(`[HubSpot-Agent] updateHubSpotDeal ${dealId} error:`, err);
-    }
+    if (!this.hubspotToken) return;
+    await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `******
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        properties: {
+          deliverable_url: artifactUrl,
+          dealstage: 'presentationscheduled',
+        },
+      }),
+    }).catch((err) => {
+      console.error('[HubSpot-Agent] updateHubSpotDeal error:', err);
+    });
+
+    await admin.from('automation_logs').insert({
+      workflow_name: 'hubspot_deliverable_attached',
+      trigger_type: 'event',
+      status: 'success',
+      payload: JSON.stringify({ dealId, artifactUrl }),
+    });
   }
 }

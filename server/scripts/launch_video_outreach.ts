@@ -1,5 +1,10 @@
 import "dotenv/config";
 import { createMission, enqueueTask, getLeadByEmail } from "../db.js";
+import type { MissionType } from "../missions/types.js";
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 async function launchMedtronicVideoBriefing() {
   console.log("🎬 Initializing High-Prestige Video Outreach for Medtronic...");
@@ -14,7 +19,7 @@ async function launchMedtronicVideoBriefing() {
     }
 
     // 1. Create the Video Briefing Mission
-    const missionId = await createMission("MEDTECH_VIDEO_BRIEFING" as any);
+    const missionId = await createMission("MEDTECH_VIDEO_BRIEFING" as MissionType);
     console.log(`✅ Mission Created: ${missionId}`);
 
     // 2. Enqueue the HeyGen Video Generation Task
@@ -47,8 +52,8 @@ async function launchMedtronicVideoBriefing() {
     console.log("AgentZ is generating the 'Guardian' briefing via HeyGen.");
     console.log("Monitor the progress in your dashboard under 'Active Missions'.");
 
-  } catch (err: any) {
-    console.error("❌ Failed to launch video mission:", err.message);
+  } catch (err: unknown) {
+    console.error("❌ Failed to launch video mission:", getErrorMessage(err));
   }
 }
 

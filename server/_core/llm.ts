@@ -34,6 +34,7 @@ export type Message = {
   content: MessageContent | MessageContent[];
   name?: string;
   tool_call_id?: string;
+  tool_calls?: ToolCall[];
 };
 
 export type Tool = {
@@ -113,6 +114,36 @@ export type ResponseFormat =
   | { type: "text" }
   | { type: "json_object" }
   | { type: "json_schema"; json_schema: JsonSchema };
+
+type GeminiPart = { text?: string };
+type GeminiResponse = {
+  responseId?: string;
+  modelVersion?: string;
+  candidates?: Array<{
+    finishReason?: string | null;
+    content?: {
+      parts?: GeminiPart[];
+    };
+  }>;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
+};
+
+type AnthropicTextBlock = { type: "text"; text: string };
+type AnthropicToolUseBlock = { type: "tool_use"; id: string; name: string; input: unknown };
+type AnthropicResponse = {
+  id?: string;
+  model?: string;
+  stop_reason?: string | null;
+  content?: Array<AnthropicTextBlock | AnthropicToolUseBlock>;
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+  };
+};
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -233,10 +264,10 @@ async function invokeGemini(args: {
     throw new Error(`Gemini API error: ${response.status} ${response.statusText} – ${await response.text()}`);
   }
 
-  const raw: any = await response.json();
+  const raw = await response.json() as GeminiResponse;
   const candidate = raw.candidates?.[0];
   const text: string = (candidate?.content?.parts ?? [])
-    .map((p: any) => p.text ?? "")
+    .map((p) => p.text ?? "")
     .join("");
 
   return {
@@ -291,8 +322,9 @@ function contentToAnthropic(content: MessageContent | MessageContent[]): unknown
   const parts = Array.isArray(content) ? content : [content];
   const converted = parts.map(convertContentPartToAnthropic);
   // Collapse to a plain string when there is only one text block (Anthropic accepts both)
-  if (converted.length === 1 && (converted[0] as any).type === "text") {
-    return (converted[0] as any).text;
+  const first = converted[0] as { type?: string; text?: string } | undefined;
+  if (converted.length === 1 && first?.type === "text") {
+    return first.text ?? "";
   }
   return converted;
 }
@@ -345,7 +377,7 @@ function convertMessagesToAnthropic(messages: Message[]): {
     }
 
     if (msg.role === "assistant") {
-      const toolCallsField = (msg as any).tool_calls as ToolCall[] | undefined;
+      const toolCallsField = msg.tool_calls;
       if (toolCallsField && toolCallsField.length > 0) {
         const content: unknown[] = [];
         if (msg.content && msg.content !== "") {
@@ -416,7 +448,7 @@ function mapFinishReason(stopReason: string | null): string | null {
 }
 
 function convertAnthropicResponse(
-  raw: any,
+  raw: AnthropicResponse,
   structuredOutputMode: boolean
 ): InvokeResult {
   const toolCalls: ToolCall[] = [];

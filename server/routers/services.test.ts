@@ -1,8 +1,8 @@
 /**
  * Services router unit tests — db and stripe-service are mocked.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SERVICE_LIST, SERVICE_CATALOG } from "../service-catalog.js";
+  import { beforeEach,describe,expect,it,vi } from "vitest";
+  import { SERVICE_CATALOG,SERVICE_LIST } from "../service-catalog.js";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ vi.mock("../_core/trpc.js", () => {
   const makeProc = () => ({
     query: (fn: any) => ({ _type: "query", _fn: fn }),
     mutation: (fn: any) => ({ _type: "mutation", _fn: fn }),
-    input: (schema: any) => ({
+    input: (_unused_schema_24: any) => ({
       query: (fn: any) => ({ _type: "query", _fn: fn }),
       mutation: (fn: any) => ({ _type: "mutation", _fn: fn }),
     }),

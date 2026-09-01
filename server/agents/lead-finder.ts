@@ -18,6 +18,19 @@ interface ScoredLead extends ApolloLead {
   fitNotes: string;
 }
 
+type LeadScore = {
+  index: number;
+  fitProbability: number;
+  fitNotes: string;
+};
+
+type LeadScoreResponse =
+  | LeadScore[]
+  | {
+      leads?: LeadScore[];
+      scores?: LeadScore[];
+    };
+
 /** Score Apollo leads via LLM Bayesian reasoning — one LLM call for the whole batch. */
 async function scoreleads(
   apolloLeads: ApolloLead[],
@@ -56,7 +69,7 @@ Return JSON array (same order, same indices):
       messages: [{ role: 'user', content: prompt }],
       responseFormat: { type: 'json_object' },
     });
-    const parsed = parseLLMContent<any>(result.choices[0].message.content);
+    const parsed = parseLLMContent<LeadScoreResponse>(result.choices[0].message.content);
     const scores: Array<{ index: number; fitProbability: number; fitNotes: string }> =
       Array.isArray(parsed) ? parsed : (parsed.leads ?? parsed.scores ?? []);
 

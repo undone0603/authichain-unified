@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- This .cjs generator intentionally uses CommonJS semantics. */
 /**
  * gen-seo-pages.cjs
  * Deterministically generates the committed programmatic-SEO catalogue

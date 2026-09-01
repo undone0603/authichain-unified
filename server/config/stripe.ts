@@ -2,7 +2,7 @@
 // Centralized Stripe price ID mapping for all AuthiChain brands and plans.
 // All getPriceId calls resolve from environment variables set at runtime.
 
-import Stripe from "stripe";
+  import Stripe from "stripe";
 
 let _stripe: Stripe | null = null;
 
@@ -216,7 +216,7 @@ export function getMrr(planId: PlanId | string): number {
 
 /** Map Stripe Price ID back to a plan ID. */
 export function getPlanFromPriceId(priceId: string): PlanId | null {
-  for (const [planId, config] of Object.entries(PLAN_CONFIGS)) {
+  for (const [planId, _unused_config_219] of Object.entries(PLAN_CONFIGS)) {
     try {
       if (getPriceId(planId) === priceId) return planId as PlanId;
     } catch {

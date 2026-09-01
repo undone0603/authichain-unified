@@ -1,12 +1,15 @@
 'use client';
 
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import {
-  ArrowLeft, Sparkles, Download, Copy, Share2, CheckCircle,
-  ExternalLink, AlertCircle,
-} from 'lucide-react';
+  import {
+    ArrowLeft,
+    Copy,
+    Download,
+    Share2,
+    Sparkles
+  } from 'lucide-react';
+  import Link from 'next/link';
+  import { useParams } from 'next/navigation';
+  import { useEffect,useState } from 'react';
 
 const PURPLE = '#8b5cf6';
 
@@ -14,7 +17,7 @@ export default function ArtworkDetail() {
   const params = useParams();
   const id = params.id as string;
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [_unused_copied_20, _unused_setCopied_20] = useState(false);
 
   useEffect(() => {
     setLoading(false);

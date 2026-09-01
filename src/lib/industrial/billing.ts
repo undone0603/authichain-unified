@@ -31,6 +31,14 @@ function getAdmin(): ReturnType<typeof createClient> {
   return _admin;
 }
 
+type AutomationLogWriter = {
+  insert: (values: Record<string, unknown>) => PromiseLike<unknown>;
+};
+
+function automationLogs(): AutomationLogWriter {
+  return getAdmin().from("automation_logs") as unknown as AutomationLogWriter;
+}
+
 /**
  * BILLING CONFIGURATION
  * Defines the metered pricing for AI agent tool calls.
@@ -115,7 +123,7 @@ export async function reportAgentUsage(
     });
 
     // 4. Log to DB for internal analytics
-    await (getAdmin().from("automation_logs") as any).insert({
+    await automationLogs().insert({
       workflow_name: "metered_usage_reported",
       trigger_type: "event",
       status: "success",
@@ -133,7 +141,7 @@ export async function reportAgentUsage(
   } catch (err) {
     console.error("[Billing] Reporting failed:", err);
     // Non-blocking log
-    (getAdmin().from("automation_logs") as any)
+    automationLogs()
       .insert({
         workflow_name: "metered_usage_reported",
         trigger_type: "event",

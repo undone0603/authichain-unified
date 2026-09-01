@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
-import { resend } from '@/lib/resend';
+  import { resend } from '@/lib/resend';
+  import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
+  import { NextRequest,NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   const { email, name, use_case } = await req.json();
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   if (existing) return NextResponse.json({ message: 'Already on waitlist', position: null });
 
-  const { data, error } = await supabase
+  const { _unused_data_17, error } = await supabase
     .from('waitlist')
     .insert({ email, name, use_case, joined_at: new Date().toISOString() })
     .select('id')

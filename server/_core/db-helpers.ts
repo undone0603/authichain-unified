@@ -23,14 +23,14 @@ export async function upsertUser(db: Db, user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error('User openId is required for upsert');
   try {
     const values: InsertUser = { openId: user.openId };
-    const updateSet: Record<string, unknown> = {};
+    const updateSet: Partial<InsertUser> = {};
     const textFields = ['name', 'email', 'loginMethod'] as const;
     type TextField = (typeof textFields)[number];
     const assignNullable = (field: TextField) => {
       const value = user[field];
       if (value === undefined) return;
       const normalized = value ?? null;
-      (values as any)[field] = normalized;
+      values[field] = normalized;
       updateSet[field] = normalized;
     };
     textFields.forEach(assignNullable);
@@ -40,9 +40,9 @@ export async function upsertUser(db: Db, user: InsertUser): Promise<void> {
       updateSet.role = user.role;
     }
 
-    if ((user as any).points !== undefined) {
-      (values as any).points = (user as any).points;
-      updateSet.points = (user as any).points;
+    if (user.points !== undefined) {
+      values.points = user.points;
+      updateSet.points = user.points;
     }
 
     if (user.lastSignedIn) {

@@ -4,9 +4,9 @@
  * Formula: H = (Trust * Velocity * Adoption) ^ (1/3)
  */
 
-import * as db from "../db";
-import { authentications, stakingPositions, revenueRecords, checkpointBatches } from "../../drizzle/schema";
-import { sql, eq, gte } from "drizzle-orm";
+  import { eq,gte,sql } from "drizzle-orm";
+  import { authentications,stakingPositions } from "../../drizzle/schema";
+  import * as db from "../db";
 
 export interface HarmonyMetrics {
   index: number; // 0.0 - 1.0

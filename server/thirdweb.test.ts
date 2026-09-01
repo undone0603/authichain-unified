@@ -1,11 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
-import { 
-  getConnectionStatus, 
-  uploadImageToIPFS, 
-  uploadMetadataToIPFS,
-  buildAuthCertificateMetadata,
-  mintAuthenticationNFT
-} from './thirdweb';
+  import { describe,expect,it } from 'vitest';
+  import {
+    buildAuthCertificateMetadata,
+    getConnectionStatus,
+    mintAuthenticationNFT,
+    uploadImageToIPFS,
+    uploadMetadataToIPFS
+  } from './thirdweb';
 
 describe('Thirdweb Service', () => {
   it('should return connection status', async () => {

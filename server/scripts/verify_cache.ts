@@ -1,6 +1,10 @@
 import "dotenv/config";
 import { invokeLLM } from "../_core/llm.js";
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function verifyCache() {
   console.log("⚡ Starting LLM Cache Verification Test...");
   console.log("-----------------------------------------");
@@ -18,8 +22,8 @@ async function verifyCache() {
     const duration1 = Date.now() - start1;
     console.log(`✅ Call 1 Finished in ${duration1}ms`);
     console.log(`   Response: "${res1.choices[0].message.content}"`);
-  } catch (err: any) {
-    console.warn(`⚠️  Call 1 failed: ${err.message}. (Test will continue if fallback is active)`);
+  } catch (err: unknown) {
+    console.warn(`⚠️  Call 1 failed: ${getErrorMessage(err)}. (Test will continue if fallback is active)`);
   }
 
   // 2. Second Call (Must be instant hit)
@@ -36,8 +40,8 @@ async function verifyCache() {
     } else {
       console.log("\n⚠️  Notice: Response time was higher than expected. Check DB latency.");
     }
-  } catch (err: any) {
-    console.error(`❌ Call 2 failed: ${err.message}`);
+  } catch (err: unknown) {
+    console.error(`❌ Call 2 failed: ${getErrorMessage(err)}`);
   }
 
   console.log("-----------------------------------------");

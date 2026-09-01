@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+  import { NextRequest,NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint for health check / documentation
-export async function GET(request: NextRequest) {
+export async function GET(_unused_request_105: NextRequest) {
   return NextResponse.json(
     {
       message: 'Funnel tracking API',

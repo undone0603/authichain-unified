@@ -5,8 +5,8 @@
  * source; this layer is a fast first-pass tamper check.
  */
 
-import { createHash } from 'node:crypto';
-import { ENV } from './env.js';
+  import { createHash } from 'node:crypto';
+  import { ENV } from './env.js';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,7 +134,7 @@ export function issueVerificationUrl(
  *
  * Used as a fast pre-filter before hitting Supabase.
  */
-export function quickVerify(productId: string, hash: string, toleranceMs = 60_000): boolean {
+export function quickVerify(productId: string, hash: string, _unused_toleranceMs_137 = 60_000): boolean {
   // We can't know the original timestamp, so we can't regenerate the hash
   // without the record. This function is a structural placeholder — the real
   // check is always done by verifyHash() against the stored QRVerificationRecord.

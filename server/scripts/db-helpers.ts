@@ -17,10 +17,24 @@ import type { getHyperdriveDb } from '../db';
 import type { MissionType } from '../missions/types';
 
 export type Db = ReturnType<typeof getHyperdriveDb>;
+type LeadInput = {
+  email: string;
+  name?: string | null;
+  company?: string | null;
+  title?: string | null;
+  phone?: string | null;
+  source?: string | null;
+  status?: string | null;
+  isVip?: boolean | null;
+  industry?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+type MissionStatus = typeof missions.$inferSelect["status"];
+type TaskPayload = Record<string, unknown>;
 
 // ─── Leads ──────────────────────────────────────────────────────────────────
 
-export async function createLead(db: Db, data: any) {
+export async function createLead(db: Db, data: LeadInput) {
   const values = {
     email: data.email,
     name: data.name ?? null,
@@ -37,7 +51,7 @@ export async function createLead(db: Db, data: any) {
   return result;
 }
 
-export async function updateLead(db: Db, id: number, data: any) {
+export async function updateLead(db: Db, id: number, data: Partial<LeadInput>) {
   await db.update(leads).set(data).where(eq(leads.id, id));
 }
 
@@ -63,9 +77,9 @@ export async function createMission(db: Db, type: MissionType) {
   return id;
 }
 
-export async function getMissions(db: Db, statusFilter?: string) {
+export async function getMissions(db: Db, statusFilter?: MissionStatus) {
   if (statusFilter) {
-    return db.select().from(missions).where(eq(missions.status, statusFilter as any));
+    return db.select().from(missions).where(eq(missions.status, statusFilter));
   }
   return db.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
 }
@@ -74,7 +88,7 @@ export async function enqueueTask(
   db: Db,
   missionId: string,
   kind: string,
-  payload: any,
+  payload: TaskPayload,
   scheduledAt?: Date,
 ) {
   const id = randomUUID();

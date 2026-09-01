@@ -7,7 +7,7 @@ export default function WatchdogSimulator() {
   const [temperature, setTemperature] = useState(70);
   const [humidity, setHumidity] = useState(50);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<{ compliant: boolean; blockchainTx?: string } | null>(null);
 
   const triggerTelemetry = async () => {
     setIsSimulating(true);

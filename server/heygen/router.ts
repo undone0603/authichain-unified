@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
+  import { z } from "zod";
+  import { protectedProcedure,router } from "../_core/trpc";
 
 const HEYGEN_BASE = "https://api.heygen.com";
 

@@ -1,6 +1,10 @@
 import "dotenv/config";
 import { startGovernmentEngine } from "../../src/agents/government-lead-gen-v2.js";
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function runGovEngine() {
   console.log("🏛️  Launching GovChain Federal Discovery Engine...");
   console.log("-----------------------------------------------");
@@ -17,8 +21,8 @@ async function runGovEngine() {
       console.log("\n✨ Potential high-value government leads identified.");
       console.log("Check the logs above for specific agencies and opportunities.");
     }
-  } catch (err: any) {
-    console.error("❌ Gov Engine Failed:", err.message);
+  } catch (err: unknown) {
+    console.error("❌ Gov Engine Failed:", getErrorMessage(err));
   }
 }
 

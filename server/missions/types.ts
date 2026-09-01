@@ -1,3 +1,5 @@
+import type { Mission, MissionTask } from "../../drizzle/schema";
+
 export const MISSION_TYPES = [
   'GOV_PILOT',
   'RETAIL_PILOT',
@@ -39,7 +41,7 @@ export type MissionStatus = typeof MISSION_STATUSES[number];
  * constraint rather than folded into 'failed' — a mission waiting on something
  * is not a mission that failed, and collapsing them would lose that.
  */
-export const MISSION_STATUS_TO_DB: Record<MissionStatus, string> = {
+export const MISSION_STATUS_TO_DB: Record<MissionStatus, Mission["status"]> = {
   PLANNED: 'pending',
   IN_PROGRESS: 'active',
   BLOCKED: 'blocked',
@@ -100,13 +102,15 @@ export type LeadStatus =
   | 'CLOSED_WON'
   | 'CLOSED_LOST';
 
+export type MissionWithTasks = Mission & { tasks: MissionTask[] };
+
 // ─── Repository contract ──────────────────────────────────────────────────────
 // Implemented by DbMissionsRepository (real DB) and injectable for tests.
 export interface IMissionsRepository {
-  getMissions(status?: MissionStatus): Promise<any[]>;
-  getMissionById(id: string): Promise<any | null>;
+  getMissions(status?: MissionStatus): Promise<Mission[]>;
+  getMissionById(id: string): Promise<MissionWithTasks | null>;
   createMission(type: MissionType): Promise<string>;
   updateMissionStatus(id: string, status: MissionStatus): Promise<void>;
-  getTasksByMission(missionId: string): Promise<any[]>;
+  getTasksByMission(missionId: string): Promise<MissionTask[]>;
   retryTask(id: string): Promise<void>;
 }

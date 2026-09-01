@@ -2,6 +2,32 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
+type GalleryStyle = 'abstract' | 'geometric' | 'organic' | 'retro' | 'neon' | 'minimalist';
+type GalleryCategory = 'marketing' | 'product' | 'brand' | 'social' | 'custom';
+
+interface MissionRecord {
+  id: string;
+  title?: string | null;
+  createdAt: string;
+  metadata?: GalleryMetadata | null;
+}
+
+interface GalleryMetadata {
+  title?: string;
+  artist?: string;
+  style?: GalleryStyle;
+  category?: GalleryCategory;
+  imageUrl?: string;
+  scans?: number;
+  shares?: number;
+  views?: number;
+  avgEngagementTime?: number;
+  scanLocations?: string[];
+  featured?: boolean;
+  creator?: string;
+  tags?: string[];
+}
+
 export async function GET(_request: Request) {
   try {
     const supabase = createClient(
@@ -23,14 +49,14 @@ export async function GET(_request: Request) {
     }
 
     // Transform database records to API format
-    const artworks = (data || []).map((record: any) => {
-      const metadata = (record.metadata || {}) as Record<string, any>;
+    const artworks = ((data || []) as MissionRecord[]).map((record) => {
+      const metadata = record.metadata || {};
       return {
         id: record.id,
         title: metadata.title || record.title || 'Untitled',
         artist: metadata.artist || 'Anonymous',
-        style: metadata.style || 'abstract' as 'abstract' | 'geometric' | 'organic' | 'retro' | 'neon' | 'minimalist',
-        category: metadata.category || 'custom' as 'marketing' | 'product' | 'brand' | 'social' | 'custom',
+        style: metadata.style || 'abstract' as GalleryStyle,
+        category: metadata.category || 'custom' as GalleryCategory,
         imageUrl: metadata.imageUrl || undefined,
         scans: metadata.scans || 0,
         shares: metadata.shares || 0,

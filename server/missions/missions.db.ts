@@ -1,28 +1,28 @@
 // server/missions/missions.db.ts
 import { getDb } from "../db";
-import { missions, missionTasks } from "../../drizzle/schema";
+import { missions, missionTasks, type Mission, type MissionTask } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { missionTemplates, taskTemplates } from "./templates";
-import type { MissionType, MissionStatus } from "./types";
+import type { MissionType, MissionStatus, MissionWithTasks } from "./types";
 import { MISSION_STATUS_TO_DB } from "./types";
 
 // ─── Read ────────────────────────────────────────────────────────────────────
 
-export async function getMissions(statusFilter?: string) {
+export async function getMissions(statusFilter?: Mission["status"]) {
   const d = await getDb();
   if (statusFilter) {
     return d
       .select()
       .from(missions)
-      .where(eq(missions.status, statusFilter as any))
+      .where(eq(missions.status, statusFilter))
       .orderBy(desc(missions.createdAt))
       .limit(200);
   }
   return d.select().from(missions).orderBy(desc(missions.createdAt)).limit(200);
 }
 
-export async function getMissionById(id: string) {
+export async function getMissionById(id: string): Promise<MissionWithTasks | null> {
   const d = await getDb();
   const [mission] = await d
     .select()

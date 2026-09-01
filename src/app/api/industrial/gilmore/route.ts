@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server';
 import { generateGilmoreArt, GilmoreArtRequest } from '@/lib/industrial/gilmore-pipeline';
 import { createClient } from '@/utils/supabase/server';
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session: _session } } = await supabase.auth.getSession();
 
     // In a real scenario, we might want to restrict this to Theater 3/Enterprise users
     // For the demo, we'll allow authenticated users.
@@ -21,13 +25,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      qron: result
+      qron: result,
     });
-
-  } catch (error: any) {
+  } catch (error) {
     console.error('Gilmore Pipeline Error:', error);
-    return NextResponse.json({ 
-      message: error.message || 'Error generating automotive art' 
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        message: getErrorMessage(error, 'Error generating automotive art'),
+      },
+      { status: 500 }
+    );
   }
 }

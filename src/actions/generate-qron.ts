@@ -1,7 +1,7 @@
 'use server'
 
 // @ts-ignore - package installed separately
-import { HfInference } from '@huggingface/inference';
+  import { HfInference } from '@huggingface/inference';
 
 // Resolve the HF token under any of the names used across the codebase / deploy
 // pipeline (HF_TOKEN / HF_API_KEY / HUGGINGFACE_API_KEY / HUGGINGFACE_TOKEN).
@@ -12,7 +12,7 @@ const hf = new HfInference(
     process.env.HF_API_KEY,
 );
 
-export async function generateAutomotiveQRON(vendorName: string, destinationUrl: string) {
+export async function generateAutomotiveQRON(vendorName: string, _unused_destinationUrl_15: string) {
   console.log(`🎨 Initiating QRON Generation for: ${vendorName}`);
 
   try {

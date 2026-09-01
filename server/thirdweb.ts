@@ -3,12 +3,11 @@
  * Server-side integration for NFT minting, contract interactions,
  * and on-chain authentication verification.
  */
-import { createThirdwebClient, getContract, defineChain } from "thirdweb";
-import { privateKeyToAccount } from "thirdweb/wallets";
-import { mintTo, balanceOf, totalSupply, getOwnedNFTs } from "thirdweb/extensions/erc721";
-import { upload } from "thirdweb/storage";
-import { sendTransaction, readContract } from "thirdweb";
-import { ENV } from "./_core/env";
+  import { createThirdwebClient,defineChain,getContract,sendTransaction } from "thirdweb";
+  import { balanceOf,getOwnedNFTs,mintTo,totalSupply } from "thirdweb/extensions/erc721";
+  import { upload } from "thirdweb/storage";
+  import { privateKeyToAccount } from "thirdweb/wallets";
+  import { ENV } from "./_core/env";
 
 // ─── Client Initialization ──────────────────────────────────────────────────
 
@@ -250,8 +249,8 @@ export async function checkThirdwebConnection(): Promise<{
   error?: string;
 }> {
   try {
-    const client = getThirdwebClient();
-    const chain = getDefaultChain();
+    const _unused_client_252 = getThirdwebClient();
+    const _unused_chain_253 = getDefaultChain();
     return {
       connected: true,
       clientId: ENV.thirdwebClientId || "configured",

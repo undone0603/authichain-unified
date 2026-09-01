@@ -1,24 +1,22 @@
-import {
-  serial,
-  integer,
-  pgTable,
-  text,
-  timestamp,
-  varchar,
-  boolean,
-  json,
-  numeric,
-  bigint,
-  bigserial,
-  uuid,
-  pgEnum,
-  index,
-  jsonb,
-  primaryKey,
-  real,
-  date,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+  import {
+    bigserial,
+    boolean,
+    date,
+    index,
+    integer,
+    json,
+    jsonb,
+    numeric,
+    pgEnum,
+    pgTable,
+    real,
+    serial,
+    text,
+    timestamp,
+    uniqueIndex,
+    uuid,
+    varchar
+  } from "drizzle-orm/pg-core";
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 export const tierEnum = pgEnum("tier", ["free", "pro", "enterprise"]);
