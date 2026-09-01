@@ -73,7 +73,7 @@ async def generate_audit_report(supabase, vertical: str) -> Dict[str, Any]:
     """
     Generates an audit-ready compliance report for regional mandates.
     """
-    reqs = await research_dpp_requirements(vertical)
+    reqs = await research_compliance_requirements(vertical)
     
     # Fetch all products in the vertical
     products = supabase.table("products").select("id, name, metadata").eq("industry_id", vertical).execute().data

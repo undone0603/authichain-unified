@@ -7,7 +7,7 @@ regulatory requirements (e.g., EU DPP).
 from __future__ import annotations
 import logging
 from typing import Dict, Any, List
-from agentz.core.compliance import scan_product_compliance, research_dpp_requirements
+from agentz.core.compliance import scan_product_compliance, research_compliance_requirements
 
 logger = logging.getLogger("agentz.compliance_scanner")
 
@@ -18,7 +18,7 @@ async def run_automated_audit(supabase) -> Dict[str, Any]:
     logger.info("Starting automated compliance audit.")
     
     # 1. DPP Compliance Scan
-    dpp_reqs = await research_dpp_requirements("luxury") # Defaulting to luxury for now
+    dpp_reqs = await research_compliance_requirements("luxury")  # Defaulting to luxury for now
     products = supabase.table("products").select("id").execute().data or []
     
     audit_results = []

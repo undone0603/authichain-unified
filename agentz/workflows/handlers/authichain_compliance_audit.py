@@ -15,8 +15,8 @@ import os
 from supabase import Client, create_client
 
 from agentz.core.compliance import (
-    research_dpp_requirements,
-    run_global_compliance_audit,
+    research_compliance_requirements,
+    scan_product_compliance,
 )
 from agentz.core.credentials import get_or_placeholder
 from agentz.core.llm import lm_manager
@@ -36,13 +36,17 @@ def run(ctx: ExecutionContext) -> str:
             ctx.step(f"Warning: Local model could not be loaded: {e}")
 
     try:
-        supabase_url = get_or_placeholder("supabase_url", ctx)
-        supabase_key = get_or_placeholder("supabase_service_key", ctx)
-        supabase: Client = create_client(supabase_url, supabase_key)
+        supabase: Client | None = None
+        if ctx.mode != Mode.DRY_RUN:
+            supabase_url = get_or_placeholder("supabase_url", ctx)
+            supabase_key = get_or_placeholder("supabase_service_key", ctx)
+            supabase = create_client(supabase_url, supabase_key)
+        else:
+            ctx.step("Supabase client skipped (dry-run)")
 
         ctx.step("--- EU DPP COMPLIANCE AUDIT ---")
 
-        # 1. Research current mandates (browser-use call; mocked in dry-run)
+        # 1. Research current mandates (table lookup; dry-run uses baseline fields)
         ctx.step("Researching current EU DPP mandates for luxury vertical...")
         if ctx.mode == Mode.DRY_RUN:
             requirements = [
@@ -54,8 +58,8 @@ def run(ctx: ExecutionContext) -> str:
             ctx.step(f"   -> (dry-run mandate set: {len(requirements)} fields)")
         else:
             requirements = ctx.step(
-                "Fetch DPP mandates from EU Commission portal",
-                action=lambda: asyncio.run(research_dpp_requirements("luxury", ctx)),
+                "Fetch DPP mandates from regulatory profile table",
+                action=lambda: asyncio.run(research_compliance_requirements("luxury", ctx)),
             ) or []
             ctx.step(f"   -> {len(requirements)} mandatory field(s) identified")
 
@@ -67,9 +71,18 @@ def run(ctx: ExecutionContext) -> str:
             ]
             ctx.step("   -> (dry-run: would scan up to 10 products)")
         else:
+            assert supabase is not None
+            products = supabase.table("products").select("id").limit(10).execute().data or []
+
+            async def _audit_batch():
+                out = []
+                for p in products:
+                    out.append(await scan_product_compliance(supabase, p["id"], requirements))
+                return out
+
             results = ctx.step(
                 "Scan products and write dpp_compliance metadata",
-                action=lambda: asyncio.run(run_global_compliance_audit(supabase, ctx)),
+                action=lambda: asyncio.run(_audit_batch()),
             ) or []
 
         # 3. Summarize

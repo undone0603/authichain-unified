@@ -14,8 +14,20 @@ def run(ctx: ExecutionContext) -> Optional[str]:
     if not dms:
         # Seed some data if empty for demonstration
         from agentz.core.outreach import add_pending_dm
-        add_pending_dm("LVMH", "Exciting news! Your digital twin is ready.", "https://lvmh.authichain.com")
-        add_pending_dm("Nike", "Protect your brand with blockchain trust.", "https://nike.authichain.com")
+        add_pending_dm(
+            "LVMH",
+            personalized_hook="Exciting news! Your digital twin is ready.",
+            generic_hook="Protect luxury authenticity with cryptographic provenance.",
+            message="Exciting news! Your digital twin is ready.",
+            microsite_url="https://lvmh.authichain.com",
+        )
+        add_pending_dm(
+            "Nike",
+            personalized_hook="Protect your brand with blockchain trust.",
+            generic_hook="Industry-standard trust verification for supply chains.",
+            message="Protect your brand with blockchain trust.",
+            microsite_url="https://nike.authichain.com",
+        )
         dms = get_pending_dms()
 
     ctx.step(f"Loaded {len(dms)} pending DM(s) for review.")

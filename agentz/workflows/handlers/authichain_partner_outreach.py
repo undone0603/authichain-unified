@@ -56,7 +56,13 @@ def run(ctx: ExecutionContext) -> Optional[str]:
                 final_message = invitation + offer_addendum
                 
                 from agentz.core.outreach import add_pending_dm
-                add_pending_dm(brand_name, final_message, "https://authichain.com/partners")
+                add_pending_dm(
+                    brand_name,
+                    personalized_hook=f"Founding partner invitation for {brand_name}",
+                    generic_hook="Technical partnership invitation — AuthiChain Protocol",
+                    message=final_message,
+                    microsite_url="https://authichain.com/partners",
+                )
                 return f"✓ Proposal queued for {brand_name}."
 
             try:

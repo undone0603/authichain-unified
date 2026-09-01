@@ -1,0 +1,19 @@
+name: 'Setup Cloudflare Environment'
+description: 'Sets up Node.js environment and configures Cloudflare Wrangler'
+inputs:
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '22'
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
