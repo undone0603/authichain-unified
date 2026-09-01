@@ -14,13 +14,14 @@
 import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 
-const files = execSync(
-  "git ls-files -- '*wrangler.toml' ':!:**/node_modules/**'",
-  { cwd: process.cwd(), encoding: "utf8" }
-)
+const files = execSync("git ls-files -- 'wrangler.toml' '**/wrangler.toml'", {
+  cwd: process.cwd(),
+  encoding: "utf8",
+})
   .split("\n")
   .map(f => f.trim())
-  .filter(Boolean);
+  .filter(Boolean)
+  .filter(f => !f.includes("node_modules"));
 
 let failed = false;
 for (const file of files) {
