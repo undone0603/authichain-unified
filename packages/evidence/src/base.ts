@@ -33,5 +33,5 @@ export function canonicalize(value: any): string {
     .join(",")}}`;
 }
 
-export { DsCsaEvidenceSchema, type DsCsaEvidence } from "./dscsa";
+export type { DsCsaEvidence } from "./dscsa";
 export { mapEpcisToDsCsa } from "./mapping";

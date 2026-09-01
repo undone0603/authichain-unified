@@ -1,56 +1,48 @@
-import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
-import './globals.css';
-import { ReferralTracker } from '@/components/ReferralTracker';
-import { FunnelTracker } from '@/components/FunnelTracker';
-import { ThemeManager } from '@/components/ThemeManager';
-import { TRPCProvider } from '@/components/TRPCProvider';
-import React, { Suspense } from 'react';
-import { ThirdwebProvider } from 'thirdweb/react';
-import { SiteNav } from '@/components/SiteNav';
-import { SpeedInsights } from '@vercel/speed-insights/next';
-import { Analytics } from '@vercel/analytics/next';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+import type { Metadata } from "next";
+import "./globals.css";
+import { ReferralTracker } from "@/components/ReferralTracker";
+import { FunnelTracker } from "@/components/FunnelTracker";
+import { ThemeManager } from "@/components/ThemeManager";
+import { TRPCProvider } from "@/components/TRPCProvider";
+import React, { Suspense } from "react";
+import { ThirdwebProvider } from "thirdweb/react";
+import { SiteNav } from "@/components/SiteNav";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: {
-    default: 'QRON | Cryptographically Verified AI QR Art',
-    template: '%s | AuthiChain Protocol',
+    default: "QRON | Cryptographically Verified AI QR Art",
+    template: "%s | AuthiChain Protocol",
   },
-  description: 'The global standard for cryptographically-verified product identity, industrial provenance, and AI-generated QR art.',
-  metadataBase: new URL('https://qron.space'),
+  description:
+    "The global standard for cryptographically-verified product identity, industrial provenance, and AI-generated QR art.",
+  metadataBase: new URL("https://qron.space"),
   alternates: {
-    canonical: '/',
+    canonical: "/",
   },
   openGraph: {
-    title: 'QRON | Verified AI QR Art',
-    description: 'Transform your brand with cryptographically-signed AI QR codes. Ed25519 secure, Polygon anchored.',
-    url: 'https://qron.space',
-    siteName: 'QRON Space',
+    title: "QRON | Verified AI QR Art",
+    description:
+      "Transform your brand with cryptographically-signed AI QR codes. Ed25519 secure, Polygon anchored.",
+    url: "https://qron.space",
+    siteName: "QRON Space",
     images: [
       {
-        url: '/media/samples/01_flux_qron_space.png',
+        url: "/media/samples/01_flux_qron_space.png",
         width: 1200,
         height: 1200,
-        alt: 'AuthiChain QRON Artistic AI',
+        alt: "AuthiChain QRON Artistic AI",
       },
     ],
-    locale: 'en_US',
-    type: 'website',
+    locale: "en_US",
+    type: "website",
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'QRON | Verified AI QR Art',
-    description: 'Transform your brand with cryptographically-signed AI QR codes.',
+    card: "summary_large_image",
+    title: "QRON | Verified AI QR Art",
+    description:
+      "Transform your brand with cryptographically-signed AI QR codes.",
   },
 };
 
@@ -61,7 +53,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className="antialiased">
         <ThemeManager>
           <TRPCProvider>
             <Suspense fallback={null}>
@@ -71,9 +63,7 @@ export default function RootLayout({
               <ReferralTracker />
             </Suspense>
             <FunnelTracker />
-            <ThirdwebProvider>
-              {children}
-            </ThirdwebProvider>
+            <ThirdwebProvider>{children}</ThirdwebProvider>
           </TRPCProvider>
         </ThemeManager>
         <SpeedInsights />

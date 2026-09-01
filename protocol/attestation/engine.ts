@@ -2,8 +2,8 @@ import * as jose from "jose";
 import { Attestation, Identity, Evidence } from "./types";
 
 export class AttestationEngine {
-  private privateKey: jose.KeyLike;
-  private publicKey: jose.KeyLike;
+  private privateKey: ReturnType<typeof jose.importPKCS8>;
+  private publicKey: ReturnType<typeof jose.importSPKI>;
 
   constructor(privateKeyPem: string, publicKeyPem: string) {
     this.privateKey = jose.importPKCS8(privateKeyPem, "EdDSA");
@@ -31,7 +31,7 @@ export class AttestationEngine {
       .setIssuedAt()
       .setIssuer("Authichain-Core")
       .setSubject(objectId)
-      .sign(this.privateKey);
+      .sign(await this.privateKey);
 
     return {
       ...payload,
@@ -47,7 +47,7 @@ export class AttestationEngine {
     jwt: string
   ): Promise<{ verified: boolean; payload?: any; error?: string }> {
     try {
-      const { payload } = await jose.jwtVerify(jwt, this.publicKey, {
+      const { payload } = await jose.jwtVerify(jwt, await this.publicKey, {
         issuer: "Authichain-Core",
       });
       return { verified: true, payload };

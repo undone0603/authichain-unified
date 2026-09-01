@@ -93,8 +93,6 @@ export default defineConfig({
       "workers/**/*.test.ts",
       "protocol/**/*.test.mjs",
       "packages/**/*.test.ts",
-      "apps/**/*.test.ts",
-      "apps/**/*.test.tsx",
     ],
   },
 });

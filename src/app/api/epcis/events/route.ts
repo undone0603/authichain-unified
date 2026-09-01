@@ -3,14 +3,17 @@ import { mapEpcisToDsCsa, DsCsaEvidenceSchema } from "@authichain/evidence";
 import { db } from "@/db";
 import { supplyChainEvents, products } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { importPKCS8, verify } from "jose";
+import { importJWK, importPKCS8 } from "jose";
+import { publicJwkFromPrivateKey } from "@authichain/verifier";
 
 async function getPublicKey() {
   const raw = process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
   if (!raw)
     throw new Error("AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 not configured");
   const pem = Buffer.from(raw, "base64").toString("utf8");
-  return importPKCS8(pem, "EdDSA");
+  const privateKey = await importPKCS8(pem, "EdDSA");
+  const publicJwk = await publicJwkFromPrivateKey(privateKey);
+  return importJWK(publicJwk, "EdDSA");
 }
 
 export const dynamic = "force-dynamic";
@@ -42,13 +45,21 @@ export async function POST(req: NextRequest) {
     const { signature, ...payload } = validatedEvidence;
     // Canonicalize the payload for verification - using simple JSON stringify for consistency
     const data = new TextEncoder().encode(JSON.stringify(payload));
-    const publicKey = await getPublicKey();
+    const publicKey = (await getPublicKey()) as CryptoKey;
     const sigBytes = Buffer.from(signature, "base64");
 
-    await verify(data, publicKey, {
-      algorithms: ["EdDSA"],
-      signature: sigBytes,
-    });
+    const verified = await crypto.subtle.verify(
+      "Ed25519",
+      publicKey,
+      sigBytes,
+      data
+    );
+    if (!verified) {
+      return NextResponse.json(
+        { error: "Invalid evidence signature" },
+        { status: 400 }
+      );
+    }
 
     // 5. Resolve Product ID
     const product = await db.query.products.findFirst({

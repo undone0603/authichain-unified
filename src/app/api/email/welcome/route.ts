@@ -1,8 +1,6 @@
 // app/api/email/welcome/route.ts
-import { Resend } from "resend";
 import { NextResponse } from "next/server";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { resend } from "@/lib/resend";
 
 export async function POST(request: Request) {
   try {

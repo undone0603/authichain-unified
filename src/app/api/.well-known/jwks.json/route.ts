@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateJWKS } from "@/protocol/attestation/jwks";
+import { generateJWKS } from "../../../../../protocol/attestation/jwks";
 
 export async function GET(req: NextRequest) {
   try {

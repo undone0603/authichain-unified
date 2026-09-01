@@ -2,7 +2,6 @@ import { db } from "@/db";
 import { supplyChainEvents } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { EvidenceSchema, DsCsaEvidenceSchema } from "@authichain/evidence";
-import { verify, importPKCS8 } from "jose";
 
 export interface ComplianceReport {
   subject_id: string;

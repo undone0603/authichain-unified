@@ -283,6 +283,16 @@ export const subscriptions = pgTable("subscriptions", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+export const usageRecords = pgTable("usage_records", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  subscriptionId: integer("subscriptionId"),
+  type: varchar("type", { length: 64 }).notNull(),
+  quantity: integer("quantity").default(1),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 // ─── API Usage ──────────────────────────────────────────────────────────────
 export const apiUsage = pgTable(
   "api_usage",
