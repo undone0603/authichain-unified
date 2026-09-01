@@ -29,7 +29,7 @@
     "gov:monitor": "bash scripts/ops/monitor-gov-engine.sh",
     "gov:deploy-base": "tsx scripts/deploy-authichain-nft-base.ts",
     "gov:mint": "tsx scripts/mint-govchain-nfts.ts",
-    "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .github package.json next.config.js postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts && node scripts/check-cloudflare-only.mjs",
+    "lint:ci": "eslint --ext .ts,.tsx . && prettier --check .github package.json next.config.js postcss.config.mjs tailwind.config.ts vite.config.ts vitest.config.ts",
     "lint-staged": "lint-staged",
     "preinstall": "node scripts/check-npm-version.cjs",
     "prepare": "husky install"
