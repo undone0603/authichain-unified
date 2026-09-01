@@ -303,8 +303,6 @@ export const apiUsage = pgTable(
   })
 );
 
-export const usageRecords = apiUsage;
-
 // ─── Invoices ────────────────────────────────────────────────────────────────
 export const invoices = pgTable("invoices", {
   id: uuid("id").primaryKey().defaultRandom(),
