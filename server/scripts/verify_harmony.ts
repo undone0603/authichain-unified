@@ -1,6 +1,10 @@
 import "dotenv/config";
 import { calculateHarmony } from "../sales/harmony-service.js";
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function verifyHarmony() {
   console.log("📐 Calculating Protocol Harmony (H)...");
   console.log("--------------------------------------");
@@ -18,8 +22,8 @@ async function verifyHarmony() {
     
     console.log("\n✅ Mathematical Harmony Verified. System is in Equilibrium.");
 
-  } catch (err: any) {
-    console.error("❌ Harmony Calculation Failed:", err.message);
+  } catch (err: unknown) {
+    console.error("❌ Harmony Calculation Failed:", getErrorMessage(err));
   }
 }
 

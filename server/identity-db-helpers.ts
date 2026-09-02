@@ -50,6 +50,28 @@ import {
 import type { getHyperdriveDb } from "./db";
 
 export type Db = ReturnType<typeof getHyperdriveDb>;
+type FlexibleInsert<T> = T & Record<string, unknown>;
+type FlexibleUpdate<T> = Partial<T> & Record<string, unknown>;
+type ActivityPayload = {
+  userId?: number | null;
+  action: string;
+  entityType?: string;
+  entityId?: number | string;
+  details?: unknown;
+};
+type StakingPositionInsert = typeof stakingPositions.$inferInsert;
+type AffiliateInsert = typeof affiliates.$inferInsert;
+type WhiteLabelClientInsert = typeof whiteLabelClients.$inferInsert;
+type UsageRecordInsert = typeof usageRecords.$inferInsert;
+type ProductInsert = typeof products.$inferInsert;
+type AuthenticationInsert = typeof authentications.$inferInsert;
+type CertificateInsert = typeof certificates.$inferInsert;
+type AutopilotDecisionInsert = typeof autopilotDecisions.$inferInsert;
+type SupplyChainEventInsert = typeof supplyChainEvents.$inferInsert;
+type QrCodeInsert = typeof qrCodes.$inferInsert;
+type NftInsert = typeof nfts.$inferInsert;
+type CollectionInsert = typeof nftCollections.$inferInsert;
+type AuctionInsert = typeof auctions.$inferInsert;
 
 // ─────────────────────────────────────────────────────────────
 // ACTIVITY LOG
@@ -57,7 +79,7 @@ export type Db = ReturnType<typeof getHyperdriveDb>;
 
 export async function logActivity(
   db: Db,
-  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any },
+  actionOrData: string | ActivityPayload,
   details?: string,
 ): Promise<void> {
   if (typeof actionOrData === "string") {
@@ -90,7 +112,7 @@ export async function createSystemNotification(
   type: InsertNotification["type"],
   actionUrl?: string,
 ) {
-  return createNotification(db, { userId, type: type as any, title, message, isRead: false, actionUrl });
+  return createNotification(db, { userId, type, title, message, isRead: false, actionUrl });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -101,12 +123,12 @@ export async function getUserStakingPositions(db: Db, userId: number) {
   return await db.select().from(stakingPositions).where(eq(stakingPositions.userId, userId)).orderBy(desc(stakingPositions.stakedAt));
 }
 
-export async function createStakingPosition(db: Db, data: any) {
+export async function createStakingPosition(db: Db, data: FlexibleInsert<StakingPositionInsert>) {
   const [result] = await db.insert(stakingPositions).values(data).returning();
   return { id: result.id, ...data };
 }
 
-export async function updateStakingPosition(db: Db, id: number, userId: number, data: any) {
+export async function updateStakingPosition(db: Db, id: number, userId: number, data: FlexibleUpdate<StakingPositionInsert>) {
   await db.update(stakingPositions).set(data).where(and(eq(stakingPositions.id, id), eq(stakingPositions.userId, userId)));
 }
 
@@ -132,7 +154,7 @@ export async function getAffiliateByUserId(db: Db, userId: number) {
   return result[0];
 }
 
-export async function createAffiliate(db: Db, data: any) {
+export async function createAffiliate(db: Db, data: FlexibleInsert<AffiliateInsert>) {
   const [result] = await db.insert(affiliates).values(data).returning();
   return { id: result.id };
 }
@@ -145,7 +167,7 @@ export async function getAffiliateCommissions(db: Db, affiliateId: number) {
 // WHITE LABEL
 // ─────────────────────────────────────────────────────────────
 
-export async function createWhiteLabelClient(db: Db, data: any) {
+export async function createWhiteLabelClient(db: Db, data: FlexibleInsert<WhiteLabelClientInsert>) {
   const [result] = await db.insert(whiteLabelClients).values(data).returning();
   return { id: result.id };
 }
@@ -185,7 +207,7 @@ export async function consumeSubscriptionQuota(db: Db, userId: number): Promise<
   return sub ? "exceeded" : "no_subscription";
 }
 
-export async function recordUsage(db: Db, data: any) {
+export async function recordUsage(db: Db, data: FlexibleInsert<UsageRecordInsert>) {
   await db.insert(usageRecords).values(data);
 }
 
@@ -202,11 +224,11 @@ export async function getProductById(db: Db, id: string) {
   return result[0];
 }
 
-export async function updateProduct(db: Db, id: string, data: any) {
+export async function updateProduct(db: Db, id: string, data: FlexibleUpdate<ProductInsert>) {
   await db.update(products).set(data).where(eq(products.id, id));
 }
 
-export async function createProduct(db: Db, data: any) {
+export async function createProduct(db: Db, data: FlexibleInsert<ProductInsert>) {
   const [result] = await db.insert(products).values(data).returning();
   return { id: result.id };
 }
@@ -215,7 +237,7 @@ export async function createProduct(db: Db, data: any) {
 // AUTHENTICATIONS / CERTIFICATES
 // ─────────────────────────────────────────────────────────────
 
-export async function createAuthentication(db: Db, data: any) {
+export async function createAuthentication(db: Db, data: FlexibleInsert<AuthenticationInsert>) {
   const [result] = await db.insert(authentications).values(data).returning();
   return { id: result.id };
 }
@@ -237,7 +259,7 @@ export async function incrementShareCount(db: Db, id: string) {
   await db.update(authentications).set({ shareCount: sql`${authentications.shareCount} + 1` }).where(eq(authentications.id, id));
 }
 
-export async function createCertificate(db: Db, data: any) {
+export async function createCertificate(db: Db, data: FlexibleInsert<CertificateInsert>) {
   const [result] = await db.insert(certificates).values(data).returning();
   return result;
 }
@@ -255,7 +277,7 @@ export async function getUserCertificates(db: Db, userId: number) {
 // AUTOPILOT (used by b44-service.ts)
 // ─────────────────────────────────────────────────────────────
 
-export async function createAutopilotDecision(db: Db, data: any) {
+export async function createAutopilotDecision(db: Db, data: FlexibleInsert<AutopilotDecisionInsert>) {
   const [result] = await db.insert(autopilotDecisions).values(data).returning();
   return { id: result.id };
 }
@@ -274,7 +296,7 @@ export async function getAutopilotDecisionCountByMonth(db: Db, _type?: string): 
 // SUPPLY CHAIN
 // ─────────────────────────────────────────────────────────────
 
-export async function createSupplyChainEvent(db: Db, data: any) {
+export async function createSupplyChainEvent(db: Db, data: FlexibleInsert<SupplyChainEventInsert>) {
   const [result] = await db.insert(supplyChainEvents).values(data).returning();
   return { id: result.id };
 }
@@ -396,7 +418,7 @@ export async function updateQron(
 // QR CODES / SCANS
 // ─────────────────────────────────────────────────────────────
 
-export async function createQrCode(db: Db, data: any) {
+export async function createQrCode(db: Db, data: FlexibleInsert<QrCodeInsert>) {
   const [result] = await db.insert(qrCodes).values(data).returning();
   return { id: result.id };
 }
@@ -463,7 +485,7 @@ export async function getNftById(db: Db, id: string) {
   return result[0];
 }
 
-export async function createNft(db: Db, data: any) {
+export async function createNft(db: Db, data: FlexibleInsert<NftInsert>) {
   const [result] = await db.insert(nfts).values(data).returning();
   return result;
 }
@@ -477,12 +499,12 @@ export async function getCollectionBySlug(db: Db, slug: string) {
   return result[0];
 }
 
-export async function createCollection(db: Db, data: any) {
+export async function createCollection(db: Db, data: FlexibleInsert<CollectionInsert>) {
   const [result] = await db.insert(nftCollections).values(data).returning();
   return { id: result.id };
 }
 
-export async function createAuction(db: Db, data: any) {
+export async function createAuction(db: Db, data: FlexibleInsert<AuctionInsert>) {
   const [result] = await db.insert(auctions).values(data).returning();
   return { id: result.id };
 }

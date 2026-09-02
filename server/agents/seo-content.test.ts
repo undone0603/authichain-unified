@@ -33,7 +33,7 @@ describe('generateSeoPage', () => {
     expect(page.slug).toBe('cannabis-blockchain-provenance');
     expect(page.brand).toBe('StrainChain');
     expect(page.jsonLd['@type']).toBe('Product');
-    expect((page.jsonLd as any).url).toBe('https://strainchain.io/cannabis-blockchain-provenance');
+    expect(page.jsonLd.url).toBe('https://strainchain.io/cannabis-blockchain-provenance');
   });
 
   it('clamps title to 60 and meta to 155 chars', async () => {
@@ -80,7 +80,7 @@ describe('runProgrammaticSeoBatch', () => {
 
   it('skips unknown brand keys', async () => {
     const pages = await runProgrammaticSeoBatch([
-      { brandKey: 'nope' as any, keyword: 'x' },
+      { brandKey: 'nope' as keyof typeof BRAND_SEO, keyword: 'x' },
     ]);
     expect(pages).toHaveLength(0);
   });

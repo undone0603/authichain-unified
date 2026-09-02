@@ -2,6 +2,25 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
+interface MissionRecord {
+  id: string;
+  title?: string | null;
+  createdAt: string;
+  metadata?: MadeInUsaMetadata | null;
+}
+
+interface MadeInUsaMetadata {
+  companyName?: string;
+  productCategory?: string;
+  state?: string;
+  verified?: boolean;
+  scans?: number;
+  productsTracked?: number;
+  qronCodeUrl?: string;
+  certificationDate?: string;
+  tags?: string[];
+}
+
 export async function GET(_request: Request) {
   try {
     const supabase = createClient(
@@ -23,8 +42,8 @@ export async function GET(_request: Request) {
     }
 
     // Transform database records to API format
-    const products = (data || []).map((record: any) => {
-      const metadata = (record.metadata || {}) as Record<string, any>;
+    const products = ((data || []) as MissionRecord[]).map((record) => {
+      const metadata = record.metadata || {};
       return {
         id: record.id,
         companyName: metadata.companyName || 'Unknown Manufacturer',

@@ -3,8 +3,8 @@
  * This script simulates the anchoring process to verify the AuthiChain protocol integration.
  */
 
-const { ethers } = require('ethers');
-require('dotenv').config();
+import { ethers } from 'ethers';
+import 'dotenv/config';
 
 const AUTHICHAIN_ABI = [
   "function anchorHash(bytes32 edgeHash, string metadata) external returns (uint256)",

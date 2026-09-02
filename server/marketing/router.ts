@@ -1,8 +1,8 @@
-import { protectedProcedure, publicProcedure, adminProcedure, router } from "../_core/trpc";
-import * as db from "../db";
-import * as hubspot from "../hubspot-service";
-import { z } from "zod";
-import { invokeLLM } from "../_core/llm";
+  import { z } from "zod";
+  import { invokeLLM } from "../_core/llm";
+  import { adminProcedure,protectedProcedure,publicProcedure,router } from "../_core/trpc";
+  import * as db from "../db";
+  import * as hubspot from "../hubspot-service";
 
 export const marketingRouter = router({
   leads: adminProcedure.query(async () => {
@@ -17,7 +17,7 @@ export const marketingRouter = router({
     const result = await db.createLead(input);
     try {
       await hubspot.syncLeadToHubSpot(input);
-    } catch (e) { /* HubSpot sync is best-effort */ }
+    } catch (_unused_e_20) { /* HubSpot sync is best-effort */ }
     return result;
   }),
   updateLeadScore: adminProcedure.input(z.object({ id: z.number(), score: z.number() })).mutation(async ({ input }) => {

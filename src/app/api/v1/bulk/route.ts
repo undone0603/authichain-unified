@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+interface BulkCodeInput {
+  name?: string;
+  url?: string;
+  type?: string;
+  campaign_id?: string | null;
+  style?: {
+    foreground?: string;
+    background?: string;
+    logo?: boolean;
+  };
+}
+
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { codes } = body;
+  const body = await req.json() as { codes?: BulkCodeInput[] };
+  const codes = body.codes;
 
   if (!Array.isArray(codes) || codes.length === 0) {
     return NextResponse.json({ error: 'codes array is required and must not be empty' }, { status: 400 });
@@ -12,7 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Maximum 500 QR codes per bulk request' }, { status: 400 });
   }
 
-  const results = codes.map((code: any, index: number) => {
+  const results = codes.map((code, index: number) => {
     if (!code.name || !code.url) {
       return {
         index,
@@ -56,7 +68,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const batch_id = searchParams.get('batch_id');
+  const _batch_id = searchParams.get('batch_id');
 
   return NextResponse.json({
     success: true,

@@ -3,9 +3,8 @@
  * Autonomous execution of complete customer acquisition strategy
  */
 
-import { invokeLLM, parseLLMContent } from '../_core/llm';
-import { sendEmail } from '../email/smtp';
-import { notifyOwner } from '../_core/notification';
+  import { invokeLLM,parseLLMContent } from '../_core/llm';
+  import { notifyOwner } from '../_core/notification';
 
 /**
  * 30-Day Master Timeline

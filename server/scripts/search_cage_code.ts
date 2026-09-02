@@ -1,6 +1,5 @@
 // script to search Gmail for CAGE code using found App Password
-import "dotenv/config";
-import nodemailer from "nodemailer";
+  import "dotenv/config";
 
 async function searchWithImap() {
   const user = process.env.GMAIL_USER || process.env.GMAIL_FROM_EMAIL || "authichain@gmail.com";

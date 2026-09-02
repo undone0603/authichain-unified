@@ -13,6 +13,7 @@ import { runBrowserAgentJobs } from "./browser-jobs";
 import { getDueTasks, getRunTaskCount, getAdaptivePriors, createMission, getActiveMissionTypes } from "../db";
 import { runTask } from "./task-runner";
 import { ucb1Score, betaMean } from "../_core/bayesian";
+import type { MissionType } from "../missions/types";
 
 /**
  * Runs one pipeline tick.
@@ -121,7 +122,7 @@ async function executeTick() {
 
   // ── PMF auto-scale: if a segment's posterior mean exceeds threshold AND
   //    no active mission of that type exists, create one automatically. ──────
-  const PMF_THRESHOLDS: Record<string, { missionType: string; threshold: number }> = {
+  const PMF_THRESHOLDS: Record<string, { missionType: MissionType; threshold: number }> = {
     GOV:    { missionType: 'GOV_PILOT',    threshold: 0.12 },
     RETAIL: { missionType: 'RETAIL_PILOT', threshold: 0.10 },
   };
@@ -132,7 +133,7 @@ async function executeTick() {
     if (!prior) continue;
     const mean = betaMean(prior);
     if (mean >= threshold && !activeMissionTypes.includes(missionType)) {
-      await createMission(missionType as any);
+      await createMission(missionType);
       pmfCreated.push(missionType);
     }
   }

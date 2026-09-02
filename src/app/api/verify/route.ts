@@ -1,13 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { randomUUID } from 'crypto';
-import { onVerificationEvent } from '../../../../server/revenue-engine/loop';
-import {
-  consumeVerificationQuota,
-  statusForDenial,
-  isRetryable,
-  verificationPriceCents,
-} from '@/lib/verification-caps';
+  import {
+    consumeVerificationQuota,
+    isRetryable,
+    statusForDenial,
+    verificationPriceCents,
+  } from '@/lib/verification-caps';
+  import { createClient } from '@supabase/supabase-js';
+  import { NextRequest,NextResponse } from 'next/server';
+  import { onVerificationEvent } from '../../../../server/revenue-engine/loop';
 
 export async function POST(req: NextRequest) {
   // Caps before work. This endpoint is the one agents will call and pay for, so

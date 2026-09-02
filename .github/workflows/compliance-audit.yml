@@ -15,13 +15,18 @@ jobs:
     name: Run EU DPP Compliance Audit
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # This job requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository
+    # secrets to talk to the live product ledger. Those secrets are not
+    # configured for every PR (e.g. forks), so skip the job entirely rather
+    # than failing CI when they're unavailable.
+    if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 

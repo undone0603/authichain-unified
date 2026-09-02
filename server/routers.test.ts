@@ -1,10 +1,25 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import type { Notification, User } from "../src/db/schema";
+
+type TestNotification = Pick<
+  Notification,
+  "id" | "userId" | "type" | "title" | "message" | "isRead" | "actionUrl" | "createdAt"
+>;
+
+type TestNotificationInput = Omit<TestNotification, "id" | "createdAt">;
+
+type SchedulerJob = {
+  name: string;
+  description: string;
+  schedule: string;
+  enabled: boolean;
+};
 
 // In-memory store so db-writing tests work without a real database.
 const store = vi.hoisted(() => {
-  const notifications: any[] = [];
+  const notifications: TestNotification[] = [];
   let notifId = 1;
   let leadId = 1;
   return {
@@ -19,29 +34,33 @@ vi.mock("./db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./db")>();
   return {
     ...actual,
-    createNotification: vi.fn(async (data: any) => {
+    createNotification: vi.fn(async (data: TestNotificationInput) => {
       const id = store.nextNotifId();
       store.notifications.push({ ...data, id, createdAt: new Date() });
       return { id };
     }),
     getUserNotifications: vi.fn(async (userId: number, limit = 50) => {
-      return store.notifications.filter((n: any) => n.userId === userId).slice(0, limit);
+      return store.notifications.filter((n: TestNotification) => n.userId === userId).slice(0, limit);
     }),
     getUnreadNotificationCount: vi.fn(async (userId: number) => {
-      return store.notifications.filter((n: any) => n.userId === userId && n.isRead === false).length;
+      return store.notifications.filter((n: TestNotification) => n.userId === userId && n.isRead === false).length;
     }),
-    markNotificationRead: vi.fn(async (id: number, userId: number) => {
-      const n = store.notifications.find((n: any) => n.id === id && n.userId === userId);
+    markNotificationRead: vi.fn(async (id: string, userId: number) => {
+      const n = store.notifications.find((n: TestNotification) => n.id === id && n.userId === userId);
       if (n) n.isRead = true;
     }),
     markAllNotificationsRead: vi.fn(async (userId: number) => {
-      store.notifications.filter((n: any) => n.userId === userId).forEach((n: any) => { n.isRead = true; });
+      store.notifications
+        .filter((n: TestNotification) => n.userId === userId)
+        .forEach((n: TestNotification) => {
+          n.isRead = true;
+        });
     }),
-    deleteNotification: vi.fn(async (id: number, userId: number) => {
-      const idx = store.notifications.findIndex((n: any) => n.id === id && n.userId === userId);
+    deleteNotification: vi.fn(async (id: string, userId: number) => {
+      const idx = store.notifications.findIndex((n: TestNotification) => n.id === id && n.userId === userId);
       if (idx >= 0) store.notifications.splice(idx, 1);
     }),
-    createLead: vi.fn(async (_data: any) => ({ id: store.nextLeadId() })),
+    createLead: vi.fn(async (_data: unknown) => ({ id: store.nextLeadId() })),
     // certificates
     getCertificateByNumber: vi.fn(async () => null),
     // nft
@@ -81,21 +100,33 @@ vi.mock("./db", async (importOriginal) => {
   };
 });
 
-type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
-
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
-  const user: AuthenticatedUser = {
-    id: "00000000-0000-4000-8000-000000000001",
+  const user: User = {
+    authUid: null,
+    id: 1,
     openId: "test-user-001",
     email: "test@authichain.com",
     name: "Test User",
     loginMethod: "manus",
     role,
+    walletAddress: null,
+    avatarUrl: null,
+    company: null,
+    title: null,
+    phone: null,
+    onboardingCompleted: 0,
     stripeCustomerId: null,
+    paddleCustomerId: null,
+    points: 0,
+    generationsUsed: 0,
+    generationsLimit: 0,
+    affiliateId: null,
+    referredBy: null,
+    storyModeEnabled: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
-  } as any;
+  };
 
   return {
     user,
@@ -379,9 +410,10 @@ describe("AuthiChain Unified Platform Routers", () => {
       // This will fail at the thirdweb call level, but proves the route is accessible
       try {
         await caller.blockchain.getNFTBalance({ contractAddress: "0x0000000000000000000000000000000000000000", walletAddress: "0x0000000000000000000000000000000000000000" });
-      } catch (e: any) {
+      } catch (e: unknown) {
         // Expected to fail due to invalid contract, but should not be an auth error
-        expect(e.message).not.toContain("login");
+        expect(e).toBeInstanceOf(Error);
+        expect((e as Error).message).not.toContain("login");
       }
     });
 
@@ -390,8 +422,9 @@ describe("AuthiChain Unified Platform Routers", () => {
       const caller = appRouter.createCaller(ctx);
       try {
         await caller.blockchain.getContractSupply({ contractAddress: "0x0000000000000000000000000000000000000000" });
-      } catch (e: any) {
-        expect(e.message).not.toContain("login");
+      } catch (e: unknown) {
+        expect(e).toBeInstanceOf(Error);
+        expect((e as Error).message).not.toContain("login");
       }
     });
 
@@ -562,7 +595,7 @@ describe("AuthiChain Unified Platform Routers", () => {
       });
       // List should contain it
       const list = await caller.notifications.list({ limit: 50 });
-      const found = list.find((n: any) => n.title === "Visible Test");
+      const found = list.find((n: TestNotification) => n.title === "Visible Test");
       expect(found).toBeDefined();
       expect(found?.message).toBe("Should appear in list");
       expect(found?.type).toBe("authentication");
@@ -583,7 +616,7 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(markResult).toEqual({ success: true });
       // Verify it's read
       const list = await caller.notifications.list({ limit: 50 });
-      const found = list.find((n: any) => n.id === created.id);
+      const found = list.find((n: TestNotification) => n.id === created.id);
       expect(found?.isRead).toBe(true);
     });
 
@@ -601,7 +634,7 @@ describe("AuthiChain Unified Platform Routers", () => {
       expect(deleteResult).toEqual({ success: true });
       // Verify it's gone
       const list = await caller.notifications.list({ limit: 50 });
-      const found = list.find((n: any) => n.id === created.id);
+      const found = list.find((n: TestNotification) => n.id === created.id);
       expect(found).toBeUndefined();
     });
 
@@ -642,8 +675,8 @@ describe("AuthiChain Unified Platform Routers", () => {
 
     it("returns all 8 registered maintenance jobs", async () => {
       const caller = appRouter.createCaller(createAuthContext("admin"));
-      const jobs = await caller.scheduler.listJobs();
-      const jobNames = jobs.map((j: any) => j.name);
+      const jobs = await caller.scheduler.listJobs() as SchedulerJob[];
+      const jobNames = jobs.map((j: SchedulerJob) => j.name);
       expect(jobNames).toContain("subscription-health-check");
       expect(jobNames).toContain("certificate-expiry-check");
       expect(jobNames).toContain("lead-nurturing");
@@ -738,8 +771,9 @@ describe("AuthiChain Unified Platform Routers", () => {
 
     it("validates archetype input on generate", async () => {
       const caller = appRouter.createCaller(createAuthContext());
+      type GenerateCharacterInput = Parameters<typeof caller.character.generate>[0];
       await expect(
-        caller.character.generate({ archetype: "invalid_archetype" as any })
+        caller.character.generate({ archetype: "invalid_archetype" as unknown as GenerateCharacterInput["archetype"] })
       ).rejects.toThrow();
     });
   });

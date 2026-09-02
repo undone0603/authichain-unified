@@ -42,12 +42,18 @@ env:
 jobs:
   outreach:
     name: B2B Cold Outreach — ${{ inputs.segment || 'all' }}
+    # Manual runs (workflow_dispatch) are always allowed. Scheduled runs only
+    # send live outreach once B2B_OUTREACH_ENABLED is explicitly set to
+    # "true" as a repository variable — the same kill-switch convention used
+    # by autonomous-business-cycle.yml, so this cron trigger can't silently
+    # send live cold email before someone has opted in.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.B2B_OUTREACH_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -55,7 +61,7 @@ jobs:
           version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "pnpm"

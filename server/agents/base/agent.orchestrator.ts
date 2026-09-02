@@ -10,7 +10,7 @@ export interface AgentTask {
   id: string;
   capability: AgentCapability;
   action: string;
-  params: any;
+  params: unknown;
   context?: AgentContext;
   retries?: number;
   timeout?: number;

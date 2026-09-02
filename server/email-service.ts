@@ -1,6 +1,46 @@
 import { ENV } from "./_core/env";
 import nodemailer from "nodemailer";
 
+type JsonRecord = Record<string, unknown>;
+type GmailTokenResponse = {
+  access_token?: string;
+  expires_in?: number;
+};
+type GmailHeader = {
+  name?: string;
+  value?: string;
+};
+type GmailPayload = {
+  mimeType?: string;
+  body?: { data?: string };
+  parts?: GmailPayload[];
+  headers?: GmailHeader[];
+};
+type GmailMessage = {
+  labelIds?: string[];
+  payload?: GmailPayload;
+};
+type GmailThreadResponse = {
+  messages?: GmailMessage[];
+};
+type GmailSendResponse = {
+  id?: string;
+  threadId?: string;
+};
+
+function asRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" ? value as JsonRecord : {};
+}
+
+function parseJsonResponse<T extends JsonRecord>(value: unknown): Partial<T> {
+  return asRecord(value) as Partial<T>;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return typeof error === "string" ? error : "Unknown error";
+}
+
 // ─── Gmail token cache (auto-refresh) ────────────────────────────────────────
 
 let _cachedToken: string | null = null;
@@ -42,7 +82,7 @@ async function getGmailAccessToken(): Promise<string> {
     return staticToken; // fall back to static if refresh fails
   }
 
-  const data = await res.json().catch(() => ({})) as any;
+  const data = parseJsonResponse<GmailTokenResponse>(await res.json().catch(() => ({})));
   _cachedToken = data.access_token ?? staticToken;
   // expires_in is in seconds; default 3600
   _tokenExpiresAt = Date.now() + ((data.expires_in ?? 3600) * 1000);
@@ -192,13 +232,13 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         }),
       });
       if (res.ok) {
-        const data = await res.json().catch(() => ({} as any));
+        const data = parseJsonResponse<{ id?: string }>(await res.json().catch(() => ({})));
         return { status: "sent", provider: "resend", providerMessageId: data?.id };
       }
       const errText = await res.text().catch(() => "");
       console.warn(`[email-service] Resend failed (${res.status}): ${errText.slice(0, 200)}`);
-    } catch (resendErr: any) {
-      console.warn("[email-service] Resend error, falling back:", resendErr.message);
+    } catch (resendErr: unknown) {
+      console.warn("[email-service] Resend error, falling back:", getErrorMessage(resendErr));
     }
   }
 
@@ -222,8 +262,8 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         provider: "gmail-smtp",
         providerMessageId: info.messageId,
       };
-    } catch (smtpErr: any) {
-      console.warn("[email-service] SMTP failed, attempting OAuth2...", smtpErr.message);
+    } catch (smtpErr: unknown) {
+      console.warn("[email-service] SMTP failed, attempting OAuth2...", getErrorMessage(smtpErr));
     }
   }
 
@@ -266,7 +306,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     };
   }
 
-  const data = await response.json().catch(() => ({} as any));
+  const data = parseJsonResponse<GmailSendResponse>(await response.json().catch(() => ({})));
   return {
     status: "sent",
     provider: "gmail-oauth",
@@ -290,8 +330,8 @@ export async function checkThreadReplies(threadId: string): Promise<{
   );
   if (!res.ok) return { hasReply: false };
 
-  const thread = await res.json().catch(() => null) as any;
-  const messages: any[] = thread?.messages ?? [];
+  const thread = parseJsonResponse<GmailThreadResponse>(await res.json().catch(() => null));
+  const messages = Array.isArray(thread.messages) ? thread.messages : [];
   // First message is the one we sent (SENT label). Any subsequent message is a reply.
   const replies = messages.filter(m =>
     Array.isArray(m.labelIds) && m.labelIds.includes("INBOX"),
@@ -301,7 +341,7 @@ export async function checkThreadReplies(threadId: string): Promise<{
   const latest = replies[replies.length - 1];
 
   // Extract plain-text body (base64url encoded)
-  function extractBody(payload: any): string {
+  function extractBody(payload?: GmailPayload): string {
     if (!payload) return "";
     if (payload.mimeType === "text/plain" && payload.body?.data) {
       return Buffer.from(payload.body.data, "base64").toString("utf-8");
@@ -314,8 +354,8 @@ export async function checkThreadReplies(threadId: string): Promise<{
   }
 
   const replyText = extractBody(latest.payload).slice(0, 1500);
-  const fromHeader = (latest.payload?.headers as any[] ?? []).find((h: any) => h.name === "From");
+  const headers = Array.isArray(latest.payload?.headers) ? latest.payload.headers : [];
+  const fromHeader = headers.find((header): header is GmailHeader & { value: string } => header.name === "From" && typeof header.value === "string");
 
   return { hasReply: true, replyText, replyFrom: fromHeader?.value };
 }
-

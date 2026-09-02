@@ -1,13 +1,15 @@
+import { type z } from 'zod';
 import { db } from "@/db";
 import { supplyChainEvents } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { EvidenceSchema, DsCsaEvidenceSchema } from "@authichain/evidence";
-import { verify, importPKCS8 } from "jose";
+import { DsCsaEvidenceSchema } from "@authichain/evidence";
+
+type DsCsaEvidence = z.infer<typeof DsCsaEvidenceSchema>;
 
 export interface ComplianceReport {
   subject_id: string;
   generated_at: string;
-  events: any[];
+  events: DsCsaEvidence[];
   is_tamper_evident: boolean;
 }
 
@@ -17,11 +19,11 @@ export class AuditReportService {
     const events = await db
       .select()
       .from(supplyChainEvents)
-      .where(eq(supplyChainEvents.productId, productId as any))
+      .where(eq(supplyChainEvents.productId, productId))
       .orderBy(desc(supplyChainEvents.createdAt));
 
     // 2. Verify and Map
-    const verifiedEvents = [];
+    const verifiedEvents: DsCsaEvidence[] = [];
     let isTamperEvident = true;
 
     for (const event of events) {
@@ -30,13 +32,13 @@ export class AuditReportService {
         id: event.id,
         subject_id: event.productId,
         type: event.eventType,
-        issuer: { id: "unknown", name: "unknown" }, // Should be in DB
+        issuer: { id: 'unknown', name: 'unknown' }, // Should be in DB
         timestamp: event.createdAt
           ? event.createdAt.toISOString()
           : new Date().toISOString(),
         digest:
-          "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        signature: "unsigned", // Should be in DB
+          'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        signature: 'unsigned', // Should be in DB
         metadata: event.metadata,
       };
       const result = DsCsaEvidenceSchema.safeParse(record);

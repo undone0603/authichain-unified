@@ -6,28 +6,29 @@
  *   SEND_CONTRACT    → LLM contract terms + payment link (formal acceptance)
  *   AUTO_REPLY       → objection / pricing question handled autonomously
  */
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { sendEmail, checkThreadReplies } from '../email-service.js';
-import { logActivity, enqueueTask, getDb, createProposal } from '../db.js';
-import { leads } from '../../drizzle/schema.js';
-import { eq } from 'drizzle-orm';
-import { getStripe } from '../stripe-service.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { eq } from "drizzle-orm";
+import type { MissionTask as Task } from "../../drizzle/schema.js";
+import { leads } from "../../drizzle/schema.js";
+import { invokeLLM, parseLLMContent } from "../_core/llm.js";
+import { createProposal, enqueueTask, getDb, logActivity } from "../db.js";
+import { checkThreadReplies, sendEmail } from "../email-service.js";
+import { getStripe } from "../stripe-service.js";
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
 const PILOT_PRICE_USD: Record<string, number> = {
-  GOV:     25_000,
-  RETAIL:   5_000,
+  GOV: 25_000,
+  RETAIL: 5_000,
   PARTNER: 10_000,
-  PRESS:        0, // press is comp
+  PRESS: 0, // press is comp
   DEFAULT: 10_000,
 };
 
 async function updateLeadStatus(email: string, status: string) {
   const db = await getDb();
   if (!db) return;
-  await db.update(leads)
+  await db
+    .update(leads)
     .set({ status, updatedAt: new Date() })
     .where(eq(leads.email, email.toLowerCase()));
 }
@@ -46,15 +47,21 @@ interface CheckRepliesPayload {
 }
 
 type ReplyIntent =
-  | 'interested'
-  | 'wants_proposal'
-  | 'objection'
-  | 'pricing'
-  | 'not_interested'
-  | 'already_customer'
-  | 'unknown';
+  | "interested"
+  | "wants_proposal"
+  | "objection"
+  | "pricing"
+  | "not_interested"
+  | "already_customer"
+  | "unknown";
 
-async function classifyReplyIntent(replyText: string, segment: string): Promise<ReplyIntent> {
+type ReplyIntentResult = { intent?: ReplyIntent };
+type SubjectBodyResult = { subject?: string; body?: string };
+
+async function classifyReplyIntent(
+  replyText: string,
+  segment: string
+): Promise<ReplyIntent> {
   const prompt = `Classify this email reply from a B2B sales prospect for AuthiChain (blockchain product authentication).
 Segment: ${segment}
 Reply: """${replyText.slice(0, 800)}"""
@@ -63,75 +70,112 @@ Return JSON: { "intent": "<one of: interested | wants_proposal | objection | pri
 
   try {
     const result = await invokeLLM({
-      messages: [{ role: 'user', content: prompt }],
-      responseFormat: { type: 'json_object' },
+      messages: [{ role: "user", content: prompt }],
+      responseFormat: { type: "json_object" },
     });
-    const parsed = parseLLMContent<any>(result.choices[0].message.content);
-    return (parsed.intent as ReplyIntent) ?? 'unknown';
+    const parsed = parseLLMContent<ReplyIntentResult>(
+      result.choices[0].message.content
+    );
+    return (parsed.intent as ReplyIntent) ?? "unknown";
   } catch {
-    return 'unknown';
+    return "unknown";
   }
 }
 
 export async function runCheckReplies(task: Task): Promise<void> {
   const payload = task.payload as CheckRepliesPayload;
-  const { threadId, leadEmail, leadName, leadOrg, leadTitle, segment } = payload;
+  const { threadId, leadEmail, leadName, leadOrg, leadTitle, segment } =
+    payload;
   const sequence = payload.sequence ?? 1;
   const maxSequence = payload.maxSequence ?? 3;
 
-  const replyCheck = await checkThreadReplies(threadId ?? '');
+  const replyCheck = await checkThreadReplies(threadId ?? "");
 
   if (replyCheck.hasReply && replyCheck.replyText) {
     const intent = await classifyReplyIntent(replyCheck.replyText, segment);
 
-    await updateLeadStatus(leadEmail, 'REPLIED');
+    await updateLeadStatus(leadEmail, "REPLIED");
 
     await logActivity({
-      userId: null, action: 'reply_received', entityType: 'task', entityId: 0,
-      details: { taskId: task.id, leadEmail, segment, intent, replyFrom: replyCheck.replyFrom },
+      userId: null,
+      action: "reply_received",
+      entityType: "task",
+      entityId: 0,
+      details: {
+        taskId: task.id,
+        leadEmail,
+        segment,
+        intent,
+        replyFrom: replyCheck.replyFrom,
+      },
     });
 
-    const nextBase = { leadEmail, leadName, leadOrg, leadTitle, segment, threadId, replyText: replyCheck.replyText };
+    const nextBase = {
+      leadEmail,
+      leadName,
+      leadOrg,
+      leadTitle,
+      segment,
+      threadId,
+      replyText: replyCheck.replyText,
+    };
     const delay48h = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
     switch (intent) {
-      case 'interested':
-        await enqueueTask(task.missionId, 'SEND_DEMO_PACKET', nextBase);
+      case "interested":
+        await enqueueTask(task.missionId, "SEND_DEMO_PACKET", nextBase);
         break;
 
-      case 'wants_proposal':
-        await enqueueTask(task.missionId, 'GENERATE_PROPOSAL', nextBase);
+      case "wants_proposal":
+        await enqueueTask(task.missionId, "GENERATE_PROPOSAL", nextBase);
         break;
 
-      case 'objection':
-        await enqueueTask(task.missionId, 'AUTO_REPLY', { ...nextBase, intent: 'objection' });
-        break;
-
-      case 'pricing':
-        await enqueueTask(task.missionId, 'AUTO_REPLY', { ...nextBase, intent: 'pricing' });
-        break;
-
-      case 'not_interested':
-        await updateLeadStatus(leadEmail, 'CLOSED_LOST');
-        await logActivity({
-          userId: null, action: 'outcome_signal', entityType: 'lead', entityId: 0,
-          details: { signal: 'no_response', segment },
+      case "objection":
+        await enqueueTask(task.missionId, "AUTO_REPLY", {
+          ...nextBase,
+          intent: "objection",
         });
         break;
 
-      case 'already_customer':
-        await updateLeadStatus(leadEmail, 'CLOSED_WON');
+      case "pricing":
+        await enqueueTask(task.missionId, "AUTO_REPLY", {
+          ...nextBase,
+          intent: "pricing",
+        });
+        break;
+
+      case "not_interested":
+        await updateLeadStatus(leadEmail, "CLOSED_LOST");
+        await logActivity({
+          userId: null,
+          action: "outcome_signal",
+          entityType: "lead",
+          entityId: 0,
+          details: { signal: "no_response", segment },
+        });
+        break;
+
+      case "already_customer":
+        await updateLeadStatus(leadEmail, "CLOSED_WON");
         break;
 
       default:
         // Unknown intent — treat as soft interest, send demo in 48h
-        await enqueueTask(task.missionId, 'SEND_DEMO_PACKET', nextBase, delay48h);
+        await enqueueTask(
+          task.missionId,
+          "SEND_DEMO_PACKET",
+          nextBase,
+          delay48h
+        );
     }
 
     // Record reply outcome signal for Bayesian learning
     await logActivity({
-      userId: null, action: 'outcome_signal', entityType: 'lead', entityId: 0,
-      details: { signal: 'email_replied', segment },
+      userId: null,
+      action: "outcome_signal",
+      entityType: "lead",
+      entityId: 0,
+      details: { signal: "email_replied", segment },
     });
     return;
   }
@@ -139,14 +183,28 @@ export async function runCheckReplies(task: Task): Promise<void> {
   // No reply — advance follow-up sequence or close lost
   if (sequence < maxSequence) {
     const delay = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // 3 days
-    await enqueueTask(task.missionId, 'FOLLOWUP_SEQUENCE', {
-      segment, leadEmail, leadName, leadOrg, leadTitle, sequence: sequence + 1, maxFollowups: maxSequence,
-    }, delay);
+    await enqueueTask(
+      task.missionId,
+      "FOLLOWUP_SEQUENCE",
+      {
+        segment,
+        leadEmail,
+        leadName,
+        leadOrg,
+        leadTitle,
+        sequence: sequence + 1,
+        maxFollowups: maxSequence,
+      },
+      delay
+    );
   } else {
-    await updateLeadStatus(leadEmail, 'CLOSED_LOST');
+    await updateLeadStatus(leadEmail, "CLOSED_LOST");
     await logActivity({
-      userId: null, action: 'outcome_signal', entityType: 'lead', entityId: 0,
-      details: { signal: 'no_response', segment },
+      userId: null,
+      action: "outcome_signal",
+      entityType: "lead",
+      entityId: 0,
+      details: { signal: "no_response", segment },
     });
   }
 }
@@ -164,23 +222,36 @@ interface DemoPacketPayload {
 }
 
 const SEGMENT_ROI_CONTEXT: Record<string, string> = {
-  GOV:     'Government agencies lose billions annually to counterfeit goods in procurement. AuthiChain provides instant blockchain verification at point-of-receipt.',
-  RETAIL:  'Retail brands lose 20–40% of premium revenue to counterfeit products. AuthiChain gives every SKU a tamper-evident QR code customers can scan to verify authenticity.',
-  PARTNER: 'Embed AuthiChain\'s authentication API in 30 minutes. White-label the dashboard. Add a new revenue stream without building the infra.',
-  PRESS:   'AuthiChain is the first platform to combine AI confidence scoring with NFT provenance tracking for physical product authentication.',
-  DEFAULT: 'AuthiChain enables brands to verify product authenticity via blockchain-backed QR codes and AI confidence scoring.',
+  GOV: "Government agencies lose billions annually to counterfeit goods in procurement. AuthiChain provides instant blockchain verification at point-of-receipt.",
+  RETAIL:
+    "Retail brands lose 20–40% of premium revenue to counterfeit products. AuthiChain gives every SKU a tamper-evident QR code customers can scan to verify authenticity.",
+  PARTNER:
+    "Embed AuthiChain's authentication API in 30 minutes. White-label the dashboard. Add a new revenue stream without building the infra.",
+  PRESS:
+    "AuthiChain is the first platform to combine AI confidence scoring with NFT provenance tracking for physical product authentication.",
+  DEFAULT:
+    "AuthiChain enables brands to verify product authenticity via blockchain-backed QR codes and AI confidence scoring.",
 };
 
 export async function runSendDemoPacket(task: Task): Promise<void> {
   const payload = task.payload as DemoPacketPayload;
-  const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText, threadId } = payload;
+  const {
+    leadEmail,
+    leadName,
+    leadOrg,
+    leadTitle,
+    segment,
+    replyText,
+    threadId,
+  } = payload;
 
-  const roiContext = SEGMENT_ROI_CONTEXT[segment] ?? SEGMENT_ROI_CONTEXT.DEFAULT;
+  const roiContext =
+    SEGMENT_ROI_CONTEXT[segment] ?? SEGMENT_ROI_CONTEXT.DEFAULT;
 
   const prompt = `You are writing a personalized demo/value email for AuthiChain — NO sales call required.
-Recipient: ${leadName ?? 'there'} at ${leadOrg ?? 'your organization'}${leadTitle ? ` (${leadTitle})` : ''}
+Recipient: ${leadName ?? "there"} at ${leadOrg ?? "your organization"}${leadTitle ? ` (${leadTitle})` : ""}
 Segment: ${segment}
-${replyText ? `Their previous reply: "${replyText.slice(0, 300)}"` : ''}
+${replyText ? `Their previous reply: "${replyText.slice(0, 300)}"` : ""}
 
 ROI context for this segment:
 ${roiContext}
@@ -195,31 +266,53 @@ Write a 4–6 sentence email that:
 Return JSON: { "subject": "...", "body": "..." }`;
 
   const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [{ role: "user", content: prompt }],
+    responseFormat: { type: "json_object" },
   });
 
-  const parsed_demo = parseLLMContent<any>(result.choices[0].message.content);
-  const subject = parsed_demo.subject ?? `AuthiChain for ${leadOrg ?? segment}: How It Works`;
-  const body = parsed_demo.body ?? '';
+  const parsed_demo = parseLLMContent<SubjectBodyResult>(
+    result.choices[0].message.content
+  );
+  const subject =
+    parsed_demo.subject ?? `AuthiChain for ${leadOrg ?? segment}: How It Works`;
+  const body = parsed_demo.body ?? "";
 
-  if (!body) throw new Error('Demo packet LLM returned empty body');
+  if (!body) throw new Error("Demo packet LLM returned empty body");
 
   const sendResult = await sendEmail({ to: leadEmail, subject, body });
 
-  if (sendResult.status === 'sent') {
-    await updateLeadStatus(leadEmail, 'DEMO_SENT');
+  if (sendResult.status === "sent") {
+    await updateLeadStatus(leadEmail, "DEMO_SENT");
     // Enqueue reply check in 72h
     const check72h = new Date(Date.now() + 72 * 60 * 60 * 1000);
-    await enqueueTask(task.missionId, 'CHECK_REPLIES', {
-      threadId: sendResult.threadId ?? threadId,
-      leadEmail, leadName, leadOrg, leadTitle, segment, sequence: 0, maxSequence: 1,
-    }, check72h);
+    await enqueueTask(
+      task.missionId,
+      "CHECK_REPLIES",
+      {
+        threadId: sendResult.threadId ?? threadId,
+        leadEmail,
+        leadName,
+        leadOrg,
+        leadTitle,
+        segment,
+        sequence: 0,
+        maxSequence: 1,
+      },
+      check72h
+    );
   }
 
   await logActivity({
-    userId: null, action: 'demo_packet_sent', entityType: 'task', entityId: 0,
-    details: { taskId: task.id, leadEmail, segment, sendStatus: sendResult.status },
+    userId: null,
+    action: "demo_packet_sent",
+    entityType: "task",
+    entityId: 0,
+    details: {
+      taskId: task.id,
+      leadEmail,
+      segment,
+      sendStatus: sendResult.status,
+    },
   });
 }
 
@@ -237,16 +330,17 @@ interface ProposalPayload {
 
 export async function runGenerateProposal(task: Task): Promise<void> {
   const payload = task.payload as ProposalPayload;
-  const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText, threadId } = payload;
+  const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText } =
+    payload;
   const priceUsd = PILOT_PRICE_USD[segment] ?? PILOT_PRICE_USD.DEFAULT;
 
   // ── LLM proposal generation ───────────────────────────────────────────────
   const prompt = `Write a professional B2B proposal for AuthiChain (authichain.com), a blockchain product authentication platform.
 
-Client: ${leadName ?? 'Decision-Maker'} at ${leadOrg ?? 'your organization'}${leadTitle ? `, ${leadTitle}` : ''}
+Client: ${leadName ?? "Decision-Maker"} at ${leadOrg ?? "your organization"}${leadTitle ? `, ${leadTitle}` : ""}
 Segment: ${segment}
 Pilot price: $${priceUsd.toLocaleString()} USD (6-month pilot program)
-${replyText ? `Context from their last email: "${replyText.slice(0, 400)}"` : ''}
+${replyText ? `Context from their last email: "${replyText.slice(0, 400)}"` : ""}
 
 Write a 400–600 word proposal covering:
 1. Executive Summary (2–3 sentences, specific to their industry)
@@ -261,15 +355,19 @@ Tone: authoritative, specific, zero fluff.
 Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." }`;
 
   const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [{ role: "user", content: prompt }],
+    responseFormat: { type: "json_object" },
   });
 
-  const parsed_proposal = parseLLMContent<any>(result.choices[0].message.content);
-  const subject = parsed_proposal.subject ?? `AuthiChain Pilot Proposal — ${leadOrg ?? segment}`;
-  const proposalContent = parsed_proposal.body ?? '';
+  const parsed_proposal = parseLLMContent<SubjectBodyResult>(
+    result.choices[0].message.content
+  );
+  const subject =
+    parsed_proposal.subject ??
+    `AuthiChain Pilot Proposal — ${leadOrg ?? segment}`;
+  const proposalContent = parsed_proposal.body ?? "";
 
-  if (!proposalContent) throw new Error('Proposal LLM returned empty content');
+  if (!proposalContent) throw new Error("Proposal LLM returned empty content");
 
   // ── Stripe checkout session (payment link) ─────────────────────────────────
   let paymentLink: string | undefined;
@@ -279,22 +377,30 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
     try {
       const stripe = getStripe();
       const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        payment_method_types: ['card'],
-        line_items: [{
-          price_data: {
-            currency: 'usd',
-            unit_amount: priceUsd * 100,
-            product_data: {
-              name: `AuthiChain ${segment} Pilot Program`,
-              description: `6-month pilot program for ${leadOrg ?? 'your organization'}`,
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              unit_amount: priceUsd * 100,
+              product_data: {
+                name: `AuthiChain ${segment} Pilot Program`,
+                description: `6-month pilot program for ${leadOrg ?? "your organization"}`,
+              },
             },
+            quantity: 1,
           },
-          quantity: 1,
-        }],
-        metadata: { leadEmail, segment, missionId: task.missionId, taskId: task.id },
-        success_url: 'https://authichain.com/welcome?session_id={CHECKOUT_SESSION_ID}',
-        cancel_url:  'https://authichain.com/pricing',
+        ],
+        metadata: {
+          leadEmail,
+          segment,
+          missionId: task.missionId,
+          taskId: task.id,
+        },
+        success_url:
+          "https://authichain.com/welcome?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url: "https://authichain.com/pricing",
         customer_email: leadEmail,
         expires_at: Math.floor(Date.now() / 1000) + 86400 * 30, // 30 days
       });
@@ -320,7 +426,7 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
   // ── Send email ────────────────────────────────────────────────────────────
   const paymentSection = paymentLink
     ? `\n\n---\n🔒 Ready to proceed? Secure your pilot today:\n${paymentLink}\n(This link is valid for 30 days)`
-    : '';
+    : "";
 
   const sendResult = await sendEmail({
     to: leadEmail,
@@ -328,13 +434,21 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
     body: `${proposalContent}${paymentSection}`,
   });
 
-  await updateLeadStatus(leadEmail, 'PILOT_PROPOSED');
+  await updateLeadStatus(leadEmail, "PILOT_PROPOSED");
 
   await logActivity({
-    userId: null, action: 'proposal_sent', entityType: 'task', entityId: 0,
+    userId: null,
+    action: "proposal_sent",
+    entityType: "task",
+    entityId: 0,
     details: {
-      taskId: task.id, leadEmail, segment, proposalId,
-      hasPaymentLink: !!paymentLink, sendStatus: sendResult.status, priceUsd,
+      taskId: task.id,
+      leadEmail,
+      segment,
+      proposalId,
+      hasPaymentLink: !!paymentLink,
+      sendStatus: sendResult.status,
+      priceUsd,
     },
   });
 }
@@ -356,10 +470,10 @@ export async function runSendContract(task: Task): Promise<void> {
   const { leadEmail, leadName, leadOrg, segment } = payload;
   const priceUsd = PILOT_PRICE_USD[segment] ?? PILOT_PRICE_USD.DEFAULT;
 
-  const prompt = `Draft a simple, professional Service Agreement between AuthiChain Inc. and ${leadOrg ?? 'Client'}.
+  const prompt = `Draft a simple, professional Service Agreement between AuthiChain Inc. and ${leadOrg ?? "Client"}.
 
 Terms to include:
-1. Parties: AuthiChain Inc. (Provider) and ${leadOrg ?? 'Client'} (Client), represented by ${leadName ?? 'authorized signatory'}
+1. Parties: AuthiChain Inc. (Provider) and ${leadOrg ?? "Client"} (Client), represented by ${leadName ?? "authorized signatory"}
 2. Services: 6-month AuthiChain pilot — product authentication platform including QR code generation, blockchain provenance tracking, AI confidence scoring, dashboard access, and onboarding support
 3. Payment: $${priceUsd.toLocaleString()} USD, due upon execution
 4. IP: AuthiChain retains all platform IP. Client retains rights to their product data.
@@ -372,13 +486,17 @@ Keep it to 250–350 words. Professional but readable — this is a pilot agreem
 Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "..." }`;
 
   const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [{ role: "user", content: prompt }],
+    responseFormat: { type: "json_object" },
   });
 
-  const parsed_contract = parseLLMContent<any>(result.choices[0].message.content);
-  const subject = parsed_contract.subject ?? `AuthiChain Service Agreement — ${leadOrg ?? segment}`;
-  const contractBody = parsed_contract.body ?? '';
+  const parsed_contract = parseLLMContent<SubjectBodyResult>(
+    result.choices[0].message.content
+  );
+  const subject =
+    parsed_contract.subject ??
+    `AuthiChain Service Agreement — ${leadOrg ?? segment}`;
+  const contractBody = parsed_contract.body ?? "";
 
   // Re-use existing payment link from payload or create a new checkout session
   let paymentLink = payload.paymentLink;
@@ -386,22 +504,42 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
     try {
       const stripe = getStripe();
       const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        payment_method_types: ['card'],
-        line_items: [{ price_data: { currency: 'usd', unit_amount: priceUsd * 100, product_data: { name: `AuthiChain ${segment} Pilot — Contract Execution` } }, quantity: 1 }],
-        metadata: { leadEmail, segment, missionId: task.missionId, taskId: task.id, type: 'contract' },
-        success_url: 'https://authichain.com/welcome?session_id={CHECKOUT_SESSION_ID}',
-        cancel_url:  'https://authichain.com/pricing',
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              unit_amount: priceUsd * 100,
+              product_data: {
+                name: `AuthiChain ${segment} Pilot — Contract Execution`,
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          leadEmail,
+          segment,
+          missionId: task.missionId,
+          taskId: task.id,
+          type: "contract",
+        },
+        success_url:
+          "https://authichain.com/welcome?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url: "https://authichain.com/pricing",
         customer_email: leadEmail,
         expires_at: Math.floor(Date.now() / 1000) + 86400 * 14, // 14 days to sign
       });
       paymentLink = session.url ?? undefined;
-    } catch { /* non-fatal */ }
+    } catch {
+      /* non-fatal */
+    }
   }
 
   const paymentSection = paymentLink
     ? `\n\n---\nTo execute this agreement, complete payment here:\n${paymentLink}\n(Link expires in 14 days. Payment constitutes acceptance of the above terms.)`
-    : '';
+    : "";
 
   const sendResult = await sendEmail({
     to: leadEmail,
@@ -410,8 +548,17 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
   });
 
   await logActivity({
-    userId: null, action: 'contract_sent', entityType: 'task', entityId: 0,
-    details: { taskId: task.id, leadEmail, segment, sendStatus: sendResult.status, hasPaymentLink: !!paymentLink },
+    userId: null,
+    action: "contract_sent",
+    entityType: "task",
+    entityId: 0,
+    details: {
+      taskId: task.id,
+      leadEmail,
+      segment,
+      sendStatus: sendResult.status,
+      hasPaymentLink: !!paymentLink,
+    },
   });
 }
 
@@ -423,28 +570,33 @@ interface AutoReplyPayload {
   leadOrg?: string;
   segment: string;
   replyText: string;
-  intent: 'objection' | 'pricing' | 'general';
+  intent: "objection" | "pricing" | "general";
   threadId?: string;
 }
 
 const PRICING_TABLE: Record<string, string> = {
-  GOV:     '$25,000 for a 6-month pilot. Includes full onboarding, integrations, dedicated support, and a blockchain dashboard. Government pricing is fixed — no negotiation on scope, but we can phase the payment.',
-  RETAIL:  '$5,000 for a 6-month pilot. Includes unlimited SKU onboarding, QR code generation, authentication analytics, and brand protection reporting. ROI typically pays back within 60 days.',
-  PARTNER: '$10,000 for 6 months. Includes API access, white-label dashboard, co-marketing, and a dedicated integration engineer.',
-  DEFAULT: 'Pricing is $5,000–$25,000 depending on scope, with a 6-month pilot structure. We can tailor the package to your needs.',
+  GOV: "$25,000 for a 6-month pilot. Includes full onboarding, integrations, dedicated support, and a blockchain dashboard. Government pricing is fixed — no negotiation on scope, but we can phase the payment.",
+  RETAIL:
+    "$5,000 for a 6-month pilot. Includes unlimited SKU onboarding, QR code generation, authentication analytics, and brand protection reporting. ROI typically pays back within 60 days.",
+  PARTNER:
+    "$10,000 for 6 months. Includes API access, white-label dashboard, co-marketing, and a dedicated integration engineer.",
+  DEFAULT:
+    "Pricing is $5,000–$25,000 depending on scope, with a 6-month pilot structure. We can tailor the package to your needs.",
 };
 
 export async function runAutoReply(task: Task): Promise<void> {
   const payload = task.payload as AutoReplyPayload;
-  const { leadEmail, leadName, leadOrg, segment, replyText, intent, threadId } = payload;
+  const { leadEmail, leadName, leadOrg, segment, replyText, intent, threadId } =
+    payload;
 
-  const intentGuidance = intent === 'pricing'
-    ? `Pricing context for ${segment}: ${PRICING_TABLE[segment] ?? PRICING_TABLE.DEFAULT}\nProvide clear pricing, justify the ROI, and offer a direct payment link.`
-    : `This is an objection. Address it directly, confidently, and with evidence. Do NOT be defensive.`;
+  const intentGuidance =
+    intent === "pricing"
+      ? `Pricing context for ${segment}: ${PRICING_TABLE[segment] ?? PRICING_TABLE.DEFAULT}\nProvide clear pricing, justify the ROI, and offer a direct payment link.`
+      : `This is an objection. Address it directly, confidently, and with evidence. Do NOT be defensive.`;
 
   const prompt = `You are responding to a prospect on behalf of AuthiChain. No hedging — be direct and close.
 
-Prospect: ${leadName ?? 'there'} at ${leadOrg ?? 'your org'}
+Prospect: ${leadName ?? "there"} at ${leadOrg ?? "your org"}
 Their message: """${replyText.slice(0, 600)}"""
 Intent category: ${intent}
 ${intentGuidance}
@@ -457,27 +609,48 @@ Write a 3–5 sentence reply that:
 Return JSON: { "subject": "Re: [keep thread subject]", "body": "..." }`;
 
   const result = await invokeLLM({
-    messages: [{ role: 'user', content: prompt }],
-    responseFormat: { type: 'json_object' },
+    messages: [{ role: "user", content: prompt }],
+    responseFormat: { type: "json_object" },
   });
 
-  const parsed_reply = parseLLMContent<any>(result.choices[0].message.content);
+  const parsed_reply = parseLLMContent<SubjectBodyResult>(
+    result.choices[0].message.content
+  );
   const subject = parsed_reply.subject ?? `Re: AuthiChain`;
-  const body = parsed_reply.body ?? '';
+  const body = parsed_reply.body ?? "";
 
   const sendResult = await sendEmail({ to: leadEmail, subject, body });
 
-  if (sendResult.status === 'sent') {
+  if (sendResult.status === "sent") {
     // Check again in 72h
     const check72h = new Date(Date.now() + 72 * 60 * 60 * 1000);
-    await enqueueTask(task.missionId, 'CHECK_REPLIES', {
-      threadId: sendResult.threadId ?? threadId,
-      leadEmail, leadName, leadOrg, segment, sequence: 0, maxSequence: 1,
-    }, check72h);
+    await enqueueTask(
+      task.missionId,
+      "CHECK_REPLIES",
+      {
+        threadId: sendResult.threadId ?? threadId,
+        leadEmail,
+        leadName,
+        leadOrg,
+        segment,
+        sequence: 0,
+        maxSequence: 1,
+      },
+      check72h
+    );
   }
 
   await logActivity({
-    userId: null, action: 'auto_reply_sent', entityType: 'task', entityId: 0,
-    details: { taskId: task.id, leadEmail, segment, intent, sendStatus: sendResult.status },
+    userId: null,
+    action: "auto_reply_sent",
+    entityType: "task",
+    entityId: 0,
+    details: {
+      taskId: task.id,
+      leadEmail,
+      segment,
+      intent,
+      sendStatus: sendResult.status,
+    },
   });
 }

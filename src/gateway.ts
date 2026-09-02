@@ -16,6 +16,8 @@ export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   BITCOIN_GATEWAY_URL: string; // HTTP endpoint that broadcasts OP_RETURN and returns { txid }
+  AI_CATALOG_JSON?: string; // optional JSON override for the ai-catalog response
+  LLMS_TXT?: string; // optional override for the llms.txt response
 }
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
@@ -42,8 +44,7 @@ function getSupabase(env: Env): SupabaseClient {
 // Set AI_CATALOG_JSON in Cloudflare if you want to override the default.
 function getAiCatalog(env: Env): JsonValue {
   try {
-    // @ts-ignore – optional env, not declared in Env interface
-    const raw = (env as any).AI_CATALOG_JSON;
+    const raw = env.AI_CATALOG_JSON;
     if (raw) return JSON.parse(raw);
   } catch (_) {
     // fall through to default
@@ -67,8 +68,7 @@ function getAiCatalog(env: Env): JsonValue {
 
 // llms.txt is also controlled via env for easy mutation.
 function getLlmsTxt(env: Env): string {
-  // @ts-ignore – optional env, not declared in Env interface
-  const raw = (env as any).LLMS_TXT;
+  const raw = env.LLMS_TXT;
   if (raw) return raw;
 
   return [
@@ -203,10 +203,10 @@ async function handleAnchor(request: Request, env: Env): Promise<Response> {
         .update({ status: "error", error_message: `HTTP ${res.status}` })
         .eq("id", queueId);
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     await supabase
       .from("anchor_queue")
-      .update({ status: "error", error_message: String(e?.message ?? e) })
+      .update({ status: "error", error_message: String(e instanceof Error ? e.message : e) })
       .eq("id", queueId);
   }
 
@@ -236,7 +236,7 @@ async function handleLlmsTxt(_request: Request, env: Env): Promise<Response> {
 
 // ---------- Router ----------
 
-export default {
+const gatewayWorker = {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
@@ -268,3 +268,5 @@ export default {
     return json({ ok: false, error: "not_found" }, 404);
   },
 };
+
+export default gatewayWorker;

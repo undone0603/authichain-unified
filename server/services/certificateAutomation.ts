@@ -1,24 +1,24 @@
-import { getDb } from '../db';
-import { certificates, products, users } from '../../drizzle/schema';
-import { eq } from 'drizzle-orm';
-import { storagePut } from '../storage';
-import { notifyOwner } from '../_core/notification';
+  import { eq } from 'drizzle-orm';
+  import { certificates,products,users } from '../../drizzle/schema';
+  import { ENV } from '../_core/env';
+  import { notifyOwner } from '../_core/notification';
+  import { getDb } from '../db';
+  import { storagePut } from '../storage';
+  import { buildAuthCertificateMetadata,mintAuthenticationNFT } from '../thirdweb';
+  import { sendCertificateEmail as sendCrispCertificateEmail } from './crispService';
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
   if (!domain) return '***';
   return `${local?.[0] ?? ''}***@${domain}`;
 }
-import { mintAuthenticationNFT, buildAuthCertificateMetadata } from '../thirdweb';
-import { ENV } from '../_core/env';
-import { sendCertificateEmail as sendCrispCertificateEmail } from './crispService';
 
 /**
  * Automated Certificate Generation Service
  * Handles the complete workflow: Payment → Certificate → NFT → Email
  */
 
-interface CertificateData {
+interface _unused_CertificateData_21 {
   certificateId: string;
   userId: number;
   productName: string;

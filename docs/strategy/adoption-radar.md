@@ -280,3 +280,164 @@ Noted here per instructions, not edited into `SPEC.md`:
   thought about it" once W3C's quantum-resistant cryptosuite work matures past FPWD.
 
 ---
+
+## 2026-09-02
+
+General web search again this week; WebFetch was blocked by the network egress proxy for
+several primary sources this week specifically (`eprint.iacr.org`, `spherity.com`,
+`regenstudio.world`, `standards.iteh.ai`), so several items below are sourced from search-result
+summaries rather than the primary document — flagged individually. Absence of a finding below
+means "not found by this search," not "did not happen."
+
+### What actually moved this week
+
+- **CEN-CLC/JTC 24 has two of the eight EU DPP technical standards still outstanding, both due
+  this month, and one of them is squarely our spec's problem.** The other six (EN
+  18216/18219–18223) published 2026-05-27, cited in the Official Journal 2026-07-15
+  ([field guide, Regen Studio](https://www.regenstudio.world/blog/dpp-system-standards/) —
+  fetch blocked, read via search summary; [wiot-group summary](https://wiot-group.com/think/en/news/cen-cenelec-six-eu-dpp-standards-en-18xxx/)).
+  The two still due:
+  - **FprEN 18239** — access rights management, IT security, business confidentiality.
+  - **FprEN 18246** — "Digital product passport: data authentication, reliability and
+    integrity." Per standards-catalog listings
+    ([iteh.ai](https://standards.iteh.ai/catalog/standards/cen/9d9fbc1f-0c14-4e84-ab6c-f233e3f19398/pren-18246) —
+    fetch blocked, [DIN mirror](https://www.dinmedia.de/en/draft-standard/din-en-18246/394416240),
+    [dpp.gs alignment note](https://dpp.gs/blog/dpp-cen-cenelec-standards-compliance.html)), it
+    requires "Electronically Signed Data Constructs" (ESDCs) — cryptographically signed by the
+    issuing party, tamper-evident, digitally verifiable — referencing **ISO/IEC 20248 (DigSig)**
+    for the signature data structure, plus an audit-proof log of every DPP-modifying event. That
+    is a formal EU standard for exactly the problem `protocol/SPEC.md` solves — signing and
+    verifying a product-provenance record — arriving under different vocabulary (ESDC, DigSig)
+    than ours (VC 2.0, Ed25519/JCS). The enquiry-stage draft (`prEN 18246:2025`) is already
+    closed for public comment; what's left is formal publication, expected this month. Whether
+    ESDC verification is designed to work offline the way ours does was not established — no
+    primary-source text was read, only catalog summaries — so treat that specific comparison as
+    open, not settled.
+- **A new academic security analysis of C2PA landed on the IACR Cryptology ePrint Archive as
+  2026/804**, "Verifying Provenance of Digital Media: Security Analysis of C2PA and its
+  Implementation" (Golaszewski, Krawetz, Sherman, Zieglar, et al. — a UMBC-affiliated group with
+  an earlier arXiv companion piece, [2604.24890, "Why the C2PA Specifications Fall
+  Short"](https://arxiv.org/html/2604.24890v1)). `eprint.iacr.org` itself was blocked by the
+  network proxy this session, so this is read via search-result summaries only, not the primary
+  text — treat the specifics as reported-by-search, not verified firsthand. Per those summaries,
+  the paper's findings include: conforming C2PA validators accept manifests signed with
+  known-compromised certificates because of inadequate revocation policy; conforming validators
+  produce inconsistent verdicts from identical input; an "exclusion range" in the manifest format
+  permits undetectable alteration; and the C2PA conformance program certifies implementations
+  without technical review. This is exactly the kind of public argument over verification claims
+  this radar watches for, and — if the summaries hold up under a direct read — it names a
+  specific adjacent spec's conformance program as weaker in precisely the place ours was
+  deliberately hardened (`conformance/README.md`'s suite, validated against three deliberately
+  broken implementations). Worth a follow-up week where this paper is actually read in full
+  before leaning on it any harder.
+- **Spherity has two items this radar missed last week because they predate this week's search
+  window**, corrected forward per the append-only rule rather than by editing 2026-08-26: it
+  [joined W3C](https://www.spherity.com/post/spherity-joins-w3c-to-advance-open-interoperable-standards)
+  (announced 2026-05, fetch blocked, read via search summary) and was named the sole "Pioneer"
+  in [Gartner's Emerging Market Quadrant for Digital Product Passport — Established
+  Vendors](https://www.spherity.com/post/gartner-emerging-market-quadrant-for-digital-product-passport),
+  published 2026-07-06. Narravero was separately named a "Market Shaper" in the same report
+  ([PR Newswire](https://www.prnewswire.com/news-releases/narravero-named-a-market-shaper-in-the-2026-gartner-emerging-market-quadrant-for-digital-product-passport-302849620.html)).
+  The underlying Gartner report itself is paywalled and was not read; both placements are
+  reported only via the vendors' own press material, not verified against Gartner directly.
+- **A W3C/GS1 joint workshop — "E-commerce for Humans and AI Agents" — runs 2026-09-08 to
+  09-09 in Zurich, hosted by Google**
+  ([workshop overview](https://www.w3.org/2026/ecommerce-agents/), [W3C news](https://www.w3.org/news/2026/upcoming-w3c-gs1-workshop-on-e-commerce-for-humans-and-ai-agents/)).
+  This is the two standards bodies our spec explicitly aligns to (§2: W3C VC 2.0 + GS1 Digital
+  Link) convening jointly on how AI agents interact with e-commerce and product data — directly
+  adjacent to both this protocol and to Move 2 of the leadership strategy (agent-payable
+  verification). The Position Statement / Expression of Interest deadline was 2026-07-10 — long
+  past — so there is nothing to submit; the only remaining move is to watch for published
+  outputs (minutes, position statements, any resulting Community Group work) once the workshop
+  happens. OriginTrail has separately said it will attend
+  ([TradingView/Coindar reprint](https://www.tradingview.com/news/coindar:afb62218b094b:0-origintrail-to-attend-w3c-gs1-workshop-in-zurich-on-september-8th/) —
+  a market-data aggregator's syndication of a press item, not a primary source).
+- **OriginTrail (adjacent, not a direct competitor):** "Election Guardian," built with Viva AI on
+  OriginTrail's Decentralized Knowledge Graph, launched 2026-08-21 across the Americas for
+  deepfake and disinformation detection during elections; source is OriginTrail's own material,
+  not independently corroborated. Its **DKGcon 2026** runs online, live from Zurich, 2026-09-11,
+  themed "Scaling trust in the age of AI — verifying what's real, from deepfakes to
+  impersonation" ([event page](https://dkgcon.origintrail.io/)). Both are content/media
+  authenticity and disinformation-detection use cases, not physical-item provenance — adjacent
+  noise in our narrow scope, not a direct competitive signal, but notable that three
+  trust-and-verification events (W3C/GS1, DKGcon, and the Global Digital Collaboration
+  Conference, 2026-09-01–03, Geneva) all landed in the same September window.
+- **Quiet this week:** no EPCIS/CBV version change beyond an already-reported 2026-08-15 page
+  refresh; no dated Transmute news; no further milestone on Confidence Method / Render Method
+  beyond what was already reported 2026-08-26 (both still targeting W3C Recommendation status in
+  September 2026 per the working group charter — no confirmation found this week that either has
+  actually been published as a Recommendation yet); the UK GOV.UK digital product record
+  consultation (see below) had no news beyond remaining open.
+
+### Where we are genuinely differentiated
+
+- **Offline verification with no server dependency** — unchanged, and now facing its first
+  concrete formal-standard comparison rather than only vendor/W3C comparisons: FprEN 18246's
+  ESDC model is the thing to check this against once it publishes and is actually readable,
+  since today's finding is catalog-summary-level only.
+- **Adversarial conformance suite validated against deliberately broken implementations** — the
+  IACR paper on C2PA, if its summarized findings hold up, is the sharpest external validation of
+  this differentiator found in any week so far: a widely-deployed provenance conformance program
+  reportedly certifying products "without technical review," which is precisely the failure mode
+  `conformance/README.md` was built to make impossible for us. Flagged as summary-sourced, not
+  independently confirmed — worth reading the full paper before repeating this claim publicly.
+- **Apache-2.0 with a patent grant on the protocol, proprietary platform** — unchanged.
+- **Three verdicts, no score** — unchanged from the 2026-08-26 correction; no new information
+  this week either direction.
+
+### Where we are genuinely behind
+
+- **No revocation until v0.2** — unchanged, but the C2PA findings (summary-sourced) sharpen what
+  "solving" this actually requires: a shipped, adopted, industry-standard revocation mechanism is
+  reportedly failing in practice at the certificate-checking step. Simply adding
+  `credentialStatus` in v0.2 without a robust operational revocation-checking story could
+  reproduce the same failure mode rather than fix it. The honest framing is not just "we don't
+  have revocation yet" but "we don't yet have a plan for avoiding C2PA's reported failure mode
+  when we do."
+- **Signatures prove authorship, not truth** — unchanged, structural.
+- **No crypto-agility or post-quantum story** — unchanged from last week; not yet addressed.
+- **New this week: our record vocabulary has no stated relationship to the EU's emerging DPP
+  vocabulary.** If FprEN 18246 publishes with ESDC/ISO-IEC-20248 as the reference model for
+  "data authentication" in European DPP implementations, `SPEC.md` §2's alignment table (W3C VC
+  2.0, GS1 Digital Link, CAIP-2) has nothing bridging to it. Not a defect today — the standard
+  isn't published yet — but worth tracking before it calcifies into "two incompatible ways to
+  sign the same kind of record, invented independently."
+
+### Named awareness targets
+
+- **UK GOV.UK digital product record call for evidence** —
+  [gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy](https://www.gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy).
+  Carried forward from last week and now the most time-boxed item on this radar: closes
+  **2026-09-21**, 19 days from today, and still not acted on. This remains the single most
+  actionable item precisely because the window to submit is still open, unlike the two other
+  items below.
+- **FprEN 18246 (CEN-CLC/JTC 24)** — publication expected this month. Once it's actually
+  publishable and readable in full, a short technical note mapping our Ed25519+JCS signed-record
+  model against its ESDC/ISO-IEC-20248 model is the single most relevant thing we could publish
+  next quarter: it would surface for the exact audience — EU compliance engineers implementing
+  DPP data authentication — who will be searching for practical guidance the standard itself
+  won't provide.
+- **W3C/GS1 Workshop on E-commerce for Humans and AI Agents**, 2026-09-08–09, Zurich —
+  [w3.org/2026/ecommerce-agents](https://www.w3.org/2026/ecommerce-agents/). Submission window
+  closed; the move is to watch for published minutes or follow-on Community Group work once the
+  workshop happens, since it sits at the exact intersection of our two aligned standards and our
+  agentic-verification strategy.
+- **IACR eprint 2026/804 / the UMBC group behind it** —
+  [eprint.iacr.org/2026/804](https://eprint.iacr.org/2026/804) (blocked this session; revisit
+  directly next week). If they publish a cross-industry "lessons learned" piece, our
+  conformance-suite-with-teeth story is a natural point of contrast worth having ready.
+
+### Spec gaps
+
+Noted here per instructions, not edited into `SPEC.md`:
+
+- Carried over, unresolved: `confidenceMethod`-style interaction with the §5.1 verdict; no named
+  mechanism for v0.2 `credentialStatus` revocation (Bitstring Status List remains the plausible
+  candidate); Ed25519-only with no crypto-agility or post-quantum migration statement.
+- New this week: no bridging or mapping between our record vocabulary and the EU's emerging
+  ESDC/ISO-IEC-20248 vocabulary for the same underlying problem (signed-record authenticity for
+  provenance/passport data). Not a spec defect today since FprEN 18246 isn't published yet, but
+  worth a forward note once it is, so the gap doesn't calcify into two incompatible vocabularies
+  for the same idea.
+
+---

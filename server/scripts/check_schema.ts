@@ -1,6 +1,10 @@
 import "dotenv/config";
 import { getDb } from "../db.js";
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function checkLeadsSchema() {
   console.log("🔍 Checking MySQL Schema for 'leads' table...");
   const d = await getDb();
@@ -11,10 +15,10 @@ async function checkLeadsSchema() {
   
   try {
     const result = await d.execute("DESCRIBE leads");
-    const rows = (result as any).rows ?? result;
+    const rows = (result as { rows?: unknown }).rows ?? result;
     console.log(JSON.stringify(rows, null, 2));
-  } catch (err: any) {
-    console.error("❌ Schema check failed:", err.message);
+  } catch (err: unknown) {
+    console.error("❌ Schema check failed:", getErrorMessage(err));
   }
   process.exit(0);
 }

@@ -1,4 +1,16 @@
 import { timingSafeEqual } from "crypto";
+import { Router, type Request, type Response } from "express";
+import { ENV } from "./_core/env";
+import { invokeLLM, parseLLMContent } from "./_core/llm";
+import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
+import { createProduct, getCertificateByNumber, getDb, getWhiteLabelByApiKey } from "./db";
+import { computeTrustScore, generateProductQRON } from "./qron-service";
+import { reportUsageToStripe } from "./tenant-billing";
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return typeof err === "string" ? err : "Unknown error";
+}
 
 function timingSafeStringEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
@@ -6,13 +18,6 @@ function timingSafeStringEqual(a: string, b: string): boolean {
   if (bufA.length !== bufB.length) return false;
   return timingSafeEqual(bufA, bufB);
 }
-import { Router, type Request, type Response } from "express";
-import { getCertificateByNumber, getWhiteLabelByApiKey, createProduct, getDb } from "./db";
-import { computeTrustScore, generateProductQRON } from "./qron-service";
-import { calculateStrainRarity, formatTruthLayerMetadata } from "./cannabis-service";
-import { invokeLLM, parseLLMContent } from "./_core/llm";
-import { ENV } from "./_core/env";
-import { reportUsageToStripe } from "./tenant-billing";
 
 /**
  * Internal API routes for the authichain-gateway Cloudflare Worker.
@@ -83,8 +88,8 @@ export function createInternalRouter(): Router {
         riskFlags: result.riskFlags || [],
         agents: ["Guardian", "Archivist", "Sentinel", "Scout", "Arbiter"],
       });
-    } catch (err: any) {
-      console.error("[Internal API] verify error:", err.message);
+    } catch (err: unknown) {
+      console.error("[Internal API] verify error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -92,7 +97,7 @@ export function createInternalRouter(): Router {
   // ─── POST /api/internal/qr/generate ──────────────────────────��─────────────
   router.post("/qr/generate", async (req: Request, res: Response) => {
     try {
-      const { url, data, style, productName, brand, productId, prompt } = req.body;
+      const { url, data, style, productName, brand, productId, _unused_prompt_95 } = req.body;
       const qrData = url || data;
       if (!qrData) return res.status(400).json({ error: "url or data required" });
 
@@ -105,8 +110,8 @@ export function createInternalRouter(): Router {
       });
 
       res.json(result);
-    } catch (err: any) {
-      console.error("[Internal API] qr/generate error:", err.message);
+    } catch (err: unknown) {
+      console.error("[Internal API] qr/generate error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -129,8 +134,8 @@ export function createInternalRouter(): Router {
         expiresAt: cert.expiresAt,
         blockchainVerified: !!cert.blockchainTxHash,
       });
-    } catch (err: any) {
-      console.error("[Internal API] certificates/verify error:", err.message);
+    } catch (err: unknown) {
+      console.error("[Internal API] certificates/verify error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -164,8 +169,8 @@ export function createInternalRouter(): Router {
         complianceStatus: dispensaryId ? "compliant" : "unverified",
         truthLayer,
       });
-    } catch (err: any) {
-      console.error("[Internal API] cannabis/verify error:", err.message);
+    } catch (err: unknown) {
+      console.error("[Internal API] cannabis/verify error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -187,8 +192,8 @@ export function createInternalRouter(): Router {
         ...score,
         inputs: { qrDecodePass, blockchainCertExists, nfcMatch, visualMatch, geoFenceOk },
       });
-    } catch (err: any) {
-      console.error("[Internal API] trust-score error:", err.message);
+    } catch (err: unknown) {
+      console.error("[Internal API] trust-score error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -209,8 +214,8 @@ export function createInternalRouter(): Router {
         activeAgents: 5,
         message: "Analytics data will be populated once usage metering is active",
       });
-    } catch (err: any) {
-      console.error("[Internal API] analytics error:", err.message);
+    } catch (err: unknown) {
+      console.error("[Internal API] analytics error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -236,8 +241,8 @@ export function createInternalRouter(): Router {
       });
 
       res.json({ success: true, product });
-    } catch (err: any) {
-      console.error("[Internal API] products/register error:", err.message);
+    } catch (err: unknown) {
+      console.error("[Internal API] products/register error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -258,8 +263,8 @@ export function createInternalRouter(): Router {
       );
 
       res.json({ success: true, processed: records.length });
-    } catch (err: any) {
-      console.error("[Internal API] usage/report error:", err.message);
+    } catch (err: unknown) {
+      console.error("[Internal API] usage/report error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -282,8 +287,8 @@ export function createInternalRouter(): Router {
         monthlyApiCalls: tenant.monthlyApiCalls,
         features: tenant.features,
       });
-    } catch (err: any) {
-      console.error("[Internal API] tenant error:", err.message);
+    } catch (err: unknown) {
+      console.error("[Internal API] tenant error:", getErrorMessage(err));
       res.status(500).json({ error: "Internal server error" });
     }
   });

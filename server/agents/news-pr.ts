@@ -2,9 +2,23 @@
  * Newsjacking PR Agent — AgentZ Global Authority Force
  * Monitors news and drafts automated technical PR responses.
  */
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity, enqueueTask, getDb } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
+import { enqueueTask, logActivity } from '../db.js';
+
+type NewsStory = {
+  storyTitle: string;
+  sourceUrl: string;
+  summary: string;
+  incidentDate: string;
+  whyAuthiChainFixesThis: string;
+  technicalAngle: string;
+};
+
+type PressReleaseDraft = {
+  prTitle: string;
+  prBody: string;
+};
 
 export async function runNewsjackingMonitor(task: Task): Promise<void> {
   const p = task.payload as { topics: string[] };
@@ -34,7 +48,7 @@ Return JSON:
       responseFormat: { type: 'json_object' }
     });
 
-    const story = parseLLMContent<any>(result.choices[0].message.content);
+    const story = parseLLMContent<NewsStory>(result.choices[0].message.content);
     console.log(`[Newsjacking] Target Story Found: ${story.storyTitle}`);
 
     // 2. Draft the Technical Press Release
@@ -59,7 +73,7 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
       responseFormat: { type: 'json_object' }
     });
 
-    const pr = parseLLMContent<any>(prResult.choices[0].message.content);
+    const pr = parseLLMContent<PressReleaseDraft>(prResult.choices[0].message.content);
 
     // 3. Log findings and enqueue the next steps
     await logActivity({
@@ -84,7 +98,7 @@ Return JSON: { "prTitle": "...", "prBody": "..." }
 
     console.log(`✅ Newsjacking analysis complete for: ${story.storyTitle}`);
 
-  } catch (err: any) {
+  } catch (_unused_err_87: unknown) {
     console.warn("⚠️ Newsjacking Monitor primary path failed. Executing high-fidelity Production Fallback...");
     
     // PRODUCTION FALLBACK: Medtronic Bravo Esophageal pH Monitoring Capsules Recall (Jan 2026)

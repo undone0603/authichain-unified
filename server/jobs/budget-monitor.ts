@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { createSystemNotification, getAllUsers, getBudgetStatus, getRecentActivity, logActivity } from "../db";
 
 type Threshold = 70 | 90;
+type BudgetAlertDetails = Record<string, unknown>;
 
 function alertAction(metric: string, threshold: Threshold, periodKey: string) {
   return `budget_alert_${metric}_${threshold}_${periodKey}`;
@@ -13,7 +14,7 @@ async function alreadyAlerted(action: string) {
   return recent.some(a => a.action === action);
 }
 
-async function notifyAdmins(title: string, message: string, details: any) {
+async function notifyAdmins(title: string, message: string, details: BudgetAlertDetails) {
   const admins = (await getAllUsers()).filter(u => u.role === "admin");
   for (const admin of admins) {
     await createSystemNotification(admin.id, title, message, "alert", "/admin");

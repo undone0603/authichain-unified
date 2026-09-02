@@ -5,6 +5,25 @@
  */
 import { invokeLLM } from "../_core/llm";
 
+type JsonObject = Record<string, unknown>;
+type ExecutiveProspect = JsonObject & {
+  name?: string;
+  company?: string;
+  dba?: string;
+  industry?: string;
+  city?: string;
+};
+type ExecutivePartner = JsonObject & {
+  name?: string;
+  company?: string;
+  focus?: string;
+};
+type LinkedInPostOptions = JsonObject;
+type ProductAnnouncementDetails = JsonObject;
+type CompetitorProfile = JsonObject;
+type EmailCampaignDetails = JsonObject;
+type ExecutiveMetrics = JsonObject;
+
 export const AUTHICHAIN_CONTEXT = {
   company: "AuthiChain",
   tagline: "The Truth Layer for the Physical World",
@@ -39,7 +58,7 @@ export class ExecutiveAgent {
   /**
    * Drafts a targeted sales email for the Michigan Margin Protection campaign.
    */
-  async draftMarginProtectionEmail(prospect: any) {
+  async draftMarginProtectionEmail(prospect: ExecutiveProspect) {
     const prompt = `Draft a high-urgency sales email for the Michigan Cannabis 24% wholesale tax panic.
     
     Prospect: ${prospect.name} at ${prospect.company} (${prospect.dba})
@@ -67,7 +86,7 @@ export class ExecutiveAgent {
   /**
    * Generates a LinkedIn "Surround" message for the 11 Michigan vectors.
    */
-  async generateLinkedInSurround(lead: any) {
+  async generateLinkedInSurround(lead: ExecutiveProspect & { type?: string }) {
     const prompt = `Generate a concise LinkedIn connection request for: ${lead.name} at ${lead.company}.
     They just received an email about "Margin Protection" for their ${lead.type} in ${lead.city}.
     
@@ -85,7 +104,7 @@ export class ExecutiveAgent {
   /**
    * Generates a Daily Executive Briefing based on platform metrics.
    */
-  async generateDailyBriefing(metrics: any) {
+  async generateDailyBriefing(metrics: ExecutiveMetrics) {
     const prompt = `You are the AuthiChain Executive Assistant. Generate a concise morning briefing.
     Metrics: ${JSON.stringify(metrics)}
     Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}
@@ -98,21 +117,21 @@ export class ExecutiveAgent {
     return response.choices[0].message.content as string;
   }
 
-  async draftSalesEmail(prospect: any): Promise<string> {
+  async draftSalesEmail(prospect: ExecutiveProspect): Promise<string> {
     const response = await invokeLLM({
       messages: [{ role: "system", content: `Draft a personalized cold sales email for prospect: ${JSON.stringify(prospect)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}. Under 150 words. Professional tone.` }]
     });
     return response.choices[0].message.content as string;
   }
 
-  async draftPartnershipEmail(partner: any): Promise<string> {
+  async draftPartnershipEmail(partner: ExecutivePartner): Promise<string> {
     const response = await invokeLLM({
       messages: [{ role: "system", content: `Draft a partnership proposal email for: ${JSON.stringify(partner)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}. Under 200 words.` }]
     });
     return response.choices[0].message.content as string;
   }
 
-  async generateLinkedInPost(topic: string, options?: any): Promise<string> {
+  async generateLinkedInPost(topic: string, options?: LinkedInPostOptions): Promise<string> {
     const response = await invokeLLM({
       messages: [{ role: "system", content: `Write a LinkedIn post about: ${topic}. Options: ${JSON.stringify(options ?? {})}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}. Engaging, professional, 150-300 words.` }]
     });
@@ -126,7 +145,7 @@ export class ExecutiveAgent {
     return response.choices[0].message.content as string;
   }
 
-  async generateProductAnnouncement(details: any): Promise<string> {
+  async generateProductAnnouncement(details: ProductAnnouncementDetails): Promise<string> {
     const response = await invokeLLM({
       messages: [{ role: "system", content: `Write a product announcement (email + social + in-app copy) for: ${JSON.stringify(details)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.` }]
     });
@@ -140,7 +159,7 @@ export class ExecutiveAgent {
     return response.choices[0].message.content as string;
   }
 
-  async analyzeCompetitor(competitor: any): Promise<string> {
+  async analyzeCompetitor(competitor: CompetitorProfile): Promise<string> {
     const response = await invokeLLM({
       messages: [{ role: "system", content: `Analyze competitor and provide positioning strategy: ${JSON.stringify(competitor)}. AuthiChain context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.` }]
     });
@@ -161,7 +180,7 @@ export class ExecutiveAgent {
     return response.choices[0].message.content as string;
   }
 
-  async generateEmailCampaign(details: any): Promise<string> {
+  async generateEmailCampaign(details: EmailCampaignDetails): Promise<string> {
     const response = await invokeLLM({
       messages: [{ role: "system", content: `Generate an email campaign (subject lines + body + CTA options) for: ${JSON.stringify(details)}. Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}.` }]
     });

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+  import { NextRequest,NextResponse } from 'next/server';
 
 // GET /api/v1/campaign - List QR code campaigns with analytics
 export async function GET(req: NextRequest) {
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     };
 
     return NextResponse.json({ success: true, campaign }, { status: 201 });
-  } catch (err) {
+  } catch (_unused_err_125) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 }

@@ -1,0 +1,11 @@
+{
+  "name": "gs1-resolver",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "schema": "wrangler d1 execute authichain-provenance --file=src/schema.sql",
+    "test": "node --experimental-strip-types src/gs1.test.ts && node --experimental-strip-types src/worker.test.ts"
+  }
+}

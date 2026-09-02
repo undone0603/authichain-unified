@@ -1,8 +1,8 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity } from '../db.js';
-import { postThread } from '../twitter-service.js';
-import { postLinkedInThread } from '../linkedin-service.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+  import type { MissionTask as Task } from '../../drizzle/schema.js';
+  import { invokeLLM,parseLLMContent } from '../_core/llm.js';
+  import { logActivity } from '../db.js';
+  import { postLinkedInThread } from '../linkedin-service.js';
+  import { postThread } from '../twitter-service.js';
 
 interface ContentPayload {
   audience?: string;
@@ -32,7 +32,7 @@ Return JSON: { "title": "...", "categories": [{ "name": "...", "items": [{ "task
     responseFormat: { type: 'json_object' },
   });
 
-  const checklist = parseLLMContent<unknown>(result.choices[0].message.content);
+  const _unused_checklist_35 = parseLLMContent<unknown>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'launch_checklist_generated', entityType: 'task', entityId: 0, details: { taskId: task.id,
     scope,
@@ -94,7 +94,7 @@ Return JSON: { "headline": "...", "subheadline": "...", "body": "...", "quote": 
     responseFormat: { type: 'json_object' },
   });
 
-  const pr = parseLLMContent<unknown>(result.choices[0].message.content);
+  const _unused_pr_97 = parseLLMContent<unknown>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'press_release_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
     missionId: task.missionId,

@@ -3,9 +3,8 @@
  * Facilitates real-time synchronization between state seed-to-sale data 
  * and the AuthiChain Bitcoin L1 Truth Layer.
  */
-import { ENV } from "./_core/env";
-import * as db from "./db";
-import { broadcastSocialProof } from "./social-service";
+  import * as db from "./db";
+  import { broadcastSocialProof } from "./social-service";
 
 interface MetrcAuth {
   vendorKey: string;
@@ -39,7 +38,7 @@ export async function syncMetrcTransfers(auth: MetrcAuth) {
     "https://api-mi-backup.metrc.com" // Simulated fallback
   ];
 
-  let lastError: Error | null = null;
+  let _unused_lastError_76: Error | null = null;
 
   for (const baseUrl of endpoints) {
     for (let attempt = 1; attempt <= 3; attempt++) {
@@ -74,7 +73,7 @@ export async function syncMetrcTransfers(auth: MetrcAuth) {
 
       } catch (err: any) {
         console.warn(`[METRC] ${baseUrl} exception: ${err.message}`);
-        lastError = err;
+        _unused_lastError_76 = err;
         await new Promise(r => setTimeout(r, attempt * 1000));
       }
     }
@@ -88,7 +87,7 @@ export async function syncMetrcTransfers(auth: MetrcAuth) {
  * Anchors a METRC package to a Bitcoin Inscription.
  * This turns a state compliance record into a permanent brand asset.
  */
-export async function anchorPackageToTruthLayer(packageTag: string, manifestId: string) {
+export async function anchorPackageToTruthLayer(packageTag: string, _unused_manifestId_90: string) {
   // 1. Verify manifest existence in DB
   // 2. Trigger Inscription via qron-ordinal-worker
   // 3. Update AuthiChain certificate status

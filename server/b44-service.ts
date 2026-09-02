@@ -3,8 +3,7 @@
  * Connects the unified backend to the B44 ProductDNA engine.
  * URL: https://chain-pay-a81f7780.base44.app/
  */
-import { ENV } from "./_core/env";
-import * as db from "./db";
+  import * as db from "./db";
 
 const B44_BASE_URL = "https://chain-pay-a81f7780.base44.app";
 const FREE_TIER_MONTHLY_LIMIT = 50; // Assumed free tier cap for ProductDNA analysis

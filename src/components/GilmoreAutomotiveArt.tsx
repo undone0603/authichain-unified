@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react';
-import { Car, Sparkles, Image as ImageIcon, CheckCircle, Loader2 } from 'lucide-react';
+  import { Car,CheckCircle,Loader2,Sparkles } from 'lucide-react';
+  import { useState } from 'react';
 
 export default function GilmoreAutomotiveArt() {
   const [carModel, setCarModel] = useState('Duesenberg Model J');
   const [year, setYear] = useState('1929');
   const [style, setStyle] = useState<'classic_photo' | 'brushed_aluminum' | 'blueprint' | 'neon_night'>('classic_photo');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<{ imageUrl: string; id: string } | null>(null);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -85,7 +85,7 @@ export default function GilmoreAutomotiveArt() {
             ].map((s) => (
               <button
                 key={s.id}
-                onClick={() => setStyle(s.id as any)}
+                onClick={() => setStyle(s.id as typeof style)}
                 className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                   style === s.id 
                     ? 'bg-gold text-black' 

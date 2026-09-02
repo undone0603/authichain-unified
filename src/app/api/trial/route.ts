@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+  import { NextRequest,NextResponse } from 'next/server';
 
 const TRIAL_PLANS = [
   {
@@ -72,7 +72,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { email, name, company, plan_id = 'pro_trial', use_case, referral_code } = body;
+  const { email, name, company, plan_id = 'pro_trial', _unused_use_case_75, referral_code } = body;
 
   if (!email) {
     return NextResponse.json({ error: 'email is required to start a trial' }, { status: 400 });

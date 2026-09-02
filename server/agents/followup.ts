@@ -11,6 +11,11 @@ interface FollowupPayload {
   maxFollowups?: number;
 }
 
+type EmailDraftResult = {
+  subject?: string;
+  body?: string;
+};
+
 export async function runFollowupSequence(task: Task): Promise<void> {
   const payload = task.payload as FollowupPayload;
   const segment = payload.segment ?? 'GOV';
@@ -53,7 +58,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
     let subject: string;
     let body: string;
     try {
-      const parsed = parseLLMContent<any>(result.choices[0].message.content);
+      const parsed = parseLLMContent<EmailDraftResult>(result.choices[0].message.content);
       subject = parsed.subject ?? `Follow-up ${followupNum}: AuthiChain`;
       body = parsed.body ?? '';
     } catch {

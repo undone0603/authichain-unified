@@ -58,10 +58,6 @@ sync_key AIRTABLE_BASE_ID
 sync_key CLOUDFLARE_API_TOKEN
 sync_key CLOUDFLARE_ACCOUNT_ID
 
-# Vercel
-sync_key VERCEL_TOKEN
-sync_key VERCEL_TEAM_ID              VERCEL_ORG_ID
-
 # Misc
 sync_key SLACK_SIGNING_SECRET        SLACK_BOT_TOKEN
 sync_key PINECONE_API_KEY

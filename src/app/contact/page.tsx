@@ -26,13 +26,15 @@ export default function ContactPage() {
         }),
       });
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(j.error ?? "Submission failed");
       }
       setStatus("done");
-    } catch (err: any) {
+    } catch (err) {
       setErrorMsg(
-        err.message ?? "Something went wrong. Please email us directly."
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please email us directly."
       );
       setStatus("error");
     }

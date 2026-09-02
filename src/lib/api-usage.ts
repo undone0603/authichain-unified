@@ -1,6 +1,6 @@
-import { db } from "@/db";
-import { apiUsage, subscriptions } from "@/db/schema";
-import { eq, and, gte } from "drizzle-orm";
+  import { db } from "@/db";
+  import { apiUsage,subscriptions } from "@/db/schema";
+  import { and,eq } from "drizzle-orm";
 
 export class ApiUsageLimitError extends Error {
   constructor(message: string) {

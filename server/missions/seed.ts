@@ -14,6 +14,8 @@ import { leads, missionTasks } from '../../drizzle/schema.js';
 import { eq, and } from 'drizzle-orm';
 import type { MissionType } from './types.js';
 
+type SeedLead = typeof leads.$inferInsert;
+
 const ALL_TYPES: MissionType[] = [
   'GOV_PILOT',
   'RETAIL_PILOT',
@@ -23,7 +25,7 @@ const ALL_TYPES: MissionType[] = [
   'LAUNCH_AUTHICHAIN',
 ];
 
-const TEST_LEADS = [
+const TEST_LEADS: SeedLead[] = [
   {
     email: 'procurement@gsa.test.gov',
     name: 'Jordan Mitchell',
@@ -73,7 +75,7 @@ const TEST_LEADS = [
     title: 'Senior Reporter',
     source: 'seed',
     status: 'new',
-    segment: 'PRESS' as any,
+    segment: 'PRESS',
     notes: 'Covers blockchain product launches.',
   },
 ];
@@ -90,7 +92,7 @@ async function seedLeads(db: NonNullable<Awaited<ReturnType<typeof getDb>>>) {
     if (existing.length === 0) {
       await db.insert(leads).values({
         ...lead,
-        nextActionAt: (lead as any).nextActionAt ?? null,
+        nextActionAt: lead.nextActionAt ?? null,
       });
       inserted++;
     }

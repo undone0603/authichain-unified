@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { Sparkles, Zap, Eye, TrendingUp, ArrowRight } from 'lucide-react';
+  import { Eye,Sparkles,TrendingUp,Zap } from 'lucide-react';
+  import Link from 'next/link';
 
 const PURPLE = '#8b5cf6';
 const PINK = '#ec4899';

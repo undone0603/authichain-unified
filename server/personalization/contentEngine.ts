@@ -1,4 +1,4 @@
-import { invokeLLM, parseLLMContent } from "../_core/llm";
+  import { invokeLLM,parseLLMContent } from "../_core/llm";
 
 /**
  * AI Content Personalization Engine
@@ -331,7 +331,7 @@ export function parseUTMParams(url: string): {
       utmMedium: urlObj.searchParams.get("utm_medium") || undefined,
       utmCampaign: urlObj.searchParams.get("utm_campaign") || undefined,
     };
-  } catch (error) {
+  } catch (_unused_error_334) {
     return {};
   }
 }

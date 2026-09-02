@@ -2,11 +2,13 @@ import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import * as cookie from "cookie";
-import type { Request } from "express";
-// cookie@2 renamed parse → parseCookie; keep a local alias for either shape.
-const parseCookieHeader: (str: string) => Record<string, string | undefined> =
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (cookie as any).parseCookie ?? (cookie as any).parse;
+// The root and workers tsc programs resolve different major versions of
+// "cookie" (v2 exports parseCookie, v0.x exports parse) — index through an
+// untyped view so either version's export satisfies both programs.
+const cookieModule = cookie as unknown as Record<string, unknown>;
+const parseCookieHeader = (cookieModule.parseCookie ?? cookieModule.parse) as (
+  str: string
+) => Record<string, string | undefined>;
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
@@ -21,6 +23,19 @@ import type {
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
+
+type UserInfoWithPlatforms<T> = T & {
+  platform?: string | null;
+  platforms?: unknown;
+};
+
+// The global Fetch API Request, not express's — this authenticates both
+// Fetch-style handlers and Express-like request objects (headers.cookie).
+type HeaderCarrier = globalThis.Request | { headers: { cookie?: string } };
+type RequestHeadersLike = {
+  get?: (name: string) => string | null;
+  cookie?: string;
+};
 
 export type SessionPayload = {
   openId: string;
@@ -138,12 +153,13 @@ class SDKServer {
     const data = await this.oauthService.getUserInfoByToken({
       accessToken,
     } as ExchangeTokenResponse);
+    const enrichedData = data as UserInfoWithPlatforms<GetUserInfoResponse>;
     const loginMethod = this.deriveLoginMethod(
-      (data as any)?.platforms,
-      (data as any)?.platform ?? data.platform ?? null
+      enrichedData.platforms,
+      enrichedData.platform ?? data.platform ?? null
     );
     return {
-      ...(data as any),
+      ...data,
       platform: loginMethod,
       loginMethod,
     } as GetUserInfoResponse;
@@ -156,7 +172,7 @@ class SDKServer {
 
     const parsed = parseCookieHeader(cookieHeader);
     const entries = Object.entries(parsed).filter(
-      (entry): entry is [string, string] => typeof entry[1] === "string",
+      (entry): entry is [string, string] => typeof entry[1] === "string"
     );
     return new Map(entries);
   }
@@ -252,24 +268,26 @@ class SDKServer {
       payload
     );
 
+    const enrichedData =
+      data as UserInfoWithPlatforms<GetUserInfoWithJwtResponse>;
     const loginMethod = this.deriveLoginMethod(
-      (data as any)?.platforms,
-      (data as any)?.platform ?? data.platform ?? null
+      enrichedData.platforms,
+      enrichedData.platform ?? data.platform ?? null
     );
     return {
-      ...(data as any),
+      ...data,
       platform: loginMethod,
       loginMethod,
     } as GetUserInfoWithJwtResponse;
   }
 
-  async authenticateRequest(req: Request | { headers: { cookie?: string } }): Promise<User> {
+  async authenticateRequest(req: HeaderCarrier): Promise<User> {
     // Regular authentication flow
     // Support both Fetch API Request (headers.get()) and Express-like objects (headers.cookie).
     let cookieHeader: string | undefined;
 
     // Try Fetch API headers.get() first
-    const headersObj = req.headers as any;
+    const headersObj = req.headers as RequestHeadersLike;
     if (typeof headersObj.get === "function") {
       const result = headersObj.get("cookie");
       if (result) {

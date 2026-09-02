@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+  import { NextRequest,NextResponse } from 'next/server';
 
 // GET /api/settings - Get workspace settings
-export async function GET(req: NextRequest) {
+export async function GET(_unused_req_4: NextRequest) {
   try {
     const settings = {
       workspace: {

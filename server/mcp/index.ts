@@ -1,8 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { getCertificateByNumber, getProductById } from "../db";
 import { classifyIndustry } from "../../shared/industries";
+import { getCertificateByNumber, getProductById } from "../db";
 
 /**
  * AuthiChain MCP Server
@@ -56,7 +56,7 @@ server.tool(
       .optional()
       .describe("Amount of $QRON to lock as a trust bounty"),
   },
-  async ({ productId, userId, bountyAmount }) => {
+  async ({ productId }) => {
     // This calls our internal DB/Blockchain logic
     return {
       content: [

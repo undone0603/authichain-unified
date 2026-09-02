@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { COOKIE_NAME } from "@shared/const";
-import { sdk } from "./sdk";
-import * as db from "../db";
+  import { COOKIE_NAME } from "@shared/const";
+  import { afterEach,beforeEach,describe,expect,it,vi } from "vitest";
+  import { sdk } from "./sdk";
 
 // Mock the db module to avoid database dependencies
 vi.mock("../db", () => ({
@@ -33,7 +32,7 @@ describe("sdk.authenticateRequest", () => {
       });
 
       try {
-        await sdk.authenticateRequest(req as any);
+        await sdk.authenticateRequest(req);
       } catch (error) {
         // Expected to fail due to invalid session, but extraction should have worked
         expect(error).toBeDefined();
@@ -55,7 +54,7 @@ describe("sdk.authenticateRequest", () => {
       };
 
       try {
-        await sdk.authenticateRequest(req as any);
+        await sdk.authenticateRequest(req);
       } catch (error) {
         // Expected to fail due to invalid session, but extraction should have worked
         expect(error).toBeDefined();
@@ -76,7 +75,7 @@ describe("sdk.authenticateRequest", () => {
       });
 
       try {
-        await sdk.authenticateRequest(req as any);
+        await sdk.authenticateRequest(req);
       } catch (error) {
         expect(error).toBeDefined();
       }
@@ -93,7 +92,7 @@ describe("sdk.authenticateRequest", () => {
       };
 
       try {
-        await sdk.authenticateRequest(req as any);
+        await sdk.authenticateRequest(req);
       } catch (error) {
         expect(error).toBeDefined();
       }

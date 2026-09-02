@@ -1,26 +1,76 @@
-import { NextRequest, NextResponse, after } from 'next/server';
-import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
-import { provisionPurchase } from '@/lib/provisioning';
-import { renderBillingEmail } from '@/lib/billing-emails';
-import { getBrandIdFromMetadata } from '@/lib/brand-billing';
-import { sendEmail } from '@/lib/email';
+import { NextRequest, NextResponse, after } from "next/server";
+import Stripe from "stripe";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { provisionPurchase } from "@/lib/provisioning";
+import { renderBillingEmail } from "@/lib/billing-emails";
+import { getBrandIdFromMetadata } from "@/lib/brand-billing";
+import { sendEmail } from "@/lib/email";
 import {
   anchorStripeReversal,
   anchorStripeSale,
   resolveBuyerWallet,
   resolveSku,
-} from '@/lib/ledger-service';
+} from "@/lib/ledger-service";
 
 // Never anchor test-mode objects from a production deployment.
 function isAnchorable(event: Stripe.Event): boolean {
-  return event.livemode || process.env.NODE_ENV !== 'production';
+  return event.livemode || process.env.NODE_ENV !== "production";
 }
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// Stripe fields typed as `string | Expandable<T> | null` collapse to a plain
+// id string whenever we don't pass `expand`, which this webhook never does.
+function toStripeId(
+  value: string | { id: string } | null | undefined
+): string | null {
+  if (!value) return null;
+  return typeof value === "string" ? value : value.id;
+}
+
+// The Stripe SDK's types no longer expose `subscription`/`payment_intent`
+// directly on Invoice, and `invoice` on Charge, after the account moved to a
+// newer API version's typings — but the webhook payloads on this account's
+// pinned apiVersion still carry them at runtime. Read defensively.
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  return toStripeId(
+    (invoice as unknown as { subscription?: string | { id: string } | null })
+      .subscription ?? null
+  );
+}
+function getInvoicePaymentIntentId(invoice: Stripe.Invoice): string | null {
+  return toStripeId(
+    (invoice as unknown as { payment_intent?: string | { id: string } | null })
+      .payment_intent ?? null
+  );
+}
+function getLinePriceId(line: Stripe.InvoiceLineItem): string | null {
+  return (
+    (line as unknown as { price?: { id: string } | null }).price?.id ?? null
+  );
+}
+function getChargeInvoiceId(charge: Stripe.Charge): string | null {
+  return toStripeId(
+    (charge as unknown as { invoice?: string | { id: string } | null })
+      .invoice ?? null
+  );
+}
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const REFERRAL_REWARD_CREDITS = 100;
+type AdminSupabase = SupabaseClient<any>;
+
+type BillingProfile = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  brand: string | null;
+  subscription_plan: string | null;
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
 
 /**
  * Credit a user-to-user referrer with account credit on the referred buyer's
@@ -31,7 +81,7 @@ async function creditReferral(
   supabase: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   refCode: string | undefined,
   referredEmail: string | null,
-  brand: string,
+  brand: string
 ): Promise<void> {
   if (!refCode || !referredEmail) return;
   const email = referredEmail.toLowerCase().trim();
@@ -39,40 +89,46 @@ async function creditReferral(
 
   try {
     const { data: existing } = await supabase
-      .from('user_referrals')
-      .select('id, status')
-      .eq('ref_code', refCode)
-      .eq('referred_email', email)
+      .from("user_referrals")
+      .select("id, status")
+      .eq("ref_code", refCode)
+      .eq("referred_email", email)
       .maybeSingle();
-    if (existing && (existing.status === 'converted' || existing.status === 'rewarded')) {
+    if (
+      existing &&
+      (existing.status === "converted" || existing.status === "rewarded")
+    ) {
       return; // already credited
     }
 
     const { data: referrer } = await supabase
-      .from('profiles')
-      .select('id, generations_limit')
-      .eq('id', refCode)
+      .from("profiles")
+      .select("id, generations_limit")
+      .eq("id", refCode)
       .maybeSingle();
 
     if (referrer?.id) {
       await supabase
-        .from('profiles')
-        .update({ generations_limit: Number(referrer.generations_limit ?? 0) + REFERRAL_REWARD_CREDITS })
-        .eq('id', referrer.id);
+        .from("profiles")
+        .update({
+          generations_limit:
+            Number(referrer.generations_limit ?? 0) + REFERRAL_REWARD_CREDITS,
+        })
+        .eq("id", referrer.id);
     }
 
-    await supabase.from('user_referrals').insert({
+    await supabase.from("user_referrals").insert({
       ref_code: refCode,
       referrer_id: referrer?.id ?? null,
       referred_email: email,
       brand,
-      status: 'rewarded',
+      status: "rewarded",
       reward_credits: REFERRAL_REWARD_CREDITS,
       converted_at: new Date().toISOString(),
       rewarded_at: new Date().toISOString(),
     });
   } catch (e) {
-    console.error('[webhook] referral credit failed:', e);
+    console.error("[webhook] referral credit failed:", e);
   }
 }
 
@@ -81,19 +137,18 @@ let _stripe: Stripe | null = null;
 function getStripe(): Stripe {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) throw new Error('STRIPE_SECRET_KEY not configured');
-    _stripe = new Stripe(key, { apiVersion: '2026-07-29.dahlia' as const });
+    if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
+    _stripe = new Stripe(key, { apiVersion: "2026-08-26.dahlia" as const });
   }
   return _stripe;
 }
 
-let _supabase: ReturnType<typeof createClient> | null = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getSupabase(): any {
+let _supabase: AdminSupabase | null = null;
+function getSupabase(): AdminSupabase {
   if (!_supabase) {
     _supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
   }
   return _supabase;
@@ -110,36 +165,42 @@ export async function POST(req: NextRequest) {
   ].filter((s): s is string => !!s);
 
   if (!process.env.STRIPE_SECRET_KEY || secrets.length === 0) {
-    return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Stripe not configured" },
+      { status: 500 }
+    );
   }
 
   const stripe = getStripe();
 
   const body = await req.text();
-  const sig = req.headers.get('stripe-signature')!;
+  const sig = req.headers.get("stripe-signature")!;
 
-  let event: any = null;
-  let lastErr = '';
+  let event: Stripe.Event | null = null;
+  let lastErr = "";
   for (const secret of secrets) {
     try {
       event = stripe.webhooks.constructEvent(body, sig, secret);
       break;
-    } catch (err: any) {
-      lastErr = err.message;
+    } catch (err) {
+      lastErr = getErrorMessage(err);
     }
   }
   if (!event) {
-    console.error('Stripe webhook signature verification failed:', lastErr);
-    return NextResponse.json({ error: `Webhook Error: ${lastErr}` }, { status: 400 });
+    console.error("Stripe webhook signature verification failed:", lastErr);
+    return NextResponse.json(
+      { error: `Webhook Error: ${lastErr}` },
+      { status: 400 }
+    );
   }
 
   // Idempotency: Stripe retries deliveries. Skip events we've already recorded
   // so commission accrual and other side effects run at most once per event.
   try {
     const { data: seen } = await getSupabase()
-      .from('stripe_events')
-      .select('event_id')
-      .eq('event_id', event.id)
+      .from("stripe_events")
+      .select("event_id")
+      .eq("event_id", event.id)
       .maybeSingle();
     if (seen) {
       return NextResponse.json({ received: true, duplicate: true });
@@ -150,20 +211,23 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
-      case 'checkout.session.completed': {
+      case "checkout.session.completed": {
         const session = event.data.object;
         const md = session.metadata || {};
         const userId = md.user_id;
         const plan = md.plan;
         const brand = getBrandIdFromMetadata(md);
-        const customerId = session.customer;
-        const subscriptionId = session.subscription;
+        const customerId = toStripeId(session.customer);
+        const subscriptionId = toStripeId(session.subscription);
 
-        const isTrial = md.trial === 'true';
+        const isTrial = md.trial === "true";
         const grantRaw = md.grant;
         const grantParsed = grantRaw ? parseInt(grantRaw, 10) : NaN;
-        const generationsGrant = Number.isNaN(grantParsed) ? undefined : grantParsed;
-        const email = session.customer_email || session.customer_details?.email || null;
+        const generationsGrant = Number.isNaN(grantParsed)
+          ? undefined
+          : grantParsed;
+        const email =
+          session.customer_email || session.customer_details?.email || null;
 
         // Hands-off provisioning for BOTH authenticated and guest checkouts.
         // Guests get a profile created/resolved by email so the purchase is
@@ -180,33 +244,51 @@ export async function POST(req: NextRequest) {
         });
 
         if (prov.profileId) {
-          await getSupabase().from('checkout_sessions').update({ status: 'completed' })
-            .eq('session_id', session.id);
+          await getSupabase()
+            .from("checkout_sessions")
+            .update({ status: "completed" })
+            .eq("session_id", session.id);
 
           // Brand-aware welcome email (replaces the cross-call to /api/email).
           if (email) {
-            const mail = renderBillingEmail('subscription_confirmed', brand, { planName: plan || undefined });
-            await sendEmail({ to: email, from: mail.from, subject: mail.subject, html: mail.html, text: mail.text }).catch(() => {});
+            const mail = renderBillingEmail("subscription_confirmed", brand, {
+              planName: plan || undefined,
+            });
+            await sendEmail({
+              to: email,
+              from: mail.from,
+              subject: mail.subject,
+              html: mail.html,
+              text: mail.text,
+            }).catch(() => {});
           }
         }
 
         // complete_checkout funnel event — success is only known here.
         if (md.prospect_id) {
           try {
-            await getSupabase().from('funnel_events').insert({
-              prospect_id: md.prospect_id,
-              stage: 'complete_checkout',
-              source: md.source || 'direct',
-              metadata: { plan, brand },
-              timestamp: new Date().toISOString(),
-            });
+            await getSupabase()
+              .from("funnel_events")
+              .insert({
+                prospect_id: md.prospect_id,
+                stage: "complete_checkout",
+                source: md.source || "direct",
+                metadata: { plan, brand },
+                timestamp: new Date().toISOString(),
+              });
           } catch (e) {
-            console.error('[webhook] complete_checkout funnel insert failed:', e);
+            console.error(
+              "[webhook] complete_checkout funnel insert failed:",
+              e
+            );
           }
         }
 
         // User-to-user referral account credit (first paid conversion).
-        if (typeof session.amount_total === 'number' && session.amount_total > 0) {
+        if (
+          typeof session.amount_total === "number" &&
+          session.amount_total > 0
+        ) {
           await creditReferral(getSupabase(), md.ref_code, email, brand);
         }
 
@@ -214,40 +296,47 @@ export async function POST(req: NextRequest) {
         // pending_payout when the buyer arrived via an affiliate code.
         // Runs independently of userId (guest checkouts can still be referred).
         const affiliateCode = session.metadata?.affiliate_code;
-        if (affiliateCode && typeof session.amount_total === 'number' && session.amount_total > 0) {
+        if (
+          affiliateCode &&
+          typeof session.amount_total === "number" &&
+          session.amount_total > 0
+        ) {
           try {
             const { data: aff } = await getSupabase()
-              .from('affiliates')
-              .select('id, pending_payout, total_referrals, total_conversions, commission_rate, status')
-              .eq('affiliatecode', affiliateCode)
+              .from("affiliates")
+              .select(
+                "id, pending_payout, total_referrals, total_conversions, commission_rate, status"
+              )
+              .eq("affiliatecode", affiliateCode)
               .maybeSingle();
 
-            if (aff && aff.status === 'active') {
+            if (aff && aff.status === "active") {
               const gross = session.amount_total / 100;
               const rate = Number(aff.commission_rate ?? 0.1);
               const commission = Math.round(gross * rate * 100) / 100;
               if (commission > 0) {
                 await getSupabase()
-                  .from('affiliates')
+                  .from("affiliates")
                   .update({
-                    pending_payout: Number(aff.pending_payout ?? 0) + commission,
+                    pending_payout:
+                      Number(aff.pending_payout ?? 0) + commission,
                     total_referrals: Number(aff.total_referrals ?? 0) + 1,
                     total_conversions: Number(aff.total_conversions ?? 0) + 1,
                     updated_at: new Date().toISOString(),
                   })
-                  .eq('id', aff.id)
-                  .eq('pending_payout', aff.pending_payout ?? 0);
+                  .eq("id", aff.id)
+                  .eq("pending_payout", aff.pending_payout ?? 0);
               }
             }
           } catch (e) {
-            console.error('[webhook] affiliate accrual failed:', e);
+            console.error("[webhook] affiliate accrual failed:", e);
           }
         }
 
         // --- AuthiChainLedger: anchor the sale (non-blocking, never throws) --
         if (
           isAnchorable(event) &&
-          session.payment_status === 'paid' &&
+          session.payment_status === "paid" &&
           (session.amount_total ?? 0) > 0
         ) {
           after(() =>
@@ -256,12 +345,14 @@ export async function POST(req: NextRequest) {
               objectId: session.id,
               sku: resolveSku(md, null),
               amountCents: session.amount_total!,
-              currency: session.currency ?? 'usd',
+              currency: session.currency ?? "usd",
               buyerWallet: resolveBuyerWallet(md),
               stripeCreated: session.created,
-              source: 'live',
+              source: "live",
               paymentIntentId:
-                typeof session.payment_intent === 'string' ? session.payment_intent : null,
+                typeof session.payment_intent === "string"
+                  ? session.payment_intent
+                  : null,
               checkoutSessionId: session.id,
             })
           );
@@ -269,31 +360,34 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      case 'invoice.paid': {
+      case "invoice.paid": {
         const invoice = event.data.object;
-        const customerId = invoice.customer;
-        const subscriptionId = invoice.subscription;
+        const customerId = toStripeId(invoice.customer);
+        const subscriptionId = getInvoiceSubscriptionId(invoice);
         const amountPaid = invoice.amount_paid / 100;
 
         const { data: profile } = await getSupabase()
-          .from('profiles')
-          .select('id, subscription_plan')
-          .eq('stripe_customer_id', customerId)
+          .from("profiles")
+          .select("id, subscription_plan")
+          .eq("stripe_customer_id", customerId)
           .single();
 
         if (profile) {
-          await getSupabase().from('profiles').update({
-            subscription_status: 'active',
-            last_payment_at: new Date().toISOString(),
-          }).eq('id', profile.id);
+          await getSupabase()
+            .from("profiles")
+            .update({
+              subscription_status: "active",
+              last_payment_at: new Date().toISOString(),
+            })
+            .eq("id", profile.id);
 
-          await getSupabase().from('payment_history').insert({
+          await getSupabase().from("payment_history").insert({
             user_id: profile.id,
             stripe_invoice_id: invoice.id,
             stripe_subscription_id: subscriptionId,
             amount: amountPaid,
             currency: invoice.currency,
-            status: 'paid',
+            status: "paid",
             paid_at: new Date().toISOString(),
           });
         }
@@ -302,33 +396,39 @@ export async function POST(req: NextRequest) {
         // The first payment is handled by checkout.session.completed, so we skip
         // billing_reason 'subscription_create' here to avoid double-counting.
         // Event-level idempotency (stripe_events) prevents re-crediting a retry.
-        if (invoice.billing_reason === 'subscription_cycle' && subscriptionId && invoice.amount_paid > 0) {
+        if (
+          invoice.billing_reason === "subscription_cycle" &&
+          subscriptionId &&
+          invoice.amount_paid > 0
+        ) {
           try {
             const sub = await stripe.subscriptions.retrieve(subscriptionId);
             const affiliateCode = sub.metadata?.affiliate_code;
             if (affiliateCode) {
               const { data: aff } = await getSupabase()
-                .from('affiliates')
-                .select('id, pending_payout, commission_rate, status')
-                .eq('affiliatecode', affiliateCode)
+                .from("affiliates")
+                .select("id, pending_payout, commission_rate, status")
+                .eq("affiliatecode", affiliateCode)
                 .maybeSingle();
-              if (aff && aff.status === 'active') {
+              if (aff && aff.status === "active") {
                 const rate = Number(aff.commission_rate ?? 0.1);
-                const commission = Math.round((invoice.amount_paid / 100) * rate * 100) / 100;
+                const commission =
+                  Math.round((invoice.amount_paid / 100) * rate * 100) / 100;
                 if (commission > 0) {
                   await getSupabase()
-                    .from('affiliates')
+                    .from("affiliates")
                     .update({
-                      pending_payout: Number(aff.pending_payout ?? 0) + commission,
+                      pending_payout:
+                        Number(aff.pending_payout ?? 0) + commission,
                       updated_at: new Date().toISOString(),
                     })
-                    .eq('id', aff.id)
-                    .eq('pending_payout', aff.pending_payout ?? 0);
+                    .eq("id", aff.id)
+                    .eq("pending_payout", aff.pending_payout ?? 0);
                 }
               }
             }
           } catch (e) {
-            console.error('[webhook] recurring affiliate accrual failed:', e);
+            console.error("[webhook] recurring affiliate accrual failed:", e);
           }
         }
 
@@ -336,114 +436,149 @@ export async function POST(req: NextRequest) {
         // subscription invoice is already anchored under the checkout
         // session id — anchoring it again here would double-count revenue
         // under a second ref.
-        const isRenewal = invoice.billing_reason !== 'subscription_create';
-        if (isAnchorable(event) && isRenewal && invoice.status === 'paid' && (invoice.amount_paid ?? 0) > 0) {
+        const isRenewal = invoice.billing_reason !== "subscription_create";
+        if (
+          isAnchorable(event) &&
+          isRenewal &&
+          invoice.status === "paid" &&
+          (invoice.amount_paid ?? 0) > 0
+        ) {
           const line = invoice.lines?.data?.[0];
           after(() =>
             anchorStripeSale({
               eventId: event.id,
               objectId: invoice.id!,
-              sku: resolveSku(invoice.metadata, line?.price?.id ?? null),
+              sku: resolveSku(
+                invoice.metadata,
+                line ? getLinePriceId(line) : null
+              ),
               amountCents: invoice.amount_paid!,
-              currency: invoice.currency ?? 'usd',
+              currency: invoice.currency ?? "usd",
               buyerWallet: resolveBuyerWallet(invoice.metadata, line?.metadata),
               stripeCreated: invoice.created,
-              source: 'live',
+              source: "live",
               invoiceId: invoice.id,
-              paymentIntentId:
-                typeof invoice.payment_intent === 'string' ? invoice.payment_intent : null,
+              paymentIntentId: getInvoicePaymentIntentId(invoice),
             })
           );
         }
         break;
       }
 
-      case 'invoice.payment_failed': {
+      case "invoice.payment_failed": {
         const invoice = event.data.object;
-        const customerId = invoice.customer;
+        const customerId = toStripeId(invoice.customer);
 
-        const { data: profile } = await getSupabase()
-          .from('profiles')
-          .select('id, email, full_name, brand, subscription_plan')
-          .eq('stripe_customer_id', customerId)
-          .single() as any;
+        const profileResult = await getSupabase()
+          .from("profiles")
+          .select("id, email, full_name, brand, subscription_plan")
+          .eq("stripe_customer_id", customerId)
+          .single();
+        const profile = profileResult.data as BillingProfile | null;
 
         if (profile) {
-          await getSupabase().from('profiles').update({
-            subscription_status: 'past_due',
-          }).eq('id', profile.id);
+          await getSupabase()
+            .from("profiles")
+            .update({
+              subscription_status: "past_due",
+            })
+            .eq("id", profile.id);
 
           if (profile.email) {
             const brand = getBrandIdFromMetadata({ brand: profile.brand });
-            const mail = renderBillingEmail('payment_failed', brand, {
+            const mail = renderBillingEmail("payment_failed", brand, {
               name: profile.full_name || undefined,
               planName: profile.subscription_plan || undefined,
             });
-            await sendEmail({ to: profile.email, from: mail.from, subject: mail.subject, html: mail.html, text: mail.text }).catch(() => {});
+            await sendEmail({
+              to: profile.email,
+              from: mail.from,
+              subject: mail.subject,
+              html: mail.html,
+              text: mail.text,
+            }).catch(() => {});
           }
         }
         break;
       }
 
-      case 'customer.subscription.deleted': {
+      case "customer.subscription.deleted": {
         const subscription = event.data.object;
-        const customerId = subscription.customer;
+        const customerId = toStripeId(subscription.customer);
 
-        await getSupabase().from('profiles').update({
-          subscription_status: 'cancelled',
-          subscription_plan: 'free',
-          cancelled_at: new Date().toISOString(),
-        }).eq('stripe_customer_id', customerId);
+        await getSupabase()
+          .from("profiles")
+          .update({
+            subscription_status: "cancelled",
+            subscription_plan: "free",
+            cancelled_at: new Date().toISOString(),
+          })
+          .eq("stripe_customer_id", customerId);
         break;
       }
 
-      case 'customer.subscription.updated': {
+      case "customer.subscription.updated": {
         const subscription = event.data.object;
-        const customerId = subscription.customer;
+        const customerId = toStripeId(subscription.customer);
         const status = subscription.status;
 
-        await getSupabase().from('profiles').update({
-          subscription_status: status,
-          stripe_subscription_id: subscription.id,
-        }).eq('stripe_customer_id', customerId);
+        await getSupabase()
+          .from("profiles")
+          .update({
+            subscription_status: status,
+            stripe_subscription_id: subscription.id,
+          })
+          .eq("stripe_customer_id", customerId);
         break;
       }
 
-      case 'customer.subscription.trial_will_end': {
+      case "customer.subscription.trial_will_end": {
         const subscription = event.data.object;
-        const customerId = subscription.customer;
+        const customerId = toStripeId(subscription.customer);
 
-        const { data: profile } = await getSupabase()
-          .from('profiles')
-          .select('id, email, full_name, brand, subscription_plan')
-          .eq('stripe_customer_id', customerId)
-          .single() as any;
+        const profileResult = await getSupabase()
+          .from("profiles")
+          .select("id, email, full_name, brand, subscription_plan")
+          .eq("stripe_customer_id", customerId)
+          .single();
+        const profile = profileResult.data as BillingProfile | null;
 
         if (profile?.email) {
           const brand = getBrandIdFromMetadata({ brand: profile.brand });
-          const mail = renderBillingEmail('trial_expiring', brand, {
+          const mail = renderBillingEmail("trial_expiring", brand, {
             name: profile.full_name || undefined,
             planName: profile.subscription_plan || undefined,
             days: 3,
           });
-          await sendEmail({ to: profile.email, from: mail.from, subject: mail.subject, html: mail.html, text: mail.text }).catch(() => {});
+          await sendEmail({
+            to: profile.email,
+            from: mail.from,
+            subject: mail.subject,
+            html: mail.html,
+            text: mail.text,
+          }).catch(() => {});
         }
         break;
       }
 
-      case 'charge.refunded': {
+      case "charge.refunded": {
         const charge = event.data.object;
 
         // The refund arrives as ch_/pi_, but the sale was anchored under cs_
         // or in_. Resolve the checkout session so the reversal lands right.
         let sessionId: string | undefined;
         const piId =
-          typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
+          typeof charge.payment_intent === "string"
+            ? charge.payment_intent
+            : charge.payment_intent?.id;
         if (piId) {
-          const sessions = await stripe.checkout.sessions.list({ payment_intent: piId, limit: 1 });
+          const sessions = await stripe.checkout.sessions.list({
+            payment_intent: piId,
+            limit: 1,
+          });
           sessionId = sessions.data[0]?.id;
         }
-        const invoiceId = typeof charge.invoice === 'string' ? charge.invoice : charge.invoice?.id;
+        const invoiceId = getChargeInvoiceId(charge);
 
         if (isAnchorable(event)) {
           after(() =>
@@ -456,11 +591,14 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      case 'invoice.voided': {
+      case "invoice.voided": {
         const invoice = event.data.object;
         if (isAnchorable(event)) {
           after(() =>
-            anchorStripeReversal({ eventId: event.id, candidateObjectIds: [invoice.id] })
+            anchorStripeReversal({
+              eventId: event.id,
+              candidateObjectIds: [invoice.id],
+            })
           );
         }
         break;
@@ -471,15 +609,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Log all events
-    await getSupabase().from('stripe_events').insert({
-      event_id: event.id,
-      event_type: event.type,
-      processed_at: new Date().toISOString(),
-    }).select();
+    await getSupabase()
+      .from("stripe_events")
+      .insert({
+        event_id: event.id,
+        event_type: event.type,
+        processed_at: new Date().toISOString(),
+      })
+      .select();
 
     return NextResponse.json({ received: true, type: event.type });
-  } catch (err: any) {
-    console.error('Webhook processing error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    console.error("Webhook processing error:", err);
+    return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }

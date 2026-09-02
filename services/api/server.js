@@ -1,4 +1,27 @@
-import{createRequire as _cr}from'module';const require=_cr(import.meta.url);
+  import { randomUUID } from "crypto";
+  import {
+    and,
+    desc,
+    eq,
+    gte,
+    like,
+    lte,
+    sql
+  } from "drizzle-orm";
+  import {
+    integer,
+    jsonb,
+    numeric,
+    pgTable,
+    serial,
+    text,
+    timestamp,
+    uniqueIndex,
+    varchar
+  } from "drizzle-orm/pg-core";
+  import { drizzle } from "drizzle-orm/postgres-js";
+  import { createRequire as _cr } from 'module';
+const _unused_require_24=_cr(import.meta.url);
 var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __esm = (fn, res) => function __init() {
@@ -68,17 +91,6 @@ __export(schema_exports, {
   visitorProfiles: () => visitorProfiles,
   whiteLabelClients: () => whiteLabelClients
 });
-import {
-  pgTable,
-  varchar,
-  text,
-  timestamp,
-  integer,
-  serial,
-  jsonb,
-  numeric,
-  uniqueIndex
-} from "drizzle-orm/pg-core";
 var missions, missionTasks, products, deadLetterQueue, authentications, certificates, qrCodes, nftCollections, nfts, auctions, auctionBids, subscriptions, usageRecords, invoices, payments, leads, emailCampaigns, emailDrafts, supplyChainEvents, referrals, affiliates, affiliateCommissions, autopilotConfig, autopilotDecisions, abTests, whiteLabelClients, activityLog, fraudAlerts, customerHealthScores, revenueRecords, notifications, scheduledJobRuns, characterGenerations, characterAssets, protocolAgents, verificationClaims, consensusResults, qronRewardLedger, checkpointBatches, bonuses, referralClicks, aiModels, modelPurchases, modelReviews, serviceOrders, users, stakingPositions, platformFees, transactions, feedback, feedbackVotes, visitorProfiles, personalizationRules, personalizationEvents, apiUsageDaily;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
@@ -1133,17 +1145,6 @@ __export(db_exports, {
   upsertStripeSubscription: () => upsertStripeSubscription,
   upsertUser: () => upsertUser
 });
-import { drizzle } from "drizzle-orm/postgres-js";
-import {
-  eq,
-  desc,
-  and,
-  sql,
-  gte,
-  lte,
-  like
-} from "drizzle-orm";
-import { randomUUID } from "crypto";
 function createDb(connectionString) {
   if (!connectionString) {
     throw new Error("[Database] Missing connection string");
@@ -1360,7 +1361,7 @@ async function getQuarterlyValueReport() {
     rows
   };
 }
-async function listHighScanUsers(minScans = 10) {
+async function listHighScanUsers(_unused_minScans_1364 = 10) {
   const d = await getDb();
   return d.select().from(users).orderBy(desc(users.lastSignedIn)).limit(50);
 }
@@ -1369,7 +1370,7 @@ async function listInactiveUsersNoRecentScans(daysSinceLastScan = 30) {
   const cutoff = new Date(Date.now() - daysSinceLastScan * 864e5);
   return d.select().from(users).where(lte(users.lastSignedIn, cutoff));
 }
-async function listUsersForOnboardingStep(step) {
+async function listUsersForOnboardingStep(_unused_step_1373) {
   const d = await getDb();
   return d.select().from(users).orderBy(desc(users.createdAt)).limit(100);
 }
@@ -1793,7 +1794,7 @@ async function updateDraftStatus(id, status, approvedBy) {
   }
   await d.update(emailDrafts).set(updateData).where(eq(emailDrafts.id, id));
 }
-async function sendApprovalEmail(to, subject, body) {
+async function sendApprovalEmail(to, subject, _unused_body_1797) {
   console.log(`[EmailDrafts] Sending approved email to ${to}: ${subject}`);
 }
 async function getProductSupplyChain(productId) {
@@ -2027,7 +2028,11 @@ var init_db = __esm({
 });
 
 // server/_core/notification.ts
-import { TRPCError } from "@trpc/server";
+  import { Client } from "@hubspot/api-client";
+  import { TRPCError } from "@trpc/server";
+  import crypto3 from "crypto";
+  import { and as and7,count,desc as desc7,eq as eq9,sql as sql3 } from "drizzle-orm";
+  import Stripe from "stripe";
 async function notifyOwner(payload) {
   const { title, content } = validatePayload(payload);
   if (!ENV.forgeApiUrl) {
@@ -2208,7 +2213,6 @@ __export(stripe_service_exports, {
   getSubscriptionDetails: () => getSubscriptionDetails,
   processWebhookEvent: () => processWebhookEvent
 });
-import Stripe from "stripe";
 function getStripe() {
   if (!_stripe) {
     const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -2651,7 +2655,6 @@ __export(hubspot_service_exports, {
   syncLeadToHubSpot: () => syncLeadToHubSpot,
   syncPaymentToHubSpot: () => syncPaymentToHubSpot
 });
-import { Client } from "@hubspot/api-client";
 function getClient() {
   if (!_client2) {
     if (!ENV.hubspotServiceKey) throw new Error("HUBSPOT_SERVICE_KEY is not configured");
@@ -2989,8 +2992,6 @@ __export(character_service_exports, {
   startCharacterGeneration: () => startCharacterGeneration,
   submitVerificationClaim: () => submitVerificationClaim
 });
-import { eq as eq9, desc as desc7, sql as sql3, and as and7, count } from "drizzle-orm";
-import crypto3 from "crypto";
 function buildCharacterPrompt(archetype, context) {
   const arch = ARCHETYPES[archetype];
   const v = arch.visual;
@@ -3588,8 +3589,8 @@ var init_social_service = __esm({
 });
 
 // server/jobs/budget-monitor.ts
-import "dotenv/config";
-import { pathToFileURL } from "node:url";
+  import "dotenv/config";
+  import { pathToFileURL } from "node:url";
 function alertAction(metric, threshold, periodKey) {
   return `budget_alert_${metric}_${threshold}_${periodKey}`;
 }
@@ -3663,8 +3664,8 @@ var init_budget_monitor = __esm({
 });
 
 // server/jobs/dunning.ts
-import "dotenv/config";
-import { pathToFileURL as pathToFileURL2 } from "node:url";
+  import "dotenv/config";
+  import { pathToFileURL as pathToFileURL2 } from "node:url";
 function daysSince(date) {
   if (!date) return 0;
   const then = new Date(date).getTime();
@@ -3745,8 +3746,8 @@ var init_dunning = __esm({
 });
 
 // server/jobs/retention.ts
-import "dotenv/config";
-import { pathToFileURL as pathToFileURL3 } from "node:url";
+  import "dotenv/config";
+  import { pathToFileURL as pathToFileURL3 } from "node:url";
 async function sendOnboarding(step, message) {
   const users2 = await listUsersForOnboardingStep(step);
   let sent = 0;
@@ -3844,8 +3845,8 @@ var init_retention = __esm({
 });
 
 // server/jobs/weekly-digest.ts
-import "dotenv/config";
-import { pathToFileURL as pathToFileURL4 } from "node:url";
+  import "dotenv/config";
+  import { pathToFileURL as pathToFileURL4 } from "node:url";
 async function runWeeklyDigestDispatch() {
   const now = /* @__PURE__ */ new Date();
   const startOfYear = new Date(now.getFullYear(), 0, 1);
@@ -3901,8 +3902,8 @@ var init_weekly_digest = __esm({
 });
 
 // server/jobs/quarterly-value.ts
-import "dotenv/config";
-import { pathToFileURL as pathToFileURL5 } from "node:url";
+  import "dotenv/config";
+  import { pathToFileURL as pathToFileURL5 } from "node:url";
 async function runQuarterlyValueReportDispatch() {
   const report = await getQuarterlyValueReport();
   const periodAction = `report_generated_quarterly_value_${report.period}`;
@@ -3950,8 +3951,8 @@ var init_quarterly_value = __esm({
 });
 
 // server/jobs/organic-traffic.ts
-import "dotenv/config";
-import { pathToFileURL as pathToFileURL6 } from "node:url";
+  import "dotenv/config";
+  import { pathToFileURL as pathToFileURL6 } from "node:url";
 function slugify(input) {
   return input.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
 }
@@ -4688,7 +4689,7 @@ var init_email_service = __esm({
 });
 
 // server/agents/outbound-email.ts
-import { eq as eq11 } from "drizzle-orm";
+  import { eq as eq11 } from "drizzle-orm";
 async function runOutboundEmail(task) {
   const payload = task.payload;
   const segment = payload.segment ?? "GOV";
@@ -4820,7 +4821,7 @@ var init_outbound_email = __esm({
 });
 
 // server/agents/followup.ts
-import { eq as eq12, and as and8, lte as lte2, inArray as inArray2 } from "drizzle-orm";
+  import { and as and8,eq as eq12,inArray as inArray2,lte as lte2 } from "drizzle-orm";
 async function runFollowupSequence(task) {
   const payload = task.payload;
   const segment = payload.segment ?? "GOV";
@@ -4968,9 +4969,9 @@ Return JSON: { "title": "...", "sections": [{ "heading": "...", "content": "..."
     messages: [{ role: "user", content: prompt }],
     responseFormat: { type: "json_object" }
   });
-  let dossier;
+  let _unused_dossier_4974;
   try {
-    dossier = JSON.parse(result.choices[0].message.content ?? "{}");
+    _unused_dossier_4974 = JSON.parse(result.choices[0].message.content ?? "{}");
   } catch {
     throw new Error("Intel dossier LLM returned unparseable JSON");
   }
@@ -4997,7 +4998,7 @@ var init_pilot_packet = __esm({
 });
 
 // server/agents/crm-update.ts
-import { eq as eq13 } from "drizzle-orm";
+  import { eq as eq13 } from "drizzle-orm";
 async function runCrmUpdate(task) {
   const payload = task.payload;
   if (!isHubSpotConfigured()) {
@@ -5069,9 +5070,9 @@ Return JSON: { "posScan": "...", "shelfTalker": "...", "counterCard": { "headlin
     messages: [{ role: "user", content: prompt }],
     responseFormat: { type: "json_object" }
   });
-  let signage;
+  let _unused_signage_5075;
   try {
-    signage = JSON.parse(result.choices[0].message.content ?? "{}");
+    _unused_signage_5075 = JSON.parse(result.choices[0].message.content ?? "{}");
   } catch {
     throw new Error("Retail signage LLM returned unparseable JSON");
   }
@@ -5099,9 +5100,9 @@ Return JSON: { "sections": [{ "heading": "...", "steps": ["..."] }] }`;
     messages: [{ role: "user", content: prompt }],
     responseFormat: { type: "json_object" }
   });
-  let onboarding;
+  let _unused_onboarding_5105;
   try {
-    onboarding = JSON.parse(result.choices[0].message.content ?? "{}");
+    _unused_onboarding_5105 = JSON.parse(result.choices[0].message.content ?? "{}");
   } catch {
     throw new Error("SKU onboarding LLM returned unparseable JSON");
   }
@@ -5216,7 +5217,7 @@ var init_infra = __esm({
 });
 
 // server/twitter-service.ts
-import { createHmac, randomBytes } from "crypto";
+  import { createHmac,randomBytes } from "crypto";
 function pct(str) {
   return encodeURIComponent(str).replace(/[!'()*]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
 }
@@ -5424,9 +5425,9 @@ Return JSON: { "title": "...", "categories": [{ "name": "...", "items": [{ "task
     messages: [{ role: "user", content: prompt }],
     responseFormat: { type: "json_object" }
   });
-  let checklist;
+  let _unused_checklist_5430;
   try {
-    checklist = JSON.parse(result.choices[0].message.content ?? "{}");
+    _unused_checklist_5430 = JSON.parse(result.choices[0].message.content ?? "{}");
   } catch {
     throw new Error("Launch checklist LLM returned unparseable JSON");
   }
@@ -5489,9 +5490,9 @@ Return JSON: { "headline": "...", "subheadline": "...", "body": "...", "quote": 
     messages: [{ role: "user", content: prompt }],
     responseFormat: { type: "json_object" }
   });
-  let pr;
+  let _unused_pr_5495;
   try {
-    pr = JSON.parse(result.choices[0].message.content ?? "{}");
+    _unused_pr_5495 = JSON.parse(result.choices[0].message.content ?? "{}");
   } catch {
     throw new Error("Press release LLM returned unparseable JSON");
   }
@@ -5574,7 +5575,10 @@ var init_content = __esm({
 });
 
 // server/agents/closer.ts
-import { eq as eq14 } from "drizzle-orm";
+  import { randomBytes as randomBytes2 } from "crypto";
+  import "dotenv/config";
+  import { and as and10,eq as eq14,eq as eq15,eq as eq17 } from "drizzle-orm";
+  import { pathToFileURL as pathToFileURL7 } from "node:url";
 async function updateLeadStatus2(email, status) {
   const db2 = await getDb();
   if (!db2) return;
@@ -5759,7 +5763,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
 }
 async function runGenerateProposal(task) {
   const payload = task.payload;
-  const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText, threadId } = payload;
+  const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText, _unused_threadId_5766 } = payload;
   const priceUsd = PILOT_PRICE_USD[segment] ?? PILOT_PRICE_USD.DEFAULT;
   const prompt = `Write a professional B2B proposal for AuthiChain (authichain.com), a blockchain product authentication platform.
 
@@ -7325,9 +7329,6 @@ var pipeline_tick_exports = {};
 __export(pipeline_tick_exports, {
   runPipelineTick: () => runPipelineTick
 });
-import "dotenv/config";
-import { pathToFileURL as pathToFileURL7 } from "node:url";
-import { eq as eq15 } from "drizzle-orm";
 async function runPipelineTick() {
   if (!ENV.autonomousPipelineEnabled) {
     return { enabled: false, skipped: true, reason: "AUTONOMOUS_PIPELINE_ENABLED=false" };
@@ -7367,7 +7368,7 @@ async function runPipelineTick() {
   });
   scored.sort((a, b) => b.score - a.score);
   const taskResults = { total: dueTasks.length, ran: 0, errors: 0 };
-  for (const { task, score } of scored) {
+  for (const { task, _unused_score_7371 } of scored) {
     const result = await runTask(task);
     if (result.ok) {
       taskResults.ran++;
@@ -7650,8 +7651,6 @@ __export(tenant_billing_exports, {
   provisionTenant: () => provisionTenant,
   reportUsageToStripe: () => reportUsageToStripe
 });
-import { eq as eq17, and as and10 } from "drizzle-orm";
-import { randomBytes as randomBytes2 } from "crypto";
 async function provisionTenant(data) {
   const stripe = getStripe();
   const db2 = await getDb();
@@ -7769,9 +7768,13 @@ var init_tenant_billing = __esm({
 });
 
 // server/_core/app.ts
-import "dotenv/config";
-import express from "express";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
+  import { createExpressMiddleware } from "@trpc/server/adapters/express";
+  import axios from "axios";
+  import { parse as parseCookieHeader } from "cookie";
+  import "dotenv/config";
+  import express from "express";
+  import { jwtVerify,SignJWT } from "jose";
+  import { z } from "zod";
 
 // shared/const.ts
 var COOKIE_NAME = "app_session_id";
@@ -7814,9 +7817,6 @@ var ForbiddenError = (msg) => new HttpError(403, msg);
 // server/_core/sdk.ts
 init_db();
 init_env();
-import axios from "axios";
-import { parse as parseCookieHeader } from "cookie";
-import { SignJWT, jwtVerify } from "jose";
 var isNonEmptyString = (value) => typeof value === "string" && value.length > 0;
 var EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
 var GET_USER_INFO_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfo`;
@@ -8074,11 +8074,10 @@ function registerOAuthRoutes(app) {
 
 // server/_core/systemRouter.ts
 init_notification();
-import { z } from "zod";
 
 // server/_core/trpc.ts
-import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
-import superjson from "superjson";
+  import { initTRPC,TRPCError as TRPCError2 } from "@trpc/server";
+  import superjson from "superjson";
 var t = initTRPC.context().create({
   transformer: superjson
 });
@@ -8135,18 +8134,17 @@ var systemRouter = router({
 });
 
 // server/routers.ts
-import { z as z28 } from "zod";
-import { TRPCError as TRPCError6 } from "@trpc/server";
+  import { TRPCError as TRPCError6 } from "@trpc/server";
+  import { and as and3,eq as eq2,eq as eq3 } from "drizzle-orm";
+  import { nanoid } from "nanoid";
+  import { z as z2,z as z28,z as z3,z as z4 } from "zod";
 
 // server/referral/router.ts
 init_db();
-import { z as z2 } from "zod";
 
 // server/referral/core.ts
 init_db();
 init_schema();
-import { nanoid } from "nanoid";
-import { eq as eq2 } from "drizzle-orm";
 var COMMISSION_RATES = {
   starter: 0.1,
   // 10%
@@ -8184,7 +8182,7 @@ async function trackReferralClick(params) {
   await db.insert(referralClicks).values(params);
 }
 async function completeReferral(params) {
-  const rate = COMMISSION_RATES[params.tier] || COMMISSION_RATES.starter;
+  const _unused_rate_8185 = COMMISSION_RATES[params.tier] || COMMISSION_RATES.starter;
   await db.update(referrals).set({
     referredId: params.referredId,
     referredEmail: params.referredEmail,
@@ -8248,7 +8246,6 @@ var referralRouter = router({
 
 // server/affiliate/router.ts
 init_db();
-import { z as z3 } from "zod";
 var affiliateRouter = router({
   getStatus: protectedProcedure.query(async ({ ctx }) => {
     return await getAffiliateByUserId(ctx.user.id);
@@ -8294,8 +8291,6 @@ var affiliateRouter = router({
 // server/bonuses/router.ts
 init_db();
 init_schema();
-import { z as z4 } from "zod";
-import { eq as eq3, and as and3 } from "drizzle-orm";
 var bonusesRouter = router({
   getUserBonuses: protectedProcedure.query(async ({ ctx }) => {
     return await db.select().from(bonuses).where(eq3(bonuses.userId, ctx.user.id));
@@ -8329,12 +8324,12 @@ var bonusesRouter = router({
 });
 
 // server/marketplace/router.ts
-import { z as z5 } from "zod";
+  import { and as and4,desc as desc3,eq as eq4,sql as sql2 } from "drizzle-orm";
+  import { z as z5,z as z6 } from "zod";
 
 // server/marketplace/db.ts
 init_db();
 init_schema();
-import { eq as eq4, desc as desc3, and as and4, sql as sql2 } from "drizzle-orm";
 async function listModels(filters) {
   let query = db.select().from(aiModels);
   const conditions = [];
@@ -8420,7 +8415,6 @@ var marketplaceRouter = router({
 
 // server/email-drafts/router.ts
 init_db();
-import { z as z6 } from "zod";
 var emailDraftsRouter = router({
   listPending: protectedProcedure.query(async () => {
     return await getPendingDrafts();
@@ -8503,8 +8497,8 @@ async function createPaddleTransaction(input) {
 }
 
 // server/subscriptions/router.ts
-import { z as z7 } from "zod";
-import { TRPCError as TRPCError3 } from "@trpc/server";
+  import { TRPCError as TRPCError3 } from "@trpc/server";
+  import { z as z7 } from "zod";
 
 // shared/subscriptionPlans.ts
 var SUBSCRIPTION_PLANS = {
@@ -8684,13 +8678,18 @@ var subscriptionsRouter = router({
 });
 
 // server/missions/router.ts
-import { z as z8 } from "zod";
+  import { TRPCError as TRPCError4,TRPCError as TRPCError5 } from "@trpc/server";
+  import { randomUUID as randomUUID2 } from "crypto";
+  import { and as and5,desc as desc4,desc as desc5,eq as eq5,eq as eq6 } from "drizzle-orm";
+  import { createThirdwebClient,defineChain,getContract,sendTransaction } from "thirdweb";
+  import { balanceOf,getOwnedNFTs,mintTo,totalSupply } from "thirdweb/extensions/erc721";
+  import { upload } from "thirdweb/storage";
+  import { privateKeyToAccount } from "thirdweb/wallets";
+  import { z as z10,z as z11,z as z12,z as z13,z as z14,z as z15,z as z16,z as z8,z as z9 } from "zod";
 
 // server/missions/missions.db.ts
 init_db();
 init_schema();
-import { eq as eq5, desc as desc4 } from "drizzle-orm";
-import { randomUUID as randomUUID2 } from "crypto";
 
 // server/missions/templates.ts
 var missionTemplates = {
@@ -8880,7 +8879,6 @@ var tasksRouter = router({
 
 // server/admin/router.ts
 init_db();
-import { z as z9 } from "zod";
 var adminRouter = router({
   metrics: adminProcedure.query(async () => {
     return await getAdminDashboardMetrics();
@@ -8913,7 +8911,6 @@ var adminRouter = router({
 
 // server/notifications/router.ts
 init_db();
-import { z as z10 } from "zod";
 var notificationsRouter = router({
   list: protectedProcedure.input(z10.object({
     limit: z10.number().optional().default(50)
@@ -8947,7 +8944,6 @@ var notificationsRouter = router({
 
 // server/ai/router.ts
 init_llm();
-import { z as z11 } from "zod";
 var aiRouter = router({
   chat: protectedProcedure.input(z11.object({
     messages: z11.array(z11.object({ role: z11.enum(["user", "assistant", "system"]), content: z11.string() }))
@@ -8962,7 +8958,6 @@ var aiRouter = router({
 // server/autopilot/router.ts
 init_db();
 init_llm();
-import { z as z12 } from "zod";
 var autopilotRouter = router({
   getStatus: protectedProcedure.query(async () => {
     const config = await getAutopilotConfig();
@@ -9061,11 +9056,6 @@ init_db();
 
 // server/thirdweb.ts
 init_env();
-import { createThirdwebClient, getContract, defineChain } from "thirdweb";
-import { privateKeyToAccount } from "thirdweb/wallets";
-import { mintTo, balanceOf, totalSupply, getOwnedNFTs } from "thirdweb/extensions/erc721";
-import { upload } from "thirdweb/storage";
-import { sendTransaction } from "thirdweb";
 var _client = null;
 function getThirdwebClient() {
   if (!_client) {
@@ -9169,8 +9159,8 @@ function buildAuthCertificateMetadata(data) {
 }
 async function checkThirdwebConnection() {
   try {
-    const client = getThirdwebClient();
-    const chain = getDefaultChain();
+    const _unused_client_9162 = getThirdwebClient();
+    const _unused_chain_9163 = getDefaultChain();
     return {
       connected: true,
       clientId: ENV.thirdwebClientId || "configured",
@@ -9188,8 +9178,6 @@ async function checkThirdwebConnection() {
 
 // server/blockchain/router.ts
 init_env();
-import { z as z13 } from "zod";
-import { TRPCError as TRPCError4 } from "@trpc/server";
 function getServerPrivateKey() {
   const key = ENV.blockchainPrivateKey || process.env.BLOCKCHAIN_PRIVATE_KEY;
   if (!key) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Blockchain signing key not configured on server" });
@@ -9259,8 +9247,8 @@ var blockchainRouter = router({
       name: product?.name,
       ts: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const envelope = await prepareOrdinalEnvelope2(product?.imageUrl || "", metadata);
-    const result = await linkOrdinalToProduct2(input.productId, "btc_ins_pending_" + Date.now());
+    const _unused_envelope_9250 = await prepareOrdinalEnvelope2(product?.imageUrl || "", metadata);
+    const _unused_result_9251 = await linkOrdinalToProduct2(input.productId, "btc_ins_pending_" + Date.now());
     return { success: true, status: "ANCHORING_INITIATED", details: "BTC Inscription staged for witness." };
   }),
   mintNFT: protectedProcedure.input(z13.object({
@@ -9327,7 +9315,6 @@ var blockchainRouter = router({
 init_db();
 init_hubspot_service();
 init_llm();
-import { z as z14 } from "zod";
 var marketingRouter = router({
   leads: adminProcedure.query(async () => {
     return await getAllLeads();
@@ -9341,7 +9328,7 @@ var marketingRouter = router({
     const result = await createLead(input);
     try {
       await syncLeadToHubSpot(input);
-    } catch (e) {
+    } catch (_unused_e_9331) {
     }
     return result;
   }),
@@ -9370,8 +9357,6 @@ var marketingRouter = router({
 
 // server/nft/router.ts
 init_db();
-import { z as z15 } from "zod";
-import { TRPCError as TRPCError5 } from "@trpc/server";
 var nftRouter = router({
   list: publicProcedure.input(z15.object({
     collectionId: z15.number().optional(),
@@ -9452,8 +9437,6 @@ var nftRouter = router({
 // server/personalization/router.ts
 init_db();
 init_schema();
-import { z as z16 } from "zod";
-import { eq as eq6, desc as desc5, and as and5 } from "drizzle-orm";
 
 // server/personalization/contentEngine.ts
 init_llm();
@@ -9612,7 +9595,7 @@ function parseUTMParams(url) {
       utmMedium: urlObj.searchParams.get("utm_medium") || void 0,
       utmCampaign: urlObj.searchParams.get("utm_campaign") || void 0
     };
-  } catch (error) {
+  } catch (_unused_error_9598) {
     return {};
   }
 }
@@ -9966,12 +9949,12 @@ var personalizationRouter = router({
 });
 
 // server/staking/router.ts
-import { z as z17 } from "zod";
+  import { and as and6,desc as desc6,eq as eq7 } from "drizzle-orm";
+  import { z as z17,z as z18,z as z19 } from "zod";
 
 // server/staking/db.ts
 init_db();
 init_schema();
-import { eq as eq7, and as and6, desc as desc6 } from "drizzle-orm";
 async function getUserStakingPositions(userId) {
   const db2 = await getDb();
   if (!db2) return [];
@@ -10209,7 +10192,6 @@ var stakingRouter = router({
 
 // server/supply-chain/router.ts
 init_db();
-import { z as z18 } from "zod";
 var supplyChainRouter = router({
   getEvents: protectedProcedure.input(z18.object({ productId: z18.number() })).query(async ({ input }) => {
     return await getProductSupplyChain(input.productId);
@@ -10234,7 +10216,6 @@ var supplyChainRouter = router({
 
 // server/white-label/router.ts
 init_db();
-import { z as z19 } from "zod";
 var whiteLabelRouter = router({
   list: adminProcedure.query(async () => {
     return await getWhiteLabelClients();
@@ -10259,14 +10240,14 @@ var whiteLabelRouter = router({
 });
 
 // server/stripe-connect-router.ts
-import { z as z20 } from "zod";
+  import crypto2 from "crypto";
+  import { eq as eq8 } from "drizzle-orm";
+  import { z as z20,z as z21,z as z22,z as z23 } from "zod";
 
 // server/stripe-connect-service.ts
 init_stripe_service();
 init_db();
 init_schema();
-import { eq as eq8 } from "drizzle-orm";
-import crypto2 from "crypto";
 function generateIdempotencyKey(operation, id) {
   return crypto2.createHash("sha256").update(`${operation}-${id}`).digest("hex").slice(0, 32);
 }
@@ -10410,7 +10391,6 @@ var stripeConnectRouter = router({
 
 // server/hubspot/router.ts
 init_hubspot_service();
-import { z as z21 } from "zod";
 var hubspotRouter = router({
   status: protectedProcedure.query(async () => {
     if (!isHubSpotConfigured()) return { connected: false, contacts: 0, companies: 0, deals: 0, error: "HUBSPOT_SERVICE_KEY is not configured. Add it in Settings \u2192 Secrets." };
@@ -10465,7 +10445,6 @@ var hubspotRouter = router({
 // server/email-campaigns/router.ts
 init_db();
 init_llm();
-import { z as z22 } from "zod";
 var emailCampaignsRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     return await getUserEmailCampaigns(ctx.user.id);
@@ -10524,7 +10503,6 @@ var dashboardRouter = router({
 
 // server/character/router.ts
 init_character_service();
-import { z as z23 } from "zod";
 var characterRouter = router({
   generate: protectedProcedure.input(z23.object({
     archetype: z23.enum(["guardian", "archivist", "sentinel", "scout", "arbiter", "merchant", "explorer"]),
@@ -10608,7 +10586,7 @@ var characterRouter = router({
 });
 
 // server/routers/metrc.ts
-import { z as z24 } from "zod";
+  import { z as z24 } from "zod";
 
 // server/metrc-service.ts
 init_db();
@@ -10620,7 +10598,7 @@ async function syncMetrcTransfers(auth) {
     "https://api-mi-backup.metrc.com"
     // Simulated fallback
   ];
-  let lastError = null;
+  let _unused_lastError_10633 = null;
   for (const baseUrl of endpoints) {
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
@@ -10652,7 +10630,7 @@ async function syncMetrcTransfers(auth) {
         await new Promise((r) => setTimeout(r, attempt * 1e3));
       } catch (err) {
         console.warn(`[METRC] ${baseUrl} exception: ${err.message}`);
-        lastError = err;
+        _unused_lastError_10633 = err;
         await new Promise((r) => setTimeout(r, attempt * 1e3));
       }
     }
@@ -10660,9 +10638,9 @@ async function syncMetrcTransfers(auth) {
   console.error("[METRC] All state API endpoints failed.");
   return [];
 }
-async function anchorPackageToTruthLayer(packageTag, manifestId) {
+async function anchorPackageToTruthLayer(packageTag, _unused_manifestId_10641) {
   console.log(`\u{1F517} Anchoring METRC Package ${packageTag} to Bitcoin L1...`);
-  const inscriptionUrl = "https://qron.space/api/ordinals/inscribe";
+  const _unused_inscriptionUrl_10643 = "https://qron.space/api/ordinals/inscribe";
   try {
     const { broadcastSocialProof: broadcastSocialProof2 } = await Promise.resolve().then(() => (init_social_service(), social_service_exports));
     await broadcastSocialProof2({
@@ -10723,12 +10701,12 @@ var metrcRouter = router({
 });
 
 // server/routers/products.ts
-import { z as z25 } from "zod";
+  import { eq as eq10 } from "drizzle-orm";
+  import { z as z25 } from "zod";
 
 // server/asset-service.ts
 init_db();
 init_schema();
-import { eq as eq10 } from "drizzle-orm";
 
 // server/vision-service.ts
 init_llm();
@@ -10759,7 +10737,7 @@ async function analyzeProductVision(imageUrl, productType) {
     let analysis;
     try {
       analysis = JSON.parse(content);
-    } catch (e) {
+    } catch (_unused_e_10740) {
       console.warn("[Vision] Failed to parse LLM response, using partial extraction...");
       const resultMatch = content.match(/"result":\s*"([^"]+)"/);
       analysis = {
@@ -10881,7 +10859,7 @@ async function retryFailedAssets() {
     try {
       await generateProductAssets(productId);
       await db2.update(deadLetterQueue).set({ status: "resolved" }).where(eq10(deadLetterQueue.id, task.id));
-    } catch (e) {
+    } catch (_unused_e_10862) {
       await db2.update(deadLetterQueue).set({
         retryCount: (task.retryCount || 0) + 1,
         lastAttemptedAt: /* @__PURE__ */ new Date()
@@ -10909,7 +10887,8 @@ var productsRouter = router({
 });
 
 // server/routers/scheduler.ts
-import { z as z26 } from "zod";
+  import { and as and9,count as count2,desc as desc8,eq as eq16,gte as gte2,lt,lte as lte3,sql as sql4 } from "drizzle-orm";
+  import { z as z26 } from "zod";
 
 // server/scheduled-jobs.ts
 init_db();
@@ -10917,7 +10896,6 @@ init_schema();
 init_notification();
 init_hubspot_service();
 init_env();
-import { eq as eq16, lt, and as and9, sql as sql4, desc as desc8, lte as lte3, gte as gte2, count as count2 } from "drizzle-orm";
 var jobs = [];
 var scheduledTasks = /* @__PURE__ */ new Map();
 function registerJob(job) {
@@ -10996,9 +10974,9 @@ registerJob({
       processed++;
     }
     details.markedPastDue = pastDueSubs.length;
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const _unused_firstOfMonth_10977 = new Date(now.getFullYear(), now.getMonth(), 1);
     if (now.getDate() === 1) {
-      const [resetResult] = await db2.update(subscriptions).set({ usedQuota: 0 }).where(eq16(subscriptions.status, "active"));
+      const [_unused_resetResult_10979] = await db2.update(subscriptions).set({ usedQuota: 0 }).where(eq16(subscriptions.status, "active"));
       details.quotasReset = true;
     }
     return { itemsProcessed: processed, details };
@@ -11030,7 +11008,7 @@ registerJob({
       });
       processed++;
     }
-    const [expiredResult] = await db2.update(certificates).set({ status: "expired" }).where(and9(
+    const [_unused_expiredResult_11011] = await db2.update(certificates).set({ status: "expired" }).where(and9(
       eq16(certificates.status, "active"),
       lt(certificates.expiresAt, now)
     ));
@@ -11090,13 +11068,13 @@ registerJob({
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1e3);
     let processed = 0;
     const details = {};
-    const [notifResult] = await db2.delete(notifications).where(and9(
+    const [_unused_notifResult_11071] = await db2.delete(notifications).where(and9(
       eq16(notifications.isRead, 1),
       lt(notifications.createdAt, thirtyDaysAgo)
     ));
     details.oldNotificationsDeleted = "checked";
     processed++;
-    const [jobRunResult] = await db2.delete(scheduledJobRuns).where(and9(
+    const [_unused_jobRunResult_11077] = await db2.delete(scheduledJobRuns).where(and9(
       eq16(scheduledJobRuns.status, "completed"),
       lt(scheduledJobRuns.startedAt, ninetyDaysAgo)
     ));
@@ -11191,7 +11169,7 @@ registerJob({
   handler: async () => {
     const db2 = await getDb();
     if (!db2) return { itemsProcessed: 0, details: { error: "No DB" } };
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3);
+    const _unused_thirtyDaysAgo_11172 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3);
     let processed = 0;
     const activeSubs = await db2.select().from(subscriptions).where(eq16(subscriptions.status, "active"));
     for (const sub of activeSubs) {
@@ -11297,7 +11275,7 @@ async function initializeScheduler() {
       /* @vite-ignore */
       moduleName
     )).default;
-  } catch (err) {
+  } catch (_unused_err_11278) {
     console.warn("[Scheduler] node-cron not available in this environment, skipping initialization.");
     return;
   }
@@ -11416,7 +11394,9 @@ var schedulerRouter = router({
 });
 
 // server/routers/services.ts
-import { z as z27 } from "zod";
+  import { createHash } from "crypto";
+  import { Router } from "express";
+  import { z as z27 } from "zod";
 
 // server/service-catalog.ts
 var SERVICE_CATALOG = {
@@ -11601,7 +11581,7 @@ var SERVICE_CATALOG = {
   }
 };
 var SERVICE_LIST = Object.values(SERVICE_CATALOG);
-var SERVICE_KEYS = Object.keys(SERVICE_CATALOG);
+var _unused_SERVICE_KEYS_11584 = Object.keys(SERVICE_CATALOG);
 
 // server/routers/services.ts
 init_db();
@@ -11877,7 +11857,7 @@ async function createContext(opts) {
   let user = null;
   try {
     user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
+  } catch (_unused_error_11860) {
     user = null;
   }
   return {
@@ -11889,11 +11869,9 @@ async function createContext(opts) {
 
 // server/internal-api.ts
 init_db();
-import { Router } from "express";
 
 // server/qron-service.ts
 init_env();
-import { createHash } from "crypto";
 var QRON_API = process.env.NEXT_PUBLIC_WORKER_URL ?? "https://qron-api.exzactly-k.workers.dev";
 var QRON_SPACE_URL = "https://qron.space";
 var MODE_BY_TIER = {
@@ -12107,7 +12085,7 @@ function createInternalRouter() {
   });
   router2.post("/qr/generate", async (req, res) => {
     try {
-      const { url, data, style, productName, brand, productId, prompt } = req.body;
+      const { url, data, style, productName, brand, productId, _unused_prompt_12088 } = req.body;
       const qrData = url || data;
       if (!qrData) return res.status(400).json({ error: "url or data required" });
       const result = await generateProductQRON({
@@ -12448,6 +12426,6 @@ function createApp() {
 
 // server/vercel-entry.ts
 var vercel_entry_default = createApp();
-export {
-  vercel_entry_default as default
-};
+  export {
+    vercel_entry_default as default
+  };

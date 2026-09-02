@@ -5,6 +5,28 @@ import {
   type BrowseCompetitorPayload,
   type BrowseNewsPayload,
 } from '../agents/browser.js';
+import type { MissionTask as Task } from '../../drizzle/schema.js';
+
+type BrowserTaskPayload = BrowseCompetitorPayload | BrowseNewsPayload;
+
+function createSyntheticTask(payload: BrowserTaskPayload): Task {
+  return {
+    id: "synthetic-browser-task",
+    missionId: "synthetic-browser-mission",
+    kind: "BROWSER_JOB",
+    title: "Synthetic browser task",
+    description: null,
+    status: "pending",
+    priority: 0,
+    order: 0,
+    payload,
+    result: null,
+    error: null,
+    scheduledAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
 
 // Competitors to monitor weekly
 const COMPETITORS: BrowseCompetitorPayload[] = [
@@ -39,7 +61,7 @@ export async function runBrowserAgentJobs(): Promise<{
   } else {
     for (const competitor of COMPETITORS) {
       try {
-        const fakeTask = { id: 0, missionId: 0, payload: competitor } as any;
+        const fakeTask = createSyntheticTask(competitor);
         await runBrowseCompetitorMonitor(fakeTask);
         competitorsChecked++;
       } catch (err) {
@@ -62,7 +84,7 @@ export async function runBrowserAgentJobs(): Promise<{
 
     try {
       const payload: BrowseNewsPayload = { keyword, enqueueNewsTask: true };
-      const fakeTask = { id: 0, missionId: 0, payload } as any;
+      const fakeTask = createSyntheticTask(payload);
       await runBrowseScrapeIndustryNews(fakeTask);
       newsKeywordsScanned++;
     } catch (err) {

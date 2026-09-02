@@ -17,7 +17,7 @@ interface CrispConfig {
   websiteId: string;
 }
 
-let crispClient: any = null;
+let crispClient: Crisp | null = null;
 let isConfigured = false;
 
 /**
@@ -107,7 +107,7 @@ export async function sendCertificateEmail(params: {
     console.log(`[Crisp] Certificate message sent successfully to ${maskEmail(to)}`);
     return true;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Crisp] Failed to send certificate message:', error);
     return false;
   }
@@ -201,7 +201,7 @@ export async function sendCrispMessage(params: {
 export async function updateCrispProfile(params: {
   email: string;
   name?: string;
-  data?: Record<string, any>;
+  data?: Record<string, string | number | boolean>;
 }): Promise<boolean> {
   const config = initializeCrisp();
 

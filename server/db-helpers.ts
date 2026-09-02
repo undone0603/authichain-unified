@@ -43,6 +43,22 @@ import type { getHyperdriveDb } from "./db";
 import type { MissionType } from "./missions/types";
 
 export type Db = ReturnType<typeof getHyperdriveDb>;
+type FlexibleInsert<T> = T & Record<string, unknown>;
+type FlexibleUpdate<T> = Partial<T> & Record<string, unknown>;
+type ActivityPayload = {
+  userId?: number | null;
+  action: string;
+  entityType?: string;
+  entityId?: number | string;
+  details?: unknown;
+};
+type LeadInsert = typeof leads.$inferInsert;
+type MissionTaskInsert = typeof missionTasks.$inferInsert;
+type ServiceOrderInsert = typeof serviceOrders.$inferInsert;
+type SubscriptionInsert = typeof subscriptions.$inferInsert;
+type InvoiceInsert = typeof invoices.$inferInsert;
+type PaymentInsert = typeof payments.$inferInsert;
+type RevenueRecordInsert = typeof revenueRecords.$inferInsert;
 
 // ─────────────────────────────────────────────────────────────
 // ACTIVITY / AUDIT LOG
@@ -50,7 +66,7 @@ export type Db = ReturnType<typeof getHyperdriveDb>;
 
 export async function logActivity(
   db: Db,
-  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any },
+  actionOrData: string | ActivityPayload,
   details?: string,
 ): Promise<void> {
   if (typeof actionOrData === "string") {
@@ -104,15 +120,15 @@ export async function createSystemNotification(
   type: InsertNotification["type"],
   actionUrl?: string,
 ) {
-  return createNotification(db, { userId, type: type as any, title, message, isRead: false, actionUrl });
+  return createNotification(db, { userId, type, title, message, isRead: false, actionUrl });
 }
 
 // ─────────────────────────────────────────────────────────────
 // LEADS
 // ─────────────────────────────────────────────────────────────
 
-export async function createLead(db: Db, data: any) {
-  const values = {
+export async function createLead(db: Db, data: FlexibleInsert<Pick<LeadInsert, "email"> & Partial<Omit<LeadInsert, "email">>>) {
+  const values: LeadInsert = {
     email: data.email,
     name: data.name ?? null,
     company: data.company ?? null,
@@ -133,10 +149,6 @@ export async function getLeadByEmail(db: Db, email: string) {
   return rows[0] ?? null;
 }
 
-export async function updateLead(db: Db, id: number, data: any) {
-  await db.update(leads).set(data).where(eq(leads.id, id));
-}
-
 export async function getLeadById(db: Db, id: number) {
   const rows = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   return rows[0] ?? null;
@@ -150,8 +162,12 @@ export async function updateLeadScore(db: Db, id: number, score: number) {
   await db.update(leads).set({ score }).where(eq(leads.id, id));
 }
 
-export async function updateLeadStatus(db: Db, id: number, status: string) {
-  await db.update(leads).set({ status: status as any }).where(eq(leads.id, id));
+export async function updateLead(db: Db, id: number, data: FlexibleUpdate<LeadInsert>) {
+  await db.update(leads).set(data).where(eq(leads.id, id));
+}
+
+export async function updateLeadStatus(db: Db, id: number, status: NonNullable<LeadInsert["status"]>) {
+  await db.update(leads).set({ status }).where(eq(leads.id, id));
 }
 
 export async function upsertLeadByEmail(
@@ -231,7 +247,10 @@ export async function createMission(db: Db, type: MissionType) {
   return id;
 }
 
-export async function createTask(db: Db, data: any) {
+export async function createTask(
+  db: Db,
+  data: FlexibleInsert<Pick<MissionTaskInsert, "missionId" | "kind"> & Partial<Omit<MissionTaskInsert, "id" | "missionId" | "kind">>>,
+) {
   const id = randomUUID();
   await db.insert(missionTasks).values({
     id,
@@ -246,7 +265,13 @@ export async function createTask(db: Db, data: any) {
   return id;
 }
 
-export async function enqueueTask(db: Db, missionId: string, kind: string, payload: any, scheduledAt?: Date) {
+export async function enqueueTask(
+  db: Db,
+  missionId: string,
+  kind: string,
+  payload: MissionTaskInsert["payload"],
+  scheduledAt?: Date,
+) {
   const id = randomUUID();
   await db.insert(missionTasks).values({
     id,
@@ -269,11 +294,16 @@ export async function getServiceOrderById(db: Db, id: number) {
   return rows[0] ?? null;
 }
 
-export async function updateServiceOrderStatus(db: Db, id: number, status: string, extra?: Record<string, any>) {
+export async function updateServiceOrderStatus(
+  db: Db,
+  id: number,
+  status: NonNullable<ServiceOrderInsert["status"]>,
+  extra?: FlexibleUpdate<ServiceOrderInsert>,
+) {
   await db.update(serviceOrders).set({ status, ...(extra ?? {}), updatedAt: new Date() }).where(eq(serviceOrders.id, id));
 }
 
-export async function createServiceOrder(db: Db, data: any) {
+export async function createServiceOrder(db: Db, data: FlexibleInsert<ServiceOrderInsert>) {
   const [result] = await db.insert(serviceOrders).values(data).returning();
   const id = result.id;
   return { id, ...data };
@@ -301,12 +331,12 @@ export async function getUserSubscription(db: Db, userId: number) {
   return result[0];
 }
 
-export async function createSubscription(db: Db, data: any) {
+export async function createSubscription(db: Db, data: FlexibleInsert<SubscriptionInsert>) {
   const [result] = await db.insert(subscriptions).values(data).returning();
   return { id: result.id };
 }
 
-export async function createInvoice(db: Db, data: any) {
+export async function createInvoice(db: Db, data: FlexibleInsert<InvoiceInsert>) {
   const [result] = await db.insert(invoices).values(data).returning();
   return { id: result.id };
 }
@@ -315,7 +345,7 @@ export async function getUserInvoices(db: Db, userId: number) {
   return await db.select().from(invoices).where(eq(invoices.userId, userId)).orderBy(desc(invoices.createdAt));
 }
 
-export async function createPayment(db: Db, data: any) {
+export async function createPayment(db: Db, data: FlexibleInsert<PaymentInsert>) {
   const [result] = await db.insert(payments).values(data).returning();
   return { id: result.id };
 }
@@ -461,7 +491,7 @@ export async function getSubscriptionByPaddleSubscriptionId(db: Db, paddleSubscr
 // REVENUE
 // ─────────────────────────────────────────────────────────────
 
-export async function recordRevenue(db: Db, data: any) {
+export async function recordRevenue(db: Db, data: FlexibleInsert<RevenueRecordInsert>) {
   await db.insert(revenueRecords).values(data);
 }
 

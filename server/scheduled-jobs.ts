@@ -1,11 +1,10 @@
 // server/scheduled-jobs.ts
-import { getDb, logActivity } from "./db";
-import { scheduledJobRuns, subscriptions, certificates, leads, notifications, users, authentications, payments, customerHealthScores, fraudAlerts, stakingPositions, qronRewardLedger, serviceOrders } from "../drizzle/schema";
-import { eq, lt, and, sql, desc, isNull, lte, gte, count } from "drizzle-orm";
-import { notifyOwner } from "./_core/notification";
-import { isHubSpotConfigured, syncLeadToHubSpot, getCRMStats } from "./hubspot-service";
-import { ENV } from "./_core/env";
-import { runStrainChainSync } from "./jobs/strainchain-sync";
+  import { and,count,desc,eq,gte,lt,lte,sql } from "drizzle-orm";
+  import { authentications,certificates,customerHealthScores,fraudAlerts,leads,notifications,payments,qronRewardLedger,scheduledJobRuns,serviceOrders,stakingPositions,subscriptions,users } from "../drizzle/schema";
+  import { ENV } from "./_core/env";
+  import { notifyOwner } from "./_core/notification";
+  import { getDb,logActivity } from "./db";
+  import { getCRMStats,isHubSpotConfigured,syncLeadToHubSpot } from "./hubspot-service";
 
 // ─── Job Registry ───────────────────────────────────────────────────────────
 interface JobDefinition {
@@ -148,7 +147,7 @@ registerJob({
     details.markedPastDue = pastDueSubs.length;
 
     // Reset monthly quotas for subscriptions at period start
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const _unused_firstOfMonth_150 = new Date(now.getFullYear(), now.getMonth(), 1);
     if (now.getDate() === 1) {
       await db.update(subscriptions)
         .set({ usedQuota: 0 })
@@ -454,7 +453,7 @@ registerJob({
     const db = await getDb();
     if (!db) return { itemsProcessed: 0, details: { error: "No DB" } };
 
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const _unused_thirtyDaysAgo_456 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     let processed = 0;
 
     // Get all active subscribers
@@ -613,7 +612,7 @@ export async function initializeScheduler(): Promise<void> {
     // dynamic import throws and we fall through to the warn+return below.
     const moduleName = ["node", "cron"].join("-");
     cron = (await import(/* @vite-ignore */ moduleName)).default;
-  } catch (err) {
+  } catch (_unused_err_615) {
     console.warn("[Scheduler] node-cron not available in this environment, skipping initialization.");
     return;
   }
@@ -893,7 +892,7 @@ registerJob({
             actionUrl: "/services",
           });
         }
-      } catch (e) {
+      } catch (_unused_e_895) {
         console.warn(`[service-order-timeout] Failed to notify user ${order.userId}`);
       }
 

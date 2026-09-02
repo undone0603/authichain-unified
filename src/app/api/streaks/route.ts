@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
@@ -37,8 +41,8 @@ export async function GET(req: NextRequest) {
       days_since_active: daysSinceActive,
       milestones,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
     }, { onConflict: 'user_id' });
 
     return NextResponse.json({ streak_days: newStreak, longest_streak: longest, updated: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }

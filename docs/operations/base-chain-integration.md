@@ -1,90 +1,61 @@
 # Base chain integration — GovChain pilots
 
-Date: 2026-08-28 (updated same day: Sepolia ship path)
+Date: 2026-08-31 (mainnet exception authorized)
 
-## Live probe (2026-08-28)
+Sepolia is skipped. Fund path is the 10 USDC on the Coinbase Smart Wallet on Base 8453.
 
-| Check | Result |
-|---|---|
-| `0xC0D26735…` Base mainnet / Sepolia `getCode` | `0x` (counterfactual Smart Wallet until first UserOp) |
-| `0xC0D26735…` ETH balance on 8453 and 84532 | `0` |
-| Polygon deployer `0xbad4e580…` on Base Sepolia | `0` ETH |
-| `0x4da4…` on Base Sepolia | no bytecode |
+## Live probe (2026-08-31 00:01 EDT)
 
-Cannot deploy or mint until an **ops EOA** has Base Sepolia ETH. Faucets will not drip to this sandbox; claim in browser against the ops EOA.
-
-## What is already true
-
-| Layer | State |
-|---|---|
-| thirdweb | `defineChain(8453)` and `84532` exist in `server/thirdweb.ts` and client libs. Default mint path is still **Polygon 137 / Amoy 80002**. |
-| Gov mint script | `scripts/mint-govchain-nfts.ts` probes `eth_chainId` + `getCode`, calls `mintProduct`. |
-| Deploy / roles script | `scripts/deploy-authichain-nft-base.ts` |
-| Live NFT contract | Polygon only: [`0x4da4D2675e52374639C9c954f4f653887A9972BE`](https://polygonscan.com/address/0x4da4D2675e52374639C9c954f4f653887A9972BE) (16 ACPT). |
-| Signer split | Public recipient / $QRON owner: `0xC0D26735fd9e868eacc60400ef3171Fa4161177f` (Coinbase Smart Wallet). Ops minter: `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d`. |
-
-## Role gotcha — `MINTER_ROLE` is not enough
-
-`mintProduct` reverts `UnauthorizedManufacturer` unless `msg.sender` is in `_verifiedManufacturers` **or** holds `DEFAULT_ADMIN_ROLE`.
-
-```solidity
-if (!_verifiedManufacturers[msg.sender] && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender))
-    revert UnauthorizedManufacturer(msg.sender);
-```
-
-Constructor only verifies the deployer. Use `verifyManufacturer(opsEOA)` which also grants `MINTER_ROLE`. Do not only call `grantRole`.
-
-Do **not** put a Smart Wallet key in `WALLET_PRIVATE_KEY`. There isn't one ethers can use.
-
-## Why Base for GovChain
-
-- Coinbase Smart Wallet is native on Base (8453, gas = ETH).
-- Public RPC `https://mainnet.base.org` is rate-limited; production uses Alchemy / CDP Node.
-- Explorer: https://basescan.org — Sepolia 84532 / https://sepolia.basescan.org.
-- Keep $QRON and ACPT inventory on Polygon.
-
-## Recommended split
-
-| Asset | Chain | Why |
+| Account | Base 8453 ETH | Base 8453 USDC |
 |---|---|---|
-| Product certificates (ACPT) | Polygon 137 | Already live |
-| $QRON | Polygon 137 | Live token + tax/owner wallet |
-| GovChain pilot NFTs | **Base Sepolia → Base 8453** | Smart Wallet, cheap ETH gas |
-| SAM / PII / proposals | Supabase | Never on-chain |
+| Smart Wallet `0xC0D26735fd9e868eacc60400ef3171Fa4161177f` | 0 | **10.0** |
+| Ops EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d` | 0 | 0 |
+| `0x833589fC…` | Circle USDC contract | not a wallet |
 
-## Ship order (ops EOA, not Smart Wallet)
+Gas on Base at probe: ~0.006 gwei. A contract deploy is well under $0.05. 10 USDC of ETH is more than enough.
 
-1. Claim Base Sepolia ETH to the **ops EOA** (`0xbad4e580…` or a new EOA you control):
-   - https://www.alchemy.com/faucets/base-sepolia
-   - https://portal.cdp.coinbase.com/products/faucet
-   - https://docs.base.org/base-chain/network-information/network-faucets
-2. Deploy `contracts/AuthiChainNFT.sol` to Base Sepolia:
-   - Preferred: `npx thirdweb deploy contracts/AuthiChainNFT.sol` → Base Sepolia.
-   - Or compile an artifact, then `CHAIN=base-sepolia DRY_RUN=false pnpm exec tsx scripts/deploy-authichain-nft-base.ts`.
-3. `verifyManufacturer(opsEOA)` (script does this for the signing wallet). Optionally `GRANT_SMART_WALLET=true` so the Smart Wallet can mint from Coinbase Wallet later.
-4. GitHub / local secrets:
+This sandbox cannot sign a Smart Wallet UserOp. The swap has to happen in Coinbase Wallet.
+
+## Swap + fund (you, in Coinbase Wallet)
+
+1. Open Coinbase Wallet → network **Base**.
+2. Confirm the 10 USDC is on `0xC0D26735…`.
+3. Swap **9 USDC → ETH**. Leave 1 USDC if you want a stable remainder. Coinbase’s Base paymaster usually sponsors the swap gas so you do not need ETH first.
+4. Send **0.002 ETH** to the ops EOA:
+   `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d`
+   Keep the rest in the Smart Wallet.
+5. Reply with the two BaseScan links (swap + transfer). Deploy runs after `eth_getBalance(opsEOA) > 0` on 8453.
+
+Do not send USDC to the ops EOA. The deploy script pays gas in ETH from an ethers-signed EOA. The USDC contract cannot sign.
+
+## After the ops EOA has ETH
+
+```bash
+CHAIN=base DRY_RUN=false GRANT_SMART_WALLET=true pnpm exec tsx scripts/deploy-authichain-nft-base.ts
+```
+
+or `npx thirdweb deploy contracts/AuthiChainNFT.sol` → **Base** (8453).
+
+Then:
 
 ```
-CHAIN=base-sepolia
-GOVCHAIN_NFT_CONTRACT=<new Base Sepolia address>
+CHAIN=base
+GOVCHAIN_NFT_CONTRACT=<new Base address>
+WALLET_PRIVATE_KEY=<ops EOA>
 ALCHEMY_API_KEY=<Base app>
-WALLET_PRIVATE_KEY=<ops EOA, not the Smart Wallet>
 DRY_RUN=true
 ```
 
-5. `pnpm exec tsx scripts/mint-govchain-nfts.ts` — success is `chain=Base Sepolia (84532)` and non-empty `getCode`. `DRY_RUN=true` does not send a tx.
-6. `DRY_RUN=false` for one `gov_proposals` row with `fit_score >= 75`.
-7. Repeat on Base mainnet only after a Sepolia receipt is on sepolia.basescan.org.
+`pnpm exec tsx scripts/mint-govchain-nfts.ts` — success is `chain=Base (8453)` and non-empty `getCode`.
 
-Hardhat `paths.sources` is still `contracts/ledger`. `npx hardhat compile` will **not** emit AuthiChainNFT until that path is widened on purpose.
+Flip `DRY_RUN=false` for one `gov_proposals` row with `fit_score >= 75`.
 
-## Env
+`verifyManufacturer(opsEOA)` is required (`MINTER_ROLE` alone reverts). `GRANT_SMART_WALLET=true` also verifies `0xC0D26735…` so Coinbase Wallet can mint later.
 
-```
-CHAIN=base-sepolia         # or 84532 | base | 8453 | polygon | 137
-ALCHEMY_API_KEY=
-WALLET_PRIVATE_KEY=        # ops EOA; also accepts MINTER_PRIVATE_KEY / POLYGON_PRIVATE_KEY
-GOVCHAIN_NFT_CONTRACT=     # also CONTRACT_ADDRESS
-GRANT_SMART_WALLET=false
-DRY_RUN=true
-```
+## Split unchanged
+
+| Asset | Chain |
+|---|---|
+| ACPT + $QRON | Polygon 137 (`0x4da4…`) |
+| GovChain pilot NFTs | **Base 8453** |
+| SAM / PII / proposals | Supabase |

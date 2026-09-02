@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable
@@ -27,6 +27,7 @@ class ExecutionContext:
     mode: Mode
     workflow_id: str
     verbose: bool = True
+    parameters: dict[str, Any] = field(default_factory=dict)
 
     def save_state(self, data: dict[str, Any]) -> None:
         """Persist workflow state to a checkpoint file."""

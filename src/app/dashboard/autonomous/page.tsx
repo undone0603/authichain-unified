@@ -51,6 +51,12 @@ function RunRow({ run }: { run: { jobName: string; status: string; startedAt: Da
   );
 }
 
+type AutopilotDecision = {
+  status?: string;
+  action?: string;
+  type?: string;
+};
+
 export default function AutonomousPage() {
   const statusQ = trpc.scheduler.getSystemStatus.useQuery(undefined, { refetchInterval: 10_000 });
   const jobsQ = trpc.scheduler.listJobs.useQuery();
@@ -66,6 +72,7 @@ export default function AutonomousPage() {
 
   const status = statusQ.data;
   const autopilot = autopilotQ.data;
+  const recentDecisions = (autopilot?.recentDecisions ?? []) as AutopilotDecision[];
 
   function handleRun(jobName: string) {
     runMutation.mutate({ jobName });
@@ -162,13 +169,13 @@ export default function AutonomousPage() {
         </div>
 
         {/* Autopilot Decisions */}
-        {autopilot?.recentDecisions && autopilot.recentDecisions.length > 0 && (
+        {recentDecisions.length > 0 && (
           <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-5">
             <h2 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
               <Zap className="w-4 h-4 text-yellow-400" /> Recent Autopilot Decisions
             </h2>
             <div className="space-y-2">
-              {autopilot.recentDecisions.map((d: any, i: number) => (
+              {recentDecisions.map((d, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm py-2 border-b border-zinc-800/50 last:border-0">
                   <span className={`w-2 h-2 rounded-full flex-shrink-0 ${d.status === "executed" ? "bg-green-400" : d.status === "overridden" ? "bg-yellow-400" : "bg-zinc-600"}`} />
                   <span className="flex-1 text-zinc-300 truncate">{d.action || d.type}</span>

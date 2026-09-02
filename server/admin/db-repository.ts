@@ -6,39 +6,39 @@ import * as db from "../db";
 import type { IAdminRepository } from "./types";
 
 export class DbAdminRepository implements IAdminRepository {
-  getAdminDashboardMetrics(): Promise<any> {
+  getAdminDashboardMetrics(): ReturnType<IAdminRepository["getAdminDashboardMetrics"]> {
     return db.getAdminDashboardMetrics();
   }
 
-  getAllUsers(): Promise<any[]> {
+  getAllUsers(): ReturnType<IAdminRepository["getAllUsers"]> {
     return db.getAllUsers();
   }
 
-  getRevenueAnalytics(startDate?: Date, endDate?: Date): Promise<any[]> {
+  getRevenueAnalytics(startDate?: Date, endDate?: Date): ReturnType<IAdminRepository["getRevenueAnalytics"]> {
     return db.getRevenueAnalytics(startDate, endDate);
   }
 
-  getSubscriptionAnalytics(): Promise<any[]> {
+  getSubscriptionAnalytics(): ReturnType<IAdminRepository["getSubscriptionAnalytics"]> {
     return db.getSubscriptionAnalytics();
   }
 
-  getOpenFraudAlerts(): Promise<any[]> {
+  getOpenFraudAlerts(): ReturnType<IAdminRepository["getOpenFraudAlerts"]> {
     return db.getOpenFraudAlerts();
   }
 
-  getAllHealthScores(): Promise<any[]> {
+  getAllHealthScores(): ReturnType<IAdminRepository["getAllHealthScores"]> {
     return db.getAllHealthScores();
   }
 
-  getRecentActivity(limit: number): Promise<any[]> {
+  getRecentActivity(limit: number): ReturnType<IAdminRepository["getRecentActivity"]> {
     return db.getRecentActivity(limit);
   }
 
-  getPastDueSubscriptions(): Promise<any[]> {
+  getPastDueSubscriptions(): ReturnType<IAdminRepository["getPastDueSubscriptions"]> {
     return db.listPastDueSubscriptions();
   }
 
-  getInactiveUsers(daysSinceLastScan?: number): Promise<any[]> {
+  getInactiveUsers(daysSinceLastScan?: number): ReturnType<IAdminRepository["getInactiveUsers"]> {
     return db.listInactiveUsersNoRecentScans(daysSinceLastScan || 7);
   }
 }

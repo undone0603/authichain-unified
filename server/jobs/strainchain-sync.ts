@@ -5,6 +5,18 @@
 import { syncMetrcTransfers, anchorPackageToTruthLayer } from "../metrc-service";
 import * as db from "../db";
 
+type WhiteLabelFeatures = {
+  metrc?: {
+    licenseNumber?: string;
+    vendorKey?: string;
+    userKey?: string;
+  };
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export async function runStrainChainSync() {
   console.log("[StrainChain Job] Starting METRC sync...");
   
@@ -14,7 +26,7 @@ export async function runStrainChainSync() {
 
   for (const client of clients) {
     // We assume METRC config is stored in the features JSON field
-    const features = client.features as any;
+    const features = (client.features as WhiteLabelFeatures | null) ?? {};
     const metrcConfig = features?.metrc;
     
     if (!metrcConfig || !metrcConfig.licenseNumber) {
@@ -57,8 +69,8 @@ export async function runStrainChainSync() {
           }
         }
       }
-    } catch (err: any) {
-      console.error(`[StrainChain Job] Failed for client ${client.id}:`, err.message);
+    } catch (err: unknown) {
+      console.error(`[StrainChain Job] Failed for client ${client.id}:`, getErrorMessage(err));
     }
   }
 

@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Lazy singletons — avoid build-time throw when env vars are absent.
 let _stripe: Stripe | null = null;
@@ -10,14 +10,18 @@ function getStripe(): Stripe {
     if (!key) throw new Error("STRIPE_SECRET_KEY not set");
     // Pinned to legacy API version because subscriptionItems.createUsageRecord
     // is only available on pre-meterEvents Stripe API versions.
+    // Stripe continues to honor this server-side version; the current SDK's
+    // latest-version-only type must therefore be narrowed intentionally.
 
-    _stripe = new Stripe(key, { apiVersion: "2026-07-29.dahlia" as const });
+    _stripe = new Stripe(key, {
+      apiVersion: "2026-07-29.dahlia" as unknown as Stripe.LatestApiVersion,
+    });
   }
   return _stripe;
 }
 
-let _admin: ReturnType<typeof createClient> | null = null;
-function getAdmin(): ReturnType<typeof createClient> {
+let _admin: SupabaseClient<any> | null = null;
+function getAdmin(): SupabaseClient<any> {
   if (!_admin) {
     _admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,6 +29,14 @@ function getAdmin(): ReturnType<typeof createClient> {
     );
   }
   return _admin;
+}
+
+type AutomationLogWriter = {
+  insert: (values: Record<string, unknown>) => PromiseLike<unknown>;
+};
+
+function automationLogs(): AutomationLogWriter {
+  return getAdmin().from("automation_logs") as unknown as AutomationLogWriter;
 }
 
 /**
@@ -111,7 +123,7 @@ export async function reportAgentUsage(
     });
 
     // 4. Log to DB for internal analytics
-    await (getAdmin().from("automation_logs") as any).insert({
+    await automationLogs().insert({
       workflow_name: "metered_usage_reported",
       trigger_type: "event",
       status: "success",
@@ -129,7 +141,7 @@ export async function reportAgentUsage(
   } catch (err) {
     console.error("[Billing] Reporting failed:", err);
     // Non-blocking log
-    (getAdmin().from("automation_logs") as any)
+    automationLogs()
       .insert({
         workflow_name: "metered_usage_reported",
         trigger_type: "event",

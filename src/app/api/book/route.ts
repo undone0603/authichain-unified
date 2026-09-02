@@ -1,13 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { detectBot } from './bot-detection';
+  import { createClient } from '@supabase/supabase-js';
+  import { NextRequest,NextResponse } from 'next/server';
+  import { detectBot } from './bot-detection';
 
 export const dynamic = 'force-dynamic';
 
 const HS_BASE = 'https://api.hubapi.com';
 
+type HubSpotContactSearchResponse = {
+  results?: Array<{ id?: string }>;
+};
+
+type HubSpotErrorResponse = {
+  message?: string;
+};
+
+type HubSpotDealResponse = {
+  id: string;
+};
+
+function getErrorMessage(error: unknown, fallback = 'Internal error'): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 async function upsertHubSpotDeal(
-  { name, email, company, message, interest }: Record<string, string | undefined>,
+  { name, email, company, message }: Record<string, string | undefined>,
   token: string,
   ownerId: string,
 ) {
@@ -24,7 +40,7 @@ async function upsertHubSpotDeal(
   if (cRes.ok) {
     contactId = (await cRes.json()).id;
   } else if (cRes.status === 409) {
-    const err = await cRes.json();
+    const err = (await cRes.json()) as HubSpotErrorResponse;
     const m = (err.message as string)?.match(/ID:\s*(\d+)/);
     if (m) {
       contactId = m[1];
@@ -33,7 +49,7 @@ async function upsertHubSpotDeal(
         method: 'POST', headers,
         body: JSON.stringify({ filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: email }] }], limit: 1 }),
       });
-      const sData = await sRes.json();
+      const sData = (await sRes.json()) as HubSpotContactSearchResponse;
       contactId = sData.results?.[0]?.id;
     }
   } else {
@@ -57,13 +73,13 @@ async function upsertHubSpotDeal(
     console.warn('[api/book] HubSpot deal error:', dRes.status);
     return;
   }
-  const deal = await dRes.json();
+  const deal = (await dRes.json()) as HubSpotDealResponse;
 
   // Associate deal → contact (associationTypeId 3 = deal_to_contact)
   if (contactId) {
     await fetch(`${HS_BASE}/crm/v4/objects/deals/${deal.id}/associations/contacts/${contactId}/3`, {
       method: 'PUT', headers,
-    }).catch((e: any) => console.warn('[api/book] HubSpot association error:', e?.message));
+    }).catch((e: unknown) => console.warn('[api/book] HubSpot association error:', getErrorMessage(e)));
   }
 
   return deal.id as string;
@@ -116,7 +132,7 @@ export async function POST(req: NextRequest) {
     const hsOwner = process.env.HUBSPOT_OWNER_ID ?? '87978084';
     if (hsToken) {
       upsertHubSpotDeal({ name, email, company, message, interest }, hsToken, hsOwner)
-        .catch((e: any) => console.warn('[api/book] HubSpot pipeline error:', e?.message));
+        .catch((e: unknown) => console.warn('[api/book] HubSpot pipeline error:', getErrorMessage(e)));
     }
 
     // Send notification to team via Resend (optional — degrades gracefully)
@@ -140,14 +156,14 @@ export async function POST(req: NextRequest) {
           ${prospect_id ? `<p><strong>Prospect ID:</strong> ${prospect_id} (originated from cold outreach)</p>` : ''}
           <p><a href="mailto:${email}">Reply directly →</a></p>
         `,
-      }).catch((err: any) =>
-        console.warn('[api/book] notification email failed:', err?.message),
+      }).catch((err: unknown) =>
+        console.warn('[api/book] notification email failed:', getErrorMessage(err)),
       );
     }
 
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    console.error('[api/book] error:', err?.message);
+  } catch (err) {
+    console.error('[api/book] error:', getErrorMessage(err));
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

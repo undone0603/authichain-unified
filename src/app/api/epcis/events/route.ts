@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mapEpcisToDsCsa, DsCsaEvidenceSchema } from "@authichain/evidence";
 import { db } from "@/db";
-import { supplyChainEvents, products } from "@/db/schema";
+import { supplyChainEvents, products, type SupplyChainEvent } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { importPKCS8, verify } from "jose";
+import { createPrivateKey, createPublicKey, verify as verifySignature } from "node:crypto";
 
 async function getPublicKey() {
   const raw = process.env.AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64;
   if (!raw)
     throw new Error("AUTHICHAIN_ATTESTATION_PRIVATE_KEY_B64 not configured");
   const pem = Buffer.from(raw, "base64").toString("utf8");
-  return importPKCS8(pem, "EdDSA");
+  return createPublicKey(createPrivateKey(pem));
 }
 
 export const dynamic = "force-dynamic";
@@ -45,14 +45,12 @@ export async function POST(req: NextRequest) {
     const publicKey = await getPublicKey();
     const sigBytes = Buffer.from(signature, "base64");
 
-    await verify(data, publicKey, {
-      algorithms: ["EdDSA"],
-      signature: sigBytes,
-    });
+    const isValid = verifySignature(null, data, publicKey, sigBytes);
+    if (!isValid) throw new Error("Invalid evidence signature");
 
     // 5. Resolve Product ID
     const product = await db.query.products.findFirst({
-      where: eq(products.id, validatedEvidence.subject_id as any),
+      where: eq(products.id, validatedEvidence.subject_id),
     });
 
     if (!product) {
@@ -64,7 +62,7 @@ export async function POST(req: NextRequest) {
       id: validatedEvidence.id,
       productId: product.id,
       eventType: validatedEvidence.type,
-      metadata: validatedEvidence.metadata as any,
+      metadata: validatedEvidence.metadata as SupplyChainEvent["metadata"],
     });
 
     return NextResponse.json(

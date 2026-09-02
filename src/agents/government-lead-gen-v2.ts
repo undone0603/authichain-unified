@@ -24,6 +24,73 @@ const ACTIVE_ENTITY = {
 
 const DRY_RUN = process.env.DRY_RUN !== 'false';
 
+type ContactRecord = {
+  fullName?: string;
+  email?: string;
+};
+
+type LeadSourceRecord = {
+  id?: string;
+  noticeId?: string;
+  opportunity_id?: string;
+  piid?: string;
+  contractAwardId?: string;
+  notice_id?: string;
+  title?: string;
+  contractDescription?: string;
+  agency?: string;
+  contractingAgency?: string;
+  awardingAgencyName?: string;
+  organizationType?: string;
+  contact?: string;
+  pointOfContact?: ContactRecord[];
+  poc?: ContactRecord[];
+  email?: string;
+  similarity?: number;
+  [key: string]: unknown;
+};
+
+type UsaSpendingAward = {
+  [key: string]: unknown;
+};
+
+type VectorLeadRecord = LeadSourceRecord & {
+  notice_id?: string;
+  similarity?: number;
+};
+
+type ScoredLead = {
+  id: string;
+  title: string;
+  agency: string;
+  contact: string;
+  source: string;
+  raw: LeadSourceRecord;
+  awardsContext?: LeadSourceRecord[];
+  spendingContext?: UsaSpendingAward | null;
+  relevanceScore?: number;
+};
+
+type QRONPayload = Record<string, unknown>;
+
+type QRON = { signature: string; payload: QRONPayload; style: string };
+
+type UsaSpendingRequestBody = {
+  filters: {
+    award_type_codes: string[];
+    time_period: Array<{ start_date: string; end_date: string }>;
+    agencies?: Array<{ type: 'awarding'; tier: 'toptier'; name: string }>;
+  };
+  fields: string[];
+  limit: number;
+  sort: string;
+  order: string;
+};
+
+function isNumberArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'number');
+}
+
 function samApiKey(): string | undefined {
   return process.env.SAM_GOV_API_KEY || process.env.SAM_API_KEY || undefined;
 }
@@ -40,8 +107,10 @@ async function embedText(text: string): Promise<number[] | null> {
       body: JSON.stringify({ inputs: text.slice(0, 2000), options: { wait_for_model: true } }),
     });
     if (!res.ok) return null;
-    const data: any = await res.json();
-    return Array.isArray(data[0]) ? data[0] : data;
+    const data = await res.json();
+    if (isNumberArray(data)) return data;
+    if (Array.isArray(data) && isNumberArray(data[0])) return data[0];
+    return null;
   } catch {
     return null;
   }
@@ -54,7 +123,7 @@ function supabaseAdmin(): SupabaseClient | null {
   return createClient(supabaseUrl, supabaseKey);
 }
 
-async function findSupabaseOpportunities(queryText: string, limit = 8): Promise<any[]> {
+async function findSupabaseOpportunities(queryText: string, limit = 8): Promise<VectorLeadRecord[]> {
   const supabase = supabaseAdmin();
   if (!supabase) {
     console.warn('[gov-engine] Supabase env not set — skipping vector match');
@@ -75,7 +144,8 @@ async function findSupabaseOpportunities(queryText: string, limit = 8): Promise<
       console.warn('[gov-engine] pgvector RPC error:', error.message);
       return [];
     }
-    return (data ?? []).map((r: any) => ({
+    const rows = Array.isArray(data) ? (data as VectorLeadRecord[]) : [];
+    return rows.map((r) => ({
       ...r,
       id: r.notice_id,
       relevanceScore: Math.round((r.similarity ?? 0.5) * 100),
@@ -97,7 +167,7 @@ function rollingWindow(days: number) {
   return { samFrom: sam(from), samTo: sam(to), isoFrom: iso(from), isoTo: iso(to) };
 }
 
-async function fetchSAMOpportunities(): Promise<any[]> {
+async function fetchSAMOpportunities(): Promise<LeadSourceRecord[]> {
   const key = samApiKey();
   if (!key) {
     console.warn('[gov-engine] SAM_GOV_API_KEY / SAM_API_KEY not set — skipping Opportunities');
@@ -117,7 +187,7 @@ async function fetchSAMOpportunities(): Promise<any[]> {
       console.error(`[gov-engine] SAM Opportunities ${res.status} ${res.statusText}`);
       return [];
     }
-    const data: any = await res.json();
+    const data = (await res.json()) as { opportunitiesData?: LeadSourceRecord[] };
     return data.opportunitiesData || [];
   } catch (err) {
     console.error('[gov-engine] fetchSAMOpportunities failed:', err);
@@ -125,7 +195,7 @@ async function fetchSAMOpportunities(): Promise<any[]> {
   }
 }
 
-async function fetchSAMContractAwards(): Promise<any[]> {
+async function fetchSAMContractAwards(): Promise<LeadSourceRecord[]> {
   const key = samApiKey();
   if (!key) {
     console.warn('[gov-engine] SAM_GOV_API_KEY / SAM_API_KEY not set — skipping Contract Awards');
@@ -143,7 +213,10 @@ async function fetchSAMContractAwards(): Promise<any[]> {
       console.error(`[gov-engine] SAM Contract Awards ${res.status} ${res.statusText}`);
       return [];
     }
-    const data: any = await res.json();
+    const data = (await res.json()) as {
+      results?: LeadSourceRecord[];
+      contractAwardsData?: LeadSourceRecord[];
+    };
     return data.results || data.contractAwardsData || [];
   } catch (err) {
     console.error('[gov-engine] fetchSAMContractAwards failed:', err);
@@ -151,9 +224,9 @@ async function fetchSAMContractAwards(): Promise<any[]> {
   }
 }
 
-async function fetchUSASpendingAwards(agencyName?: string): Promise<any[]> {
+async function fetchUSASpendingAwards(agencyName?: string): Promise<UsaSpendingAward[]> {
   const { isoFrom, isoTo } = rollingWindow(120);
-  const body: any = {
+  const body: UsaSpendingRequestBody = {
     filters: {
       award_type_codes: ['A', 'B', 'C', 'D'],
       time_period: [{ start_date: isoFrom, end_date: isoTo }],
@@ -173,7 +246,7 @@ async function fetchUSASpendingAwards(agencyName?: string): Promise<any[]> {
       body: JSON.stringify(body),
     });
     if (!res.ok) return [];
-    const data: any = await res.json();
+    const data = (await res.json()) as { results?: UsaSpendingAward[] };
     return data.results || [];
   } catch (err) {
     console.error('[gov-engine] fetchUSASpendingAwards failed:', err);
@@ -194,7 +267,7 @@ function hitScore(haystack: string, terms: string[]): number {
   return Math.min(100, Math.round((hits / terms.length) * 100));
 }
 
-async function runFiveAgentConsensus(lead: any): Promise<ConsensusResult> {
+async function runFiveAgentConsensus(lead: ScoredLead): Promise<ConsensusResult> {
   const haystack = JSON.stringify(lead).toLowerCase();
 
   const guardian = hitScore(haystack, [
@@ -246,9 +319,7 @@ async function runFiveAgentConsensus(lead: any): Promise<ConsensusResult> {
   };
 }
 
-type QRON = { signature: string; payload: any; style: string };
-
-async function generateQRON(payload: any): Promise<QRON> {
+async function generateQRON(payload: QRONPayload): Promise<QRON> {
   try {
     const res = await fetch('https://qron-image-gen.undone-k.workers.dev/generate', {
       method: 'POST',
@@ -261,7 +332,7 @@ async function generateQRON(payload: any): Promise<QRON> {
       }),
     });
     if (res.ok) {
-      const data: any = await res.json();
+      const data = (await res.json()) as { imageUrl?: string; url?: string };
       const imageUrl: string = data.imageUrl || data.url || '';
       if (imageUrl) return { signature: imageUrl, payload, style: 'marble_white' };
     }
@@ -272,7 +343,7 @@ async function generateQRON(payload: any): Promise<QRON> {
   return { signature: sig, payload, style: 'american-seal-eagle-govchain' };
 }
 
-async function sendOutreach(lead: any, proposal: string, _qron: QRON): Promise<void> {
+async function sendOutreach(lead: ScoredLead, proposal: string, _qron: QRON): Promise<void> {
   if (DRY_RUN) {
     console.log(`[gov-engine] DRY_RUN outreach skipped for ${lead.agency || 'lead'}`);
     return;
@@ -342,7 +413,7 @@ async function mintPilotNFT(args: {
   }
 }
 
-function normalizeLead(raw: any, source: string) {
+function normalizeLead(raw: LeadSourceRecord, source: string): ScoredLead {
   return {
     id:
       raw.id ||
@@ -377,14 +448,14 @@ export async function runAdvancedGovernmentLeadGen() {
     `[gov-engine] SAM.gov: ${opportunities.length} opportunities, ${awards.length} contract awards`
   );
 
-  const enrichedLeads: any[] = [];
+  const enrichedLeads: ScoredLead[] = [];
   for (const opp of opportunities) {
     const lead = normalizeLead(opp, 'sam.gov-opportunity');
     const spending = await fetchUSASpendingAwards(lead.agency);
     enrichedLeads.push({
       ...lead,
       awardsContext: awards
-        .filter((a: any) => (a.awardingAgencyName || a.agency) === lead.agency)
+        .filter((a) => (a.awardingAgencyName || a.agency) === lead.agency)
         .slice(0, 3),
       spendingContext: spending[0] || null,
       relevanceScore: spending.length > 0 ? 90 : 70,
@@ -409,7 +480,7 @@ export async function runAdvancedGovernmentLeadGen() {
 
   const allLeads = [
     ...enrichedLeads,
-    ...vectorLeads.map((v: any) => normalizeLead(v, 'supabase-pgvector')),
+    ...vectorLeads.map((v) => normalizeLead(v, 'supabase-pgvector')),
   ];
 
   let processed = 0;

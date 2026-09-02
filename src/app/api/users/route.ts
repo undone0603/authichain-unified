@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+  import { NextRequest,NextResponse } from 'next/server';
 
 // GET /api/users - Get current user profile
-export async function GET(req: NextRequest) {
+export async function GET(_unused_req_4: NextRequest) {
   try {
     const user = {
       id: 'usr_001',

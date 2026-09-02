@@ -52,7 +52,7 @@ async function runSync() {
     if (!line.trim()) continue;
     
     // email,first_name,company,dba,city,type,tax_vulnerability
-    const [email, first_name, company, dba, city, type, tax_vulnerability] = line.split(",");
+    const [email, first_name, company, dba, _unused_city_55, _unused_type_55, _unused_tax_vulnerability_55] = line.split(",");
 
     console.log(`📡 Syncing ${email} (${dba})...`);
     

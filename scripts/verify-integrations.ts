@@ -85,12 +85,20 @@ async function main() {
     return `read ${recs.length} record`;
   });
 
-  // --- Vercel ---
-  await run('Vercel (qron-platform)', ['VERCEL_TOKEN'], async () => {
-    const { getQronDeployments } = await import('../libs/integrations/vercel');
-    const data = await getQronDeployments(1);
-    const n = Array.isArray(data?.deployments) ? data.deployments.length : 0;
-    return `fetched ${n} deployment`;
+  // --- Cloudflare ---
+  await run('Cloudflare Workers', ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'], async () => {
+    const auth = ['Bearer', process.env.CLOUDFLARE_API_TOKEN].join(' ');
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts`,
+      {
+        headers: {
+          Authorization: auth,
+        },
+      },
+    );
+    if (!response.ok) throw new Error(`Cloudflare API ${response.status} ${response.statusText}`);
+    const data = await response.json() as { result?: unknown[] };
+    return `fetched ${Array.isArray(data.result) ? data.result.length : 0} worker(s)`;
   });
 
   // --- Print summary ---

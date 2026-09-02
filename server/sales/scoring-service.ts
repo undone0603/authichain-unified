@@ -1,6 +1,4 @@
-import * as db from "../db";
-import { missions, missionTasks } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+  import * as db from "../db";
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split('@');

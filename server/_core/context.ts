@@ -1,10 +1,10 @@
-import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import type { User } from "../../drizzle/schema";
-import { sdk } from "./sdk";
-import type { IMissionsRepository } from "../missions/types";
-import type { IAdminRepository } from "../admin/types";
-import { DbMissionsRepository } from "../missions/db-repository";
-import { DbAdminRepository } from "../admin/db-repository";
+  import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+  import type { User } from "../../drizzle/schema";
+  import { DbAdminRepository } from "../admin/db-repository";
+  import type { IAdminRepository } from "../admin/types";
+  import { DbMissionsRepository } from "../missions/db-repository";
+  import type { IMissionsRepository } from "../missions/types";
+  import { sdk } from "./sdk";
 
 export type TrpcContext = {
   req?: CreateExpressContextOptions["req"];
@@ -24,7 +24,7 @@ export async function createContext(
 
   try {
     user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
+  } catch (_unused_error_27) {
     // Authentication is optional for public procedures.
     user = null;
   }

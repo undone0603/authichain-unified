@@ -1,11 +1,18 @@
 'use client';
 
-import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import {
-  Filter, Search, TrendingUp, MapPin, Building2, AlertCircle,
-  ExternalLink, Zap, Flag, Award, BarChart3, Users,
-} from 'lucide-react';
+  import {
+    AlertCircle,
+    Award,
+    Building2,
+    ExternalLink,
+    Filter,
+    Flag,
+    MapPin,
+    Search,
+    Users
+  } from 'lucide-react';
+  import Link from 'next/link';
+  import { useEffect,useState } from 'react';
 
 const BLUE = '#3b82f6';
 const RED = '#ef4444';
@@ -26,13 +33,15 @@ interface USManufacturer {
   createdAt: string;
 }
 
+type MarketplaceSort = 'trending' | 'verified' | 'recent';
+
 export default function MadeInUSAMarketplace() {
   const [products, setProducts] = useState<USManufacturer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedState, setSelectedState] = useState<'all' | string>('all');
   const [selectedCategory, setSelectedCategory] = useState<'all' | string>('all');
-  const [sortBy, setSortBy] = useState<'trending' | 'verified' | 'recent'>('trending');
+  const [sortBy, setSortBy] = useState<MarketplaceSort>('trending');
 
   useEffect(() => {
     fetchProducts();
@@ -149,7 +158,7 @@ export default function MadeInUSAMarketplace() {
             {/* Sort */}
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
+              onChange={e => setSortBy(e.target.value as MarketplaceSort)}
               className="px-4 py-3 rounded-xl border border-zinc-800 bg-zinc-950 text-white focus:outline-none focus:border-red-500 transition-colors"
             >
               <option value="trending">Sort: Trending</option>

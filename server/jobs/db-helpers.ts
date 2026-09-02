@@ -35,12 +35,14 @@ import type { MissionType } from '../missions/types';
 import type { getHyperdriveDb } from '../db';
 
 export type Db = ReturnType<typeof getHyperdriveDb>;
+type ActivityLogDetails = Record<string, unknown>;
+type TaskResult = Record<string, unknown> | null;
 
 // ─── Activity Log ─────────────────────────────────────────────────────────
 
 export async function logActivity(
   db: Db,
-  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any },
+  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: ActivityLogDetails },
   details?: string,
 ): Promise<void> {
   if (typeof actionOrData === 'string') {
@@ -130,7 +132,7 @@ export async function createSystemNotification(
   type: InsertNotification['type'],
   actionUrl?: string,
 ): Promise<{ id: string }> {
-  return createNotification(db, { userId, type: type as any, title, message, isRead: false, actionUrl });
+  return createNotification(db, { userId, type, title, message, isRead: false, actionUrl });
 }
 
 // ─── Budget & Task Queue ────────────────────────────────────────────────────
@@ -177,7 +179,7 @@ export async function markTaskRunning(db: Db, id: string): Promise<boolean> {
   return rows.length > 0;
 }
 
-export async function markTaskDone(db: Db, id: string, result?: any) {
+export async function markTaskDone(db: Db, id: string, result?: TaskResult) {
   // WHERE status='in_progress' preserves 'waiting_human' if an agent set it during execution
   await db.update(missionTasks).set({ status: 'completed', result, updatedAt: new Date() }).where(and(eq(missionTasks.id, id), eq(missionTasks.status, 'in_progress')));
 }

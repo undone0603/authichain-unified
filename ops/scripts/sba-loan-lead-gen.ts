@@ -1,5 +1,5 @@
 import { invokeLLM } from "../server/_core/llm";
-import { getDb, createLead, createAutopilotDecision, logActivity } from "../server/db";
+import { createLead, createAutopilotDecision, logActivity } from "../server/db";
 import fs from "fs";
 import path from "path";
 

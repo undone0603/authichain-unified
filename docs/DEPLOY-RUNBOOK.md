@@ -1,7 +1,7 @@
 # Deploy Runbook
 
-One-command paths for the deploy steps that were blocking full launch. All require
-a Cloudflare API token; nothing here stores secrets in the repo.
+One-command paths for the deploy steps that were blocking full launch. Cloudflare
+is the only active deploy target; nothing here stores secrets in the repo.
 
 ## 0. Get a Cloudflare API token
 https://dash.cloudflare.com/profile/api-tokens → Create Token. Permissions:
@@ -10,6 +10,7 @@ https://dash.cloudflare.com/profile/api-tokens → Create Token. Permissions:
 ```bash
 export CLOUDFLARE_API_TOKEN="..."
 export CLOUDFLARE_ACCOUNT_ID="4c1869b90f13f86940aa3747839bf420"   # optional; this is the default
+export NEXT_PUBLIC_APP_URL="https://authichain.com"
 ```
 
 ## 1. Rotate the leaked credentials (do this first — repo is public)
@@ -47,6 +48,11 @@ npx wrangler d1 create authichain-provenance   # only if it doesn't exist; paste
 `.github/workflows/deploy-workers.yml` deploys every `workers/*` on push to `main`
 (path-filtered) or via **Actions → Deploy Workers → Run workflow** (optionally one worker).
 Requires repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+
+For the root Cloudflare deploy workflow, also set the repository variable
+`CLOUDFLARE_DEPLOY_ENABLED=true`. Scheduled GitHub Actions that call internal
+cron endpoints use `vars.APP_URL` (defaults to `https://authichain.com`) and
+`CRON_SECRET`; no Vercel secrets are required.
 
 ## 3. Remaining founder-only items
 See `docs/operations/LAUNCH-READINESS-2026-06-23.md` §"Founder-only":

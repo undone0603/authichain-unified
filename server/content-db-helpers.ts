@@ -40,6 +40,20 @@ import {
 import type { getHyperdriveDb } from "./db";
 
 export type Db = ReturnType<typeof getHyperdriveDb>;
+type FlexibleInsert<T> = T & Record<string, unknown>;
+type ActivityPayload = {
+  userId?: number | null;
+  action: string;
+  entityType?: string;
+  entityId?: number | string;
+  details?: unknown;
+};
+type LeadInsert = typeof leads.$inferInsert;
+type EmailCampaignInsert = typeof emailCampaigns.$inferInsert;
+type EmailDraftInsert = typeof emailDrafts.$inferInsert;
+type AutopilotConfigInsert = typeof autopilotConfig.$inferInsert;
+type AutopilotDecisionInsert = typeof autopilotDecisions.$inferInsert;
+type AbTestInsert = typeof abTests.$inferInsert;
 
 // ─────────────────────────────────────────────────────────────
 // USERS
@@ -60,7 +74,7 @@ export async function getRecentActivity(db: Db, limit = 20) {
 
 export async function logActivity(
   db: Db,
-  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any },
+  actionOrData: string | ActivityPayload,
   details?: string,
 ): Promise<void> {
   if (typeof actionOrData === "string") {
@@ -91,8 +105,8 @@ export async function hasUserActionLogged(db: Db, userId: number, action: string
 // LEADS
 // ─────────────────────────────────────────────────────────────
 
-export async function createLead(db: Db, data: any) {
-  const values = {
+export async function createLead(db: Db, data: FlexibleInsert<Pick<LeadInsert, "email"> & Partial<Omit<LeadInsert, "email">>>) {
+  const values: LeadInsert = {
     email: data.email,
     name: data.name ?? null,
     company: data.company ?? null,
@@ -116,8 +130,8 @@ export async function updateLeadScore(db: Db, id: number, score: number) {
   await db.update(leads).set({ score }).where(eq(leads.id, id));
 }
 
-export async function updateLeadStatus(db: Db, id: number, status: string) {
-  await db.update(leads).set({ status: status as any }).where(eq(leads.id, id));
+export async function updateLeadStatus(db: Db, id: number, status: NonNullable<LeadInsert["status"]>) {
+  await db.update(leads).set({ status }).where(eq(leads.id, id));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -143,7 +157,7 @@ export async function getCertificateByNumber(db: Db, certNumber: string) {
 // EMAIL CAMPAIGNS
 // ─────────────────────────────────────────────────────────────
 
-export async function createEmailCampaign(db: Db, data: any) {
+export async function createEmailCampaign(db: Db, data: FlexibleInsert<EmailCampaignInsert>) {
   const [result] = await db.insert(emailCampaigns).values(data).returning();
   return { id: result.id };
 }
@@ -152,7 +166,7 @@ export async function getUserEmailCampaigns(db: Db, userId: number) {
   return db.select().from(emailCampaigns).where(eq(emailCampaigns.userId, userId)).orderBy(desc(emailCampaigns.createdAt));
 }
 
-export async function updateEmailCampaign(db: Db, id: string, data: any) {
+export async function updateEmailCampaign(db: Db, id: string, data: Partial<EmailCampaignInsert>) {
   await db.update(emailCampaigns).set(data).where(eq(emailCampaigns.id, id));
 }
 
@@ -160,7 +174,7 @@ export async function updateEmailCampaign(db: Db, id: string, data: any) {
 // EMAIL DRAFTS
 // ─────────────────────────────────────────────────────────────
 
-export async function createEmailDraft(db: Db, data: any) {
+export async function createEmailDraft(db: Db, data: FlexibleInsert<EmailDraftInsert>) {
   const [result] = await db.insert(emailDrafts).values(data).returning();
   return { id: result.id };
 }
@@ -170,7 +184,7 @@ export async function getPendingDrafts(db: Db) {
 }
 
 export async function updateDraftStatus(db: Db, id: string, status: string, approvedBy?: number) {
-  const updateData: any = { status };
+  const updateData: Pick<EmailDraftInsert, "status" | "approvedBy" | "approvedAt" | "sentAt"> = { status };
   if (approvedBy) { updateData.approvedBy = approvedBy; updateData.approvedAt = new Date(); }
   if (status === "sent") updateData.sentAt = new Date();
   await db.update(emailDrafts).set(updateData).where(eq(emailDrafts.id, id));
@@ -185,12 +199,12 @@ export async function getAutopilotConfig(db: Db) {
   return result[0];
 }
 
-export async function upsertAutopilotConfig(db: Db, data: any) {
+export async function upsertAutopilotConfig(db: Db, data: FlexibleInsert<AutopilotConfigInsert>) {
   const [result] = await db.insert(autopilotConfig).values(data).onConflictDoUpdate({ target: autopilotConfig.tenantId, set: data }).returning();
   return result?.id;
 }
 
-export async function createAutopilotDecision(db: Db, data: any) {
+export async function createAutopilotDecision(db: Db, data: FlexibleInsert<AutopilotDecisionInsert>) {
   const [result] = await db.insert(autopilotDecisions).values(data).returning();
   return { id: result.id };
 }
@@ -203,7 +217,7 @@ export async function getRecentDecisions(db: Db, limit = 10) {
 // A/B TESTS
 // ─────────────────────────────────────────────────────────────
 
-export async function createAbTest(db: Db, data: any) {
+export async function createAbTest(db: Db, data: FlexibleInsert<AbTestInsert>) {
   const [result] = await db.insert(abTests).values(data).returning();
   return { id: result.id };
 }

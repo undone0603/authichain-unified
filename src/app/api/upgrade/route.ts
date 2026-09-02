@@ -10,6 +10,10 @@ const PLAN_PRICES: Record<string, { monthly: number | null; annual: number | nul
   enterprise: { monthly: null, annual: null, contact: true }
 };
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
@@ -18,7 +22,11 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
 
-    const body = await req.json();
+    const body = await req.json() as {
+      to_plan?: string;
+      billing_cycle?: 'monthly' | 'annual';
+      promo_code?: string;
+    };
     const { to_plan, billing_cycle = 'monthly', promo_code } = body;
 
     if (!to_plan || !PLAN_PRICES[to_plan]) {
@@ -88,8 +96,8 @@ export async function POST(req: NextRequest) {
       is_upgrade,
       checkout_url: `/api/checkout?upgrade_id=${record.id}`
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -108,7 +116,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false });
 
     return NextResponse.json({ success: true, upgrades: data || [] });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }

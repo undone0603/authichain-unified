@@ -1,7 +1,7 @@
-import { nanoid } from "nanoid";
-import { eq, desc, and } from "drizzle-orm";
-import { db } from "../db";
-import { referrals, referralClicks, affiliates } from "../../drizzle/schema";
+  import { and,eq } from "drizzle-orm";
+  import { nanoid } from "nanoid";
+  import { referralClicks,referrals } from "../../drizzle/schema";
+  import { db } from "../db";
 
 export const COMMISSION_RATES: Record<string, number> = {
   starter: 0.10,      // 10%

@@ -33,14 +33,14 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN || secrets.HUBSPOT_ACCESS_TOKEN }}
       AGENTZ_WEBHOOK_SECRET: ${{ secrets.AGENTZ_WEBHOOK_SECRET }}
-      VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
+      APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
     steps:
       - id: check
         shell: bash
         run: |
           set -euo pipefail
           missing=()
-          for required in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY HUBSPOT_TOKEN AGENTZ_WEBHOOK_SECRET VERCEL_APP_URL; do
+          for required in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY HUBSPOT_TOKEN AGENTZ_WEBHOOK_SECRET; do
             if [ -z "${!required}" ]; then
               missing+=("$required")
             fi
@@ -61,10 +61,10 @@ jobs:
     needs: preflight
     if: needs.preflight.outputs.ready == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
         with: { version: "${{ env.PNPM_VERSION }}" }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Qualify leads with AI scoring
@@ -89,10 +89,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: qualify-leads
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
         with: { version: "${{ env.PNPM_VERSION }}" }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Sync MI leads to HubSpot CRM
@@ -115,10 +115,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: sync-mi-leads
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
         with: { version: "${{ env.PNPM_VERSION }}" }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "${{ env.NODE_VERSION }}", cache: pnpm }
       - run: pnpm install --no-frozen-lockfile --config.minimumReleaseAge=0
       - name: Generate funnel performance report
@@ -145,7 +145,7 @@ jobs:
           SYNC_MI_LEADS_STATUS: ${{ needs.sync-mi-leads.result }}
           FUNNEL_REPORT_STATUS: ${{ needs.funnel-report.result }}
           AGENTZ_WEBHOOK_SECRET: ${{ secrets.AGENTZ_WEBHOOK_SECRET }}
-          VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
+          APP_URL: ${{ vars.APP_URL || 'https://authichain.com' }}
         run: |
           set -euo pipefail
           status="success"
@@ -159,7 +159,7 @@ jobs:
           curl --fail-with-body --silent --show-error -X POST \
             -H "Content-Type: application/json" \
             -H "x-agentz-secret: $AGENTZ_WEBHOOK_SECRET" \
-            "$VERCEL_APP_URL/api/agentz/webhook" \
+            "$APP_URL/api/agentz/webhook" \
             -d "{\"event\":\"automation.complete\",\"payload\":{\"workflow\":\"agentz-orchestration\",\"run_id\":\"${{ github.run_id }}\",\"status\":\"$status\",\"stages\":{\"preflight\":\"$PREFLIGHT_STATUS\",\"qualify_leads\":\"$QUALIFY_LEADS_STATUS\",\"sync_mi_leads\":\"$SYNC_MI_LEADS_STATUS\",\"funnel_report\":\"$FUNNEL_REPORT_STATUS\"}}}"
 
           if [ "$status" != "success" ]; then

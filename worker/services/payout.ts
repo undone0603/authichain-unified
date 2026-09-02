@@ -32,7 +32,7 @@ export async function executeStripeTransfer(
   if (amountCents <= 0) return;
 
   const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: "2026-07-29.dahlia", // Updated to latest stable version compatible with worker
+    apiVersion: "2026-08-26.dahlia", // Updated to latest stable version compatible with worker
   });
 
   try {

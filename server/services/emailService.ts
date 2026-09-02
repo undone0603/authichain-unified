@@ -19,6 +19,14 @@ interface EmailConfig {
 
 let isConfigured = false;
 
+function hasResponseBody(
+  error: unknown,
+): error is { response: { body: unknown } } {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { response?: unknown };
+  return !!candidate.response && typeof candidate.response === "object" && "body" in candidate.response;
+}
+
 /**
  * Initialize SendGrid with API key
  */
@@ -109,10 +117,10 @@ export async function sendCertificateEmail(params: {
     console.log(`[Email] Certificate email sent successfully to ${maskEmail(to)}`);
     return true;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Email] Failed to send certificate email:', error);
     
-    if (error.response) {
+    if (hasResponseBody(error)) {
       console.error('[Email] SendGrid error:', error.response.body);
     }
     

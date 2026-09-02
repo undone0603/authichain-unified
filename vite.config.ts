@@ -101,15 +101,21 @@ function vitePluginManusDebugCollector(): Plugin {
           return next();
         }
 
-        const handlePayload = (payload: any) => {
+        interface ManusLogPayload {
+          consoleLogs?: unknown[];
+          networkRequests?: unknown[];
+          sessionEvents?: unknown[];
+        }
+
+        const handlePayload = (payload: ManusLogPayload) => {
           // Write logs directly to files
-          if (payload.consoleLogs?.length > 0) {
+          if (payload.consoleLogs && payload.consoleLogs.length > 0) {
             writeToLogFile("browserConsole", payload.consoleLogs);
           }
-          if (payload.networkRequests?.length > 0) {
+          if (payload.networkRequests && payload.networkRequests.length > 0) {
             writeToLogFile("networkRequests", payload.networkRequests);
           }
-          if (payload.sessionEvents?.length > 0) {
+          if (payload.sessionEvents && payload.sessionEvents.length > 0) {
             writeToLogFile("sessionReplay", payload.sessionEvents);
           }
 

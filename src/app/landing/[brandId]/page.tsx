@@ -1,6 +1,6 @@
-import { notFound } from 'next/navigation';
-import { BRANDS, type BrandId } from '@shared/brands';
-import { BrandLanding, type LandingFeature } from '@/app/_home/BrandLanding';
+  import { BrandLanding,type LandingFeature } from '@/app/_home/BrandLanding';
+  import { BRANDS,type BrandId } from '@shared/brands';
+  import { notFound } from 'next/navigation';
 
 interface LandingPageProps {
   params: Promise<{ brandId: string }>;
@@ -24,7 +24,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
     notFound();
   }
 
-  const brand = BRANDS[brandId as BrandId];
+  const _unused_brand_27 = BRANDS[brandId as BrandId];
 
   // Generate brand-specific landing page content
   const content = getLandingContent(brandId as BrandId);

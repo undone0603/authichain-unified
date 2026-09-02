@@ -3,14 +3,15 @@
 // Thin wrapper over missions.db so it can be swapped for a mock in tests
 // (see server/missions.test.ts repository-injection coverage).
 import * as missionsDb from "./missions.db";
-import type { IMissionsRepository, MissionStatus, MissionType } from "./types";
+import type { IMissionsRepository, MissionStatus, MissionType, MissionWithTasks } from "./types";
+import type { Mission, MissionTask } from "../../drizzle/schema";
 
 export class DbMissionsRepository implements IMissionsRepository {
-  getMissions(status?: MissionStatus): Promise<any[]> {
+  getMissions(status?: MissionStatus): Promise<Mission[]> {
     return missionsDb.getMissions(status);
   }
 
-  getMissionById(id: string): Promise<any | null> {
+  getMissionById(id: string): Promise<MissionWithTasks | null> {
     return missionsDb.getMissionById(id);
   }
 
@@ -22,7 +23,7 @@ export class DbMissionsRepository implements IMissionsRepository {
     return missionsDb.updateMissionStatus(id, status);
   }
 
-  getTasksByMission(missionId: string): Promise<any[]> {
+  getTasksByMission(missionId: string): Promise<MissionTask[]> {
     return missionsDb.getTasksByMission(missionId);
   }
 
