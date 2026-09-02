@@ -138,8 +138,9 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260825.1",
     "@nomicfoundation/hardhat-ethers": "^4.0.15",
-    "@testing-library/jest-dom": "^6.0.0",
+    "@openzeppelin/contracts": "5.6.1",
     "@tailwindcss/postcss": "^4.3.3",
+    "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^14.0.0",
     "@types/node": "^26.3.0",
     "@types/nodemailer": "^8.0.0",
@@ -162,6 +163,7 @@
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "redis": "file:./stubs/empty-redis",
+    "solc": "0.8.24",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.2",
