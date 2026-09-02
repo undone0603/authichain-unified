@@ -3137,9 +3137,13 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         The EU's Ecodesign for Sustainable Products Regulation (ESPR) requires a blockchain-readable product passport for every item sold in Europe. AuthiChain is live — ERC-721 certificates, audit-ready exports, one integration.
       </p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" href="https://authichain-unified.vercel.app/onboard">Get DPP Compliant</a>
+        <a class="btn btn-primary" href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c">Start Your DPP Readiness Audit &mdash; $299</a>
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20Compliance%20Demo">Book a Demo</a>
       </div>
+      <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
+        Written readiness report and a 30-minute strategy call within 5 business days.
+        The $299 is credited in full toward AuthiChain Basic if you move forward.
+      </p>
     </div>
   </section>
 
