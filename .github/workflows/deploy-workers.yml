@@ -34,7 +34,6 @@ jobs:
 
   deploy:
     needs: secret-scan
-    uses: ./.github/workflows/reusable-deploy.yml
     strategy:
       fail-fast: false
       matrix:
@@ -66,7 +65,6 @@ jobs:
           - authichain-verify-worker
           - stripe-webhook
           - authichain-openclaw
-          - authichain-bridge
           - authichain-infra
           - authichain-outreach-engine
           - blockchain

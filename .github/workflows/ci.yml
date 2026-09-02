@@ -53,7 +53,7 @@ jobs:
         uses: mikepenz/action-junit-report@v5
         if: always() # always run even if tests fail
         with:
-          report_paths: '**/test-results/*.xml'
+          report_paths: "**/test-results/*.xml"
 
       - name: Production build
         run: pnpm build

@@ -28,7 +28,6 @@ jobs:
 
   deploy:
     needs: secret-scan
-    uses: ./.github/workflows/reusable-deploy.yml
     if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout repository

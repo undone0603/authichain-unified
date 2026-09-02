@@ -17,9 +17,11 @@ jobs:
     timeout-minutes: 30
     # This job requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository
     # secrets to talk to the live product ledger. Those secrets are not
-    # configured for every PR (e.g. forks), so skip the job entirely rather
-    # than failing CI when they're unavailable.
-    if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+    # configured for every PR (e.g. forks). The `secrets` context is not
+    # available in a job-level `if`, so the availability check runs as the
+    # first step and the audit step is guarded with an env-based condition.
+    env:
+      HAS_SUPABASE_SECRETS: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
 
     steps:
       - name: Checkout repository
@@ -35,7 +37,16 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements-agentz.txt
 
+      - name: Check secrets availability
+        run: |
+          if [ "${HAS_SUPABASE_SECRETS}" = "true" ]; then
+            echo "Supabase secrets available - running audit."
+          else
+            echo "Supabase secrets unavailable - skipping audit."
+          fi
+
       - name: Run Compliance Audit
+        if: env.HAS_SUPABASE_SECRETS == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
