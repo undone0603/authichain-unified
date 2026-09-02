@@ -6403,5 +6403,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "csddd-due-diligence-directive-2029",
+    "keyword": "csddd due diligence directive 2029",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "CSDDD Due Diligence Directive 2029 | AuthiChain",
+    "metaDescription": "CSDDD’s Omnibus I amendments entered into force in March 2026, narrowing the directive to companies with more than 5,000 employees and €1.5 billion in.",
+    "h1": "CSDDD Due Diligence Directive 2029",
+    "bodyHtml": "<p>CSDDD’s Omnibus I amendments entered into force in March 2026, narrowing the directive to companies with more than 5,000 employees and €1.5 billion in turnover and pushing the due-diligence obligation itself to 26 July 2029 — the underlying duty is unchanged: show you identified and addressed impacts across your chain of activities, not just filed a policy statement.</p><h2>Why AuthiChain</h2><ul><li>The chain-of-activities due-diligence duty stays legally binding for the &gt;5,000-employee, &gt;€1.5B-turnover companies Omnibus I leaves in scope, even after the two lower phase-in tiers were removed entirely</li><li>A signed, per-batch or per-shipment record gives an in-scope company evidence a downstream auditor can check directly, instead of a supplier questionnaire collected once and never re-verified</li><li>Article 16 reporting duties apply separately and later — for financial years starting on or after 1 January 2030 — a full year after the core due-diligence obligation itself starts applying</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does CSDDD still apply to mid-sized companies?</h3><p>No — Omnibus I removed the two lower phase-in thresholds entirely. As amended, CSDDD’s due-diligence duty applies only to companies with more than 5,000 employees and more than €1.5 billion in worldwide turnover.</p><h3>When do in-scope companies actually need to comply?</h3><p>Member States must transpose the Omnibus I amendments into national law by 26 July 2028, with the due-diligence obligations applying from 26 July 2029. Article 16 reporting follows separately, for financial years starting on or after 1 January 2030.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — CSDDD Due Diligence Directive 2029",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "CSDDD’s Omnibus I amendments entered into force in March 2026, narrowing the directive to companies with more than 5,000 employees and €1.5 billion in turnover and pushing the due-diligence obligation itself to 26 July 2029 — the underlying duty is unchanged: show you identified and addressed impacts across your chain of activities, not just filed a policy statement.",
+          "url": "https://authichain.com/p/csddd-due-diligence-directive-2029"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "CSDDD Due Diligence Directive 2029",
+              "item": "https://authichain.com/p/csddd-due-diligence-directive-2029"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does CSDDD still apply to mid-sized companies?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — Omnibus I removed the two lower phase-in thresholds entirely. As amended, CSDDD’s due-diligence duty applies only to companies with more than 5,000 employees and more than €1.5 billion in worldwide turnover."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "When do in-scope companies actually need to comply?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Member States must transpose the Omnibus I amendments into national law by 26 July 2028, with the due-diligence obligations applying from 26 July 2029. Article 16 reporting follows separately, for financial years starting on or after 1 January 2030."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "digital-watermarks-vs-qr-code-packaging",
+    "keyword": "digital watermarks vs qr code packaging",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Digital Watermarks Vs QR Code Packaging | AuthiChain",
+    "metaDescription": "HolyGrail 2.0’s industrial trials ran digital watermarking against real household packaging waste from Germany and Denmark through late 2024, measuring.",
+    "h1": "Digital Watermarks Vs QR Code Packaging",
+    "bodyHtml": "<p>HolyGrail 2.0’s industrial trials ran digital watermarking against real household packaging waste from Germany and Denmark through late 2024, measuring 87.9–93.8% detection efficiency across nearly 6 million scans — a sorting-line technology that answers a different question than the GS1 Digital Link QR code a person or auditor scans by hand.</p><h2>Why AuthiChain</h2><ul><li>A digital watermark is built for a sorting-line camera reading tens of thousands of packages per day at speed; a GS1 Digital Link QR code is built for a person’s phone to read one item at a time — different readers, not competing formats for the same job</li><li>PPWR’s recycled-content requirement for plastic packaging applies from 1 January 2030, the deadline HolyGrail 2030’s early-adopter rollout in Belgium and Germany is built against, not a hypothetical future date</li><li>A signed AuthiChain record and a sorting watermark can sit on the same package without conflict: one proves authenticity and provenance to a person, the other tells a recycling facility which resin stream the package belongs in</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a digital watermark replace the QR code on a package?</h3><p>No — they solve different problems. A watermark is optimized for automated sorting-line detection at speed; a QR code is optimized for a person or handheld scanner to read one item’s data. PPWR does not require choosing one over the other.</p><h3>Is digital watermarking mandatory under PPWR?</h3><p>No — PPWR sets recycled-content and labelling requirements without naming a sorting technology. HolyGrail 2.0’s industrial trials demonstrated watermarking as one way to meet the sorting challenge; adoption is moving into voluntary early-adopter market rollouts, not a mandate.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Digital Watermarks Vs QR Code Packaging",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "HolyGrail 2.0’s industrial trials ran digital watermarking against real household packaging waste from Germany and Denmark through late 2024, measuring 87.9–93.8% detection efficiency across nearly 6 million scans — a sorting-line technology that answers a different question than the GS1 Digital Link QR code a person or auditor scans by hand.",
+          "url": "https://authichain.com/p/digital-watermarks-vs-qr-code-packaging"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Digital Watermarks Vs QR Code Packaging",
+              "item": "https://authichain.com/p/digital-watermarks-vs-qr-code-packaging"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a digital watermark replace the QR code on a package?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — they solve different problems. A watermark is optimized for automated sorting-line detection at speed; a QR code is optimized for a person or handheld scanner to read one item’s data. PPWR does not require choosing one over the other."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is digital watermarking mandatory under PPWR?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — PPWR sets recycled-content and labelling requirements without naming a sorting technology. HolyGrail 2.0’s industrial trials demonstrated watermarking as one way to meet the sorting challenge; adoption is moving into voluntary early-adopter market rollouts, not a mandate."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "solar-panel-digital-product-passport",
+    "keyword": "solar panel digital product passport",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Solar Panel Digital Product Passport | AuthiChain",
+    "metaDescription": "The European Solar PV Industry Alliance is pushing for a mandatory Digital Product Passport for solar modules, and the Commission’s harmonised.",
+    "h1": "Solar Panel Digital Product Passport",
+    "bodyHtml": "<p>The European Solar PV Industry Alliance is pushing for a mandatory Digital Product Passport for solar modules, and the Commission’s harmonised carbon-footprint calculation methodology for PV modules cleared a procedural step in mid-2025 — but as of this writing, no ESPR delegated act has adopted a PV passport requirement or set a compliance date.</p><h2>Why AuthiChain</h2><ul><li>Carbon footprint, material content, and end-of-life data for a PV module map onto the same W3C Verifiable Credential structure already issued for the battery and steel passports — no new record type needed if a PV delegated act adopts</li><li>The Net Zero Industry Act’s 40%-domestic-production target for net-zero technologies by 2030 does not itself require a digital passport — passport advocacy and domestic-manufacturing targets are separate policy tracks that get conflated in solar policy coverage</li><li>A module built against the harmonised carbon-footprint methodology now can carry that figure in a signed record before any passport mandate exists — the data does not have to wait for a delegated act to become worth anchoring</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is a Digital Product Passport mandatory for solar panels today?</h3><p>No — industry groups are advocating for one, and the Commission has published a harmonised carbon-footprint calculation methodology as groundwork, but no ESPR delegated act has adopted a PV passport requirement or compliance date as of this writing.</p><h3>What does the carbon-footprint methodology actually cover?</h3><p>It standardizes how a manufacturer calculates a PV module’s embedded carbon footprint under the Ecodesign framework — one input a future passport would need, not a passport requirement by itself.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Solar Panel Digital Product Passport",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The European Solar PV Industry Alliance is pushing for a mandatory Digital Product Passport for solar modules, and the Commission’s harmonised carbon-footprint calculation methodology for PV modules cleared a procedural step in mid-2025 — but as of this writing, no ESPR delegated act has adopted a PV passport requirement or set a compliance date.",
+          "url": "https://authichain.com/p/solar-panel-digital-product-passport"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Solar Panel Digital Product Passport",
+              "item": "https://authichain.com/p/solar-panel-digital-product-passport"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is a Digital Product Passport mandatory for solar panels today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — industry groups are advocating for one, and the Commission has published a harmonised carbon-footprint calculation methodology as groundwork, but no ESPR delegated act has adopted a PV passport requirement or compliance date as of this writing."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What does the carbon-footprint methodology actually cover?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It standardizes how a manufacturer calculates a PV module’s embedded carbon footprint under the Ecodesign framework — one input a future passport would need, not a passport requirement by itself."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "ebsi-trust-registry-vs-did-key",
+    "keyword": "ebsi trust registry vs did key",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EBSI Trust Registry Vs DID Key | AuthiChain",
+    "metaDescription": "EBSI, the EU’s own blockchain infrastructure for verifiable credentials, resolves trust through a governed Trusted Issuers Registry — a verifier checks.",
+    "h1": "EBSI Trust Registry Vs DID Key",
+    "bodyHtml": "<p>EBSI, the EU’s own blockchain infrastructure for verifiable credentials, resolves trust through a governed Trusted Issuers Registry — a verifier checks whether an issuer’s DID is accredited on that list before trusting a credential, the opposite model from the did:key default protocol/SPEC.md §5 uses, where the key itself is the entire trust anchor.</p><h2>Why AuthiChain</h2><ul><li>A Trusted Issuers Registry answers “is this issuer accredited to issue this schema” — a governance question a registry operator controls; did:key answers only “did this specific keypair sign this record,” with no accreditation layer at all</li><li>EBSI’s model fits a use case where who is allowed to issue matters, like diplomas or professional credentials; a physical-item provenance record cares which specific issuer signed it, not whether a central registry pre-approved them — why protocol/SPEC.md keeps verification independent of any registry lookup</li><li>A registry-based trust model requires the registry to stay reachable for a verifier to check accreditation; did:key resolves the issuer key with zero network access, matching this protocol’s offline-verification requirement — a tradeoff, not a strictly better or worse choice</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain use EBSI or a trust registry?</h3><p>No — the reference verifier resolves did:key directly, per protocol/SPEC.md §5, with no registry lookup. A verifier checks the signature against the key embedded in the identifier itself.</p><h3>Would a trust-registry model work for product provenance records?</h3><p>It could, at the cost of the offline-verification property this protocol optimizes for: a registry check means a verifier depends on that registry being reachable, which did:key’s self-contained resolution avoids by design.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EBSI Trust Registry Vs DID Key",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "EBSI, the EU’s own blockchain infrastructure for verifiable credentials, resolves trust through a governed Trusted Issuers Registry — a verifier checks whether an issuer’s DID is accredited on that list before trusting a credential, the opposite model from the did:key default protocol/SPEC.md §5 uses, where the key itself is the entire trust anchor.",
+          "url": "https://authichain.com/p/ebsi-trust-registry-vs-did-key"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EBSI Trust Registry Vs DID Key",
+              "item": "https://authichain.com/p/ebsi-trust-registry-vs-did-key"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain use EBSI or a trust registry?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the reference verifier resolves did:key directly, per protocol/SPEC.md §5, with no registry lookup. A verifier checks the signature against the key embedded in the identifier itself."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Would a trust-registry model work for product provenance records?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It could, at the cost of the offline-verification property this protocol optimizes for: a registry check means a verifier depends on that registry being reachable, which did:key’s self-contained resolution avoids by design."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "battery-passport-second-life-repurposing",
+    "keyword": "battery passport second life repurposing",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Battery Passport Second Life Repurposing | AuthiChain",
+    "metaDescription": "When an EV battery is pulled for second-life use in stationary storage, EU rules treat the repurposed unit as a new product — the operator repurposing it has.",
+    "h1": "Battery Passport Second Life Repurposing",
+    "bodyHtml": "<p>When an EV battery is pulled for second-life use in stationary storage, EU rules treat the repurposed unit as a new product — the operator repurposing it has to issue a new battery passport with a new QR code that references the original battery’s history, not just relabel the old passport.</p><h2>Why AuthiChain</h2><ul><li>A new passport for a repurposed battery is a new signed record with its own identifier — the same one-record-per-physical-unit model this protocol already uses, not a mutation of the original battery’s record</li><li>The new record has to reference the original battery’s passport, so a second-life buyer traces composition, usage history, and state-of-health back through both records instead of trusting a fresh passport with no lineage</li><li>The 18 February 2027 mandate applies to any battery over 2 kWh placed on the market from that date, including a repurposed one — a second-life operator entering the market after that date is a covered economic operator, not an exception to it</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can a second-life battery keep its original passport?</h3><p>No — repurposing or remanufacturing a battery for a new use makes it a new product under EU rules. The repurposing operator issues a new passport and QR code, referencing the original battery’s history rather than replacing it.</p><h3>Who is responsible for issuing the second-life passport?</h3><p>The economic operator that repurposes or remanufactures the battery — not the original manufacturer — becomes responsible for the new passport once the battery re-enters the market as a distinct product.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Battery Passport Second Life Repurposing",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "When an EV battery is pulled for second-life use in stationary storage, EU rules treat the repurposed unit as a new product — the operator repurposing it has to issue a new battery passport with a new QR code that references the original battery’s history, not just relabel the old passport.",
+          "url": "https://authichain.com/p/battery-passport-second-life-repurposing"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Battery Passport Second Life Repurposing",
+              "item": "https://authichain.com/p/battery-passport-second-life-repurposing"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can a second-life battery keep its original passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — repurposing or remanufacturing a battery for a new use makes it a new product under EU rules. The repurposing operator issues a new passport and QR code, referencing the original battery’s history rather than replacing it."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who is responsible for issuing the second-life passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The economic operator that repurposes or remanufactures the battery — not the original manufacturer — becomes responsible for the new passport once the battery re-enters the market as a distinct product."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
