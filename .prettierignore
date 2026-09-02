@@ -33,3 +33,8 @@ pnpm-lock.yaml
 # OS files
 .DS_Store
 Thumbs.db
+
+# Prettier's TS parser stack-overflows on this file's single giant HTML
+# template literal (RangeError: Maximum call stack size exceeded, reproduces
+# on prettier 3.9.6 independent of any specific edit).
+workers/authichain-com/src/index.ts
