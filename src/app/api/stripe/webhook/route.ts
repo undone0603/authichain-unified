@@ -5,6 +5,7 @@ import { provisionPurchase } from "@/lib/provisioning";
 import { renderBillingEmail } from "@/lib/billing-emails";
 import { getBrandIdFromMetadata } from "@/lib/brand-billing";
 import { sendEmail } from "@/lib/email";
+import { dppActivateUrl, isDppOffer, recordDppLoopEvent } from "@/lib/dpp-loop";
 import {
   anchorStripeReversal,
   anchorStripeSale,
@@ -228,6 +229,25 @@ export async function POST(req: NextRequest) {
           : grantParsed;
         const email =
           session.customer_email || session.customer_details?.email || null;
+        const linePriceId =
+          session.line_items?.data?.[0]?.price?.id ||
+          (typeof session.metadata?.stripe_price_id === "string"
+            ? session.metadata.stripe_price_id
+            : null);
+        const dppOffer = isDppOffer(md as Record<string, unknown>, linePriceId);
+        const visitId =
+          md.visit_id || md.prospect_id || session.client_reference_id || null;
+
+        if (dppOffer && visitId) {
+          await recordDppLoopEvent(getSupabase(), {
+            visitId: String(visitId),
+            stage: "payment_succeeded",
+            source: md.source || "direct",
+            email,
+            stripeSessionId: session.id,
+            metadata: { plan, brand, amount_total: session.amount_total },
+          });
+        }
 
         // Hands-off provisioning for BOTH authenticated and guest checkouts.
         // Guests get a profile created/resolved by email so the purchase is
@@ -235,7 +255,7 @@ export async function POST(req: NextRequest) {
         const prov = await provisionPurchase(getSupabase(), {
           email,
           userId,
-          plan,
+          plan: plan || (dppOffer ? "dpp_readiness" : plan),
           brand,
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscriptionId,
@@ -249,11 +269,34 @@ export async function POST(req: NextRequest) {
             .update({ status: "completed" })
             .eq("session_id", session.id);
 
+          if (dppOffer && visitId) {
+            await recordDppLoopEvent(getSupabase(), {
+              visitId: String(visitId),
+              stage: "provisioned",
+              source: md.source || "direct",
+              email,
+              profileId: prov.profileId,
+              stripeSessionId: session.id,
+              metadata: {
+                created: prov.created,
+                plan: plan || "dpp_readiness",
+              },
+            });
+          }
+
           // Brand-aware welcome email (replaces the cross-call to /api/email).
           if (email) {
-            const mail = renderBillingEmail("subscription_confirmed", brand, {
-              planName: plan || undefined,
-            });
+            const mail = dppOffer
+              ? renderBillingEmail("dpp_audit_provisioned", brand, {
+                  planName: "EU DPP Readiness Audit",
+                  activateUrl: dppActivateUrl(
+                    session.id,
+                    visitId ? String(visitId) : null
+                  ),
+                })
+              : renderBillingEmail("subscription_confirmed", brand, {
+                  planName: plan || undefined,
+                });
             await sendEmail({
               to: email,
               from: mail.from,
@@ -265,7 +308,8 @@ export async function POST(req: NextRequest) {
         }
 
         // complete_checkout funnel event — success is only known here.
-        if (md.prospect_id) {
+        // DPP offers record via recordDppLoopEvent above; skip duplicate insert.
+        if (md.prospect_id && !dppOffer) {
           try {
             await getSupabase()
               .from("funnel_events")

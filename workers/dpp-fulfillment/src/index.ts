@@ -141,17 +141,16 @@ function sessionName(session: any): string {
   return email ? email.split("@")[0] : "there";
 }
 
-function onboardingBody(name: string): string {
+function onboardingBody(name: string, activateUrl: string): string {
   return `Hi ${name},
 
 Thanks for purchasing the EU DPP Readiness Audit ($299).
 
-To deliver your report and schedule the 30-minute strategy call within 5 business days, please reply to this email with:
+Your workspace is provisioned by the app webhook. Complete self-serve activation here (no reply needed):
 
-1. Product categories / SKU families in scope
-2. EU markets you sell into (or plan to)
-3. Current labeling / QR / NFC setup (or "none")
-4. Preferred call windows (timezone + 2–3 options)
+${activateUrl}
+
+That records merchant activation and unlocks the rest of the autonomous loop. Humans only handle exceptions.
 
 Your $299 is fully credited toward AuthiChain Basic if you convert after the audit.
 
@@ -295,11 +294,20 @@ async function handleCompleted(env: Env, session: any): Promise<void> {
   if (await alreadyDone(env, idem)) return;
 
   const name = sessionName(session);
+  const visitId =
+    session.client_reference_id ||
+    session.metadata?.visit_id ||
+    session.metadata?.prospect_id ||
+    "";
+  const activateUrl = `https://authichain.com/dpp/activate?session_id=${encodeURIComponent(
+    session.id
+  )}${visitId ? `&visit_id=${encodeURIComponent(String(visitId))}` : ""}`;
+
   const buyer = await sendEmail(
     env,
     email,
-    "Your EU DPP Readiness Audit — next steps",
-    onboardingBody(name)
+    "Your EU DPP Readiness Audit — activate now",
+    onboardingBody(name, activateUrl)
   );
   await bumpCounter(env, "onboarding_sent");
 
@@ -316,10 +324,12 @@ async function handleCompleted(env: Env, session: any): Promise<void> {
       `Buyer: ${name} <${email}>`,
       `Session: ${session.id}`,
       `Amount: $${(amount / 100).toFixed(2)}`,
+      `Activate URL: ${activateUrl}`,
       `Onboarding email: ${buyer.ok ? "sent" : "FAILED — " + buyer.error}`,
       `HubSpot deal: ${deal.ok ? deal.id : "FAILED — " + deal.error}`,
       ``,
-      `Reply to the buyer within 1 business day to schedule the call.`,
+      `Provisioning is owned by the app Stripe webhook.`,
+      `Escalate only if activation or provisioning fails.`,
     ].join("\n")
   );
   await bumpCounter(env, "payments");

@@ -10,16 +10,16 @@ Do not add agents or new verticals until this loop produces a green end-to-end s
 
 ## Event contract
 
-| Event | Meaning | Required evidence |
-|---|---|---|
-| `attributed_visit` | Buyer reaches `/dpp` with campaign/referrer context | UTM/referrer + timestamp |
-| `checkout_started` | Buyer enters Stripe checkout | stable client reference |
-| `payment_succeeded` | Stripe confirms payment | Stripe event/session ID |
-| `provisioned` | Buyer receives usable workspace/access | merchant/profile ID |
-| `merchant_activated` | Buyer completes first meaningful setup action | activation event |
-| `dpp_published` | First DPP is published | DPP/object ID |
-| `verification` | Product/DPP is successfully verified | verification/scan event |
-| `retained` | Buyer returns for meaningful usage at retention horizon | dated usage event |
+| Event                | Meaning                                                 | Required evidence        |
+| -------------------- | ------------------------------------------------------- | ------------------------ |
+| `attributed_visit`   | Buyer reaches `/dpp` with campaign/referrer context     | UTM/referrer + timestamp |
+| `checkout_started`   | Buyer enters Stripe checkout                            | stable client reference  |
+| `payment_succeeded`  | Stripe confirms payment                                 | Stripe event/session ID  |
+| `provisioned`        | Buyer receives usable workspace/access                  | merchant/profile ID      |
+| `merchant_activated` | Buyer completes first meaningful setup action           | activation event         |
+| `dpp_published`      | First DPP is published                                  | DPP/object ID            |
+| `verification`       | Product/DPP is successfully verified                    | verification/scan event  |
+| `retained`           | Buyer returns for meaningful usage at retention horizon | dated usage event        |
 
 ## State machine
 
@@ -67,10 +67,12 @@ Use the existing `DPP-SMOKE-E2E` promotion for a no-cost end-to-end test. The sm
 
 ## Current implementation anchors
 
-- `workers/authichain-com`: DPP landing surface.
-- `workers/dpp-fulfillment`: Stripe fulfillment, onboarding, CRM, recovery, and daily report.
-- `src/lib/provisioning.ts`: shared paid-checkout provisioning for authenticated and guest buyers.
-- `src/app/api/stripe/webhook/route.ts`: canonical application Stripe webhook/provisioning path.
+- `workers/authichain-com`: DPP landing surface (`/dpp`) with attributed CTA → `/api/checkout/dpp`.
+- `src/app/api/checkout/dpp/route.ts`: creates attributed Stripe Checkout Session (`client_reference_id` + offer metadata); allows `DPP-SMOKE-E2E`.
+- `src/app/api/stripe/webhook/route.ts`: canonical payment → `provisionPurchase` → DPP activate email.
+- `src/app/dpp/thanks` + `src/app/dpp/activate` + `src/app/api/dpp/activate`: self-serve merchant activation (no human handoff).
+- `src/lib/dpp-loop.ts`: records observable loop stages onto `funnel_events` (`metadata.loop_stage`).
+- `workers/dpp-fulfillment`: CRM / recovery / daily report only — not the access-grant path.
 
 ## Success metric
 

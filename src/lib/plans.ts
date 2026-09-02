@@ -2,7 +2,15 @@
 // Products and prices are pre-created in the Stripe dashboard.
 // priceId values are LIVE; keep in sync with Stripe.
 
-export type PlanId = 'free' | 'starter' | 'creator' | 'studio' | 'business' | 'theater_1' | 'theater_3';
+export type PlanId =
+  | "free"
+  | "starter"
+  | "creator"
+  | "studio"
+  | "business"
+  | "theater_1"
+  | "theater_3"
+  | "dpp_readiness";
 
 export interface Plan {
   id: PlanId;
@@ -13,8 +21,8 @@ export interface Plan {
   generations: number; // 0 = unlimited
   stripe_price_id: string | null;
   stripe_payment_link?: string;
-  stripe_mode: 'payment' | 'subscription' | null;
-  tier: 'free' | 'pro' | 'enterprise';
+  stripe_mode: "payment" | "subscription" | null;
+  tier: "free" | "pro" | "enterprise";
   features: string[];
   cta: string;
   highlighted?: boolean;
@@ -22,100 +30,121 @@ export interface Plan {
 
 export const PLANS: Plan[] = [
   {
-    id: 'free',
-    name: 'Free Trial',
+    id: "free",
+    name: "Free Trial",
     price: 0,
-    description: 'Try every Pro feature free for 7 days',
+    description: "Try every Pro feature free for 7 days",
     generations: 0,
     stripe_price_id: null,
     stripe_mode: null,
-    tier: 'free',
+    tier: "free",
     features: [
-      '7-day free trial — full access',
-      'All Pro generation modes',
-      'Cancel anytime before it ends',
-      'Card required · no charge during trial',
+      "7-day free trial — full access",
+      "All Pro generation modes",
+      "Cancel anytime before it ends",
+      "Card required · no charge during trial",
     ],
-    cta: 'Try Free for 7 Days',
+    cta: "Try Free for 7 Days",
   },
   {
-    id: 'starter',
-    name: 'Starter Pack',
+    id: "starter",
+    name: "Starter Pack",
     price: 29,
-    description: '100 AI QR generations, never expire',
+    description: "100 AI QR generations, never expire",
     generations: 100,
-    stripe_price_id: 'price_1TGOM9GqTruSqV8TdV7j3DuL',
-    stripe_payment_link: 'https://buy.stripe.com/6oUeVfflp9lPgzY76AaIM0c',
-    stripe_mode: 'payment',
-    tier: 'pro',
+    stripe_price_id: "price_1TGOM9GqTruSqV8TdV7j3DuL",
+    stripe_payment_link: "https://buy.stripe.com/6oUeVfflp9lPgzY76AaIM0c",
+    stripe_mode: "payment",
+    tier: "pro",
     features: [
-      '100 generations (one-time)',
-      'All free modes',
-      'Holographic & Memory modes',
-      'Ed25519-signed on AuthiChain',
+      "100 generations (one-time)",
+      "All free modes",
+      "Holographic & Memory modes",
+      "Ed25519-signed on AuthiChain",
     ],
-    cta: 'Buy Starter Pack',
+    cta: "Buy Starter Pack",
   },
   {
-    id: 'creator',
-    name: 'Creator Pack',
+    id: "creator",
+    name: "Creator Pack",
     price: 99,
-    description: '500 AI QR generations — best value',
+    description: "500 AI QR generations — best value",
     generations: 500,
-    stripe_price_id: 'price_1TGAiZGqTruSqV8Tb4ZdCVKr',
-    stripe_payment_link: 'https://buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d',
-    stripe_mode: 'payment',
-    tier: 'pro',
+    stripe_price_id: "price_1TGAiZGqTruSqV8Tb4ZdCVKr",
+    stripe_payment_link: "https://buy.stripe.com/28E00l6OT7dHcjI1MgaIM0d",
+    stripe_mode: "payment",
+    tier: "pro",
     features: [
-      '500 generations (one-time)',
-      'All Pro modes',
-      'Premium styles',
-      'Priority generation queue',
-      'Ed25519-signed on AuthiChain',
+      "500 generations (one-time)",
+      "All Pro modes",
+      "Premium styles",
+      "Priority generation queue",
+      "Ed25519-signed on AuthiChain",
     ],
-    cta: 'Buy Creator Pack',
+    cta: "Buy Creator Pack",
     highlighted: true,
   },
   {
-    id: 'theater_1',
-    name: 'Theater 1: AgTech',
+    id: "theater_1",
+    name: "Theater 1: AgTech",
     price: 499,
-    price_suffix: '/month',
-    description: 'Industrial AgTech & StrainChain Provenance',
+    price_suffix: "/month",
+    description: "Industrial AgTech & StrainChain Provenance",
     generations: 5000,
-    stripe_price_id: 'price_1TmDKJGqTruSqV8TGwxK8oc5',
-    stripe_mode: 'subscription',
-    tier: 'enterprise',
+    stripe_price_id: "price_1TmDKJGqTruSqV8TGwxK8oc5",
+    stripe_mode: "subscription",
+    tier: "enterprise",
     features: [
-      '5,000 Industrial generations / mo',
-      'Full DPP Data Integration',
-      'StrainChain Genetic Mapping',
-      'Supply Chain Watchdog Alerts',
-      'Geo-fencing Security',
+      "5,000 Industrial generations / mo",
+      "Full DPP Data Integration",
+      "StrainChain Genetic Mapping",
+      "Supply Chain Watchdog Alerts",
+      "Geo-fencing Security",
     ],
-    cta: 'Initialize Theater 1',
+    cta: "Initialize Theater 1",
   },
   {
-    id: 'theater_3',
-    name: 'Theater 3: Elite',
+    id: "theater_3",
+    name: "Theater 3: Elite",
     price: 1499,
-    price_suffix: '/month',
-    description: 'The Ultimate Industrial & Luxury Security',
+    price_suffix: "/month",
+    description: "The Ultimate Industrial & Luxury Security",
     generations: 0,
-    stripe_price_id: 'price_1TmDKQGqTruSqV8TvSILgzXM',
-    stripe_mode: 'subscription',
-    tier: 'enterprise',
+    stripe_price_id: "price_1TmDKQGqTruSqV8TvSILgzXM",
+    stripe_mode: "subscription",
+    tier: "enterprise",
     features: [
-      'Unlimited Industrial Artifacts',
-      'Custom AI Model Training',
-      'On-Chain Product Narratives',
-      'Real-time Security Webhooks',
-      '24/7 AuthiChain Core Support',
+      "Unlimited Industrial Artifacts",
+      "Custom AI Model Training",
+      "On-Chain Product Narratives",
+      "Real-time Security Webhooks",
+      "24/7 AuthiChain Core Support",
     ],
-    cta: 'Contact for Theater 3',
+    cta: "Contact for Theater 3",
     highlighted: true,
+  },
+  {
+    id: "dpp_readiness",
+    name: "EU DPP Readiness Audit",
+    price: 299,
+    description: "One-time EU DPP readiness audit with self-serve activation",
+    generations: 50,
+    stripe_price_id: "price_1TwmD8GqTruSqV8TpAF8dfyA",
+    stripe_payment_link: "https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c",
+    stripe_mode: "payment",
+    tier: "pro",
+    features: [
+      "Written EU DPP readiness assessment",
+      "Self-serve merchant activation",
+      "50 workspace generations to publish first DPP",
+      "$299 credited toward AuthiChain Basic on conversion",
+    ],
+    cta: "Start DPP Readiness Audit",
   },
 ];
+
+/** Stripe metadata.offer value for the autonomous DPP revenue loop. */
+export const DPP_OFFER_KEY = "dpp_readiness_2026";
 
 // Credit grants per plan (added to generations_limit on purchase)
 export const PLAN_CREDITS: Record<PlanId, number> = {
@@ -126,15 +155,17 @@ export const PLAN_CREDITS: Record<PlanId, number> = {
   business: 999999,
   theater_1: 5000,
   theater_3: 999999,
+  dpp_readiness: 50,
 };
 
 // Tier granted per plan
-export const PLAN_TIER: Record<PlanId, 'free' | 'pro' | 'enterprise'> = {
-  free: 'free',
-  starter: 'pro',
-  creator: 'pro',
-  studio: 'pro',
-  business: 'enterprise',
-  theater_1: 'enterprise',
-  theater_3: 'enterprise',
+export const PLAN_TIER: Record<PlanId, "free" | "pro" | "enterprise"> = {
+  free: "free",
+  starter: "pro",
+  creator: "pro",
+  studio: "pro",
+  business: "enterprise",
+  theater_1: "enterprise",
+  theater_3: "enterprise",
+  dpp_readiness: "pro",
 };

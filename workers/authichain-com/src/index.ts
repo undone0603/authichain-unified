@@ -3123,7 +3123,7 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
     <div class="nav-links">
       <a class="nav-link" href="/">Home</a>
       <a class="nav-link" href="https://authichain-unified.vercel.app/subscriptions">Pricing</a>
-      <a class="btn btn-primary btn-sm" href="https://authichain-unified.vercel.app/onboard">Start DPP Onboarding</a>
+      <a class="btn btn-primary btn-sm" id="nav-dpp-cta" href="/api/checkout/dpp">Start DPP Audit — $299</a>
     </div>
   </nav>
 
@@ -3137,15 +3137,63 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
         The EU's Ecodesign for Sustainable Products Regulation (ESPR) requires a blockchain-readable product passport for every item sold in Europe. AuthiChain is live — ERC-721 certificates, audit-ready exports, one integration.
       </p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:32px">
-        <a class="btn btn-primary" href="https://buy.stripe.com/bJe7sLgDTaRwh0S9vu1ND0c">Start Your DPP Readiness Audit &mdash; $299</a>
+        <a class="btn btn-primary" id="dpp-checkout-cta" href="/api/checkout/dpp">Start Your DPP Readiness Audit &mdash; $299</a>
         <a class="btn btn-outline" href="mailto:hello@authichain.com?subject=DPP%20Compliance%20Demo">Book a Demo</a>
       </div>
       <p style="max-width:520px;margin:16px auto 0;font-size:0.92rem;line-height:1.5;opacity:0.75">
-        Written readiness report and a 30-minute strategy call within 5 business days.
-        The $299 is credited in full toward AuthiChain Basic if you move forward.
+        Pay once → automatic provisioning → self-serve activation → publish your first DPP.
+        The $299 is credited in full toward AuthiChain Basic if you move forward. Promo <code>DPP-SMOKE-E2E</code> for end-to-end smoke.
       </p>
     </div>
   </section>
+  <script>
+  (function () {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
+      var visitId = localStorage.getItem('dpp_visit_id');
+      if (!visitId) {
+        visitId = 'dpp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem('dpp_visit_id', visitId);
+      }
+      var q = new URLSearchParams();
+      q.set('visit_id', visitId);
+      keys.forEach(function (k) {
+        var v = params.get(k);
+        if (v) q.set(k, v);
+      });
+      if (document.referrer) q.set('referrer', document.referrer.slice(0, 512));
+      var source = params.get('utm_source') || params.get('source') || 'direct';
+      q.set('source', source);
+      var checkout = '/api/checkout/dpp?' + q.toString();
+      ['dpp-checkout-cta','nav-dpp-cta'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.setAttribute('href', checkout);
+      });
+      // attributed_visit — best-effort; never blocks CTA
+      fetch('/api/funnel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prospect_id: visitId,
+          stage: 'visit_landing_page',
+          source: ['gov_engine','linkedin_post','reddit_post','seo','direct','email','affiliate'].indexOf(source) >= 0 ? source : 'direct',
+          event_type: 'dpp_loop:attributed_visit',
+          metadata: {
+            offer: 'dpp_readiness_2026',
+            loop_stage: 'attributed_visit',
+            utm_source: params.get('utm_source'),
+            utm_medium: params.get('utm_medium'),
+            utm_campaign: params.get('utm_campaign'),
+            referrer: document.referrer || null,
+            path: location.pathname
+          }
+        }),
+        keepalive: true
+      }).catch(function () {});
+    } catch (e) {}
+  })();
+  </script>
 
   <section class="section" id="regulation">
     <div class="container">
@@ -3279,6 +3327,20 @@ export default {
     }
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    // Self-serve thanks/activate live on the app (Vercel); keep /dpp marketing here.
+    if (p === '/dpp/thanks' || p.startsWith('/dpp/thanks/') || p === '/dpp/activate' || p.startsWith('/dpp/activate/')) {
+      const target = new URL(request.url);
+      target.hostname = 'authichain-unified.vercel.app';
+      target.protocol = 'https:';
+      const headers = new Headers(request.headers);
+      headers.set('Host', 'authichain-unified.vercel.app');
+      return fetch(new Request(target.toString(), {
+        method: request.method,
+        headers,
+        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+        redirect: 'follow',
+      }));
     }
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });

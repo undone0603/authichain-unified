@@ -4,11 +4,13 @@ Stripe webhook + daily report worker for the **EU DPP Readiness Audit** ($299).
 
 ## What it does
 
-| Trigger                      | Action                                                  |
-| ---------------------------- | ------------------------------------------------------- |
-| `checkout.session.completed` | Onboarding email to buyer, HubSpot deal, founder notify |
-| `checkout.session.expired`   | One recovery email with payment link                    |
-| Cron `0 13 * * *`            | Daily founder report (payments / emails / deals)        |
+| Trigger                      | Action                                                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `checkout.session.completed` | CRM email with **self-serve activate** URL, HubSpot deal, founder notify (provisioning is owned by the app webhook) |
+| `checkout.session.expired`   | One recovery email with payment link                                                                                |
+| Cron `0 13 * * *`            | Daily founder report (payments / emails / deals)                                                                    |
+
+**Canonical money → access path:** `/api/checkout/dpp` → Stripe Checkout → `src/app/api/stripe/webhook` → `provisionPurchase` → `/dpp/activate`. This worker must not be treated as fulfillment proof.
 
 Kill switch: set KV key `sending_paused` = `true`.
 
