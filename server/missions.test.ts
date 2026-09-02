@@ -1,16 +1,15 @@
-import { describe, expect, it, beforeAll } from 'vitest';
-import { vi } from 'vitest';
-import { appRouter } from './routers';
-import type { TrpcContext } from './_core/context';
-import type { User } from '../src/db/schema';
-import type { MissionStatus, MissionType, TaskStatus } from './missions/types';
+import { describe, expect, it, beforeAll } from "vitest";
+import { vi } from "vitest";
+import { appRouter } from "./routers";
+import type { TrpcContext } from "./_core/context";
+import type { User } from "../src/db/schema";
+import type { MissionStatus, MissionType, TaskStatus } from "./missions/types";
 
 type TestMission = {
   id: string;
   type: MissionType;
   title: string;
   status: MissionStatus;
-  priority: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -38,76 +37,125 @@ type TestMissionWithTasks = TestMission & {
 const { store } = vi.hoisted(() => ({
   store: {
     missions: new Map<string, TestMission>(),
-    tasks:    new Map<string, TestTask>(),
+    tasks: new Map<string, TestTask>(),
   },
 }));
 
 // Task kind lists matching templates.ts exactly
 const TASK_KINDS: Record<MissionType, string[]> = {
-  GOV_PILOT:          ['BUILD_PILOT_PACKET', 'DRAFT_INTEL_DOSSIER', 'FIND_GOV_LEADS', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
-  RETAIL_PILOT:       ['FINALIZE_RETAIL_SIGNAGE', 'PACKAGE_SKU_ONBOARDING', 'FIND_RETAIL_LEADS', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
-  PRESS_LAUNCH:       ['FIND_RETAIL_LEADS', 'DRAFT_PRESS_RELEASE', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'SCHEDULE_SOCIAL_POSTS'],
-  PARTNER_ONBOARDING: ['BUILD_PILOT_PACKET', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
-  TECH_OS_LOCK:       ['BUILD_PILOT_PACKET', 'DRAFT_INTEL_DOSSIER', 'GENERATE_LAUNCH_CHECKLIST'],
-  LAUNCH_AUTHICHAIN:  ['CHECK_DNS_CONFIG', 'VERIFY_SSL', 'RUN_LIGHTHOUSE_AUDIT', 'GENERATE_LAUNCH_CHECKLIST', 'DRAFT_LAUNCH_EMAIL', 'DRAFT_PRESS_RELEASE', 'SCHEDULE_SOCIAL_POSTS'],
-  LUXURY_OUTREACH:    [],
-  PHARMA_OUTREACH:    [],
-  MEDTECH_OUTREACH:   [],
+  GOV_PILOT: [
+    "BUILD_PILOT_PACKET",
+    "DRAFT_INTEL_DOSSIER",
+    "FIND_GOV_LEADS",
+    "DRAFT_OUTBOUND_EMAIL",
+    "FOLLOWUP_SEQUENCE",
+    "CRM_UPDATE",
+  ],
+  RETAIL_PILOT: [
+    "FINALIZE_RETAIL_SIGNAGE",
+    "PACKAGE_SKU_ONBOARDING",
+    "FIND_RETAIL_LEADS",
+    "DRAFT_OUTBOUND_EMAIL",
+    "FOLLOWUP_SEQUENCE",
+    "CRM_UPDATE",
+  ],
+  PRESS_LAUNCH: [
+    "FIND_RETAIL_LEADS",
+    "DRAFT_PRESS_RELEASE",
+    "DRAFT_OUTBOUND_EMAIL",
+    "FOLLOWUP_SEQUENCE",
+    "SCHEDULE_SOCIAL_POSTS",
+  ],
+  PARTNER_ONBOARDING: [
+    "BUILD_PILOT_PACKET",
+    "DRAFT_OUTBOUND_EMAIL",
+    "FOLLOWUP_SEQUENCE",
+    "CRM_UPDATE",
+  ],
+  TECH_OS_LOCK: [
+    "BUILD_PILOT_PACKET",
+    "DRAFT_INTEL_DOSSIER",
+    "GENERATE_LAUNCH_CHECKLIST",
+  ],
+  LAUNCH_AUTHICHAIN: [
+    "CHECK_DNS_CONFIG",
+    "VERIFY_SSL",
+    "RUN_LIGHTHOUSE_AUDIT",
+    "GENERATE_LAUNCH_CHECKLIST",
+    "DRAFT_LAUNCH_EMAIL",
+    "DRAFT_PRESS_RELEASE",
+    "SCHEDULE_SOCIAL_POSTS",
+  ],
+  LUXURY_OUTREACH: [],
+  PHARMA_OUTREACH: [],
+  MEDTECH_OUTREACH: [],
   TIMEPIECE_OUTREACH: [],
   NEWSJACKING_LAUNCH: [],
-  TECH_SPRINT:        [],
+  TECH_SPRINT: [],
   MEDTECH_VIDEO_BRIEFING: [],
   MI_CRA_PARTNERSHIP: [],
 };
 
 const TITLES: Record<MissionType, string> = {
-  GOV_PILOT:          'Government Pilot – Initial Agency',
-  RETAIL_PILOT:       'Retail Pilot – Dispensary / Retail Partner',
-  PRESS_LAUNCH:       'Press Launch – Media & PR Outreach',
-  PARTNER_ONBOARDING: 'Partner Onboarding',
-  TECH_OS_LOCK:       'Tech OS Lock – Platform Defensibility',
-  LAUNCH_AUTHICHAIN:  'AuthiChain.com – Full Launch Orchestration',
-  LUXURY_OUTREACH:    'LUXURY_OUTREACH',
-  PHARMA_OUTREACH:    'PHARMA_OUTREACH',
-  MEDTECH_OUTREACH:   'MEDTECH_OUTREACH',
-  TIMEPIECE_OUTREACH: 'TIMEPIECE_OUTREACH',
-  NEWSJACKING_LAUNCH: 'NEWSJACKING_LAUNCH',
-  TECH_SPRINT:        'TECH_SPRINT',
-  MEDTECH_VIDEO_BRIEFING: 'MEDTECH_VIDEO_BRIEFING',
-  MI_CRA_PARTNERSHIP: 'MI_CRA_PARTNERSHIP',
+  GOV_PILOT: "Government Pilot – Initial Agency",
+  RETAIL_PILOT: "Retail Pilot – Dispensary / Retail Partner",
+  PRESS_LAUNCH: "Press Launch – Media & PR Outreach",
+  PARTNER_ONBOARDING: "Partner Onboarding",
+  TECH_OS_LOCK: "Tech OS Lock – Platform Defensibility",
+  LAUNCH_AUTHICHAIN: "AuthiChain.com – Full Launch Orchestration",
+  LUXURY_OUTREACH: "LUXURY_OUTREACH",
+  PHARMA_OUTREACH: "PHARMA_OUTREACH",
+  MEDTECH_OUTREACH: "MEDTECH_OUTREACH",
+  TIMEPIECE_OUTREACH: "TIMEPIECE_OUTREACH",
+  NEWSJACKING_LAUNCH: "NEWSJACKING_LAUNCH",
+  TECH_SPRINT: "TECH_SPRINT",
+  MEDTECH_VIDEO_BRIEFING: "MEDTECH_VIDEO_BRIEFING",
+  MI_CRA_PARTNERSHIP: "MI_CRA_PARTNERSHIP",
 };
 
 // ─── Mock missions.db module (what the router actually imports) ───────────────
 
-vi.mock('./missions/missions.db', () => ({
+vi.mock("./missions/missions.db", () => ({
   getMissions: async (statusFilter?: MissionStatus) => {
     const all = [...store.missions.values()];
-    return statusFilter ? all.filter((m: TestMission) => m.status === statusFilter) : all;
+    return statusFilter
+      ? all.filter((m: TestMission) => m.status === statusFilter)
+      : all;
   },
 
   getMissionById: async (id: string) => {
     const m = store.missions.get(id);
     if (!m) return null;
-    const tasks = [...store.tasks.values()].filter((t: TestTask) => t.missionId === id);
+    const tasks = [...store.tasks.values()].filter(
+      (t: TestTask) => t.missionId === id
+    );
     return { ...m, tasks };
   },
 
   createMission: async (type: MissionType) => {
     const id = crypto.randomUUID();
     store.missions.set(id, {
-      id, type,
+      id,
+      type,
       title: TITLES[type] ?? type,
-      status: 'PLANNED',
-      priority: 5,
+      status: "PLANNED",
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-    for (const kind of (TASK_KINDS[type] ?? [])) {
+    for (const kind of TASK_KINDS[type] ?? []) {
       const taskId = crypto.randomUUID();
       store.tasks.set(taskId, {
-        id: taskId, missionId: id, kind, payload: {}, status: 'PENDING',
-        runAt: new Date(), lastError: null, retryCount: 0, retryAfter: null,
-        createdAt: new Date(), updatedAt: new Date(),
+        id: taskId,
+        missionId: id,
+        kind,
+        payload: {},
+        status: "PENDING",
+        runAt: new Date(),
+        lastError: null,
+        retryCount: 0,
+        retryAfter: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
     }
     return id;
@@ -119,33 +167,43 @@ vi.mock('./missions/missions.db', () => ({
   },
 
   getTasksByMission: async (missionId: string) => {
-    return [...store.tasks.values()].filter((t: TestTask) => t.missionId === missionId);
+    return [...store.tasks.values()].filter(
+      (t: TestTask) => t.missionId === missionId
+    );
   },
 
   retryTask: async (id: string) => {
     const t = store.tasks.get(id);
-    if (t) store.tasks.set(id, { ...t, status: 'PENDING', lastError: null, retryCount: 0, retryAfter: null, updatedAt: new Date() });
+    if (t)
+      store.tasks.set(id, {
+        ...t,
+        status: "PENDING",
+        lastError: null,
+        retryCount: 0,
+        retryAfter: null,
+        updatedAt: new Date(),
+      });
   },
 }));
 
 // ─── Mock shared db module for helpers not in missions.db ────────────────────
 
-vi.mock('./db', () => ({
+vi.mock("./db", () => ({
   getDb: async () => null,
-  logActivity:               vi.fn().mockResolvedValue(undefined),
-  createSystemNotification:  vi.fn().mockResolvedValue(undefined),
+  logActivity: vi.fn().mockResolvedValue(undefined),
+  createSystemNotification: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ─── Shared test context ──────────────────────────────────────────────────────
 
-function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
+function makeCtx(role: "user" | "admin" = "user"): TrpcContext {
   const user: User = {
     authUid: null,
     id: 1,
-    openId: 'test-agentz-001',
-    email: 'agentz@authichain.com',
-    name: 'AgentZ Test',
-    loginMethod: 'manus',
+    openId: "test-agentz-001",
+    email: "agentz@authichain.com",
+    name: "AgentZ Test",
+    loginMethod: "manus",
     role,
     walletAddress: null,
     avatarUrl: null,
@@ -167,94 +225,105 @@ function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
   };
   return {
     user,
-    req: { protocol: 'https', headers: {} } as TrpcContext['req'],
-    res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
+    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    res: { clearCookie: () => {} } as unknown as TrpcContext["res"],
   };
 }
 
 function publicCtx(): TrpcContext {
   return {
     user: null,
-    req: { protocol: 'https', headers: {} } as TrpcContext['req'],
-    res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
+    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    res: { clearCookie: () => {} } as unknown as TrpcContext["res"],
   };
 }
 
 // ─── Auth guards ──────────────────────────────────────────────────────────────
 
-describe('missions — auth guards', () => {
-  it('missions.list throws UNAUTHORIZED for unauthenticated', async () => {
+describe("missions — auth guards", () => {
+  it("missions.list throws UNAUTHORIZED for unauthenticated", async () => {
     const caller = appRouter.createCaller(publicCtx());
     await expect(caller.missions.list({})).rejects.toThrow();
   });
 
-  it('missions.create throws UNAUTHORIZED for unauthenticated', async () => {
-    const caller = appRouter.createCaller(publicCtx());
-    await expect(caller.missions.create({ type: 'GOV_PILOT' })).rejects.toThrow();
-  });
-
-  it('tasks.list throws UNAUTHORIZED for unauthenticated', async () => {
+  it("missions.create throws UNAUTHORIZED for unauthenticated", async () => {
     const caller = appRouter.createCaller(publicCtx());
     await expect(
-      caller.tasks.list({ missionId: '00000000-0000-0000-0000-000000000000' }),
+      caller.missions.create({ type: "GOV_PILOT" })
+    ).rejects.toThrow();
+  });
+
+  it("tasks.list throws UNAUTHORIZED for unauthenticated", async () => {
+    const caller = appRouter.createCaller(publicCtx());
+    await expect(
+      caller.tasks.list({ missionId: "00000000-0000-0000-0000-000000000000" })
     ).rejects.toThrow();
   });
 });
 
 // ─── missions.list ────────────────────────────────────────────────────────────
 
-describe('missions.list', () => {
-  it('returns an array', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
+describe("missions.list", () => {
+  it("returns an array", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
     const result = await caller.missions.list({});
     expect(Array.isArray(result)).toBe(true);
   });
 
-  it('filters by status', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    const result = await caller.missions.list({ status: 'PLANNED' });
+  it("filters by status", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    const result = await caller.missions.list({ status: "PLANNED" });
     expect(Array.isArray(result)).toBe(true);
-    result.forEach((m: TestMission) => expect(m.status).toBe('PLANNED'));
+    result.forEach(m => expect(m.status).toBe("PLANNED"));
   });
 });
 
 // ─── missions.create + missions.get ──────────────────────────────────────────
 
-describe('missions.create', () => {
+describe("missions.create", () => {
   let missionId: string;
 
-  it('creates a RETAIL_PILOT mission and returns an id', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    const result = await caller.missions.create({ type: 'RETAIL_PILOT' });
-    expect(result).toHaveProperty('id');
-    expect(typeof result.id).toBe('string');
+  it("creates a RETAIL_PILOT mission and returns an id", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    const result = await caller.missions.create({ type: "RETAIL_PILOT" });
+    expect(result).toHaveProperty("id");
+    expect(typeof result.id).toBe("string");
     missionId = result.id;
   });
 
-  it('missions.get returns mission with correct type', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    const result = await caller.missions.get({ id: missionId }) as TestMissionWithTasks | null;
+  it("missions.get returns mission with correct type", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    const result = (await caller.missions.get({
+      id: missionId,
+    })) as TestMissionWithTasks | null;
     expect(result).not.toBeNull();
-    if (!result) throw new Error('Expected mission to exist');
-    expect(result.type).toBe('RETAIL_PILOT');
-    expect(result.status).toBe('PLANNED');
+    if (!result) throw new Error("Expected mission to exist");
+    expect(result.type).toBe("RETAIL_PILOT");
+    expect(result.status).toBe("PLANNED");
   });
 
-  it('missions.get includes seeded tasks', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    const result = await caller.missions.get({ id: missionId }) as TestMissionWithTasks | null;
+  it("missions.get includes seeded tasks", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    const result = (await caller.missions.get({
+      id: missionId,
+    })) as TestMissionWithTasks | null;
     expect(Array.isArray(result?.tasks)).toBe(true);
-    if (!result) throw new Error('Expected mission to exist');
+    if (!result) throw new Error("Expected mission to exist");
     expect(result.tasks.length).toBeGreaterThan(0);
     result.tasks.forEach((t: TestTask) => {
       expect(t.missionId).toBe(missionId);
-      expect(t.status).toBe('PENDING');
+      expect(t.status).toBe("PENDING");
     });
   });
 
-  it('tasks.list returns same tasks for mission', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    const fromGet = ((await caller.missions.get({ id: missionId }) as TestMissionWithTasks | null)?.tasks ?? []);
+  it("tasks.list returns same tasks for mission", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    const fromGet =
+      (
+        (await caller.missions.get({
+          id: missionId,
+        })) as TestMissionWithTasks | null
+      )?.tasks ?? [];
     const fromList = await caller.tasks.list({ missionId });
     expect(fromList.length).toBe(fromGet.length);
     expect(fromList.length).toBeGreaterThan(0);
@@ -263,19 +332,22 @@ describe('missions.create', () => {
 
 // ─── missions.create — all types produce tasks ───────────────────────────────
 
-describe('missions.create — task counts', () => {
+describe("missions.create — task counts", () => {
   const expectedTaskCounts: Partial<Record<MissionType, number>> = {
-    GOV_PILOT:          6,
-    RETAIL_PILOT:       6,
-    PRESS_LAUNCH:       5,
+    GOV_PILOT: 6,
+    RETAIL_PILOT: 6,
+    PRESS_LAUNCH: 5,
     PARTNER_ONBOARDING: 4,
-    TECH_OS_LOCK:       3,
-    LAUNCH_AUTHICHAIN:  7,
+    TECH_OS_LOCK: 3,
+    LAUNCH_AUTHICHAIN: 7,
   };
 
-  for (const [type, count] of Object.entries(expectedTaskCounts) as [MissionType, number][]) {
+  for (const [type, count] of Object.entries(expectedTaskCounts) as [
+    MissionType,
+    number,
+  ][]) {
     it(`${type} creates ${count} tasks`, async () => {
-      const caller = appRouter.createCaller(makeCtx('admin'));
+      const caller = appRouter.createCaller(makeCtx("admin"));
       const { id } = await caller.missions.create({ type });
       const tasks = await caller.tasks.list({ missionId: id });
       expect(tasks.length).toBe(count);
@@ -285,115 +357,150 @@ describe('missions.create — task counts', () => {
 
 // ─── missions.updateStatus ────────────────────────────────────────────────────
 
-describe('missions.updateStatus', () => {
+describe("missions.updateStatus", () => {
   let missionId: string;
 
   beforeAll(async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    const result = await caller.missions.create({ type: 'PARTNER_ONBOARDING' });
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    const result = await caller.missions.create({ type: "PARTNER_ONBOARDING" });
     missionId = result.id;
   });
 
-  it('transitions PLANNED → IN_PROGRESS', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    const result = await caller.missions.updateStatus({ id: missionId, status: 'IN_PROGRESS' });
+  it("transitions PLANNED → IN_PROGRESS", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    const result = await caller.missions.updateStatus({
+      id: missionId,
+      status: "IN_PROGRESS",
+    });
     expect(result).toEqual({ ok: true });
 
-    const mission = await caller.missions.get({ id: missionId }) as TestMissionWithTasks | null;
-    expect(mission?.status).toBe('IN_PROGRESS');
+    const mission = (await caller.missions.get({
+      id: missionId,
+    })) as TestMissionWithTasks | null;
+    expect(mission?.status).toBe("IN_PROGRESS");
   });
 
-  it('transitions IN_PROGRESS → COMPLETED', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    await caller.missions.updateStatus({ id: missionId, status: 'COMPLETED' });
-    const mission = await caller.missions.get({ id: missionId }) as TestMissionWithTasks | null;
-    expect(mission?.status).toBe('COMPLETED');
+  it("transitions IN_PROGRESS → COMPLETED", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    await caller.missions.updateStatus({ id: missionId, status: "COMPLETED" });
+    const mission = (await caller.missions.get({
+      id: missionId,
+    })) as TestMissionWithTasks | null;
+    expect(mission?.status).toBe("COMPLETED");
   });
 });
 
 // ─── tasks.retry ─────────────────────────────────────────────────────────────
 
-describe('tasks.retry', () => {
+describe("tasks.retry", () => {
   let failedTaskId: string;
 
   beforeAll(async () => {
-    const { createMission, getTasksByMission } = await import('./missions/missions.db');
-    const { getDb } = await import('./db');
+    const { createMission, getTasksByMission } =
+      await import("./missions/missions.db");
+    const { getDb } = await import("./db");
 
-    const missionId = await createMission('TECH_OS_LOCK');
+    const missionId = await createMission("TECH_OS_LOCK");
     const tasks = await getTasksByMission(missionId);
     failedTaskId = tasks[0].id;
 
     // Directly mark the task FAILED in the in-memory store
     const t = store.tasks.get(failedTaskId);
-    if (t) store.tasks.set(failedTaskId, { ...t, status: 'FAILED', lastError: 'test failure', updatedAt: new Date() });
+    if (t)
+      store.tasks.set(failedTaskId, {
+        ...t,
+        status: "FAILED",
+        lastError: "test failure",
+        updatedAt: new Date(),
+      });
 
     const db = await getDb();
     if (db) {
       // If a real DB were present, we'd update there too (won't run in mock env)
-      const { missionTasks } = await import('../drizzle/schema');
-      const { eq } = await import('drizzle-orm');
-      await (db as {
-        update: (table: typeof missionTasks) => {
-          set: (values: Pick<TestTask, 'status' | 'lastError' | 'updatedAt'>) => {
-            where: (condition: unknown) => Promise<unknown>;
+      const { missionTasks } = await import("../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      await (
+        db as {
+          update: (table: typeof missionTasks) => {
+            set: (
+              values: Pick<TestTask, "status" | "lastError" | "updatedAt">
+            ) => {
+              where: (condition: unknown) => Promise<unknown>;
+            };
           };
-        };
-      }).update(missionTasks)
-        .set({ status: 'FAILED', lastError: 'test failure', updatedAt: new Date() })
+        }
+      )
+        .update(missionTasks)
+        .set({
+          status: "FAILED",
+          lastError: "test failure",
+          updatedAt: new Date(),
+        })
         .where(eq(missionTasks.id, failedTaskId));
     }
   });
 
-  it('retries a FAILED task — resets to PENDING', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
+  it("retries a FAILED task — resets to PENDING", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
     const result = await caller.tasks.retry({ id: failedTaskId });
     expect(result).toEqual({ ok: true });
 
     // Verify in the in-memory store
     const task = store.tasks.get(failedTaskId);
-    expect(task?.status).toBe('PENDING');
+    expect(task?.status).toBe("PENDING");
     expect(task?.lastError).toBeNull();
   });
 
-  it('retry on a PENDING task is a safe no-op', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    await expect(caller.tasks.retry({ id: failedTaskId })).resolves.toEqual({ ok: true });
+  it("retry on a PENDING task is a safe no-op", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    await expect(caller.tasks.retry({ id: failedTaskId })).resolves.toEqual({
+      ok: true,
+    });
     const task = store.tasks.get(failedTaskId);
-    expect(task?.status).toBe('PENDING');
+    expect(task?.status).toBe("PENDING");
   });
 });
 
 // ─── missions.get — non-existent ─────────────────────────────────────────────
 
-describe('missions.get edge cases', () => {
-  it('returns null for a non-existent mission id', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    const result = await caller.missions.get({ id: '00000000-0000-0000-0000-000000000000' });
+describe("missions.get edge cases", () => {
+  it("returns null for a non-existent mission id", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    const result = await caller.missions.get({
+      id: "00000000-0000-0000-0000-000000000000",
+    });
     expect(result).toBeNull();
   });
 });
 
 // ─── missions.list — status filter reflects mutations ─────────────────────────
 
-describe('missions.list — status filtering after mutations', () => {
-  it('lists IN_PROGRESS missions after status update', async () => {
-    const caller = appRouter.createCaller(makeCtx('admin'));
-    const { id } = await caller.missions.create({ type: 'GOV_PILOT' });
-    await caller.missions.updateStatus({ id, status: 'IN_PROGRESS' });
+describe("missions.list — status filtering after mutations", () => {
+  it("lists IN_PROGRESS missions after status update", async () => {
+    const caller = appRouter.createCaller(makeCtx("admin"));
+    const { id } = await caller.missions.create({ type: "GOV_PILOT" });
+    await caller.missions.updateStatus({ id, status: "IN_PROGRESS" });
 
-    const inProgress = await caller.missions.list({ status: 'IN_PROGRESS' }) as TestMission[];
+    const inProgress = (await caller.missions.list({
+      status: "IN_PROGRESS",
+    })) as TestMission[];
     expect(inProgress.some((m: TestMission) => m.id === id)).toBe(true);
 
-    const planned = await caller.missions.list({ status: 'PLANNED' }) as TestMission[];
+    const planned = (await caller.missions.list({
+      status: "PLANNED",
+    })) as TestMission[];
     expect(planned.every((m: TestMission) => m.id !== id)).toBe(true);
   });
 });
 
-describe('missions repository injection', () => {
-  it('calls the injected repository instead of the database implementation', async () => {
+describe("missions repository injection", () => {
+  it("calls the injected repository instead of the database implementation", async () => {
     const mockRepo = {
-      getMissions: vi.fn().mockResolvedValue([{ id: 'injected-id', type: 'TECH_OS_LOCK', status: 'COMPLETED' }]),
+      getMissions: vi
+        .fn()
+        .mockResolvedValue([
+          { id: "injected-id", type: "TECH_OS_LOCK", status: "COMPLETED" },
+        ]),
       getMissionById: vi.fn(),
       createMission: vi.fn(),
       createTask: vi.fn(),
@@ -401,12 +508,14 @@ describe('missions repository injection', () => {
       getTasksByMission: vi.fn(),
       retryTask: vi.fn(),
     };
-    const ctx = makeCtx('admin');
+    const ctx = makeCtx("admin");
     ctx.missionsRepo = mockRepo;
 
     const caller = appRouter.createCaller(ctx);
     const result = await caller.missions.list({});
-    expect(result).toEqual([{ id: 'injected-id', type: 'TECH_OS_LOCK', status: 'COMPLETED' }]);
+    expect(result).toEqual([
+      { id: "injected-id", type: "TECH_OS_LOCK", status: "COMPLETED" },
+    ]);
     expect(mockRepo.getMissions).toHaveBeenCalled();
   });
 });

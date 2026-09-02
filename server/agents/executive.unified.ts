@@ -3,9 +3,14 @@
  * Implements AbstractAgent interface for unified orchestration
  */
 
-import { AbstractAgent, AgentContext, AgentCapability, AgentExecutionResult } from './base/agent.interface.js';
-import { invokeLLM } from '../_core/llm.js';
-import { logActivity } from '../db.js';
+import {
+  AbstractAgent,
+  AgentContext,
+  AgentCapability,
+  AgentExecutionResult,
+} from "./base/agent.interface.js";
+import { invokeLLM } from "../_core/llm.js";
+import { logActivity } from "../db.js";
 
 type JsonObject = Record<string, unknown>;
 type ExecutiveProspect = JsonObject & {
@@ -32,7 +37,7 @@ export const AUTHICHAIN_CONTEXT = {
     core: "authichain.com",
     creative: "qron.space",
     compliance: "strainchain.io",
-    regulatory: "govchain.us"
+    regulatory: "govchain.us",
   },
 
   features: [
@@ -42,21 +47,21 @@ export const AUTHICHAIN_CONTEXT = {
     "METRC & BioTrack Seed-to-Sale Compliance Bridge",
     "Stripe Connect v2 direct balance billing",
     "Real-time Regulatory Audit Trails (Michigan CRA compliant)",
-    "White-label Enterprise Verification Marketplace"
+    "White-label Enterprise Verification Marketplace",
   ],
 
   monetization: {
     creator: { price: "$29/mo", fee: "5%" },
     pro: { price: "$79/mo", fee: "3%" },
     enterprise: { price: "$299/mo", fee: "1.5%" },
-    agency: { price: "$999/mo", fee: "0%" }
-  }
+    agency: { price: "$999/mo", fee: "0%" },
+  },
 };
 
 export class ExecutiveAgentImpl extends AbstractAgent {
-  name = 'ExecutiveAgent';
-  capabilities: AgentCapability[] = ['executive', 'sales'];
-  version = '2.1.0';
+  name = "ExecutiveAgent";
+  capabilities: AgentCapability[] = ["executive", "sales"];
+  version = "2.1.0";
 
   constructor() {
     super();
@@ -66,56 +71,67 @@ export class ExecutiveAgentImpl extends AbstractAgent {
   private initializeTools(): void {
     this.tools = [
       {
-        name: 'draft_sales_email',
-        description: 'Draft personalized sales emails for prospects',
-        execute: (params) => this.draftSalesEmail(params),
+        name: "draft_sales_email",
+        description: "Draft personalized sales emails for prospects",
+        execute: params => this.draftSalesEmail(params as ExecutiveProspect),
         schema: {
-          prospect: { type: 'object', description: 'Prospect details' },
-        }
+          prospect: { type: "object", description: "Prospect details" },
+        },
       },
       {
-        name: 'draft_partnership_email',
-        description: 'Draft partnership proposal emails',
-        execute: (params) => this.draftPartnershipEmail(params),
+        name: "draft_partnership_email",
+        description: "Draft partnership proposal emails",
+        execute: params =>
+          this.draftPartnershipEmail(params as ExecutivePartner),
         schema: {
-          partner: { type: 'object', description: 'Partner details' }
-        }
+          partner: { type: "object", description: "Partner details" },
+        },
       },
       {
-        name: 'generate_linkedin_post',
-        description: 'Generate LinkedIn content',
-        execute: (params) => this.generateLinkedInPost(params.topic, params.options),
+        name: "generate_linkedin_post",
+        description: "Generate LinkedIn content",
+        execute: params => {
+          const p = params as { topic: string; options?: JsonObject };
+          return this.generateLinkedInPost(p.topic, p.options);
+        },
         schema: {
-          topic: { type: 'string', description: 'Post topic' },
-          options: { type: 'object', description: 'Optional formatting' }
-        }
+          topic: { type: "string", description: "Post topic" },
+          options: { type: "object", description: "Optional formatting" },
+        },
       },
       {
-        name: 'generate_blog_post',
-        description: 'Generate blog content',
-        execute: (params) => this.generateBlogPost(params.topic, params.length, params.keywords),
+        name: "generate_blog_post",
+        description: "Generate blog content",
+        execute: params => {
+          const p = params as {
+            topic: string;
+            length?: string;
+            keywords?: string[];
+          };
+          return this.generateBlogPost(p.topic, p.length, p.keywords);
+        },
         schema: {
-          topic: { type: 'string' },
-          length: { type: 'string', enum: ['short', 'medium', 'long'] },
-          keywords: { type: 'array', items: { type: 'string' } }
-        }
+          topic: { type: "string" },
+          length: { type: "string", enum: ["short", "medium", "long"] },
+          keywords: { type: "array", items: { type: "string" } },
+        },
       },
       {
-        name: 'generate_email_campaign',
-        description: 'Generate multi-variant email campaigns',
-        execute: (params) => this.generateEmailCampaign(params),
+        name: "generate_email_campaign",
+        description: "Generate multi-variant email campaigns",
+        execute: params => this.generateEmailCampaign(params as JsonObject),
         schema: {
-          details: { type: 'object', description: 'Campaign details' }
-        }
+          details: { type: "object", description: "Campaign details" },
+        },
       },
       {
-        name: 'daily_briefing',
-        description: 'Generate executive daily briefing',
-        execute: (params) => this.generateDailyBriefing(params),
+        name: "daily_briefing",
+        description: "Generate executive daily briefing",
+        execute: params => this.generateDailyBriefing(params as JsonObject),
         schema: {
-          metrics: { type: 'object', description: 'Platform metrics' }
-        }
-      }
+          metrics: { type: "object", description: "Platform metrics" },
+        },
+      },
     ];
   }
 
@@ -130,23 +146,38 @@ export class ExecutiveAgentImpl extends AbstractAgent {
       let output: string;
 
       switch (action) {
-        case 'draft_sales_email':
-          output = await this.draftSalesEmail(params.prospect);
+        case "draft_sales_email":
+          output = await this.draftSalesEmail(
+            params.prospect as ExecutiveProspect
+          );
           break;
-        case 'draft_partnership_email':
-          output = await this.draftPartnershipEmail(params.partner);
+        case "draft_partnership_email":
+          output = await this.draftPartnershipEmail(
+            params.partner as ExecutivePartner
+          );
           break;
-        case 'generate_linkedin_post':
-          output = await this.generateLinkedInPost(params.topic, params.options);
+        case "generate_linkedin_post":
+          output = await this.generateLinkedInPost(
+            params.topic as string,
+            params.options as JsonObject | undefined
+          );
           break;
-        case 'generate_blog_post':
-          output = await this.generateBlogPost(params.topic, params.length, params.keywords);
+        case "generate_blog_post":
+          output = await this.generateBlogPost(
+            params.topic as string,
+            params.length as string | undefined,
+            params.keywords as string[] | undefined
+          );
           break;
-        case 'generate_email_campaign':
-          output = await this.generateEmailCampaign(params.details);
+        case "generate_email_campaign":
+          output = await this.generateEmailCampaign(
+            params.details as JsonObject
+          );
           break;
-        case 'daily_briefing':
-          output = await this.generateDailyBriefing(params.metrics);
+        case "daily_briefing":
+          output = await this.generateDailyBriefing(
+            params.metrics as JsonObject
+          );
           break;
         default:
           throw new Error(`Unknown action: ${action}`);
@@ -157,24 +188,37 @@ export class ExecutiveAgentImpl extends AbstractAgent {
       // Log execution
       await logActivity({
         action: `executive_${action}`,
-        entityType: 'agent_execution',
+        entityType: "agent_execution",
         entityId: context?.missionId || 0,
-        details: { params, executionTimeMs }
+        details: { params, executionTimeMs },
       });
 
-      return this.createResult(true, output, undefined, [action], executionTimeMs);
+      return this.createResult(
+        true,
+        output,
+        undefined,
+        [action],
+        executionTimeMs
+      );
     } catch (error) {
       const executionTimeMs = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
 
       await logActivity({
         action: `executive_${action}_failed`,
-        entityType: 'agent_execution',
+        entityType: "agent_execution",
         entityId: context?.missionId || 0,
-        details: { error: errorMessage, executionTimeMs }
+        details: { error: errorMessage, executionTimeMs },
       });
 
-      return this.createResult(false, undefined, errorMessage, undefined, executionTimeMs);
+      return this.createResult(
+        false,
+        undefined,
+        errorMessage,
+        undefined,
+        executionTimeMs
+      );
     }
   }
 
@@ -197,7 +241,7 @@ Requirements:
 
     const response = await invokeLLM({
       messages: [{ role: "user", content: prompt }],
-      responseFormat: { type: "text" }
+      responseFormat: { type: "text" },
     });
 
     return response.choices[0].message.content as string;
@@ -221,13 +265,16 @@ Requirements:
 - Include next steps`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
   }
 
-  async generateLinkedInPost(topic: string, options?: JsonObject): Promise<string> {
+  async generateLinkedInPost(
+    topic: string,
+    options?: JsonObject
+  ): Promise<string> {
     const prompt = `Write an engaging LinkedIn post about: ${topic}
 Options: ${JSON.stringify(options ?? {})}
 Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}
@@ -239,13 +286,17 @@ Requirements:
 - Call-to-action or thought-provoking question`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
   }
 
-  async generateBlogPost(topic: string, length?: string, keywords?: string[]): Promise<string> {
+  async generateBlogPost(
+    topic: string,
+    length?: string,
+    keywords?: string[]
+  ): Promise<string> {
     const prompt = `Write a ${length ?? "medium"}-length blog post about: ${topic}
 Keywords: ${(keywords ?? []).join(", ")}
 Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}
@@ -255,10 +306,10 @@ Requirements:
 - Include relevant AuthiChain use cases
 - Clear structure with headings
 - Actionable insights
-- ${length === 'short' ? '300-500' : length === 'long' ? '1500-2000' : '800-1200'} words`;
+- ${length === "short" ? "300-500" : length === "long" ? "1500-2000" : "800-1200"} words`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
@@ -276,7 +327,7 @@ Requirements:
 - A/B testing suggestions`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
@@ -296,17 +347,19 @@ Structure:
 5. **Recommendation** - 1 strategic recommendation`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
   }
 
   // Backward compatibility with existing code
-  async draftMarginProtectionEmail(prospect: ExecutiveProspect): Promise<string> {
+  async draftMarginProtectionEmail(
+    prospect: ExecutiveProspect
+  ): Promise<string> {
     const prompt = `Draft a high-urgency sales email for Michigan Cannabis 24% wholesale tax scenario.
 
-Prospect: ${prospect.name} at ${prospect.company} (${prospect.dba ?? 'N/A'})
+Prospect: ${prospect.name} at ${prospect.company} (${prospect.dba ?? "N/A"})
 Industry: ${prospect.industry}
 City: ${prospect.city}
 
@@ -321,7 +374,7 @@ Requirements:
 - Under 130 words`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
@@ -340,7 +393,7 @@ Requirements:
 - Include subtle value prop`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;

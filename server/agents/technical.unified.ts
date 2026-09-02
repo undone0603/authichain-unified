@@ -3,9 +3,14 @@
  * Handles code generation, testing, deployment, and system maintenance
  */
 
-import { AbstractAgent, AgentContext, AgentCapability, AgentExecutionResult } from './base/agent.interface.js';
-import { invokeLLM } from '../_core/llm.js';
-import { logActivity } from '../db.js';
+import {
+  AbstractAgent,
+  AgentContext,
+  AgentCapability,
+  AgentExecutionResult,
+} from "./base/agent.interface.js";
+import { invokeLLM } from "../_core/llm.js";
+import { logActivity } from "../db.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -27,9 +32,9 @@ const TECHNICAL_SYSTEM_PROMPT = `You are TechnicalAgent, the autonomous infrastr
 - Always add error handling and logging`;
 
 export class TechnicalAgentImpl extends AbstractAgent {
-  name = 'TechnicalAgent';
-  capabilities: AgentCapability[] = ['technical', 'operations'];
-  version = '1.0.0';
+  name = "TechnicalAgent";
+  capabilities: AgentCapability[] = ["technical", "operations"];
+  version = "1.0.0";
 
   constructor() {
     super();
@@ -39,59 +44,84 @@ export class TechnicalAgentImpl extends AbstractAgent {
   private initializeTools(): void {
     this.tools = [
       {
-        name: 'analyze_codebase',
-        description: 'Analyze codebase for patterns, structure, and issues',
-        execute: (params) => this.analyzeCodebase(params),
+        name: "analyze_codebase",
+        description: "Analyze codebase for patterns, structure, and issues",
+        execute: params =>
+          this.analyzeCodebase(
+            params as { paths: string[]; focusArea?: string }
+          ),
         schema: {
-          paths: { type: 'array', items: { type: 'string' } },
-          focusArea: { type: 'string' }
-        }
+          paths: { type: "array", items: { type: "string" } },
+          focusArea: { type: "string" },
+        },
       },
       {
-        name: 'check_type_safety',
-        description: 'Verify TypeScript compilation and type safety',
-        execute: (params) => this.checkTypeSafety(params),
+        name: "check_type_safety",
+        description: "Verify TypeScript compilation and type safety",
+        execute: params => this.checkTypeSafety(params as { files?: string[] }),
         schema: {
-          files: { type: 'array', items: { type: 'string' } }
-        }
+          files: { type: "array", items: { type: "string" } },
+        },
       },
       {
-        name: 'propose_implementation',
-        description: 'Propose implementation for a feature or fix',
-        execute: (params) => this.proposeImplementation(params),
+        name: "propose_implementation",
+        description: "Propose implementation for a feature or fix",
+        execute: params =>
+          this.proposeImplementation(
+            params as {
+              feature: string;
+              context?: string;
+              targetFiles: string[];
+            }
+          ),
         schema: {
-          feature: { type: 'string', description: 'Feature description' },
-          context: { type: 'string', description: 'Additional context' },
-          targetFiles: { type: 'array', items: { type: 'string' } }
-        }
+          feature: { type: "string", description: "Feature description" },
+          context: { type: "string", description: "Additional context" },
+          targetFiles: { type: "array", items: { type: "string" } },
+        },
       },
       {
-        name: 'audit_performance',
-        description: 'Audit system performance and identify bottlenecks',
-        execute: (params) => this.auditPerformance(params),
+        name: "audit_performance",
+        description: "Audit system performance and identify bottlenecks",
+        execute: params =>
+          this.auditPerformance(
+            params as { module: string; metrics?: string[] }
+          ),
         schema: {
-          module: { type: 'string', description: 'Module to audit' },
-          metrics: { type: 'array', items: { type: 'string' } }
-        }
+          module: { type: "string", description: "Module to audit" },
+          metrics: { type: "array", items: { type: "string" } },
+        },
       },
       {
-        name: 'check_security',
-        description: 'Security review of code or infrastructure',
-        execute: (params) => this.checkSecurity(params),
+        name: "check_security",
+        description: "Security review of code or infrastructure",
+        execute: params =>
+          this.checkSecurity(
+            params as {
+              scope: "code" | "infrastructure" | "api" | "database";
+              files?: string[];
+            }
+          ),
         schema: {
-          scope: { type: 'string', enum: ['code', 'infrastructure', 'api', 'database'] },
-          files: { type: 'array', items: { type: 'string' } }
-        }
+          scope: {
+            type: "string",
+            enum: ["code", "infrastructure", "api", "database"],
+          },
+          files: { type: "array", items: { type: "string" } },
+        },
       },
       {
-        name: 'generate_migration',
-        description: 'Generate database migration SQL',
-        execute: (params) => this.generateMigration(params),
+        name: "generate_migration",
+        description: "Generate database migration SQL",
+        execute: params =>
+          this.generateMigration(
+            params as { description: string; changes: JsonObject }
+          ),
         schema: {
-          description: { type: 'string', description: 'Migration description' },
-          changes: { type: 'object', description: 'Schema changes' }
-        }
-      }
+          description: { type: "string", description: "Migration description" },
+          changes: { type: "object", description: "Schema changes" },
+        },
+      },
     ];
   }
 
@@ -106,23 +136,40 @@ export class TechnicalAgentImpl extends AbstractAgent {
       let output: string;
 
       switch (action) {
-        case 'analyze_codebase':
-          output = await this.analyzeCodebase(params);
+        case "analyze_codebase":
+          output = await this.analyzeCodebase(
+            params as { paths: string[]; focusArea?: string }
+          );
           break;
-        case 'check_type_safety':
-          output = await this.checkTypeSafety(params);
+        case "check_type_safety":
+          output = await this.checkTypeSafety(params as { files?: string[] });
           break;
-        case 'propose_implementation':
-          output = await this.proposeImplementation(params);
+        case "propose_implementation":
+          output = await this.proposeImplementation(
+            params as {
+              feature: string;
+              context?: string;
+              targetFiles: string[];
+            }
+          );
           break;
-        case 'audit_performance':
-          output = await this.auditPerformance(params);
+        case "audit_performance":
+          output = await this.auditPerformance(
+            params as { module: string; metrics?: string[] }
+          );
           break;
-        case 'check_security':
-          output = await this.checkSecurity(params);
+        case "check_security":
+          output = await this.checkSecurity(
+            params as {
+              scope: "code" | "infrastructure" | "api" | "database";
+              files?: string[];
+            }
+          );
           break;
-        case 'generate_migration':
-          output = await this.generateMigration(params);
+        case "generate_migration":
+          output = await this.generateMigration(
+            params as { description: string; changes: JsonObject }
+          );
           break;
         default:
           throw new Error(`Unknown action: ${action}`);
@@ -132,24 +179,37 @@ export class TechnicalAgentImpl extends AbstractAgent {
 
       await logActivity({
         action: `technical_${action}`,
-        entityType: 'agent_execution',
+        entityType: "agent_execution",
         entityId: context?.missionId || 0,
-        details: { executionTimeMs }
+        details: { executionTimeMs },
       });
 
-      return this.createResult(true, output, undefined, [action], executionTimeMs);
+      return this.createResult(
+        true,
+        output,
+        undefined,
+        [action],
+        executionTimeMs
+      );
     } catch (error) {
       const executionTimeMs = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
 
       await logActivity({
         action: `technical_${action}_failed`,
-        entityType: 'agent_execution',
+        entityType: "agent_execution",
         entityId: context?.missionId || 0,
-        details: { error: errorMessage }
+        details: { error: errorMessage },
       });
 
-      return this.createResult(false, undefined, errorMessage, undefined, executionTimeMs);
+      return this.createResult(
+        false,
+        undefined,
+        errorMessage,
+        undefined,
+        executionTimeMs
+      );
     }
   }
 
@@ -159,8 +219,8 @@ export class TechnicalAgentImpl extends AbstractAgent {
   }): Promise<string> {
     const prompt = `Analyze the AuthiChain codebase for structural patterns and issues.
 
-Paths to analyze: ${params.paths.join(', ')}
-Focus area: ${params.focusArea ?? 'general structure'}
+Paths to analyze: ${params.paths.join(", ")}
+Focus area: ${params.focusArea ?? "general structure"}
 
 ${TECHNICAL_SYSTEM_PROMPT}
 
@@ -172,18 +232,16 @@ Provide:
 5. **Recommendations** - Concrete improvements`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
   }
 
-  async checkTypeSafety(params: {
-    files?: string[];
-  }): Promise<string> {
+  async checkTypeSafety(params: { files?: string[] }): Promise<string> {
     const prompt = `Review TypeScript type safety for AuthiChain codebase.
 
-Files to check: ${params.files?.join(', ') ?? 'all'}
+Files to check: ${params.files?.join(", ") ?? "all"}
 
 ${TECHNICAL_SYSTEM_PROMPT}
 
@@ -196,7 +254,7 @@ Verify:
 6. **Recommendations** - Prioritized improvements`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
@@ -209,8 +267,8 @@ Verify:
   }): Promise<string> {
     const prompt = `Propose implementation for: ${params.feature}
 
-Context: ${params.context ?? 'See description'}
-Target files: ${params.targetFiles.join(', ')}
+Context: ${params.context ?? "See description"}
+Target files: ${params.targetFiles.join(", ")}
 
 ${TECHNICAL_SYSTEM_PROMPT}
 
@@ -226,7 +284,7 @@ Provide:
 Format as actionable checklist.`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
@@ -238,7 +296,7 @@ Format as actionable checklist.`;
   }): Promise<string> {
     const prompt = `Audit performance of: ${params.module}
 
-Metrics to evaluate: ${params.metrics?.join(', ') ?? 'response time, memory, database queries'}
+Metrics to evaluate: ${params.metrics?.join(", ") ?? "response time, memory, database queries"}
 
 ${TECHNICAL_SYSTEM_PROMPT}
 
@@ -251,19 +309,19 @@ Analysis:
 6. **Recommendations** - Prioritized optimizations`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
   }
 
   async checkSecurity(params: {
-    scope: 'code' | 'infrastructure' | 'api' | 'database';
+    scope: "code" | "infrastructure" | "api" | "database";
     files?: string[];
   }): Promise<string> {
     const prompt = `Security review for: ${params.scope}
 
-Files: ${params.files?.join(', ') ?? 'all in scope'}
+Files: ${params.files?.join(", ") ?? "all in scope"}
 
 ${TECHNICAL_SYSTEM_PROMPT}
 
@@ -280,7 +338,7 @@ Review for:
 Severity levels: Critical, High, Medium, Low`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
@@ -307,7 +365,7 @@ Provide:
 Format as production-ready SQL.`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;
@@ -315,7 +373,7 @@ Format as production-ready SQL.`;
 
   // Additional utility methods
   async suggestRefactoring(code: string, area?: string): Promise<string> {
-    const prompt = `Suggest refactoring improvements for this ${area ?? 'code'}.
+    const prompt = `Suggest refactoring improvements for this ${area ?? "code"}.
 
 \`\`\`typescript
 ${code}
@@ -330,7 +388,7 @@ Provide:
 4. **Migration Path** - How to change existing code`;
 
     const response = await invokeLLM({
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: prompt }],
     });
 
     return response.choices[0].message.content as string;

@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Lazy singletons — avoid build-time throw when env vars are absent.
 let _stripe: Stripe | null = null;
@@ -20,8 +20,8 @@ function getStripe(): Stripe {
   return _stripe;
 }
 
-let _admin: ReturnType<typeof createClient> | null = null;
-function getAdmin(): ReturnType<typeof createClient> {
+let _admin: SupabaseClient<any> | null = null;
+function getAdmin(): SupabaseClient<any> {
   if (!_admin) {
     _admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

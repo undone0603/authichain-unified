@@ -2,11 +2,13 @@ import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import * as cookie from "cookie";
-import type { Request } from "express";
-// cookie@2 renamed parse → parseCookie; keep a local alias for either shape.
-const cookieModule = cookie as typeof cookie & { parseCookie?: typeof cookie.parse };
-const parseCookieHeader: (str: string) => Record<string, string | undefined> =
-  cookieModule.parseCookie ?? cookieModule.parse;
+// The root and workers tsc programs resolve different major versions of
+// "cookie" (v2 exports parseCookie, v0.x exports parse) — index through an
+// untyped view so either version's export satisfies both programs.
+const cookieModule = cookie as unknown as Record<string, unknown>;
+const parseCookieHeader = (cookieModule.parseCookie ?? cookieModule.parse) as (
+  str: string
+) => Record<string, string | undefined>;
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
@@ -27,8 +29,13 @@ type UserInfoWithPlatforms<T> = T & {
   platforms?: unknown;
 };
 
-type HeaderCarrier = Request | { headers: { cookie?: string } };
-type RequestHeadersLike = HeaderCarrier["headers"] & { get?: (name: string) => string | null };
+// The global Fetch API Request, not express's — this authenticates both
+// Fetch-style handlers and Express-like request objects (headers.cookie).
+type HeaderCarrier = globalThis.Request | { headers: { cookie?: string } };
+type RequestHeadersLike = {
+  get?: (name: string) => string | null;
+  cookie?: string;
+};
 
 export type SessionPayload = {
   openId: string;
@@ -165,7 +172,7 @@ class SDKServer {
 
     const parsed = parseCookieHeader(cookieHeader);
     const entries = Object.entries(parsed).filter(
-      (entry): entry is [string, string] => typeof entry[1] === "string",
+      (entry): entry is [string, string] => typeof entry[1] === "string"
     );
     return new Map(entries);
   }
@@ -261,8 +268,12 @@ class SDKServer {
       payload
     );
 
-    const enrichedData = data as UserInfoWithPlatforms<GetUserInfoWithJwtResponse>;
-    const loginMethod = this.deriveLoginMethod(enrichedData.platforms, enrichedData.platform ?? data.platform ?? null);
+    const enrichedData =
+      data as UserInfoWithPlatforms<GetUserInfoWithJwtResponse>;
+    const loginMethod = this.deriveLoginMethod(
+      enrichedData.platforms,
+      enrichedData.platform ?? data.platform ?? null
+    );
     return {
       ...data,
       platform: loginMethod,
