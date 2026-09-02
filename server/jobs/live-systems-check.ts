@@ -31,12 +31,17 @@ function toErrorMessage(error: unknown) {
 
 async function checkStripe(): Promise<IntegrationCheckResult> {
   if (!process.env.STRIPE_SECRET_KEY) {
-    return { configured: false, connected: false, error: "STRIPE_SECRET_KEY missing" };
+    return {
+      configured: false,
+      connected: false,
+      error: "STRIPE_SECRET_KEY missing",
+    };
   }
   try {
     const { getStripe } = await import("../stripe-service");
     const stripe = getStripe();
-    const account = await stripe.accounts.retrieve() as Stripe.Response<Stripe.Account>;
+    const account =
+      (await stripe.accounts.retrieveCurrent()) as Stripe.Response<Stripe.Account>;
     return {
       configured: true,
       connected: true,
@@ -53,7 +58,11 @@ async function checkStripe(): Promise<IntegrationCheckResult> {
 
 async function checkHubSpot(): Promise<IntegrationCheckResult> {
   if (!process.env.HUBSPOT_SERVICE_KEY) {
-    return { configured: false, connected: false, error: "HUBSPOT_SERVICE_KEY missing" };
+    return {
+      configured: false,
+      connected: false,
+      error: "HUBSPOT_SERVICE_KEY missing",
+    };
   }
   try {
     const { getCRMStats } = await import("../hubspot-service");
@@ -85,9 +94,12 @@ async function checkGmail(): Promise<IntegrationCheckResult> {
     };
   }
   try {
-    const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetch(
+      "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     if (!response.ok) {
       const text = await response.text().catch(() => "");
       return {
@@ -96,7 +108,9 @@ async function checkGmail(): Promise<IntegrationCheckResult> {
         error: `gmail_profile_failed:${response.status}:${text.slice(0, 200)}`,
       };
     }
-    const data = await response.json().catch(() => ({} as { emailAddress?: string; messagesTotal?: number }));
+    const data = await response
+      .json()
+      .catch(() => ({}) as { emailAddress?: string; messagesTotal?: number });
     return {
       configured: true,
       connected: true,
@@ -112,10 +126,18 @@ async function checkGmail(): Promise<IntegrationCheckResult> {
 }
 
 async function checkPostHog(): Promise<IntegrationCheckResult> {
-  const host = (process.env.POSTHOG_HOST || "https://us.i.posthog.com").replace(/\/$/, "");
-  const key = process.env.POSTHOG_PROJECT_KEY || process.env.VITE_POSTHOG_KEY || "";
+  const host = (process.env.POSTHOG_HOST || "https://us.i.posthog.com").replace(
+    /\/$/,
+    ""
+  );
+  const key =
+    process.env.POSTHOG_PROJECT_KEY || process.env.VITE_POSTHOG_KEY || "";
   if (!key) {
-    return { configured: false, connected: false, error: "POSTHOG_PROJECT_KEY/VITE_POSTHOG_KEY missing" };
+    return {
+      configured: false,
+      connected: false,
+      error: "POSTHOG_PROJECT_KEY/VITE_POSTHOG_KEY missing",
+    };
   }
   try {
     const eventPayload = {
@@ -154,7 +176,11 @@ async function checkGa4(): Promise<IntegrationCheckResult> {
   const measurementId = process.env.GA4_MEASUREMENT_ID || "";
   const apiSecret = process.env.GA4_API_SECRET || "";
   if (!measurementId || !apiSecret) {
-    return { configured: false, connected: false, error: "GA4_MEASUREMENT_ID or GA4_API_SECRET missing" };
+    return {
+      configured: false,
+      connected: false,
+      error: "GA4_MEASUREMENT_ID or GA4_API_SECRET missing",
+    };
   }
   try {
     const url = `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(measurementId)}&api_secret=${encodeURIComponent(apiSecret)}`;
@@ -163,7 +189,12 @@ async function checkGa4(): Promise<IntegrationCheckResult> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         client_id: "agentz.1",
-        events: [{ name: "agentz_live_systems_check", params: { source: "authichain-unified" } }],
+        events: [
+          {
+            name: "agentz_live_systems_check",
+            params: { source: "authichain-unified" },
+          },
+        ],
       }),
     });
     if (!response.ok) {
@@ -218,7 +249,8 @@ export async function runLiveSystemsCheck(): Promise<LiveSystemsCheckResult> {
   return payload;
 }
 
-const isMain = !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMain =
+  !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
   runLiveSystemsCheck()

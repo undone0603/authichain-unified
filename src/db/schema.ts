@@ -1,22 +1,22 @@
-  import {
-    bigserial,
-    boolean,
-    date,
-    index,
-    integer,
-    json,
-    jsonb,
-    numeric,
-    pgEnum,
-    pgTable,
-    real,
-    serial,
-    text,
-    timestamp,
-    uniqueIndex,
-    uuid,
-    varchar
-  } from "drizzle-orm/pg-core";
+import {
+  bigserial,
+  boolean,
+  date,
+  index,
+  integer,
+  json,
+  jsonb,
+  numeric,
+  pgEnum,
+  pgTable,
+  real,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 export const tierEnum = pgEnum("tier", ["free", "pro", "enterprise"]);
@@ -280,6 +280,8 @@ export const subscriptions = pgTable("subscriptions", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
+
+export type Subscription = typeof subscriptions.$inferSelect;
 
 // ─── API Usage ──────────────────────────────────────────────────────────────
 export const apiUsage = pgTable(
