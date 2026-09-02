@@ -1,21 +1,9 @@
-/**
- * @file route.ts
- * @project qron-platform
- * @author AuthiChain Ops
- * @copyright (c) 2026 AuthiChain Inc. All rights reserved.
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { attestationEngine, mapDbToIdentity, mapDbToEvidence } from '@/protocol/attestation';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/v1/verify
- * 
- * High-level verification endpoint for the GPT and Universal SDK.
- * Supports both registration_id (internal) and serial (external).
- */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -33,33 +21,47 @@ export async function GET(req: NextRequest) {
       .select('*, products(*)');
 
     if (serial) query = query.eq('serial_number', serial);
-    if (registrationId) query = query.eq('id', registrationId); // Internal ID
+    if (registrationId) query = query.eq('id', registrationId);
 
     const { data: cert, error: certError } = await query.single();
 
     if (certError || !cert) {
-      return NextResponse.json({ is_authentic: false, error: 'Asset not found' }, { status: 404 });
+      return NextResponse.json({ 
+        decision: 'invalid', 
+        error: 'Asset not found' 
+      }, { status: 404 });
     }
 
-    // Fetch DPP
     const { data: dpp } = await supabase
       .from('dpp_data')
       .select('*')
       .eq('certification_id', cert.id)
       .single();
 
+    // 1. Map database state to Attestation Protocol
+    const identity = mapDbToIdentity(cert.products, cert);
+    const evidence = mapDbToEvidence(cert.products, cert, dpp);
+    
+    // 2. Generate a cryptographic attestation on-the-fly
+    // In a full prod env, this might be retrieved from a cache or a ledger
+    const attestation = await attestationEngine.createAttestation(
+      cert.id,
+      identity,
+      evidence,
+      cert.status === 'approved' ? 'verified' : 'blocked'
+    );
+
+    // 3. Return the Interoperable Verification Protocol response
     return NextResponse.json({
-      is_authentic: cert.status === 'approved',
-      protocol: 'AuthiChain',
-      version: '1.4.2',
-      asset: {
-        serial_number: cert.serial_number,
-        status: cert.status,
-        issued_at: cert.issued_at || cert.created_at,
-        network: 'Polygon POS'
-      },
-      product: cert.products,
-      dpp: dpp || null
+      object_id: `authi:${cert.id}`,
+      decision: attestation.decision,
+      issuer: attestation.issuer,
+      subject: attestation.subject,
+      attestation: attestation.signature.value,
+      signature: attestation.signature,
+      evidence: attestation.evidence,
+      status: attestation.status,
+      verified_at: attestation.verifiedAt
     });
 
   } catch (err: unknown) {

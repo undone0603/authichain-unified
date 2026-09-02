@@ -48,8 +48,9 @@ async def scout_businesses(city: str, ctx: Optional[ExecutionContext] = None) ->
         
     task = (
         f"Search for top-rated artisanal businesses, breweries, and dispensaries in {city}, Michigan. "
-        "Extract a list of 5 businesses including their name, category (vertical), city, rating, and website. "
-        "Return the data as a clean JSON list of objects."
+        "Extract a list of 5 businesses including their name, category (vertical), city, rating, website, "
+        "and a 1-2 sentence 'deep_context' summarizing recent activity, specific offerings, or potential "
+        "pain points found on their site/socials. Return the data as a clean JSON list of objects."
     )
     
     llm = get_llm(model="gpt-4o") # Browser-use often works best with gpt-4o

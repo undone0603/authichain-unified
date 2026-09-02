@@ -30,7 +30,6 @@ jobs:
           GITLEAKS_CONFIG: .gitleaks.toml
 
   deploy:
-    name: Deploy Revenue Worker
     needs: secret-scan
     runs-on: ubuntu-latest
     timeout-minutes: 20

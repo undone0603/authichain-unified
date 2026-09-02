@@ -100,7 +100,14 @@ def run(ctx: ExecutionContext) -> str:
                 else:
                     ctx.step(f"Twitter session missing. Outreach for {name} QUEUED in PENDING_DMS.")
                     from agentz.core.outreach import add_pending_dm
-                    add_pending_dm(name, message, site_url)
+                    # Add missing arguments: personalized_hook, generic_hook
+                    add_pending_dm(
+                        lead_name=name,
+                        personalized_hook=f"Personalized demo for {name}",
+                        generic_hook="Industry standard trust verification",
+                        message=message,
+                        microsite_url=site_url
+                    )
                 
                 activated += 1
             except Exception as e:

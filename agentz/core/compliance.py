@@ -24,19 +24,24 @@ logger = logging.getLogger("agentz.compliance")
 # battery Feb 18 2027, cannabis/textile Q2 2027).
 _BASELINE_FIELDS = ["origin_country", "material_composition", "carbon_footprint_total", "circularity_index"]
 
-EU_DPP_REQUIREMENTS: Dict[str, List[str]] = {
-    "luxury":    [*_BASELINE_FIELDS, "reparability_score", "substances_of_concern"],
-    "textile":   [*_BASELINE_FIELDS, "fiber_composition", "microplastic_release", "recyclability_score"],
-    "battery":   [*_BASELINE_FIELDS, "battery_chemistry", "recycled_content_cobalt", "recycled_content_lithium", "capacity_fade_rating"],
-    "cannabis":  [*_BASELINE_FIELDS, "cultivation_method", "lab_test_reference"],
-    "electronics": [*_BASELINE_FIELDS, "repairability_index", "software_support_duration"],
+# Regulatory Compliance Profiles
+REGULATORY_PROFILES: Dict[str, List[str]] = {
+    "pharmaceutical_dscsa": [
+        "gtin14", "serial", "lot", "expiry", "trading_partner_id", "transaction_id"
+    ],
+    "medical_device_udi": [
+        "udi_di", "udi_pi_lot", "udi_pi_serial", "udi_pi_expiry", "device_model", "manufacturer_gln"
+    ]
 }
 
-
-async def research_dpp_requirements(vertical: str, ctx: Optional[ExecutionContext] = None) -> List[str]:
+async def research_compliance_requirements(profile: str, ctx: Optional[ExecutionContext] = None) -> List[str]:
+    """
+    Research requirements based on the formalized regulatory profile.
+    """
     if ctx:
-        ctx.step(f"Looked up static EU DPP mandate table for vertical='{vertical}'")
-    return EU_DPP_REQUIREMENTS.get(vertical.lower(), _BASELINE_FIELDS)
+        ctx.step(f"Looked up regulatory mandate table for profile='{profile}'")
+    return REGULATORY_PROFILES.get(profile.lower(), _BASELINE_FIELDS)
+
 
 
 async def scan_product_compliance(supabase, product_id: str, requirements: List[str]) -> Dict[str, Any]:
@@ -64,16 +69,37 @@ async def scan_product_compliance(supabase, product_id: str, requirements: List[
     }
 
 
-async def run_global_compliance_audit(supabase, ctx: Optional[ExecutionContext] = None):
-    reqs = await research_dpp_requirements("luxury", ctx)
-    products = supabase.table("products").select("id").limit(10).execute().data
-
-    results = []
+async def generate_audit_report(supabase, vertical: str) -> Dict[str, Any]:
+    """
+    Generates an audit-ready compliance report for regional mandates.
+    """
+    reqs = await research_compliance_requirements(vertical)
+    
+    # Fetch all products in the vertical
+    products = supabase.table("products").select("id, name, metadata").eq("industry_id", vertical).execute().data
+    
+    report = {
+        "vertical": vertical,
+        "total_products": len(products),
+        "compliant_count": 0,
+        "details": []
+    }
+    
     for p in products:
-        res = await scan_product_compliance(supabase, p["id"], reqs)
-        results.append(res)
+        compliance = p.get("metadata", {}).get("dpp_compliance", {})
+        is_compliant = compliance.get("status") == "COMPLIANT"
+        
+        if is_compliant:
+            report["compliant_count"] += 1
+            
+        report["details"].append({
+            "product_id": p["id"],
+            "name": p["name"],
+            "status": compliance.get("status", "UNKNOWN")
+        })
+        
+    return report
 
-    return results
 
 class GDPRHandler:
     """

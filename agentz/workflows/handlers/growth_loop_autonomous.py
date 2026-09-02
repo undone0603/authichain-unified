@@ -72,7 +72,13 @@ def run(ctx: ExecutionContext) -> Optional[str]:
                 invitation = asyncio.run(generate_social_post(topic, "Hyper-Personalized Risk Alert"))
                 
                 from agentz.core.outreach import add_pending_dm
-                add_pending_dm(company, invitation, "https://authichain.com/demo")
+                add_pending_dm(
+                    company,
+                    personalized_hook=f"Risk alert for {company}",
+                    generic_hook="Provenance gap detected — AuthiChain can close it.",
+                    message=invitation,
+                    microsite_url="https://authichain.com/demo",
+                )
                 processed.append(company)
                 
             return processed

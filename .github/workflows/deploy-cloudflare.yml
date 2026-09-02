@@ -27,11 +27,8 @@ jobs:
           GITLEAKS_CONFIG: .gitleaks.toml
 
   deploy:
-    name: Deploy Worker + Static Assets
     needs: secret-scan
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # Skip entire job if Cloudflare token not configured
+    uses: ./.github/workflows/reusable-deploy.yml
     if: ${{ vars.CLOUDFLARE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout repository

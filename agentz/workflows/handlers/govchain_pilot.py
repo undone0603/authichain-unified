@@ -12,10 +12,14 @@ from agentz.core.pages import generate_living_page_config, publish_living_page
 from supabase import create_client, Client
 
 def run(ctx: ExecutionContext) -> str:
-    # 1. Setup credentials
-    supabase_url = get_or_placeholder("supabase_url", ctx)
-    supabase_key = get_or_placeholder("supabase_service_key", ctx)
-    supabase: Client = create_client(supabase_url, supabase_key)
+    # 1. Setup credentials (skip real client in dry-run — placeholders are not valid URLs)
+    supabase: Client | None = None
+    if ctx.mode != Mode.DRY_RUN:
+        supabase_url = get_or_placeholder("supabase_url", ctx)
+        supabase_key = get_or_placeholder("supabase_service_key", ctx)
+        supabase = create_client(supabase_url, supabase_key)
+    else:
+        ctx.step("Supabase client skipped (dry-run)")
     
     # 2. Define Public Project
     project_data = {

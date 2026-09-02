@@ -6,10 +6,9 @@ Welcome to the unified repository for the **QRON Platform** and the **AuthiChain
 
 This repository is the central hub for the QRON ecosystem, integrating a high-performance frontend with a sophisticated autonomous agent orchestration layer.
 
-- **QRON Platform**: A multi-domain web app serving specialized brands (qron.space, authichain.com, govchain.us, strainchain.io) with Cloudflare Edge integration and Drizzle ORM. **The primary dev/build scripts in this repo use Vite** (see `package.json`), with some Next.js-compatible modules/config also present.
-- **AuthiChain Unified Core (AgentZ)**: A Python-based workflow orchestrator that manages autonomous agents for infrastructure fixing, revenue operations, and high-entropy supply chain audits.
-
-> **Status:** This platform is in an active pre-traffic / early-revenue phase. Autonomous revenue and agentic workflows are built and operational in the codebase, but production usage metrics are still ramping — see commit history for ongoing hardening work.
+- **[Frontend (Client)](client/README.md)**: Vite + React application for branded experiences.
+- **[AgentZ (Core)](agentz/README.md)**: Python-based workflow orchestrator for operational tasks.
+- **[Protocol](protocol/README.md)**: Open-source reference implementation of the verification protocol.
 
 ---
 
@@ -92,15 +91,4 @@ See `docs/operations/PILOT-READY-BASELINE.md` and `docs/attestation/v0.1.md` for
 
 ## ⚖️ Legal & Intellectual Property
 
-### Licensing
-
-This repository uses a **two-part license** (AuthiChain Software License v1.1):
-
-- **The Protocol** — the verification specification, reference verifier, and registry record format, located in `protocol/` — is licensed under the **Apache License 2.0** (see `protocol/LICENSE`). Anyone may implement it, including competitors.
-- **The Platform** — everything else in this repository, including the application, the multi-agent verification pipeline, the edge deployment topology, brand implementations, and operational tooling — remains **proprietary** under the terms in `LICENSE.md`.
-
-See `LICENSE.md` for full terms.
-
-### Copyright
-
-Copyright (c) 2026 AuthiChain Inc. All rights reserved. The QRON logo, AuthiChain Protocol branding, and "Living Portal" technology are trademarks of AuthiChain Inc.
+See `docs/project/LICENSE.md` for full terms.

@@ -4,6 +4,7 @@
     "config:recommended"
   ],
   "timezone": "America/Detroit",
+  "dependencyDashboard": true,
   "schedule": ["after 1am and before 6am every weekday", "every weekend"],
   "labels": ["dependencies", "renovate"],
   "prConcurrentLimit": 8,
