@@ -1,0 +1,18 @@
+{
+  "linkedin": "A QR code on a cannabis package should point at something checkable — not just a claim printed on the box. StrainChain hashes each batch record at registration and generates a QR code per lot, so scanning it surfaces the actual event ledger behind that batch: cultivated, harvested, lab-tested, packaged, transferred, received at the dispensary. Each stage is its own record, not a single end-of-chain attestation a buyer just has to trust.\n\nUnderneath that ledger sits a direct Michigan METRC integration — pulling transfer manifests from the state's seed-to-sale API, with retry and fallback built in, instead of a distributor's compliance record being a spreadsheet someone re-keys after the fact.\n\nThis is Michigan METRC today, not every state's system — the sync is real, not a demo screenshot, and we're not pretending it covers more ground than it does.\n\nhttps://strainchain.io/?utm_source=linkedin&utm_medium=social&utm_campaign=strainchain-chain-of-custody&utm_content=b",
+  "reddit": {
+    "subreddit": "weedbiz",
+    "title": "What's actually behind the QR code on a cannabis package's compliance label?",
+    "body": "I work on StrainChain, a cannabis-provenance tool. The part I want feedback on: a QR code on a package is only as good as what it points at, so batch registration hashes the record and generates a QR per lot that resolves to the batch's actual event ledger — cultivated, harvested, lab-tested, packaged, transferred, received at the dispensary — as separate, ordered records rather than one end-of-chain attestation.\n\nThat ledger sits on top of a Michigan METRC integration that pulls transfer manifests directly from the state's seed-to-sale API (with retry/fallback), rather than someone re-keying a manifest into a spreadsheet after the fact.\n\nRight now this is Michigan METRC specifically — I haven't built out other states' systems yet, and I don't want to imply otherwise.\n\nFor people running compliance in other METRC states: if a QR code on a label resolved to a real per-stage ledger instead of a static certificate, would that change how you audit a batch, or is METRC's own manifest already enough for you?\n\nhttps://strainchain.io/?utm_source=reddit&utm_medium=social&utm_campaign=strainchain-chain-of-custody&utm_content=b\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A QR code on a cannabis package should point at something checkable, not just a claim on the box. StrainChain hashes each batch record at registration and generates a QR per lot that resolves to the batch's real event ledger.",
+    "That ledger is staged, not a single attestation: cultivated, harvested, lab-tested, packaged, transferred, received at the dispensary — each one its own record, in order.",
+    "Underneath it: a direct Michigan METRC sync pulling transfer manifests from the state's API, retry/fallback included. Michigan today, not every state: https://strainchain.io/?utm_source=twitter&utm_medium=social&utm_campaign=strainchain-chain-of-custody&utm_content=b"
+  ],
+  "experiment": {
+    "campaign": "strainchain-chain-of-custody",
+    "variant": "b",
+    "hypothesis": "leading with the checkable QR/hashed-batch hook (the generic provenance framing variant a deliberately avoided) outperforms leading with the METRC-sync mechanics on click-through to strainchain.io"
+  }
+}

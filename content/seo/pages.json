@@ -6148,5 +6148,260 @@
         }
       ]
     }
+  },
+  {
+    "slug": "cyber-resilience-act-vulnerability-reporting-deadline-2026",
+    "keyword": "cyber resilience act vulnerability reporting deadline 2026",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Cyber Resilience Act Vulnerability Reporting | AuthiChain",
+    "metaDescription": "CRA Article 14 reporting duties apply from September 11, 2026: a manufacturer with an actively exploited vulnerability has 24 hours to file an early warning.",
+    "h1": "Cyber Resilience Act Vulnerability Reporting Deadline 2026",
+    "bodyHtml": "<p>CRA Article 14 reporting duties apply from September 11, 2026: a manufacturer with an actively exploited vulnerability has 24 hours to file an early warning with ENISA’s Single Reporting Platform, a clock that only works if the manufacturer already knows which components are in the product.</p><h2>Why AuthiChain</h2><ul><li>A component inventory signed as a W3C Verifiable Credential uses the same Ed25519 signing and SHA-256 hashing this protocol already applies to a physical item’s provenance record — one signing model, not a separate one for software</li><li>The September 2026 deadline covers actively exploited vulnerabilities and severe incidents only; the CRA’s broader machine-readable SBOM requirement, covering at least top-level dependencies, applies later, from December 11, 2027</li><li>Reports file through ENISA’s Single Reporting Platform, not through AuthiChain — a signed component record is evidence you can produce fast when the 24-hour clock starts, not a substitute for filing the report itself</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain file CRA vulnerability reports for us?</h3><p>No — Article 14 reports go to ENISA and the relevant national CSIRT through the Single Reporting Platform. A signed component record gives you an inventory to report from quickly; filing the report is still yours to do.</p><h3>What’s different between the September 2026 and December 2027 CRA dates?</h3><p>September 11, 2026 starts the 24-hour early-warning duty for actively exploited vulnerabilities and severe incidents, on products already on the market. The full CRA obligations, including the machine-readable SBOM requirement, apply from December 11, 2027.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Cyber Resilience Act Vulnerability Reporting Deadline 2026",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "CRA Article 14 reporting duties apply from September 11, 2026: a manufacturer with an actively exploited vulnerability has 24 hours to file an early warning with ENISA’s Single Reporting Platform, a clock that only works if the manufacturer already knows which components are in the product.",
+          "url": "https://authichain.com/p/cyber-resilience-act-vulnerability-reporting-deadline-2026"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Cyber Resilience Act Vulnerability Reporting Deadline 2026",
+              "item": "https://authichain.com/p/cyber-resilience-act-vulnerability-reporting-deadline-2026"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain file CRA vulnerability reports for us?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — Article 14 reports go to ENISA and the relevant national CSIRT through the Single Reporting Platform. A signed component record gives you an inventory to report from quickly; filing the report is still yours to do."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What’s different between the September 2026 and December 2027 CRA dates?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "September 11, 2026 starts the 24-hour early-warning duty for actively exploited vulnerabilities and severe incidents, on products already on the market. The full CRA obligations, including the machine-readable SBOM requirement, apply from December 11, 2027."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-tyre-label-digital-qr-code-proposal",
+    "keyword": "eu tyre label digital qr code proposal",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "EU Tyre Label Digital QR Code Proposal | QRON",
+    "metaDescription": "A Commission proposal published June 24, 2026 would let tyre suppliers meet the Regulation (EU) 2020/740 labelling duty with a QR code, an electronic.",
+    "h1": "EU Tyre Label Digital QR Code Proposal",
+    "bodyHtml": "<p>A Commission proposal published June 24, 2026 would let tyre suppliers meet the Regulation (EU) 2020/740 labelling duty with a QR code, an electronic display, or information shown at an installer’s point of sale — a change still working through Parliament and Council, not adopted law yet.</p><h2>Why QRON</h2><ul><li>The proposal amends Regulation (EU) 2017/1369 (energy labelling) and Regulation (EU) 2020/740 (tyre labelling) together, and the Commission projects roughly €125 million in annual administrative savings across the two regimes over ten years</li><li>A GS1 Digital Link-formatted QR code — the same identifier format QRON already issues — is a natural fit for whichever digital carrier the final text settles on, since the proposal names QR codes explicitly as one accepted format</li><li>Nothing in the proposal requires cryptographic signing or on-chain anchoring; it permits a digital label format. A signed, verifiable record is a layer a supplier could add on top, not something the proposal itself asks for</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $29/mo.</p><h2>FAQ</h2><h3>Is the digital tyre label mandatory now?</h3><p>No — the Commission published the proposal June 24, 2026. It needs Parliament and Council agreement before Regulation (EU) 2020/740 changes; the printed label stays required in the meantime.</p><h3>Does a QR code already replace the physical tyre label?</h3><p>Not yet. Today’s rule under 2020/740 requires the printed label. The proposal would add digital formats as an accepted alternative, not remove the physical requirement outright — final text isn’t settled.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — EU Tyre Label Digital QR Code Proposal",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "A Commission proposal published June 24, 2026 would let tyre suppliers meet the Regulation (EU) 2020/740 labelling duty with a QR code, an electronic display, or information shown at an installer’s point of sale — a change still working through Parliament and Council, not adopted law yet.",
+          "url": "https://qron.space/p/eu-tyre-label-digital-qr-code-proposal"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Tyre Label Digital QR Code Proposal",
+              "item": "https://qron.space/p/eu-tyre-label-digital-qr-code-proposal"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the digital tyre label mandatory now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the Commission published the proposal June 24, 2026. It needs Parliament and Council agreement before Regulation (EU) 2020/740 changes; the printed label stays required in the meantime."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a QR code already replace the physical tyre label?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet. Today’s rule under 2020/740 requires the printed label. The proposal would add digital formats as an accepted alternative, not remove the physical requirement outright — final text isn’t settled."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-wine-ingredient-nutrition-qr-code-label",
+    "keyword": "eu wine ingredient nutrition qr code label",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Wine Ingredient Nutrition QR Code Label | AuthiChain",
+    "metaDescription": "Every wine placed on the EU market has needed a full ingredient list and nutrition declaration since December 8, 2023 under Regulation (EU) 2021/2117, and.",
+    "h1": "EU Wine Ingredient Nutrition QR Code Label",
+    "bodyHtml": "<p>Every wine placed on the EU market has needed a full ingredient list and nutrition declaration since December 8, 2023 under Regulation (EU) 2021/2117, and since March 18, 2026 an amendment also requires the energy value on the physical label itself — while the detailed ingredient list and nutrition table can still sit behind a QR code specific to that wine.</p><h2>Why AuthiChain</h2><ul><li>A generic QR code pointing to a producer’s website does not satisfy the regulation — the code has to resolve to that exact wine’s data, the same one-identifier-per-item model this protocol already uses for provenance records</li><li>Allergens and, since the March 2026 amendment, the energy value in kilocalories must appear printed on the label; only the full ingredient list and detailed nutrition table can be pushed behind the e-label</li><li>Wine produced exclusively for export outside the EU is exempt from the ingredient and nutrition declaration requirement entirely, under the same March 2026 amendment</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Can one QR code cover an entire wine range?</h3><p>No — the e-label has to correspond to that specific product’s ingredients and nutrition data. A code shared across multiple wines in a producer’s range does not meet the requirement.</p><h3>What still has to be printed on the bottle even with an e-label?</h3><p>Allergens, and since March 18, 2026 the energy value shown with the “E” symbol, cannot be pushed behind a QR code. Only the detailed ingredient list and full nutrition table can be electronic.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — EU Wine Ingredient Nutrition QR Code Label",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "Every wine placed on the EU market has needed a full ingredient list and nutrition declaration since December 8, 2023 under Regulation (EU) 2021/2117, and since March 18, 2026 an amendment also requires the energy value on the physical label itself — while the detailed ingredient list and nutrition table can still sit behind a QR code specific to that wine.",
+          "url": "https://authichain.com/p/eu-wine-ingredient-nutrition-qr-code-label"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Wine Ingredient Nutrition QR Code Label",
+              "item": "https://authichain.com/p/eu-wine-ingredient-nutrition-qr-code-label"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Can one QR code cover an entire wine range?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the e-label has to correspond to that specific product’s ingredients and nutrition data. A code shared across multiple wines in a producer’s range does not meet the requirement."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What still has to be printed on the bottle even with an e-label?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Allergens, and since March 18, 2026 the energy value shown with the “E” symbol, cannot be pushed behind a QR code. Only the detailed ingredient list and full nutrition table can be electronic."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verified-by-gs1-vs-blockchain-provenance-record",
+    "keyword": "verified by gs1 vs blockchain provenance record",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "Verified By GS1 Vs Blockchain Provenance Record | QRON",
+    "metaDescription": "Verified by GS1 checks whether a GTIN, GLN, or company identifier is real and who registered it, against data the brand owner submitted to GS1’s own registry.",
+    "h1": "Verified By GS1 Vs Blockchain Provenance Record",
+    "bodyHtml": "<p>Verified by GS1 checks whether a GTIN, GLN, or company identifier is real and who registered it, against data the brand owner submitted to GS1’s own registry — a different question from whether one specific physical unit’s record is signed and unaltered, which is what a QRON scan checks.</p><h2>Why QRON</h2><ul><li>Verified by GS1 answers “does this identifier exist and who owns it” at the registry level — it doesn’t check a per-unit signature, so two items sharing one genuine GTIN pass a Verified by GS1 lookup identically, counterfeit or not</li><li>A QRON record ties an Ed25519 signature to one serialized item’s data, not to the identifier class it belongs to — a distinction GS1 Digital Link Sunrise 2027’s move to 2D barcodes does not by itself resolve</li><li>The two aren’t competitors: one GS1 Digital Link URL can resolve to both a Verified by GS1-style identity lookup and a signed provenance record, selected by linkType, from the same printed code</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $29/mo.</p><h2>FAQ</h2><h3>Does Verified by GS1 stop counterfeiting?</h3><p>It confirms an identifier and its registered owner are genuine, which catches a fabricated or unassigned GTIN. It doesn’t verify that a specific physical unit carrying a real GTIN is the genuine item — a counterfeit using a real product’s GTIN on a fake unit still passes a Verified by GS1 check.</p><h3>Do we need both Verified by GS1 and a signed provenance record?</h3><p>They answer different questions. Verified by GS1 is useful for confirming a partner’s identifier is legitimately registered before you list a product; a signed per-unit record is what proves the specific item a customer is holding is genuine.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — Verified By GS1 Vs Blockchain Provenance Record",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "Verified by GS1 checks whether a GTIN, GLN, or company identifier is real and who registered it, against data the brand owner submitted to GS1’s own registry — a different question from whether one specific physical unit’s record is signed and unaltered, which is what a QRON scan checks.",
+          "url": "https://qron.space/p/verified-by-gs1-vs-blockchain-provenance-record"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verified By GS1 Vs Blockchain Provenance Record",
+              "item": "https://qron.space/p/verified-by-gs1-vs-blockchain-provenance-record"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does Verified by GS1 stop counterfeiting?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It confirms an identifier and its registered owner are genuine, which catches a fabricated or unassigned GTIN. It doesn’t verify that a specific physical unit carrying a real GTIN is the genuine item — a counterfeit using a real product’s GTIN on a fake unit still passes a Verified by GS1 check."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Do we need both Verified by GS1 and a signed provenance record?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "They answer different questions. Verified by GS1 is useful for confirming a partner’s identifier is legitimately registered before you list a product; a signed per-unit record is what proves the specific item a customer is holding is genuine."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
