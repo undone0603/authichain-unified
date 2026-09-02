@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type AdminSupabase = ReturnType<typeof createClient>;
+type AdminSupabase = SupabaseClient<any>;
 type AuditPayload = Record<string, unknown>;
 
 function getErrorMessage(error: unknown): string {
@@ -161,7 +161,10 @@ export async function POST(req: NextRequest) {
     // Log failure to audit_log
     await logAuditEvent(supabase, event.type, event.id, "error", {
       error: getErrorMessage(err),
-      stack: err instanceof Error ? err.stack?.split("\n").slice(0, 3).join("\n") : undefined,
+      stack:
+        err instanceof Error
+          ? err.stack?.split("\n").slice(0, 3).join("\n")
+          : undefined,
     }).catch(() => {});
 
     return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
@@ -352,7 +355,10 @@ async function handleInvoicePaymentSucceeded(
  * - Update subscriptions table (status='payment_failed')
  * - Insert alert for sales team
  */
-async function handleInvoicePaymentFailed(supabase: AdminSupabase, event: Stripe.Event) {
+async function handleInvoicePaymentFailed(
+  supabase: AdminSupabase,
+  event: Stripe.Event
+) {
   const invoice = event.data.object as Stripe.Invoice;
 
   const customerId = invoice.customer as string;

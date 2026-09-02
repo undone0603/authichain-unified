@@ -1,53 +1,68 @@
-  import { resend } from '@/lib/resend';
-  import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
-  import { NextRequest,NextResponse } from 'next/server';
+import { resend } from "@/lib/resend";
+import { supabaseAdmin as supabase } from "@/lib/supabase-admin";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   const { email, name, use_case } = await req.json();
-  if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 });
+  if (!email)
+    return NextResponse.json({ error: "email required" }, { status: 400 });
 
   const { data: existing } = await supabase
-    .from('waitlist')
-    .select('id')
-    .eq('email', email)
+    .from("waitlist")
+    .select("id")
+    .eq("email", email)
     .single();
 
-  if (existing) return NextResponse.json({ message: 'Already on waitlist', position: null });
+  if (existing)
+    return NextResponse.json({
+      message: "Already on waitlist",
+      position: null,
+    });
 
-  const { _unused_data_17, error } = await supabase
-    .from('waitlist')
+  const { error } = await supabase
+    .from("waitlist")
     .insert({ email, name, use_case, joined_at: new Date().toISOString() })
-    .select('id')
+    .select("id")
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 });
 
   const { count } = await supabase
-    .from('waitlist')
-    .select('*', { count: 'exact', head: true });
+    .from("waitlist")
+    .select("*", { count: "exact", head: true });
 
-  const safeName = (name || 'friend').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const safeUseCase = (use_case || 'Not specified').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeName = (name || "friend")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const safeUseCase = (use_case || "Not specified")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
-  await resend.emails.send({
-    from: 'QRON <noreply@qron.space>',
-    to: email,
-    subject: "You're on the QRON waitlist!",
-    html: `<h2>Welcome to QRON, ${safeName}!</h2><p>You're #${count} on our waitlist. We'll notify you when your spot opens up.</p><p>Use case: ${safeUseCase}</p>`,
-  }).catch(() => {});
+  await resend.emails
+    .send({
+      from: "QRON <noreply@qron.space>",
+      to: email,
+      subject: "You're on the QRON waitlist!",
+      html: `<h2>Welcome to QRON, ${safeName}!</h2><p>You're #${count} on our waitlist. We'll notify you when your spot opens up.</p><p>Use case: ${safeUseCase}</p>`,
+    })
+    .catch(() => {});
 
   return NextResponse.json({ success: true, position: count });
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const admin = searchParams.get('admin_key');
-  if (admin !== process.env.ADMIN_SECRET) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const admin = searchParams.get("admin_key");
+  if (admin !== process.env.ADMIN_SECRET)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data, count } = await supabase
-    .from('waitlist')
-    .select('*', { count: 'exact' })
-    .order('joined_at', { ascending: false });
+    .from("waitlist")
+    .select("*", { count: "exact" })
+    .order("joined_at", { ascending: false });
 
   return NextResponse.json({ total: count, entries: data || [] });
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { provisionPurchase } from "@/lib/provisioning";
 import { renderBillingEmail } from "@/lib/billing-emails";
 import { getBrandIdFromMetadata } from "@/lib/brand-billing";
@@ -17,11 +17,48 @@ function isAnchorable(event: Stripe.Event): boolean {
   return event.livemode || process.env.NODE_ENV !== "production";
 }
 
+// Stripe fields typed as `string | Expandable<T> | null` collapse to a plain
+// id string whenever we don't pass `expand`, which this webhook never does.
+function toStripeId(
+  value: string | { id: string } | null | undefined
+): string | null {
+  if (!value) return null;
+  return typeof value === "string" ? value : value.id;
+}
+
+// The Stripe SDK's types no longer expose `subscription`/`payment_intent`
+// directly on Invoice, and `invoice` on Charge, after the account moved to a
+// newer API version's typings — but the webhook payloads on this account's
+// pinned apiVersion still carry them at runtime. Read defensively.
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  return toStripeId(
+    (invoice as unknown as { subscription?: string | { id: string } | null })
+      .subscription ?? null
+  );
+}
+function getInvoicePaymentIntentId(invoice: Stripe.Invoice): string | null {
+  return toStripeId(
+    (invoice as unknown as { payment_intent?: string | { id: string } | null })
+      .payment_intent ?? null
+  );
+}
+function getLinePriceId(line: Stripe.InvoiceLineItem): string | null {
+  return (
+    (line as unknown as { price?: { id: string } | null }).price?.id ?? null
+  );
+}
+function getChargeInvoiceId(charge: Stripe.Charge): string | null {
+  return toStripeId(
+    (charge as unknown as { invoice?: string | { id: string } | null })
+      .invoice ?? null
+  );
+}
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const REFERRAL_REWARD_CREDITS = 100;
-type AdminSupabase = ReturnType<typeof createClient>;
+type AdminSupabase = SupabaseClient<any>;
 
 type BillingProfile = {
   id: string;
@@ -180,8 +217,8 @@ export async function POST(req: NextRequest) {
         const userId = md.user_id;
         const plan = md.plan;
         const brand = getBrandIdFromMetadata(md);
-        const customerId = session.customer;
-        const subscriptionId = session.subscription;
+        const customerId = toStripeId(session.customer);
+        const subscriptionId = toStripeId(session.subscription);
 
         const isTrial = md.trial === "true";
         const grantRaw = md.grant;
@@ -325,8 +362,8 @@ export async function POST(req: NextRequest) {
 
       case "invoice.paid": {
         const invoice = event.data.object;
-        const customerId = invoice.customer;
-        const subscriptionId = invoice.subscription;
+        const customerId = toStripeId(invoice.customer);
+        const subscriptionId = getInvoiceSubscriptionId(invoice);
         const amountPaid = invoice.amount_paid / 100;
 
         const { data: profile } = await getSupabase()
@@ -411,17 +448,17 @@ export async function POST(req: NextRequest) {
             anchorStripeSale({
               eventId: event.id,
               objectId: invoice.id!,
-              sku: resolveSku(invoice.metadata, line?.price?.id ?? null),
+              sku: resolveSku(
+                invoice.metadata,
+                line ? getLinePriceId(line) : null
+              ),
               amountCents: invoice.amount_paid!,
               currency: invoice.currency ?? "usd",
               buyerWallet: resolveBuyerWallet(invoice.metadata, line?.metadata),
               stripeCreated: invoice.created,
               source: "live",
               invoiceId: invoice.id,
-              paymentIntentId:
-                typeof invoice.payment_intent === "string"
-                  ? invoice.payment_intent
-                  : null,
+              paymentIntentId: getInvoicePaymentIntentId(invoice),
             })
           );
         }
@@ -430,7 +467,7 @@ export async function POST(req: NextRequest) {
 
       case "invoice.payment_failed": {
         const invoice = event.data.object;
-        const customerId = invoice.customer;
+        const customerId = toStripeId(invoice.customer);
 
         const profileResult = await getSupabase()
           .from("profiles")
@@ -467,7 +504,7 @@ export async function POST(req: NextRequest) {
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object;
-        const customerId = subscription.customer;
+        const customerId = toStripeId(subscription.customer);
 
         await getSupabase()
           .from("profiles")
@@ -482,7 +519,7 @@ export async function POST(req: NextRequest) {
 
       case "customer.subscription.updated": {
         const subscription = event.data.object;
-        const customerId = subscription.customer;
+        const customerId = toStripeId(subscription.customer);
         const status = subscription.status;
 
         await getSupabase()
@@ -497,7 +534,7 @@ export async function POST(req: NextRequest) {
 
       case "customer.subscription.trial_will_end": {
         const subscription = event.data.object;
-        const customerId = subscription.customer;
+        const customerId = toStripeId(subscription.customer);
 
         const profileResult = await getSupabase()
           .from("profiles")
@@ -541,10 +578,7 @@ export async function POST(req: NextRequest) {
           });
           sessionId = sessions.data[0]?.id;
         }
-        const invoiceId =
-          typeof charge.invoice === "string"
-            ? charge.invoice
-            : charge.invoice?.id;
+        const invoiceId = getChargeInvoiceId(charge);
 
         if (isAnchorable(event)) {
           after(() =>
