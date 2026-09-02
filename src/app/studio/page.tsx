@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Sparkles,
   Download,
-  ArrowRight,
   Zap,
   Shield,
   Lock,
