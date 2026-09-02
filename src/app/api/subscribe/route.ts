@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { supabaseAdmin as supabase } from "@/lib/supabase-admin";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
@@ -11,6 +12,10 @@ const PLAN_PRICE_MAP: Record<string, string> = {
   enterprise: process.env.STRIPE_PRICE_ENTERPRISE || "",
 };
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -20,8 +25,8 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
 
-    const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(stripeKey, {
+    const StripeClient = (await import("stripe")).default;
+    const stripe = new StripeClient(stripeKey, {
       apiVersion: "2026-08-26.dahlia" as const,
     });
 
@@ -36,7 +41,12 @@ export async function POST(req: NextRequest) {
     if (authErr || !user)
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
 
-    const body = await req.json();
+    const body = (await req.json()) as {
+      plan?: string;
+      success_url?: string;
+      cancel_url?: string;
+      trial_days?: string | number;
+    };
     const { plan, success_url, cancel_url, trial_days } = body;
 
     if (!plan || !PLAN_PRICE_MAP[plan]) {
@@ -79,7 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build checkout session
-    const sessionParams: any = {
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: stripeCustomerId,
       mode: "subscription",
       payment_method_types: ["card"],
@@ -99,8 +109,12 @@ export async function POST(req: NextRequest) {
     };
 
     // Add trial if requested
-    if (trial_days && parseInt(trial_days) > 0) {
-      sessionParams.subscription_data.trial_period_days = parseInt(trial_days);
+    const trialDays = trial_days ? Number.parseInt(String(trial_days), 10) : Number.NaN;
+    if (!Number.isNaN(trialDays) && trialDays > 0) {
+      sessionParams.subscription_data = {
+        ...sessionParams.subscription_data,
+        trial_period_days: trialDays,
+      };
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
@@ -123,12 +137,12 @@ export async function POST(req: NextRequest) {
       session_id: session.id,
       plan,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(_unused_req_131: NextRequest) {
   // Return available plans with prices for self-serve pricing page
   const plans = [
     {

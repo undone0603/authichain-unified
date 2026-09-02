@@ -3,10 +3,10 @@ import { logErrorDetail } from "./log-error-detail";
 
 describe("logErrorDetail", () => {
   it("includes message, cause, and code from a driver-wrapped error", () => {
-    const causeErr = new Error("self-signed certificate in certificate chain");
-    (causeErr as any).code = "SELF_SIGNED_CERT_IN_CHAIN";
-    const wrapped = new Error("Failed query: select 1");
-    (wrapped as any).cause = causeErr;
+    const causeErr = new Error("self-signed certificate in certificate chain") as Error & { code?: string };
+    causeErr.code = "SELF_SIGNED_CERT_IN_CHAIN";
+    const wrapped = new Error("Failed query: select 1") as Error & { cause?: unknown };
+    wrapped.cause = causeErr;
 
     const detail = logErrorDetail(wrapped);
 

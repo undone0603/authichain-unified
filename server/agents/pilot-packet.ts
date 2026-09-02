@@ -1,6 +1,6 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity } from '../db.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+  import type { MissionTask as Task } from '../../drizzle/schema.js';
+  import { invokeLLM,parseLLMContent } from '../_core/llm.js';
+  import { logActivity } from '../db.js';
 
 interface PilotPacketPayload {
   segment?: string;
@@ -73,7 +73,7 @@ Return JSON: { "title": "...", "sections": [{ "heading": "...", "content": "..."
     responseFormat: { type: 'json_object' },
   });
 
-  const dossier = parseLLMContent<unknown>(result.choices[0].message.content);
+  const _unused_dossier_76 = parseLLMContent<unknown>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'intel_dossier_drafted', entityType: 'task', entityId: 0, details: { taskId: task.id,
     segment,

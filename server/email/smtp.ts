@@ -1,5 +1,4 @@
-import type nodemailerType from "nodemailer";
-import type { Transporter } from "nodemailer";
+  import type nodemailerType from "nodemailer";
 
 async function getNodemailer() {
   return (await import("nodemailer")) as typeof nodemailerType & { default: typeof nodemailerType };

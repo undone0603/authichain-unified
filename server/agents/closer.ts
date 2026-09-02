@@ -6,13 +6,13 @@
  *   SEND_CONTRACT    → LLM contract terms + payment link (formal acceptance)
  *   AUTO_REPLY       → objection / pricing question handled autonomously
  */
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { sendEmail, checkThreadReplies } from '../email-service.js';
-import { logActivity, enqueueTask, getDb, createProposal } from '../db.js';
-import { leads } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
-import { getStripe } from '../stripe-service.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
+import { leads } from '../../drizzle/schema.js';
+import { invokeLLM, parseLLMContent } from '../_core/llm.js';
+import { createProposal, enqueueTask, getDb, logActivity } from '../db.js';
+import { checkThreadReplies, sendEmail } from '../email-service.js';
+import { getStripe } from '../stripe-service.js';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -54,6 +54,9 @@ type ReplyIntent =
   | 'already_customer'
   | 'unknown';
 
+type ReplyIntentResult = { intent?: ReplyIntent };
+type SubjectBodyResult = { subject?: string; body?: string };
+
 async function classifyReplyIntent(replyText: string, segment: string): Promise<ReplyIntent> {
   const prompt = `Classify this email reply from a B2B sales prospect for AuthiChain (blockchain product authentication).
 Segment: ${segment}
@@ -66,7 +69,7 @@ Return JSON: { "intent": "<one of: interested | wants_proposal | objection | pri
       messages: [{ role: 'user', content: prompt }],
       responseFormat: { type: 'json_object' },
     });
-    const parsed = parseLLMContent<any>(result.choices[0].message.content);
+    const parsed = parseLLMContent<ReplyIntentResult>(result.choices[0].message.content);
     return (parsed.intent as ReplyIntent) ?? 'unknown';
   } catch {
     return 'unknown';
@@ -173,7 +176,7 @@ const SEGMENT_ROI_CONTEXT: Record<string, string> = {
 
 export async function runSendDemoPacket(task: Task): Promise<void> {
   const payload = task.payload as DemoPacketPayload;
-  const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText, threadId } = payload;
+  const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText } = payload;
 
   const roiContext = SEGMENT_ROI_CONTEXT[segment] ?? SEGMENT_ROI_CONTEXT.DEFAULT;
 
@@ -199,7 +202,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
     responseFormat: { type: 'json_object' },
   });
 
-  const parsed_demo = parseLLMContent<any>(result.choices[0].message.content);
+  const parsed_demo = parseLLMContent<SubjectBodyResult>(result.choices[0].message.content);
   const subject = parsed_demo.subject ?? `AuthiChain for ${leadOrg ?? segment}: How It Works`;
   const body = parsed_demo.body ?? '';
 
@@ -237,7 +240,7 @@ interface ProposalPayload {
 
 export async function runGenerateProposal(task: Task): Promise<void> {
   const payload = task.payload as ProposalPayload;
-  const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText, threadId } = payload;
+  const { leadEmail, leadName, leadOrg, leadTitle, segment, replyText } = payload;
   const priceUsd = PILOT_PRICE_USD[segment] ?? PILOT_PRICE_USD.DEFAULT;
 
   // ── LLM proposal generation ───────────────────────────────────────────────
@@ -265,7 +268,7 @@ Return JSON: { "subject": "Proposal: AuthiChain Pilot for [Org]", "body": "..." 
     responseFormat: { type: 'json_object' },
   });
 
-  const parsed_proposal = parseLLMContent<any>(result.choices[0].message.content);
+  const parsed_proposal = parseLLMContent<SubjectBodyResult>(result.choices[0].message.content);
   const subject = parsed_proposal.subject ?? `AuthiChain Pilot Proposal — ${leadOrg ?? segment}`;
   const proposalContent = parsed_proposal.body ?? '';
 
@@ -376,7 +379,7 @@ Return JSON: { "subject": "AuthiChain Service Agreement — [Org]", "body": "...
     responseFormat: { type: 'json_object' },
   });
 
-  const parsed_contract = parseLLMContent<any>(result.choices[0].message.content);
+  const parsed_contract = parseLLMContent<SubjectBodyResult>(result.choices[0].message.content);
   const subject = parsed_contract.subject ?? `AuthiChain Service Agreement — ${leadOrg ?? segment}`;
   const contractBody = parsed_contract.body ?? '';
 
@@ -461,7 +464,7 @@ Return JSON: { "subject": "Re: [keep thread subject]", "body": "..." }`;
     responseFormat: { type: 'json_object' },
   });
 
-  const parsed_reply = parseLLMContent<any>(result.choices[0].message.content);
+  const parsed_reply = parseLLMContent<SubjectBodyResult>(result.choices[0].message.content);
   const subject = parsed_reply.subject ?? `Re: AuthiChain`;
   const body = parsed_reply.body ?? '';
 

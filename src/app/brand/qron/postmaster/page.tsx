@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
-import { Mail, Zap, Check, Barcode, Lock, TrendingUp, ArrowRight, Shield } from 'lucide-react';
+  import { Barcode,Check,Lock,Mail,TrendingUp,Zap } from 'lucide-react';
+  import Link from 'next/link';
 
 const BLUE = '#3b82f6';
-const PURPLE = '#8b5cf6';
+const _unused_PURPLE_7 = '#8b5cf6';
 
 export default function QRONPostmaster() {
   return (

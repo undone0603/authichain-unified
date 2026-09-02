@@ -170,7 +170,7 @@ describe('Unified Agent System', () => {
       }
 
       // Verify structure (actual registration would need proper implementation)
-      const mockAgent = new MockAgent() as any;
+      const mockAgent = new MockAgent();
       expect(mockAgent.name).toBe('MockAgent');
       expect(mockAgent.capabilities.length).toBeGreaterThan(0);
     });
@@ -183,7 +183,7 @@ describe('Unified Agent System', () => {
     });
 
     it('should handle missing capability', () => {
-      const agents = AgentRegistry.getAgentsByCapability('unknown-capability' as any);
+      const agents = AgentRegistry.getAgentsByCapability('unknown-capability' as never);
       expect(agents.length).toBe(0);
     });
   });

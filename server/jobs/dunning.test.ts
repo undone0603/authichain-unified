@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Subscription } from '../../drizzle/schema';
 
-const { state } = vi.hoisted(() => ({ state: { subs: [] as any[], logged: new Set<string>() } }));
+const { state } = vi.hoisted(() => ({ state: { subs: [] as Subscription[], logged: new Set<string>() } }));
 
 const sendEmail = vi.fn(async (..._a: unknown[]) => {});
 const createSystemNotification = vi.fn(async (..._a: unknown[]) => {});

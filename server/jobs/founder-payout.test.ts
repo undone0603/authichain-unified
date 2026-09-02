@@ -75,7 +75,7 @@ describe('lastMonthRange', () => {
 
 describe('collectedRevenueCents', () => {
   it('sums revenueRecords.amount (dollars) into cents', async () => {
-    rev.rows = [{ amount: '199.00' }, { amount: '499.50' }, { amount: 'bad' } as any];
+    rev.rows = [{ amount: '199.00' }, { amount: '499.50' }, { amount: 'bad' } as { amount: string | null }];
     const cents = await collectedRevenueCents(new Date(), new Date());
     expect(cents).toBe(69850); // 199.00 + 499.50 = 698.50 -> 69850 cents; 'bad' ignored
   });

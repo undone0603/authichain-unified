@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+  import { ethers } from 'ethers';
 
 /**
  * AuthiChain.sol ABI - Core Protocol Interface
@@ -75,7 +75,7 @@ export async function anchorEdgeHash(edgeHash: string, metadata: string) {
             anchorId = parsedLog.args.anchorId.toString();
             break;
           }
-        } catch (e) {
+        } catch (_unused_e_78) {
           // Continue to next log if parsing fails
         }
       }

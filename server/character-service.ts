@@ -6,19 +6,21 @@
  * silhouette, trust_symbolism, mint_readiness, ui_compatibility),
  * mint-prep pipeline, agent creation, QRON reward distribution.
  */
-import { getDb } from "./db";
-import {
-  characterGenerations, characterAssets, protocolAgents,
-  verificationClaims, consensusResults, qronRewardLedger,
-  checkpointBatches,
-  type InsertCharacterGeneration, type InsertCharacterAsset,
-  type InsertProtocolAgent,
-} from "../drizzle/schema";
-import { eq, desc, sql, and, count } from "drizzle-orm";
-import { generateImage } from "./_core/imageGeneration";
-import { invokeLLM, parseLLMContent } from "./_core/llm";
-import { storagePut } from "./storage";
-import crypto from "crypto";
+  import crypto from "crypto";
+  import { and,count,desc,eq,sql } from "drizzle-orm";
+  import {
+    characterAssets,
+    characterGenerations,
+    checkpointBatches,
+    consensusResults,
+    protocolAgents,
+    qronRewardLedger,
+    verificationClaims
+  } from "../drizzle/schema";
+  import { generateImage } from "./_core/imageGeneration";
+  import { invokeLLM,parseLLMContent } from "./_core/llm";
+  import { getDb } from "./db";
+  import { storagePut } from "./storage";
 
 // ─── Archetype Definitions (7 archetypes from OpenArt protocol) ────────────
 const ARCHETYPES = {
@@ -750,7 +752,7 @@ export async function submitVerificationClaim(
   return { claimId: result.id };
 }
 
-import { checkUserMilestones } from "./hubspot/automation";
+  import { checkUserMilestones } from "./hubspot/automation";
 
 /**
  * Reward user's agent for completing a verification (called from authenticate.analyze)
@@ -784,4 +786,4 @@ export async function rewardAgentForVerification(userId: number, wasSuccessful: 
 }
 
 
-export { ARCHETYPES };
+  export { ARCHETYPES };

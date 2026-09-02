@@ -25,7 +25,7 @@ export function createClient() {
           );
         },
       }
-    ) as any;
+    ) as ReturnType<typeof createBrowserClient>;
   }
 
   return createBrowserClient(url, anonKey);

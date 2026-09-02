@@ -1,11 +1,49 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { appRouter } from "./routers";
+import { beforeEach,describe,expect,it,vi } from "vitest";
+import type { Affiliate, Bonus, User } from "../src/db/schema";
 import type { TrpcContext } from "./_core/context";
+import { appRouter } from "./routers";
+
+type TestBonusInsert = Pick<Bonus, "userId" | "bonusType" | "bonusName" | "bonusValue"> &
+  Partial<Pick<Bonus, "tier" | "status" | "deliveryMethod" | "claimedAt" | "deliveredAt">>;
+
+type MockDb = {
+  select: () => {
+    from: (_table: unknown) => {
+      where: () => {
+        limit: () => Bonus[];
+      };
+      orderBy: () => never[];
+    };
+  };
+  insert: (_table: unknown) => {
+    values: (data: TestBonusInsert) => {
+      returning: () => Array<Pick<Bonus, "id">>;
+    };
+  };
+  update: () => {
+    set: () => {
+      where: () => undefined;
+    };
+  };
+};
+
+type AffiliateSubmitSuccess = {
+  success: true;
+  affiliateCode: string;
+  id: number;
+};
+
+type AffiliateSubmitFailure = {
+  success: false;
+  message: string;
+};
+
+type AffiliateSubmitResult = AffiliateSubmitSuccess | AffiliateSubmitFailure;
 
 // ─── Shared in-memory store ───────────────────────────────────────────────────
 const store = vi.hoisted(() => {
   let seq = 200;
-  const bonuses: any[] = [];
+  const bonuses: Bonus[] = [];
   return {
     bonuses,
     nextId: () => ++seq,
@@ -18,9 +56,9 @@ vi.mock("./db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./db")>();
 
   // Minimal chainable db proxy so bonuses/marketplace code doesn't throw
-  const mockDb: any = {
+  const mockDb: MockDb = {
     select: () => ({
-      from: (_table: any) => ({
+      from: (_table: unknown) => ({
         where: () => ({
           // Always return the first stored bonus (empty when store is reset)
           limit: () => store.bonuses.slice(0, 1),
@@ -28,10 +66,20 @@ vi.mock("./db", async (importOriginal) => {
         orderBy: () => [],
       }),
     }),
-    insert: (_table: any) => ({
-      values: (data: any) => {
+    insert: (_table: unknown) => ({
+      values: (data: TestBonusInsert) => {
         const id = store.nextId();
-        store.bonuses.push({ ...data, id });
+        store.bonuses.push({
+          ...data,
+          id,
+          userId: data.userId ?? null,
+          tier: data.tier ?? null,
+          status: data.status ?? "pending",
+          deliveryMethod: data.deliveryMethod ?? null,
+          claimedAt: data.claimedAt ?? null,
+          deliveredAt: data.deliveredAt ?? null,
+          createdAt: new Date(),
+        });
         return { returning: () => [{ id }] };
       },
     }),
@@ -47,7 +95,14 @@ vi.mock("./db", async (importOriginal) => {
     createReferral: vi.fn(async () => ({ id: store.nextId() })),
     // affiliate helpers
     getAffiliateByUserId: vi.fn(async () => undefined),
-    createAffiliate: vi.fn(async (data: any) => ({ id: store.nextId() })),
+    createAffiliate: vi.fn(
+      async (
+        _data: Pick<
+          Affiliate,
+          "userId" | "affiliateCode" | "status" | "commissionRate" | "payoutMethod" | "payoutDetails"
+        >,
+      ) => ({ id: store.nextId() }),
+    ),
     getAffiliateCommissions: vi.fn(async () => []),
     // email-draft helpers
     getPendingDrafts: vi.fn(async () => []),
@@ -110,14 +165,16 @@ vi.mock("./email/smtp", async () => ({
 }));
 
 // ─── Context helpers ──────────────────────────────────────────────────────────
-type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
-
 function createAuthContext(role: "user" | "admin" = "user"): TrpcContext {
-  const user: AuthenticatedUser = {
-    id: "00000000-0000-4000-8000-000000000001", openId: "test-user-001", email: "test@authichain.com",
+  const user: User = {
+    authUid: null,
+    id: 1, openId: "test-user-001", email: "test@authichain.com",
     name: "Test User", loginMethod: "manus", role, stripeCustomerId: null,
+    walletAddress: null, avatarUrl: null, company: null, title: null, phone: null,
+    onboardingCompleted: 0, paddleCustomerId: null, points: 0, generationsUsed: 0,
+    generationsLimit: 0, affiliateId: null, referredBy: null, storyModeEnabled: false,
     createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
-  } as any;
+  };
   return {
     user,
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
@@ -231,10 +288,14 @@ describe("New Features", () => {
       });
 
       it("affiliate.submitApplication creates affiliate for new user", async () => {
-        const result = await appRouter.createCaller(createAuthContext()).affiliate.submitApplication({ paypalEmail: "user@paypal.com" });
+        const result = await appRouter.createCaller(createAuthContext()).affiliate.submitApplication({
+          paypalEmail: "user@paypal.com",
+        }) as AffiliateSubmitResult;
         expect(result.success).toBe(true);
-        expect((result as any).affiliateCode).toMatch(/^AFF-/);
-        expect((result as any).id).toBeDefined();
+        if (result.success) {
+          expect(result.affiliateCode).toMatch(/^AFF-/);
+          expect(result.id).toBeDefined();
+        }
       });
 
       it("affiliate.submitApplication reports already-enrolled when affiliate exists", async () => {
@@ -244,11 +305,13 @@ describe("New Features", () => {
           commissionRate: "10.00", totalEarnings: "0", pendingPayout: "0",
           totalReferrals: 0, totalConversions: 0, payoutMethod: null, payoutDetails: null,
           createdAt: new Date(), updatedAt: new Date(),
-          tier: "basic" as any, activeReferrals: 0, paypalEmail: null,
-        });
-        const result = await appRouter.createCaller(createAuthContext()).affiliate.submitApplication({});
+          tier: "basic", activeReferrals: 0, paypalEmail: null,
+        } as Affiliate);
+        const result = await appRouter.createCaller(createAuthContext()).affiliate.submitApplication({}) as AffiliateSubmitResult;
         expect(result.success).toBe(false);
-        expect((result as any).message).toMatch(/already/i);
+        if (!result.success) {
+          expect(result.message).toMatch(/already/i);
+        }
       });
 
       it("affiliate.getStats returns stats object when enrolled", async () => {
@@ -258,8 +321,8 @@ describe("New Features", () => {
           commissionRate: "15.00", totalEarnings: "250.00", pendingPayout: "50.00",
           totalReferrals: 12, totalConversions: 5, payoutMethod: "paypal", payoutDetails: null,
           createdAt: new Date(), updatedAt: new Date(),
-          tier: "gold" as any, activeReferrals: 3, paypalEmail: "gold@paypal.com",
-        });
+          tier: "gold", activeReferrals: 3, paypalEmail: "gold@paypal.com",
+        } as Affiliate);
         vi.mocked(getAffiliateCommissions).mockResolvedValueOnce([
           { id: 1, affiliateId: 10, paymentId: null, amount: "50.00", status: "pending", paidAt: null, createdAt: new Date() },
         ]);

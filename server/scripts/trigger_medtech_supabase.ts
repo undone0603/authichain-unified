@@ -1,6 +1,10 @@
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function triggerMedTechSupabase() {
   const url = process.env.SUPABASE_URL || "https://dbwoikpflfruikspdnfc.supabase.co";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -55,8 +59,8 @@ async function triggerMedTechSupabase() {
     console.log("\n✨ MedTech pipeline initialized.");
     console.log("AgentZ is processing leads. Review drafts at: /email-campaigns");
 
-  } catch (err: any) {
-    console.error("❌ Supabase Error:", err.message);
+  } catch (err: unknown) {
+    console.error("❌ Supabase Error:", getErrorMessage(err));
   }
 }
 

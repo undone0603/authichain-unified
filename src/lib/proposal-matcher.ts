@@ -1,6 +1,6 @@
-import { db } from '@/db';
-import { leads, proposals } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+  import { db } from '@/db';
+  import { leads,proposals } from '@/db/schema';
+  import { desc,eq } from 'drizzle-orm';
 
 interface MatchResult {
   proposalId: string | null;
@@ -115,7 +115,7 @@ function matchSubjectToProposal(subject: string): MatchResult | null {
  * Attempt to match by In-Reply-To message ID (thread matching).
  * This requires tracking original email message IDs in proposals.
  */
-async function matchByThreadId(inReplyTo: string): Promise<MatchResult | null> {
+async function matchByThreadId(_unused_inReplyTo_118: string): Promise<MatchResult | null> {
   // For now, this is a placeholder. In a full implementation,
   // we would store the original email's messageId in proposals.metadata
   // and look it up here.

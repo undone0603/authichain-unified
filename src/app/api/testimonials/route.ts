@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
 const SEED_TESTIMONIALS = [
   { id: '1', name: 'Marcus T.', role: 'Marketing Director', company: 'RetailBrand Co.', avatar_initials: 'MT', rating: 5, text: 'QRON transformed how we track our in-store QR campaigns. The AI art styling alone is worth the upgrade — our scan rates doubled in the first month.', plan: 'pro', verified: true, created_at: '2026-03-12' },
   { id: '2', name: 'Priya S.', role: 'E-commerce Manager', company: 'ShopFast', avatar_initials: 'PS', rating: 5, text: 'We replaced three separate tools with QRON. The analytics dashboard tells us exactly which QR codes drive conversions. Setup took 10 minutes.', plan: 'pro', verified: true, created_at: '2026-02-28' },
@@ -25,12 +29,14 @@ export async function GET(req: NextRequest) {
 
     if (plan) query.eq('plan', plan);
 
-    const { data, error } = await query;
+    const { data } = await query;
 
-    const testimonials = (data && data.length > 0) ? data : SEED_TESTIMONIALS.filter(t => !plan || t.plan === plan).slice(0, limit);
+    const testimonials = (data && data.length > 0)
+      ? data
+      : SEED_TESTIMONIALS.filter(t => !plan || t.plan === plan).slice(0, limit);
 
     return NextResponse.json({ testimonials, count: testimonials.length });
-  } catch (err: any) {
+  } catch {
     return NextResponse.json({ testimonials: SEED_TESTIMONIALS, count: SEED_TESTIMONIALS.length });
   }
 }
@@ -43,7 +49,12 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
 
-    const { text, rating, role, company } = await req.json();
+    const { text, rating, role, company } = await req.json() as {
+      text?: string;
+      rating?: number;
+      role?: string;
+      company?: string;
+    };
     if (!text || !rating) return NextResponse.json({ error: 'text and rating are required' }, { status: 400 });
 
     const { data, error } = await supabase.from('testimonials').insert({
@@ -58,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
     return NextResponse.json({ success: true, testimonial: data, message: 'Thank you! Your testimonial is under review.' });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }

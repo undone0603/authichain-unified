@@ -1,12 +1,10 @@
-import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
-import type { User } from "../../drizzle/schema";
-import { sdk } from "./sdk";
-import type { IMissionsRepository } from "../missions/types";
-import type { IAdminRepository } from "../admin/types";
-import { DbMissionsRepository } from "../missions/db-repository";
-import { DbAdminRepository } from "../admin/db-repository";
-import { getHyperdriveDb } from "../db";
-import type { TrpcContext } from "./context";
+  import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
+  import type { User } from "../../drizzle/schema";
+  import { DbAdminRepository } from "../admin/db-repository";
+  import { getHyperdriveDb } from "../db";
+  import { DbMissionsRepository } from "../missions/db-repository";
+  import type { TrpcContext } from "./context";
+  import { sdk } from "./sdk";
 
 type WorkersEnv = { HYPERDRIVE: { connectionString: string } };
 
@@ -18,7 +16,7 @@ export async function createWorkersContext(
 
   try {
     user = await sdk.authenticateRequest(opts.req as unknown as import("express").Request);
-  } catch (error) {
+  } catch (_unused_error_19) {
     // Authentication is optional for public procedures.
     user = null;
   }

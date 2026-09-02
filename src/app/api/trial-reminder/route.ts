@@ -2,11 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 import { resend } from '@/lib/resend';
 
+interface TrialReminderUser {
+  email?: string | null;
+  name?: string | null;
+}
+
+interface TrialReminderRow {
+  user_id: string;
+  trial_start: string;
+  users?: TrialReminderUser | null;
+}
+
 // Called daily by Vercel cron or n8n
 // Sends reminder emails to trial users at day 10 and day 13
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `****** {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -33,10 +44,12 @@ export async function GET(req: NextRequest) {
   let sent = 0;
 
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const day10Rows = (day10Users ?? []) as TrialReminderRow[];
+  const day13Rows = (day13Users ?? []) as TrialReminderRow[];
 
-  for (const user of (day10Users || [])) {
-    const email = (user as any).users?.email;
-    const name = esc((user as any).users?.name || 'there');
+  for (const user of day10Rows) {
+    const email = user.users?.email;
+    const name = esc(user.users?.name || 'there');
     if (!email) continue;
     await resend.emails.send({
       from: 'QRON <noreply@qron.space>',
@@ -47,9 +60,9 @@ export async function GET(req: NextRequest) {
     sent++;
   }
 
-  for (const user of (day13Users || [])) {
-    const email = (user as any).users?.email;
-    const name = esc((user as any).users?.name || 'there');
+  for (const user of day13Rows) {
+    const email = user.users?.email;
+    const name = esc(user.users?.name || 'there');
     if (!email) continue;
     await resend.emails.send({
       from: 'QRON <noreply@qron.space>',
@@ -62,8 +75,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    day10_reminders: (day10Users || []).length,
-    day13_reminders: (day13Users || []).length,
+    day10_reminders: day10Rows.length,
+    day13_reminders: day13Rows.length,
     total_sent: sent,
     run_at: now.toISOString(),
   });

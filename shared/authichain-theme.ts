@@ -435,7 +435,7 @@ export function seoMetadata(brand: keyof typeof BRANDS) {
   <meta property="twitter:image" content="https://images.unsplash.com/photo-1639322537228-f710d846310a?w=1200&q=80&auto=format">`;
 }
 
-export function growthBand(brand: keyof typeof BRANDS) {
+export function growthBand(_unused_brand_438: keyof typeof BRANDS) {
   return `
 <section style="background: var(--primary); padding: 12px 24px; text-align: center; position: relative; z-index: 1001">
   <p style="color: #000; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 1px; margin: 0">
@@ -444,7 +444,7 @@ export function growthBand(brand: keyof typeof BRANDS) {
 </section>`;
 }
 
-export function communityHub(brand: keyof typeof BRANDS) {
+export function communityHub(_unused_brand_447: keyof typeof BRANDS) {
   return `
 <section class="web3-section" id="community">
   <div class="hero-content" style="max-width:1000px">
@@ -523,7 +523,7 @@ export function techStack() {
 </section>`;
 }
 
-export function ecosystemFooter(currentBrand: keyof typeof BRANDS) {
+export function ecosystemFooter(_unused_currentBrand_526: keyof typeof BRANDS) {
   return `
 <!-- REAL-TIME VERIFICATION TICKER -->
 <div style="background: rgba(0,0,0,0.5); border-top: 1px solid var(--border-dim); padding: 8px 24px; overflow: hidden; white-space: nowrap; position: relative; z-index: 10">

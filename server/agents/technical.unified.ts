@@ -7,6 +7,8 @@ import { AbstractAgent, AgentContext, AgentCapability, AgentExecutionResult } fr
 import { invokeLLM } from '../_core/llm.js';
 import { logActivity } from '../db.js';
 
+type JsonObject = Record<string, unknown>;
+
 const TECHNICAL_SYSTEM_PROMPT = `You are TechnicalAgent, the autonomous infrastructure & development specialist.
 
 ## Tech Stack
@@ -95,13 +97,13 @@ export class TechnicalAgentImpl extends AbstractAgent {
 
   async execute(
     action: string,
-    params: any,
+    params: JsonObject,
     context?: AgentContext
   ): Promise<AgentExecutionResult> {
     const startTime = Date.now();
 
     try {
-      let output: any;
+      let output: string;
 
       switch (action) {
         case 'analyze_codebase':
@@ -286,7 +288,7 @@ Severity levels: Critical, High, Medium, Low`;
 
   async generateMigration(params: {
     description: string;
-    changes: any;
+    changes: JsonObject;
   }): Promise<string> {
     const prompt = `Generate a Drizzle database migration for: ${params.description}
 

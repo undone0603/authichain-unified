@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
+  import { NextResponse } from 'next/server';
 
-export async function GET(req: Request) {
+export async function GET(_unused_req_3: Request) {
   return NextResponse.json({
     success: true,
     endpoint: '/api/templates',

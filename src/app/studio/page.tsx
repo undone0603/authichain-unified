@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Sparkles, Download, ArrowRight, Zap, Shield, Lock, CheckCircle, QrCode } from 'lucide-react';
+import { Sparkles, Download, ArrowRight, Zap, Shield, Lock, QrCode } from 'lucide-react';
 
 const VISUAL_MODES = [
   { id: 'static', label: 'Static', desc: 'Classic AI QR art for print & social. Max scan reliability.' },
@@ -33,10 +33,10 @@ export default function StudioPage() {
         body: JSON.stringify({ url, prompt, mode }),
       });
       if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setResult(data.imageUrl);
-    } catch (err: any) {
-      setError(err.message || 'Generation failed. Please try again.');
+      const data = (await res.json()) as { imageUrl?: string };
+      setResult(data.imageUrl ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Generation failed. Please try again.');
     } finally {
       setGenerating(false);
     }

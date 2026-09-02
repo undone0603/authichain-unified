@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- This .cjs pitch-deck script intentionally uses CommonJS semantics. */
 // Voyage Bloom Pack-to-NFT + Storymode — 8-slide pitch deck
 // Neon festival palette aligned to packaging energy.
 

@@ -1,9 +1,10 @@
 import "dotenv/config";
+import { desc, eq } from "drizzle-orm";
+import { activityLog, leads } from "../../drizzle/schema.js";
+import { getDb } from "../db.js";
 
 const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?.[0] ?? ''}***@${d}` : '***'; };
-import { getDb } from "../db.js";
-import { activityLog, leads } from "../../drizzle/schema.js";
-import { desc, eq, and } from "drizzle-orm";
+type OutboundActivityDetails = { leadEmail?: string };
 
 async function monitorActivity() {
   console.log("🕵️  AgentZ Activity Monitor: ACTIVE");
@@ -26,7 +27,7 @@ async function monitorActivity() {
   if (recentEmails.length > 0) {
     console.log(`Found ${recentEmails.length} active outreach threads.`);
     for (const log of recentEmails) {
-      const details = log.details as any;
+      const details = (log.details as OutboundActivityDetails | null) ?? {};
       console.log(` - Sent to: ${details.leadEmail} (${log.createdAt})`);
     }
   }

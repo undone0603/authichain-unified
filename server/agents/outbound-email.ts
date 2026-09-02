@@ -31,6 +31,11 @@ interface OutboundEmailPayload {
   verificationSource?: VerificationSource;  // provenance gate; defaults to 'unknown' (blocked)
 }
 
+type OutboundEmailDraft = {
+  subject?: string;
+  body?: string;
+};
+
 const segmentContext: Record<string, string> = {
   GOV:     'government agency procurement officer focused on supply chain integrity and anti-counterfeiting',
   RETAIL:  'retail business owner (dispensary or specialty retail) focused on product authenticity and brand trust',
@@ -111,7 +116,7 @@ Return JSON: { "subject": "...", "body": "..." }`;
     responseFormat: { type: 'json_object' },
   });
 
-  const parsed_email = parseLLMContent<any>(result.choices[0].message.content);
+  const parsed_email = parseLLMContent<OutboundEmailDraft>(result.choices[0].message.content);
   const subject = parsed_email.subject ?? subjectFallback;
   const body = parsed_email.body ?? '';
 

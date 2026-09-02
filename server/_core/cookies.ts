@@ -1,12 +1,12 @@
 // Single source of truth lives in shared/const.ts — re-exported here so
 // existing imports from this module keep working.
-export { COOKIE_NAME } from "@shared/const";
+  export { COOKIE_NAME } from "@shared/const";
 
-import type { CookieOptions, Request } from "express";
+  import type { CookieOptions,Request } from "express";
 
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const _unused_LOCAL_HOSTS_7 = new Set(["localhost", "127.0.0.1", "::1"]);
 
-function isIpAddress(host: string) {
+function _unused_isIpAddress_9(host: string) {
   // Basic IPv4 check and IPv6 presence detection.
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return true;
   return host.includes(":");

@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+  import { createClient } from '@/utils/supabase/server';
+  import { NextRequest,NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 // GET /api/team - Get team/workspace members and settings
-export async function GET(request: NextRequest) {
+export async function GET(_unused_request_7: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();

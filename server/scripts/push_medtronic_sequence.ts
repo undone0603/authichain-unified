@@ -1,7 +1,7 @@
-import "dotenv/config";
-import { invokeLLM, parseLLMContent } from "../_core/llm.js";
-import { sendEmail } from "../email-service.js";
-import { bayesianPreamble, betaMean, betaCI, SEGMENT_PRIORS } from "../_core/bayesian.js";
+  import "dotenv/config";
+  import { bayesianPreamble,betaCI,betaMean,SEGMENT_PRIORS } from "../_core/bayesian.js";
+  import { invokeLLM,parseLLMContent } from "../_core/llm.js";
+  import { sendEmail } from "../email-service.js";
 
 // server/scripts/ is excluded from `pnpm check` (see tsconfig.json), so this
 // was never caught: maskEmail is used on the success path below but was never
@@ -11,6 +11,7 @@ const maskEmail = (e: string) => { const [l, d] = e.split('@'); return d ? `${l?
 
 /** Sends only when CONFIRM_SEND=1; otherwise prints what would be sent. */
 const CONFIRM_SEND = process.env.CONFIRM_SEND === "1";
+type OutreachContent = { subject: string; body: string };
 
 async function pushMedtronicSequence() {
   console.log("🚀 Executing Medtronic High-Ticket Outreach...");
@@ -54,14 +55,14 @@ Write a 3-sentence high-impact email. End with a CTA to read the open specificat
 
 Return JSON: { "subject": "...", "body": "..." }`;
 
-  let content;
+  let content: OutreachContent;
   try {
     const result = await invokeLLM({
       messages: [{ role: "user", content: prompt }],
       responseFormat: { type: "json_object" },
     });
-    content = parseLLMContent<any>(result.choices[0].message.content);
-  } catch (err: any) {
+    content = parseLLMContent<OutreachContent>(result.choices[0].message.content);
+  } catch (_unused_err_64: unknown) {
     console.warn("⚠️ LLM Generation failed. Using high-fidelity hardcoded fallback sequence.");
     content = {
       subject: `Medtronic / AuthiChain: Eliminating ISO 13485 Audit Overhead`,

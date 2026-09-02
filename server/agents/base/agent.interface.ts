@@ -14,8 +14,8 @@ export type AgentCapability =
 export interface AgentTool {
   name: string;
   description: string;
-  execute: (params: any) => Promise<any>;
-  schema?: Record<string, any>;
+  execute: (params: unknown) => Promise<unknown>;
+  schema?: Record<string, unknown>;
 }
 
 export interface AgentContext {
@@ -23,16 +23,16 @@ export interface AgentContext {
   sessionId?: string;
   missionId?: number;
   taskId?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AgentExecutionResult {
   success: boolean;
-  output?: any;
+  output?: unknown;
   error?: string;
   toolsUsed?: string[];
   executionTimeMs?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface BaseAgent {
@@ -46,7 +46,7 @@ export interface BaseAgent {
    */
   execute(
     action: string,
-    params: any,
+    params: unknown,
     context?: AgentContext
   ): Promise<AgentExecutionResult>;
 
@@ -86,13 +86,13 @@ export abstract class AbstractAgent implements BaseAgent {
 
   abstract execute(
     action: string,
-    params: any,
+    params: unknown,
     context?: AgentContext
   ): Promise<AgentExecutionResult>;
 
   protected createResult(
     success: boolean,
-    output?: any,
+    output?: unknown,
     error?: string,
     toolsUsed?: string[],
     executionTimeMs?: number

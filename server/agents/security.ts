@@ -5,6 +5,14 @@ import { invokeLLM, parseLLMContent } from '../_core/llm.js';
 import { logActivity, createSystemNotification } from '../db.js';
 import type { MissionTask as Task } from '../../drizzle/schema.js';
 
+type SecurityFinding = {
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  category: "Authentication" | "Injection" | "Cryptography" | "Compliance" | "Infrastructure";
+  title: string;
+  description: string;
+  recommendation: string;
+};
+
 export async function runSecurityAudit(task: Task): Promise<void> {
   const p = task.payload as {
     scope: string;
@@ -59,7 +67,7 @@ Return JSON:
   });
 
   const auditResult = parseLLMContent<{
-    findings: any[];
+    findings: SecurityFinding[];
     complianceStatus: Record<string, string>;
     summary: string;
   }>(result.choices[0].message.content);

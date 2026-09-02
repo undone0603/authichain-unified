@@ -23,6 +23,10 @@ export interface PayoutPlan {
   operatingCents: number;
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
 const clampPct = (n: number, fallback: number): number =>
   Number.isFinite(n) && n >= 0 && n <= 100 ? n : fallback;
 
@@ -92,8 +96,8 @@ export async function runFounderPayout(grossCents: number): Promise<PayoutPlan> 
         entityId: 0,
         details: { payoutId: result.payoutId, status: result.status, amount: plan.founderCents },
       });
-    } catch (error: any) {
-      const msg = error?.message || "Unknown error";
+    } catch (error: unknown) {
+      const msg = getErrorMessage(error);
       console.error(`[founder-payout] Payout failed: ${msg}`);
       payoutStatus = ` ⚠️ Payout failed: ${msg}`;
 

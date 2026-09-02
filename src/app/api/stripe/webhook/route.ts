@@ -21,6 +21,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const REFERRAL_REWARD_CREDITS = 100;
+type AdminSupabase = ReturnType<typeof createClient>;
+
+type BillingProfile = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  brand: string | null;
+  subscription_plan: string | null;
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
 
 /**
  * Credit a user-to-user referrer with account credit on the referred buyer's
@@ -93,9 +106,8 @@ function getStripe(): Stripe {
   return _stripe;
 }
 
-let _supabase: ReturnType<typeof createClient> | null = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getSupabase(): any {
+let _supabase: AdminSupabase | null = null;
+function getSupabase(): AdminSupabase {
   if (!_supabase) {
     _supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -127,14 +139,14 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get("stripe-signature")!;
 
-  let event: any = null;
+  let event: Stripe.Event | null = null;
   let lastErr = "";
   for (const secret of secrets) {
     try {
       event = stripe.webhooks.constructEvent(body, sig, secret);
       break;
-    } catch (err: any) {
-      lastErr = err.message;
+    } catch (err) {
+      lastErr = getErrorMessage(err);
     }
   }
   if (!event) {
@@ -420,11 +432,12 @@ export async function POST(req: NextRequest) {
         const invoice = event.data.object;
         const customerId = invoice.customer;
 
-        const { data: profile } = (await getSupabase()
+        const profileResult = await getSupabase()
           .from("profiles")
           .select("id, email, full_name, brand, subscription_plan")
           .eq("stripe_customer_id", customerId)
-          .single()) as any;
+          .single();
+        const profile = profileResult.data as BillingProfile | null;
 
         if (profile) {
           await getSupabase()
@@ -486,11 +499,12 @@ export async function POST(req: NextRequest) {
         const subscription = event.data.object;
         const customerId = subscription.customer;
 
-        const { data: profile } = (await getSupabase()
+        const profileResult = await getSupabase()
           .from("profiles")
           .select("id, email, full_name, brand, subscription_plan")
           .eq("stripe_customer_id", customerId)
-          .single()) as any;
+          .single();
+        const profile = profileResult.data as BillingProfile | null;
 
         if (profile?.email) {
           const brand = getBrandIdFromMetadata({ brand: profile.brand });
@@ -571,8 +585,8 @@ export async function POST(req: NextRequest) {
       .select();
 
     return NextResponse.json({ received: true, type: event.type });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Webhook processing error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });
   }
 }

@@ -7,6 +7,22 @@ import { AbstractAgent, AgentContext, AgentCapability, AgentExecutionResult } fr
 import { invokeLLM } from '../_core/llm.js';
 import { logActivity } from '../db.js';
 
+type JsonObject = Record<string, unknown>;
+type ExecutiveProspect = JsonObject & {
+  name?: string;
+  company?: string;
+  dba?: string;
+  industry?: string;
+  city?: string;
+  type?: string;
+};
+type ExecutivePartner = JsonObject & {
+  name?: string;
+  company?: string;
+  focus?: string;
+};
+type AgentActionParams = JsonObject;
+
 export const AUTHICHAIN_CONTEXT = {
   company: "AuthiChain",
   tagline: "The Truth Layer for the Physical World",
@@ -105,13 +121,13 @@ export class ExecutiveAgentImpl extends AbstractAgent {
 
   async execute(
     action: string,
-    params: any,
+    params: AgentActionParams,
     context?: AgentContext
   ): Promise<AgentExecutionResult> {
     const startTime = Date.now();
 
     try {
-      let output: any;
+      let output: string;
 
       switch (action) {
         case 'draft_sales_email':
@@ -162,7 +178,7 @@ export class ExecutiveAgentImpl extends AbstractAgent {
     }
   }
 
-  async draftSalesEmail(prospect: any): Promise<string> {
+  async draftSalesEmail(prospect: ExecutiveProspect): Promise<string> {
     const prompt = `Draft a high-impact sales email for prospect.
 
 Prospect: ${prospect.name} at ${prospect.company}
@@ -187,7 +203,7 @@ Requirements:
     return response.choices[0].message.content as string;
   }
 
-  async draftPartnershipEmail(partner: any): Promise<string> {
+  async draftPartnershipEmail(partner: ExecutivePartner): Promise<string> {
     const prompt = `Draft a partnership proposal email for potential partner.
 
 Partner: ${partner.name}
@@ -211,7 +227,7 @@ Requirements:
     return response.choices[0].message.content as string;
   }
 
-  async generateLinkedInPost(topic: string, options?: any): Promise<string> {
+  async generateLinkedInPost(topic: string, options?: JsonObject): Promise<string> {
     const prompt = `Write an engaging LinkedIn post about: ${topic}
 Options: ${JSON.stringify(options ?? {})}
 Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}
@@ -248,7 +264,7 @@ Requirements:
     return response.choices[0].message.content as string;
   }
 
-  async generateEmailCampaign(details: any): Promise<string> {
+  async generateEmailCampaign(details: JsonObject): Promise<string> {
     const prompt = `Generate an email campaign with multiple variants for: ${JSON.stringify(details)}
 Context: ${JSON.stringify(AUTHICHAIN_CONTEXT)}
 
@@ -266,7 +282,7 @@ Requirements:
     return response.choices[0].message.content as string;
   }
 
-  async generateDailyBriefing(metrics: any): Promise<string> {
+  async generateDailyBriefing(metrics: JsonObject): Promise<string> {
     const prompt = `Generate an executive daily briefing.
 
 Metrics: ${JSON.stringify(metrics)}
@@ -287,7 +303,7 @@ Structure:
   }
 
   // Backward compatibility with existing code
-  async draftMarginProtectionEmail(prospect: any): Promise<string> {
+  async draftMarginProtectionEmail(prospect: ExecutiveProspect): Promise<string> {
     const prompt = `Draft a high-urgency sales email for Michigan Cannabis 24% wholesale tax scenario.
 
 Prospect: ${prospect.name} at ${prospect.company} (${prospect.dba ?? 'N/A'})
@@ -311,7 +327,7 @@ Requirements:
     return response.choices[0].message.content as string;
   }
 
-  async generateLinkedInSurround(lead: any): Promise<string> {
+  async generateLinkedInSurround(lead: ExecutiveProspect): Promise<string> {
     const prompt = `Generate a concise LinkedIn connection request.
 
 Lead: ${lead.name} at ${lead.company}

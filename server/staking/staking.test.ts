@@ -1,7 +1,7 @@
 /**
  * Staking DB unit tests — all DB calls are mocked.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+  import { beforeEach,describe,expect,it,vi } from "vitest";
 
 // ─── Mock getDb ───────────────────────────────────────────────────────────────
 
@@ -59,7 +59,7 @@ function makeInsertChain(returnedRow = { id: 1 }) {
   return chain;
 }
 
-function makeUpdateChain() {
+function _unused_makeUpdateChain_62() {
   const chain = {
     set: vi.fn().mockReturnThis(),
     where: vi.fn().mockResolvedValue(undefined),

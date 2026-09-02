@@ -2,10 +2,10 @@
  * AuthiChain Stripe Service
  * Handles checkout sessions, subscription management, and webhook processing
  */
-import Stripe from "stripe";
-import { STRIPE_PRODUCTS, type PlanKey, getPlanQuota } from "./stripe-products";
-import { ENV } from "./_core/env";
-import { safeOrigin } from "./_core/allowed-origins";
+  import Stripe from "stripe";
+  import { safeOrigin } from "./_core/allowed-origins";
+  import { ENV } from "./_core/env";
+  import { STRIPE_PRODUCTS,type PlanKey } from "./stripe-products";
 
 let _stripe: Stripe | null = null;
 

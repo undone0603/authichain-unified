@@ -1,18 +1,17 @@
-import { router, publicProcedure, adminProcedure } from "../_core/trpc";
-import { z } from "zod";
-import { getDb } from "../db";
-import { visitorProfiles, personalizationRules, personalizationEvents } from "../../drizzle/schema";
-import { eq, desc, and } from "drizzle-orm";
-import {
-  generatePersonalizedContent,
-  generatePersonalizationRules,
-  detectSegment,
-  matchRules,
-  getGeolocation,
-  parseUTMParams,
-  detectTrafficSource,
-  analyzePersonalizationPerformance,
-} from "./contentEngine";
+  import { and,desc,eq } from "drizzle-orm";
+  import { z } from "zod";
+  import { personalizationEvents,personalizationRules,visitorProfiles } from "../../drizzle/schema";
+  import { adminProcedure,publicProcedure,router } from "../_core/trpc";
+  import { getDb } from "../db";
+  import {
+    analyzePersonalizationPerformance,
+    detectSegment,
+    detectTrafficSource,
+    generatePersonalizationRules,
+    getGeolocation,
+    matchRules,
+    parseUTMParams
+  } from "./contentEngine";
 
 export const personalizationRouter = router({
   // Track visitor and get personalized content (public endpoint)

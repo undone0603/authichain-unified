@@ -20,6 +20,18 @@ export interface EnrichedContact {
   theater_potential?: 'theater_1' | 'theater_2' | 'theater_3' | null;
 }
 
+interface ApolloMatchResponse {
+  person?: {
+    first_name?: string;
+    last_name?: string;
+    title?: string;
+    linkedin_url?: string;
+    organization?: {
+      name?: string;
+    };
+  };
+}
+
 const ENTERPRISE_DOMAINS = [
   'bmw.com', 'trulieve.com', 'metrc.com', 'mercedes-benz.com', 
   'tesla.com', 'apple.com', 'google.com', 'sap.com', 'salesforce.com',
@@ -60,7 +72,7 @@ export async function fetchProfessionalData(email: string): Promise<Partial<Enri
       body: JSON.stringify({ api_key: apolloKey, email }),
     });
     if (!res.ok) return {};
-    const data = await res.json() as any;
+    const data = await res.json() as ApolloMatchResponse;
     return {
       first_name: data.person?.first_name,
       last_name: data.person?.last_name,
@@ -82,7 +94,8 @@ export async function enrichLead(email: string): Promise<EnrichedContact> {
 
   // 1. Core Heuristics
   const theater = detectEnterpriseTheater(email);
-  const isEnterprise = !!theater || !['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'].includes(email.split('@')[1]);
+  const domain = email.split('@')[1];
+  const isEnterprise = !!theater || !['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'].includes(domain ?? '');
 
   // 2. Professional Enrichment (External API)
   const proData = await fetchProfessionalData(email);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mapEpcisToDsCsa, DsCsaEvidenceSchema } from "@authichain/evidence";
 import { db } from "@/db";
-import { supplyChainEvents, products } from "@/db/schema";
+import { supplyChainEvents, products, type SupplyChainEvent } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { createPrivateKey, createPublicKey, verify as verifySignature } from "node:crypto";
 
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     // 5. Resolve Product ID
     const product = await db.query.products.findFirst({
-      where: eq(products.id, validatedEvidence.subject_id as any),
+      where: eq(products.id, validatedEvidence.subject_id),
     });
 
     if (!product) {
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       id: validatedEvidence.id,
       productId: product.id,
       eventType: validatedEvidence.type,
-      metadata: validatedEvidence.metadata as any,
+      metadata: validatedEvidence.metadata as SupplyChainEvent["metadata"],
     });
 
     return NextResponse.json(

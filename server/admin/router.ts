@@ -2,6 +2,10 @@ import { adminProcedure, router } from "../_core/trpc";
 import { DbAdminRepository } from "./db-repository";
 import { logActivity } from "../db";
 import { z } from "zod";
+import type { IAdminRepository } from "./types";
+
+type RevenueRow = Awaited<ReturnType<IAdminRepository["getRevenueAnalytics"]>>[number];
+type SubscriptionRow = Awaited<ReturnType<IAdminRepository["getSubscriptionAnalytics"]>>[number];
 
 export const adminRouter = router({
   metrics: adminProcedure.query(async ({ ctx }) => {
@@ -30,10 +34,10 @@ export const adminRouter = router({
     ]);
 
     // Revenue aggregations
-    const totalRevenue = allRevenue.reduce((s: number, r: any) => s + parseFloat(r.amount || "0"), 0);
+    const totalRevenue = allRevenue.reduce((s: number, r: RevenueRow) => s + parseFloat(r.amount || "0"), 0);
     const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const recentRevenue = allRevenue.filter((r: any) => new Date(r.createdAt) >= last30Days);
-    const revenue30d = recentRevenue.reduce((s: number, r: any) => s + parseFloat(r.amount || "0"), 0);
+    const recentRevenue = allRevenue.filter((r: RevenueRow) => new Date(r.createdAt) >= last30Days);
+    const revenue30d = recentRevenue.reduce((s: number, r: RevenueRow) => s + parseFloat(r.amount || "0"), 0);
 
     // Revenue by source
     const bySource: Record<string, number> = {};
@@ -55,7 +59,7 @@ export const adminRouter = router({
     const planPrices: Record<string, number> = { starter: 49, professional: 199, enterprise: 799 };
     let mrr = 0;
 
-    for (const s of allSubs) {
+    for (const s of allSubs as SubscriptionRow[]) {
       const plan = s.plan || "starter";
       const status = s.status || "unknown";
       subsByPlan[plan] = (subsByPlan[plan] || 0) + 1;

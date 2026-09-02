@@ -2,51 +2,97 @@ import { describe, expect, it, beforeAll } from 'vitest';
 import { vi } from 'vitest';
 import { appRouter } from './routers';
 import type { TrpcContext } from './_core/context';
+import type { User } from '../src/db/schema';
+import type { MissionStatus, MissionType, TaskStatus } from './missions/types';
+
+type TestMission = {
+  id: string;
+  type: MissionType;
+  title: string;
+  status: MissionStatus;
+  priority: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type TestTask = {
+  id: string;
+  missionId: string;
+  kind: string;
+  payload: Record<string, never>;
+  status: TaskStatus;
+  runAt: Date;
+  lastError: string | null;
+  retryCount: number;
+  retryAfter: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type TestMissionWithTasks = TestMission & {
+  tasks: TestTask[];
+};
 
 // ─── In-memory store (hoisted so vi.mock factory can access it) ───────────────
 
 const { store } = vi.hoisted(() => ({
   store: {
-    missions: new Map<string, any>(),
-    tasks:    new Map<string, any>(),
+    missions: new Map<string, TestMission>(),
+    tasks:    new Map<string, TestTask>(),
   },
 }));
 
 // Task kind lists matching templates.ts exactly
-const TASK_KINDS: Record<string, string[]> = {
+const TASK_KINDS: Record<MissionType, string[]> = {
   GOV_PILOT:          ['BUILD_PILOT_PACKET', 'DRAFT_INTEL_DOSSIER', 'FIND_GOV_LEADS', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
   RETAIL_PILOT:       ['FINALIZE_RETAIL_SIGNAGE', 'PACKAGE_SKU_ONBOARDING', 'FIND_RETAIL_LEADS', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
   PRESS_LAUNCH:       ['FIND_RETAIL_LEADS', 'DRAFT_PRESS_RELEASE', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'SCHEDULE_SOCIAL_POSTS'],
   PARTNER_ONBOARDING: ['BUILD_PILOT_PACKET', 'DRAFT_OUTBOUND_EMAIL', 'FOLLOWUP_SEQUENCE', 'CRM_UPDATE'],
   TECH_OS_LOCK:       ['BUILD_PILOT_PACKET', 'DRAFT_INTEL_DOSSIER', 'GENERATE_LAUNCH_CHECKLIST'],
   LAUNCH_AUTHICHAIN:  ['CHECK_DNS_CONFIG', 'VERIFY_SSL', 'RUN_LIGHTHOUSE_AUDIT', 'GENERATE_LAUNCH_CHECKLIST', 'DRAFT_LAUNCH_EMAIL', 'DRAFT_PRESS_RELEASE', 'SCHEDULE_SOCIAL_POSTS'],
+  LUXURY_OUTREACH:    [],
+  PHARMA_OUTREACH:    [],
+  MEDTECH_OUTREACH:   [],
+  TIMEPIECE_OUTREACH: [],
+  NEWSJACKING_LAUNCH: [],
+  TECH_SPRINT:        [],
+  MEDTECH_VIDEO_BRIEFING: [],
+  MI_CRA_PARTNERSHIP: [],
 };
 
-const TITLES: Record<string, string> = {
+const TITLES: Record<MissionType, string> = {
   GOV_PILOT:          'Government Pilot – Initial Agency',
   RETAIL_PILOT:       'Retail Pilot – Dispensary / Retail Partner',
   PRESS_LAUNCH:       'Press Launch – Media & PR Outreach',
   PARTNER_ONBOARDING: 'Partner Onboarding',
   TECH_OS_LOCK:       'Tech OS Lock – Platform Defensibility',
   LAUNCH_AUTHICHAIN:  'AuthiChain.com – Full Launch Orchestration',
+  LUXURY_OUTREACH:    'LUXURY_OUTREACH',
+  PHARMA_OUTREACH:    'PHARMA_OUTREACH',
+  MEDTECH_OUTREACH:   'MEDTECH_OUTREACH',
+  TIMEPIECE_OUTREACH: 'TIMEPIECE_OUTREACH',
+  NEWSJACKING_LAUNCH: 'NEWSJACKING_LAUNCH',
+  TECH_SPRINT:        'TECH_SPRINT',
+  MEDTECH_VIDEO_BRIEFING: 'MEDTECH_VIDEO_BRIEFING',
+  MI_CRA_PARTNERSHIP: 'MI_CRA_PARTNERSHIP',
 };
 
 // ─── Mock missions.db module (what the router actually imports) ───────────────
 
 vi.mock('./missions/missions.db', () => ({
-  getMissions: async (statusFilter?: string) => {
+  getMissions: async (statusFilter?: MissionStatus) => {
     const all = [...store.missions.values()];
-    return statusFilter ? all.filter((m: any) => m.status === statusFilter) : all;
+    return statusFilter ? all.filter((m: TestMission) => m.status === statusFilter) : all;
   },
 
   getMissionById: async (id: string) => {
     const m = store.missions.get(id);
     if (!m) return null;
-    const tasks = [...store.tasks.values()].filter((t: any) => t.missionId === id);
+    const tasks = [...store.tasks.values()].filter((t: TestTask) => t.missionId === id);
     return { ...m, tasks };
   },
 
-  createMission: async (type: string) => {
+  createMission: async (type: MissionType) => {
     const id = crypto.randomUUID();
     store.missions.set(id, {
       id, type,
@@ -67,13 +113,13 @@ vi.mock('./missions/missions.db', () => ({
     return id;
   },
 
-  updateMissionStatus: async (id: string, status: string) => {
+  updateMissionStatus: async (id: string, status: MissionStatus) => {
     const m = store.missions.get(id);
     if (m) store.missions.set(id, { ...m, status, updatedAt: new Date() });
   },
 
   getTasksByMission: async (missionId: string) => {
-    return [...store.tasks.values()].filter((t: any) => t.missionId === missionId);
+    return [...store.tasks.values()].filter((t: TestTask) => t.missionId === missionId);
   },
 
   retryTask: async (id: string) => {
@@ -93,19 +139,34 @@ vi.mock('./db', () => ({
 // ─── Shared test context ──────────────────────────────────────────────────────
 
 function makeCtx(role: 'user' | 'admin' = 'user'): TrpcContext {
+  const user: User = {
+    authUid: null,
+    id: 1,
+    openId: 'test-agentz-001',
+    email: 'agentz@authichain.com',
+    name: 'AgentZ Test',
+    loginMethod: 'manus',
+    role,
+    walletAddress: null,
+    avatarUrl: null,
+    company: null,
+    title: null,
+    phone: null,
+    onboardingCompleted: 0,
+    stripeCustomerId: null,
+    paddleCustomerId: null,
+    points: 0,
+    generationsUsed: 0,
+    generationsLimit: 0,
+    affiliateId: null,
+    referredBy: null,
+    storyModeEnabled: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    lastSignedIn: new Date(),
+  };
   return {
-    user: {
-      id: 1,
-      openId: 'test-agentz-001',
-      email: 'agentz@authichain.com',
-      name: 'AgentZ Test',
-      loginMethod: 'manus',
-      role,
-      stripeCustomerId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastSignedIn: new Date(),
-    } as any,
+    user,
     req: { protocol: 'https', headers: {} } as TrpcContext['req'],
     res: { clearCookie: () => {} } as unknown as TrpcContext['res'],
   };
@@ -153,7 +214,7 @@ describe('missions.list', () => {
     const caller = appRouter.createCaller(makeCtx('admin'));
     const result = await caller.missions.list({ status: 'PLANNED' });
     expect(Array.isArray(result)).toBe(true);
-    result.forEach((m: any) => expect(m.status).toBe('PLANNED'));
+    result.forEach((m: TestMission) => expect(m.status).toBe('PLANNED'));
   });
 });
 
@@ -172,18 +233,20 @@ describe('missions.create', () => {
 
   it('missions.get returns mission with correct type', async () => {
     const caller = appRouter.createCaller(makeCtx('admin'));
-    const result = await caller.missions.get({ id: missionId }) as any;
+    const result = await caller.missions.get({ id: missionId }) as TestMissionWithTasks | null;
     expect(result).not.toBeNull();
+    if (!result) throw new Error('Expected mission to exist');
     expect(result.type).toBe('RETAIL_PILOT');
     expect(result.status).toBe('PLANNED');
   });
 
   it('missions.get includes seeded tasks', async () => {
     const caller = appRouter.createCaller(makeCtx('admin'));
-    const result = await caller.missions.get({ id: missionId }) as any;
+    const result = await caller.missions.get({ id: missionId }) as TestMissionWithTasks | null;
     expect(Array.isArray(result?.tasks)).toBe(true);
+    if (!result) throw new Error('Expected mission to exist');
     expect(result.tasks.length).toBeGreaterThan(0);
-    result.tasks.forEach((t: any) => {
+    result.tasks.forEach((t: TestTask) => {
       expect(t.missionId).toBe(missionId);
       expect(t.status).toBe('PENDING');
     });
@@ -191,17 +254,17 @@ describe('missions.create', () => {
 
   it('tasks.list returns same tasks for mission', async () => {
     const caller = appRouter.createCaller(makeCtx('admin'));
-    const fromGet = (await caller.missions.get({ id: missionId }) as any)?.tasks ?? [];
+    const fromGet = ((await caller.missions.get({ id: missionId }) as TestMissionWithTasks | null)?.tasks ?? []);
     const fromList = await caller.tasks.list({ missionId });
-    expect((fromList as any[]).length).toBe(fromGet.length);
-    expect((fromList as any[]).length).toBeGreaterThan(0);
+    expect(fromList.length).toBe(fromGet.length);
+    expect(fromList.length).toBeGreaterThan(0);
   });
 });
 
 // ─── missions.create — all types produce tasks ───────────────────────────────
 
 describe('missions.create — task counts', () => {
-  const expectedTaskCounts: Record<string, number> = {
+  const expectedTaskCounts: Partial<Record<MissionType, number>> = {
     GOV_PILOT:          6,
     RETAIL_PILOT:       6,
     PRESS_LAUNCH:       5,
@@ -210,12 +273,12 @@ describe('missions.create — task counts', () => {
     LAUNCH_AUTHICHAIN:  7,
   };
 
-  for (const [type, count] of Object.entries(expectedTaskCounts)) {
+  for (const [type, count] of Object.entries(expectedTaskCounts) as [MissionType, number][]) {
     it(`${type} creates ${count} tasks`, async () => {
       const caller = appRouter.createCaller(makeCtx('admin'));
-      const { id } = await caller.missions.create({ type: type as any });
+      const { id } = await caller.missions.create({ type });
       const tasks = await caller.tasks.list({ missionId: id });
-      expect((tasks as any[]).length).toBe(count);
+      expect(tasks.length).toBe(count);
     });
   }
 });
@@ -236,14 +299,14 @@ describe('missions.updateStatus', () => {
     const result = await caller.missions.updateStatus({ id: missionId, status: 'IN_PROGRESS' });
     expect(result).toEqual({ ok: true });
 
-    const mission = await caller.missions.get({ id: missionId }) as any;
+    const mission = await caller.missions.get({ id: missionId }) as TestMissionWithTasks | null;
     expect(mission?.status).toBe('IN_PROGRESS');
   });
 
   it('transitions IN_PROGRESS → COMPLETED', async () => {
     const caller = appRouter.createCaller(makeCtx('admin'));
     await caller.missions.updateStatus({ id: missionId, status: 'COMPLETED' });
-    const mission = await caller.missions.get({ id: missionId }) as any;
+    const mission = await caller.missions.get({ id: missionId }) as TestMissionWithTasks | null;
     expect(mission?.status).toBe('COMPLETED');
   });
 });
@@ -270,7 +333,13 @@ describe('tasks.retry', () => {
       // If a real DB were present, we'd update there too (won't run in mock env)
       const { missionTasks } = await import('../drizzle/schema');
       const { eq } = await import('drizzle-orm');
-      await (db as any).update(missionTasks)
+      await (db as {
+        update: (table: typeof missionTasks) => {
+          set: (values: Pick<TestTask, 'status' | 'lastError' | 'updatedAt'>) => {
+            where: (condition: unknown) => Promise<unknown>;
+          };
+        };
+      }).update(missionTasks)
         .set({ status: 'FAILED', lastError: 'test failure', updatedAt: new Date() })
         .where(eq(missionTasks.id, failedTaskId));
     }
@@ -313,11 +382,11 @@ describe('missions.list — status filtering after mutations', () => {
     const { id } = await caller.missions.create({ type: 'GOV_PILOT' });
     await caller.missions.updateStatus({ id, status: 'IN_PROGRESS' });
 
-    const inProgress = await caller.missions.list({ status: 'IN_PROGRESS' }) as any[];
-    expect(inProgress.some((m: any) => m.id === id)).toBe(true);
+    const inProgress = await caller.missions.list({ status: 'IN_PROGRESS' }) as TestMission[];
+    expect(inProgress.some((m: TestMission) => m.id === id)).toBe(true);
 
-    const planned = await caller.missions.list({ status: 'PLANNED' }) as any[];
-    expect(planned.every((m: any) => m.id !== id)).toBe(true);
+    const planned = await caller.missions.list({ status: 'PLANNED' }) as TestMission[];
+    expect(planned.every((m: TestMission) => m.id !== id)).toBe(true);
   });
 });
 

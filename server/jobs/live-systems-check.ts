@@ -2,6 +2,7 @@ import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { logActivity } from "../db";
+import type Stripe from "stripe";
 
 type IntegrationCheckResult = {
   configured: boolean;
@@ -35,7 +36,7 @@ async function checkStripe(): Promise<IntegrationCheckResult> {
   try {
     const { getStripe } = await import("../stripe-service");
     const stripe = getStripe();
-    const account = await (stripe.accounts as any).retrieve();
+    const account = await stripe.accounts.retrieve() as Stripe.Response<Stripe.Account>;
     return {
       configured: true,
       connected: true,
@@ -95,7 +96,7 @@ async function checkGmail(): Promise<IntegrationCheckResult> {
         error: `gmail_profile_failed:${response.status}:${text.slice(0, 200)}`,
       };
     }
-    const data: any = await response.json().catch(() => ({}));
+    const data = await response.json().catch(() => ({} as { emailAddress?: string; messagesTotal?: number }));
     return {
       configured: true,
       connected: true,

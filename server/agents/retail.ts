@@ -1,6 +1,6 @@
-import { invokeLLM, parseLLMContent } from '../_core/llm.js';
-import { logActivity } from '../db.js';
-import type { MissionTask as Task } from '../../drizzle/schema.js';
+  import type { MissionTask as Task } from '../../drizzle/schema.js';
+  import { invokeLLM,parseLLMContent } from '../_core/llm.js';
+  import { logActivity } from '../db.js';
 
 interface RetailPayload {
   vertical?: string;
@@ -26,7 +26,7 @@ Return JSON: { "posScan": "...", "shelfTalker": "...", "counterCard": { "headlin
     responseFormat: { type: 'json_object' },
   });
 
-  const signage = parseLLMContent<unknown>(result.choices[0].message.content);
+  const _unused_signage_29 = parseLLMContent<unknown>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'retail_signage_finalized', entityType: 'task', entityId: 0, details: { taskId: task.id,
     vertical,
@@ -55,7 +55,7 @@ Return JSON: { "sections": [{ "heading": "...", "steps": ["..."] }] }`;
     responseFormat: { type: 'json_object' },
   });
 
-  const onboarding = parseLLMContent<unknown>(result.choices[0].message.content);
+  const _unused_onboarding_58 = parseLLMContent<unknown>(result.choices[0].message.content);
 
   await logActivity({ userId: null, action: 'sku_onboarding_packaged', entityType: 'task', entityId: 0, details: { taskId: task.id,
     vertical,

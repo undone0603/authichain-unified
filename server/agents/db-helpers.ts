@@ -25,10 +25,21 @@ import type { getHyperdriveDb } from '../db';
 
 export type Db = ReturnType<typeof getHyperdriveDb>;
 type InsertSeoPage = typeof seoPages.$inferInsert;
+type ActivityLogDetails = Record<string, unknown>;
+type TaskPayload = Record<string, unknown>;
+type TaskCreateData = {
+  missionId: string;
+  kind: string;
+  title?: string;
+  description?: string;
+  priority?: number;
+  status?: string;
+  payload?: TaskPayload | null;
+};
 
 export async function logActivity(
   db: Db,
-  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: any },
+  actionOrData: string | { userId?: number | null; action: string; entityType?: string; entityId?: number | string; details?: ActivityLogDetails },
   details?: string,
 ): Promise<void> {
   if (typeof actionOrData === 'string') {
@@ -48,7 +59,7 @@ export async function enqueueTask(
   db: Db,
   missionId: string,
   kind: string,
-  payload: any,
+  payload: TaskPayload,
   scheduledAt?: Date,
 ): Promise<string> {
   const id = randomUUID();
@@ -156,10 +167,10 @@ export async function createSystemNotification(
   type: InsertNotification['type'],
   actionUrl?: string,
 ): Promise<{ id: string }> {
-  return createNotification(db, { userId, type: type as any, title, message, isRead: false, actionUrl });
+  return createNotification(db, { userId, type, title, message, isRead: false, actionUrl });
 }
 
-export async function createTask(db: Db, data: any): Promise<string> {
+export async function createTask(db: Db, data: TaskCreateData): Promise<string> {
   const id = randomUUID();
   await db.insert(missionTasks).values({
     id,
