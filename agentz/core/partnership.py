@@ -36,12 +36,44 @@ async def scout_strategic_partners(vertical: str, ctx: Optional[ExecutionContext
         history = await agent.run()
     else:
         history = await run_with_healing(agent, ctx)
-        
-    # Mocked leads for the pilot
-    return [
-        {"name": "DHL Supply Chain Solutions", "type": "Logistics", "lead_url": "https://dhl.com/partnerships"},
-        {"name": "Lloyd's of London (Fine Art & Specie)", "type": "Insurance", "lead_url": "https://lloyds.com/insurance/fine-art"}
-    ]
+
+    return _parse_leads(history)
+
+
+def _parse_leads(history: Any) -> List[Dict[str, str]]:
+    """
+    Extract the agent's leads from its run history.
+
+    Returns [] when there is no parseable result. Never substitutes
+    placeholder leads: downstream code drafts real outreach to whatever
+    this returns, so an invented lead becomes a real email to a real company.
+    """
+    import json
+
+    try:
+        raw = history.final_result()
+    except Exception:
+        logger.warning("Partner scout: no final_result on history; returning no leads.")
+        return []
+
+    if not raw:
+        logger.warning("Partner scout: agent returned an empty result; returning no leads.")
+        return []
+
+    try:
+        leads = json.loads(raw)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Partner scout: could not parse agent result as JSON; returning no leads. "
+            "Raw result: %.200s", raw
+        )
+        return []
+
+    if not isinstance(leads, list):
+        logger.warning("Partner scout: agent result was not a list; returning no leads.")
+        return []
+
+    return leads
 
 async def draft_partnership_proposal(partner_data: Dict[str, str], brand_metrics: Dict[str, Any]) -> str:
     """

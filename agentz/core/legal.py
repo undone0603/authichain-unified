@@ -36,12 +36,45 @@ async def scout_marketplace_infringement(brand_name: str, ctx: Optional[Executio
         history = await agent.run()
     else:
         history = await run_with_healing(agent, ctx)
-        
-    # Mocked results for the pilot/demo if no real history
-    return [
-        {"url": "https://ebay.com/itm/fake-123", "seller": "DiscountLuxury99", "issue": "Price 70% below MSRP"},
-        {"url": "https://amazon.com/scam-456", "seller": "GenericExporter", "issue": "Unauthorized use of AuthiChain logo"}
-    ]
+
+    return _parse_infringements(history)
+
+
+def _parse_infringements(history: Any) -> List[Dict[str, str]]:
+    """
+    Extract the agent's infringement findings from its run history.
+
+    Returns [] when there is no parseable result. Never substitutes
+    placeholder findings: draft_enforcement_notice turns these into Cease &
+    Desist letters naming a specific seller, so a fabricated finding becomes
+    a real legal threat against someone on no evidence.
+    """
+    import json
+
+    try:
+        raw = history.final_result()
+    except Exception:
+        logger.warning("Infringement scout: no final_result on history; returning no findings.")
+        return []
+
+    if not raw:
+        logger.warning("Infringement scout: agent returned an empty result; returning no findings.")
+        return []
+
+    try:
+        findings = json.loads(raw)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Infringement scout: could not parse agent result as JSON; returning no "
+            "findings. Raw result: %.200s", raw
+        )
+        return []
+
+    if not isinstance(findings, list):
+        logger.warning("Infringement scout: agent result was not a list; returning no findings.")
+        return []
+
+    return findings
 
 async def draft_enforcement_notice(infringement_data: Dict[str, str], brand_name: str) -> str:
     """
