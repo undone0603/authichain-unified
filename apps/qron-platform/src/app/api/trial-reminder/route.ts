@@ -10,7 +10,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
   process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-role-key"
 );
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
 
 // Called daily by Vercel cron or n8n
 // Sends reminder emails to trial users at day 10 and day 13

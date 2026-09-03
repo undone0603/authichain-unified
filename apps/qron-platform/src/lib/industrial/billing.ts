@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Pinned to legacy API version because subscriptionItems.createUsageRecord
 // is only available on pre-meterEvents Stripe API versions.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_placeholder", {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   apiVersion: '2025-01-27' as any,
 });

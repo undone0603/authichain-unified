@@ -11,8 +11,8 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
   process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-role-key"
 );
-const resend = new Resend(process.env.RESEND_API_KEY);
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' as const });
+const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_placeholder", { apiVersion: '2026-05-27.dahlia' as const });
 
 // Called by Stripe webhook on invoice.payment_failed OR daily cron for past_due cleanup
 export async function POST(req: NextRequest) {
