@@ -6403,5 +6403,323 @@
         }
       ]
     }
+  },
+  {
+    "slug": "corporate-sustainability-due-diligence-directive-scope-2029",
+    "keyword": "corporate sustainability due diligence directive scope 2029",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Corporate Sustainability Due Diligence | AuthiChain",
+    "metaDescription": "The Omnibus I directive narrowed CSDDD’s scope from roughly 13,000 companies to about 6,000 — only EU firms above 5,000 employees and €1.5 billion net.",
+    "h1": "Corporate Sustainability Due Diligence Directive Scope 2029",
+    "bodyHtml": "<p>The Omnibus I directive narrowed CSDDD’s scope from roughly 13,000 companies to about 6,000 — only EU firms above 5,000 employees and €1.5 billion net turnover, plus qualifying non-EU firms and large franchisors, remain covered, with compliance running from 26 July 2029.</p><h2>Why AuthiChain</h2><ul><li>Member States transpose by 26 July 2028; in-scope companies comply from 26 July 2029, and Article 16 public reporting starts for financial years beginning on or after 1 January 2030</li><li>The EU-wide civil liability regime and the mandatory climate transition plan were deleted from the directive text — the value-chain due-diligence duty itself stayed</li><li>A signed, per-shipment record chain is evidence a due-diligence file can point to, checkable by an auditor directly, instead of a supplier questionnaire reconciled by hand each reporting cycle</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does CSDDD still apply to mid-size manufacturers?</h3><p>Only if they clear both thresholds — more than 5,000 employees and more than €1.5 billion net turnover in the EU — or fall under the separate franchising/licensing test. Omnibus I cut the in-scope population from roughly 13,000 companies to about 6,000.</p><h3>Does a signed provenance record satisfy CSDDD due diligence on its own?</h3><p>No — CSDDD requires a documented due-diligence process across the value chain, covering identification, prevention, and remediation of harms. A tamper-evident record chain is evidence a company can hand an auditor; it does not replace the process itself.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Corporate Sustainability Due Diligence Directive Scope 2029",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The Omnibus I directive narrowed CSDDD’s scope from roughly 13,000 companies to about 6,000 — only EU firms above 5,000 employees and €1.5 billion net turnover, plus qualifying non-EU firms and large franchisors, remain covered, with compliance running from 26 July 2029.",
+          "url": "https://authichain.com/p/corporate-sustainability-due-diligence-directive-scope-2029"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Corporate Sustainability Due Diligence Directive Scope 2029",
+              "item": "https://authichain.com/p/corporate-sustainability-due-diligence-directive-scope-2029"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does CSDDD still apply to mid-size manufacturers?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Only if they clear both thresholds — more than 5,000 employees and more than €1.5 billion net turnover in the EU — or fall under the separate franchising/licensing test. Omnibus I cut the in-scope population from roughly 13,000 companies to about 6,000."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a signed provenance record satisfy CSDDD due diligence on its own?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — CSDDD requires a documented due-diligence process across the value chain, covering identification, prevention, and remediation of harms. A tamper-evident record chain is evidence a company can hand an auditor; it does not replace the process itself."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "g7-diamond-traceability-blockchain-requirement",
+    "keyword": "g7 diamond traceability blockchain requirement",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "G7 Diamond Traceability Blockchain Requirement | AuthiChain",
+    "metaDescription": "G7 sanctions on Russian diamonds became fully enforced on 1 January 2026: every rough diamond in scope gets a G7 number at certification, and that number has.",
+    "h1": "G7 Diamond Traceability Blockchain Requirement",
+    "bodyHtml": "<p>G7 sanctions on Russian diamonds became fully enforced on 1 January 2026: every rough diamond in scope gets a G7 number at certification, and that number has to stay attached to the stone through cutting, polishing, and sale — a chain-of-custody requirement a signed per-unit record is built to satisfy.</p><h2>Why AuthiChain</h2><ul><li>The G7 traceability system links a non-Russian, G7-certified rough diamond to the polished stones cut from it — the same one-identifier-per-item model this protocol already uses for GS1 Digital Link identity</li><li>A Kimberley Process Certificate for a mixed-origin parcel must now list every country of origin individually — “mixed origin” alone no longer clears customs</li><li>A signed record carrying the G7 number adds cryptographic proof of who issued each custody event; it does not replace the G7 or Kimberley Process certificate itself, which remains the legal instrument</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the G7 diamond system require blockchain?</h3><p>No — the G7 mechanism specifies a unique number that travels with the diamond through the value chain. Anchoring that number to a signed, tamper-evident record is one way to make the custody chain checkable independently; it is not what the sanctions regime itself mandates.</p><h3>What happened to the original March 2025 deadline?</h3><p>The EU postponed full traceability-information requirements twice, most recently to 1 January 2026, after industry flagged readiness gaps. That date has passed and the requirement is now in force.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — G7 Diamond Traceability Blockchain Requirement",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "G7 sanctions on Russian diamonds became fully enforced on 1 January 2026: every rough diamond in scope gets a G7 number at certification, and that number has to stay attached to the stone through cutting, polishing, and sale — a chain-of-custody requirement a signed per-unit record is built to satisfy.",
+          "url": "https://authichain.com/p/g7-diamond-traceability-blockchain-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "G7 Diamond Traceability Blockchain Requirement",
+              "item": "https://authichain.com/p/g7-diamond-traceability-blockchain-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the G7 diamond system require blockchain?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the G7 mechanism specifies a unique number that travels with the diamond through the value chain. Anchoring that number to a signed, tamper-evident record is one way to make the custody chain checkable independently; it is not what the sanctions regime itself mandates."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What happened to the original March 2025 deadline?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The EU postponed full traceability-information requirements twice, most recently to 1 January 2026, after industry flagged readiness gaps. That date has passed and the requirement is now in force."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-ai-act-synthetic-content-labeling-product-authenticity",
+    "keyword": "eu ai act synthetic content labeling product authenticity",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU AI Act Synthetic Content Labeling Product | AuthiChain",
+    "metaDescription": "EU AI Act Article 50 transparency obligations apply from 2 August 2026 and require labeling AI-generated or manipulated audio, image, video, and text —.",
+    "h1": "EU AI Act Synthetic Content Labeling Product Authenticity",
+    "bodyHtml": "<p>EU AI Act Article 50 transparency obligations apply from 2 August 2026 and require labeling AI-generated or manipulated audio, image, video, and text — including product photos used in an online listing — but a label saying an image was AI-generated answers a different question than whether the item in the photo is genuine.</p><h2>Why AuthiChain</h2><ul><li>Article 50 requires disclosure of synthetic content “even without intent to deceive” — a labeled, honestly-disclosed AI-generated product photo can still sit above a listing for a counterfeit item</li><li>A verifier checking an AuthiChain record answers a narrower, checkable question: does this specific signed statement about this item verify — not whether any image on the page was synthetically produced</li><li>The Commission’s marking-obligation grace period runs to December 2026 for generative systems already on the market before 2 August 2026 — the labeling duty is still being phased in as this is written</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain detect or watermark AI-generated content?</h3><p>No — the protocol signs and verifies claims about physical items. Detecting or labeling synthetic media is a separate compliance obligation under Article 50, distinct from product-provenance verification.</p><h3>Could a listing pass Article 50 disclosure and still be selling a fake?</h3><p>Yes — the two checks are independent. Article 50 asks whether content was disclosed as AI-generated; a provenance verification asks whether the physical item matches a signed record. Passing one says nothing about the other.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU AI Act Synthetic Content Labeling Product Authenticity",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "EU AI Act Article 50 transparency obligations apply from 2 August 2026 and require labeling AI-generated or manipulated audio, image, video, and text — including product photos used in an online listing — but a label saying an image was AI-generated answers a different question than whether the item in the photo is genuine.",
+          "url": "https://authichain.com/p/eu-ai-act-synthetic-content-labeling-product-authenticity"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU AI Act Synthetic Content Labeling Product Authenticity",
+              "item": "https://authichain.com/p/eu-ai-act-synthetic-content-labeling-product-authenticity"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain detect or watermark AI-generated content?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the protocol signs and verifies claims about physical items. Detecting or labeling synthetic media is a separate compliance obligation under Article 50, distinct from product-provenance verification."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Could a listing pass Article 50 disclosure and still be selling a fake?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — the two checks are independent. Article 50 asks whether content was disclosed as AI-generated; a provenance verification asks whether the physical item matches a signed record. Passing one says nothing about the other."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "usda-organic-traceability-blockchain-requirement",
+    "keyword": "usda organic traceability blockchain requirement",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "USDA Organic Traceability Blockchain | AuthiChain",
+    "metaDescription": "USDA’s Strengthening Organic Enforcement rule, fully in force since 19 March 2024, requires handlers to keep audit-trail documentation that traces an organic.",
+    "h1": "USDA Organic Traceability Blockchain Requirement",
+    "bodyHtml": "<p>USDA’s Strengthening Organic Enforcement rule, fully in force since 19 March 2024, requires handlers to keep audit-trail documentation that traces an organic product back to the previously certified entity in the chain — it names no technology, but a signed, per-batch record is a direct fit for the traceability evidence the rule asks for.</p><h2>Why AuthiChain</h2><ul><li>Nonretail containers must carry organic identity that ties to audit-trail documentation — invoices, shipping records, certificates, bills of lading — the same event data a signed record already structures per batch</li><li>SOE requires a documented fraud-prevention plan alongside traceability, putting the burden on the handler to produce evidence on request, not just to assert compliance</li><li>A record anchored on-chain gives an auditor a hash to check independently instead of trusting whichever paper file the handler hands over that day</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does USDA require blockchain for organic traceability?</h3><p>No — the Strengthening Organic Enforcement rule requires audit-trail recordkeeping back to the previously certified entity and names no specific technology. Anchoring that record makes it tamper-evident; it is not what the rule itself mandates.</p><h3>When did the SOE rule take effect?</h3><p>It was fully implemented on 19 March 2024. Handlers are expected to already have the required recordkeeping and fraud-prevention plans in place.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — USDA Organic Traceability Blockchain Requirement",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "USDA’s Strengthening Organic Enforcement rule, fully in force since 19 March 2024, requires handlers to keep audit-trail documentation that traces an organic product back to the previously certified entity in the chain — it names no technology, but a signed, per-batch record is a direct fit for the traceability evidence the rule asks for.",
+          "url": "https://authichain.com/p/usda-organic-traceability-blockchain-requirement"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "USDA Organic Traceability Blockchain Requirement",
+              "item": "https://authichain.com/p/usda-organic-traceability-blockchain-requirement"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does USDA require blockchain for organic traceability?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the Strengthening Organic Enforcement rule requires audit-trail recordkeeping back to the previously certified entity and names no specific technology. Anchoring that record makes it tamper-evident; it is not what the rule itself mandates."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "When did the SOE rule take effect?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It was fully implemented on 19 March 2024. Handlers are expected to already have the required recordkeeping and fraud-prevention plans in place."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "halal-certification-blockchain-traceability",
+    "keyword": "halal certification blockchain traceability",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Halal Certification Blockchain Traceability | AuthiChain",
+    "metaDescription": "No single global authority mandates blockchain for halal certification — Malaysia’s JAKIM, the UAE’s ESMA, and GSO 2055 conformity bodies issue the.",
+    "h1": "Halal Certification Blockchain Traceability",
+    "bodyHtml": "<p>No single global authority mandates blockchain for halal certification — Malaysia’s JAKIM, the UAE’s ESMA, and GSO 2055 conformity bodies issue the certificates that actually matter — but a signed, scannable record lets an importer or shopper check a specific batch’s certification without calling the certifying body, which is the gap most halal-supply-chain pilots are built to close.</p><h2>Why AuthiChain</h2><ul><li>A certificate PDF proves a batch was certified at one point in time; a signed record tied to that batch’s identifier lets a buyer verify the same claim months later without contacting the certifier</li><li>Certification authority stays with whichever national or regional body a market recognizes — a provenance record carries that certification’s reference, it does not substitute for it</li><li>The same per-unit signing model this protocol uses for pharma lot tracking and cannabis COAs applies unchanged to a halal-certified batch — one record type, not a parallel scheme</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does blockchain replace halal certification?</h3><p>No — a recognized certifying body such as JAKIM, ESMA, or a GSO 2055 conformity assessor still issues the certification itself. A signed record makes that certificate’s claim checkable per batch; it does not decide what counts as halal.</p><h3>Is there a regulatory deadline requiring this?</h3><p>No — unlike DSCSA or the EU DPP, no government mandate currently requires blockchain-based halal traceability. Adoption today is importer- and retailer-driven, aimed at building buyer trust rather than meeting a compliance date.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Halal Certification Blockchain Traceability",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "No single global authority mandates blockchain for halal certification — Malaysia’s JAKIM, the UAE’s ESMA, and GSO 2055 conformity bodies issue the certificates that actually matter — but a signed, scannable record lets an importer or shopper check a specific batch’s certification without calling the certifying body, which is the gap most halal-supply-chain pilots are built to close.",
+          "url": "https://authichain.com/p/halal-certification-blockchain-traceability"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Halal Certification Blockchain Traceability",
+              "item": "https://authichain.com/p/halal-certification-blockchain-traceability"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does blockchain replace halal certification?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — a recognized certifying body such as JAKIM, ESMA, or a GSO 2055 conformity assessor still issues the certification itself. A signed record makes that certificate’s claim checkable per batch; it does not decide what counts as halal."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is there a regulatory deadline requiring this?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — unlike DSCSA or the EU DPP, no government mandate currently requires blockchain-based halal traceability. Adoption today is importer- and retailer-driven, aimed at building buyer trust rather than meeting a compliance date."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
