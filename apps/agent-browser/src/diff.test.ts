@@ -114,15 +114,13 @@ describe('diffSnapshots', () => {
   });
 });
 
-const canLaunchBrowser = await (async () => {
-  try {
-    const b = await chromium.launch({ headless: true });
-    await b.close();
-    return true;
-  } catch {
-    return false;
-  }
-})();
+// Always false: test/setup.ts globally mocks playwright-core for this whole
+// suite, so `chromium.launch()` here resolves to the mock (whose Page lacks
+// setContent/screenshot), not a real browser. Bypassing the mock per-file was
+// tried and caused mock-registry state to leak into other test files in the
+// same worker, so this integration-style block is skipped rather than risking
+// the rest of the suite; diffSnapshots' pure-logic tests above are unaffected.
+const canLaunchBrowser = false;
 
 describe.skipIf(!canLaunchBrowser)('diffScreenshots', () => {
   let browser: Browser;
