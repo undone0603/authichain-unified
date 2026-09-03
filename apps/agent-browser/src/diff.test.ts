@@ -1,9 +1,17 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { diffSnapshots, diffScreenshots } from './diff.js';
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+
+// test/setup.ts globally mocks playwright-core for the rest of the suite;
+// this file's screenshot tests need the real browser, not the mock Page
+// (which doesn't implement setContent/screenshot).
+vi.unmock('playwright-core');
+const { chromium } = await vi.importActual<typeof import('playwright-core')>('playwright-core');
+type Browser = import('playwright-core').Browser;
+type BrowserContext = import('playwright-core').BrowserContext;
+type Page = import('playwright-core').Page;
 
 describe('diffSnapshots', () => {
   it('should report no changes for identical inputs', () => {

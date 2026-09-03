@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { BrowserManager, getDefaultTimeout } from './browser.js';
 import { executeCommand } from './actions.js';
-import { chromium } from 'playwright-core';
+
+// test/setup.ts globally mocks playwright-core for the rest of the suite;
+// this file is a real-browser integration suite and needs the actual module.
+vi.unmock('playwright-core');
+const { chromium } = await vi.importActual<typeof import('playwright-core')>('playwright-core');
 
 describe('BrowserManager', () => {
   let browser: BrowserManager;
