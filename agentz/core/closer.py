@@ -40,15 +40,24 @@ async def send_closing_package(supabase, deal_data: Dict[str, Any]):
     agreement_path = str(agreements[0]) if agreements else "agentz/logs/agreements/default_partnership.md"
     
     ds_res = await create_envelope_from_markdown(agreement_path, email)
-    
+    envelope_sent = bool(ds_res.get("sent"))
+
     # 3. Log to HubSpot & Queue Outreach
-    logger.info(f"Closing package dispatched for {deal_name}. Payment: {payment_url} | Envelope: {ds_res.get('envelope_id')}")
-    
+    if envelope_sent:
+        logger.info(f"Closing package dispatched for {deal_name}. Payment: {payment_url} | Envelope: {ds_res.get('envelope_id')}")
+    else:
+        logger.warning(
+            f"Closing package for {deal_name} NOT fully dispatched -- payment link "
+            f"{payment_url} was created, but the agreement was not sent "
+            f"(docusign status: {ds_res.get('status')})."
+        )
+
     return {
         "deal_id": deal_id,
         "payment_url": payment_url,
         "envelope_id": ds_res.get("envelope_id"),
-        "package_sent": True
+        "envelope_status": ds_res.get("status"),
+        "package_sent": envelope_sent
     }
 
 async def run_closing_loop(supabase):

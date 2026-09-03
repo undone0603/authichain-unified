@@ -31,6 +31,7 @@ def run(ctx: ExecutionContext) -> Optional[str]:
     }
     
     sent_count = 0
+    skipped_count = 0
     for path in agreements:
         brand = path.lower()
         target_email = "admin@authichain.com" # Default fallback
@@ -44,7 +45,19 @@ def run(ctx: ExecutionContext) -> Optional[str]:
         
         if ctx.mode != Mode.DRY_RUN:
             res = asyncio.run(create_envelope_from_markdown(path, target_email))
-            ctx.step(f"Envelope Sent: {res['envelope_id']}")
-            sent_count += 1
-            
+            if res.get("sent"):
+                ctx.step(f"Envelope Sent: {res['envelope_id']}")
+                sent_count += 1
+            else:
+                ctx.step(
+                    f"Envelope NOT sent for {brand} "
+                    f"(status: {res.get('status')}): {res.get('message', 'no detail')}"
+                )
+                skipped_count += 1
+
+    if skipped_count:
+        return (
+            f"Signature Blitz complete. {sent_count} agreement(s) dispatched to "
+            f"DocuSign, {skipped_count} not sent."
+        )
     return f"Signature Blitz complete. {sent_count} agreement(s) dispatched to DocuSign."
