@@ -230,7 +230,13 @@ function passportPayload(
         }
       : null,
     metadata,
-    passportUrl: seal ? `${env.PASSPORT_ORIGIN}/passport/${encodeURIComponent(seal.cert_id)}` : null,
+    // passportUrl intentionally omitted. PASSPORT_ORIGIN + /passport/{certId}
+    // has no route on authichain.com as of 2026-09-04 -- it serves the
+    // marketing homepage for ANY cert id (identical bytes for a real and a
+    // nonsense id, canonical pointing at the site root), so linking there
+    // dead-ends a scan on a marketing page. This response IS the passport
+    // until that page exists; re-add the link once it does.
+    passportUrl: null,
   };
 }
 

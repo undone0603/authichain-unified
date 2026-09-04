@@ -11,6 +11,11 @@ database_name = "authichain-provenance"
 database_id = "ebd8081b-ac13-485a-8b0e-a6cd9c0f7be5"
 
 [vars]
+# NOTE (verified 2026-09-04): authichain.com/passport/{certId} has NO route --
+# it serves the marketing homepage for any cert id. The resolver therefore does
+# not link to it (see passportUrl in src/index.ts). PASSPORT_ORIGIN is still
+# used for the /.well-known docs link. Re-enable the passport link only after
+# that route actually renders a passport.
 PASSPORT_ORIGIN = "https://authichain.com"
 RESOLVER_ORIGIN = "https://id.authichain.com"
 
