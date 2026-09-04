@@ -1,10 +1,8 @@
 import {
   pgTable,
   uuid,
-  integer,
   text,
   timestamp,
-  jsonb,
 } from "drizzle-orm/pg-core";
 
 // Local mirror of the `qr_codes` table used by db.ts. This server can't import
