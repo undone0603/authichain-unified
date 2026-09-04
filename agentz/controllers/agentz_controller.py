@@ -2,6 +2,11 @@ from typing import Any
 from ..models import AgentOutput
 
 class AgentzController:
+    """Thin adapter around an LLM callable (e.g. LMStudioClient.chat)."""
+
+    def __init__(self, llm: Any) -> None:
+        self.llm = llm
+
     def run_llm(self, *args, **kwargs) -> AgentOutput | Any:
 
         """
