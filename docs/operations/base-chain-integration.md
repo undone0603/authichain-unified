@@ -1,42 +1,36 @@
 # Base chain integration — GovChain pilots
 
-Date: 2026-08-31 (mainnet exception authorized)
+Date: 2026-09-04
 
-Sepolia is skipped. Fund path is the 10 USDC on the Coinbase Smart Wallet on Base 8453.
+Sepolia skipped. Funding complete. Deploy is the next signed step.
 
-## Live probe (2026-08-31 00:01 EDT)
+## Live probe (2026-09-04 17:36 EDT)
 
-| Account | Base 8453 ETH | Base 8453 USDC |
-|---|---|---|
-| Smart Wallet `0xC0D26735fd9e868eacc60400ef3171Fa4161177f` | 0 | **10.0** |
-| Ops EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d` | 0 | 0 |
-| `0x833589fC…` | Circle USDC contract | not a wallet |
+| Account | Base 8453 ETH | Base 8453 USDC | nonce |
+|---|---|---|---|
+| Smart Wallet `0xC0D26735fd9e868eacc60400ef3171Fa4161177f` | ~0.00170 | 1.0 | 1 (UserOp) |
+| Ops EOA `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d` | **0.002** | 0 | **0** |
 
-Gas on Base at probe: ~0.006 gwei. A contract deploy is well under $0.05. 10 USDC of ETH is more than enough.
+Fund tx: [`0x4c9ce401…b2145`](https://basescan.org/tx/0x4c9ce401ae191aa48a2703dc21a33638fe2e08a0922344638bcc0febeb2b2145) (block 50760586). Coinbase bundler → EntryPoint 0.6 → 0.002 ETH to ops EOA. Paymaster was `0x0`; gas paid from Smart Wallet ETH.
 
-This sandbox cannot sign a Smart Wallet UserOp. The swap has to happen in Coinbase Wallet.
+No AuthiChainNFT bytecode on Base yet. Ops nonce 0 means the deploy key has never sent a Base tx.
 
-## Swap + fund (you, in Coinbase Wallet)
+Compile path (PR #871): `scripts/compile-authichain-nft.cjs` writes the artifact `scripts/deploy-authichain-nft-base.ts` expects. Hardhat `paths.sources` is still `contracts/ledger` — do not use `npx hardhat compile` for this contract.
 
-1. Open Coinbase Wallet → network **Base**.
-2. Confirm the 10 USDC is on `0xC0D26735…`.
-3. Swap **9 USDC → ETH**. Leave 1 USDC if you want a stable remainder. Coinbase’s Base paymaster usually sponsors the swap gas so you do not need ETH first.
-4. Send **0.002 ETH** to the ops EOA:
-   `0xbad4e580ce467a4b22237ed4ad9746e718ed2b0d`
-   Keep the rest in the Smart Wallet.
-5. Reply with the two BaseScan links (swap + transfer). Deploy runs after `eth_getBalance(opsEOA) > 0` on 8453.
+## Deploy (signed, ops EOA)
 
-Do not send USDC to the ops EOA. The deploy script pays gas in ETH from an ethers-signed EOA. The USDC contract cannot sign.
-
-## After the ops EOA has ETH
+This sandbox cannot hold `WALLET_PRIVATE_KEY`. Run on the machine that has the ops key:
 
 ```bash
+pnpm exec node scripts/compile-authichain-nft.cjs
 CHAIN=base DRY_RUN=false GRANT_SMART_WALLET=true pnpm exec tsx scripts/deploy-authichain-nft-base.ts
 ```
 
-or `npx thirdweb deploy contracts/AuthiChainNFT.sol` → **Base** (8453).
+or `npx thirdweb deploy contracts/AuthiChainNFT.sol` → Base 8453.
 
-Then:
+`verifyManufacturer(opsEOA)` is required. `GRANT_SMART_WALLET=true` also verifies `0xC0D26735…`.
+
+Then set secrets and dry-run mint:
 
 ```
 CHAIN=base
@@ -46,11 +40,7 @@ ALCHEMY_API_KEY=<Base app>
 DRY_RUN=true
 ```
 
-`pnpm exec tsx scripts/mint-govchain-nfts.ts` — success is `chain=Base (8453)` and non-empty `getCode`.
-
-Flip `DRY_RUN=false` for one `gov_proposals` row with `fit_score >= 75`.
-
-`verifyManufacturer(opsEOA)` is required (`MINTER_ROLE` alone reverts). `GRANT_SMART_WALLET=true` also verifies `0xC0D26735…` so Coinbase Wallet can mint later.
+Success: `chain=Base (8453)` and non-empty `getCode`. Flip `DRY_RUN=false` for one `gov_proposals` row with `fit_score >= 75`.
 
 ## Split unchanged
 
