@@ -8,5 +8,13 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "// exclude": [
+    "*.test.ts runs under Node (node --experimental-strip-types), not the Workers",
+    "runtime. Typechecking it here would need @types/node and",
+    "allowImportingTsExtensions in a config that should stay Worker-only, and",
+    "pulling node types in would let worker code reference Node globals that do",
+    "not exist at runtime. The tests are verified by executing them: pnpm test."
+  ],
+  "exclude": ["src/**/*.test.ts"]
 }
