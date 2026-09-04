@@ -23,8 +23,8 @@ async def get_all_deals(limit: int = 200, _retry: bool = True) -> List[Dict[str,
     """
     token = get("hubspot_token")
     if not token:
-        logger.warning("HubSpot token missing. Returning mock deals.")
-        return [{"id": str(i), "name": f"Mock Deal {i}", "slug": f"mock-{i}", "city": "Detroit"} for i in range(10)]
+        logger.warning("HubSpot token missing. Returning no deals.")
+        return []
 
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
@@ -118,7 +118,7 @@ async def get_deal_notes(deal_id: str) -> str:
     """
     token = get("hubspot_token")
     if not token: 
-        return "Mock note: Client expressed interest in pilot expansion."
+        return "No notes available (missing token)."
 
     headers = {"Authorization": f"Bearer {token}"}
     try:
