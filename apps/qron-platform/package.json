@@ -17,7 +17,11 @@
     "@sendgrid/mail": "^8.1.6",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.1",
-    "@types/nodemailer": "^9.0.0",
+    "@types/nodemailer": "^8.0.1",
+    "@x402/core": "^2.24.0",
+    "@x402/evm": "^2.24.0",
+    "@x402/extensions": "^2.24.0",
+    "@x402/svm": "^2.24.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
@@ -33,7 +37,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "sonner": "^2.0.7",
-    "stripe": "^^17.4.0",
+    "stripe": "^17.4.0",
     "thirdweb": "^5.119.4"
   },
   "devDependencies": {

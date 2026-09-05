@@ -10,6 +10,7 @@ import httpx
 import logging
 import asyncio
 import json
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from agentz.core.credentials import get, update_credential
 from agentz.core.hubspot_healer import rotate_hubspot_token
@@ -23,8 +24,8 @@ async def get_all_deals(limit: int = 200, _retry: bool = True) -> List[Dict[str,
     """
     token = get("hubspot_token")
     if not token:
-        logger.warning("HubSpot token missing. Returning mock deals.")
-        return [{"id": str(i), "name": f"Mock Deal {i}", "slug": f"mock-{i}", "city": "Detroit"} for i in range(10)]
+        logger.warning("HubSpot token missing. Returning no deals.")
+        return []
 
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
@@ -118,7 +119,7 @@ async def get_deal_notes(deal_id: str) -> str:
     """
     token = get("hubspot_token")
     if not token: 
-        return "Mock note: Client expressed interest in pilot expansion."
+        return "No notes available (missing token)."
 
     headers = {"Authorization": f"Bearer {token}"}
     try:
@@ -140,6 +141,37 @@ async def get_deal_notes(deal_id: str) -> str:
         logger.error(f"Failed to fetch notes for deal {deal_id}: {e}")
     
     return ""
+
+async def add_deal_note(deal_id: str, content: str) -> bool:
+    """Creates a note and associates it with a deal."""
+    token = get("hubspot_token")
+    if not token:
+        return False
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    note_payload = {
+        "properties": {
+            "hs_note_body": content,
+            "hs_timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        },
+        "associations": [
+            {
+                "to": {"id": deal_id},
+                "types": [{"associationCategory": "HUBSPOT_DEFINED", "associationTypeId": 214}],
+            }
+        ],
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                "https://api.hubapi.com/crm/v3/objects/notes", headers=headers, json=note_payload
+            )
+            return r.status_code == 201
+    except Exception as e:
+        logger.error(f"Failed to add note to deal {deal_id}: {e}")
+        return False
+
 
 async def prioritize_leads_by_sentiment(deals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """

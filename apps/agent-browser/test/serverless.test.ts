@@ -11,14 +11,20 @@ import * as os from 'os';
 
 const isLinux = os.platform() === 'linux';
 
-// Only run if @sparticuz/chromium is available AND we're on Linux
+// Only run if @sparticuz/chromium is available, on Linux, AND exposes the
+// expected API — import() can resolve to an incompatible/stub module without
+// throwing under some resolvers, so check the actual shape, not just presence.
 const canRunTest = await (async () => {
   if (!isLinux) {
     console.log('Skipping @sparticuz/chromium test: only runs on Linux');
     return false;
   }
   try {
-    await import('@sparticuz/chromium');
+    const chromium = await import('@sparticuz/chromium');
+    if (typeof chromium.default?.executablePath !== 'function') {
+      console.log('Skipping @sparticuz/chromium test: unexpected module shape');
+      return false;
+    }
     return true;
   } catch {
     console.log('Skipping @sparticuz/chromium test: package not installed');

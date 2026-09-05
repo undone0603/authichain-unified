@@ -110,6 +110,39 @@ def load_federal_pipeline():
         return pd.DataFrame()
 
 @st.cache_data(ttl=30)
+def load_deal_pipeline():
+    """Loads real deal data from HubSpot.
+
+    Mirrors load_federal_pipeline above: returns an empty DataFrame rather
+    than placeholder numbers when the source is unavailable, so the Revenue
+    Siphon page can say "no data" instead of showing invented figures.
+    """
+    try:
+        # Imported here (not at module scope) so the live module attribute is
+        # resolved at call time.
+        from agentz.core import hubspot
+
+        deals = asyncio.run(hubspot.get_all_deals())
+        if not deals:
+            return pd.DataFrame()
+
+        rows = []
+        for d in deals:
+            try:
+                amount = float(d.get("amount") or 0)
+            except (TypeError, ValueError):
+                amount = 0.0
+            rows.append({
+                "id": d.get("id", "Unknown"),
+                "name": d.get("name", "Unknown"),
+                "amount": amount,
+                "stage": d.get("stage", "unknown"),
+            })
+        return pd.DataFrame(rows)
+    except Exception:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=30)
 def load_network_stats():
     try:
         url = get("supabase_url")
@@ -234,28 +267,48 @@ elif page == "Federal Capture":
 
 elif page == "Revenue Siphon":
     st.header("$$ Real-time Revenue Siphon")
-    
-    # Real Pipeline Projections
-    pipeline_total = 172 # Total deals in backlog
-    avg_setup = 2500
-    avg_sub = 499 * 12
-    potential_arr = pipeline_total * (avg_setup + avg_sub)
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Current Pipeline Potential", f"${potential_arr:,.0f}", delta="Backlog: 172")
-    col2.metric("Layer 1: SaaS (Target)", "$1.46M", delta="+ $85k/mo")
-    col3.metric("High-Value Potential", "$250,000", delta="LVMH + Hermes")
-    
-    st.divider()
-    st.subheader("Mass Activation Pipeline")
-    # Live data from HubSpot probe
-    chart_data = pd.DataFrame({
-        "Stage": ["Backlog", "Researching", "Deployed", "Contacted", "Contract Sent"],
-        "Count": [72, 50, 35, 10, 5]
-    })
-    st.bar_chart(chart_data, x="Stage", y="Count")
-    
-    st.info("💡 **Revenue Blitz Tip**: 100 lead-microsites are currently live. Transitioning to 'Auto-Closer' loop will issue 5 DocuSign agreements this week.")
+
+    df_deals = load_deal_pipeline()
+
+    if df_deals.empty:
+        st.warning(
+            "No deals returned from HubSpot. Check the `hubspot_token` credential "
+            "and connectivity — no figures are shown rather than placeholder ones."
+        )
+    else:
+        pipeline_total = len(df_deals)
+        booked_value = df_deals["amount"].sum()
+
+        # Projection, not measured revenue — assumptions stated inline.
+        avg_setup = 2500
+        avg_sub = 499 * 12
+        potential_arr = pipeline_total * (avg_setup + avg_sub)
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Deals in Pipeline", f"{pipeline_total:,}")
+        col2.metric("Booked Deal Value", f"${booked_value:,.0f}")
+        col3.metric(
+            "Projected ARR (modelled)",
+            f"${potential_arr:,.0f}",
+            help=(
+                f"Projection only: {pipeline_total} deals x "
+                f"(${avg_setup:,} setup + ${avg_sub:,}/yr subscription). "
+                "Not booked revenue."
+            ),
+        )
+
+        st.divider()
+        st.subheader("Mass Activation Pipeline")
+        stage_counts = (
+            df_deals.groupby("stage").size().reset_index(name="Count")
+            .rename(columns={"stage": "Stage"})
+            .sort_values("Count", ascending=False)
+        )
+        st.bar_chart(stage_counts, x="Stage", y="Count")
+
+        st.divider()
+        st.subheader("Deals")
+        st.dataframe(df_deals, use_container_width=True)
 
 elif page == "Limit-Proofing Health":
     st.header("🛡️ Limit-Proofing: Provider Health")
