@@ -6403,5 +6403,389 @@
         }
       ]
     }
+  },
+  {
+    "slug": "verifiable-credential-barcodes-vs-gs1-digital-link-qr-code",
+    "keyword": "verifiable credential barcodes vs gs1 digital link qr code",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Barcodes Vs GS1 Digital | AuthiChain",
+    "metaDescription": "W3C’s Verifiable Credential Barcodes specification compresses a signed credential to under 150 bytes so it fits inside a 1D or 2D barcode with no network.",
+    "h1": "Verifiable Credential Barcodes Vs GS1 Digital Link QR Code",
+    "bodyHtml": "<p>W3C’s Verifiable Credential Barcodes specification compresses a signed credential to under 150 bytes so it fits inside a 1D or 2D barcode with no network lookup — the opposite design choice from protocol/SPEC.md §6, which puts a GS1 Digital Link URL in the code and resolves the full record from a registry.</p><h2>Why AuthiChain</h2><ul><li>VC Barcodes targets physical credentials like driver’s licenses and travel documents, where the reader can’t assume a live registry exists to query — the credential has to travel entirely inside the printed code</li><li>protocol/SPEC.md §6 takes the other path deliberately: a permanent, unauthenticated URL that can be updated, re-anchored, or extended after the item ships, which an embedded credential cannot be once printed</li><li>Both are secured the same way — a W3C Data Integrity proof over canonicalized bytes — so the choice is about where the signed data lives, not whether the signature is real</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does AuthiChain embed the credential inside the QR code?</h3><p>No — the code carries a GS1 Digital Link URL that resolves to the record, per protocol/SPEC.md §6. The full record is what gets verified, not a compressed stand-in for it.</p><h3>When would the embedded approach make more sense than a resolvable URL?</h3><p>When the data can’t change after issuance and there’s no expectation of querying a live registry — a printed ID card, not an item carrying an evolving passport record.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Barcodes Vs GS1 Digital Link QR Code",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "W3C’s Verifiable Credential Barcodes specification compresses a signed credential to under 150 bytes so it fits inside a 1D or 2D barcode with no network lookup — the opposite design choice from protocol/SPEC.md §6, which puts a GS1 Digital Link URL in the code and resolves the full record from a registry.",
+          "url": "https://authichain.com/p/verifiable-credential-barcodes-vs-gs1-digital-link-qr-code"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Barcodes Vs GS1 Digital Link QR Code",
+              "item": "https://authichain.com/p/verifiable-credential-barcodes-vs-gs1-digital-link-qr-code"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain embed the credential inside the QR code?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the code carries a GS1 Digital Link URL that resolves to the record, per protocol/SPEC.md §6. The full record is what gets verified, not a compressed stand-in for it."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "When would the embedded approach make more sense than a resolvable URL?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "When the data can’t change after issuance and there’s no expectation of querying a live registry — a printed ID card, not an item carrying an evolving passport record."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "verifiable-credential-forgery-defense-post-quantum-witness-list",
+    "keyword": "verifiable credential forgery defense post quantum witness list",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Verifiable Credential Forgery Defense Post | AuthiChain",
+    "metaDescription": "W3C’s Verifiable Credential Forgery Defense, published as a first public working draft in 2026, lets an issuer publish a separate, quantum-resistant-signed.",
+    "h1": "Verifiable Credential Forgery Defense Post Quantum Witness List",
+    "bodyHtml": "<p>W3C’s Verifiable Credential Forgery Defense, published as a first public working draft in 2026, lets an issuer publish a separate, quantum-resistant-signed witness list proving which of its already-issued, conventionally-signed credentials are genuine — protection for records nobody plans to reissue with a post-quantum key.</p><h2>Why AuthiChain</h2><ul><li>A witness is the high bits of a hash of the credential combined with a random seed, published in a list that is itself a Verifiable Credential signed with a post-quantum scheme — the list’s authenticity doesn’t depend on the original signature’s strength</li><li>It defends against a specific failure: a compromised or forged issuer key later used to mint fake records that still pass ordinary signature verification — a forged record simply won’t appear on the issuer’s own published witness list</li><li>protocol/SPEC.md §8 already states plainly that Ed25519 is not post-quantum secure; it defines no witness-list mechanism today, so this is a gap an issuer would have to close outside the current spec, not something the reference verifier checks</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the AuthiChain reference verifier check a forgery-defense witness list?</h3><p>No — this is a new W3C first public working draft as of 2026. The reference verifier implements protocol/SPEC.md §5’s four checks, which don’t include a witness-list lookup.</p><h3>How is this different from revocation?</h3><p>Revocation says a genuine, once-valid credential should no longer be trusted. Forgery defense says a credential claiming to come from an issuer might never have actually been issued by them — different threats, different mechanisms, and neither is implemented in the current spec.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Verifiable Credential Forgery Defense Post Quantum Witness List",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "W3C’s Verifiable Credential Forgery Defense, published as a first public working draft in 2026, lets an issuer publish a separate, quantum-resistant-signed witness list proving which of its already-issued, conventionally-signed credentials are genuine — protection for records nobody plans to reissue with a post-quantum key.",
+          "url": "https://authichain.com/p/verifiable-credential-forgery-defense-post-quantum-witness-list"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Verifiable Credential Forgery Defense Post Quantum Witness List",
+              "item": "https://authichain.com/p/verifiable-credential-forgery-defense-post-quantum-witness-list"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the AuthiChain reference verifier check a forgery-defense witness list?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — this is a new W3C first public working draft as of 2026. The reference verifier implements protocol/SPEC.md §5’s four checks, which don’t include a witness-list lookup."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How is this different from revocation?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Revocation says a genuine, once-valid credential should no longer be trusted. Forgery defense says a credential claiming to come from an issuer might never have actually been issued by them — different threats, different mechanisms, and neither is implemented in the current spec."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dscsa-verification-router-service-upgrade-interoperability-2026",
+    "keyword": "dscsa verification router service upgrade interoperability 2026",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DSCSA Verification Router Service Upgrade | AuthiChain",
+    "metaDescription": "The pharmaceutical industry’s own Verification Router Service network moved to GS1’s Lightweight Messaging Standard R1.3 in 2026, and solution providers have.",
+    "h1": "DSCSA Verification Router Service Upgrade Interoperability 2026",
+    "bodyHtml": "<p>The pharmaceutical industry’s own Verification Router Service network moved to GS1’s Lightweight Messaging Standard R1.3 in 2026, and solution providers have been testing integrations that express DSCSA verification responses as Verifiable Credentials — the same signed-record model protocol/SPEC.md already specifies for provenance.</p><h2>Why AuthiChain</h2><ul><li>VRS answers one question — was this serialized unit legitimately introduced into commerce, and is it not expired or recalled — by routing a live query to the manufacturer’s system; a signed record answers the same question offline, with no query at all</li><li>GS1’s R1.3 messaging upgrade and its Verifiable Credential integrations respond to the same problem protocol/SPEC.md §5 solves: a check a downstream party can run without trusting whichever server happens to answer first</li><li>This is infrastructure between manufacturers and trading partners, not a consumer-facing check — a patient or pharmacist scanning a package still needs a record built to resolve without VRS access</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a signed DSCSA record replace the need for VRS?</h3><p>No — VRS verifies a product identifier against the manufacturer’s system in real time. A signed record verifies offline against the record itself. Large trading partners typically run both.</p><h3>What changed with the GS1 LVMS R1.3 upgrade?</h3><p>An upgrade to VRS’s underlying messaging standard, hardening the infrastructure trading partners use to route verification requests — solution providers have been testing Verifiable Credential-based responses against it through 2026.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DSCSA Verification Router Service Upgrade Interoperability 2026",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The pharmaceutical industry’s own Verification Router Service network moved to GS1’s Lightweight Messaging Standard R1.3 in 2026, and solution providers have been testing integrations that express DSCSA verification responses as Verifiable Credentials — the same signed-record model protocol/SPEC.md already specifies for provenance.",
+          "url": "https://authichain.com/p/dscsa-verification-router-service-upgrade-interoperability-2026"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSCSA Verification Router Service Upgrade Interoperability 2026",
+              "item": "https://authichain.com/p/dscsa-verification-router-service-upgrade-interoperability-2026"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a signed DSCSA record replace the need for VRS?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — VRS verifies a product identifier against the manufacturer’s system in real time. A signed record verifies offline against the record itself. Large trading partners typically run both."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What changed with the GS1 LVMS R1.3 upgrade?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "An upgrade to VRS’s underlying messaging standard, hardening the infrastructure trading partners use to route verification requests — solution providers have been testing Verifiable Credential-based responses against it through 2026."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-battery-passport-data-access-rights-delegated-act-deadline",
+    "keyword": "eu battery passport data access rights delegated act deadline",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Battery Passport Data Access Rights | AuthiChain",
+    "metaDescription": "The European Commission owed a delegated act by 18 August 2026 setting which parties — recyclers, professional repairers, consumers, authorities — see which.",
+    "h1": "EU Battery Passport Data Access Rights Delegated Act Deadline",
+    "bodyHtml": "<p>The European Commission owed a delegated act by 18 August 2026 setting which parties — recyclers, professional repairers, consumers, authorities — see which fields of a battery passport, and on what terms data gets entered, modified, and updated after issuance.</p><h2>Why AuthiChain</h2><ul><li>Access-rights tiering is a separate obligation from the passport’s 18 February 2027 mandatory-data deadline — a battery can have its carbon-footprint and material data fully structured while access-rights compliance is still pending</li><li>A record built as a permanently-addressed, resolvable W3C Verifiable Credential — protocol/SPEC.md §6 — is the shape a tiered-access rule attaches restrictions to; the identifier and resolution mechanism don’t change when field-level rules land, only which fields a given caller sees</li><li>Recyclers specifically are meant to get access to recycling-potential and technical detail data the public tier doesn’t see — a distinction that only takes effect once the delegated act’s field list is final</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Has the battery passport access-rights delegated act been adopted?</h3><p>18 August 2026 was the Commission’s own deadline to adopt it. Check the EU’s official register for current status rather than assuming adoption from the deadline alone.</p><h3>Does this delay the battery passport itself?</h3><p>No — access rights govern who sees what within a passport already required from 18 February 2027. It’s a separate obligation on a separate track.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Battery Passport Data Access Rights Delegated Act Deadline",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The European Commission owed a delegated act by 18 August 2026 setting which parties — recyclers, professional repairers, consumers, authorities — see which fields of a battery passport, and on what terms data gets entered, modified, and updated after issuance.",
+          "url": "https://authichain.com/p/eu-battery-passport-data-access-rights-delegated-act-deadline"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Battery Passport Data Access Rights Delegated Act Deadline",
+              "item": "https://authichain.com/p/eu-battery-passport-data-access-rights-delegated-act-deadline"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Has the battery passport access-rights delegated act been adopted?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "18 August 2026 was the Commission’s own deadline to adopt it. Check the EU’s official register for current status rather than assuming adoption from the deadline alone."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does this delay the battery passport itself?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — access rights govern who sees what within a passport already required from 18 February 2027. It’s a separate obligation on a separate track."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "espr-iron-and-steel-delegated-act-status-2026",
+    "keyword": "espr iron and steel delegated act status 2026",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ESPR Iron And Steel Delegated Act Status 2026 | AuthiChain",
+    "metaDescription": "Iron and steel are the ESPR’s first Digital Product Passport delegated act: the public consultation closed 12 August 2026, and the Commission’s own Working.",
+    "h1": "ESPR Iron And Steel Delegated Act Status 2026",
+    "bodyHtml": "<p>Iron and steel are the ESPR’s first Digital Product Passport delegated act: the public consultation closed 12 August 2026, and the Commission’s own Working Plan targets adoption in Q4 2026, ahead of every other priority category.</p><h2>Why AuthiChain</h2><ul><li>Every ESPR delegated act must define its product group by commodity code under Article 8(a) — the steel act’s actual scope is whichever list of codes the final text names, not a general description of “steel products”</li><li>A JRC preparatory study has already proposed the steel passport’s content — embodied carbon, recycled content, grade — the same fields AuthiChain structures into its steel passport record ahead of the act formally requiring them</li><li>Adoption in Q4 2026 would start roughly the same 18-month compliance runway the battery passport followed between its regulation and its 18 February 2027 mandate — a rough date to work backward from once the act actually adopts</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the iron and steel DPP mandatory today?</h3><p>No — as of this writing the delegated act had not adopted. The consultation closed 12 August 2026, with Q4 2026 targeted for adoption, followed by an approximately 18-month compliance runway.</p><h3>Why is steel first among ESPR categories?</h3><p>The ESPR Working Plan 2025–2030 sequences categories by technical readiness, and steel’s definitions and data structures were further along than most other priority groups when the plan was set.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ESPR Iron And Steel Delegated Act Status 2026",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Iron and steel are the ESPR’s first Digital Product Passport delegated act: the public consultation closed 12 August 2026, and the Commission’s own Working Plan targets adoption in Q4 2026, ahead of every other priority category.",
+          "url": "https://authichain.com/p/espr-iron-and-steel-delegated-act-status-2026"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ESPR Iron And Steel Delegated Act Status 2026",
+              "item": "https://authichain.com/p/espr-iron-and-steel-delegated-act-status-2026"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the iron and steel DPP mandatory today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — as of this writing the delegated act had not adopted. The consultation closed 12 August 2026, with Q4 2026 targeted for adoption, followed by an approximately 18-month compliance runway."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Why is steel first among ESPR categories?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The ESPR Working Plan 2025–2030 sequences categories by technical readiness, and steel’s definitions and data structures were further along than most other priority groups when the plan was set."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "is-gs1-digital-link-mandatory-for-sunrise-2027",
+    "keyword": "is gs1 digital link mandatory for sunrise 2027",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "Is GS1 Digital Link Mandatory For Sunrise 2027 | QRON",
+    "metaDescription": "Sunrise 2027 requires that retail scanners read 2D barcodes by the end of 2027 — it does not require the code to carry a GS1 Digital Link URL; a QR encoding.",
+    "h1": "Is GS1 Digital Link Mandatory For Sunrise 2027",
+    "bodyHtml": "<p>Sunrise 2027 requires that retail scanners read 2D barcodes by the end of 2027 — it does not require the code to carry a GS1 Digital Link URL; a QR encoding nothing but a bare GTIN clears the initiative on its own.</p><h2>Why QRON</h2><ul><li>The initiative’s text asks for 2D-barcode scan readiness at point of sale, not for a particular URL format inside the code — Digital Link is the identifier format GS1 recommends for extra capability, not what Sunrise 2027 itself mandates</li><li>A brand shipping a Digital Link QR gets Sunrise 2027 compliance and a resolvable identifier that can point to a signed record, a certificate, or a product page selected by linkType from one printed code; the bare-GTIN path gets compliance and nothing else</li><li>QRON issues Digital Link-formatted identifiers by default because the marginal cost over a bare GTIN is close to zero, not because Sunrise 2027 requires it</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $29/mo.</p><h2>FAQ</h2><h3>Will a QR code with just a GTIN pass Sunrise 2027 compliance?</h3><p>Yes — Sunrise 2027 is a scan-readiness initiative for 2D barcodes at point of sale. It names no required URL structure inside the code.</p><h3>So why use GS1 Digital Link at all?</h3><p>A bare GTIN code does one thing: identify the product. A Digital Link URL can resolve to multiple linked resources — provenance record, certificate, product page — selected by linkType, for close to the same printing cost.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — Is GS1 Digital Link Mandatory For Sunrise 2027",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "Sunrise 2027 requires that retail scanners read 2D barcodes by the end of 2027 — it does not require the code to carry a GS1 Digital Link URL; a QR encoding nothing but a bare GTIN clears the initiative on its own.",
+          "url": "https://qron.space/p/is-gs1-digital-link-mandatory-for-sunrise-2027"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Is GS1 Digital Link Mandatory For Sunrise 2027",
+              "item": "https://qron.space/p/is-gs1-digital-link-mandatory-for-sunrise-2027"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Will a QR code with just a GTIN pass Sunrise 2027 compliance?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes — Sunrise 2027 is a scan-readiness initiative for 2D barcodes at point of sale. It names no required URL structure inside the code."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "So why use GS1 Digital Link at all?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A bare GTIN code does one thing: identify the product. A Digital Link URL can resolve to multiple linked resources — provenance record, certificate, product page — selected by linkType, for close to the same printing cost."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
