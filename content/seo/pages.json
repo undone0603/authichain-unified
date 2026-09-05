@@ -6403,5 +6403,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "iso-iec-jtc-5-digital-product-passport-standard",
+    "keyword": "iso iec jtc 5 digital product passport standard",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "ISO IEC JTC 5 Digital Product Passport Standard | AuthiChain",
+    "metaDescription": "ISO and IEC formed Joint Technical Committee 5 in April 2026 to build the first global Digital Product Passport standard, with work starting in the third.",
+    "h1": "ISO IEC JTC 5 Digital Product Passport Standard",
+    "bodyHtml": "<p>ISO and IEC formed Joint Technical Committee 5 in April 2026 to build the first global Digital Product Passport standard, with work starting in the third quarter of 2026 and initial results not expected before 2028 — years before any conformance claim against it is even possible, which is exactly why AuthiChain issues passport records today on the open standards JTC 5 is building from: W3C Verifiable Credentials and GS1 Digital Link.</p><h2>Why AuthiChain</h2><ul><li>JTC 5 is a global ISO/IEC standard under DIN secretariat, distinct from the CEN-CENELEC EN 18xxx series already publishing for the EU market — the two tracks are related, not identical</li><li>Work began Q3 2026 with initial deliverables not expected before 2028, so a product shipping a passport now cannot wait for JTC 5 to finish before it needs a working record</li><li>GS1 China joined as the Chinese mirror committee in June 2026, a signal the emerging global data model is being built for cross-border trade, not scoped to the EU alone</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When will ISO/IEC JTC 5 publish Digital Product Passport standards?</h3><p>The committee began work in the third quarter of 2026; initial results are not expected before 2028. No published standard exists yet to claim conformance against.</p><h3>Does JTC 5 replace the CEN-CENELEC EN 18xxx DPP standards?</h3><p>No — EN 18xxx are European harmonised standards CEN-CENELEC is publishing through 2026. JTC 5 develops separate global ISO/IEC standards; how the two will align has not been settled.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — ISO IEC JTC 5 Digital Product Passport Standard",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "ISO and IEC formed Joint Technical Committee 5 in April 2026 to build the first global Digital Product Passport standard, with work starting in the third quarter of 2026 and initial results not expected before 2028 — years before any conformance claim against it is even possible, which is exactly why AuthiChain issues passport records today on the open standards JTC 5 is building from: W3C Verifiable Credentials and GS1 Digital Link.",
+          "url": "https://authichain.com/p/iso-iec-jtc-5-digital-product-passport-standard"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ISO IEC JTC 5 Digital Product Passport Standard",
+              "item": "https://authichain.com/p/iso-iec-jtc-5-digital-product-passport-standard"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When will ISO/IEC JTC 5 publish Digital Product Passport standards?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The committee began work in the third quarter of 2026; initial results are not expected before 2028. No published standard exists yet to claim conformance against."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does JTC 5 replace the CEN-CENELEC EN 18xxx DPP standards?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — EN 18xxx are European harmonised standards CEN-CENELEC is publishing through 2026. JTC 5 develops separate global ISO/IEC standards; how the two will align has not been settled."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-dpp-data-authentication-integrity-standard-en-18246",
+    "keyword": "eu dpp data authentication integrity standard en 18246",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU DPP Data Authentication Integrity Standard | AuthiChain",
+    "metaDescription": "EN 18246, the CEN standard covering Digital Product Passport data authentication, reliability and integrity, was on track for ratification in August 2026.",
+    "h1": "EU DPP Data Authentication Integrity Standard En 18246",
+    "bodyHtml": "<p>EN 18246, the CEN standard covering Digital Product Passport data authentication, reliability and integrity, was on track for ratification in August 2026 with a definitive text expected around September 16, 2026 — and its Electronically Signed Data Construct model is the same shape protocol/SPEC.md §3–5 already implements: a signed record a verifier checks independently, not a database entry it has to trust.</p><h2>Why AuthiChain</h2><ul><li>EN 18246 exists to standardize signed, tamper-evident passport records specifically to reduce product fraud and counterfeiting — the same problem this protocol’s Ed25519 signing and anchoring already address</li><li>protocol/SPEC.md §3.2 and §5 already require JCS-canonicalized signing and reject any record whose signature fails to verify — the verification mechanic EN 18246 is standardizing, not a novel one built for this page</li><li>EN 18246 was still finalizing as of this writing, so a formal conformance claim against its published text is not yet possible, the same caveat that applies to the rest of the CEN-CENELEC DPP series</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is EN 18246 published yet?</h3><p>Not fully as of this writing — ratification was scheduled for 17 August 2026 with the definitive text expected around 16 September 2026, so it was finalizing rather than final.</p><h3>Does AuthiChain already meet EN 18246?</h3><p>The building blocks match — a signed, independently verifiable record over a defined construct — but a formal conformance claim isn’t possible until the published standard’s specific requirements are out and testable against.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU DPP Data Authentication Integrity Standard En 18246",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "EN 18246, the CEN standard covering Digital Product Passport data authentication, reliability and integrity, was on track for ratification in August 2026 with a definitive text expected around September 16, 2026 — and its Electronically Signed Data Construct model is the same shape protocol/SPEC.md §3–5 already implements: a signed record a verifier checks independently, not a database entry it has to trust.",
+          "url": "https://authichain.com/p/eu-dpp-data-authentication-integrity-standard-en-18246"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU DPP Data Authentication Integrity Standard En 18246",
+              "item": "https://authichain.com/p/eu-dpp-data-authentication-integrity-standard-en-18246"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is EN 18246 published yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not fully as of this writing — ratification was scheduled for 17 August 2026 with the definitive text expected around 16 September 2026, so it was finalizing rather than final."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain already meet EN 18246?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The building blocks match — a signed, independently verifiable record over a defined construct — but a formal conformance claim isn’t possible until the published standard’s specific requirements are out and testable against."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "france-agec-digital-product-passport-overlap",
+    "keyword": "france agec digital product passport overlap",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "France AGEC Digital Product Passport Overlap | AuthiChain",
+    "metaDescription": "France’s AGEC law already requires manufacturers to report a repairability index and end-of-life data across 19 product categories — several of the same.",
+    "h1": "France AGEC Digital Product Passport Overlap",
+    "bodyHtml": "<p>France’s AGEC law already requires manufacturers to report a repairability index and end-of-life data across 19 product categories — several of the same fields the EU’s own Digital Product Passport will require once each category’s ESPR delegated act lands, so a signed record built for AGEC today does not get thrown away when the DPP deadline arrives.</p><h2>Why AuthiChain</h2><ul><li>AGEC’s repairability index and extended-producer-responsibility reporting overlap directly with several mandatory ESPR DPP fields, so a W3C Verifiable Credential built for AGEC compliance extends rather than gets replaced when a category’s delegated act adopts</li><li>AGEC has applied in stages since February 2020 across 19 EPR product streams; ESPR’s DPP requirement is newer and narrower, reaching textiles from 2027 and furniture from 2028 on the current ESPR Working Plan</li><li>AGEC data alone does not satisfy ESPR: each category’s delegated act sets additional required fields beyond what AGEC mandates, so AGEC compliance is a floor, not the finish line</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does complying with AGEC mean we already meet EU DPP requirements?</h3><p>No — AGEC’s repairability and EPR data overlaps with several DPP fields, but each ESPR delegated act requires additional data per category. AGEC compliance is a starting point, not full DPP compliance.</p><h3>Which AGEC data carries over into a DPP record?</h3><p>Repairability index scores and end-of-life/EPR stream data map most directly onto DPP fields; the exact required field set is still set separately by each category’s ESPR delegated act.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — France AGEC Digital Product Passport Overlap",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "France’s AGEC law already requires manufacturers to report a repairability index and end-of-life data across 19 product categories — several of the same fields the EU’s own Digital Product Passport will require once each category’s ESPR delegated act lands, so a signed record built for AGEC today does not get thrown away when the DPP deadline arrives.",
+          "url": "https://authichain.com/p/france-agec-digital-product-passport-overlap"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "France AGEC Digital Product Passport Overlap",
+              "item": "https://authichain.com/p/france-agec-digital-product-passport-overlap"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does complying with AGEC mean we already meet EU DPP requirements?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — AGEC’s repairability and EPR data overlaps with several DPP fields, but each ESPR delegated act requires additional data per category. AGEC compliance is a starting point, not full DPP compliance."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Which AGEC data carries over into a DPP record?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Repairability index scores and end-of-life/EPR stream data map most directly onto DPP fields; the exact required field set is still set separately by each category’s ESPR delegated act."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "federal-hemp-redefinition-2026-interstate-traceability",
+    "keyword": "federal hemp redefinition 2026 interstate traceability",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "Federal Hemp Redefinition 2026 Interstate | StrainChain",
+    "metaDescription": "The Continuing Appropriations and Extensions Act, 2026 narrows the federal definition of hemp starting in November 2026, closing the loophole that let.",
+    "h1": "Federal Hemp Redefinition 2026 Interstate Traceability",
+    "bodyHtml": "<p>The Continuing Appropriations and Extensions Act, 2026 narrows the federal definition of hemp starting in November 2026, closing the loophole that let delta-8 and other hemp-derived intoxicants ship across state lines with no cannabis-program oversight — the lab result and chain-of-custody record a buyer or carrier can check is what shows which side of that line a shipment landed on.</p><h2>Why StrainChain</h2><ul><li>The 2026 CAEA’s narrower hemp definition takes effect in November 2026: a product legally sold as hemp today can fall outside that definition afterward with no change to the product itself, only to the law around it</li><li>A signed lab certificate and chain-of-custody record tied to a specific batch answers the compliance question a buyer, retailer, or carrier actually needs at the point of sale or shipment — not a brand’s blanket claim that its whole product line is compliant</li><li>HR 7212, introduced January 22, 2026, proposes a separate federal regulatory framework for cannabinoid hemp products; it has not been enacted, and the November 2026 redefinition applies regardless of whether it eventually passes</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $199/mo.</p><h2>FAQ</h2><h3>Does the 2026 hemp redefinition ban all hemp products?</h3><p>No — it narrows which products qualify as federally lawful hemp, primarily affecting THC-containing hemp derivatives like delta-8 and THCA that exploited the prior definition. It takes effect in November 2026.</p><h3>Does a lab certificate alone prove a shipment is compliant after the redefinition?</h3><p>A verified lab result shows what was in the product at the time of testing. Whether that specific formulation and concentration falls inside the new federal hemp definition is a legal determination the buyer or carrier still has to make from that data.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "StrainChain — Federal Hemp Redefinition 2026 Interstate Traceability",
+          "provider": {
+            "@type": "Organization",
+            "name": "StrainChain",
+            "url": "https://strainchain.io"
+          },
+          "description": "The Continuing Appropriations and Extensions Act, 2026 narrows the federal definition of hemp starting in November 2026, closing the loophole that let delta-8 and other hemp-derived intoxicants ship across state lines with no cannabis-program oversight — the lab result and chain-of-custody record a buyer or carrier can check is what shows which side of that line a shipment landed on.",
+          "url": "https://strainchain.io/p/federal-hemp-redefinition-2026-interstate-traceability"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "StrainChain",
+              "item": "https://strainchain.io"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Federal Hemp Redefinition 2026 Interstate Traceability",
+              "item": "https://strainchain.io/p/federal-hemp-redefinition-2026-interstate-traceability"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the 2026 hemp redefinition ban all hemp products?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it narrows which products qualify as federally lawful hemp, primarily affecting THC-containing hemp derivatives like delta-8 and THCA that exploited the prior definition. It takes effect in November 2026."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a lab certificate alone prove a shipment is compliant after the redefinition?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A verified lab result shows what was in the product at the time of testing. Whether that specific formulation and concentration falls inside the new federal hemp definition is a legal determination the buyer or carrier still has to make from that data."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dfars-counterfeit-electronic-parts-detection-avoidance",
+    "keyword": "dfars counterfeit electronic parts detection avoidance",
+    "brand": "GovChain",
+    "domain": "govchain.us",
+    "title": "DFARS Counterfeit Electronic Parts Detection | GovChain",
+    "metaDescription": "DFARS 252.246-7007 requires covered DoD contractors to run a system for detecting and avoiding counterfeit electronic parts, including traceability to the.",
+    "h1": "DFARS Counterfeit Electronic Parts Detection Avoidance",
+    "bodyHtml": "<p>DFARS 252.246-7007 requires covered DoD contractors to run a system for detecting and avoiding counterfeit electronic parts, including traceability to the original manufacturer — and the clause names no specific technology for doing it, only that the system has to work, which is why the record it points to has to be checkable by an auditor who wasn’t in the room when the part was made.</p><h2>Why GovChain</h2><ul><li>DFARS 252.246-7007, part of the DoD’s 2014 counterfeit-detection rule under DFARS 246.870, requires traceability to the original manufacturer — a signed, per-part provenance record is one way to make that traceability checkable, not a format the clause itself defines</li><li>A GovChain record ties a part’s provenance to an Ed25519 signature an auditor verifies independently of the contractor’s own database — the same “don’t ask us, check it yourself” property a counterfeit-detection audit is built to test</li><li>The clause applies to covered contractors and subcontractors handling electronic parts; it does not mandate a specific record format, so a documented, tamper-evident chain of custody is evidence toward compliance, not a checkbox the clause defines by itself</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Does DFARS 252.246-7007 require blockchain-based tracking?</h3><p>No — it requires a system for detecting and avoiding counterfeit electronic parts, including traceability to the original manufacturer. It names no specific technology; a tamper-evident record is one way to satisfy that traceability requirement.</p><h3>Who has to comply with DFARS 252.246-7007?</h3><p>Covered DoD contractors and subcontractors handling electronic parts, under the counterfeit-detection-and-avoidance system requirements DFARS 246.870 and 252.246-7007 established.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "GovChain — DFARS Counterfeit Electronic Parts Detection Avoidance",
+          "provider": {
+            "@type": "Organization",
+            "name": "GovChain",
+            "url": "https://govchain.us"
+          },
+          "description": "DFARS 252.246-7007 requires covered DoD contractors to run a system for detecting and avoiding counterfeit electronic parts, including traceability to the original manufacturer — and the clause names no specific technology for doing it, only that the system has to work, which is why the record it points to has to be checkable by an auditor who wasn’t in the room when the part was made.",
+          "url": "https://govchain.us/p/dfars-counterfeit-electronic-parts-detection-avoidance"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "GovChain",
+              "item": "https://govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DFARS Counterfeit Electronic Parts Detection Avoidance",
+              "item": "https://govchain.us/p/dfars-counterfeit-electronic-parts-detection-avoidance"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does DFARS 252.246-7007 require blockchain-based tracking?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it requires a system for detecting and avoiding counterfeit electronic parts, including traceability to the original manufacturer. It names no specific technology; a tamper-evident record is one way to satisfy that traceability requirement."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who has to comply with DFARS 252.246-7007?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Covered DoD contractors and subcontractors handling electronic parts, under the counterfeit-detection-and-avoidance system requirements DFARS 246.870 and 252.246-7007 established."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
