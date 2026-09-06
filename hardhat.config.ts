@@ -1,4 +1,5 @@
-import "@nomicfoundation/hardhat-ethers";
+import hardhatEthers from "@nomicfoundation/hardhat-ethers";
+import hardhatNodeTestRunner from "@nomicfoundation/hardhat-node-test-runner";
 import type { HardhatUserConfig } from "hardhat/config";
 
 /**
@@ -19,6 +20,7 @@ const accounts = process.env.MINTER_PRIVATE_KEY
     : [];
 
 const config: HardhatUserConfig = {
+  plugins: [hardhatEthers, hardhatNodeTestRunner],
   solidity: {
     version: "0.8.19",
     settings: {
@@ -32,23 +34,27 @@ const config: HardhatUserConfig = {
     artifacts: "./artifacts",
   },
   networks: {
-    hardhat: {},
+    hardhat: { type: "edr-simulated" },
     amoy: {
+      type: "http",
       url: process.env.POLYGON_AMOY_RPC_URL || "https://rpc-amoy.polygon.technology",
       accounts,
       chainId: 80002,
     },
     polygon: {
+      type: "http",
       url: process.env.NFT_RPC_URL || process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
       accounts,
       chainId: 137,
     },
     base: {
+      type: "http",
       url: process.env.BASE_RPC_URL || "https://mainnet.base.org",
       accounts,
       chainId: 8453,
     },
     "base-sepolia": {
+      type: "http",
       url: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
       accounts,
       chainId: 84532,
