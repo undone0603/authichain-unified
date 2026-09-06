@@ -6723,5 +6723,323 @@
         }
       ]
     }
+  },
+  {
+    "slug": "california-sb-707-textile-epr-traceability",
+    "keyword": "california sb 707 textile epr traceability",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "California SB 707 Textile EPR Traceability | AuthiChain",
+    "metaDescription": "California’s SB 707 requires every apparel and textile producer selling into the state to join the state’s approved Producer Responsibility Organization by.",
+    "h1": "California SB 707 Textile EPR Traceability",
+    "bodyHtml": "<p>California’s SB 707 requires every apparel and textile producer selling into the state to join the state’s approved Producer Responsibility Organization by July 1, 2026 — the PRO then collects fiber-composition and sales-volume data per producer, which only exists if a company can trace it batch by batch rather than estimate it after the fact.</p><h2>Why AuthiChain</h2><ul><li>Landbell USA, selected by CalRecycle on February 27, 2026, is the approved PRO producers must join ahead of fiber-composition and sales-volume reporting</li><li>A signed, per-batch record gives a producer checkable fiber-composition evidence instead of a spreadsheet reconciled the week a report is due</li><li>Non-compliance carries penalties up to $10,000 per day, or $50,000 per day for a knowing violation, once CalRecycle enforcement begins</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>What does SB 707 actually require by July 1, 2026?</h3><p>Every covered producer selling apparel or textiles into California must join Landbell USA, the state’s approved Producer Responsibility Organization, ahead of the fiber-composition and sales-volume reporting the program requires.</p><h3>Does AuthiChain file the PRO report for us?</h3><p>No — reporting goes through Landbell USA under CalRecycle’s program. A signed, per-batch provenance record gives a producer accurate fiber-composition data to report from; it is not a filing service.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — California SB 707 Textile EPR Traceability",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "California’s SB 707 requires every apparel and textile producer selling into the state to join the state’s approved Producer Responsibility Organization by July 1, 2026 — the PRO then collects fiber-composition and sales-volume data per producer, which only exists if a company can trace it batch by batch rather than estimate it after the fact.",
+          "url": "https://authichain.com/p/california-sb-707-textile-epr-traceability"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "California SB 707 Textile EPR Traceability",
+              "item": "https://authichain.com/p/california-sb-707-textile-epr-traceability"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What does SB 707 actually require by July 1, 2026?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Every covered producer selling apparel or textiles into California must join Landbell USA, the state’s approved Producer Responsibility Organization, ahead of the fiber-composition and sales-volume reporting the program requires."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does AuthiChain file the PRO report for us?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — reporting goes through Landbell USA under CalRecycle’s program. A signed, per-batch provenance record gives a producer accurate fiber-composition data to report from; it is not a filing service."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "kimberley-process-diamond-certification-blockchain-2026",
+    "keyword": "kimberley process diamond certification blockchain 2026",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Kimberley Process Diamond Certification | AuthiChain",
+    "metaDescription": "India’s 2026 chairship of the Kimberley Process has put blockchain-based, tamper-proof rough-diamond certificates on the reform agenda for the scheme’s 60.",
+    "h1": "Kimberley Process Diamond Certification Blockchain 2026",
+    "bodyHtml": "<p>India’s 2026 chairship of the Kimberley Process has put blockchain-based, tamper-proof rough-diamond certificates on the reform agenda for the scheme’s 60 participants — an aspiration not yet adopted, and a narrower problem AuthiChain already solves: proving one specific polished stone is the one described in its certificate.</p><h2>Why AuthiChain</h2><ul><li>The Kimberley Process certifies rough-diamond shipments at the border; it says nothing about which specific polished stone a consumer holds years later — a signed per-stone record closes that separate gap</li><li>A record signed at cutting and polishing ties a stone’s grading report and provenance to an Ed25519 signature a jeweler or buyer checks without contacting the original miner or KP participant</li><li>Blockchain-based KP certification is a 2026 chairship priority, not a shipped system — the 60 participants have not adopted a common ledger, so a stone-level record built today does not wait on that reform to land</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the Kimberley Process already use blockchain?</h3><p>Not as a scheme-wide requirement. India’s 2026 chairship has put blockchain-based digital certificates on the reform agenda; the 60 participants have not adopted one, and today’s KP certificates remain a shipment-level, largely paper-based system.</p><h3>What’s the difference between a KP certificate and a per-stone provenance record?</h3><p>A KP certificate accompanies a shipment of rough diamonds across a border. A signed provenance record ties one cut and polished stone to its grading report and chain of custody — a claim a buyer can check years after the shipment it came from has cleared customs.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — Kimberley Process Diamond Certification Blockchain 2026",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "India’s 2026 chairship of the Kimberley Process has put blockchain-based, tamper-proof rough-diamond certificates on the reform agenda for the scheme’s 60 participants — an aspiration not yet adopted, and a narrower problem AuthiChain already solves: proving one specific polished stone is the one described in its certificate.",
+          "url": "https://authichain.com/p/kimberley-process-diamond-certification-blockchain-2026"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Kimberley Process Diamond Certification Blockchain 2026",
+              "item": "https://authichain.com/p/kimberley-process-diamond-certification-blockchain-2026"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the Kimberley Process already use blockchain?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not as a scheme-wide requirement. India’s 2026 chairship has put blockchain-based digital certificates on the reform agenda; the 60 participants have not adopted one, and today’s KP certificates remain a shipment-level, largely paper-based system."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What’s the difference between a KP certificate and a per-stone provenance record?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A KP certificate accompanies a shipment of rough diamonds across a border. A signed provenance record ties one cut and polished stone to its grading report and chain of custody — a claim a buyer can check years after the shipment it came from has cleared customs."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "usda-product-of-usa-label-traceability-documentation",
+    "keyword": "usda product of usa label traceability documentation",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "USDA Product Of USA Label Traceability | AuthiChain",
+    "metaDescription": "USDA’s “Product of USA” and “Made in the USA” labels have required proof since January 1, 2026 that an animal was born, raised, slaughtered, and processed.",
+    "h1": "USDA Product Of USA Label Traceability Documentation",
+    "bodyHtml": "<p>USDA’s “Product of USA” and “Made in the USA” labels have required proof since January 1, 2026 that an animal was born, raised, slaughtered, and processed entirely in the United States — and FSIS expects an establishment to produce that documentation within 24 hours of a request, not reconstruct it after the fact.</p><h2>Why AuthiChain</h2><ul><li>All four stages — born, raised, slaughtered, processed — must be domestic; the label is not available for meeting three out of four</li><li>FSIS verification checks written records against the claim: descriptions of origin controls, traceability and segregation records, and signed statements, not the label text itself</li><li>A signed, per-batch record tied to each production stage is documentation a plant can hand over inside FSIS’s 24-hour window, not a claim assembled from memory when the inspector asks</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does this apply to all USDA-regulated meat and poultry?</h3><p>It applies to any FSIS-regulated product carrying a “Product of USA” or “Made in the USA” claim; verification of origin claims took effect January 1, 2026, and establishments not making the claim are unaffected.</p><h3>What happens if we can’t produce documentation fast enough?</h3><p>FSIS can pursue the claim as false or misleading labeling. The rule sets no grace period for gathering records after being asked — the documentation is expected to already exist per batch.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          "name": "AuthiChain — USDA Product Of USA Label Traceability Documentation",
+          "brand": {
+            "@type": "Brand",
+            "name": "AuthiChain"
+          },
+          "description": "USDA’s “Product of USA” and “Made in the USA” labels have required proof since January 1, 2026 that an animal was born, raised, slaughtered, and processed entirely in the United States — and FSIS expects an establishment to produce that documentation within 24 hours of a request, not reconstruct it after the fact.",
+          "url": "https://authichain.com/p/usda-product-of-usa-label-traceability-documentation"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "USDA Product Of USA Label Traceability Documentation",
+              "item": "https://authichain.com/p/usda-product-of-usa-label-traceability-documentation"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does this apply to all USDA-regulated meat and poultry?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It applies to any FSIS-regulated product carrying a “Product of USA” or “Made in the USA” claim; verification of origin claims took effect January 1, 2026, and establishments not making the claim are unaffected."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What happens if we can’t produce documentation fast enough?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "FSIS can pursue the claim as false or misleading labeling. The rule sets no grace period for gathering records after being asked — the documentation is expected to already exist per batch."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-iron-steel-digital-product-passport-delegated-act-date",
+    "keyword": "eu iron steel digital product passport delegated act date",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Iron Steel Digital Product Passport | AuthiChain",
+    "metaDescription": "The European Commission closed its consultation on the iron and steel Digital Product Passport delegated act on August 12, 2026, targeting adoption in the.",
+    "h1": "EU Iron Steel Digital Product Passport Delegated Act Date",
+    "bodyHtml": "<p>The European Commission closed its consultation on the iron and steel Digital Product Passport delegated act on August 12, 2026, targeting adoption in the fourth quarter of 2026 — but ESPR’s own 18-month minimum runway after adoption, plus a roughly two-month Parliament and Council scrutiny period, puts the earliest realistic compliance date around 2028, not 2026.</p><h2>Why AuthiChain</h2><ul><li>Iron and steel leads the ESPR Working Plan’s delegated-act sequence, ahead of textiles (2027) and furniture (2028), but “first scheduled” and “first mandatory” are different dates, separated by that same statutory runway</li><li>The passport is built on mill test certificates the industry already issues — a signed W3C Verifiable Credential wraps that existing document rather than asking a mill to originate new data</li><li>Q4 2026 is the Commission’s indicative adoption target, not a locked date; ESPR delegated acts have slipped before, so a mill structuring the record now is not racing a deadline that could still move again</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>When must iron and steel producers have a Digital Product Passport?</h3><p>No date is fixed yet. The Commission targets adoption of the delegated act in Q4 2026; ESPR Article 4(4) then requires at least 18 months’ runway before application, plus a roughly two-month scrutiny period, putting realistic compliance around 2028.</p><h3>Can we wait until the delegated act adopts to start?</h3><p>The record format is a W3C Verifiable Credential wrapping data mills already produce — mill test certificates, grade, recycled content. Structuring that now costs nothing extra when the act’s specific required fields land.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Iron Steel Digital Product Passport Delegated Act Date",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The European Commission closed its consultation on the iron and steel Digital Product Passport delegated act on August 12, 2026, targeting adoption in the fourth quarter of 2026 — but ESPR’s own 18-month minimum runway after adoption, plus a roughly two-month Parliament and Council scrutiny period, puts the earliest realistic compliance date around 2028, not 2026.",
+          "url": "https://authichain.com/p/eu-iron-steel-digital-product-passport-delegated-act-date"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Iron Steel Digital Product Passport Delegated Act Date",
+              "item": "https://authichain.com/p/eu-iron-steel-digital-product-passport-delegated-act-date"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When must iron and steel producers have a Digital Product Passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No date is fixed yet. The Commission targets adoption of the delegated act in Q4 2026; ESPR Article 4(4) then requires at least 18 months’ runway before application, plus a roughly two-month scrutiny period, putting realistic compliance around 2028."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can we wait until the delegated act adopts to start?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The record format is a W3C Verifiable Credential wrapping data mills already produce — mill test certificates, grade, recycled content. Structuring that now costs nothing extra when the act’s specific required fields land."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "weee-directive-revision-2026-electronics-traceability",
+    "keyword": "weee directive revision 2026 electronics traceability",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "WEEE Directive Revision 2026 Electronics | AuthiChain",
+    "metaDescription": "The European Commission is expected to publish a formal proposal to revise the WEEE Directive in the third quarter of 2026, running alongside — not inside —.",
+    "h1": "WEEE Directive Revision 2026 Electronics Traceability",
+    "bodyHtml": "<p>The European Commission is expected to publish a formal proposal to revise the WEEE Directive in the third quarter of 2026, running alongside — not inside — the separate ESPR electronics Digital Product Passport delegated act, and the two get treated as one project despite sitting on different legal tracks with different timelines.</p><h2>Why AuthiChain</h2><ul><li>A WEEE revision proposal in Q3 2026 still needs Parliament and Council agreement; EU legislation at this scale has typically taken a year or more to adopt after proposal, with phased compliance windows following after that</li><li>A signed W3C Verifiable Credential built for the ESPR electronics passport already carries the material-composition and disassembly data a WEEE recycler needs — a revised WEEE Directive is a reason to extend that record, not build a second one</li><li>Nothing in a WEEE revision proposal requires blockchain or cryptographic signing; anchoring a record for tamper-evidence is a choice a manufacturer makes on top of whatever the directive itself ends up requiring</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the WEEE Directive revision adopted yet?</h3><p>No — a formal legislative proposal is expected in Q3 2026. Adoption and any compliance dates follow the ordinary EU legislative process from there, typically over a year or more.</p><h3>Does the ESPR electronics Digital Product Passport satisfy WEEE requirements?</h3><p>They are related but separate: ESPR’s electronics DPP delegated act, targeted around 2029 on the current Working Plan, and the WEEE revision are different legal instruments. A passport record built for one can carry data useful to the other, but neither substitutes for the other’s specific legal requirements.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — WEEE Directive Revision 2026 Electronics Traceability",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The European Commission is expected to publish a formal proposal to revise the WEEE Directive in the third quarter of 2026, running alongside — not inside — the separate ESPR electronics Digital Product Passport delegated act, and the two get treated as one project despite sitting on different legal tracks with different timelines.",
+          "url": "https://authichain.com/p/weee-directive-revision-2026-electronics-traceability"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "WEEE Directive Revision 2026 Electronics Traceability",
+              "item": "https://authichain.com/p/weee-directive-revision-2026-electronics-traceability"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the WEEE Directive revision adopted yet?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — a formal legislative proposal is expected in Q3 2026. Adoption and any compliance dates follow the ordinary EU legislative process from there, typically over a year or more."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does the ESPR electronics Digital Product Passport satisfy WEEE requirements?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "They are related but separate: ESPR’s electronics DPP delegated act, targeted around 2029 on the current Working Plan, and the WEEE revision are different legal instruments. A passport record built for one can carry data useful to the other, but neither substitutes for the other’s specific legal requirements."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
