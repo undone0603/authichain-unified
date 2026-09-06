@@ -8,9 +8,9 @@ on:
         required: false
         default: "true"
       chain:
-        description: Chain key (base-sepolia | base | polygon)
+        description: Chain key (base | base-sepolia | polygon)
         required: false
-        default: "base-sepolia"
+        default: "base"
   workflow_call:
     inputs:
       dry_run:
@@ -20,7 +20,7 @@ on:
       chain:
         required: false
         type: string
-        default: "base-sepolia"
+        default: "base"
     secrets:
       ALCHEMY_API_KEY:
         required: false
@@ -53,7 +53,7 @@ jobs:
         continue-on-error: true
         run: pnpm exec tsx scripts/mint-govchain-nfts.ts
         env:
-          CHAIN: ${{ inputs.chain || 'base-sepolia' }}
+          CHAIN: ${{ inputs.chain || 'base' }}
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
           WALLET_PRIVATE_KEY: ${{ secrets.WALLET_PRIVATE_KEY || secrets.POLYGON_PRIVATE_KEY }}
           GOVCHAIN_NFT_CONTRACT: ${{ secrets.GOVCHAIN_NFT_CONTRACT }}

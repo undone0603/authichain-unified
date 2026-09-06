@@ -40,13 +40,32 @@ jobs:
       - name: Lint
         run: pnpm lint:ci
 
+      - name: Install Playwright browsers
+        run: pnpm --filter agent-browser exec playwright install --with-deps chromium
+
+      - name: Set up Python (AgentZ)
+        if: hashFiles('requirements-agentz.txt') != ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install AgentZ Python dependencies
+        if: hashFiles('requirements-agentz.txt') != ''
+        run: |
+          python -m venv .venv
+          ./.venv/bin/pip install --upgrade pip
+          ./.venv/bin/pip install -r requirements-agentz.txt
+
       - name: Run tests
         run: |
           pnpm -w test
-          # Assuming pytest is available in the venv
-          if [ -f "requirements-agentz.txt" ]; then
+          if [ -f "requirements-agentz.txt" ] && [ -f ".venv/bin/activate" ]; then
             source .venv/bin/activate
-            pytest --junitxml=test-results/pytest.xml || true
+            # Non-blocking (|| true): reported via the JUnit step below, not gated.
+            # Scoped to agentz/tests -- the only real pytest suite; the test_*.py
+            # files under ops/scripts/ are scripts and collect zero tests.
+            python -m pytest agentz/tests --junitxml=test-results/pytest.xml || true
           fi
 
       - name: Publish Test Report

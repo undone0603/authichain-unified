@@ -1,5 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+  - workers/*
+  - worker
+  - mcp
 allowBuilds:
   '@clerk/shared': true
+  agent-browser: false
   bufferutil: true
   esbuild: true
   keccak: true

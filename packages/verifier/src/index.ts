@@ -59,7 +59,7 @@ export function canonicalize(value: Json): string {
 }
 
 // Utility functions for base64url encoding/decoding using standard APIs
-function b64url(value: Uint8Array | string): string {
+export function b64url(value: Uint8Array | string): string {
   const bytes =
     typeof value === "string" ? new TextEncoder().encode(value) : value;
   return btoa(String.fromCharCode(...bytes))
@@ -84,7 +84,7 @@ export function canonicalizeGtin(gtin: string): string {
   if (!/^\d{8,14}$/.test(gtin)) {
     throw new Error("GTIN must be 8-14 digits");
   }
-  return gtin.padStart(14, '0');
+  return gtin.padStart(14, "0");
 }
 
 export function validateAttestation(input: unknown): AuthiChainAttestationV01 {
@@ -202,7 +202,7 @@ export async function signAttestation(
 ): Promise<string> {
   // Enforce canonical GTIN-14
   if (input.subject.gtin) {
-      input.subject.gtin = canonicalizeGtin(input.subject.gtin);
+    input.subject.gtin = canonicalizeGtin(input.subject.gtin);
   }
   const attestation = validateAttestation(input);
   const protectedHeader = {
@@ -256,11 +256,13 @@ export function parseJws(jws: string) {
   };
 }
 
-export function toW3cVerifiableCredential(attestation: AuthiChainAttestationV01): Record<string, unknown> {
+export function toW3cVerifiableCredential(
+  attestation: AuthiChainAttestationV01
+): Record<string, unknown> {
   return {
     "@context": [
       "https://www.w3.org/ns/credentials/v2",
-      "https://w3id.org/security/suites/jws-2020/v1"
+      "https://w3id.org/security/suites/jws-2020/v1",
     ],
     id: `urn:uuid:${attestation.attestation_id}`,
     type: ["VerifiableCredential", "AuthiChainAttestation"],
@@ -280,9 +282,9 @@ export function toW3cVerifiableCredential(attestation: AuthiChainAttestationV01)
       statusPurpose: attestation.status,
     },
     metadata: {
-        decision: attestation.decision,
-        evidence: attestation.evidence,
-        version: attestation.version
-    }
+      decision: attestation.decision,
+      evidence: attestation.evidence,
+      version: attestation.version,
+    },
   };
 }

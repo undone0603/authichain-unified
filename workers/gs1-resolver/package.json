@@ -6,6 +6,6 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "schema": "wrangler d1 execute authichain-provenance --file=src/schema.sql",
-    "test": "node --experimental-strip-types src/gs1.test.ts && node --experimental-strip-types src/worker.test.ts"
+    "test": "node --experimental-strip-types src/gs1.test.ts && node --experimental-strip-types src/clone.test.ts"
   }
 }

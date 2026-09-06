@@ -2,12 +2,12 @@ import * as jose from "jose";
 import { Attestation, Identity, Evidence } from "./types";
 
 export class AttestationEngine {
-  private privateKey: jose.KeyLike;
-  private publicKey: jose.KeyLike;
+  private privateKeyPromise: Promise<jose.CryptoKey>;
+  private publicKeyPromise: Promise<jose.CryptoKey>;
 
   constructor(privateKeyPem: string, publicKeyPem: string) {
-    this.privateKey = jose.importPKCS8(privateKeyPem, "EdDSA");
-    this.publicKey = jose.importSPKI(publicKeyPem, "EdDSA");
+    this.privateKeyPromise = jose.importPKCS8(privateKeyPem, "EdDSA");
+    this.publicKeyPromise = jose.importSPKI(publicKeyPem, "EdDSA");
   }
 
   async createAttestation(
@@ -26,12 +26,13 @@ export class AttestationEngine {
       verifiedAt: new Date().toISOString(),
     };
 
+    const privateKey = await this.privateKeyPromise;
     const signedJwt = await new jose.SignJWT(payload)
       .setProtectedHeader({ alg: "EdDSA", kid: "authichain-core-01" })
       .setIssuedAt()
       .setIssuer("Authichain-Core")
       .setSubject(objectId)
-      .sign(this.privateKey);
+      .sign(privateKey);
 
     return {
       ...payload,
@@ -47,7 +48,8 @@ export class AttestationEngine {
     jwt: string
   ): Promise<{ verified: boolean; payload?: any; error?: string }> {
     try {
-      const { payload } = await jose.jwtVerify(jwt, this.publicKey, {
+      const publicKey = await this.publicKeyPromise;
+      const { payload } = await jose.jwtVerify(jwt, publicKey, {
         issuer: "Authichain-Core",
       });
       return { verified: true, payload };

@@ -5,8 +5,8 @@ import { createClient } from '@supabase/supabase-js';
 // Artistic backgrounds come from the qron-image-gen worker (Cloudflare Workers AI).
 // The previous implementation called HuggingFace's hf-inference ControlNet endpoint,
 // which no longer hosts the model (410 deprecated).
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-role-key";
 const supabaseAdmin = createClient(supabaseUrl, serviceKey);
 
 const QRON_WORKER_URL =

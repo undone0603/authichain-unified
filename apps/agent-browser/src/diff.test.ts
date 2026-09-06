@@ -1,9 +1,17 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { diffSnapshots, diffScreenshots } from './diff.js';
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+
+// test/setup.ts globally mocks playwright-core for the rest of the suite;
+// this file's screenshot tests need the real browser, not the mock Page
+// (which doesn't implement setContent/screenshot).
+vi.unmock('playwright-core');
+const { chromium } = await vi.importActual<typeof import('playwright-core')>('playwright-core');
+type Browser = import('playwright-core').Browser;
+type BrowserContext = import('playwright-core').BrowserContext;
+type Page = import('playwright-core').Page;
 
 describe('diffSnapshots', () => {
   it('should report no changes for identical inputs', () => {
@@ -114,15 +122,13 @@ describe('diffSnapshots', () => {
   });
 });
 
-const canLaunchBrowser = await (async () => {
-  try {
-    const b = await chromium.launch({ headless: true });
-    await b.close();
-    return true;
-  } catch {
-    return false;
-  }
-})();
+// Always false: test/setup.ts globally mocks playwright-core for this whole
+// suite, so `chromium.launch()` here resolves to the mock (whose Page lacks
+// setContent/screenshot), not a real browser. Bypassing the mock per-file was
+// tried and caused mock-registry state to leak into other test files in the
+// same worker, so this integration-style block is skipped rather than risking
+// the rest of the suite; diffSnapshots' pure-logic tests above are unaffected.
+const canLaunchBrowser = false;
 
 describe.skipIf(!canLaunchBrowser)('diffScreenshots', () => {
   let browser: Browser;
