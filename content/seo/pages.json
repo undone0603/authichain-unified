@@ -7041,5 +7041,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "w3c-verifiable-credential-barcodes-spec",
+    "keyword": "w3c verifiable credential barcodes spec",
+    "brand": "QRON",
+    "domain": "qron.space",
+    "title": "W3C Verifiable Credential Barcodes Spec | QRON",
+    "metaDescription": "W3C’s Verifiable Credentials Working Group advanced Verifiable Credential Barcodes to a Working Draft on the Recommendation track in 2026 — a specification.",
+    "h1": "W3C Verifiable Credential Barcodes Spec",
+    "bodyHtml": "<p>W3C’s Verifiable Credentials Working Group advanced Verifiable Credential Barcodes to a Working Draft on the Recommendation track in 2026 — a specification for securing an optical code with a cryptographic credential using CBOR-LD, compact enough to fit under 150 bytes.</p><h2>Why QRON</h2><ul><li>CBOR-LD compression targets under 150 bytes, tight enough for a signed credential to share space with existing barcode formats like PDF417 on driver’s licenses and travel documents</li><li>The spec’s named use cases are identity documents; a QRON record applies the same idea — an optical code carrying a credential a verifier checks cryptographically — to item identity instead of a person’s</li><li>Still a Working Draft, not a finished Recommendation: the wire format can change before it stabilizes, which is why QRON signs against VC Data Model 2.0, the base spec that is already final</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $29/mo.</p><h2>FAQ</h2><h3>Is this the same thing QRON already does?</h3><p>The core idea matches — an optical code carrying a cryptographically verifiable credential — but VC Barcodes targets identity documents specifically and has not reached Recommendation status. QRON’s item-provenance records already run on the finished VC Data Model 2.0 and Ed25519 signing.</p><h3>Does this change how QRON’s QR codes work today?</h3><p>Not yet. A Working Draft is still subject to change before it becomes a Recommendation; QRON tracks the spec but signs records against the stable base it already implements.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "QRON — W3C Verifiable Credential Barcodes Spec",
+          "provider": {
+            "@type": "Organization",
+            "name": "QRON",
+            "url": "https://qron.space"
+          },
+          "description": "W3C’s Verifiable Credentials Working Group advanced Verifiable Credential Barcodes to a Working Draft on the Recommendation track in 2026 — a specification for securing an optical code with a cryptographic credential using CBOR-LD, compact enough to fit under 150 bytes.",
+          "url": "https://qron.space/p/w3c-verifiable-credential-barcodes-spec"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "QRON",
+              "item": "https://qron.space"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "W3C Verifiable Credential Barcodes Spec",
+              "item": "https://qron.space/p/w3c-verifiable-credential-barcodes-spec"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is this the same thing QRON already does?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The core idea matches — an optical code carrying a cryptographically verifiable credential — but VC Barcodes targets identity documents specifically and has not reached Recommendation status. QRON’s item-provenance records already run on the finished VC Data Model 2.0 and Ed25519 signing."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does this change how QRON’s QR codes work today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet. A Working Draft is still subject to change before it becomes a Recommendation; QRON tracks the spec but signs records against the stable base it already implements."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "battery-passport-data-access-rights-governance",
+    "keyword": "battery passport data access rights governance",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Battery Passport Data Access Rights Governance | AuthiChain",
+    "metaDescription": "The EU battery passport’s 18 February 2027 deadline is fixed, but which actor can read or write which data field across a battery’s life — manufacturer.",
+    "h1": "Battery Passport Data Access Rights Governance",
+    "bodyHtml": "<p>The EU battery passport’s 18 February 2027 deadline is fixed, but which actor can read or write which data field across a battery’s life — manufacturer, recycler, second-life operator — is still being worked out, and a March 2026 industry roundtable named exactly that as the harder open problem, not the date itself.</p><h2>Why AuthiChain</h2><ul><li>A signed W3C Verifiable Credential separates who issued a claim from who can later read it — access control is a policy layer above the record, not something the signature format decides for you</li><li>Each lifecycle event — manufactured, in service, recycled — can be its own signed record appended to the same battery identifier, so a future access-rights rule does not require re-issuing history already anchored</li><li>The required data fields — carbon footprint, state-of-health, material composition — anchor today independent of the governance question; access-control rules attach to who can query them, not to the record format itself</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Has the EU settled who can update battery passport data after manufacture?</h3><p>Not fully. A March 2026 EU roundtable on the battery passport named converging on who gathers and updates data across reuse, second-life, and recycling stages as the industry’s biggest open question — separate from the fixed 18 February 2027 mandate date.</p><h3>Does an unsettled access-rights model block starting a passport now?</h3><p>No — the required data fields are specified independently of the access-control question. A signed record anchored today does not need reformatting once governance rules for who can update it are finalized.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Battery Passport Data Access Rights Governance",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU battery passport’s 18 February 2027 deadline is fixed, but which actor can read or write which data field across a battery’s life — manufacturer, recycler, second-life operator — is still being worked out, and a March 2026 industry roundtable named exactly that as the harder open problem, not the date itself.",
+          "url": "https://authichain.com/p/battery-passport-data-access-rights-governance"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Battery Passport Data Access Rights Governance",
+              "item": "https://authichain.com/p/battery-passport-data-access-rights-governance"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Has the EU settled who can update battery passport data after manufacture?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not fully. A March 2026 EU roundtable on the battery passport named converging on who gathers and updates data across reuse, second-life, and recycling stages as the industry’s biggest open question — separate from the fixed 18 February 2027 mandate date."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does an unsettled access-rights model block starting a passport now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the required data fields are specified independently of the access-control question. A signed record anchored today does not need reformatting once governance rules for who can update it are finalized."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "dsa-marketplace-seller-verification-vs-product-authentication",
+    "keyword": "dsa marketplace seller verification vs product authentication",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DSA Marketplace Seller Verification Vs Product | AuthiChain",
+    "metaDescription": "The Digital Services Act’s Article 30 “know your business customer” duty requires an online marketplace to verify who a seller is — legal name.",
+    "h1": "DSA Marketplace Seller Verification Vs Product Authentication",
+    "bodyHtml": "<p>The Digital Services Act’s Article 30 “know your business customer” duty requires an online marketplace to verify who a seller is — legal name, trade-register number, a self-certification of product-safety compliance — which answers a different question than whether the specific item a buyer receives is genuine.</p><h2>Why AuthiChain</h2><ul><li>KYBC verifies the trader’s identity and paperwork once, at onboarding; it says nothing about whether the next unit that trader ships is the genuine item or a counterfeit run through a verified account</li><li>A signed, per-item provenance record answers the question KYBC leaves open — the marketplace confirms who the seller claims to be, an Ed25519 signature confirms what the specific item claims to be</li><li>DSA enforcement in 2026 carries fines up to 6% of global annual turnover under Article 74 — real exposure for a marketplace’s own compliance gap, and a separate question from whether a counterfeit slipped past a verified seller</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does DSA seller verification stop counterfeit goods from being listed?</h3><p>It stops an unverified or fraudulent trader from listing at all under Article 30. A verified seller account can still list a counterfeit item — KYBC checks the business, not the goods.</p><h3>Do marketplaces need both DSA compliance and item-level authentication?</h3><p>They answer different liability questions. DSA Article 30 is the marketplace’s own legal obligation to know its traders; item-level verification is what lets a buyer or the marketplace check a specific product, which DSA does not require by itself.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DSA Marketplace Seller Verification Vs Product Authentication",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The Digital Services Act’s Article 30 “know your business customer” duty requires an online marketplace to verify who a seller is — legal name, trade-register number, a self-certification of product-safety compliance — which answers a different question than whether the specific item a buyer receives is genuine.",
+          "url": "https://authichain.com/p/dsa-marketplace-seller-verification-vs-product-authentication"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSA Marketplace Seller Verification Vs Product Authentication",
+              "item": "https://authichain.com/p/dsa-marketplace-seller-verification-vs-product-authentication"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does DSA seller verification stop counterfeit goods from being listed?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It stops an unverified or fraudulent trader from listing at all under Article 30. A verified seller account can still list a counterfeit item — KYBC checks the business, not the goods."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Do marketplaces need both DSA compliance and item-level authentication?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "They answer different liability questions. DSA Article 30 is the marketplace’s own legal obligation to know its traders; item-level verification is what lets a buyer or the marketplace check a specific product, which DSA does not require by itself."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-digital-product-passport-sme-exemption",
+    "keyword": "eu digital product passport sme exemption",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Digital Product Passport SME Exemption | AuthiChain",
+    "metaDescription": "There is no blanket SME exemption from the EU Digital Product Passport — what most delegated acts are expected to include instead is a later applies-from.",
+    "h1": "EU Digital Product Passport SME Exemption",
+    "bodyHtml": "<p>There is no blanket SME exemption from the EU Digital Product Passport — what most delegated acts are expected to include instead is a later applies-from date for small and micro enterprises and a narrower required data set, not an opt-out.</p><h2>Why AuthiChain</h2><ul><li>Each category’s delegated act sets its own SME provisions individually; a furniture-category schedule for small producers says nothing about a battery-category one</li><li>A W3C Verifiable Credential scales down cleanly: a narrower required field set for a small producer is a smaller credentialSubject on the same record structure, not a different format to build twice</li><li>The Apache-2.0 spec means a small manufacturer’s own developer, or any low-cost implementer, can build directly against the public spec instead of being routed through one vendor’s proprietary schema</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Are small businesses exempt from the EU DPP?</h3><p>Not as a blanket rule — support measures and later applies-from dates for SMEs are being built into individual delegated acts, but no category has published a full exemption. Check the specific delegated act for your product category.</p><h3>Does a smaller required data set mean a different passport format?</h3><p>No — the record stays a W3C Verifiable Credential; a narrower SME field set is fewer required properties in credentialSubject, not a separate schema.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Digital Product Passport SME Exemption",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "There is no blanket SME exemption from the EU Digital Product Passport — what most delegated acts are expected to include instead is a later applies-from date for small and micro enterprises and a narrower required data set, not an opt-out.",
+          "url": "https://authichain.com/p/eu-digital-product-passport-sme-exemption"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Digital Product Passport SME Exemption",
+              "item": "https://authichain.com/p/eu-digital-product-passport-sme-exemption"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Are small businesses exempt from the EU DPP?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not as a blanket rule — support measures and later applies-from dates for SMEs are being built into individual delegated acts, but no category has published a full exemption. Check the specific delegated act for your product category."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a smaller required data set mean a different passport format?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the record stays a W3C Verifiable Credential; a narrower SME field set is fewer required properties in credentialSubject, not a separate schema."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eudamed-udi-medical-device-registration-2026",
+    "keyword": "eudamed udi medical device registration 2026",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EUDAMED UDI Medical Device Registration 2026 | AuthiChain",
+    "metaDescription": "EUDAMED’s UDI/Devices module became mandatory on 28 May 2026 for new MDR and IVDR devices, with legacy devices already on the market required to register by.",
+    "h1": "EUDAMED UDI Medical Device Registration 2026",
+    "bodyHtml": "<p>EUDAMED’s UDI/Devices module became mandatory on 28 May 2026 for new MDR and IVDR devices, with legacy devices already on the market required to register by 27 November 2026 — a database lookup that confirms a device’s registration, not whether the specific unit in a clinician’s hand matches what was registered.</p><h2>Why AuthiChain</h2><ul><li>EUDAMED confirms a UDI-DI is registered and who the manufacturer is; it does not check that the physical device carrying that UDI on its label is the genuine article and not a relabeled counterfeit</li><li>A signed, per-unit record layers item-level authenticity on top of UDI registration — the manufacturer that registers a device in EUDAMED can sign the same UDI into a Verifiable Credential a clinician checks offline</li><li>Legacy devices placed on the market before 28 May 2026 get a longer runway, to 27 November 2026 — a later date, not a lower bar; the same registration is still required</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does EUDAMED registration mean a device can’t be counterfeited?</h3><p>No — EUDAMED registers the UDI-DI and manufacturer identity centrally. It has no mechanism to check that a specific physical unit in front of a clinician is the genuine item; that requires checking something on the unit itself, such as a signed record.</p><h3>What’s the deadline difference between new and legacy devices?</h3><p>New MDR/IVDR devices needed EUDAMED registration by 28 May 2026. Devices already placed on the market before that date, including legacy devices under transition-period certificates, have until 27 November 2026.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EUDAMED UDI Medical Device Registration 2026",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "EUDAMED’s UDI/Devices module became mandatory on 28 May 2026 for new MDR and IVDR devices, with legacy devices already on the market required to register by 27 November 2026 — a database lookup that confirms a device’s registration, not whether the specific unit in a clinician’s hand matches what was registered.",
+          "url": "https://authichain.com/p/eudamed-udi-medical-device-registration-2026"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EUDAMED UDI Medical Device Registration 2026",
+              "item": "https://authichain.com/p/eudamed-udi-medical-device-registration-2026"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does EUDAMED registration mean a device can’t be counterfeited?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — EUDAMED registers the UDI-DI and manufacturer identity centrally. It has no mechanism to check that a specific physical unit in front of a clinician is the genuine item; that requires checking something on the unit itself, such as a signed record."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What’s the deadline difference between new and legacy devices?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "New MDR/IVDR devices needed EUDAMED registration by 28 May 2026. Devices already placed on the market before that date, including legacy devices under transition-period certificates, have until 27 November 2026."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
