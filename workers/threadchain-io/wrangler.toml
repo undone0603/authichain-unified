@@ -2,12 +2,15 @@ name = "threadchain-io"
 main = "src/index.ts"
 compatibility_date = "2026-04-01"
 account_id = "4c1869b90f13f86940aa3747839bf420"
-workers_dev = false
-
-[[routes]]
-pattern = "threadchain.io/*"
-zone_name = "threadchain.io"
-
-[[routes]]
-pattern = "www.threadchain.io/*"
-zone_name = "threadchain.io"
+workers_dev = true
+# Custom-domain routes disabled 2026-09-08: the threadchain.io zone does not exist
+# in the Cloudflare account, so wrangler deploy failed with
+# "Could not find zone for threadchain.io". Restore the routes block below once the
+# zone is re-registered:
+# [[routes]]
+# pattern = "threadchain.io/*"
+# zone_name = "threadchain.io"
+#
+# [[routes]]
+# pattern = "www.threadchain.io/*"
+# zone_name = "threadchain.io"
