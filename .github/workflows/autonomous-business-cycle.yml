@@ -1,25 +1,12 @@
 name: Autonomous Business Cycle
 
-# GitHub Actions is the only scheduler for this workflow. It calls the
-# Cloudflare-hosted app's internal cron endpoints with CRON_SECRET and stays
-# disabled on scheduled runs until the repository variable
-# AUTONOMOUS_BUSINESS_CYCLE_ENABLED is set to "true".
 
 on:
-  schedule:
-    - cron: "0 0 * * *" # pipeline
-    - cron: "0 3 * * *" # subscription-health-check
-    - cron: "0 5 * * *" # customer-health-score
-    - cron: "0 6 * * *" # automation/cron
-    - cron: "0 6 * * 1" # competitive-monitor (Mondays)
-    - cron: "0 7 * * *" # govchain
-    - cron: "0 8 * * *" # dunning-escalation
-    - cron: "0 9 * * *" # retention
-    - cron: "0 9 1 * *" # founder-payout (1st of month)
-    - cron: "0 10 * * *" # trial-reminder
-    - cron: "0 11 * * *" # live-systems-check
-    - cron: "0 12 * * *" # token-metrics
-    - cron: "0 13 * * *" # ecosystem-health
+  # Scheduled runs retired 2026-09-08: the Vercel app that hosted the
+  # /api/cron/* business-cycle endpoints was deleted. Scheduling now lives
+  # in Cloudflare Cron Triggers (authichain-autopilot, every 6h).
+  # Re-add schedule triggers here only if/when the cron functions are
+  # ported to Cloudflare Workers and reachable again.
   workflow_dispatch:
     inputs:
       task:

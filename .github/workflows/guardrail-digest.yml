@@ -2,8 +2,8 @@
 name: Guardrail Daily Digest
 
 on:
-  schedule:
-    - cron: "0 13 * * *"
+  # Retired 2026-09-08: app.authichain.com pointed at the deleted Vercel app.
+  # Manual dispatch kept for testing once the endpoint is re-homed.
   workflow_dispatch:
 
 jobs:
