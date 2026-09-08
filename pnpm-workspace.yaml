@@ -22,6 +22,8 @@ minimumReleaseAgeExclude:
 # so unaffected versions (e.g. ws@7.x) are left untouched.
 overrides:
   serialize-javascript: 7.0.3
+  # GHSA: deepmerge-ts prototype pollution (transitive via webdriverio; wdio pins ^7).
+  deepmerge-ts: ^8.0.2
   # GHSA high: form-data CRLF injection in multipart field/filenames.
   'form-data@>=4.0.0 <4.0.6': 4.0.6
   # GHSA high: js-cookie per-instance prototype hijack in assign().
