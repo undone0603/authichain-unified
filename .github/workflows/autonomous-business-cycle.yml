@@ -1,6 +1,5 @@
 name: Autonomous Business Cycle
 
-
 on:
   # Scheduled runs retired 2026-09-08: the Vercel app that hosted the
   # /api/cron/* business-cycle endpoints was deleted. Scheduling now lives
