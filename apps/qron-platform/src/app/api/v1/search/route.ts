@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
   const lowerQ = q.toLowerCase();
 
-  let results: any[] = [];
+  let results: Record<string, unknown>[] = [];
   
   if (!type || type === 'qr_codes' || type === 'all') {
     let qrs = qrCodes.filter(qr =>

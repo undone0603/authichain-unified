@@ -36,8 +36,10 @@ export async function GET(req: NextRequest) {
       .select('badge_id, earned_at')
       .eq('user_id', user.id);
 
-    const earnedIds = new Set((earned || []).map((b: any) => b.badge_id));
-    const earnedMap = Object.fromEntries((earned || []).map((b: any) => [b.badge_id, b.earned_at]));
+    const earnedIds = new Set((earned || []).map((b: { badge_id: string }) => b.badge_id));
+    const earnedMap = Object.fromEntries(
+      (earned || []).map((b: { badge_id: string; earned_at: string }) => [b.badge_id, b.earned_at])
+    );
 
     const badges = BADGE_CATALOG.map(b => ({
       ...b,
@@ -46,8 +48,8 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({ badges, total: BADGE_CATALOG.length, earned_count: earnedIds.size });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
     await supabase.from('user_badges').insert({ user_id: user.id, badge_id, earned_at: new Date().toISOString() });
 
     return NextResponse.json({ success: true, badge, message: `Congratulations! You earned the ${badge.name} badge!` });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

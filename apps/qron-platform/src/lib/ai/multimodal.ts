@@ -1,4 +1,7 @@
-export async function fuseMultimodalData(visionConfidence: number, sensorData: any) {
+export async function fuseMultimodalData(
+  visionConfidence: number,
+  sensorData: { tamperEvidentSealIntact: boolean }
+) {
   console.log("Fusing visual edge data with IoT sensor readings...");
   
   const visionWeight = 0.7;

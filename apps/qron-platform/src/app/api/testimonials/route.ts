@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     const testimonials = (data && data.length > 0) ? data : SEED_TESTIMONIALS.filter(t => !plan || t.plan === plan).slice(0, limit);
 
     return NextResponse.json({ testimonials, count: testimonials.length });
-  } catch (err: any) {
+  } catch (err) {
     return NextResponse.json({ testimonials: SEED_TESTIMONIALS, count: SEED_TESTIMONIALS.length });
   }
 }
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
     return NextResponse.json({ success: true, testimonial: data, message: 'Thank you! Your testimonial is under review.' });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

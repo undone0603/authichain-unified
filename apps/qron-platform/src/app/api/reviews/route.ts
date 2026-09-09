@@ -40,12 +40,12 @@ export async function GET(req: NextRequest) {
       .select('rating, platform')
       .eq('is_published', true);
 
-    const allRatings = (stats || []).map((r: any) => r.rating);
+    const allRatings = (stats || []).map((r: { rating: number }) => r.rating);
     const avgRating = allRatings.length > 0
       ? (allRatings.reduce((a: number, b: number) => a + b, 0) / allRatings.length).toFixed(1)
       : '5.0';
 
-    const platformCounts = (stats || []).reduce((acc: Record<string, number>, r: any) => {
+    const platformCounts = (stats || []).reduce((acc: Record<string, number>, r: { platform: string }) => {
       acc[r.platform] = (acc[r.platform] || 0) + 1;
       return acc;
     }, {});
@@ -59,8 +59,8 @@ export async function GET(req: NextRequest) {
         by_platform: platformCounts,
       },
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       review: data,
       message: 'Review submitted! It will appear after moderation.',
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

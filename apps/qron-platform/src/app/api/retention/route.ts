@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
     const risk = health < 40 ? 'high' : health < 65 ? 'medium' : 'low';
 
-    const recommendations: any[] = [];
+    const recommendations: { action: string; message: string; cta_url?: string }[] = [];
     if (daysSinceActive > 7) recommendations.push({ action: 'login', message: 'Create a QRON to keep your daily streak alive' });
     if (!stats?.streak_days || stats.streak_days < 7) recommendations.push({ action: 'streak', message: 'Build a 7-day streak to unlock the Week Warrior badge' });
     if (!stats?.total_scans || stats.total_scans < 100) recommendations.push({ action: 'share', message: 'Share your QRONs publicly to reach 100 scans and unlock the Scan Hero badge' });
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
       plan: stats?.plan || 'free',
       recommendations,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

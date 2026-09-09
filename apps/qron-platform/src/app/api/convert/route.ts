@@ -86,8 +86,8 @@ export async function POST(req: NextRequest) {
       checkout_url: `/api/checkout?plan=${plan_id}&billing=${billing_cycle}&promo=${promo_code || ''}`,
       message: 'Conversion intent captured. Proceed to checkout to complete upgrade.'
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 
@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
       .limit(20);
 
     return NextResponse.json({ success: true, events: data || [] });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
