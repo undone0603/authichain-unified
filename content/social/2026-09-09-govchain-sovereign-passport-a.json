@@ -1,0 +1,18 @@
+{
+  "linkedin": "When a government agency issues a document — a permit, a certification, a compliance determination — the person holding it usually proves it's real one way: someone calls the agency to confirm. That works, but the agency ends up fielding the same verification call for every document it's ever issued, indefinitely.\n\nGovChain lets an agency issue that document as a signed verifiable credential instead. The recipient holds a cryptographically signed record; a third party — a business partner, an auditor, another agency — can verify the signature and the issuing agency's identity directly, without a call back to the source. It runs on the same Ed25519 signing model used across the AuthiChain protocol, so the trust model is consistent across every credential type it issues.\n\nIf your agency (or the contractors you work with) is still verifying documents with a phone call, take a look at what an independently verifiable credential changes.\n\nhttps://govchain.us/?utm_source=linkedin&utm_medium=social&utm_campaign=govchain-sovereign-passport&utm_content=a\n\n#GovCon #DigitalCredentials #FederalContracting",
+  "reddit": {
+    "subreddit": "govcon",
+    "title": "Federal agencies still verify issued documents with a phone call — anyone using signed digital credentials instead of PDFs?",
+    "body": "A government agency issues a document — a permit, a certification, whatever — and the person holding it has one way to prove it's genuine: someone calls the agency to confirm. That verification burden lands back on the agency for every document it's ever issued, forever.\n\nI've been working on GovChain, which lets an issuing agency sign the document as a verifiable credential instead of handing over a PDF. The recipient holds a cryptographically signed record, and anyone downstream — a business partner, an auditor, another agency — can check the signature and confirm the issuer's identity without contacting the source agency directly. It's built on the same Ed25519 signing model as the rest of the AuthiChain protocol.\n\nCurious whether agencies or contractors here are already moving toward verifiable credentials for this kind of document, or whether phone-call verification (or a scanned PDF and a prayer) is still the norm.\n\nhttps://govchain.us/?utm_source=reddit&utm_medium=social&utm_campaign=govchain-sovereign-passport&utm_content=a\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A government agency issues a document — a permit, a certification — and there's usually one way to prove it's real: someone calls the agency to confirm. That verification call lands on the agency, for every document, forever.",
+    "GovChain lets the agency issue it as a signed verifiable credential instead. The recipient holds a cryptographically signed record; a third party can check the signature and issuer identity directly, no call back to the source needed.",
+    "Same Ed25519 signing model as the rest of the AuthiChain protocol, so the trust model doesn't change per credential type: https://govchain.us/?utm_source=twitter&utm_medium=social&utm_campaign=govchain-sovereign-passport&utm_content=a"
+  ],
+  "experiment": {
+    "campaign": "govchain-sovereign-passport",
+    "variant": "a",
+    "hypothesis": "leading with the manual-verification-bottleneck hook (agencies fielding phone calls to confirm document authenticity) outperforms a credential-portability-led hook on click-through to govchain.us"
+  }
+}
