@@ -33,6 +33,7 @@ jobs:
           GITLEAKS_CONFIG: .gitleaks.toml
 
   deploy:
+    runs-on: ubuntu-latest
     needs: secret-scan
     strategy:
       fail-fast: false

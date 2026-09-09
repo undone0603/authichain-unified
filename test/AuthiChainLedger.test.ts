@@ -8,7 +8,10 @@
  */
 
 import assert from "node:assert/strict";
-import { ethers } from "hardhat";
+import { describe, it } from "node:test";
+import hre from "hardhat";
+
+const { ethers } = await hre.network.getOrCreate();
 
 const refOf = (id: string) => ethers.keccak256(ethers.toUtf8Bytes(id));
 const sku = (s: string) => ethers.encodeBytes32String(s);

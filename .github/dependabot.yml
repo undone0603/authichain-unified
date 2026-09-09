@@ -16,6 +16,14 @@ updates:
       # produce a valid lockfile. Revisit once query-string (or the packages
       # that depend on it) supports decode-uri-component >=0.5.0.
       - dependency-name: "decode-uri-component"
+      # js-yaml 3.x is a transitive dependency of read-yaml-file@1.1.0 ->
+      # @manypkg/get-packages@1 -> turbo (build tooling only, never shipped).
+      # The fix requires js-yaml >=4.3.2, but read-yaml-file@1 pins ^3.x and
+      # its API (safeLoad) is incompatible with js-yaml 4, so Dependabot
+      # cannot produce a valid lockfile (security_update_not_possible).
+      # Revisit when turbo bumps @manypkg/get-packages to a js-yaml 4 line.
+      - dependency-name: "js-yaml"
+        versions: ["3.x"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

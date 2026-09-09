@@ -29,11 +29,18 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error;
 
-    const leaderboard = (data || []).map((row: any, index: number) => ({
+    const leaderboard = (data || []).map((row: {
+      user_id: string;
+      profiles: { display_name?: string; avatar_url?: string }[];
+      total_scans: number;
+      total_qrons: number;
+      streak_days: number;
+      milestone_count: number;
+    }, index: number) => ({
       rank: index + 1,
       user_id: row.user_id,
-      display_name: row.profiles?.display_name || 'Anonymous',
-      avatar_url: row.profiles?.avatar_url || null,
+      display_name: row.profiles?.[0]?.display_name || 'Anonymous',
+      avatar_url: row.profiles?.[0]?.avatar_url || null,
       score: metric === 'milestones' ? row.milestone_count
            : metric === 'streak' ? row.streak_days
            : metric === 'qrons' ? row.total_qrons
@@ -41,7 +48,7 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({ leaderboard, metric, period });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

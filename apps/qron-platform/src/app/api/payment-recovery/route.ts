@@ -27,9 +27,11 @@ export async function POST(req: NextRequest) {
     email = user?.email || null;
     name = user?.name || null;
   } else if (stripe_customer_id) {
-    const customer = await stripe.customers.retrieve(stripe_customer_id) as any;
-    email = customer.email;
-    name = customer.name;
+    const customer = await stripe.customers.retrieve(stripe_customer_id);
+    if (!customer.deleted) {
+      email = customer.email ?? null;
+      name = customer.name ?? null;
+    }
   }
 
   if (!email) return NextResponse.json({ error: 'Could not find user email' }, { status: 404 });

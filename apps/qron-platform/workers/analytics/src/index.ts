@@ -36,12 +36,12 @@ export default {
           "Access-Control-Allow-Origin": "*"
         }
       });
-    } catch (error: any) {
+    } catch (_error) {
       return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400 });
     }
   },
 
-  async logEvent(payload: any, env: Env) {
+  async logEvent(payload: { eventName: string; properties?: Record<string, unknown>; userId?: string; sessionId?: string }, env: Env) {
     const { eventName, properties, userId, sessionId } = payload;
     
     // Direct logging to the Supabase audit_log table

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+import { existsSync } from 'fs';
 import { BrowserManager, getDefaultTimeout } from './browser.js';
 import { executeCommand } from './actions.js';
 
@@ -7,7 +8,24 @@ import { executeCommand } from './actions.js';
 vi.unmock('playwright-core');
 const { chromium } = await vi.importActual<typeof import('playwright-core')>('playwright-core');
 
-describe('BrowserManager', () => {
+// This suite launches a real browser, so it needs the Playwright browser
+// binaries installed (CI does this via `playwright install --with-deps
+// chromium` before running tests, see .github/workflows/main.yml). In
+// sandboxed/local environments without that step, skip rather than failing
+// the whole run — mirrors the canRunTest pattern in test/serverless.test.ts.
+const canLaunchRealBrowser = await (async () => {
+  try {
+    const executablePath = chromium.executablePath();
+    return existsSync(executablePath);
+  } catch {
+    return false;
+  }
+})();
+if (!canLaunchRealBrowser) {
+  console.log('Skipping BrowserManager real-browser suite: Chromium executable not installed');
+}
+
+describe.skipIf(!canLaunchRealBrowser)('BrowserManager', () => {
   let browser: BrowserManager;
 
   beforeAll(async () => {

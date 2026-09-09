@@ -2,12 +2,15 @@ name = "provenchain-io"
 main = "src/index.ts"
 compatibility_date = "2026-04-01"
 account_id = "4c1869b90f13f86940aa3747839bf420"
-workers_dev = false
-
-[[routes]]
-pattern = "provenchain.io/*"
-zone_name = "provenchain.io"
-
-[[routes]]
-pattern = "www.provenchain.io/*"
-zone_name = "provenchain.io"
+workers_dev = true
+# Custom-domain routes disabled 2026-09-08: the provenchain.io zone does not exist
+# in the Cloudflare account, so wrangler deploy failed with
+# "Could not find zone for provenchain.io". Restore the routes block below once the
+# zone is re-registered:
+# [[routes]]
+# pattern = "provenchain.io/*"
+# zone_name = "provenchain.io"
+#
+# [[routes]]
+# pattern = "www.provenchain.io/*"
+# zone_name = "provenchain.io"
