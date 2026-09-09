@@ -15,10 +15,14 @@ Roles:
   4. PilotCloser       — owns conversion funnel
   5. RevenueOperator   — owns economics/budget allocation
   6. TrustHealer       — owns operational integrity, can auto-remediate
-  7. ConversionOptimizer — owns funnel analytics and messaging tuning
 
 Each role returns a SpecialistResult with findings, recommended actions,
 and whether it exercised veto power.
+
+A seventh helper, ConversionOptimizerSpecialist, is defined below but is
+deliberately not part of the Governor's six-specialist registry (see the
+note above ALL_SPECIALISTS) — its assess() has a different call signature
+and is invoked directly rather than through the Governor's uniform loop.
 """
 from __future__ import annotations
 
@@ -487,5 +491,13 @@ ALL_SPECIALISTS = {
     PilotCloser.ROLE: PilotCloser,
     RevenueOperator.ROLE: RevenueOperator,
     TrustHealer.ROLE: TrustHealer,
-    ConversionOptimizerSpecialist.ROLE: ConversionOptimizerSpecialist,
 }
+
+# NOTE: ConversionOptimizerSpecialist is intentionally NOT registered in
+# ALL_SPECIALISTS. Its assess() takes a `funnel_data: List[Dict]` argument
+# (funnel events), unlike the six Governor-owned specialists above, whose
+# assess() takes a shared `ctx: dict`. The Governor's _measure() loop calls
+# every registered specialist's assess() with the same ctx dict, so
+# including this one here breaks it (ctx gets iterated as a dict, yielding
+# string keys, then `.get()` is called on those strings). It is invoked
+# directly (not through the registry) — see agentz/tests/test_conversion_optimizer.py.

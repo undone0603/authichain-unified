@@ -64,7 +64,8 @@ class LaunchScore:
     """The composite launch score and its breakdown."""
     total: float = 0.0         # 0-100
     dimensions: dict[str, DimensionScore] = field(default_factory=dict)
-    bottleneck: str = ""
+    bottleneck: str = ""       # plain dimension name (a key into `dimensions`)
+    bottleneck_score: float = 0.0  # that dimension's 0-100 score, for display
     recommended_action: str = ""
     calculated_at: str = ""
     stage: str = ""
@@ -74,6 +75,7 @@ class LaunchScore:
             "total": round(self.total, 1),
             "stage": self.stage,
             "bottleneck": self.bottleneck,
+            "bottleneck_score": round(self.bottleneck_score, 1),
             "recommended_action": self.recommended_action,
             "calculated_at": self.calculated_at,
             "dimensions": {
@@ -89,7 +91,7 @@ class LaunchScore:
             lines.append(f"  {name:14s} {bar} {dim.score:3.0f}% (×{dim.weight}%)")
         lines.append("-" * 40)
         if self.bottleneck:
-            lines.append(f"  Bottleneck: {self.bottleneck}")
+            lines.append(f"  Bottleneck: {self.bottleneck} ({self.bottleneck_score:.0f}%)")
         if self.recommended_action:
             lines.append(f"  Recommended: {self.recommended_action}")
         return "\n".join(lines)
@@ -302,7 +304,11 @@ def calculate_launch_score(
     # Identify bottleneck (lowest weighted contribution)
     lowest_name = min(score.dimensions, key=lambda k: score.dimensions[k].score)
     lowest = score.dimensions[lowest_name]
-    score.bottleneck = f"{lowest_name} ({lowest.score:.0f}%)"
+    # Plain dimension name so callers can use it as a key into `dimensions`
+    # or in lookup maps (e.g. governor.py's bottleneck_to_specialist map).
+    # Use `bottleneck_score` for a human-readable "(N%)" display.
+    score.bottleneck = lowest_name
+    score.bottleneck_score = lowest.score
 
     # Recommended action based on bottleneck
     score.recommended_action = _recommend_action(lowest_name, lowest.score, stage)
