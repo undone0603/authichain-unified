@@ -87,8 +87,12 @@ class TestLaunchStateMachine:
         with tempfile.TemporaryDirectory() as tmp:
             sm = LaunchStateMachine(state_file=Path(tmp) / "state.json")
             sm.set_stage(LaunchStage.PROTOCOL_READY)
-            # With no ctx, protocol gates should fail (can't verify)
-            advanced = sm.advance(context={})
+            # Explicitly fail a gate via ctx. (Note: passing an empty ctx is
+            # NOT a reliable way to force a failure here — when node and the
+            # protocol conformance fixtures are available, the gates run the
+            # real conformance suite and may genuinely pass with no ctx at
+            # all, as they do in this repo/CI environment.)
+            advanced = sm.advance(context={"protocol_schema_pass": False})
             assert advanced is False
             assert sm.current_stage == LaunchStage.PROTOCOL_READY
 
@@ -658,5 +662,22 @@ class TestSSE:
     def test_main_app_includes_sse_router(self):
         """The main FastAPI app should include the SSE router."""
         from agentz.api.main import app
-        routes = [r.path for r in app.routes]
+
+        # Newer FastAPI/Starlette versions may represent an included
+        # sub-router as a grouped `_IncludedRouter` wrapper in app.routes
+        # rather than flattening its routes directly, so plain routes
+        # (which do have `.path`) are collected alongside any wrapper's
+        # `original_router.routes`.
+        def collect_paths(routes):
+            paths = []
+            for r in routes:
+                path = getattr(r, "path", None)
+                if path is not None:
+                    paths.append(path)
+                original_router = getattr(r, "original_router", None)
+                if original_router is not None:
+                    paths.extend(collect_paths(original_router.routes))
+            return paths
+
+        routes = collect_paths(app.routes)
         assert any("/launch/sse/" in r for r in routes)
