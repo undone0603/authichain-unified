@@ -17,3 +17,20 @@ zone_name = "authichain.com"
 
 [observability]
 enabled = true
+
+# APP_WORKER: service binding to `authichain-edge-router` (worker-app/index.ts),
+# the native Cloudflare replacement for the old Vercel deployment
+# (authichain-unified.vercel.app — that Vercel project no longer exists).
+# A service binding calls the target Worker directly inside Cloudflare's
+# network, with no public URL, DNS, or extra HTTP hop needed.
+#
+# BEFORE THIS TAKES EFFECT IN PRODUCTION: confirm `authichain-edge-router` is
+# actually deployed (it is wired into .github/workflows/deploy-cloudflare.yml
+# but gated behind the CLOUDFLARE_DEPLOY_ENABLED repo variable — verify that
+# var is set and a deploy has actually succeeded) and that its D1/KV/Hyperdrive
+# bindings point at production data (see worker-app/wrangler.toml). Deploying
+# authichain-com with this binding wired up is what cuts traffic over — do
+# not do that until the above is confirmed.
+[[services]]
+binding = "APP_WORKER"
+service = "authichain-edge-router"
