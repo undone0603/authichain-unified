@@ -2159,7 +2159,7 @@ h2{font-size:clamp(1.75rem,4vw,2.5rem);font-weight:700;margin-bottom:1rem}
 .chain-card{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;text-align:center}
 .chain-name{font-weight:600;margin:.5rem 0 .25rem}
 .chain-meta{font-size:.8rem;color:var(--muted)}
-.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem}
 .price-card{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:2rem;text-align:center}
 .price-card.featured{border-color:var(--cyan);position:relative}
 .price-amount{font-size:2.5rem;font-weight:700;color:var(--cyan);margin:1rem 0}
@@ -2180,6 +2180,7 @@ footer{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;border
     <li><a href="#bridge">Bridge</a></li>
     <li><a href="#tokenomics">Tokenomics</a></li>
     <li><a href="#videos">Videos</a></li>
+    <li><a href="#pricing">Pricing</a></li>
   </ul>
   <a href="https://authichain.com/dapp" class="btn btn-primary">Connect Wallet</a>
 </nav>
@@ -2284,12 +2285,13 @@ fetch('https://authichain-unified.vercel.app/api/qron/stats')
 </section>
 
 <section id="pricing">
-  <h2>Membership Tiers</h2>
-  <p class="section-sub">Unlock premium features and higher staking multipliers.</p>
+  <h2>Products &amp; Pricing</h2>
+  <p class="section-sub">AI QR art, blockchain-anchored product authentication, and EU DPP readiness — checkout in one click.</p>
   <div class="pricing-grid">
-    <div class="price-card"><h3>Starter</h3><div class="price-amount">$39</div><div class="price-period">per month</div><ul class="price-features"><li>100 $QRON monthly airdrop</li><li>Flexible staking access</li><li>Governance voting</li><li>Bridge access</li></ul><a href="https://authichain.com/dapp" class="btn btn-outline" style="width:100%;text-align:center">Get Started</a></div>
-    <div class="price-card featured"><h3>Pro</h3><div class="price-amount">$49</div><div class="price-period">per month</div><ul class="price-features"><li>500 $QRON monthly airdrop</li><li>All staking tiers</li><li>2x governance voting weight</li><li>Priority bridge queue</li><li>Analytics dashboard</li></ul><a href="https://authichain.com/dapp" class="btn btn-primary" style="width:100%;text-align:center">Most Popular</a></div>
-    <div class="price-card"><h3>Enterprise</h3><div class="price-amount">$99</div><div class="price-period">per month</div><ul class="price-features"><li>2,000 $QRON monthly airdrop</li><li>Custom staking pools</li><li>5x governance weight</li><li>White-label bridge</li><li>Dedicated support</li></ul><a href="https://authichain.com/dapp" class="btn btn-outline" style="width:100%;text-align:center">Contact Sales</a></div>
+    <div class="price-card"><h3>QRON Pro</h3><div class="price-amount">$49</div><div class="price-period">per month</div><ul class="price-features"><li>AI-generated artistic QR codes</li><li>Blockchain-anchored verification</li><li>QRON engagement platform access</li><li>Priority generation queue</li></ul><a href="https://buy.stripe.com/14AbJ13R78Jo5ia0YY1ND3q" class="btn btn-outline" style="width:100%;text-align:center" target="_blank" rel="noopener">Buy QRON Pro</a></div>
+    <div class="price-card featured"><h3>AuthiChain Pro</h3><div class="price-amount">$499</div><div class="price-period">per month</div><ul class="price-features"><li>10,000 seals/mo</li><li>50,000 verifications/mo</li><li>5 brand domains</li><li>Advanced analytics + priority support</li></ul><a href="https://buy.stripe.com/fZucN587n3p411U3761ND3s" class="btn btn-primary" style="width:100%;text-align:center" target="_blank" rel="noopener">Most Popular</a></div>
+    <div class="price-card"><h3>AuthiChain Basic</h3><div class="price-amount">$149</div><div class="price-period">per month</div><ul class="price-features"><li>1,000 seals/mo</li><li>5,000 verifications/mo</li><li>1 brand domain</li><li>Blockchain-anchored authentication</li></ul><a href="https://buy.stripe.com/aFa28r5Zf0cS8um9vu1ND3r" class="btn btn-outline" style="width:100%;text-align:center" target="_blank" rel="noopener">Buy Basic</a></div>
+    <div class="price-card"><h3>EU DPP Audit</h3><div class="price-amount">$2,990</div><div class="price-period">one-time</div><ul class="price-features"><li>Digital Product Passport readiness audit</li><li>Written report + strategy call</li><li>Delivered in 5 business days</li><li>Credit toward Basic on conversion</li></ul><a href="https://buy.stripe.com/9B6fZh9brf7M4e6gXW1ND3t" class="btn btn-outline" style="width:100%;text-align:center" target="_blank" rel="noopener">Book Audit</a></div>
   </div>
 </section>
 
