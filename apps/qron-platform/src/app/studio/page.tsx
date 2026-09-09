@@ -35,8 +35,8 @@ export default function StudioPage() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setResult(data.imageUrl);
-    } catch (err: any) {
-      setError(err.message || 'Generation failed. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Generation failed. Please try again.');
     } finally {
       setGenerating(false);
     }
