@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type Stripe from 'stripe';
 
 // Build-time-safe fallback: Next.js imports every route module during
 // production build's page-data collection, which runs before real env
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build checkout session
-    const sessionParams: any = {
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: stripeCustomerId,
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
 
     // Add trial if requested
     if (trial_days && parseInt(trial_days) > 0) {
-      sessionParams.subscription_data.trial_period_days = parseInt(trial_days);
+      sessionParams.subscription_data!.trial_period_days = parseInt(trial_days);
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
@@ -102,8 +103,8 @@ export async function POST(req: NextRequest) {
       session_id: session.id,
       plan,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 

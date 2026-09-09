@@ -70,7 +70,7 @@ export default {
         headers: { "Content-Type": "application/json" }
       });
 
-    } catch (error: any) {
+    } catch (_error) {
       return new Response(JSON.stringify({ error: "Authentication failed" }), { status: 500 });
     }
   }

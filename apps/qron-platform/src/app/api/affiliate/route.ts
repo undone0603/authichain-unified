@@ -49,8 +49,8 @@ export async function GET(req: NextRequest) {
       .select('id, converted_at, plan, monthly_value, status')
       .eq('affiliate_id', affiliate.id);
 
-    const totalEarned = (referrals || []).filter(r => r.status === 'paid').reduce((s: number, r: any) => s + (r.monthly_value * COMMISSION_RATE), 0);
-    const pendingEarnings = (referrals || []).filter(r => r.status === 'pending').reduce((s: number, r: any) => s + (r.monthly_value * COMMISSION_RATE), 0);
+    const totalEarned = (referrals || []).filter(r => r.status === 'paid').reduce((s: number, r: { monthly_value: number }) => s + (r.monthly_value * COMMISSION_RATE), 0);
+    const pendingEarnings = (referrals || []).filter(r => r.status === 'pending').reduce((s: number, r: { monthly_value: number }) => s + (r.monthly_value * COMMISSION_RATE), 0);
 
     return NextResponse.json({
       enrolled: true,
@@ -65,8 +65,8 @@ export async function GET(req: NextRequest) {
       },
       recent_referrals: (referrals || []).slice(0, 10),
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       affiliate_url: `https://qron.space?ref=${code}`,
       message: 'Welcome to the QRON Affiliate Program! Share your link and earn 30% recurring commission.',
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

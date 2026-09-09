@@ -32,7 +32,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   return res.json();
 }
 
-function buildEmailHTML(type: EmailType, data: Record<string, any>): { subject: string; html: string } {
+function buildEmailHTML(type: EmailType, data: Record<string, unknown>): { subject: string; html: string } {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://qron.space';
   const dashUrl = `${appUrl}/dashboard`;
   const pricingUrl = `${appUrl}/pricing`;
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, email_id: result.id, type, to: email });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

@@ -47,7 +47,7 @@ export default function StrainChainHardware() {
               <Cpu className="w-8 h-8 text-blue-400 mb-6" />
               <h3 className="text-xl font-black uppercase tracking-tight mb-4">RFID & NFC Bridge</h3>
               <p className="text-zinc-500 text-sm leading-relaxed font-medium uppercase tracking-tighter">
-                StrainChain seamlessly bridges digital QRON artifacts with physical hardware. We support syncing with Metrc RFID tags for cannabis compliance, and encrypted NTAG424 DNA chips for luxury goods. The digital twin stays synchronized with the physical asset's telemetry in real-time.
+                StrainChain seamlessly bridges digital QRON artifacts with physical hardware. We support syncing with Metrc RFID tags for cannabis compliance, and encrypted NTAG424 DNA chips for luxury goods. The digital twin stays synchronized with the physical asset&apos;s telemetry in real-time.
               </p>
             </div>
         </div>

@@ -97,8 +97,8 @@ export async function POST(req: NextRequest) {
       is_upgrade,
       checkout_url: `/api/checkout?upgrade_id=${record.id}`
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false });
 
     return NextResponse.json({ success: true, upgrades: data || [] });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

@@ -54,15 +54,15 @@ export async function GET(req: NextRequest) {
 
     const { data: achieved } = await supabase.from('milestone_achievements').select('*').eq('user_id', user.id);
     const { data: stats } = await supabase.from('user_stats').select('*').eq('user_id', user.id).maybeSingle();
-    const achievedIds = (achieved || []).map((a: any) => a.milestone_id);
+    const achievedIds = (achieved || []).map((a: { milestone_id: string }) => a.milestone_id);
 
     const enriched = MILESTONES.map(m => {
-      const current = (stats as any)?.[m.metric] || 0;
+      const current = (stats as Record<string, number> | null)?.[m.metric] || 0;
       const isAchieved = achievedIds.includes(m.id);
       return {
         ...m,
         achieved: isAchieved,
-        achieved_at: (achieved || []).find((a: any) => a.milestone_id === m.id)?.achieved_at || null,
+        achieved_at: (achieved || []).find((a: { milestone_id: string; achieved_at?: string }) => a.milestone_id === m.id)?.achieved_at || null,
         current_value: current,
         progress_percent: Math.min(100, Math.round((current / m.threshold) * 100)),
         remaining: isAchieved ? 0 : Math.max(0, m.threshold - current)
@@ -78,8 +78,8 @@ export async function GET(req: NextRequest) {
       milestones: enriched,
       next_milestone: enriched.find(m => !m.achieved) || null
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
     if (!triggered.length) return NextResponse.json({ success: true, newly_achieved: [] });
 
     const { data: existing } = await supabase.from('milestone_achievements').select('milestone_id').eq('user_id', user.id);
-    const existingIds = (existing || []).map((e: any) => e.milestone_id);
+    const existingIds = (existing || []).map((e: { milestone_id: string }) => e.milestone_id);
     const newlyAchieved = triggered.filter(m => !existingIds.includes(m.id));
 
     if (newlyAchieved.length > 0) {
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       success: true,
       newly_achieved: newlyAchieved.map(m => ({ id: m.id, title: m.title, message: m.message, icon: m.icon, badge: m.badge, reward: m.reward, celebrate: true }))
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
