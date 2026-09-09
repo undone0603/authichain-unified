@@ -7361,5 +7361,325 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eu-csddd-omnibus-supply-chain-due-diligence-delay",
+    "keyword": "eu csddd omnibus supply chain due diligence delay",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU CSDDD Omnibus Supply Chain Due Diligence | AuthiChain",
+    "metaDescription": "Omnibus I pushed the Corporate Sustainability Due Diligence Directive’s transposition deadline to July 26, 2028 and its substantive obligations to July 26.",
+    "h1": "EU CSDDD Omnibus Supply Chain Due Diligence Delay",
+    "bodyHtml": "<p>Omnibus I pushed the Corporate Sustainability Due Diligence Directive’s transposition deadline to July 26, 2028 and its substantive obligations to July 26, 2029, with first reports covering financial year 2030 — the deadline moved and the scope narrowed, but the underlying question a covered company still has to answer is unchanged: can you show where a material actually came from.</p><h2>Why AuthiChain</h2><ul><li>Scope narrowed to EU companies with more than 5,000 employees and over €1.5 billion net turnover, and non-EU companies with over €1.5 billion turnover generated in the EU — smaller suppliers feeding those companies still get asked for the same sourcing evidence</li><li>Signed, per-batch provenance records are the kind of checkable supply-chain evidence a due-diligence file needs, independent of which exact reporting deadline applies to the company assembling it</li><li>A signature proves who issued a sourcing claim, not that the claim itself is true — the same distinction protocol/SPEC.md §8 draws about any signed record, and one a due-diligence auditor draws too</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the Omnibus I delay mean supply-chain due diligence is no longer required?</h3><p>No — CSDDD still applies, just later and to a narrower group: transposition by July 26, 2028, substantive obligations from July 26, 2029. Omnibus I also removed the EU-wide civil liability regime and the mandatory climate transition plan requirement, but the core due-diligence duty for in-scope companies stands.</p><h3>Which companies are in scope after Omnibus I?</h3><p>EU companies with more than 5,000 employees and over €1.5 billion net turnover, and non-EU companies with more than €1.5 billion turnover generated in the EU — a much narrower group than the original 2024 text covered.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU CSDDD Omnibus Supply Chain Due Diligence Delay",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Omnibus I pushed the Corporate Sustainability Due Diligence Directive’s transposition deadline to July 26, 2028 and its substantive obligations to July 26, 2029, with first reports covering financial year 2030 — the deadline moved and the scope narrowed, but the underlying question a covered company still has to answer is unchanged: can you show where a material actually came from.",
+          "url": "https://authichain.com/p/eu-csddd-omnibus-supply-chain-due-diligence-delay"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU CSDDD Omnibus Supply Chain Due Diligence Delay",
+              "item": "https://authichain.com/p/eu-csddd-omnibus-supply-chain-due-diligence-delay"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the Omnibus I delay mean supply-chain due diligence is no longer required?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — CSDDD still applies, just later and to a narrower group: transposition by July 26, 2028, substantive obligations from July 26, 2029. Omnibus I also removed the EU-wide civil liability regime and the mandatory climate transition plan requirement, but the core due-diligence duty for in-scope companies stands."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Which companies are in scope after Omnibus I?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "EU companies with more than 5,000 employees and over €1.5 billion net turnover, and non-EU companies with more than €1.5 billion turnover generated in the EU — a much narrower group than the original 2024 text covered."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-catch-digital-certificate-iuu-fishing-traceability",
+    "keyword": "eu catch digital certificate iuu fishing traceability",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Catch Digital Certificate IUU Fishing | AuthiChain",
+    "metaDescription": "The EU’s CATCH system replaced paper IUU catch certificates with a mandatory digital process on January 10, 2026, run through TRACES — the same kind of.",
+    "h1": "EU Catch Digital Certificate IUU Fishing Traceability",
+    "bodyHtml": "<p>The EU’s CATCH system replaced paper IUU catch certificates with a mandatory digital process on January 10, 2026, run through TRACES — the same kind of per-shipment, checkable chain-of-custody record AuthiChain already signs and anchors for other regulated goods, now applied to the roughly 70% of EU seafood consumption that arrives as imports.</p><h2>Why AuthiChain</h2><ul><li>CATCH is mandatory for EU-side processing of catch certificates; use by non-EU exporting countries stays voluntary, so a signed catch-to-import record still has to interoperate with partners who haven’t adopted it</li><li>About 80% of EU seafood imports fall under the IUU Regulation CATCH enforces — a large share of the trade this replaces paper documentation for, not an edge case</li><li>A signed, hashed catch-to-shipment record gives an importer or authority a way to check chain of custody independent of whichever national system originated the paper before January 2026</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is the CATCH system the same as the EU Digital Product Passport?</h3><p>No — CATCH is a fisheries-control system for IUU catch certificates, run through TRACES. It’s a separate legal instrument from the ESPR’s Digital Product Passport, though both replace paper documentation with a record a downstream party can check digitally.</p><h3>Do non-EU exporting countries have to use CATCH?</h3><p>Not yet — CATCH is mandatory for the EU side of catch-certificate processing, but the regulation leaves participation voluntary for non-EU countries and their operators submitting certificates.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Catch Digital Certificate IUU Fishing Traceability",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU’s CATCH system replaced paper IUU catch certificates with a mandatory digital process on January 10, 2026, run through TRACES — the same kind of per-shipment, checkable chain-of-custody record AuthiChain already signs and anchors for other regulated goods, now applied to the roughly 70% of EU seafood consumption that arrives as imports.",
+          "url": "https://authichain.com/p/eu-catch-digital-certificate-iuu-fishing-traceability"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Catch Digital Certificate IUU Fishing Traceability",
+              "item": "https://authichain.com/p/eu-catch-digital-certificate-iuu-fishing-traceability"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is the CATCH system the same as the EU Digital Product Passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — CATCH is a fisheries-control system for IUU catch certificates, run through TRACES. It’s a separate legal instrument from the ESPR’s Digital Product Passport, though both replace paper documentation with a record a downstream party can check digitally."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Do non-EU exporting countries have to use CATCH?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not yet — CATCH is mandatory for the EU side of catch-certificate processing, but the regulation leaves participation voluntary for non-EU countries and their operators submitting certificates."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "cmmc-phase-2-certification-suspended-defense-contractors",
+    "keyword": "cmmc phase 2 certification suspended defense contractors",
+    "brand": "GovChain",
+    "domain": "govchain.us",
+    "title": "CMMC Phase 2 Certification Suspended Defense | GovChain",
+    "metaDescription": "CMMC 2.0 Phase 2 third-party Level 2 certification was suspended by the Department of War on July 13, 2026 pending a 60-day review — Phase 1 self-assessment.",
+    "h1": "CMMC Phase 2 Certification Suspended Defense Contractors",
+    "bodyHtml": "<p>CMMC 2.0 Phase 2 third-party Level 2 certification was suspended by the Department of War on July 13, 2026 pending a 60-day review — Phase 1 self-assessment requirements and the DFARS 252.204-7012 data-protection clause were not suspended and remain fully in effect through the current Phase 1 window ending November 10, 2026.</p><h2>Why GovChain</h2><ul><li>DFARS 252.204-7021 still flows CMMC requirements down through subcontractors regardless of the Phase 2 pause — a prime’s obligation to check subcontractor posture didn’t go away because third-party certification did</li><li>A contractor storing or processing CUI still needs to show, self-assessed today and third-party-certified once Phase 2 resumes, that a specific control was actually implemented — not just that a policy document says it should be</li><li>GovChain issues that evidence as a signed, per-control record an auditor checks independently, so readiness work done during the pause carries over once Phase 2 restarts rather than waiting on the review’s outcome</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. No enterprise contract — public-sector pricing.</p><h2>FAQ</h2><h3>Does the Phase 2 suspension mean CMMC compliance is on hold?</h3><p>No — only third-party Level 2 certification (Phase 2) is suspended, as of July 13, 2026, pending a 60-day Department of War review. Phase 1 self-assessment requirements and the underlying DFARS 252.204-7012 data-protection obligations remain in effect.</p><h3>When does the current Phase 1 window end?</h3><p>November 10, 2026 — one year after CMMC 2.0 was formalized in DFARS in November 2025. Whether Phase 2 resumes on schedule after that depends on the outcome of the suspended review.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "GovChain — CMMC Phase 2 Certification Suspended Defense Contractors",
+          "provider": {
+            "@type": "Organization",
+            "name": "GovChain",
+            "url": "https://govchain.us"
+          },
+          "description": "CMMC 2.0 Phase 2 third-party Level 2 certification was suspended by the Department of War on July 13, 2026 pending a 60-day review — Phase 1 self-assessment requirements and the DFARS 252.204-7012 data-protection clause were not suspended and remain fully in effect through the current Phase 1 window ending November 10, 2026.",
+          "url": "https://govchain.us/p/cmmc-phase-2-certification-suspended-defense-contractors"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "GovChain",
+              "item": "https://govchain.us"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "CMMC Phase 2 Certification Suspended Defense Contractors",
+              "item": "https://govchain.us/p/cmmc-phase-2-certification-suspended-defense-contractors"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the Phase 2 suspension mean CMMC compliance is on hold?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — only third-party Level 2 certification (Phase 2) is suspended, as of July 13, 2026, pending a 60-day Department of War review. Phase 1 self-assessment requirements and the underlying DFARS 252.204-7012 data-protection obligations remain in effect."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "When does the current Phase 1 window end?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "November 10, 2026 — one year after CMMC 2.0 was formalized in DFARS in November 2025. Whether Phase 2 resumes on schedule after that depends on the outcome of the suspended review."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "marijuana-rescheduling-schedule-iii-state-license-verification",
+    "keyword": "marijuana rescheduling schedule iii state license verification",
+    "brand": "StrainChain",
+    "domain": "strainchain.io",
+    "title": "Marijuana Rescheduling Schedule III State | StrainChain",
+    "metaDescription": "DOJ’s April 23, 2026 order moved two specific categories of marijuana from Schedule I to Schedule III — FDA-approved drug products, and marijuana sold under.",
+    "h1": "Marijuana Rescheduling Schedule III State License Verification",
+    "bodyHtml": "<p>DOJ’s April 23, 2026 order moved two specific categories of marijuana from Schedule I to Schedule III — FDA-approved drug products, and marijuana sold under a state medical license — while anything outside those two categories stays Schedule I, which means whether a specific product qualifies now turns on a state license record a scanner can actually check.</p><h2>Why StrainChain</h2><ul><li>Rescheduling applies to marijuana “subject to a qualifying state-issued license,” not to cannabis generally — a batch’s link to a verified METRC/BioTrack license record is what determines which side of the Schedule I/III line it falls on, not the product itself</li><li>A DEA hearing to consider broader rescheduling of all cannabis ran June 29 through July 15, 2026; until that process concludes, non-FDA-approved, non-state-licensed marijuana remains Schedule I regardless of state law</li><li>Section 280E tax relief follows the same state-license distinction — a dispensary’s tax position depends on the same license record its compliance system already tracks, not on a separate filing</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $199/mo.</p><h2>FAQ</h2><h3>Does the April 2026 order reschedule all marijuana to Schedule III?</h3><p>No — it covers only marijuana in an FDA-approved drug product and marijuana subject to a state-issued medical license. Marijuana outside those two categories, including most recreational-market product, remains Schedule I as of this writing.</p><h3>Could broader rescheduling still happen?</h3><p>DEA held a hearing from June 29 to July 15, 2026 on rescheduling all cannabis from Schedule I to Schedule III. The outcome decides whether the narrower April 2026 order becomes the permanent rule or a broader one replaces it.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "StrainChain — Marijuana Rescheduling Schedule III State License Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "StrainChain",
+            "url": "https://strainchain.io"
+          },
+          "description": "DOJ’s April 23, 2026 order moved two specific categories of marijuana from Schedule I to Schedule III — FDA-approved drug products, and marijuana sold under a state medical license — while anything outside those two categories stays Schedule I, which means whether a specific product qualifies now turns on a state license record a scanner can actually check.",
+          "url": "https://strainchain.io/p/marijuana-rescheduling-schedule-iii-state-license-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "StrainChain",
+              "item": "https://strainchain.io"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Marijuana Rescheduling Schedule III State License Verification",
+              "item": "https://strainchain.io/p/marijuana-rescheduling-schedule-iii-state-license-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the April 2026 order reschedule all marijuana to Schedule III?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — it covers only marijuana in an FDA-approved drug product and marijuana subject to a state-issued medical license. Marijuana outside those two categories, including most recreational-market product, remains Schedule I as of this writing."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Could broader rescheduling still happen?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "DEA held a hearing from June 29 to July 15, 2026 on rescheduling all cannabis from Schedule I to Schedule III. The outcome decides whether the narrower April 2026 order becomes the permanent rule or a broader one replaces it."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "digital-omnibus-dpp-espr-timelines-unchanged",
+    "keyword": "digital omnibus dpp espr timelines unchanged",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Digital Omnibus DPP ESPR Timelines Unchanged | AuthiChain",
+    "metaDescription": "Omnibus IV — the “Digital Omnibus” — reached provisional political agreement on June 9, 2026 and amends seven regulations, including the ESPR, to make.",
+    "h1": "Digital Omnibus DPP ESPR Timelines Unchanged",
+    "bodyHtml": "<p>Omnibus IV — the “Digital Omnibus” — reached provisional political agreement on June 9, 2026 and amends seven regulations, including the ESPR, to make digital records the default for compliance documentation, but it does not touch the Digital Product Passport’s own delegated-act timelines: those are set separately, category by category, and sit exactly where they were before Omnibus IV started.</p><h2>Why AuthiChain</h2><ul><li>Omnibus IV is a different package from Omnibus I, which delayed CSDDD and CSRD substantively — conflating the two is the most common mistake in coverage of “the omnibus and the DPP”</li><li>The EU Central DPP Registry went live with a testing environment on July 19, 2026 on schedule, and as of this writing no product-specific ESPR delegated act had entered into force — the registry opening did not wait on Omnibus IV, and neither does a category’s deadline once its delegated act adopts</li><li>A record built as a W3C Verifiable Credential today does not need restructuring if Omnibus IV’s “digital by default” language changes which documents a market-surveillance authority accepts electronically — the passport format and the accepted-format rule are separate layers</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does the Digital Omnibus delay the Digital Product Passport?</h3><p>No — Omnibus IV digitalizes how compliance documentation is submitted and accepted, amending regulations including 765/2008 on market surveillance and the ESPR itself, but it doesn’t change any category’s DPP delegated-act timeline. Those delays came from Omnibus I, a separate package that affected CSDDD and CSRD, not the DPP.</p><h3>What did Omnibus IV actually agree to on June 9, 2026?</h3><p>Provisional political agreement on the digitalisation strand, with committee approval following on July 14, 2026 and an indicative plenary first reading targeted for November 11, 2026 — text that had not been finally adopted as of this writing.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Digital Omnibus DPP ESPR Timelines Unchanged",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Omnibus IV — the “Digital Omnibus” — reached provisional political agreement on June 9, 2026 and amends seven regulations, including the ESPR, to make digital records the default for compliance documentation, but it does not touch the Digital Product Passport’s own delegated-act timelines: those are set separately, category by category, and sit exactly where they were before Omnibus IV started.",
+          "url": "https://authichain.com/p/digital-omnibus-dpp-espr-timelines-unchanged"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Digital Omnibus DPP ESPR Timelines Unchanged",
+              "item": "https://authichain.com/p/digital-omnibus-dpp-espr-timelines-unchanged"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does the Digital Omnibus delay the Digital Product Passport?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — Omnibus IV digitalizes how compliance documentation is submitted and accepted, amending regulations including 765/2008 on market surveillance and the ESPR itself, but it doesn’t change any category’s DPP delegated-act timeline. Those delays came from Omnibus I, a separate package that affected CSDDD and CSRD, not the DPP."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What did Omnibus IV actually agree to on June 9, 2026?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Provisional political agreement on the digitalisation strand, with committee approval following on July 14, 2026 and an indicative plenary first reading targeted for November 11, 2026 — text that had not been finally adopted as of this writing."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
