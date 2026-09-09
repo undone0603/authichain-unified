@@ -441,3 +441,157 @@ Noted here per instructions, not edited into `SPEC.md`:
   for the same idea.
 
 ---
+
+## 2026-09-09
+
+General web search again this week. `w3.org`, `eprint.iacr.org`, and `digital-link.com` were all
+blocked by the network egress proxy when fetched directly this session, same pattern as prior
+weeks — items sourced from those domains below are read via search-result summaries only, not the
+primary document, and flagged individually. Absence of a finding means "not found by this
+search," not "did not happen."
+
+### What actually moved this week
+
+- **The EU Commission missed its own legal deadline on battery-passport access rights.** Article
+  77(9) of the Battery Regulation required the Commission to adopt, by **18 August 2026**, the
+  implementing act defining the third tier of passport-data access — "any natural or legal person
+  with a legitimate interest," per Article 77(2) and Annex XIII. It did not; the act is now
+  reported pushed to Q4 2026
+  ([Battery-Tech Network](https://battery-tech.net/why-the-eu-is-about-to-miss-its-own-battery-passport-deadline-while-industrys-stays-fixed/)).
+  The **18 February 2027** mandatory-passport date is reported unchanged and, unlike most other
+  dates in the Regulation, carries no conditional extension. This is directly relevant to our own
+  §6: the EU's live rollout is landing on a **three-tier** access model (public / regulators /
+  vetted third parties) for the same class of record our spec treats as a single public tier — see
+  "Spec gaps" below. Read via secondary coverage, not the Commission's own implementing-act text
+  (which does not yet exist to read).
+- **FprEN 18246 ("Digital product passport: data authentication, reliability and integrity")
+  remains on track for September 2026 publication, alongside FprEN 18239** — consistent with, not
+  new beyond, what was reported 2026-09-02
+  ([standards.iteh.ai catalog entry](https://standards.iteh.ai/catalog/standards/cen/9d9fbc1f-0c14-4e84-ab6c-f233e3f19398/pren-18246),
+  fetch blocked last week and this week; [CEN-CENELEC](https://www.cencenelec.eu/news-events/news/2026/en-in-the-spotlight/2026-07-15-dpp/)).
+  No confirmation was found this week that it has actually published yet — "expected this month"
+  is still the state of the evidence, not "shipped."
+- **The W3C/GS1 "E-commerce for Humans and AI Agents" workshop ran 2026-09-08–09 in Zurich**,
+  hosted by Google, concluding today
+  ([workshop site](https://www.w3.org/2026/ecommerce-agents/), fetch blocked, read via search
+  summary). The published agenda covers Consumer Pack Variant disambiguation via GS1 Digital Link
+  and the GS1 Web Vocabulary, emerging agentic-commerce protocols (**MCP, UCP, ACP** named
+  explicitly), product discovery, connected packaging, trusted payments, verifiable credentials,
+  and liability when an agent transacts on a person's behalf. This is the first item this radar
+  has found that sits at the exact intersection of *both* halves of our strategy at once: the two
+  standards our spec aligns to (W3C VC, GS1 Digital Link) convening jointly, on an agenda that
+  names agent-to-agent commerce protocols alongside verifiable credentials — i.e., Move 3 (own the
+  spec) and Move 2 (agent-payable verification) are the same room this week. No minutes or
+  position statements have been published yet; the submission window closed long before this
+  research began, so nothing to submit — the only available action is watching for outputs.
+- **A new academic security analysis of C2PA is more concretely findable this week**, though the
+  primary source (`eprint.iacr.org/2026/804`) was still blocked by the network proxy both this
+  week and last. Secondary sources — the paper's own UMBC project page
+  ([cisa.umbc.edu](https://cisa.umbc.edu/verifying-provenance-of-digital-media-security-analysis-of-c2pa-and-its-implementation/))
+  and an arXiv companion piece
+  ([arxiv.org/pdf/2604.24890](https://arxiv.org/pdf/2604.24890)) — give firmer detail than last
+  week's summary-of-a-summary: the paper reportedly uses formal-methods analysis to show C2PA
+  timestamps can be replaced or modified without detection, finds inconsistent validation behavior
+  across implementations, cites inadequate certificate-revocation handling, and reports that
+  Google's Pixel 10 — a real, shipping C2PA-conformant device — omitted required EXIF metadata
+  from its claims. The paper's stated conclusion, per these summaries, is that the C2PA
+  specifications are "not ready for standardization or deployment." Still not independently read
+  in full here; treat the specifics as reported-by-secondary-source.
+- **OpenAI joined C2PA as a Conforming Generator** (announced 2026-05-20, not previously logged in
+  this radar), pairing C2PA Content Credentials with Google DeepMind's SynthID watermark on every
+  ChatGPT/API-generated image, and expanded the same pairing to audio by 2026-07-31
+  ([OpenAI](https://openai.com/index/advancing-content-provenance/)). Worth logging now because of
+  the timing contrast with the item above: a major AI lab has just become a certified conformer to,
+  and standard-steering-committee member of, the exact program a fresh academic paper says
+  certifies implementations "without technical review." This is adjacent to us — content/media
+  authenticity, not physical-item provenance — but it is precisely the kind of live public argument
+  over what a "conformant" verification claim is actually worth that this radar watches for.
+- **OriginTrail (adjacent, not a direct competitor):** opened OT-RFC-27 (2026-09-06) proposing a
+  read-side TRAC payment mechanism for metered AI inference over its Decentralized Knowledge Graph
+  ([TradingView syndication of a CoinMarketCal item](https://www.tradingview.com/news/coinmarketcal:45d7074d4094b:0-origintrail-ot-rfc-27-proposes-paid-inference-for-the-decentralized-knowledge-graph-06-sep-2026/) —
+  a market-data aggregator repost, not a primary source), and runs DKGcon 2026 (Zurich Online
+  Edition, 2026-09-11, "Scaling trust in the age of AI — verifying what's real"). Still a
+  knowledge-graph/RAG substrate play, not a signed single-item provenance record — adjacent noise,
+  not a direct competitive signal, but notable that a paid-per-call settlement RFC for AI
+  inference is conceptually close to our own Move 2 (agent-payable, per-call verification pricing),
+  just for a different kind of query.
+- **Quiet or not found this search:** no confirmation that W3C Confidence Method or Render Method
+  actually reached Recommendation status this week — both now have `/TR/` (not just draft-repo)
+  URLs, which typically signals advancing maturity, but the primary pages were blocked and no
+  secondary source confirmed the exact status reached, so this stays "targeting Recommendation in
+  September 2026," not "recommended," pending direct confirmation. No GS1 Digital Link or EPCIS
+  version change beyond the already-reported August 2026 releases. No dated Transmute news. No
+  IBM TrustChain or Avery Dennison atma.io news this week. No direct public forum thread arguing
+  verdict-vs-score specifically for physical-item verification (the closest hits were general
+  AI-content-detection commentary, already adjacent-scope). The UK GOV.UK consultation (see below)
+  had no news beyond remaining open.
+
+### Where we are genuinely differentiated
+
+- **Offline verification with no server dependency** — unchanged; the EU battery-passport
+  access-tiering story this week is a live counter-example of a *server-mediated, permissioned*
+  access model for provenance-adjacent data, which sharpens rather than weakens the contrast.
+- **Three verdicts, no score** — unchanged from the 2026-08-26 correction.
+- **Adversarial conformance suite validated against deliberately broken implementations** — the
+  clearer detail on IACR 2026/804 this week (Pixel 10 shipping without required metadata,
+  inconsistent cross-implementation validation) is the strongest independent evidence yet, across
+  every week of this radar, for exactly the failure mode `conformance/README.md`'s suite was built
+  to catch. Still summary-sourced pending a direct read, and still about a different spec (C2PA,
+  media authenticity) rather than ours — cite the contrast, not the specific numbers, until the
+  primary paper is actually read.
+- **Apache-2.0 with a patent grant on the protocol, proprietary platform** — unchanged.
+
+### Where we are genuinely behind
+
+- **No revocation until v0.2** — unchanged.
+- **Signatures prove authorship, not truth** — unchanged, structural.
+- **No crypto-agility or post-quantum story** — unchanged.
+- **No bridging to the EU's ESDC/ISO-IEC-20248 vocabulary** — unchanged; still pending FprEN
+  18246's actual publication.
+- **New this week: no access-tiering model.** `SPEC.md` §6 requires records to be "served without
+  authentication" full stop — "verification that requires an account is not public verification."
+  That is a deliberate, defensible design choice for the record our spec covers. But the EU's live
+  battery-passport rules are landing on three distinct access tiers for passport data generally,
+  and the Commission is actively defining who counts as a "legitimate interest" third party for
+  the non-public tier. Our spec doesn't currently say anything about scope here — i.e., whether
+  "no-auth for everything" is a claim about the *verification record specifically* (narrower than
+  a full product passport, and thus fine to keep fully public) or a position on product-data access
+  generally (which would conflict with what regulators are actually building). Silence reads as
+  the latter by default. See "Spec gaps."
+
+### Named awareness targets
+
+- **UK GOV.UK digital product record call for evidence** —
+  [gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy](https://www.gov.uk/government/calls-for-evidence/call-for-evidence-digital-product-record-policy).
+  Closes **2026-09-21** — 12 days from today. Third straight week this radar has flagged it as the
+  single most actionable, time-boxed item, and it remains unacted on. The window will close before
+  next week's entry if nothing is submitted before then.
+- **W3C/GS1 Workshop on E-commerce for Humans and AI Agents outputs** —
+  [w3.org/2026/ecommerce-agents](https://www.w3.org/2026/ecommerce-agents/). The workshop itself
+  just happened (2026-09-08–09); the concrete move now is watching for published minutes,
+  position statements, or a follow-on Community Group, since its agenda — GS1 Digital Link,
+  verifiable credentials, and agent commerce protocols (MCP/UCP/ACP) together — is the closest
+  thing found yet to a single forum spanning both Move 2 and Move 3.
+- **IACR 2026/804 / UMBC CISA group** —
+  [cisa.umbc.edu](https://cisa.umbc.edu/verifying-provenance-of-digital-media-security-analysis-of-c2pa-and-its-implementation/),
+  paper at [eprint.iacr.org/2026/804](https://eprint.iacr.org/2026/804) (blocked again this
+  session — worth a direct-read attempt from a non-proxied environment). If its findings hold up
+  under a full read, this is a citable, independent, academic point of contrast for our
+  conformance-suite story, in a way no vendor comparison can match.
+- **FprEN 18246 (CEN-CLC/JTC 24)** — unchanged from last week, expected to publish this month.
+
+### Spec gaps
+
+Noted here per instructions, not edited into `SPEC.md`:
+
+- Carried over, unresolved: `confidenceMethod`-style interaction with the §5.1 verdict; no named
+  mechanism for v0.2 `credentialStatus` revocation; Ed25519-only with no crypto-agility statement;
+  no bridging to the EU's emerging ESDC/ISO-IEC-20248 vocabulary.
+- New this week: `SPEC.md` §6 mandates unauthenticated public access with no stated scope
+  boundary. Worth a clarifying sentence in a future revision — e.g., "this specification covers
+  the provenance record only; a deployment MAY restrict access to other product data under its own
+  policy" — so the no-auth requirement reads as a scoped design decision rather than a silent,
+  broader claim that conflicts with the tiered-access model real regulators (EU battery passport)
+  are building for the wider category of product data this protocol's records can live alongside.
+
+---
