@@ -158,8 +158,8 @@ importers:
         specifier: ^5.0.6
         version: 5.0.6
       '@types/google.maps':
-        specifier: ^3.65.5
-        version: 3.66.1
+        specifier: ^3.66.2
+        version: 3.66.2
       ai:
         specifier: ^7.0.84
         version: 7.0.88(zod@3.25.76)
@@ -5824,8 +5824,8 @@ packages:
   '@types/glob@7.2.0':
     resolution: {integrity: sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==}
 
-  '@types/google.maps@3.66.1':
-    resolution: {integrity: sha512-UtnC1f4l6jSfw1WZD8nwP2XTLm5GKsL95Yk1a3etzFpKxJL4ZzO53k96IRipedIJGRLhV1z4lGlTTrP6FMyGww==}
+  '@types/google.maps@3.66.2':
+    resolution: {integrity: sha512-Lg/U5iLj90fQV3jQJo6hmGYsNAecXH3J+3LkKb4AupYyyI3UFx7y4hINz1pYILX0DEWNN1FeCAXLUEjBBeV9XA==}
 
   '@types/hast@3.0.5':
     resolution: {integrity: sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g==}
@@ -15389,7 +15389,7 @@ snapshots:
     dependencies:
       '@ethereumjs/tx': 4.2.0
       '@metamask/superstruct': 3.4.1
-      '@noble/hashes': 1.8.0
+      '@noble/hashes': 1.7.2
       '@scure/base': 1.2.6
       '@types/debug': 4.1.13
       debug: 4.4.3
@@ -18999,7 +18999,7 @@ snapshots:
       '@types/minimatch': 6.0.0
       '@types/node': 26.4.0
 
-  '@types/google.maps@3.66.1': {}
+  '@types/google.maps@3.66.2': {}
 
   '@types/hast@3.0.5':
     dependencies:
