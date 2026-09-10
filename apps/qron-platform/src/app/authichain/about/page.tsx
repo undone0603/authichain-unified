@@ -34,7 +34,7 @@ export default function AuthichainAbout() {
 
         <div className="space-y-8 text-lg text-zinc-400 leading-relaxed font-medium">
           <p>
-            AuthiChain wasn't born in Silicon Valley. It was architected by a solo founder in Gaylord, Michigan, with a singular mission: to build the infrastructure that makes truth verifiable.
+            AuthiChain wasn&apos;t born in Silicon Valley. It was architected by a solo founder in Gaylord, Michigan, with a singular mission: to build the infrastructure that makes truth verifiable.
           </p>
           <p>
             In an era of deepfakes, AI-generated fraud, and global counterfeiting, the visual internet lost its anchor to reality. We set out to fix that by creating a protocol where every physical and digital artifact can cryptographically prove its own origin.

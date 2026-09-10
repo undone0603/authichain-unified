@@ -48,6 +48,7 @@ def run(ctx: ExecutionContext) -> str:
             for name, dim in score.dimensions.items()
         },
         "bottleneck": score.bottleneck,
+        "bottleneck_score": round(score.bottleneck_score, 1),
         "recommended_action": score.recommended_action,
         "agent_activity": agent_status,
     }
@@ -63,7 +64,7 @@ def run(ctx: ExecutionContext) -> str:
             bar = "█" * int(dim.score / 10) + "░" * (10 - int(dim.score / 10))
             print(f"  {name.upper():14s} {bar} {dim.score:3.0f}%")
         print()
-        print(f"  BOTTLENECK: {score.bottleneck}")
+        print(f"  BOTTLENECK: {score.bottleneck} ({score.bottleneck_score:.0f}%)")
         print(f"  RECOMMENDED: {score.recommended_action}")
         print()
         print("  AGENT ACTIVITY")
@@ -81,5 +82,5 @@ def run(ctx: ExecutionContext) -> str:
 
     return (
         f"DAILY_REPORT: Score={score.total:.0f}, Stage={stage}, "
-        f"Bottleneck={score.bottleneck}"
+        f"Bottleneck={score.bottleneck} ({score.bottleneck_score:.0f}%)"
     )

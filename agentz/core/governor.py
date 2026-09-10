@@ -240,7 +240,13 @@ class LaunchGovernor:
         # 7. VERIFY OUTCOME — re-assess stage and score
         if verbose:
             print("\n  [VERIFY] Re-assessing stage and score...")
-        advanced = self.state_machine.advance(ctx)
+        if self.mode == Mode.DRY_RUN:
+            # Dry-run must not mutate persisted state — assess only.
+            advanced = self.state_machine.assess_stage(
+                self.state_machine.current_stage, ctx
+            ).ready_to_advance
+        else:
+            advanced = self.state_machine.advance(ctx)
         cycle.stage_after = self.state_machine.current_stage.value
 
         score_after = calculate_launch_score(ctx, cycle.stage_after)

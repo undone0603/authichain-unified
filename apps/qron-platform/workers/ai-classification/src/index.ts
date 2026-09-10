@@ -90,8 +90,9 @@ export default {
         headers: { "Content-Type": "application/json" } 
       });
 
-    } catch (error: any) {
-      return new Response(JSON.stringify({ error: "Classification pipeline failed", details: error.message }), { 
+    } catch (error) {
+      const details = error instanceof Error ? error.message : String(error);
+      return new Response(JSON.stringify({ error: "Classification pipeline failed", details }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });

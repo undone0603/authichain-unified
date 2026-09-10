@@ -12,7 +12,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Maximum 500 QR codes per bulk request' }, { status: 400 });
   }
 
-  const results = codes.map((code: any, index: number) => {
+  const results = codes.map((code: {
+    name?: string;
+    url?: string;
+    type?: string;
+    campaign_id?: string;
+    style?: { foreground: string; background: string; logo: boolean };
+  }, index: number) => {
     if (!code.name || !code.url) {
       return {
         index,

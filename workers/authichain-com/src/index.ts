@@ -3292,8 +3292,30 @@ const dppHtml = (now: Date) => `<!DOCTYPE html>
 </body>
 </html>`;
 
+/**
+ * APP_WORKER: a Cloudflare Service Binding to `authichain-edge-router`
+ * (worker-app/index.ts) — the native-Cloudflare replacement for the old
+ * Vercel deployment (authichain-unified.vercel.app, which no longer exists;
+ * see git history for context). A service binding invokes the target Worker
+ * directly inside Cloudflare's network (no public fetch, no DNS, no extra
+ * hop), and is undefined only in local `wrangler dev` runs that don't wire
+ * it up — hence the fallback path below.
+ *
+ * IMPORTANT — this binding is declared in wrangler.toml but this repo does
+ * not deploy it live as part of landing this change: confirm
+ * `authichain-edge-router` is actually deployed and its D1/KV/Hyperdrive
+ * bindings point at production data before this proxy target is exercised
+ * in production. Until then, requests will 500 (Cloudflare returns an error
+ * for an unbound/misconfigured service binding) rather than silently
+ * falling back to Vercel — which is intentional: Vercel is gone, so a loud
+ * failure here is more honest than a silent black hole.
+ */
+interface Env {
+  APP_WORKER?: { fetch: (request: Request) => Promise<Response> };
+}
+
 export default {
-  async fetch(request: Request) {
+  async fetch(request: Request, env: Env) {
     const url = new URL(request.url);
     if (url.hostname === 'www.authichain.com') {
       url.hostname = 'authichain.com';
@@ -3320,27 +3342,22 @@ export default {
       return new Response('User-agent: *\nAllow: /\nSitemap: https://authichain.com/sitemap.xml\n', { headers: { 'Content-Type': 'text/plain' } });
     }
     if (p === '/dapp' || p.startsWith('/dapp/')) {
-      return Response.redirect('https://authichain-unified.vercel.app/dashboard', 302);
+      // Was a redirect to the Vercel deployment; the app now lives on this
+      // same domain via the APP_WORKER service binding, so redirect same-origin.
+      return Response.redirect('https://authichain.com/dashboard', 302);
     }
     if (p === '/demo' || p.startsWith('/demo/')) {
-      return Response.redirect('https://authichain-unified.vercel.app/subscriptions', 302);
+      return Response.redirect('https://authichain.com/subscriptions', 302);
     }
     if (p === '/digital-product-passport' || p === '/dpp') {
       return new Response(dppHtml(new Date()), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
     }
-    // Self-serve thanks/activate live on the app (Vercel); keep /dpp marketing here.
+    // Self-serve thanks/activate live on the app; keep /dpp marketing here.
     if (p === '/dpp/thanks' || p.startsWith('/dpp/thanks/') || p === '/dpp/activate' || p.startsWith('/dpp/activate/')) {
-      const target = new URL(request.url);
-      target.hostname = 'authichain-unified.vercel.app';
-      target.protocol = 'https:';
-      const headers = new Headers(request.headers);
-      headers.set('Host', 'authichain-unified.vercel.app');
-      return fetch(new Request(target.toString(), {
-        method: request.method,
-        headers,
-        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
-        redirect: 'follow',
-      }));
+      if (env.APP_WORKER) {
+        return env.APP_WORKER.fetch(request);
+      }
+      return new Response('App worker not bound (local dev)', { status: 502 });
     }
     if (p === '/protocol' || p === '/spec') {
       return new Response(PROTOCOL_HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
@@ -3354,38 +3371,34 @@ export default {
         return new Response(certPage(certId), { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
       }
     }
-    // Landing pages: /landing/:brandId routes to Vercel for dynamic brand landing pages
+    // Landing pages: /landing/:brandId — dynamic brand landing pages.
+    // TODO(follow-up): worker-app (authichain-edge-router) has no dedicated
+    // /landing handler yet (see worker-app/route-manifest.ts and
+    // worker-app/dynamic-pages.ts — neither lists "/landing"), so this
+    // currently falls through to the SPA shell's spa-fallback, which likely
+    // does NOT reproduce the old per-brand landing page content/logic.
+    // Don't fabricate that logic here — build a real /landing dynamic-pages.ts
+    // handler (same pattern as its existing /verify handler) before relying
+    // on this route in production.
     if (p === '/landing' || p.startsWith('/landing/')) {
-      const target = new URL(request.url);
-      target.hostname = 'authichain-unified.vercel.app';
-      target.protocol = 'https:';
-      const headers = new Headers(request.headers);
-      headers.set('Host', 'authichain-unified.vercel.app');
-      return fetch(new Request(target.toString(), {
-        method: request.method,
-        headers,
-        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
-        redirect: 'follow',
-      }));
+      if (env.APP_WORKER) {
+        return env.APP_WORKER.fetch(request);
+      }
+      return new Response('App worker not bound (local dev)', { status: 502 });
     }
-    // Proxy app routes to the Vercel deployment instead of serving marketing HTML.
+    // Proxy app routes to the native Cloudflare app Worker (authichain-edge-router,
+    // see worker-app/index.ts) via a service binding, replacing the old Vercel
+    // proxy (authichain-unified.vercel.app no longer exists — see the Env/
+    // APP_WORKER doc comment above this file's `export default`).
     // Prefixes must NOT have a trailing slash so the startsWith check works correctly
     // (e.g. '/api/' would make p.startsWith('/api/'+ '/') = p.startsWith('/api//') which never matches).
     const APP_PREFIXES = ['/dashboard', '/api', '/verify', '/auth', '/login', '/logout',
       '/signup', '/register', '/subscriptions', '/settings', '/onboard', '/admin'];
     if (APP_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))) {
-      const target = new URL(request.url);
-      target.hostname = 'authichain-unified.vercel.app';
-      target.protocol = 'https:';
-      // Replace the Host header so Vercel routes to the correct project
-      const headers = new Headers(request.headers);
-      headers.set('Host', 'authichain-unified.vercel.app');
-      return fetch(new Request(target.toString(), {
-        method: request.method,
-        headers,
-        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
-        redirect: 'follow',
-      }));
+      if (env.APP_WORKER) {
+        return env.APP_WORKER.fetch(request);
+      }
+      return new Response('App worker not bound (local dev)', { status: 502 });
     }
     return new Response(HTML, { headers: { ...HTML_SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8' } });
   }

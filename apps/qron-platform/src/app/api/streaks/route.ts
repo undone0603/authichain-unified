@@ -46,8 +46,8 @@ export async function GET(req: NextRequest) {
       days_since_active: daysSinceActive,
       milestones,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     }, { onConflict: 'user_id' });
 
     return NextResponse.json({ streak_days: newStreak, longest_streak: longest, updated: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

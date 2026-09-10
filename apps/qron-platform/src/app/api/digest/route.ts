@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       supabase.from('usage_stats').select('streak_days, total_qrons, total_scans, milestone_count').eq('user_id', user.id).single(),
     ]);
 
-    const topQrons = (qrons || []).sort((a: any, b: any) => b.scan_count - a.scan_count).slice(0, 5);
+    const topQrons = (qrons || []).sort((a: { scan_count: number }, b: { scan_count: number }) => b.scan_count - a.scan_count).slice(0, 5);
 
     const digest = {
       period: 'weekly',
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     };
 
     return NextResponse.json(digest);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
