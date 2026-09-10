@@ -177,7 +177,7 @@ async function checkGitHubBranches(env: Env): Promise<CheckResult> {
     };
   try {
     const res = await fetch(
-      "https://api.github.com/repos/undone-k/authichain-unified/branches",
+      "https://api.github.com/repos/undone0603/authichain-unified/branches",
       {
         headers: {
           Authorization: `token ${env.GITHUB_TOKEN}`,
@@ -215,7 +215,7 @@ async function checkGitHubDependabot(env: Env): Promise<CheckResult> {
     };
   try {
     const res = await fetch(
-      "https://api.github.com/repos/undone-k/authichain-unified/dependabot/alerts?state=open&per_page=50",
+      "https://api.github.com/repos/undone0603/authichain-unified/dependabot/alerts?state=open&per_page=50",
       {
         headers: {
           Authorization: `token ${env.GITHUB_TOKEN}`,
