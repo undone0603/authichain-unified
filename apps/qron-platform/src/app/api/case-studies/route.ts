@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       .select('industry')
       .eq('is_published', true);
 
-    const uniqueIndustries = [...new Set((industries || []).map((i: any) => i.industry).filter(Boolean))];
+    const uniqueIndustries = [...new Set((industries || []).map((i: { industry?: string }) => i.industry).filter(Boolean))];
 
     return NextResponse.json({
       success: true,
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
       industries: uniqueIndustries,
       total: data?.length || 0,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

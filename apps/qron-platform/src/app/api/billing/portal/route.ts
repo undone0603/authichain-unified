@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
       current_plan: profile.subscription_plan,
       current_status: profile.subscription_status,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
       payment_history: payments || [],
       portal_available: !!profile?.stripe_customer_id,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

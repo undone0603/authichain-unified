@@ -11,7 +11,7 @@ const supabase = createClient(
 );
 
 // Cache for 1 hour to avoid repeated DB calls on landing page
-let cache: { data: any; ts: number } | null = null;
+let cache: { data: Record<string, unknown>; ts: number } | null = null;
 const CACHE_TTL = 3600000;
 
 export async function GET(req: NextRequest) {
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
     const totalUsers = usersRes.count || 0;
     const totalQrons = qronsRes.count || 0;
-    const totalScans = (scansRes.data || []).reduce((sum: number, r: any) => sum + (r.total_scans || 0), 0);
+    const totalScans = (scansRes.data || []).reduce((sum: number, r: { total_scans: number | null }) => sum + (r.total_scans || 0), 0);
 
     // Pad with realistic minimums if DB is empty (early traction)
     const stats = {
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
     cache = { data: proof, ts: Date.now() };
     return NextResponse.json(proof);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

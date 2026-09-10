@@ -221,6 +221,115 @@ app.post("/api/webhooks/docusign", async c => {
   }
 });
 
+// ─── AgentZ orchestration webhook + status ──────────────────────────────────
+// Ported from src/app/api/agentz/{webhook,status}/route.ts (Next.js/Vercel,
+// now dead — see workers/authichain-com/src/index.ts). Same behavior: Supabase
+// service-role writes to lead_captures / automation_logs. Logic unchanged,
+// only the request/response plumbing moved from Next's NextRequest/
+// NextResponse to Hono's Context, and the secret check now uses this file's
+// existing timing-safe comparison (the Next.js route used plain `===`).
+// Called by .github/workflows/agentz-orchestration.yml's "Notify AgentZ
+// Webhook" step, which was 404ing on every run because it hit dead Vercel.
+app.post("/api/agentz/webhook", async c => {
+  const secret = process.env.AGENTZ_WEBHOOK_SECRET;
+  const provided = c.req.header("x-agentz-secret");
+  if (!secret || !provided || !timingSafeEqualStrings(provided, secret)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  let body: { event?: string; payload?: Record<string, unknown> };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const { event, payload = {} } = body;
+  if (!event) return c.json({ error: "Missing event" }, 400);
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) {
+    return c.json({ error: "Supabase not configured" }, 503);
+  }
+
+  const { createClient } = await import("@supabase/supabase-js");
+  const admin = createClient(supabaseUrl, serviceKey);
+
+  if (event === "lead.qualified") {
+    const email = payload.email as string | undefined;
+    if (email) {
+      await admin.from("lead_captures").upsert(
+        {
+          email,
+          name: payload.name as string | undefined,
+          source: "agentz",
+          product_interest: (payload.product as string) || "authichain",
+          metadata: JSON.stringify(payload),
+          status: "qualified",
+        },
+        { onConflict: "email", ignoreDuplicates: false }
+      );
+    }
+  }
+
+  await admin.from("automation_logs").insert({
+    workflow_name: `agentz_${event.replace(".", "_")}`,
+    trigger_type: "webhook",
+    status: payload.status === "failure" ? "failure" : "success",
+    payload: JSON.stringify({ event, ...payload }),
+  });
+
+  return c.json({ ok: true, event });
+});
+
+app.get("/api/agentz/status", async c => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) {
+    return c.json({ error: "Supabase not configured" }, 503);
+  }
+
+  const { createClient } = await import("@supabase/supabase-js");
+  const admin = createClient(supabaseUrl, serviceKey);
+
+  const limit = Number(c.req.query("limit") ?? "50");
+  const { data, error } = await admin
+    .from("automation_logs")
+    .select("id, workflow_name, trigger_type, status, payload, created_at")
+    .ilike("workflow_name", "agentz_%")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Number.isFinite(limit) ? limit : 50, 200));
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  const summary = {
+    total: data?.length ?? 0,
+    byWorkflow: {} as Record<
+      string,
+      { count: number; lastRun: string; lastStatus: string }
+    >,
+  };
+
+  for (const row of data ?? []) {
+    const name = row.workflow_name as string;
+    const existing = summary.byWorkflow[name];
+    if (!existing) {
+      summary.byWorkflow[name] = {
+        count: 1,
+        lastRun: row.created_at as string,
+        lastStatus: row.status as string,
+      };
+    } else {
+      existing.count += 1;
+    }
+  }
+
+  return c.json({ ok: true, summary, logs: data });
+});
+
 // ─── Admin ops console (client/src/pages/OpsDashboard.tsx) ─────────────────
 app.get("/api/admin/ops", async c => {
   const { sdk } = await import("../server/_core/sdk");

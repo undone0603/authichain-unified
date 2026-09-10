@@ -35,6 +35,6 @@ def run(ctx: ExecutionContext) -> str:
 
     return (
         f"Launch Score: {score.total:.0f} (stage: {stage}). "
-        f"Bottleneck: {score.bottleneck}. "
+        f"Bottleneck: {score.bottleneck} ({score.bottleneck_score:.0f}%). "
         f"Recommended: {score.recommended_action}"
     )
