@@ -7361,5 +7361,133 @@
         }
       ]
     }
+  },
+  {
+    "slug": "eu-falsified-medicines-directive-verification",
+    "keyword": "eu falsified medicines directive verification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Falsified Medicines Directive Verification | AuthiChain",
+    "metaDescription": "Every prescription medicine pack sold in the EU has carried a serialized 2D data matrix code and a tamper-evident seal since 9 February 2019, checked once.",
+    "h1": "EU Falsified Medicines Directive Verification",
+    "bodyHtml": "<p>Every prescription medicine pack sold in the EU has carried a serialized 2D data matrix code and a tamper-evident seal since 9 February 2019, checked once against a national hub and decommissioned the moment a pharmacist dispenses it — a single-use verification model, distinct from the offline, repeatable check a signed AuthiChain record is built to give a downstream party.</p><h2>Why AuthiChain</h2><ul><li>The FMD unique identifier packs a product code, batch number, expiry date, and serial number into one 2D data matrix code — the same fields a DSCSA unit-level record carries for the US market, on a separate EU system with its own national verification hubs</li><li>FMD verification is a live lookup against the European Medicines Verification System at the point of dispensing; a signed AuthiChain record verifies offline against the record itself, with no hub, portal, or account required</li><li>The anti-tampering device is a physical seal, not a data field — a broken seal fails FMD compliance regardless of what the barcode reports, the same way protocol/SPEC.md §8 states a signature proves authorship, not that the physical item in hand matches the record</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Does a signed AuthiChain record replace the FMD unique identifier?</h3><p>No — the FMD unique identifier and its decommissioning in the national verification system is a separate legal requirement for EU prescription medicines. A signed record can carry the same product code, batch, and serial data, but it doesn’t satisfy that decommissioning step on its own.</p><h3>What happens if a pack’s code is scanned after it has already been decommissioned?</h3><p>The national verification system flags it — a decommissioned code scanning again reads as already dispensed, which is exactly the signal an FMD check is built to raise. That’s different from an AuthiChain record, which a buyer can verify offline as many times as they want without changing its status.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Falsified Medicines Directive Verification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "Every prescription medicine pack sold in the EU has carried a serialized 2D data matrix code and a tamper-evident seal since 9 February 2019, checked once against a national hub and decommissioned the moment a pharmacist dispenses it — a single-use verification model, distinct from the offline, repeatable check a signed AuthiChain record is built to give a downstream party.",
+          "url": "https://authichain.com/p/eu-falsified-medicines-directive-verification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Falsified Medicines Directive Verification",
+              "item": "https://authichain.com/p/eu-falsified-medicines-directive-verification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does a signed AuthiChain record replace the FMD unique identifier?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No — the FMD unique identifier and its decommissioning in the national verification system is a separate legal requirement for EU prescription medicines. A signed record can carry the same product code, batch, and serial data, but it doesn’t satisfy that decommissioning step on its own."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What happens if a pack’s code is scanned after it has already been decommissioned?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The national verification system flags it — a decommissioned code scanning again reads as already dispensed, which is exactly the signal an FMD check is built to raise. That’s different from an AuthiChain record, which a buyer can verify offline as many times as they want without changing its status."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-ai-act-product-authentication-classification",
+    "keyword": "eu ai act product authentication classification",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU AI Act Product Authentication Classification | AuthiChain",
+    "metaDescription": "The EU AI Act’s Annex III names eight high-risk use cases — biometric identification and categorization, critical infrastructure, education, employment.",
+    "h1": "EU AI Act Product Authentication Classification",
+    "bodyHtml": "<p>The EU AI Act’s Annex III names eight high-risk use cases — biometric identification and categorization, critical infrastructure, education, employment, access to essential services, law enforcement, migration and border management, and the administration of justice — and AI that checks whether a physical product is genuine is not one of them.</p><h2>Why AuthiChain</h2><ul><li>Annex III’s own list stays about people and public systems: biometric identification, critical infrastructure, education, employment, essential services, law enforcement, migration, and justice — scoring whether an item is authentic sits outside every category</li><li>The European Commission’s draft High-Risk Classification Guidelines, published 19 May 2026, treat biometric verification — confirming a specific person is who they claim to be — as explicitly excluded from high-risk status; AI that checks a physical item rather than a person sits even further outside Annex III’s named use cases</li><li>Annex III’s compliance deadline itself moved to 2 December 2027, extended from the original 2 August 2026 date — a schedule change for systems already inside Annex III, not a signal that product-authentication AI has been added to it</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit, anchor its record on-chain for tamper-evidence, and let anyone verify it with a single scan. Plans start at $49/mo.</p><h2>FAQ</h2><h3>Is AI-based authenticity scoring a high-risk AI system under the EU AI Act?</h3><p>Annex III’s eight high-risk categories cover biometric identification of people, critical infrastructure, employment, education, migration, law enforcement, essential services, and justice. AI that scores whether a physical item is genuine doesn’t fall into any of them as of this writing — worth confirming with counsel for your specific deployment, not a blanket exemption this page can grant.</p><h3>Did the Annex III deadline extension change anything for anti-counterfeiting AI?</h3><p>The 2 December 2027 date applies to systems already inside Annex III’s eight categories. Product-authentication AI was outside Annex III before the extension and remains outside it after — the schedule moved, not the scope.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU AI Act Product Authentication Classification",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The EU AI Act’s Annex III names eight high-risk use cases — biometric identification and categorization, critical infrastructure, education, employment, access to essential services, law enforcement, migration and border management, and the administration of justice — and AI that checks whether a physical product is genuine is not one of them.",
+          "url": "https://authichain.com/p/eu-ai-act-product-authentication-classification"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU AI Act Product Authentication Classification",
+              "item": "https://authichain.com/p/eu-ai-act-product-authentication-classification"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is AI-based authenticity scoring a high-risk AI system under the EU AI Act?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Annex III’s eight high-risk categories cover biometric identification of people, critical infrastructure, employment, education, migration, law enforcement, essential services, and justice. AI that scores whether a physical item is genuine doesn’t fall into any of them as of this writing — worth confirming with counsel for your specific deployment, not a blanket exemption this page can grant."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Did the Annex III deadline extension change anything for anti-counterfeiting AI?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The 2 December 2027 date applies to systems already inside Annex III’s eight categories. Product-authentication AI was outside Annex III before the extension and remains outside it after — the schedule moved, not the scope."
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 ]
