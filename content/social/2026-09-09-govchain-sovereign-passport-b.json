@@ -1,0 +1,18 @@
+{
+  "linkedin": "A credential issued by a government agency should be something the holder can carry and use anywhere it's needed — not a document that only means something when the agency itself picks up the phone to vouch for it.\n\nGovChain lets an agency issue a permit, certification, or determination as a signed verifiable credential instead of a plain document. The recipient holds a cryptographically signed record they can present directly to a business partner, an auditor, or another agency; whoever receives it verifies the signature and the issuing agency's identity on the spot, with nothing routed back through the original office. It runs on the same Ed25519 signing model used across the AuthiChain protocol, so the trust model is consistent across every credential type it issues.\n\nIf your agency (or the contractors you work with) issue documents that only hold up after a callback, take a look at what a portable, independently verifiable credential changes.\n\nhttps://govchain.us/?utm_source=linkedin&utm_medium=social&utm_campaign=govchain-sovereign-passport&utm_content=b\n\n#GovCon #DigitalCredentials #FederalContracting",
+  "reddit": {
+    "subreddit": "govcon",
+    "title": "Should a federal credential be portable on its own, or does it always need a callback to the issuing agency to mean anything?",
+    "body": "A permit or certification issued by a government agency is usually only as good as the agency's willingness to confirm it over the phone. The document itself doesn't carry proof — the holder does, but only by pointing someone back to the source.\n\nI've been working on GovChain, which lets an issuing agency sign the document as a verifiable credential the holder can carry and present directly. Whoever receives it — a business partner, an auditor, another agency — checks the signature and confirms the issuer's identity themselves, without routing back through the original office. It's built on the same Ed25519 signing model as the rest of the AuthiChain protocol.\n\nCurious how agencies or contractors here think about credential portability specifically — is a document that requires a callback to verify still workable at your scale, or is that the part that actually needs to change?\n\nhttps://govchain.us/?utm_source=reddit&utm_medium=social&utm_campaign=govchain-sovereign-passport&utm_content=b\n\nDisclosure: I work on this project."
+  },
+  "twitter": [
+    "A permit or certification from a government agency is usually only as good as the agency's willingness to confirm it by phone. The document itself doesn't carry proof — the holder does, but only by pointing someone back to the source.",
+    "GovChain lets the agency issue it as a signed verifiable credential the holder can carry and present directly. Whoever receives it checks the signature and issuer identity themselves, no routing back through the original office.",
+    "Same Ed25519 signing model as the rest of the AuthiChain protocol, so portability doesn't cost consistency: https://govchain.us/?utm_source=twitter&utm_medium=social&utm_campaign=govchain-sovereign-passport&utm_content=b"
+  ],
+  "experiment": {
+    "campaign": "govchain-sovereign-passport",
+    "variant": "b",
+    "hypothesis": "leading with a credential-portability hook (the holder can carry and present proof directly) outperforms variant a's manual-verification-bottleneck hook on click-through to govchain.us"
+  }
+}
