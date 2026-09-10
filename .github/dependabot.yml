@@ -24,6 +24,19 @@ updates:
       # Revisit when turbo bumps @manypkg/get-packages to a js-yaml 4 line.
       - dependency-name: "js-yaml"
         versions: ["3.x"]
+      # next major bumps require human review: Next 16 flipped the default
+      # bundler to Turbopack, which hard-rejects webpack configs injected by
+      # plugins (next-pwa on qron-platform) and broke main + deploys when
+      # auto-merged by a bot (2026-09-09 incident, reverted in ce16c71a).
+      # Minor/patch bumps are still auto-PR'd and safe.
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      # Same policy for the other framework anchor: react majors ride with
+      # next releases and must never land unattended.
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
