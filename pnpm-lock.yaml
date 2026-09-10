@@ -38,8 +38,8 @@ importers:
         specifier: ^0.4.2
         version: 0.4.2(@trpc/server@11.18.0(typescript@5.9.3))(hono@4.13.5)
       '@hubspot/api-client':
-        specifier: ^13.5.0
-        version: 13.5.0
+        specifier: ^14.0.1
+        version: 14.0.1
       '@lucia-auth/adapter-drizzle':
         specifier: ^1.1.0
         version: 1.1.0(drizzle-orm@0.45.2(@cloudflare/workers-types@5.20260901.1)(@types/pg@8.23.1)(pg@8.23.0)(postgres@3.4.9))(lucia@3.2.2)
@@ -2575,9 +2575,9 @@ packages:
       '@trpc/server': ^10.10.0 || >11.0.0-rc
       hono: '>=4.0.0'
 
-  '@hubspot/api-client@13.5.0':
-    resolution: {integrity: sha512-zZ9ybOqudSgAZSow5dgYWRkslDPfqA2fWnERMqWQm6ASlM/XCFS6zoec0zD3d6OxeoLOfiovVo39gVpK+KWQ9Q==}
-    engines: {node: '>=18.0.0'}
+  '@hubspot/api-client@14.0.1':
+    resolution: {integrity: sha512-+2/9e3DguqVXB/htjQ5yxWkLD4fGdS1MNsOVYlc05a4TAGx0PGt+EgvW8o5P9GwQsMIGHCCiR6CJpNYNQtbiqw==}
+    engines: {node: '>=22.0.0'}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -14790,17 +14790,13 @@ snapshots:
       '@trpc/server': 11.18.0(typescript@5.9.3)
       hono: 4.13.5
 
-  '@hubspot/api-client@13.5.0':
+  '@hubspot/api-client@14.0.1':
     dependencies:
       '@types/node': 26.4.0
-      '@types/node-fetch': 2.6.13
       bottleneck: 2.19.5
       es6-promise: 4.2.8
       form-data: 4.0.6
       lodash.merge: 4.6.2
-      node-fetch: 2.7.0
-    transitivePeerDependencies:
-      - encoding
 
   '@humanfs/core@0.19.2':
     dependencies:
