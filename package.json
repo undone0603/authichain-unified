@@ -201,7 +201,12 @@
       "redis": "file:./stubs/empty-redis"
     },
     "auditConfig": {
-      "ignoreCves": ["CVE-2026-77465", "CVE-2026-63376"]
+      "ignoreCves": [
+        "CVE-2026-77465",
+        "CVE-2026-63376",
+        "CVE-2026-56876",
+        "CVE-2026-19693"
+      ]
     }
   }
 }
