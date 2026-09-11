@@ -45,7 +45,11 @@ jobs:
 
       - name: Drizzle schema ↔ migrations drift
         run: |
-          pnpm db:generate >/dev/null 2>&1 || true
+          set -euo pipefail
+          if ! pnpm db:generate; then
+            echo "::error::pnpm db:generate failed — the drift check could not run. This is a failure, not a pass."
+            exit 1
+          fi
           if [ -n "$(git status --porcelain drizzle/)" ]; then
             echo "::error::drizzle-kit generate produced changes — ORM schema and committed migrations have drifted. Review drizzle/ (note: three parallel migration sets exist; see the maintenance notes in the PR that added this check)."
             git status --porcelain drizzle/
