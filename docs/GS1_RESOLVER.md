@@ -38,12 +38,25 @@ NEXT_PUBLIC_RESOLVER_ORIGIN=https://id.authichain.com
 
 ```
 GET  /health
-GET  /cert/AC-DEMO-001          Accept: application/json
-GET  /01/00012345678905/21/AC-DEMO-001
-POST /v1/scan  { "cert_id": "AC-DEMO-001", "country": "US" }
-POST /v1/issue { "gtin":"9506000134352", "serial":"UNIT-9", "brand":"Acme" }
-POST /v1/revoke { "cert_id":"AC-DEMO-001" }
+GET  /.well-known/gs1resolver
+GET  /cert/AC-DEMO-001            Accept: application/json   # scans
+GET  /01/00012345678905/21/AC-DEMO-001                       # scans
+GET  /v1/passport/AC-DEMO-001                                # read-only
+POST /issue { "gtin":"9506000134352", "serial":"UNIT-9", "brand":"Acme" }
 ```
+
+Corrected 2026-09-11. This list previously advertised `/v1/scan`, `/v1/issue`
+and `/v1/revoke`, none of which the worker implements, and `/v1/passport/{id}`,
+which it did not implement either -- so `src/lib/passport.ts`, which called it,
+404'd on every request. The endpoint now exists and the list matches the code.
+
+**The two kinds of GET are not interchangeable.** A Digital Link path (`/01/...`)
+or `/cert/{id}` is a _scan_: it records a scan row and can advance the seal's
+status, including into `clone_suspected`. `/v1/passport/{id}` is a _read_: it
+returns the same payload, writes nothing, and never changes status. Any surface
+that renders a passport without a person having scanned something -- a web page,
+a dashboard, a preview -- must use the read endpoint, or its own renders will be
+counted as scans from whatever regions it renders in.
 
 Print a QR that encodes:
 

@@ -77,7 +77,11 @@ function wantsJson(request: Request, url: URL): boolean {
   const accept = request.headers.get("accept") || "";
   // A browser sends text/html first; a scanner/API client typically does not.
   if (accept.includes("text/html")) return false;
-  return accept.includes("application/json") || accept.includes("application/ld+json") || accept === "";
+  return (
+    accept.includes("application/json") ||
+    accept.includes("application/ld+json") ||
+    accept === ""
+  );
 }
 
 function esc(value: unknown): string {
@@ -89,7 +93,11 @@ function esc(value: unknown): string {
 }
 
 /** Coarse geo from Cloudflare. Absent in `wrangler dev --local`. */
-function geoOf(request: Request): { country: string; region?: string; colo?: string } {
+function geoOf(request: Request): {
+  country: string;
+  region?: string;
+  colo?: string;
+} {
   const cf = (request as Request & { cf?: IncomingRequestCfProperties }).cf;
   return {
     country: (cf?.country as string) || "ZZ",
@@ -104,13 +112,17 @@ async function loadSeal(env: Env, key: string): Promise<SealRow | null> {
     .first<SealRow>();
 }
 
-async function recentScans(env: Env, sealId: string, limit = 50): Promise<ScanEvent[]> {
+async function recentScans(
+  env: Env,
+  sealId: string,
+  limit = 50
+): Promise<ScanEvent[]> {
   const { results } = await env.DB.prepare(
-    "SELECT at, country, region FROM scans WHERE seal_id = ?1 ORDER BY at DESC LIMIT ?2",
+    "SELECT at, country, region FROM scans WHERE seal_id = ?1 ORDER BY at DESC LIMIT ?2"
   )
     .bind(sealId, limit)
     .all<{ at: number; country: string; region: string | null }>();
-  return (results ?? []).map((r) => ({
+  return (results ?? []).map(r => ({
     at: r.at,
     country: r.country,
     region: r.region ?? undefined,
@@ -126,7 +138,11 @@ async function recentScans(env: Env, sealId: string, limit = 50): Promise<ScanEv
 async function registerScan(env: Env, seal: SealRow, request: Request) {
   const now = Date.now();
   const geo = geoOf(request);
-  const incoming: ScanEvent = { at: now, country: geo.country, region: geo.region };
+  const incoming: ScanEvent = {
+    at: now,
+    country: geo.country,
+    region: geo.region,
+  };
   const history = await recentScans(env, seal.id);
   const transition = nextStatus(seal.status as SealStatus, history, incoming);
 
@@ -137,7 +153,7 @@ async function registerScan(env: Env, seal: SealRow, request: Request) {
     await env.DB.batch([
       env.DB.prepare(
         `INSERT INTO scans (id, seal_id, at, country, region, colo, result, reason)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
       ).bind(
         scanId,
         seal.id,
@@ -146,7 +162,7 @@ async function registerScan(env: Env, seal: SealRow, request: Request) {
         geo.region ?? null,
         geo.colo ?? null,
         transition.next,
-        transition.reason,
+        transition.reason
       ),
       env.DB.prepare(
         `UPDATE seals
@@ -156,14 +172,14 @@ async function registerScan(env: Env, seal: SealRow, request: Request) {
                 last_scan_at = ?3,
                 first_country = COALESCE(first_country, ?4),
                 first_activated_at = COALESCE(first_activated_at, ?5)
-          WHERE id = ?6`,
+          WHERE id = ?6`
       ).bind(
         transition.next,
         transition.reason,
         now,
         isFirst ? geo.country : null,
         isFirst ? now : null,
-        seal.id,
+        seal.id
       ),
     ]);
     return { transition, recorded: true, at: now, geo };
@@ -184,7 +200,7 @@ function passportPayload(
     scanCount?: number;
     firstCountry?: string | null;
     firstActivatedAt?: number | null;
-  } = {},
+  } = {}
 ) {
   const copy = STATUS_COPY[status];
   let metadata: unknown = undefined;
@@ -224,20 +240,42 @@ function passportPayload(
     history: seal
       ? {
           scanCount: extra.scanCount ?? seal.scan_count,
-          firstCountry: extra.firstCountry !== undefined ? extra.firstCountry : seal.first_country,
+          firstCountry:
+            extra.firstCountry !== undefined
+              ? extra.firstCountry
+              : seal.first_country,
           firstActivatedAt:
-            extra.firstActivatedAt !== undefined ? extra.firstActivatedAt : seal.first_activated_at,
+            extra.firstActivatedAt !== undefined
+              ? extra.firstActivatedAt
+              : seal.first_activated_at,
         }
       : null,
     metadata,
-    // passportUrl intentionally omitted. PASSPORT_ORIGIN + /passport/{certId}
-    // has no route on authichain.com as of 2026-09-04 -- it serves the
-    // marketing homepage for ANY cert id (identical bytes for a real and a
-    // nonsense id, canonical pointing at the site root), so linking there
-    // dead-ends a scan on a marketing page. This response IS the passport
-    // until that page exists; re-add the link once it does.
-    passportUrl: null,
+    // Re-enabled 2026-09-11: /passport/{certId} now renders a real passport
+    // (src/app/passport/[id]), so a scan no longer dead-ends on a marketing
+    // page. That page reads through /v1/passport/{id}, which does not register
+    // a scan, so following this link cannot advance the seal's state.
+    // Only linked for a seal we actually resolved — a not_found response has
+    // nothing to link to.
+    passportUrl: seal?.cert_id
+      ? `${stripTrailingSlashes(env.PASSPORT_ORIGIN)}/passport/${encodeURIComponent(seal.cert_id)}`
+      : null,
   };
+}
+
+/**
+ * Strips trailing slashes in linear time.
+ *
+ * Replaces `.replace(/\/+$/, "")`, which CodeQL flagged as a polynomial
+ * regular expression on uncontrolled data: an anchored `+` backtracks
+ * quadratically over a run of slashes. These origins come from configuration
+ * rather than from a request, so the practical exposure was small — but the
+ * regex buys nothing over a scan, so there is no reason to keep it.
+ */
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47 /* "/" */) end--;
+  return value.slice(0, end);
 }
 
 const STATUS_TONE: Record<SealStatus, string> = {
@@ -306,7 +344,9 @@ function passportHtml(payload: ReturnType<typeof passportPayload>): string {
     ${
       payload.history
         ? `<dt>Scans</dt><dd>${esc(payload.history.scanCount)}${
-            payload.history.firstCountry ? ` (first: ${esc(payload.history.firstCountry)})` : ""
+            payload.history.firstCountry
+              ? ` (first: ${esc(payload.history.firstCountry)})`
+              : ""
           }</dd>`
         : ""
     }
@@ -329,16 +369,45 @@ function passportHtml(payload: ReturnType<typeof passportPayload>): string {
 </main></body></html>`;
 }
 
-/** GS1 Conformant Resolver description — standard discovery document. */
+/**
+ * Resolver description document.
+ *
+ * Corrected 2026-09-11. This previously called itself a "GS1 Conformant
+ * Resolver" and advertised supportedLinkType ["gs1:pip",
+ * "gs1:certificationInfo", "gs1:epcis"] — three link types it cannot serve.
+ * The worker implements none of Digital Link's resolution behaviour: no
+ * linkType query handling, no linkset, no 307 redirect to a linked resource,
+ * no Link header. It parses Digital Link paths and answers a verification
+ * question about the identifier, which is a different service.
+ *
+ * A machine reading a description file is entitled to act on it. Advertising
+ * capabilities that do not exist is the same failure this product sells
+ * against, so the document now describes what the worker actually does, and
+ * says plainly that it is not conformant.
+ *
+ * docs/GS1_CONFORMANCE.md tracks what conformance would require.
+ */
 function wellKnown(env: Env) {
   return {
+    name: "AuthiChain identifier verification service",
     resolverRoot: env.RESOLVER_ORIGIN,
     supportedPrimaryKeys: ["01"],
-    supportedLinkType: ["gs1:pip", "gs1:certificationInfo", "gs1:epcis"],
-    name: "AuthiChain GS1 Digital Link resolver",
-    // Declared here rather than implied: this resolver answers identity and
-    // scan-pattern questions only.
-    documentation: `${env.PASSPORT_ORIGIN}/docs/resolver`,
+
+    // Empty on purpose: no linkType is resolvable here yet. An empty list is
+    // a true statement; the previous list was not.
+    supportedLinkType: [],
+
+    gs1ConformantResolver: false,
+    conformanceNote:
+      "Parses GS1 Digital Link URIs and returns a verification result for the identifier. Does not implement linkType resolution, linksets, or redirection to linked resources, and so is not a GS1-Conformant Resolver.",
+
+    // The two behaviours a caller most needs to distinguish.
+    endpoints: {
+      scan: "GET /01/{gtin}/21/{serial} or /cert/{certId} — records a scan and may advance seal status",
+      read: "GET /v1/passport/{certId} — returns the same payload, records nothing, never changes status",
+    },
+
+    documentation: `${stripTrailingSlashes(env.PASSPORT_ORIGIN)}/docs/resolver`,
   };
 }
 
@@ -369,7 +438,49 @@ export default {
       return handleIssue(request, env);
     }
 
-    if (url.pathname === "/" ) {
+    // Read-only passport lookup, for surfaces that render a passport without a
+    // person having scanned anything.
+    //
+    // Deliberately does NOT call registerScan. A page render is not a scan:
+    // counting one would inflate scan_count, and because the app renders from
+    // more than one region, repeated renders look exactly like the multi-region
+    // burst that drives active -> clone_suspected. A viewer refreshing a
+    // passport must never be able to mark the seal as cloned.
+    //
+    // The GS1 Digital Link paths below remain the scan surface and still
+    // advance state; this endpoint only reports it.
+    if (url.pathname.startsWith("/v1/passport/")) {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return json({ error: "method_not_allowed" }, 405);
+      }
+      const rawId = url.pathname.slice("/v1/passport/".length);
+      if (!rawId) return json({ error: "no_resolvable_identifier" }, 400);
+      const fields = parseGs1Path(`/cert/${rawId}`, "");
+      if (!hasResolvableId(fields)) {
+        return json(
+          { error: "no_resolvable_identifier", path: url.pathname },
+          400
+        );
+      }
+      const found = await loadSeal(env, lookupKey(fields));
+      if (!found) {
+        return json(
+          passportPayload(null, "not_found", fields, env, {
+            reason: "unknown_seal",
+            recorded: false,
+          }),
+          404
+        );
+      }
+      return json(
+        passportPayload(found, found.status as SealStatus, fields, env, {
+          reason: "read_only",
+          recorded: false,
+        })
+      );
+    }
+
+    if (url.pathname === "/") {
       return json({
         service: "gs1-resolver",
         usage: `${env.RESOLVER_ORIGIN}/01/{gtin}/21/{serial}`,
@@ -382,12 +493,18 @@ export default {
     }
 
     if (!isResolverPath(url.pathname)) {
-      return json({ error: "not_a_digital_link_path", path: url.pathname }, 404);
+      return json(
+        { error: "not_a_digital_link_path", path: url.pathname },
+        404
+      );
     }
 
     const fields = parseGs1Path(url.pathname, url.search);
     if (!hasResolvableId(fields)) {
-      return json({ error: "no_resolvable_identifier", path: url.pathname }, 400);
+      return json(
+        { error: "no_resolvable_identifier", path: url.pathname },
+        400
+      );
     }
 
     const seal = await loadSeal(env, lookupKey(fields));
@@ -401,11 +518,18 @@ export default {
         ? json(payload, 404)
         : new Response(passportHtml(payload), {
             status: 404,
-            headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "cache-control": "no-store",
+            },
           });
     }
 
-    const { transition, recorded, at, geo } = await registerScan(env, seal, request);
+    const { transition, recorded, at, geo } = await registerScan(
+      env,
+      seal,
+      request
+    );
     const isFirst = seal.scan_count === 0;
     const payload = passportPayload(seal, transition.next, fields, env, {
       reason: transition.reason,
@@ -418,7 +542,10 @@ export default {
     return wantsJson(request, url)
       ? json(payload)
       : new Response(passportHtml(payload), {
-          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-store",
+          },
         });
   },
 };
@@ -426,7 +553,10 @@ export default {
 /** Register a seal. Requires ISSUE_SECRET; refuses outright if unset. */
 async function handleIssue(request: Request, env: Env): Promise<Response> {
   if (!env.ISSUE_SECRET) {
-    return json({ error: "issuing_disabled", detail: "ISSUE_SECRET is not configured." }, 503);
+    return json(
+      { error: "issuing_disabled", detail: "ISSUE_SECRET is not configured." },
+      503
+    );
   }
   const auth = request.headers.get("authorization") || "";
   if (auth !== `Bearer ${env.ISSUE_SECRET}`) {
@@ -445,7 +575,7 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
 
   const fields = parseGs1Path(
     typeof body.gtin === "string" ? `/01/${body.gtin}` : `/cert/${certId}`,
-    "",
+    ""
   );
   if (typeof body.lot === "string") fields.lot = body.lot;
   if (typeof body.serial === "string") fields.serial = body.serial;
@@ -458,7 +588,7 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
     await env.DB.prepare(
       `INSERT INTO seals (id, lookup_key, gtin, lot, serial, cert_id, brand, product_name,
                           issuer, chain, contract, tx_hash, status, metadata_json, created_at)
-       VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,'issued',?13,?14)`,
+       VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,'issued',?13,?14)`
     )
       .bind(
         id,
@@ -474,7 +604,7 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
         (body.contract as string) ?? null,
         (body.txHash as string) ?? null,
         body.metadata ? JSON.stringify(body.metadata) : null,
-        Date.now(),
+        Date.now()
       )
       .run();
   } catch (err) {
@@ -494,6 +624,6 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
       status: "issued",
       digitalLink: toDigitalLink(env.RESOLVER_ORIGIN, fields),
     },
-    201,
+    201
   );
 }

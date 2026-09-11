@@ -1,37 +1,41 @@
-import type { Metadata } from 'next';
-import { PLANS } from '@/lib/plans';
-import { CheckoutModal, TrialButton } from './pricing-client';
+import type { Metadata } from "next";
+import { listedPlans } from "@/lib/plans";
+import { CheckoutModal, TrialButton } from "./pricing-client";
+import { Check, Coins } from "lucide-react";
+import Link from "next/link";
+import { JsonLd } from "@/components/JsonLd";
 import {
-  Check,
-  Coins
-} from 'lucide-react';
-import Link from 'next/link';
-import { JsonLd } from '@/components/JsonLd';
-import { productSchema, brandById, breadcrumbSchema } from '@/lib/structured-data';
+  productSchema,
+  brandById,
+  breadcrumbSchema,
+} from "@/lib/structured-data";
 
 export const metadata: Metadata = {
-  title: 'Pricing | QRON Protocol',
-  description: 'Simple, transparent pricing for AI QR art and industrial product passports.',
+  title: "Pricing | QRON Protocol",
+  description:
+    "Simple, transparent pricing for AI QR art and industrial product passports.",
 };
 
 export default function PricingPage() {
-  const qron = brandById('qron');
+  const qron = brandById("qron");
   const productLd = productSchema({
-    name: 'QRON Protocol — AI QR Art & Product Passports',
+    name: "QRON Protocol — AI QR Art & Product Passports",
     description:
-      'Cryptographically-verified AI QR art generation and industrial product passports. Plans from free to enterprise.',
+      "Cryptographically-verified AI QR art generation and industrial product passports. Plans from free to enterprise.",
     brand: qron,
-    offers: PLANS.filter((p) => p.price > 0).map((p) => ({
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      priceCurrency: 'USD',
-      url: 'https://qron.space/pricing',
-    })),
+    offers: listedPlans("qron")
+      .filter(p => p.price > 0)
+      .map(p => ({
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        priceCurrency: "USD",
+        url: "https://qron.space/pricing",
+      })),
   });
   const breadcrumbLd = breadcrumbSchema([
-    { name: 'Home', url: 'https://qron.space' },
-    { name: 'Pricing', url: 'https://qron.space/pricing' },
+    { name: "Home", url: "https://qron.space" },
+    { name: "Pricing", url: "https://qron.space/pricing" },
   ]);
 
   return (
@@ -51,11 +55,13 @@ export default function PricingPage() {
       {/* Pricing Grid */}
       <section className="max-w-7xl mx-auto px-6 pb-24">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {PLANS.map((plan) => (
-            <div 
+          {listedPlans("qron").map(plan => (
+            <div
               key={plan.id}
               className={`protocol-card p-8 flex flex-col relative transition-all duration-500 group hover:translate-y-[-8px] ${
-                plan.highlighted ? 'border-gold/40 bg-gold/5 shadow-[0_0_50px_rgba(201,162,39,0.1)]' : 'border-zinc-900 bg-zinc-950/50'
+                plan.highlighted
+                  ? "border-gold/40 bg-gold/5 shadow-[0_0_50px_rgba(201,162,39,0.1)]"
+                  : "border-zinc-900 bg-zinc-950/50"
               }`}
             >
               {plan.highlighted && (
@@ -65,10 +71,16 @@ export default function PricingPage() {
               )}
 
               <div className="mb-8">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500 mb-2">{plan.name}</h3>
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                  {plan.name}
+                </h3>
                 <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-4xl font-black text-white">${plan.price}</span>
-                  <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">{plan.price_suffix || ' one-time'}</span>
+                  <span className="text-4xl font-black text-white">
+                    ${plan.price}
+                  </span>
+                  <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
+                    {plan.price_suffix || " one-time"}
+                  </span>
                 </div>
                 <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter leading-relaxed">
                   {plan.description}
@@ -78,18 +90,22 @@ export default function PricingPage() {
               <div className="flex-1 space-y-4 mb-10">
                 {plan.features.map((feature, i) => (
                   <div key={i} className="flex gap-3">
-                    <Check className={`w-4 h-4 shrink-0 ${plan.highlighted ? 'text-gold' : 'text-zinc-700'}`} />
-                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-tight">{feature}</span>
+                    <Check
+                      className={`w-4 h-4 shrink-0 ${plan.highlighted ? "text-gold" : "text-zinc-700"}`}
+                    />
+                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-tight">
+                      {feature}
+                    </span>
                   </div>
                 ))}
               </div>
 
-              {plan.tier === 'free' ? (
+              {plan.tier === "free" ? (
                 <TrialButton />
               ) : (
-                <CheckoutModal 
-                  planId={plan.id} 
-                  label={plan.name} 
+                <CheckoutModal
+                  planId={plan.id}
+                  label={plan.name}
                   price={`$${plan.price}`}
                   paymentLink={plan.stripe_payment_link}
                 />
@@ -110,59 +126,83 @@ export default function PricingPage() {
             Immutable <span className="text-[#F7931A]">Ordinals</span>
           </h2>
           <p className="max-w-xl mx-auto text-zinc-500 text-sm font-medium uppercase tracking-widest leading-relaxed">
-            Store your AI QR art permanently on the world&apos;s most trusted blockchain. 
-            Dual-chain proof for maximum verification.
+            Store your AI QR art permanently on the world&apos;s most trusted
+            blockchain. Dual-chain proof for maximum verification.
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-            {[
-                { 
-                    id: 'ordinal_single', 
-                    name: 'Ordinal Single', 
-                    price: '49', 
-                    features: ['1 AI QR Art Inscription', 'Bitcoin L1 Permanence', 'Magic Eden Ready', 'Transferable Digital Artifact'],
-                    link: 'https://buy.stripe.com/14A00jbjz9Ns5ia5fe1Nu1d'
-                },
-                { 
-                    id: 'ordinal_auth', 
-                    name: 'BTC Dual-Auth', 
-                    price: '299', 
-                    features: ['Product Cert on BTC', 'Dual-Chain Proof', 'Authichain Verification', 'Brand Inscription'],
-                    link: 'https://buy.stripe.com/dRm3cv0EV6BgeSKdLK1Nu1e',
-                    highlight: true
-                },
-                { 
-                    id: 'ordinal_collection', 
-                    name: 'Batch Collection', 
-                    price: '799', 
-                    features: ['25 L1 Inscriptions', 'Collection Listing', 'Enterprise Scale', 'Co-Marketing Rights'],
-                    link: 'https://buy.stripe.com/eVq9AT5Zff7MbGy8rq1Nu1f'
-                }
-            ].map(o => (
-                <div key={o.id} className={`protocol-card p-8 border-[#F7931A]/20 bg-[#F7931A]/5 ${o.highlight ? 'ring-2 ring-[#F7931A]/40' : ''}`}>
-                    <h3 className="text-[10px] font-black uppercase text-[#F7931A] mb-2">{o.name}</h3>
-                    <div className="flex items-baseline gap-1 mb-8">
-                        <span className="text-3xl font-black text-white">${o.price}</span>
-                    </div>
-                    <ul className="space-y-4 mb-10">
-                        {o.features.map(f => (
-                            <li key={f} className="flex gap-3">
-                                <span className="text-[#F7931A] text-xs">â‚¿</span>
-                                <span className="text-[10px] font-bold text-zinc-400 uppercase">{f}</span>
-                            </li>
-                        ))}
-                    </ul>
-                    <a 
-                        href={o.link} 
-                        target="_blank" 
-                        rel="noopener"
-                        className="block w-full py-4 rounded-xl bg-[#F7931A] text-black font-black uppercase tracking-widest text-xs text-center"
-                    >
-                        Inscribe Now
-                    </a>
-                </div>
-            ))}
+          {[
+            {
+              id: "ordinal_single",
+              name: "Ordinal Single",
+              price: "49",
+              features: [
+                "1 AI QR Art Inscription",
+                "Bitcoin L1 Permanence",
+                "Magic Eden Ready",
+                "Transferable Digital Artifact",
+              ],
+              link: "https://buy.stripe.com/14A00jbjz9Ns5ia5fe1Nu1d",
+            },
+            {
+              id: "ordinal_auth",
+              name: "BTC Dual-Auth",
+              price: "299",
+              features: [
+                "Product Cert on BTC",
+                "Dual-Chain Proof",
+                "Authichain Verification",
+                "Brand Inscription",
+              ],
+              link: "https://buy.stripe.com/dRm3cv0EV6BgeSKdLK1Nu1e",
+              highlight: true,
+            },
+            {
+              id: "ordinal_collection",
+              name: "Batch Collection",
+              price: "799",
+              features: [
+                "25 L1 Inscriptions",
+                "Collection Listing",
+                "Enterprise Scale",
+                "Co-Marketing Rights",
+              ],
+              link: "https://buy.stripe.com/eVq9AT5Zff7MbGy8rq1Nu1f",
+            },
+          ].map(o => (
+            <div
+              key={o.id}
+              className={`protocol-card p-8 border-[#F7931A]/20 bg-[#F7931A]/5 ${o.highlight ? "ring-2 ring-[#F7931A]/40" : ""}`}
+            >
+              <h3 className="text-[10px] font-black uppercase text-[#F7931A] mb-2">
+                {o.name}
+              </h3>
+              <div className="flex items-baseline gap-1 mb-8">
+                <span className="text-3xl font-black text-white">
+                  ${o.price}
+                </span>
+              </div>
+              <ul className="space-y-4 mb-10">
+                {o.features.map(f => (
+                  <li key={f} className="flex gap-3">
+                    <span className="text-[#F7931A] text-xs">â‚¿</span>
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase">
+                      {f}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <a
+                href={o.link}
+                target="_blank"
+                rel="noopener"
+                className="block w-full py-4 rounded-xl bg-[#F7931A] text-black font-black uppercase tracking-widest text-xs text-center"
+              >
+                Inscribe Now
+              </a>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -172,10 +212,16 @@ export default function PricingPage() {
           Need Custom <span className="gold-text">Enterprise</span> Scale?
         </h2>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/digital-product-passport" className="btn-outline-gold px-10 py-4 font-black uppercase tracking-widest text-xs border-zinc-800">
+          <Link
+            href="/digital-product-passport"
+            className="btn-outline-gold px-10 py-4 font-black uppercase tracking-widest text-xs border-zinc-800"
+          >
             Explore Industrial DPP
           </Link>
-          <a href="mailto:ops@qron.space" className="btn-gold px-10 py-4 font-black uppercase tracking-widest text-xs shadow-gold">
+          <a
+            href="mailto:ops@qron.space"
+            className="btn-gold px-10 py-4 font-black uppercase tracking-widest text-xs shadow-gold"
+          >
             Contact Sales
           </a>
         </div>
@@ -184,7 +230,8 @@ export default function PricingPage() {
       {/* Footer */}
       <footer className="py-12 px-6">
         <p className="text-center text-[10px] font-bold text-zinc-800 uppercase tracking-widest">
-            Payments secured by Stripe · AI Engine by Hugging Face · Settlement on Polygon & Bitcoin
+          Payments secured by Stripe · AI Engine by Hugging Face · Settlement on
+          Polygon & Bitcoin
         </p>
       </footer>
     </div>

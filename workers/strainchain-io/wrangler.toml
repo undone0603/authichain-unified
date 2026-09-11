@@ -12,5 +12,10 @@ zone_name = "strainchain.io"
 pattern = "www.strainchain.io/*"
 zone_name = "strainchain.io"
 
+[vars]
+# Origin of the Next app that renders /genetics and /passport. Those paths are
+# proxied there; everything else on strainchain.io is served by this worker.
+APP_ORIGIN = "https://authichain-unified.vercel.app"
+
 [observability]
 enabled = true

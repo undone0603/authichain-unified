@@ -1,5 +1,16 @@
 /**
- * AuthiChain pricing — single source of truth.
+ * AuthiChain pricing — Stripe plan-detection reference.
+ *
+ * NOT the source of truth for what anything costs, despite what this file
+ * claimed until 2026-09-11. The price IDs below are TEST MODE, and the only
+ * consumers are `server/webhooks/stripe-plan-detection.ts` and
+ * `scripts/setup-stripe-products.ts`. Live money runs through
+ * `src/lib/plans.ts`, which holds the live price IDs and backs /pricing,
+ * /api/checkout and the webhook — and the two files disagree on every
+ * overlapping figure.
+ *
+ * Ground any customer-facing price in `src/lib/plans.ts`. See
+ * docs/strategy/strainchain-genetics-passport.md section 3.
  *
  * Two product clusters reflecting two distinct buyers:
  *   - B2B brand-protection (AuthiChain + StrainChain + GovChain): same SKUs,
@@ -77,20 +88,23 @@ export type AnyPlanKey = B2BPlanKey | QronPlanKey;
  * Webhook plan detection consults this lookup before falling back to
  * amount-based heuristics.
  */
-export const STRIPE_PRICE_TO_PLAN: Record<string, AnyPlanKey | "contract_setup"> = {
+export const STRIPE_PRICE_TO_PLAN: Record<
+  string,
+  AnyPlanKey | "contract_setup"
+> = {
   // Test-mode IDs from scripts/setup-stripe-products.ts (Stripe acct sk_test_51SXIy…).
   // Run the script against the live account separately and append (or fork into a
   // mode-specific config) before production cutover.
-  "price_1TRJZBGqTruSqV8T3waViPX1": "starter",      // b2b_starter monthly
-  "price_1TRJZCGqTruSqV8TppJx9TyF": "starter",      // b2b_starter annual
-  "price_1TRJZEGqTruSqV8TPXbVnE8G": "professional", // b2b_professional monthly
-  "price_1TRJZEGqTruSqV8T8DggGOmB": "professional", // b2b_professional annual
-  "price_1TRJZFGqTruSqV8TeHoPf226": "enterprise",   // b2b_enterprise monthly
-  "price_1TRJZFGqTruSqV8Tn3iGixBn": "enterprise",   // b2b_enterprise annual
-  "price_1TRJZGGqTruSqV8TETqpIDAY": "launch_pack",  // qron_launch_pack one-time
-  "price_1TRJZHGqTruSqV8T4xwLjpa5": "studio",       // qron_studio monthly
-  "price_1TRJZJGqTruSqV8TVJeCoXIb": "studio_pro",   // qron_studio_pro monthly
-  "price_1TRJZKGqTruSqV8TyPJKpKpN": "contract_setup", // contract_setup one-time
+  price_1TRJZBGqTruSqV8T3waViPX1: "starter", // b2b_starter monthly
+  price_1TRJZCGqTruSqV8TppJx9TyF: "starter", // b2b_starter annual
+  price_1TRJZEGqTruSqV8TPXbVnE8G: "professional", // b2b_professional monthly
+  price_1TRJZEGqTruSqV8T8DggGOmB: "professional", // b2b_professional annual
+  price_1TRJZFGqTruSqV8TeHoPf226: "enterprise", // b2b_enterprise monthly
+  price_1TRJZFGqTruSqV8Tn3iGixBn: "enterprise", // b2b_enterprise annual
+  price_1TRJZGGqTruSqV8TETqpIDAY: "launch_pack", // qron_launch_pack one-time
+  price_1TRJZHGqTruSqV8T4xwLjpa5: "studio", // qron_studio monthly
+  price_1TRJZJGqTruSqV8TVJeCoXIb: "studio_pro", // qron_studio_pro monthly
+  price_1TRJZKGqTruSqV8TyPJKpKpN: "contract_setup", // contract_setup one-time
 };
 
 /** Returns the monthly cents for a B2B plan. */
@@ -110,7 +124,7 @@ export function getPlanQuota(plan: B2BPlanKey): number {
 
 /** Looks up a Stripe price ID; undefined if unrecognized. */
 export function lookupPlanByPriceId(
-  priceId: string,
+  priceId: string
 ): AnyPlanKey | "contract_setup" | undefined {
   return STRIPE_PRICE_TO_PLAN[priceId];
 }
