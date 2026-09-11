@@ -1969,12 +1969,74 @@ const HTML_SECURITY_HEADERS: Record<string, string> = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
 };
 
+type Env = {
+  /** Origin of the Next app that renders passports. Set in wrangler.toml. */
+  APP_ORIGIN?: string;
+};
+
+/**
+ * Paths this worker does not own. Everything else on strainchain.io is the
+ * hand-written marketing page below.
+ *
+ * Before this existed the worker had no path routing at all: every URL fell
+ * through to the same marketing HTML, so a scanned passport link resolved to
+ * the homepage and the scan dead-ended. That is the same fault the GS1
+ * resolver documented on authichain.com/passport/{certId}.
+ */
+const APP_PATHS = [/^\/genetics(?:\/|$)/, /^\/passport(?:\/|$)/];
+
+/**
+ * Proxies a request to the Next app.
+ *
+ * Builds a fresh Request rather than forwarding the original: passing it
+ * through would carry Host: strainchain.io to the upstream and misroute it.
+ * The original host travels in X-Forwarded-Host so the app can still resolve
+ * the brand.
+ */
+async function proxyToApp(request: Request, url: URL, origin: string): Promise<Response> {
+  const upstream = new URL(`${origin.replace(/\/+$/, "")}${url.pathname}${url.search}`);
+  const proxied = new Request(upstream, {
+    method: request.method,
+    headers: request.headers,
+    body: request.method === "GET" || request.method === "HEAD" ? null : request.body,
+    redirect: "manual",
+  });
+  proxied.headers.set("Host", upstream.host);
+  proxied.headers.set("X-Forwarded-Host", url.host);
+  proxied.headers.set("X-Forwarded-Proto", "https");
+
+  const res = await fetch(proxied);
+  const headers = new Headers(res.headers);
+  headers.set("x-served-by", "strainchain-io-proxy");
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+}
+
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/health") {
       return Response.json({ status: "ok", domain: "strainchain.io", ts: Date.now() });
     }
+
+    // Routed before anything else so a passport URL can never fall through to
+    // the marketing page. A misconfigured origin fails loudly here rather than
+    // quietly serving the wrong document — silently answering a verification
+    // request with marketing copy is worse than answering with an error.
+    if (APP_PATHS.some((re) => re.test(url.pathname))) {
+      if (!env?.APP_ORIGIN) {
+        return Response.json(
+          {
+            error: "app_origin_not_configured",
+            detail:
+              "strainchain.io cannot reach the passport app. Set APP_ORIGIN in workers/strainchain-io/wrangler.toml.",
+            path: url.pathname,
+          },
+          { status: 503, headers: { "cache-control": "no-store" } },
+        );
+      }
+      return proxyToApp(request, url, env.APP_ORIGIN);
+    }
+
     const p = url.pathname;
     if (p === '/og-image.png') return pngResponse(OG_IMAGE_PNG_B64);
     if (p === '/og-image.svg') return assetResponse(OG_IMAGE_SVG);
@@ -1988,6 +2050,7 @@ export default {
   <url><loc>https://strainchain.io/#compliance</loc></url>
   <url><loc>https://strainchain.io/#audit</loc></url>
   <url><loc>https://strainchain.io/#pricing</loc></url>
+  <url><loc>https://strainchain.io/genetics/mendo-love-farms</loc></url>
 </urlset>`, {
         headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });

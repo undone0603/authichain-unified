@@ -38,3 +38,10 @@ Thumbs.db
 # template literal (RangeError: Maximum call stack size exceeded, reproduces
 # on prettier 3.9.6 independent of any specific edit).
 workers/authichain-com/src/index.ts
+
+# Contains a base64 PNG assembled from ~1,900 concatenated string literals
+# (OG_IMAGE_PNG_B64). Prettier's TypeScript parser overflows its stack on that
+# expression — "RangeError: Maximum call stack size exceeded" — which fails the
+# pre-commit hook for any change to this file. Formatting is skipped here until
+# the image is moved out of source.
+workers/strainchain-io/src/index.ts
