@@ -20,10 +20,20 @@ about them.
 | Valentine Distilling Co.   | VD   | `https://passport-demo.undone-k.workers.dev/?b=Valentine%20Distilling%20Co.`     |
 | Long Road Distillers       | LR   | `https://passport-demo.undone-k.workers.dev/?b=Long%20Road%20Distillers`         |
 
-Verified in Chromium against the deployed worker source: all eight render the
-prospect's name, derive the monogram above, and leak **none** of the eight
-Copper & Rye specifics. Zero console errors. A branded link shows
+Verified in Chromium **through the worker's own `fetch()` output**: all eight
+render the prospect's name, derive the monogram above, and leak **none** of the
+eight Copper & Rye specifics. Zero console errors. A branded link shows
 `Your product name` / `Your town, your state` / `BATCH-0000`.
+
+> **Correction.** When this file was first written, the monograms were verified
+> by extracting the HTML from the worker source rather than by calling the
+> worker. That reads the template literal's _source text_, which is not what the
+> browser receives — see "The backslash trap" in
+> `workers/passport-demo/README.md`. Under that bug `split(/\s+/)` was emitted as
+> `split(/s+/)`, splitting brand names on the letter "s", so seven of these eight
+> monograms were **wrong in production**: Coppercraft rendered `CT` not `CD`,
+> Iron Fish `IH` not `IF`. The cause is fixed and the table above is now verified
+> against the worker's actual response.
 
 ## Why no town is set
 

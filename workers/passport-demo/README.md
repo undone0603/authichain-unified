@@ -80,6 +80,51 @@ segments manually. Confirmed fixed live: the branch-preview deploy running
 this version renders every field correctly, verified via browser console
 (no errors) after the change, versus the reproducible failure before it.
 
+**The mechanism has since been identified — see "The backslash trap" below.**
+The `em()` rewrite was a correct fix for the symptom, but the cause was not the
+`.replace()` call; it was that a single backslash cannot survive inside `HTML`.
+
+## The backslash trap
+
+**This whole page lives inside a JavaScript template literal** (`const HTML = \`…\``),
+so every backslash in it is consumed when that literal is evaluated. What the
+worker sends to the browser is not what the source file reads like:
+
+| in the source file          | what the browser receives |
+| --------------------------- | ------------------------- |
+| `split(/\s+/)`              | `split(/s+/)`             |
+| `.replace(/\*(.+?)\*/g, …)` | `.replace(/*(.+?)*/g, …)` |
+
+That second row is the original bug, exactly: `/*` opens a block comment, which
+swallows everything to the next `*/` and leaves a bare `g` where an argument
+should be — hence `ReferenceError: g is not defined`, thrown inside `em()`, on
+every page load. Nothing about the deployment was anomalous and the deployed
+artifact did match this file; the template literal simply does not preserve
+backslashes.
+
+The same trap silently corrupted the monogram for two months: `split(/\s+/)`
+emitted as `split(/s+/)` splits a brand name **on the letter "s"**, so
+_Coppercraft Distillery_ rendered `CT` and _Iron Fish Distillery_ rendered `IH`.
+No error, no console output — just a quietly wrong initial on a page being sent
+to prospects.
+
+**The rule: inside `HTML`, write `\\` for every backslash the browser must
+receive.** `split(/\\s+/)` in this file is correct and deliberate; `split(/\s+/)`
+is a bug.
+
+**How to check.** Never verify by extracting the text of the literal from this
+file — that reads the _source_, in which the backslashes are still present, and
+will pass while production is broken. Verify against what `fetch()` actually
+returns:
+
+```js
+const html = await worker.fetch(new Request("https://x/")).then(r => r.text());
+// assert against `html`, not against the template literal's source text
+```
+
+Any test that slices this file between backticks is testing a string the browser
+never sees.
+
 ## QR art (`/qr.png`)
 
 Redesigned for two goals that turned out to be in tension: on-brand and
